@@ -2905,6 +2905,10 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_Bool success;
    SCIP_CONSEXPR_AUXEXPR* auxexpr;
    SCIP_Bool cutoff;
+   SCIP_Real refpointx;
+   SCIP_Real refpointy;
+   SCIP_INTERVAL bndx;
+   SCIP_INTERVAL bndy;
 
    assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
    assert(bestunderestimators != NULL && bestoverestimators != NULL);
@@ -2920,6 +2924,17 @@ SCIP_RETCODE separateMcCormickImplicit(
       assert(terms[i].nauxexprs > 0);
 
       productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
+
+      bndx.inf = SCIPvarGetLbLocal(terms[i].x);
+      bndx.sup = SCIPvarGetUbLocal(terms[i].x);
+      bndy.inf = SCIPvarGetLbLocal(terms[i].y);
+      bndy.sup = SCIPvarGetUbLocal(terms[i].y);
+      refpointx = SCIPgetSolVal(scip, sol, terms[i].x);
+      refpointy = SCIPgetSolVal(scip, sol, terms[i].y);
+
+      /* adjust the reference points */
+      refpointx = MIN(MAX(refpointx, bndx.inf), bndx.sup); /*lint !e666*/
+      refpointy = MIN(MAX(refpointy, bndy.inf), bndy.sup); /*lint !e666*/
 
       /* one iteration for underestimation and one for overestimation */
       for( j = 0; j < 2; ++j ) {
@@ -2954,11 +2969,8 @@ SCIP_RETCODE separateMcCormickImplicit(
          SCIP_CALL( addAuxexprToRow(scip, cut, terms[i].x, terms[i].y, auxexpr, -1.0, &constant) );
 
          /* add McCormick terms: ask for an overestimator if relation is auxexpr <= x*y, and vice versa */
-         SCIPaddBilinMcCormick(scip, 1.0, SCIPvarGetLbLocal(terms[i].x), SCIPvarGetUbLocal(terms[i].x),
-                               SCIPgetSolVal(scip, sol, terms[i].x), SCIPvarGetLbLocal(terms[i].y),
-                               SCIPvarGetUbLocal(terms[i].y),
-                               SCIPgetSolVal(scip, sol, terms[i].y), underestimate, &xcoef, &ycoef, &constant,
-                               &success);
+         SCIPaddBilinMcCormick(scip, 1.0, bndx.inf, bndx.sup, refpointx, bndy.inf, bndy.sup, refpointy, underestimate,
+               &xcoef, &ycoef, &constant, &success);
 
          if( REALABS(constant) > MAXVARBOUND )
             success = FALSE;
