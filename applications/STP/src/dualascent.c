@@ -81,6 +81,124 @@ typedef struct dual_ascent_paths
  */
 
 
+/** sorts according to distance in solution */
+static
+SCIP_RETCODE dapathsSortStarts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph */
+   const int*            result,             /**< solution array */
+   DAPATHS*              dapaths             /**< to be initialized */
+   )
+{
+   SCIP_Real* RESTRICT starts_prio;
+   SCIP_Real* RESTRICT nodes_dist;
+   SCIP_Bool* RESTRICT nodes_visisted;
+   int* RESTRICT nodes_startid;
+   int* RESTRICT stackarr;
+   int* const startnodes = dapaths->startnodes;
+   const int nstartnodes = dapaths->nstartnodes;
+   const int nnodes = graph_get_nNodes(graph);
+   int stacksize;
+   int startcount = 0;
+
+   assert(result);
+   assert(nstartnodes > 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &starts_prio, nstartnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_dist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_visisted, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_startid, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
+
+   BMSclearMemoryArray(nodes_visisted, nnodes);
+   nodes_visisted[graph->source] = TRUE;
+   nodes_dist[graph->source] = 0.0;
+
+#ifndef NDEBUG
+   for( int i = 0; i < nstartnodes; i++ )
+      starts_prio[i] = FARAWAY;
+#endif
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(graph->term[i]) && i != graph->source )
+      {
+         nodes_startid[i] = startcount++;
+      }
+      else
+      {
+         nodes_startid[i] = -1;
+      }
+   }
+   assert(startcount == nstartnodes);
+
+   stacksize = 0;
+   stackarr[stacksize++] = graph->source;
+
+   /* DFS loop */
+   while( stacksize != 0 )
+   {
+      const int node = stackarr[--stacksize];
+
+      for( int a = graph->outbeg[node]; a != EAT_LAST; a = graph->oeat[a] )
+      {
+         if( result[a] == CONNECT )
+         {
+            const int head = graph->head[a];
+
+            if( !nodes_visisted[head] )
+            {
+               nodes_dist[head] = nodes_dist[node] + graph->cost[a];
+               nodes_visisted[head] = TRUE;
+               stackarr[stacksize++] = head;
+
+               if( Is_term(graph->term[head]) )
+               {
+                  const int start = nodes_startid[head];
+                  assert(start >= 0 && start < nstartnodes);
+
+                  starts_prio[start] = -nodes_dist[head];
+               }
+            }
+         }
+      }
+   }
+
+#ifndef NDEBUG
+   for( int i = 0; i < nstartnodes; i++ )
+   {
+      assert(!EQ(starts_prio[i], FARAWAY));
+   }
+#endif
+
+#ifdef SCIP_DEBUG
+   for( int i = 0; i < nstartnodes; i++ )
+   {
+      graph_knot_printInfo(graph, startnodes[i]);
+      printf("...%f \n", starts_prio[i]);
+   }
+#endif
+
+   SCIPsortDownRealInt(starts_prio, startnodes, nstartnodes);
+
+#ifdef SCIP_DEBUG
+   printf("after \n");
+   for( int i = 0; i < nstartnodes; i++ )
+   {
+      graph_knot_printInfo(graph, startnodes[i]);
+      printf("...%f \n", starts_prio[i]);
+   }
+#endif
+
+   SCIPfreeBufferArray(scip, &stackarr);
+   SCIPfreeBufferArray(scip, &nodes_startid);
+   SCIPfreeBufferArray(scip, &nodes_visisted);
+   SCIPfreeBufferArray(scip, &nodes_dist);
+   SCIPfreeBufferArray(scip, &starts_prio);
+
+   return SCIP_OKAY;
+}
+
 
 /** sets shortest path parameters: start node and abort nodes */
 static
@@ -1537,6 +1655,11 @@ SCIP_RETCODE dualascent_paths(
       graph_pc_2transcheck(scip, graph);
 
    SCIP_CALL( dapathsInit(scip, graph, &dapaths) );
+
+   if( result )
+   {
+      SCIP_CALL( dapathsSortStarts(scip, graph, result, &dapaths) );
+   }
 
    dapathsRunShortestPaths(graph, &dapaths, redcost, objval);
 
