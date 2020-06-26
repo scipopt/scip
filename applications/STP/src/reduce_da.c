@@ -42,7 +42,8 @@
 #include "probdata_stp.h"
 
 #define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
-#define BND_TMHEUR_NRUNS_RESTRICT 10                /**< number of runs of constructive heuristic */
+#define BND_TMHEUR_NRUNS_RESTRICT 16          /**< number of runs of constructive heuristic */
+#define BND_TMHEUR_NRUNS_RPC      16          /**< number of runs for RPC */
 #define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
@@ -202,9 +203,20 @@ SCIP_RETCODE computeSteinerTreeTM(
    const int nedges = graph_get_nEdges(graph);
    SCIP_Bool success = FALSE;
    const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
+   int runstm;
 
-   /* number of runs should not exceed number of connected vertices */
-   int runstm = directed ? BND_TMHEUR_NRUNS : BND_TMHEUR_NRUNS_RESTRICT;
+   if( directed )
+   {
+      runstm = BND_TMHEUR_NRUNS;
+   }
+   else if( graph_pc_isRootedPcMw(graph) )
+   {
+      runstm = BND_TMHEUR_NRUNS_RPC;
+   }
+   else
+   {
+      runstm = BND_TMHEUR_NRUNS_RESTRICT;
+   }
 
    assert(graph->stp_type != STP_RPCSPG || !graph->extended);
 
@@ -1328,7 +1340,7 @@ SCIP_RETCODE daPcAddTmSolToPool(
 
    /* compute second solution and add to pool */
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-      graph, NULL, NULL, result, BND_TMHEUR_NRUNS_RESTRICT, graph->source, graph->cost, graph->cost, NULL, NULL, &success) );
+      graph, NULL, NULL, result, BND_TMHEUR_NRUNS_RPC, graph->source, graph->cost, graph->cost, NULL, NULL, &success) );
    assert(success);
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, graph, result) );
@@ -2145,7 +2157,7 @@ SCIP_Bool dapathsIsPromising(
 
    graph_get_nVET(g, &nnodes, NULL, &nterms);
 
-   isPromising = ((SCIP_Real) nterms / (SCIP_Real) nnodes < 0.1 );
+   isPromising = ((SCIP_Real) nterms / (SCIP_Real) nnodes < 0.1);
 
    return isPromising;
 }
@@ -2280,26 +2292,47 @@ SCIP_RETCODE reduce_dapaths(
    const int nedges = graph_get_nEdges(g);
    int* RESTRICT result;
    SCIP_Real objbound_upper = FARAWAY;
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
 
    assert(scip && offsetp && nelims);
-   assert(*nelims >= 0);
+
+   *nelims = 0;
 
    if( g->terms <= 2 || !dapathsIsPromising(g) )
       return SCIP_OKAY;
 
-   graph_mark(g);
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
 
+   graph_mark(g);
    SCIP_CALL( reduce_redcostdataInit(scip, g->knots, nedges, FARAWAY, g->source, &redcostdata) );
    SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
-   SCIP_CALL( dualascent_paths(scip, g, redcostdata.redEdgeCost, &(redcostdata.dualBound), NULL) );
+   SCIP_CALL( dualascent_paths(scip, g, redcostdata.redEdgeCost, &(redcostdata.dualBound), result) );
    SCIP_CALL( daInitializeDistances(scip, g, &redcostdata) );
+   assert(graph_isMarked(g));
 
-   redcostdata.cutoff = objbound_upper- redcostdata.dualBound;
-//   printf("%f %f\n", objbound_upper, redcostdata.dualBound);
-   graph_mark(g);
+   redcostdata.cutoff = objbound_upper - redcostdata.dualBound;
 
    SCIP_CALL( dapathsDeleteEdges(scip, &redcostdata, result, g, nelims) );
+
+   if( *nelims > 0 && solstp_isUnreduced(scip, g, result) )
+   {
+      if( isRpcmw )
+         graph_pc_2trans(scip, g);
+
+      SCIP_CALL( SCIPStpHeurLocalRun(scip, g, result) );
+      objbound_upper = solstp_getObj(g, result, 0.0);
+      redcostdata.cutoff = objbound_upper - redcostdata.dualBound;
+
+      if( isRpcmw )
+         graph_pc_2org(scip, g);
+      else
+         graph_mark(g);
+
+      assert(graph_isMarked(g));
+
+      SCIP_CALL( dapathsDeleteEdges(scip, &redcostdata, result, g, nelims) );
+   }
+
    SCIP_CALL( dapathsReplaceNodes(scip, &redcostdata, result, objbound_upper, g, offsetp, nelims) );
 
    if( graph_pc_isRootedPcMw(g) )

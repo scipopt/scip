@@ -597,21 +597,6 @@ SCIP_RETCODE redLoopStp_inner(
          reduce_dapaths(scip, g, fixed, &dapathelims);
 
          reduceStatsPrint(fullreduce, "dapaths", dapathelims);
-//#define PRINTDA
-
-
-#ifdef PRINTDA
-         FILE *fp;
-
-                //char filename[SCIP_MAXSTRLEN];
-                //(void) SCIPsnprintf(filename, SCIP_MAXSTRLEN,"/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/x%d_pred.stp", node);
-
-                fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/dapathsNew.txt", "a+");
-                fprintf(fp, "%s %d \n", SCIPgetProbName(scip), dapathelims);
-                fclose(fp);
-                exit(1);
-#endif
-
 
          if( dapathelims <= reductbound )
             dapaths = FALSE;
@@ -1821,17 +1806,7 @@ SCIP_RETCODE redLoopPc(
             if( dapathelims <= reductbound )
                dapaths = FALSE;
 
-#ifdef PRINTDA
-         FILE *fp;
 
-                //char filename[SCIP_MAXSTRLEN];
-                //(void) SCIPsnprintf(filename, SCIP_MAXSTRLEN,"/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/x%d_pred.stp", node);
-
-                fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/dapathsNew.txt", "a+");
-                fprintf(fp, "%s %d \n", SCIPgetProbName(scip), dapathelims);
-                fclose(fp);
-                exit(1);
-#endif
          }
 
          if( sd || extensive )
