@@ -2108,7 +2108,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
       /* make sure enough space is available in rowprep arrays */
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
       assert(rowprep->varssize >= 1);
 
       branchcand = TRUE;
