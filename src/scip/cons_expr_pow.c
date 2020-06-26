@@ -1234,7 +1234,7 @@ SCIP_RETCODE chooseRefpointsPow(
    if( (exponent > 1.0 && (lb >= 0 || even)) || (exponent < 0.0 && lb >= 0) || (exponent < 0.0 && even && ub <= 0.0) )
       convex = TRUE;
    /* concave case:
-    * - parabola with a negative domain and (due to previous if) an uneven degree
+    * - parabola or hyperbola with a negative domain and (due to previous if) an uneven degree
     * - root
     */
    else if( ub <= 0 || (exponent > 0.0 && exponent < 1.0) )
