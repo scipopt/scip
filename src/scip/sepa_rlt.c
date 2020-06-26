@@ -2937,11 +2937,12 @@ SCIP_RETCODE separateMcCormickImplicit(
       refpointy = MIN(MAX(refpointy, bndy.inf), bndy.sup); /*lint !e666*/
 
       /* one iteration for underestimation and one for overestimation */
-      for( j = 0; j < 2; ++j ) {
+      for( j = 0; j < 2; ++j )
+      {
          underestimate = j == 0;
-         if (underestimate && bestunderestimators[i] != -1)
+         if( underestimate && bestunderestimators[i] != -1 )
             auxexpr = terms[i].auxexprs[bestunderestimators[i]];
-         else if (!underestimate && bestoverestimators[i] != -1)
+         else if( !underestimate && bestoverestimators[i] != -1 )
             auxexpr = terms[i].auxexprs[bestoverestimators[i]];
          else
             continue;
@@ -2949,7 +2950,7 @@ SCIP_RETCODE separateMcCormickImplicit(
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
 
          /* skip non-violated terms */
-         if ((underestimate && productval <= auxval) || (!underestimate && productval >= auxval))
+         if( (underestimate && productval <= auxval) || (!underestimate && productval >= auxval) )
             continue;
 
          /* create an empty row */
@@ -2958,7 +2959,7 @@ SCIP_RETCODE separateMcCormickImplicit(
                              SCIPgetNLPs(scip));
 
          SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
-               FALSE, FALSE));
+               FALSE, FALSE) );
 
          xcoef = 0.0;
          ycoef = 0.0;
