@@ -1269,7 +1269,7 @@ SCIP_RETCODE chooseRefpointsPow(
          refpointsover[0] = (lb + ub) / 2.0;
       else if( concave )
          addTangentRefpoints(scip, lb, ub, refpointsover);
-      else if( exponent > 1.0 && !even && lb < 0.0 && ub > 0.0 ) /* mixed signpower */
+      else if( exponent > 1.0 && !even && mixedsign ) /* mixed signpower */
          SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, FALSE, refpointsover) );
       else /* mixed hyperbola or an infinite bound */
          assert((exponent < 0.0 && mixedsign) || SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub));
