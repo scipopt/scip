@@ -1166,7 +1166,7 @@ SCIP_RETCODE addSignpowerRefpoints(
    /* make bounds finite (due to a previous if, only one can be infinite here) */
    if( SCIPisInfinity(scip, -lb) )
       lb = -ub * exprdata->root - 1.0;
-   if( SCIPisInfinity(scip,  ub) )
+   else if( SCIPisInfinity(scip,  ub) )
       ub = -lb * exprdata->root + 1.0;
 
    refpoints[0] = lb;
