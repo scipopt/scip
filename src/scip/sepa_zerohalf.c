@@ -1501,7 +1501,8 @@ void addOrigRow(
       *cutrhs += weight * SCIPfeasCeil(scip, SCIProwGetLhs(row) - SCIProwGetConstant(row));
    }
 
-   *cutrank = MAX(*cutrank, SCIProwGetRank(row));
+   if( SCIProwGetRank(row) > *cutrank )
+      *cutrank = SCIProwGetRank(row);
    *cutislocal = *cutislocal || SCIProwIsLocal(row);
 }
 
