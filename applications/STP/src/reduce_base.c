@@ -446,7 +446,6 @@ SCIP_RETCODE redLoopStp_inner(
    SCIP_Bool sdbiased = TRUE;
    SCIP_Bool sdc = FALSE;
    SCIP_Bool sdstar = TRUE;
-   SCIP_Bool dapaths = TRUE;
    SCIP_Bool da = redparameters->dualascent;
    SCIP_Bool bdk = redparameters->nodereplacing;
    SCIP_Bool bred = redparameters->boundreduce;
@@ -467,7 +466,6 @@ SCIP_RETCODE redLoopStp_inner(
       int brednelims = 0;
       int degtnelims = 0;
       int sdbiasnelims = 0;
-      int dapathelims = 0;
 
       // for debugging of extended reductions todo deleteme
 #if 0
@@ -592,25 +590,6 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      if( dapaths || extensive  )
-      {
-         reduce_dapaths(scip, g, fixed, &dapathelims);
-
-         reduceStatsPrint(fullreduce, "dapaths", dapathelims);
-
-         if( dapathelims <= reductbound )
-            dapaths = FALSE;
-
-         if( dapaths && inner_rounds == 0 )
-         {
-            inner_rounds++;
-            continue;
-         }
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
       ub = -1.0;
 
       if( da )
@@ -644,7 +623,7 @@ SCIP_RETCODE redLoopStp_inner(
       SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &degtnelims, NULL));
 
       /* too few eliminations? */
-      if( (dapathelims + sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) <= 2 * reductbound )
+      if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) <= 2 * reductbound )
       {
          // at least one successful round and full reduce and no inner_restarts yet?
          if( inner_rounds > 0 && fullreduce && inner_restarts == 0 )
@@ -671,7 +650,7 @@ SCIP_RETCODE redLoopStp_inner(
          }
       }
 
-      if( extensive && (dapathelims + sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) > 0 )
+      if( extensive && (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) > 0 )
          rerun = TRUE;
 
       inner_rounds++;
@@ -1805,8 +1784,6 @@ SCIP_RETCODE redLoopPc(
 
             if( dapathelims <= reductbound )
                dapaths = FALSE;
-
-
          }
 
          if( sd || extensive )
