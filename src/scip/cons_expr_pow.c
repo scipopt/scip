@@ -994,7 +994,7 @@ SCIP_RETCODE buildPowEstimator(
    SCIP_Real             childub,            /**< upper bound on the child variable */
    SCIP_Real             refpoint,           /**< reference point */
    SCIP_Real             exponent,           /**< esponent */
-   SCIP_Real*            coefs,              /**< array to store the coefficients of the estimator */
+   SCIP_Real*            coef,               /**< pointer to store the coefficient of the estimator */
    SCIP_Real*            constant,           /**< pointer to store the constant of the estimator */
    SCIP_Bool*            success,            /**< pointer to store whether the estimator was built successfully */
    SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is local */
@@ -1007,7 +1007,7 @@ SCIP_RETCODE buildPowEstimator(
    assert(scip != NULL);
    assert(exprdata != NULL);
    assert(childvar != NULL);
-   assert(coefs != NULL);
+   assert(coef != NULL);
    assert(constant != NULL);
    assert(success != NULL);
    assert(islocal != NULL);
@@ -1021,24 +1021,24 @@ SCIP_RETCODE buildPowEstimator(
       /* important special case: quadratic case */
       /* initialize, because SCIPaddSquareXyz only adds to existing values */
       *success = TRUE;
-      *coefs = 0.0;
+      *coef = 0.0;
       *constant = 0.0;
 
       if( overestimate )
       {
-         SCIPaddSquareSecant(scip, 1.0, childlb, childub, coefs, constant, success);
+         SCIPaddSquareSecant(scip, 1.0, childlb, childub, coef, constant, success);
          *islocal = TRUE; /* secants are only valid locally */
       }
       else
       {
-         SCIPaddSquareLinearization(scip, 1.0, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);
+         SCIPaddSquareLinearization(scip, 1.0, refpoint, SCIPvarIsIntegral(childvar), coef, constant, success);
          *islocal = FALSE; /* linearizations are globally valid */
          *branchcand = FALSE;  /* there is no improvement due to branching */
       }
    }
    else if( exponent > 0.0 && iseven )
    {
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
       /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
       *branchcand = *islocal;
    }
@@ -1050,7 +1050,7 @@ SCIP_RETCODE buildPowEstimator(
       if( refpoint < 0.0 )
          refpoint = 0.0;
 
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
 
       /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
       *branchcand = *islocal;
@@ -1079,7 +1079,7 @@ SCIP_RETCODE buildPowEstimator(
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
       estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
-                          SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
+                          SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coef, islocal, branchcand, success);
    }
    else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
    {
@@ -1088,7 +1088,7 @@ SCIP_RETCODE buildPowEstimator(
       {
          SCIP_CALL( computeHyperbolaRoot(scip, &exprdata->root, exponent) );
       }
-      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
+      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coef, islocal, branchcand, success);
    }
    else if( exponent < 0.0 )
    {
@@ -1096,14 +1096,14 @@ SCIP_RETCODE buildPowEstimator(
       assert(childlb < 0.0); /* should hold due to previous if */
       assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
 
-      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
+      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coef, islocal, branchcand, success);
    }
    else
    {
       assert(exponent < 1.0); /* the only case that should be left */
       assert(exponent > 0.0); /* should hold due to previous if */
 
-      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
 
       /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
       *branchcand = *islocal;
