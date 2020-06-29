@@ -2939,6 +2939,7 @@ SCIP_RETCODE separateMcCormickImplicit(
       /* one iteration for underestimation and one for overestimation */
       for( j = 0; j < 2; ++j )
       {
+         /* if underestimate, separate auxexpr <= x*y; if !underestimate, separate x*y <= auxexpr */
          underestimate = j == 0;
          if( underestimate && bestunderestimators[i] != -1 )
             auxexpr = terms[i].auxexprs[bestunderestimators[i]];
