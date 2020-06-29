@@ -1105,7 +1105,7 @@ SCIP_Bool RatIsGTReal(
 
    if( rat->isinf )
    {
-      return rat->val < 0;
+      return (rat->val > 0) && (real < infinity);
    }
    else
    {
@@ -1141,7 +1141,7 @@ SCIP_Bool RatIsLTReal(
 
    if( rat->isinf )
    {
-      return rat->val < 0;
+      return (rat->val < 0) && (real > -infinity);
    }
    else
    {
