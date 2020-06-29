@@ -1247,6 +1247,7 @@ SCIP_RETCODE chooseRefpointsPow(
          addTangentRefpoints(scip, lb, ub, refpointsunder);
       else if( (concave && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)) ||
                (exponent < 0.0 && even && mixedsign) ) /* concave with finite bounds or mixed even hyperbola */
+         /* for secant, refpoint doesn't matter, but we add it to signal that the corresponding cut should be created */
          refpointsunder[0] = (lb + ub) / 2.0;
       else if( exponent > 1.0 && !even && mixedsign ) /* mixed signpower */
          SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, TRUE, refpointsunder) );
