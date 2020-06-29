@@ -1786,7 +1786,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
       /* make sure enough space is available in rowprep arrays */
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren+1) );
       assert(rowprep->varssize >= nchildren);
 
       constant = 0.0;
