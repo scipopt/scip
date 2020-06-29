@@ -1169,8 +1169,6 @@ SCIP_RETCODE addSignpowerRefpoints(
    else if( SCIPisInfinity(scip,  ub) )
       ub = -lb * exprdata->root + 1.0;
 
-   refpoints[0] = lb;
-   refpoints[2] = ub;
    if( underestimate )
    {
       /* secant point */
