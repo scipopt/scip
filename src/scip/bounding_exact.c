@@ -2614,9 +2614,17 @@ SCIP_RETCODE getPSdual(
 
    if( !usefarkas )
    {
-      RatSet(lpexact->lpobjval, dualbound);
-      lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
-      lp->hasprovedbound = TRUE;
+      if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
+      {
+         RatSet(lpexact->lpobjval, dualbound);
+         lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+         lp->hasprovedbound = TRUE;
+      }
+      else
+      {
+         lp->hasprovedbound = FALSE;
+         stat->nfailprojshift++;
+      }
    }
    else
    {
