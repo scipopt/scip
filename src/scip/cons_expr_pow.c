@@ -1243,11 +1243,6 @@ SCIP_RETCODE chooseRefpointsPow(
 
    if( underestimate )
    {
-      for( i = 0; i < 3; ++i )
-      {
-         refpointsunder[i] = SCIP_INVALID;
-      }
-
       if( convex )
          addTangentRefpoints(scip, lb, ub, refpointsunder);
       else if( (concave && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)) ||
@@ -1261,11 +1256,6 @@ SCIP_RETCODE chooseRefpointsPow(
 
    if( overestimate )
    {
-      for( i = 0; i < 3; ++i )
-      {
-         refpointsover[i] = SCIP_INVALID;
-      }
-
       if( convex && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
          refpointsover[0] = (lb + ub) / 2.0;
       else if( concave )
@@ -2032,8 +2022,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    SCIP_Bool islocal;
    SCIP_Bool branchcand;
    SCIP_Bool success;
-   SCIP_Real refpointsunder[3];
-   SCIP_Real refpointsover[3];
+   SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Real constant;
    int i;
    SCIP_ROWPREP* rowprep;
@@ -2724,8 +2714,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
    SCIP_Real exponent;
    SCIP_Bool branchcand;
    SCIP_Bool success;
-   SCIP_Real* refpointsunder;
-   SCIP_Real* refpointsover;
+   SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Real refpoint;
    SCIP_Real constant;
    int i;
@@ -2759,26 +2749,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
    exprdata = SCIPgetConsExprExprData(expr);
    exponent = exprdata->exponent;
    assert(exponent > 1.0); /* this should have been simplified */
-
-   refpointsunder = NULL;
-   refpointsover = NULL;
-
-   if( underestimate )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &refpointsunder, 3) );
-      for( i = 0; i < 3; ++i )
-      {
-         refpointsunder[i] = SCIP_INVALID;
-      }
-   }
-   if( overestimate )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &refpointsover, 3) );
-      for( i = 0; i < 3; ++i )
-      {
-         refpointsover[i] = SCIP_INVALID;
-      }
-   }
 
    if( childlb >= 0.0 )
    {
@@ -2867,9 +2837,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
       if( *infeasible )
          break;
    }
-
-   SCIPfreeBufferArrayNull(scip, &refpointsunder);
-   SCIPfreeBufferArrayNull(scip, &refpointsover);
 
    return SCIP_OKAY;
 }
