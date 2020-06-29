@@ -1203,8 +1203,10 @@ SCIP_RETCODE chooseRefpointsPow(
    SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
    SCIP_Real             lb,                 /**< lower bound on the child variable */
    SCIP_Real             ub,                 /**< upper bound on the child variable */
-   SCIP_Real*            refpointsunder,     /**< array to store reference points for underestimators (NULL if not needed) */
-   SCIP_Real*            refpointsover       /**< array to store reference points for overestimators (NULL if not needed) */
+   SCIP_Real*            refpointsunder,     /**< array to store reference points for underestimators */
+   SCIP_Real*            refpointsover,      /**< array to store reference points for overestimators */
+   SCIP_Bool             underestimate,      /**< whether refpoints for underestimation are needed */
+   SCIP_Bool             overestimate        /**< whether refpoints for overestimation are needed */
 )
 {
    SCIP_Bool convex;
@@ -1216,7 +1218,7 @@ SCIP_RETCODE chooseRefpointsPow(
 
    assert(scip != NULL);
    assert(exprdata != NULL);
-   assert(refpointsunder != NULL || refpointsover != NULL);
+   assert(refpointsunder != NULL && refpointsover != NULL);
 
    exponent = exprdata->exponent;
    even = EPSISINT(exponent, 0.0) && EPSISINT(exponent / 2.0, 0.0);
@@ -1239,7 +1241,7 @@ SCIP_RETCODE chooseRefpointsPow(
    else if( ub <= 0 || (exponent > 0.0 && exponent < 1.0) )
       concave = TRUE;
 
-   if( refpointsunder != NULL )
+   if( underestimate )
    {
       for( i = 0; i < 3; ++i )
       {
@@ -1257,7 +1259,7 @@ SCIP_RETCODE chooseRefpointsPow(
          assert((exponent < 0.0 && !even && mixedsign) || SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub));
    }
 
-   if( refpointsover != NULL )
+   if( overestimate )
    {
       for( i = 0; i < 3; ++i )
       {
@@ -2030,8 +2032,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    SCIP_Bool islocal;
    SCIP_Bool branchcand;
    SCIP_Bool success;
-   SCIP_Real* refpointsunder;
-   SCIP_Real* refpointsover;
+   SCIP_Real refpointsunder[3];
+   SCIP_Real refpointsover[3];
    SCIP_Real constant;
    int i;
    SCIP_ROWPREP* rowprep;
@@ -2076,15 +2078,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    }
    assert(isinteger || childlb >= 0.0);
 
-   refpointsunder = NULL;
-   refpointsover = NULL;
-
-   if( underestimate )
-      SCIP_CALL( SCIPallocBufferArray(scip, &refpointsunder, 3) );
-   if( overestimate )
-      SCIP_CALL( SCIPallocBufferArray(scip, &refpointsover, 3) );
-
-   SCIP_CALL( chooseRefpointsPow(scip, exprdata, childlb, childub, refpointsunder, refpointsover) );
+   SCIP_CALL( chooseRefpointsPow(scip, exprdata, childlb, childub, refpointsunder, refpointsover, underestimate,
+         overestimate) );
 
    *infeasible = FALSE;
    overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
@@ -2143,9 +2138,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
       if( *infeasible )
          break;
    }
-
-   SCIPfreeBufferArrayNull(scip, &refpointsunder);
-   SCIPfreeBufferArrayNull(scip, &refpointsover);
 
    return SCIP_OKAY;
 }
