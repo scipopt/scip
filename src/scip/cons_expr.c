@@ -512,7 +512,7 @@ SCIP_RETCODE freeEnfoData(
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
    expr->nenfos = 0;
 
-   /* we need to look at this in detect again */
+   /* we need to look at this expression in detect again */
    expr->enfoinitialized = FALSE;
 
    return SCIP_OKAY;
@@ -1657,7 +1657,7 @@ SCIP_RETCODE reversePropQueue(
       }
       else
       {
-         /* if node without enforcement (before detect), call reverse propagation callback of exprhdlr directly */
+         /* if expr without enforcement (before detect), call reverse propagation callback of exprhdlr directly */
          int nreds = 0;
 
 #ifdef SCIP_DEBUG
@@ -2177,7 +2177,7 @@ SCIP_RETCODE detectNlhdlr(
     * - if no auxiliary variable usage, then do not need sepabelow or sepaabove
     * - if auxiliary variable usage, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
     * - if auxiliary variable usage, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
-    * - if noone uses activity, then do not need activity methods
+    * - if no one uses activity, then do not need activity methods
     */
    enforcemethods = SCIP_CONSEXPR_EXPRENFO_NONE;
    if( expr->nauxvaruses == 0 )
@@ -2265,7 +2265,7 @@ SCIP_RETCODE detectNlhdlr(
          /* call inteval and reverse propagation of nlhdlr
           * This makes sure that additional activity tightening as provided by the nlhdlr will be applied now and not have to wait until some of
           * the original variables get a boundtightening.
-          * This can ensure that to be created auxiliary variables take only values that are within the domain of functions that use them,
+          * This can ensure that the to be created auxiliary variables take only values that are within the domain of the functions that will use them,
           * e.g., sqrt(x) in [-infty,infty] will ensure x >= 0, thus regardless of [-infty,infty] being pretty useless.
           * Another reason to do this already here is that LP solving and separation will be called next, which could already profit
           * from the tighter bounds (or: cons_expr_pow spits out a warning in separation if the child can be negative and exponent not integral).
@@ -2380,7 +2380,7 @@ SCIP_RETCODE detectNlhdlrs(
       assert((!SCIPconsIsSeparated(conss[i]) && !SCIPconsIsEnforced(conss[i])) || SCIPconsIsInitial(conss[i]));
 
       /* if constraint will be enforced, and we are in solve, then ensure auxiliary variable for root expression
-       *   this way we can treat the root expression like other expression when enforcing via separation
+       *   this way we can treat the root expression like any other expression when enforcing via separation
        * if constraint will be propagated, then register activity usage of root expression
        * this can trigger a call to forwardPropExpr, for which we better have the indetect flag set
        */
@@ -2417,10 +2417,10 @@ SCIP_RETCODE detectNlhdlrs(
          if( expr->enfoinitialized )
             continue;
 
-         /* if there is auxvar usage, then some-one requires that
+         /* if there is auxvar usage, then someone requires that
           *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
           *   thus, we need to find nlhdlrs that separate or estimate
-          * if there is activity usage, then there is some-one requiring that
+          * if there is activity usage, then there is someone requiring that
           *   activity of this expression is updated
           *   thus, we need to find nlhdlrs that do interval-evaluation
           */
@@ -2586,7 +2586,7 @@ SCIP_RETCODE initSolve(
    /* register non linear handlers */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible, nchgbds) );
 
-   /* if detect found problems to be infeasible, e.g., because of bounds, then stop */
+   /* if detect found out that the problem is infeasible, e.g., because of bounds, then stop */
    if( *infeasible )
       return SCIP_OKAY;
 
@@ -2652,7 +2652,7 @@ SCIP_RETCODE initSolve(
 
 /** deinitializes (pre)solving data of constraints
  *
- * This removes initialization data in a constraint that was created in initSolve().
+ * This removes the initialization data created in initSolve().
  *
  * This function can be called in presolve and solve.
  * TODO At the moment, it should not be called for a constraint if there are other constraints
@@ -6225,16 +6225,16 @@ SCIP_RETCODE initSepa(
          SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, TRUE, infeasible, NULL) );
          if( *infeasible )
          {
-            SCIPdebugMsg(scip, "infeasibility detected while tightening auxvar ub (%g) using lhs of constraint (%g)\n",
-               SCIPvarGetUbLocal(consdata->expr->auxvar), consdata->lhs);
+            SCIPdebugMsg(scip, "infeasibility detected while tightening auxvar lb (%g) using lhs of constraint (%g)\n",
+               SCIPvarGetLbLocal(consdata->expr->auxvar), consdata->lhs);
             break;
          }
 
          SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, TRUE, infeasible, NULL) );
          if( *infeasible )
          {
-            SCIPdebugMsg(scip, "infeasibility detected while tightening auxvar lb (%g) using rhs of constraint (%g)\n",
-               SCIPvarGetLbLocal(consdata->expr->auxvar), consdata->rhs);
+            SCIPdebugMsg(scip, "infeasibility detected while tightening auxvar ub (%g) using rhs of constraint (%g)\n",
+               SCIPvarGetUbLocal(consdata->expr->auxvar), consdata->rhs);
             break;
          }
       }
@@ -7529,7 +7529,9 @@ SCIP_RETCODE enforceExpr(
                "%g origviolation %g under:%d over:%d weak:%d\n", nlhdlr->name, (void*)expr, expr->exprhdlr->name,
                auxviol, origviol, underestimate, overestimate, allowweakcuts); )
 
-      /* if we want overestimation and violation w.r.t. auxiliary variables is also present on this side and nlhdlr wants to be called for separation on this side, then call separation of nlhdlr */
+      /* if we want to overestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
+       * wants to be called for separation on this side, then call separation of nlhdlr
+       */
       if( overestimate && auxoverestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0 )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
@@ -7575,7 +7577,9 @@ SCIP_RETCODE enforceExpr(
          }
       }
 
-      /* if we want underestimation and violation w.r.t. auxiliary variables is also present on this side and nlhdlr wants to be called for separation on this side, then call separation of nlhdlr */
+      /* if we want to underestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
+       * wants to be called for separation on this side, then call separation of nlhdlr
+       */
       if( underestimate && auxunderestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) != 0 )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
@@ -8010,7 +8014,7 @@ SCIP_RETCODE analyzeViolation(
          {
             SCIP_CONSEXPR_NLHDLR* nlhdlr;
 
-            /* some nlhdlr cannot produce an auxvalue if they are not separating, i.e., work on aux variables */
+            /* eval in auxvars is only defined for nlhdrs that separate; there might not even be auxvars otherwise */
             if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
                continue;
 
@@ -10524,6 +10528,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 
    /* simplify constraints and replace common subexpressions */
    SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
     * or if a constraint expression became constant
@@ -14343,7 +14348,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-   /* if a reversepropagation queue is given, then add expression to that queue if it should have a nlhdlr with a reverseprop callback or nlhdlrs are not initialized yet */
+   /* if a reversepropagation queue is given, then add expression to that queue if it should have a nlhdlr with a
+    * reverseprop callback or nlhdlrs are not initialized yet
+    */
    if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || !expr->enfoinitialized) )
    {
 #ifdef DEBUG_PROP
@@ -15165,7 +15172,7 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
  * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
  * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
  * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
- * - if useactivityforsepabelow or useactivityforsepaabove is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
  *   and also increments this count for all variables in the expression.
  *
  * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
@@ -15186,7 +15193,7 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    assert(conshdlr != NULL);
    assert(expr != NULL);
 
-   /* do not store auxvar request for variables */
+   /* do not store auxvar request for variable expressions */
    if( useauxvar && SCIPisConsExprExprVar(expr) )
       useauxvar = FALSE;
 
@@ -15195,8 +15202,8 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
         (expr->nauxvaruses == 0 && useauxvar)
       ) )
    {
-      /* if we already have ran detect of nlhdlrs on expr, then we need to redo this if
-       * the we will require additional enforcement methods, that is,
+      /* if we already have ran detect of nlhdlrs on expr, then we need to rerun detection if
+       * we require additional enforcement methods, that is,
        * - activity of expr was not used before but will be used now, or
        * - auxiliary variable of expr was not required before but will be used now
        */
@@ -15212,7 +15219,9 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    if( useactivityforsepabelow || useactivityforsepaabove )
       ++(expr->nactivityusessepa);
 
-   /* remember that SCIPregisterConsExprExprUsage() has been called with useactivityforsepa{below,above}=TRUE, used in detectNlhdlr() */
+   /* remember that SCIPregisterConsExprExprUsage() has been called with useactivityforsepa{below,above}=TRUE; this
+    * information is used in detectNlhdlr()
+    */
    if( useactivityforsepabelow )
       SCIPconshdlrGetData(conshdlr)->registerusesactivitysepabelow = TRUE;
    if( useactivityforsepaabove )

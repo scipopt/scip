@@ -1083,7 +1083,7 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
  * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
  * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
  * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
- * - if useactivityforsepabelow or useactivityforsepaabove is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
  *   and also increments this count for all variables in the expression.
  *
  * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
