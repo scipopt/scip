@@ -6785,9 +6785,9 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
    }
 
    if( SCIPsetIsSumZero(set, solcutoffdist) )
-      solcutoffdist = COPYSIGN(set->num_sumepsilon, solcutoffdist);
+      solcutoffdist = set->num_sumepsilon;
 
-   solcutoffdist = SCIProwGetLPFeasibility(row, set, stat, lp) / solcutoffdist; /*lint !e795*/
+   solcutoffdist = SCIProwGetLPFeasibility(row, set, stat, lp) / ABS(solcutoffdist); /*lint !e795*/
 
    return solcutoffdist;
 }
