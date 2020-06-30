@@ -5485,6 +5485,10 @@ SCIP_RETCODE propagateTTEF(
        */
       if( infeasible )
       {
+         /* a small performance improvement is possible here: if the tighten...TEFF and propagate...TEFF methods would
+          * return not only the inferinfos, but the actual begin and end values, then the infeasibility here could also
+          * be analyzed in the case when begin and end exceed the 15 bit limit
+          */
          if( SCIPisConflictAnalysisApplicable(scip) && inferInfoIsValid(intToInferInfo(ubinferinfos[v])) )
          {
             INFERINFO inferinfo;
