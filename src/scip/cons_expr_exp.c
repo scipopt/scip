@@ -309,7 +309,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
                &success) );
       }
 
-      if( success )
+      /* if cleanup removed a variable, the cut is essentially a bound -> skip it */
+      if( success && rowprep->nvars == 2 )
       {
          /* add the cut */
          SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
