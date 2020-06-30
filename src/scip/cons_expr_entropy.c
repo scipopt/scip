@@ -551,7 +551,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
          assert(lb > 0.0 && ub >= 0.0);
          assert(ub - lb != 0.0);
 
-         *(rowprep->coefs) = (-lb * log(lb) - ub * log(ub)) / (ub - lb);
+         *(rowprep->coefs) = (-ub * log(ub) + lb * log(lb)) / (ub - lb);
          constant = -ub * log(ub) - *(rowprep->coefs) * ub;
          assert(SCIPisEQ(scip, constant, -lb * log(lb) - *(rowprep->coefs) * lb));
       }
