@@ -372,8 +372,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
 
       if( overest[i] )
          SCIPaddLogLinearization(scip, refpointsover[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success);
-
-      if( !overest[i] )
+      else
          SCIPaddLogSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
 
       if( success )

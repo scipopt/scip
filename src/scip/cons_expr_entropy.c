@@ -447,7 +447,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
 
       *islocal = TRUE;
    }
-   /* use gradient cut for underestimate (globally valid) */
+   /* use gradient cut for overestimate (globally valid) */
    else
    {
       SCIP_Real refpoint;
@@ -478,6 +478,108 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
       return SCIP_OKAY;
 
    *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** init sepa callback that initializes LP */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
+{  /*lint --e{715}*/
+   SCIP_Real refpointsover[3];
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_ROWPREP* rowprep;
+   SCIP_Real constant;
+   SCIP_Bool success;
+   int i;
+   SCIP_Bool* overest;
+   SCIP_ROW* row;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   /* get expression data */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   lb = SCIPvarGetLbLocal(childvar);
+   ub = SCIPvarGetUbLocal(childvar);
+
+   if( SCIPisEQ(scip, lb, ub) )
+      return SCIP_OKAY;
+
+   /* adjust lb */
+   lb = MAX(lb, MIN(0.5 * lb + 0.5 * ub, 0.1));
+
+   if( overestimate )
+   {
+      refpointsover[0] = lb;
+      refpointsover[1] = SCIPisInfinity(scip, ub) ? lb + 2.0 : (lb + ub) / 2;
+      refpointsover[2] = SCIPisInfinity(scip, ub) ? lb + 20.0 : ub;
+   }
+
+   *infeasible = FALSE;
+   overest = (SCIP_Bool[4]) {TRUE, TRUE, TRUE, FALSE};
+
+   for( i = 0; i < 4; ++i )
+   {
+      if( (overest[i] && !overestimate) || (!overest[i] && (!underestimate || SCIPisInfinity(scip, ub))) )
+         continue;
+
+      assert(i == 3 || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb)));
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, !overest[i]) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+
+      if( overest[i] )
+      {
+         /* -x*(1+log(x*)) + x* <= -x*log(x) */
+         *(rowprep->coefs) = -(1.0 + log(refpointsover[i]));
+         constant = refpointsover[i];
+      }
+      else
+      {
+         assert(lb > 0.0 && ub >= 0.0);
+         assert(ub - lb != 0.0);
+
+         *(rowprep->coefs) = (-lb * log(lb) - ub * log(ub)) / (ub - lb);
+         constant = -ub * log(ub) - *(rowprep->coefs) * ub;
+         assert(SCIPisEQ(scip, constant, -lb * log(lb) - *(rowprep->coefs) * lb));
+      }
+
+      rowprep->nvars = 1;
+      rowprep->vars[0] = childvar;
+      rowprep->side = -constant;
+
+      /* add auxiliary variable */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+      /* straighten out numerics */
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
+            &success) );
+
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
+   }
 
    return SCIP_OKAY;
 }
