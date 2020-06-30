@@ -1377,6 +1377,7 @@ SCIP_RETCODE psComputeSintPointRay(
    SCIP_Rational* tmp;   
    SCIP_Rational* alpha; 
    SCIP_Rational* beta;  
+   SCIP_RETCODE retcode;
 
    /* lpiexact and data used for the aux. problem */
    SCIP_LPIEXACT* pslpiexact;
@@ -1511,7 +1512,12 @@ SCIP_RETCODE psComputeSintPointRay(
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
       /* solve the LP */
-      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
+      retcode = SCIPlpiExactSolveDual(pslpiexact);
+      if( retcode == SCIP_LPERROR )
+      {
+         projshiftdata->projshiftdatafail = TRUE;
+         SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
+      }
 
       /* recover the optimal solution and set interior point and slack in constraint handler data */
       if( SCIPlpiExactIsOptimal(pslpiexact) )
@@ -1545,6 +1551,7 @@ SCIP_RETCODE psComputeSintPointRay(
       else
       {
          SCIP_CALL( printlpiexacterr( pslpiexact ) );
+         projshiftdata->projshiftdatafail = TRUE;
       }
    }
    /* use 'a'rbitrary interior point */
@@ -1618,7 +1625,12 @@ SCIP_RETCODE psComputeSintPointRay(
 
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
-      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
+      retcode = SCIPlpiExactSolveDual(pslpiexact);
+      if( retcode == SCIP_LPERROR )
+      {
+         projshiftdata->projshiftdatafail = TRUE;
+         SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
+      }
 
       if( SCIPlpiExactIsOptimal(pslpiexact) )
       {
@@ -1654,6 +1666,7 @@ SCIP_RETCODE psComputeSintPointRay(
       else
       {
          SCIP_CALL( printlpiexacterr( pslpiexact ) );
+         projshiftdata->projshiftdatafail = TRUE;
       }
    }
    /* use 'A'rbitrary interior point in transposed form*/
@@ -1708,7 +1721,12 @@ SCIP_RETCODE psComputeSintPointRay(
 
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
-      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
+      retcode = SCIPlpiExactSolveDual(pslpiexact);
+      if( retcode == SCIP_LPERROR )
+      {
+         projshiftdata->projshiftdatafail = TRUE;
+         SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
+      }
 
       if( SCIPlpiExactIsOptimal(pslpiexact) )
       {
@@ -1818,7 +1836,12 @@ SCIP_RETCODE psComputeSintPointRay(
             NULL, psnnonz, psbeg, psind, psval) );
 
       /* solve the LP */
-      SCIP_CALL( SCIPlpiExactSolveDual(pslpiexact) );
+      retcode = SCIPlpiExactSolveDual(pslpiexact);
+      if( retcode == SCIP_LPERROR )
+      {
+         projshiftdata->projshiftdatafail = TRUE;
+         SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
+      }
 
       /* get state and solution of lpiexact that was just solved */
       SCIP_CALL( SCIPlpiExactGetState(pslpiexact, blkmem, &lpistate) );
@@ -1874,7 +1897,12 @@ SCIP_RETCODE psComputeSintPointRay(
       SCIP_CALL( SCIPlpiExactSetState(pslpiexact, blkmem, lpistate) );
 
       /* reoptimizing using primal simplex seems MUCH faster here, warm start basis is primal feasible */
-      SCIP_CALL( SCIPlpiExactSolvePrimal(pslpiexact) );
+      retcode = SCIPlpiExactSolvePrimal(pslpiexact);
+      if( retcode == SCIP_LPERROR )
+      {
+         projshiftdata->projshiftdatafail = TRUE;
+         SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
+      }
       SCIP_CALL( SCIPlpiExactFreeState(pslpiexact, blkmem, &lpistate) );
 
         /* recover the optimal solution and set interior point and slack in constraint handler data */
@@ -1903,6 +1931,7 @@ SCIP_RETCODE psComputeSintPointRay(
       else
       {
          SCIP_CALL( printlpiexacterr(pslpiexact) );
+         projshiftdata->projshiftdatafail = TRUE;
       }
    }
    else
@@ -2206,7 +2235,7 @@ SCIP_RETCODE getPSdual(
       /* in case we want to prove infeasibility it might be that we were not able to compute a dual solution
        * with bound exceeding objective value; in this case dual solution is set to SCIP_INVALID
        */
-      if( (!usefarkas && SCIProwGetDualsol(lp->rows[i]) == SCIP_INVALID) || (usefarkas && SCIProwGetDualfarkas(lp->rows[i]) == SCIP_INVALID) )
+      if( (!usefarkas && REALABS(SCIProwGetDualsol(lp->rows[i])) >= SCIPsetInfinity(set)) || (usefarkas && REALABS(SCIProwGetDualfarkas(lp->rows[i])) >= SCIPsetInfinity(set)) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
