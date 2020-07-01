@@ -2417,11 +2417,11 @@ SCIP_RETCODE detectNlhdlrs(
             continue;
 
          /* if there is auxvar usage, then someone requires that
-          *   an auxvar equals (or approximates) the value of this expression or we are at the root expression (expr==consdata->expr)
+          *   auxvar == expr (or auxvar >= expr or auxvar <= expr) or we are at the root expression (expr==consdata->expr)
           *   thus, we need to find nlhdlrs that separate or estimate
           * if there is activity usage, then there is someone requiring that
-          *   activity of this expression is updated
-          *   thus, we need to find nlhdlrs that do interval-evaluation
+          *   activity of this expression is updated; this someone would also benefit from better bounds on the activity
+          *   of this expression thus, we need to find nlhdlrs that do interval-evaluation
           */
          if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
