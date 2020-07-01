@@ -15047,7 +15047,7 @@ SCIP_RETCODE SCIPgetConsExprExprMonotonicity(
    /* check whether the expression handler implements the monotonicity callback */
    if( expr->exprhdlr->monotonicity != NULL )
    {
-      SCIP_CALL_ABORT( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, childidx, monotonicity) );
+      SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, childidx, monotonicity) );
    }
 
    return SCIP_OKAY;
