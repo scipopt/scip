@@ -282,7 +282,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
       if( overest[i] && (!overestimate || SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb)) )
          continue;
 
-      assert(i == 3 || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb)));
+      assert(overest[i] || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb)));
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, overest[i]) );
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
