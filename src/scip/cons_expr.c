@@ -442,7 +442,7 @@ SCIP_RETCODE freeAuxVar(
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
 
-      SCIP_CALL( SCIPdropVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, expr->auxfilterpos) );
+      SCIP_CALL( SCIPdropVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, expr->auxfilterpos) );
       expr->auxfilterpos = -1;
    }
 
@@ -3210,7 +3210,11 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          assert(conss[c] != NULL);  /*lint !e613*/
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
 
-         /* if boundtightening, then mark constraints to be propagated again */
+         /* if boundtightening, then mark constraints to be propagated again
+          * TODO we could try be more selective here and only trigger a propagation if a relevant bound has changed,
+          *   that is, we don't need to repropagate x + ... <= rhs if only the upper bound of x has been tightened
+          *   the locks could help if they were available on a per-constraint base, but they aren't (and it may not be worth it)
+          */
          if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
          {
             consdata->ispropagated = FALSE;
@@ -3233,6 +3237,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
+
+      /* for auxvars, we only catched boundrelaxed events */
+      assert(SCIPisConsExprExprVar(expr) || (eventtype & SCIP_EVENTTYPE_BOUNDRELAXED));
 
       if( conshdlr == NULL )
          conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -6074,7 +6081,10 @@ SCIP_RETCODE createAuxVar(
 
    SCIPdebugMsg(scip, "added auxiliary variable <%s> [%g,%g] for expression %p\n", SCIPvarGetName(expr->auxvar), SCIPvarGetLbGlobal(expr->auxvar), SCIPvarGetUbGlobal(expr->auxvar), (void*)expr);
 
-   /* add variable locks in both directions */
+   /* add variable locks in both directions
+    * TODO should be sufficient to lock only according to expr->nlockspos/neg,
+    *   but then we need to also update the auxvars locks when the expr locks change
+    */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, 1, 1) );
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -6087,9 +6097,12 @@ SCIP_RETCODE createAuxVar(
    }
 #endif
 
-   /* catch bound change events on this variable, since bounds on this variable take part of activity computation */
+   /* catch bound relaxation event on this variable, since bounds on this variable can be used to tighten activity of expr
+    * TODO we could skip this if the activity of the expr not computed (because it is not used)
+    * currently we do not repropagate constraints when only an auxiliary variable gets tightened
+    */
    assert(expr->auxfilterpos == -1);
-   SCIP_CALL( SCIPcatchVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, &expr->auxfilterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, &expr->auxfilterpos) );
 
    return SCIP_OKAY;
 }
