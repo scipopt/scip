@@ -953,7 +953,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
       children = SCIPgetConsExprExprChildren(expr);
       assert(children != NULL);
 
-      /* detection is only successful if both children have will have auxiliary variable or are variables that are not binary variables */
+      /* detection is only successful if both children will have auxiliary variable or are variables that are not binary variables */
       valid = TRUE;
       for( c = 0; c < 2; ++c )
       {

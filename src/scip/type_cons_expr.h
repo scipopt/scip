@@ -645,16 +645,16 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - SCIP_CONSEXPR_EXPRENFO_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
  * - SCIP_CONSEXPR_EXPRENFO_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
  *
- * On input, parameter enforcing indicates for any of these methods, whether
- * - it is not necessary to have such a method, e.g., because no auxvar will exist for expr, or noone uses or set activities of this expression,
+ * On input, parameter 'enforcing' indicates for any of these methods, whether
+ * - it is not necessary to have such a method, e.g., because no auxvar will exist for expr, or no one uses or set activities of this expression,
  *   or due to analysis of the expression, expr >= auxvar is not necessary to be satisfied,
  * - or there already exists a nonlinear handler that will provide this method in an "enforcement" sense, that is,
- *   it believes that noone else could provide this method in a stronger sense. (This is mainly used by the default nlhdlr to check whether
+ *   it believes that no one else could provide this method in a stronger sense. (This is mainly used by the default nlhdlr to check whether
  *   it should still reach out to the exprhdlr or whether is dominated by some nonlinear handler.)
  *
- * The DETECT callback shall augment the enforcing bitmask by setting the enforcement methods it wants to provide in an "enforcement" sense.
+ * The DETECT callback shall augment the 'enforcing' bitmask by setting the enforcement methods it wants to provide in an "enforcement" sense.
  *
- * Additional, the participating bitmask shall be set if the nonlinear handler wants to be called on this expression at all.
+ * Additionally, the 'participating' bitmask shall be set if the nonlinear handler wants to be called on this expression at all.
  * Here, it shall set all methods that it wants to provide, which are those set in enforcing, but additionally those where it wants
  * to participate but leave enforcement to another nlhdlr.
  * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g., a handler that only contributes
@@ -666,7 +666,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - INTEVAL and/or REVERSEPROP will be called if SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set
  * If SCIP_CONSEXPR_EXPRENFO_SEPABELOW or SCIP_CONSEXPR_EXPRENFO_SEPAABOVE has been set, then at least one of the
  * callbacks ENFO and ESTIMATE need to be implemented. Also EVALAUX will be called in this case.
- * If SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP need to be implemented.
+ * If SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP needs to be implemented.
  * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata and can leave participating at its
  * initial value (SCIP_CONSEXPR_EXPRENFO_NONE).
  *
@@ -677,7 +677,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - it will use activity for some subexpressions when for INTEVAL or REVERSEPROP.
  *
  * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterConsExprExprUsage().
- *   They will be available when the INITSEPA call is called.
+ *   They will be available when the INITSEPA callback is called.
  *
  * - scip SCIP data structure
  * - conshdlr expr-constraint handler

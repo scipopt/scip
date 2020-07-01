@@ -54,8 +54,8 @@ SCIP_RETCODE evalExprInAux(
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[c]);
-      /* there should be an auxiliary variable, because we created them in detect for every child if we said that we will separate
-       * at the moment, EVALAUX should only be called for nlhdlr for which we said that we will separate
+      /* there should be an auxiliary variable, because we created them in detect for every child if we said that we will separate;
+       * at the moment, EVALAUX should only be called for nlhdlrs that said they will separate
        * if that changes, then we should handle this here, e.g., via *val = SCIPgetConsExprExprValue(expr); break;
        */
       assert(childvar != NULL);
@@ -90,7 +90,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
    {
-      /* having reverseprop but no inteval is something that we don't support at the moment for simplicity */
+      /* expr handlers having reverseprop but no inteval is something that we don't support at the moment for simplicity */
       assert(!SCIPhasConsExprExprHdlrReverseProp(exprhdlr) || SCIPhasConsExprExprHdlrIntEval(exprhdlr));
 
       /* participate in inteval and/or reverseprop if that is not yet provided in enforcing and we have inteval */

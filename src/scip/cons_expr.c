@@ -14241,7 +14241,7 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * since last evaluation.
  *
  * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
- *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
+ *       @ref SCIPincrementConsExprCurBoundsTag before and after calling @ref SCIPevalConsExprExprActivity.
  */
 SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */

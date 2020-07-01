@@ -1106,7 +1106,7 @@ SCIP_RETCODE collectLeafs(
 
       child = SCIPexpriteratorGetChildExprDFS(it);
 
-      /* if to to-be-visited child has children, then it doesn't need to be replaced by a new expression (representing the auxvar) */
+      /* if the to-be-visited child has children, then it doesn't need to be replaced by a new expression (representing the auxvar) */
       if( SCIPgetConsExprExprNChildren(child) > 0 )
          continue;
 

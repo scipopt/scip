@@ -360,7 +360,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       SCIPdebugMsg(scip, "expr %p is convex when replacing factors of bilinear terms, bases of squares and every other term by their aux vars\n",
             (void*)expr);
 
-      /* we will estimate the expression from below, that is handle expr <= auxvar */
+      /* we will estimate the expression from below, that is, handle expr <= auxvar */
       *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
       *enforcing |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    }
@@ -369,7 +369,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       SCIPdebugMsg(scip, "expr %p is concave when replacing factors of bilinear terms, bases of squares and every other term by their aux vars\n",
             (void*)expr);
 
-      /* we will estimate the expression from above, that is handle expr >= auxvar */
+      /* we will estimate the expression from above, that is, handle expr >= auxvar */
       *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
       *enforcing |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
    }
@@ -459,7 +459,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
    assert(success != NULL);
 
    /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them, but it does not separate these; we should not be called to estimate on indefinite quadratics, though
+    * propagate them, but it does not separate these; however, we should not be called to estimate on indefinite quadratics
     */
    assert(nlhdlrexprdata->curvature != SCIP_EXPRCURV_UNKNOWN);
    assert(!overestimate || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE);

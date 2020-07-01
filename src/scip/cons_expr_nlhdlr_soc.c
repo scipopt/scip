@@ -99,7 +99,7 @@
  */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
-   SCIP_CONSEXPR_EXPR**  vars;               /**< expressions which variables appear on both sides (x) */
+   SCIP_CONSEXPR_EXPR**  vars;               /**< expressions which (aux)variables appear on both sides (x) */
    SCIP_Real*            offsets;            /**< offsets of both sides (beta_i) */
    SCIP_Real*            transcoefs;         /**< non-zeros of linear transformation vectors (v_i) */
    int*                  transcoefsidx;      /**< mapping of transformation coefficients to variable indices in vars */
