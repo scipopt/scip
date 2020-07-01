@@ -257,7 +257,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
    lb = SCIPvarGetLbLocal(childvar);
    ub = SCIPvarGetUbLocal(childvar);
 
-   if( overestimate )
+   if( underestimate )
    {
       SCIP_Real lbfinite;
       SCIP_Real ubfinite;
