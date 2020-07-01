@@ -35,13 +35,13 @@
 #define NLHDLR_DETECTPRIORITY     -20 /**< detect last so that to make use of what other handlers detected */
 #define NLHDLR_ENFOPRIORITY       125 /**< enforce first because perspective cuts are always stronger */
 
-#define DEFAULT_DETECTSUM         FALSE /**< TODO this is not used currently */
-#define DEFAULT_MULTCUTS          TRUE  /**< TODO this is not used currently */
 #define DEFAULT_MAXPROPROUNDS     1     /**< maximal number of propagation rounds in probing */
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
 #define DEFAULT_MINVIOLPROBING    1e-05 /**< minimal violation w.r.t. auxiliary variables for applying probing */
 #define DEFAULT_PROBINGONLYINSEPA TRUE  /**< whether to do probing only in separation loop */
-#define DEFAULT_DOPROBING         2     /**< if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable) */
+#define DEFAULT_PROBINGFREQ       2     /**< if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable) */
+#define DEFAULT_CONVEXONLY        FALSE /**< whether perspective cuts are added only for convex expressions */
+#define DEFAULT_TIGHTENBOUNDS     TRUE  /**< whether variable semicontinuity is used to tighten variable bounds */
 
 /*
  * Data structures
@@ -92,13 +92,13 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_HASHMAP*         scvars;             /**< maps semicontinuous variables to their on/off bounds */
 
    /* parameters */
-   SCIP_Bool             detectsum;          /**< whether to run detection when the root of an expression is a sum */
-   SCIP_Bool             multcuts;           /**< whether to add cuts for all suitable indicator variables */
    int                   maxproprounds;      /**< maximal number of propagation rounds in probing */
    SCIP_Real             mindomreduction;    /**< minimal relative reduction in a variable's domain for applying probing */
    SCIP_Real             minviolprobing;     /**< minimal violation w.r.t. auxiliary variables for applying probing */
    SCIP_Bool             probingonlyinsepa;  /**< whether to do probing only in separation loop */
-   int                   doprobing;          /**< if and when to do probing */
+   int                   probingfreq;        /**< if and when to do probing */
+   SCIP_Bool             convexonly;         /**< whether perspective cuts are added only for convex expressions */
+   SCIP_Bool             tightenbounds;      /**< whether variable semicontinuity is used to tighten variable bounds */
 };
 
 /*
@@ -1251,7 +1251,8 @@ SCIP_RETCODE analyseVarOnoffBounds(
             return SCIP_OKAY;
          }
       }
-      else if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
+      else if( nlhdlrdata->tightenbounds &&
+              (SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5) )
       {
          /* indicator is fixed; due to a previous check, here it can only be fixed to indvalue;
           * therefore, sclb is valid for the current node
@@ -1263,7 +1264,9 @@ SCIP_RETCODE analyseVarOnoffBounds(
             SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
          }
          else
+         {
             SCIP_CALL( SCIPtightenVarLb(scip, var, sclb, FALSE, infeas, &bndchgsuccess) );
+         }
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -1285,7 +1288,8 @@ SCIP_RETCODE analyseVarOnoffBounds(
             return SCIP_OKAY;
          }
       }
-      else if( SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5 )
+      else if( nlhdlrdata->tightenbounds &&
+              (SCIPvarGetUbLocal(indicator) <= 0.5 || SCIPvarGetLbLocal(indicator) >= 0.5) )
       {
          /* indicator is fixed; due to a previous check, here it can only be fixed to indvalue;
           * therefore, scub is valid for the current node
@@ -1297,7 +1301,9 @@ SCIP_RETCODE analyseVarOnoffBounds(
             SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
          }
          else
+         {
             SCIP_CALL( SCIPtightenVarUb(scip, var, scub, FALSE, infeas, &bndchgsuccess) );
+         }
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -1424,8 +1430,6 @@ SCIP_RETCODE analyseOnoffBounds(
    {
       *doprobing = FALSE;
    }
-
-   /* TODO only report SCIP_REDUCEDDOM if the new bounds cut off the current solution? */
 
    return SCIP_OKAY;
 }
@@ -1801,6 +1805,14 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrdata != NULL);
 
+   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
+   if( nlhdlrdata->convexonly )
+   {
+      if( (!overestimate && SCIPgetConsExprExprCurvature(expr) != SCIP_EXPRCURV_CONVEX) ||
+          (overestimate && SCIPgetConsExprExprCurvature(expr) != SCIP_EXPRCURV_CONCAVE) )
+         return SCIP_OKAY;
+   }
+
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
@@ -1843,8 +1855,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          doprobing = TRUE;
    }
 
-   if( nlhdlrdata->doprobing == 0 ||
-      (nlhdlrdata->doprobing == 1 && (int) SCIPgetCurrentNode(scip)->depth > SCIPgetEffectiveRootDepth(scip)) )
+   if( nlhdlrdata->probingfreq == 0 ||
+      (nlhdlrdata->probingfreq == 1 && (int) SCIPgetCurrentNode(scip)->depth > SCIPgetEffectiveRootDepth(scip)) )
       doprobing = FALSE;
 
    if( nlhdlrdata->probingonlyinsepa && addbranchscores )
@@ -1854,7 +1866,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
     * and we are not in probing or a subscip
     * TODO use (updated) ndomainuses
     */
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
    if( SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 ||
       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
       (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) )
@@ -2622,14 +2633,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
       NLHDLR_ENFOPRIORITY, nlhdlrDetectPerspective, nlhdlrEvalauxPerspective, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/detectsum",
-      "whether to run convexity detection when the root of an expression is a sum",
-      &nlhdlrdata->detectsum, FALSE, DEFAULT_DETECTSUM, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/multcuts",
-      "whether to add cuts for all suitable indicator variables",
-      &nlhdlrdata->multcuts, FALSE, DEFAULT_MULTCUTS, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/maxproprounds",
            "maximal number of propagation rounds in probing",
            &nlhdlrdata->maxproprounds, FALSE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX, NULL, NULL) );
@@ -2646,9 +2649,17 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
            "whether to do probing only in separation",
            &nlhdlrdata->probingonlyinsepa, FALSE, DEFAULT_PROBINGONLYINSEPA, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/doprobing",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/probingfreq",
            "if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable)",
-           &nlhdlrdata->doprobing, FALSE, DEFAULT_DOPROBING, 0, 2, NULL, NULL) );
+           &nlhdlrdata->probingfreq, FALSE, DEFAULT_PROBINGFREQ, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/convexonly",
+           "whether perspective cuts are added only for convex expressions",
+           &nlhdlrdata->convexonly, FALSE, DEFAULT_CONVEXONLY, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/tightenbounds",
+           "whether variable semicontinuity is used to tighten variable bounds",
+           &nlhdlrdata->tightenbounds, FALSE, DEFAULT_TIGHTENBOUNDS, NULL, NULL) );
 
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
