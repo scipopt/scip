@@ -2380,6 +2380,17 @@ SCIP_RETCODE detectNlhdlrs(
        */
       assert((!SCIPconsIsSeparated(conss[i]) && !SCIPconsIsEnforced(conss[i])) || SCIPconsIsInitial(conss[i]));
 
+      /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+       * then we would normally skip to run DETECT again
+       * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
+       * thus, if expr is the root expression, we rerun DETECT
+       */
+      if( consdata->expr->nenfos > 0 )
+      {
+         SCIP_CALL( freeEnfoData(scip, conshdlr, consdata->expr, FALSE) );
+         assert(consdata->expr->nenfos < 0);
+      }
+
       /* if constraint will be enforced, and we are in solve, then ensure auxiliary variable for root expression
        *   this way we can treat the root expression like any other expression when enforcing via separation
        * if constraint will be propagated, then register activity usage of root expression
@@ -2398,22 +2409,7 @@ SCIP_RETCODE detectNlhdlrs(
       /* run detectNlhdlr on all expr where required */
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
       {
-         if( expr->nenfos > 0 )
-         {
-            /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
-             * then also the subtree has been investigated already and we can stop iterating further down
-             * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
-             * thus, if expr is the root expression, then rerun DETECT
-             */
-
-            if( expr == consdata->expr )
-            {
-               SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
-               assert(expr->nenfos < 0);
-            }
-         }
-
-         /* skip exprs that we already looked at (but did not do freeEnfoData again) */
+         /* skip exprs that we already looked at */
          if( expr->nenfos >= 0 )
             continue;
 
