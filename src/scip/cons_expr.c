@@ -1338,7 +1338,7 @@ SCIP_RETCODE forwardPropExpr(
                      *infeasible = TRUE;
                }
 
-#ifndef NDEBUG
+#ifdef SCIP_DISABLED_CODE  /* disabled for now, as tightening in auxvarbound does not increase curboundstag anymore, so we cannot assert this anymore */
                /* We do not check here whether the child should be added to the reversepropqueue.
                 * This should have happened when the activitytag of the child was set to curboundstag, I believe.
                 * So we can assert that the child activity should be a subset of the auxiliary variable bounds.
