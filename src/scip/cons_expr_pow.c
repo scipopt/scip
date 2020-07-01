@@ -1212,7 +1212,6 @@ SCIP_RETCODE chooseRefpointsPow(
    SCIP_Bool convex;
    SCIP_Bool concave;
    SCIP_Bool mixedsign;
-   int i;
    SCIP_Bool even;
    SCIP_Real exponent;
 
