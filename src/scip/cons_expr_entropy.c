@@ -459,10 +459,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
          if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
             return SCIP_OKAY;
 
-         if( SCIPvarGetUbLocal(childvar) < 0.2 )
-            refpoint = 0.5 * SCIPvarGetLbLocal(childvar) + 0.5 * SCIPvarGetUbLocal(childvar);
-         else
-            refpoint = 0.1;
+         refpoint = SCIPepsilon(scip);
       }
 
       /* -x*(1+log(x*)) + x* <= -x*log(x) */
@@ -518,7 +515,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
       return SCIP_OKAY;
 
    /* adjust lb */
-   lb = MAX(lb, MIN(0.5 * lb + 0.5 * ub, 0.1));
+   lb = MAX(lb, SCIPepsilon(scip));
 
    if( overestimate )
    {
