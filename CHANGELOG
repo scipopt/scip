@@ -117,6 +117,8 @@ Build system
 Fixed bugs
 ----------
 
+- Fixed overflow in inference information of cumulative constraint handler
+
 Miscellaneous
 -------------
 
