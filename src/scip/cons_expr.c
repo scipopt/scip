@@ -2446,6 +2446,7 @@ SCIP_RETCODE detectNlhdlrs(
       }
    }
 
+#if 0
    /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSACTIVE
     * is called in a local node
     */
@@ -2453,6 +2454,14 @@ SCIP_RETCODE detectNlhdlrs(
    {
       SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
+#else
+   /* ensure that all activities are reevaluated in a following propConss
+    * The SCIPregisterConsExprExprUsage() for each constraint (see above) will already have reevaluated all activities,
+    * which means that a following propConss will skip all constraints. But in propagation we collect candidates for
+    * re-propagate during forwardPropExpr(), so we need to make sure that it will be run again. (TODO: this should work differently)
+    */
+   SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
+#endif
 
    SCIPexpriteratorFree(&it);
    SCIPfreeBufferArray(scip, &nlhdlrenfobuffer);
