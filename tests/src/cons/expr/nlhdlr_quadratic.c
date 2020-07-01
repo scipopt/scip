@@ -256,7 +256,6 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata;
    expr->nenfos = 1;
    expr->enfos[0]->issepainit = FALSE;
-   expr->enfoinitialized = TRUE;
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

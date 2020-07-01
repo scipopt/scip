@@ -366,6 +366,7 @@ SCIP_RETCODE createExpr(
    (*expr)->exprdata = exprdata;
    (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
    (*expr)->auxfilterpos = -1;
+   (*expr)->nenfos = -1;
 
    /* initialize an empty interval for interval evaluation */
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->activity);
@@ -510,10 +511,9 @@ SCIP_RETCODE freeEnfoData(
 
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &expr->enfos, expr->nenfos);
-   expr->nenfos = 0;
 
    /* we need to look at this expression in detect again */
-   expr->enfoinitialized = FALSE;
+   expr->nenfos = -1;
 
    return SCIP_OKAY;
 }
@@ -1302,12 +1302,12 @@ SCIP_RETCODE forwardPropExpr(
       return SCIP_OKAY;
    }
 
-   /* if activity of rootexpr is not used, but expr participated in detect, then we do nothing
+   /* if activity of rootexpr is not used, but expr participated in detect (nenfos >= 0), then we do nothing
     * it seems wrong to be called for such an expression (unless we are in detect at the moment), so I add a SCIPABORT()
     * during detect, we are in some in-between state where we may want to eval activity
     * on exprs that we did not notify about their activity usage
     */
-   if( rootexpr->enfoinitialized && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 && !conshdlrdata->indetect)
+   if( rootexpr->nenfos >= 0 && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 && !conshdlrdata->indetect)
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "root expr activity is not used but enfo initialized, skip inteval\n");
@@ -1394,8 +1394,8 @@ SCIP_RETCODE forwardPropExpr(
                break;
             }
 
-            /* if activity of expr is not used, but expr participated in detect, then do nothing */
-            if( expr->enfoinitialized && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && !conshdlrdata->indetect )
+            /* if activity of expr is not used, but expr participated in detect (nenfos >= 0), then do nothing */
+            if( expr->nenfos >= 0 && expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && !conshdlrdata->indetect )
             {
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, "expr %p activity is not used but enfo initialized, skip inteval\n", (void*)expr);
@@ -1665,8 +1665,8 @@ SCIP_RETCODE reversePropQueue(
          SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->activity.inf, expr->activity.sup, expr->exprhdlr->name);
 #endif
 
-         /* if someone added an expr without nlhdlr into the reversepropqueue, then this must be because its enfo hasn't been initialized yet (detectNlhdlr) */
-         assert(!expr->enfoinitialized);
+         /* if someone added an expr without nlhdlr into the reversepropqueue, then this must be because its enfo hasn't been initialized in detectNlhdlr yes (nenfos < 0) */
+         assert(expr->nenfos < 0);
 
          /* call the reverseprop of the exprhdlr */
          SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, conshdlr, expr, queue, infeasible, &nreds, force) );
@@ -1686,7 +1686,7 @@ SCIP_RETCODE reversePropQueue(
 
             child = SCIPgetConsExprExprChildren(expr)[i];
 
-            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0 || !child->enfoinitialized) )
+            if( !child->inqueue && SCIPgetConsExprExprNChildren(child) > 0 && (child->nactivityusesprop > 0 || child->nactivityusessepa > 0 || child->nenfos < 0) )
             {
                /* SCIPdebugMsg(scip, "allexprs: insert expr <%p> (%s) into reversepropqueue\n", (void*)child, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child))); */
                SCIP_CALL( SCIPqueueInsert(queue, (void*) child) );
@@ -2168,8 +2168,8 @@ SCIP_RETCODE detectNlhdlr(
    assert(conshdlrdata->auxvarid >= 0);
    assert(!conshdlrdata->indetect);
 
-   /* there should be no enforcer yet, i.e., detection should not have been run already */
-   assert(expr->nenfos == 0);
+   /* there should be no enforcer yet and detection should not even have considered expr yet */
+   assert(expr->nenfos < 0);
    assert(expr->enfos == NULL);
 
    /* check which enforcement methods are required by setting flags in enforcemethods for those that are NOT required
@@ -2190,6 +2190,9 @@ SCIP_RETCODE detectNlhdlr(
    }
    if( expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
       enforcemethods |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+
+   /* it doesn't make sense to have been called on detectNlhdlr, if the expr isn't used for anything */
+   assert(enforcemethods != SCIP_CONSEXPR_EXPRENFO_ALL);
 
    nsuccess = 0;
    conshdlrdata->indetect = TRUE;
@@ -2309,8 +2312,7 @@ SCIP_RETCODE detectNlhdlr(
       return SCIP_ERROR;
    }
 
-   if( nsuccess == 0 )
-      return SCIP_OKAY;
+   assert(nsuccess > 0);
 
    /* sort nonlinear handlers by enforcement priority, in decreasing order */
    if( nsuccess > 1 )
@@ -2403,17 +2405,16 @@ SCIP_RETCODE detectNlhdlrs(
              * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
              * thus, if expr is the root expression, then rerun DETECT
              */
-            assert(expr->enfoinitialized);
 
             if( expr == consdata->expr )
             {
                SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
-               assert(!expr->enfoinitialized);
+               assert(expr->nenfos < 0);
             }
          }
 
          /* skip exprs that we already looked at (but did not do freeEnfoData again) */
-         if( expr->enfoinitialized )
+         if( expr->nenfos >= 0 )
             continue;
 
          /* if there is auxvar usage, then someone requires that
@@ -2429,14 +2430,17 @@ SCIP_RETCODE detectNlhdlrs(
 
             if( *infeasible )
                break;
+            assert(expr->nenfos >= 0);
          }
-
-         /* remember that we looked at this expression during detectNlhdlrs
-          * we may not actually have run detectNlhdlr, because no nlhdlr showed interest in this expr,
-          * but in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
-          * we have not initialized enforcement yet and expressions which are just not used in enforcement
-          */
-         expr->enfoinitialized = TRUE;
+         else
+         {
+            /* remember that we looked at this expression during detectNlhdlrs
+             * even though we have not actually run detectNlhdlr, because no nlhdlr showed interest in this expr,
+             * in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
+             * we have not initialized enforcement yet (nenfos < 0) and expressions which are just not used in enforcement (nenfos == 0)
+             */
+            expr->nenfos = 0;
+         }
       }
 
       if( *infeasible )
@@ -7674,7 +7678,7 @@ SCIP_RETCODE enforceConstraint(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->expr->enfoinitialized);
+   assert(consdata->expr->nenfos >= 0);
 
    *success = FALSE;
 
@@ -11094,10 +11098,10 @@ SCIP_DECL_CONSLOCK(consLockExpr)
       return SCIP_OKAY;
 
    /* check whether we need to initSolve again because
-    * - we have enfo initialized
+    * - we have enfo initialized (nenfos >= 0)
     * - and locks appeared (going from zero to nonzero) or disappeared (going from nonzero to zero) now
     */
-   if( consdata->expr->enfoinitialized )
+   if( consdata->expr->nenfos >= 0 )
    {
       if( (consdata->nlockspos == 0) != (nlockspos == 0) )
          reinitsolve = TRUE;
@@ -14364,9 +14368,9 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    }
 
    /* if a reversepropagation queue is given, then add expression to that queue if it should have a nlhdlr with a
-    * reverseprop callback or nlhdlrs are not initialized yet
+    * reverseprop callback or nlhdlrs are not initialized yet (nenfos < 0)
     */
-   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || !expr->enfoinitialized) )
+   if( reversepropqueue != NULL && !expr->inqueue && (expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || expr->nenfos < 0) )
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
@@ -15212,12 +15216,12 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
    if( useauxvar && SCIPisConsExprExprVar(expr) )
       useauxvar = FALSE;
 
-   if( expr->enfoinitialized &&
+   if( expr->nenfos >= 0 &&
       ( (expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 && (useactivityforprop || useactivityforsepabelow || useactivityforsepaabove)) ||
         (expr->nauxvaruses == 0 && useauxvar)
       ) )
    {
-      /* if we already have ran detect of nlhdlrs on expr, then we need to rerun detection if
+      /* if we already have ran detect of nlhdlrs on expr (nenfos >= 0), then we need to rerun detection if
        * we require additional enforcement methods, that is,
        * - activity of expr was not used before but will be used now, or
        * - auxiliary variable of expr was not required before but will be used now

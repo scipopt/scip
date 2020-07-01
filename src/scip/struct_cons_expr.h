@@ -102,9 +102,8 @@ struct SCIP_ConsExpr_Expr
 
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
-   int                     nenfos;        /**< number of enforcements */
+   int                     nenfos;        /**< number of enforcements, or -1 if not initialized */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
-   SCIP_Bool               enfoinitialized;/**< whether enforcements have been initialized, i.e., expr ran through DETECT (may still have nenfos=0) */
    unsigned int            nactivityusesprop; /**< number of nonlinear handler whose activity computation (or domain propagation) depends on the activity of the expression */
    unsigned int            nactivityusessepa; /**< number of nonlinear handler whose separation (estimate or enfo) depends on the activity of the expression */
    unsigned int            nauxvaruses;   /**< number of nonlinear handlers whose separation uses an auxvar in the expression */
