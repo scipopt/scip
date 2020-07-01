@@ -1303,17 +1303,16 @@ SCIP_RETCODE forwardPropExpr(
    }
 
    /* if activity of rootexpr is not used, but expr participated in detect, then we do nothing
-    * it seems wrong to be called for such an expression, so I also add an assert
-    * if there turns out to be a good reason, then we might need an additional mode for forwardPropExpr
-    * found a reason: during detect, we are in some in-between state where we may want to eval activity
+    * it seems wrong to be called for such an expression (unless we are in detect at the moment), so I add a SCIPABORT()
+    * during detect, we are in some in-between state where we may want to eval activity
     * on exprs that we did not notify about their activity usage
     */
-   assert(!rootexpr->enfoinitialized || rootexpr->nactivityusesprop > 0 || rootexpr->nactivityusessepa > 0 || conshdlrdata->indetect);
    if( rootexpr->enfoinitialized && rootexpr->nactivityusesprop == 0 && rootexpr->nactivityusessepa == 0 && !conshdlrdata->indetect)
    {
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "root expr activity is not used but enfo initialized, skip inteval\n");
 #endif
+      SCIPABORT();
       return SCIP_OKAY;
    }
 
@@ -6063,10 +6062,13 @@ SCIP_RETCODE createAuxVar(
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, TRUE, TRUE) );
    /* we cannot handle a domain error here at the moment, but it seems unlikely that it could occur
     * if it appear, then we could change code to handle this properly, but for now we just ensure that we continue correctly
+    * and abort in debug mode only
     */
-   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity));
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+   {
+      SCIPABORT();
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
+   }
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), activity.inf ),
       MIN( SCIPinfinity(scip), activity.sup ), 0.0, vartype) ); /*lint !e666*/
