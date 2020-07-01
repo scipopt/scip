@@ -158,7 +158,7 @@ SCIP_RETCODE abortReadIfExact(
    if( SCIPisExactSolve(scip) )
    {
       SCIPerrorMessage(errmsg);
-      if ( created != NULL )
+      if( created != NULL )
          (*created) = FALSE;
       return SCIP_ERROR;
    }
@@ -1446,14 +1446,14 @@ Bound* xlp_getlower(
    readerdata = (SCIP_READERDATA*)data;
    assert(readerdata != NULL);
 
+   scip = readerdata->scip;
+   assert(scip != NULL);
+
    if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getlower: exact version not supported.\n") )
    {
       readerdata->readerror = TRUE;
       return NULL;
    }
-
-   scip = readerdata->scip;
-   assert(scip != NULL);
 
    scipvar = (SCIP_VAR*)var;
    assert(scipvar != NULL);
@@ -1503,14 +1503,14 @@ Bound* xlp_getupper(
    readerdata = (SCIP_READERDATA*)data;
    assert(readerdata != NULL);
 
+   scip = readerdata->scip;
+   assert(scip != NULL);
+
    if( SCIP_ERROR == abortReadIfExact(scip, NULL, "xlp_getupper: exact version not supported.\n") )
    {
       readerdata->readerror = TRUE;
       return NULL;
    }
-
-   scip = readerdata->scip;
-   assert(scip != NULL);
 
    scipvar = (SCIP_VAR*)var;
    assert(scipvar != NULL);
