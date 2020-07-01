@@ -11937,6 +11937,10 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
 
    SCIP_CALL( expr->exprhdlr->bwdiff(scip, expr, childidx, derivative) );
 
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
+
    /* restore original evalvalues in children */
    if( childrenvals != NULL )
    {
@@ -11990,6 +11994,10 @@ SCIP_RETCODE SCIPevalConsExprExprHdlr(
 
    /* call expression eval callback */
    SCIP_CALL( expr->exprhdlr->eval(scip, expr, val, sol) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*val) )
+      *val = SCIP_INVALID;
 
    /* restore original evalvalues in children */
    if( origvals != NULL )
