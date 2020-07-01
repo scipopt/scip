@@ -249,7 +249,7 @@ struct SCIP_ConshdlrData
 /** Propagation rules */
 enum Proprule
 {
-   PROPRULE_INVALID              = 0,        /**< invalid inference information */
+   PROPRULE_0_INVALID            = 0,        /**< invalid inference information */
    PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
    PROPRULE_2_EDGEFINDING        = 2,        /**< edge-finder */
    PROPRULE_3_TTEF               = 3         /**< time-table edeg-finding */
@@ -343,10 +343,10 @@ INFERINFO getInferInfo(
    INFERINFO inferinfo;
 
    /* check that the data members are in the range of the available bits */
-   if( proprule == PROPRULE_INVALID || data1 < 0 || data1 >= (1<<15) || data2 < 0 || data2 >= (1<<15) )
+   if( proprule == PROPRULE_0_INVALID || data1 < 0 || data1 >= (1<<15) || data2 < 0 || data2 >= (1<<15) )
    {
       inferinfo.val.asint = 0;
-      assert(inferinfo.val.asbits.proprule == PROPRULE_INVALID);
+      assert(inferInfoGetProprule(inferinfo) == PROPRULE_0_INVALID);
       assert(inferInfoIsValid(inferinfo) == FALSE);
    }
    else
@@ -3305,6 +3305,7 @@ SCIP_RETCODE respropCumulativeCondition(
       break;
    }
 
+   case PROPRULE_0_INVALID:
    default:
       SCIPerrorMessage("invalid inference information %d\n", inferInfoGetProprule(inferinfo));
       SCIPABORT();
