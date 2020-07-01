@@ -23,12 +23,45 @@
 /**@page     SUDOKU_MAIN Sudoku Solver
  * @author Naga V C Gudapati
  *
- * This example solves a sudoku puzzles.
- * The input file is containing the configuration of a sudoku read rowwise.
- * Missing fields are represented by a dot.
+ * Methodology
+ * ============
  *
- * After compiling you can run it via the command
- * `./bin/sudoku data/puzzle5.txt`.
+ *  To solve the given sudoku puzzle using integer programming, we shall use this handy tutorial;
+ *  http://profs.sci.univr.it/~rrizzi/classes/PLS2015/sudoku/doc/497_Olszowy_Wiktor_Sudoku.pdf
+ *
+ *  An unsolved sudoku puzzle looks like below:<br>
+ * <tt>
+ *  +----------+-----------+-----------+ <br>
+ *  |*   *   * | *   *   * | *   *   * | <br>
+ *  |*   3   * | *   1   2 | *   *   8 | <br>
+ *  |*   7   * | *   6   8 | *   2   * | <br>
+ *  +----------+-----------+-----------+ <br>
+ *  |*   *   * | *   *   9 | 8   7   * | <br>
+ *  |1   2   * | 6   5   * | 4   *   * | <br>
+ *  |*   *   * | *   *   * | *   *   6 | <br>
+ *  +----------+-----------+-----------+ <br>
+ *  |*   *   3 | 9   4   * | *   *   * | <br>
+ *  |*   *   * | 2   *   * | *   6   * | <br>
+ *  |4   *   * | *   *   * | *   3   1 | <br>
+ *  +----------+-----------+-----------+ <br>
+ * </tt>
+ *
+ *  The solved puzzle will have each of the nine rows and columns filled by numbers 1, ..., 9 each appearing
+ *  exactly once. There are 9 subgrids and each subgrid also needs to be filled by numbers 1, ..., 9 each
+ *  appearing exactly once.  As seen in the unsolved puzzles, some of the positions are already filled.
+ *
+ *  In this example, we see
+ *  -  how to model problems with many variables in SCIP,
+ *  -  how to set parameters
+ *  -  how use the solution status to print custom output messages.
+ *
+ * Data Format
+ * ============
+ *
+ * A sudoku puzzle is in represented by a string of 81 charcaters. An already filled number in the
+ * puzzle is represented by that number; a blank is represented by either '.' or '0' in the puzzle
+ * string.
+ * The input file is containing the configuration of a sudoku read rowwise as a string.
  *
  * Installation
  * ============

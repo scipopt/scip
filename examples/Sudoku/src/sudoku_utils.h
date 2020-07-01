@@ -16,44 +16,35 @@
 /**@file   sudoku_utils.cpp
  * @brief  A set of utilities that are used to read the puzzle and display the puzzle
  * @author Naga V C Gudapati
- *
- *
- * A sudoku puzzle is in represented by a string of 81 charcaters. An already filled number in the puzzle is
- * represented by that number and if there is a blank, then it is represented by either '.' or '0' in the puzzle
- * string.
- * There are two functions:
- * 1) <tt>std::vector<std::vector<int>> get_sudoku_puzzle(std::string &file_path)</tt>
- *    which will read the textstring of sudoku puzzle into a 9x9 grid represented by a vector of vector of ints.
- *    The actual number is stores as itself and the blanks are stored as -1
- * 2) <tt>void print_sudoku(const std::vector<std::vector<int>> &sudoku_puzzle)</tt>
- *    which is a handy function to print the sudoku grid clearly.
- *
 */
-
-
 
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
 
-
 namespace sudoku
 {
-   std::vector<std::vector<int>> get_sudoku_puzzle( std::string &file_path )
+   /** reads in the sudoku puzzle from filepath
+    *
+     * Reads the string of sudoku puzzle into a 9x9 grid represented by a vector
+     * of a vector of ints. The actual number is stored as itself and the blanks are stored as -1.
+     *
+     */
+   std::vector<std::vector<int>> getSudokuPuzzle( std::string &filepath )
    {
       /* setting up a 9x9 grid forstoring the sudoku puzzle. */
       std::vector<std::vector<int>> puzzle(9, std::vector<int>(9));
 
       /* Reading the puzzle into a stringstream */
-      std::ifstream infile(file_path);
+      std::ifstream infile(filepath);
 
-      std::string puzzle_data = "";
+      std::string puzzledata = "";
 
       if( infile.is_open() )
       {
-         std::getline( infile, puzzle_data );
-         if( puzzle_data.length() != 81 ) /* The puzzle should have 81 characters */
+         std::getline( infile, puzzledata );
+         if( puzzledata.length() != 81 ) /* The puzzle should have 81 characters */
          {
             std::cerr << "Please check the puzzle file forinconsistencies"
                       << "\n";
@@ -68,9 +59,9 @@ namespace sudoku
          for( int j = 0; j < 9; ++j )
          {
             /* We will only convert the numeric string to an integer if it is not '.' or '0'. */
-            if( (puzzle_data.substr(idx, 1) != ".") and (puzzle_data.substr(idx, 1) != "0") )
+            if( (puzzledata.substr(idx, 1) != ".") and (puzzledata.substr(idx, 1) != "0") )
             {
-               puzzle[i][j] = std::stoi( puzzle_data.substr(idx, 1) );
+               puzzle[i][j] = std::stoi( puzzledata.substr(idx, 1) );
             }
             else
             {
@@ -84,25 +75,25 @@ namespace sudoku
       return puzzle;
    }
 
-
-   void print_sudoku( const std::vector<std::vector<int>> &sudoku_puzzle )
+   /** prints the sudoku puzzle to console */
+   void printSudoku( const std::vector<std::vector<int>> &sudokupuzzle )
    {
       std::cout << "+----------+-----------+-----------+" << "\n";
-      for( int i = 0; i < 9; ++i)
+      for( int i = 0; i < 9; ++i )
       {
          std::cout << "|";
-         for( int j = 0; j < 9; ++j)
+         for( int j = 0; j < 9; ++j )
          {
-            if( sudoku_puzzle[i][j] > 0)
+            if( sudokupuzzle[i][j] > 0 )
             {
 
                if( j == 2 or j == 5 or j == 8 )
                {
-                  std::cout << sudoku_puzzle[i][j] << " | ";
+                  std::cout << sudokupuzzle[i][j] << " | ";
                }
                else
                {
-                  std::cout << sudoku_puzzle[i][j] << "   ";
+                  std::cout << sudokupuzzle[i][j] << "   ";
                }
             }
             else
@@ -125,4 +116,4 @@ namespace sudoku
          }
       }
    }
-} // namespace sudoku
+} /* namespace sudoku */
