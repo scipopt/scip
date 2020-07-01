@@ -2928,7 +2928,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSignpower)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, TRUE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE, TRUE) );
 
    if( exprcurvature == SCIP_EXPRCURV_CONVEX )
    {
