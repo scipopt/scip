@@ -2020,6 +2020,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                SCIPaddRowprepConstant(rowprep, cst0);
                SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, indicator, -cst0));
             }
+            else
+            {
+               SCIPfreeRowprep(scip, &rowprep);
+               continue;
+            }
 
             SCIP_CALL(SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0));
 
