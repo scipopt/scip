@@ -17,6 +17,7 @@
  * @brief  exponential expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
+ * @author Ksenia Bestuzheva
  *
  */
 

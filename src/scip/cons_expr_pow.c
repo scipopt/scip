@@ -16,6 +16,7 @@
 /**@file   cons_expr_pow.c
  * @brief  power expression handler
  * @author Benjamin Mueller
+ * @author Ksenia Bestuzheva
  *
  * @todo signpower for exponent < 1 ?
  */

@@ -18,6 +18,7 @@
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  * @author Felipe Serrano
+ * @author Ksenia Bestuzheva
  *
  * Implementation of the product expression, representing a product of expressions
  * and a constant, i.e., coef * prod_i x_i.
