@@ -1791,6 +1791,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
       assert(rowprep->varssize >= nchildren);
 
       constant = 0.0;
+      success = FALSE;
 
       if( nchildren == 2 )
       {
