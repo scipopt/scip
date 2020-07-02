@@ -149,8 +149,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectDefault)
 
    /* indicate enforcement methods required in children:
     * - if separating, make sure that (auxiliary) variable will exist
-    * - if separation requires curvature, then increment activityusage count with usedforsepa == TRUE
-    * - if activity computation, then increment activityusage count with usedforprop == TRUE
+    * - if activity computation, then register activity usage
+    * - if estimating on a non-convex side, then indicate activity usage for separation for that side
     */
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
