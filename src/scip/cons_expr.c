@@ -16472,14 +16472,15 @@ SCIP_RETCODE SCIPprocessConsExprRowprep(
             SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
                                                         rowprep->nmodifiedvars, sol, &branchscoresuccess) );
 
-            /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
-             * expr's auxvar
-             * I don't think it makes sense to branch on that one (would it?)
-             * it can also fail if everything is fixed
-             * or if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
+            /* addConsExprExprBranchScoresAuxVars can fail if the only vars for which the coef was changed
+             * - were fixed,
+             * - are this expr's auxvar (I don't think it makes sense to branch on that one (would it?)), or
+             * - if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
+             * the first case came up again in #3085 and I don't see how to exclude this in the assert,
+             * so I'm disabling the assert for now
              */
-            assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
-                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0);
+            /* assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
+                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0); */
          }
       }
    }
