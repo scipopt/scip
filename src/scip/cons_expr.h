@@ -1056,7 +1056,7 @@ SCIP_Bool SCIPisConsExprExprIntegral(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprExprNActivityUsesPropagation(
+unsigned int SCIPgetConsExprExprNPropagationUsesActivity(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
@@ -1065,7 +1065,7 @@ unsigned int SCIPgetConsExprExprNActivityUsesPropagation(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprExprNActivityUsesSeparation(
+unsigned int SCIPgetConsExprExprNSeparationUsesActivity(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
@@ -1082,8 +1082,8 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
  *
  * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
  * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
- * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesPropagation
- * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNActivityUsesSeparation
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNPropagationUsesActivity
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNSeparationUsesActivity
  *   and also increments this count for all variables in the expression.
  *
  * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
