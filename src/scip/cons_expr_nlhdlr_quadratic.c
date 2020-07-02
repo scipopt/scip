@@ -298,12 +298,13 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       SCIP_CONSEXPR_EXPR** linexprs;
       int nlinexprs;
       int nquadexprs;
+      int nbilin;
       int i;
+      SCIP_Bool unboundedquad = FALSE;  /* whether there is an unbounded variable in a bilinear term */
 
       *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
-      *enforcing |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
 
-      SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, NULL, &nquadexprs, NULL);
+      SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, NULL, &nquadexprs, &nbilin);
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlexprdata->quadactivities, nquadexprs) );
 
       /* notify children of quadratic that we will need their activity for propagation */
@@ -312,8 +313,24 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       for( i = 0; i < nquadexprs; ++i )
       {
          SCIP_CONSEXPR_EXPR* argexpr;
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, NULL, NULL);
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, &nbilin, NULL);
          SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE, FALSE) );
+         if( !unboundedquad && nbilin > 0 && SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, argexpr)) )
+            unboundedquad = TRUE;
+      }
+
+      if( !unboundedquad )
+      {
+         /* TODO we should make propagation in quadratic strong enough that we don't need the default anymore
+          *    on tanksize, nlhldr_quadratic misses that it can tighten objvar, which leads to an unbounded LP, no dual bound in root, etc
+          *    in particular, the expr is <t_x35>+<t_x36>+<t_x34>*<t_x37>-24.874*<t_x37>*<t_objvar>,
+          *    which is handled as <t_x35>+<t_x36>+(<t_x34>-24.874*<t_objvar>)*<t_x37>
+          *    the propagation for objvar doesn't run due to the infinite activity on the rest term
+          *    the special rule where during propagation of x37 one would propagate another term doesn't run due to the special handling for objvar
+          *    generalizing the special rule to propagate <t_x34>-24.874*<t_objvar> in rest / x37 may work
+          * for now, we let the default nlhdlrs also propagate if there is an unbounded quadratic variable in a bilinear term
+          */
+         *enforcing |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
       }
    }
 

@@ -516,7 +516,7 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE, "got %d\n", enforcing);   /* see TODO in cons_expr_nlhldr_quadratic why this is like this for now */
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
