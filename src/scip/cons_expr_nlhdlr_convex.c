@@ -1205,7 +1205,8 @@ SCIP_RETCODE createNlhdlrExprData(
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR*   nlexpr,             /**< our copy of expression */
    SCIP_HASHMAP*         nlexpr2origexpr,    /**< mapping of expression copy to original */
-   int                   nleafs              /**< number of leafs as counted by constructExpr */
+   int                   nleafs,             /**< number of leafs as counted by constructExpr */
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating /**< the enfo methods in which we plan to participate */
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
@@ -1251,10 +1252,12 @@ SCIP_RETCODE createNlhdlrExprData(
       /* if child had children in original but not in copy means that we could not achieve the desired curvature
        * thus, we will later replace by a new child that points to the auxvar of the original expression
        * as we do not have the auxvar now, we will only register that we will need the auxvar later (if origexpr isn't a variable or constant)
-       * if we are working for the concave nlhdlr, then we also indicate interest on the exprs activity for estimate
+       * if we are working for the concave nlhdlr, then we also indicate interest on the exprs activity for estimate (distinguish below or above)
        */
       SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, origexpr,
-         SCIPgetConsExprExprNChildren(origexpr) > 0, FALSE, !nlhdlrdata->isnlhdlrconvex, !nlhdlrdata->isnlhdlrconvex) );
+         SCIPgetConsExprExprNChildren(origexpr) > 0, FALSE,
+         !nlhdlrdata->isnlhdlrconvex && (participating & SCIP_CONSEXPR_EXPRENFO_SEPABELOW),
+         !nlhdlrdata->isnlhdlrconvex && (participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)) );
 
       /* remember that we use an auxvar */
       if( SCIPgetConsExprExprNChildren(origexpr) > 0 )
@@ -1748,7 +1751,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    /* create the expression data of the nonlinear handler
     * notify conshdlr about expr for which we will require auxiliary variables
     */
-   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs) );
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs, *participating) );
 
    return SCIP_OKAY;
 }
@@ -2143,7 +2146,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConcave)
    /* create the expression data of the nonlinear handler
     * notify conshdlr about expr for which we will require auxiliary variables and use activity
     */
-   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs) );
+   SCIP_CALL( createNlhdlrExprData(scip, conshdlr, nlhdlrdata, nlhdlrexprdata, expr, nlexpr, nlexpr2origexpr, nleafs, *participating) );
 
    return SCIP_OKAY;
 }
