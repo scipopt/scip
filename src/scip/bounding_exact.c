@@ -2232,10 +2232,12 @@ SCIP_RETCODE getPSdual(
     */
    for( i = 0; i < nrows; i++ )
    {
-      /* in case we want to prove infeasibility it might be that we were not able to compute a dual solution
-       * with bound exceeding objective value; in this case dual solution is set to SCIP_INVALID
-       */
-      if( (!usefarkas && REALABS(SCIProwGetDualsol(lp->rows[i])) >= SCIPsetInfinity(set)) || (usefarkas && REALABS(SCIProwGetDualfarkas(lp->rows[i])) >= SCIPsetInfinity(set)) )
+      if( !usefarkas )
+         RatSetReal(approxdual[i], SCIProwGetDualsol(lp->rows[i]));
+      else
+         RatSetReal(approxdual[i], SCIProwGetDualfarkas(lp->rows[i]));
+
+      if( RatIsAbsInfinity(approxdual[i]) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
@@ -2246,11 +2248,6 @@ SCIP_RETCODE getPSdual(
 
          goto TERMINATE;
       }
-
-      if( !usefarkas )
-         RatSetReal(approxdual[i], SCIProwGetDualsol(lp->rows[i]));
-      else
-         RatSetReal(approxdual[i], SCIProwGetDualfarkas(lp->rows[i]));
 
       if( RatIsPositive(approxdual[i]) )
          isupper[i] = FALSE;
@@ -2265,6 +2262,18 @@ SCIP_RETCODE getPSdual(
          RatSetReal(approxdual[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
       else
          RatSetReal(approxdual[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
+
+      if( RatIsAbsInfinity(approxdual[i + nrows]) )
+      {
+         SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
+         lp->hasprovedbound = FALSE;
+         if( usefarkas )
+            stat->nfailprojshiftinf++;
+         else
+            stat->nfailprojshift++;
+
+         goto TERMINATE;
+      }
 
       if( RatIsPositive(approxdual[i+nrows]) )
          isupper[i+nrows] = FALSE;
