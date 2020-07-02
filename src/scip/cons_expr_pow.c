@@ -1159,7 +1159,7 @@ SCIP_RETCODE addSignpowerRefpoints(
    if( (underestimate && SCIPisInfinity(scip, -lb)) || (!underestimate && SCIPisInfinity(scip, ub)) )
       return SCIP_OKAY;
 
-   if( exprdata->root == SCIP_INVALID ) /*lint --e{777}*/
+   if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
    {
       SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
    }
@@ -2083,7 +2083,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
          continue;
 
       assert(overest[i] || i < 3); /* make sure that no out-of-bounds array access will be attempted */
-      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i]; /*lint --e{661}*/ /*lint --e{662}*/
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i]; /*lint !e661 !e662*/
 
       if( refpoint == SCIP_INVALID )  /*lint !e777*/
          continue;
@@ -2783,8 +2783,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
          continue;
 
       assert(overest[i] || i < 3); /* make sure that no out-of-bounds array access will be attempted */
-      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i]; /*lint --e{661}*/ /*lint --e{662}*/
-      if( refpoint == SCIP_INVALID ) /*lint --e{777}*/
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i]; /*lint !e661 !e662*/
+      if( refpoint == SCIP_INVALID ) /*lint !e777*/
          continue;
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 

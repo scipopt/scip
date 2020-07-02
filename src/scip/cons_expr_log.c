@@ -314,7 +314,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
 {
-   SCIP_Real refpointsover[3];
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
    SCIP_Real lb;
