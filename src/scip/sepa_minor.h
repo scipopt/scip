@@ -29,6 +29,19 @@
  * is also required to be positive semi-definite. Let \f$ v \f$ be a negative eigenvector for \f$ A(x^*,X^*) \f$ in a
  * point \f$ (x^*,X^*) \f$, which implies that \f$ v' A(x^*,X^*) v < 0 \f$. To cut off \f$ (x^*,X^*) \f$, the separator
  * computes the globally valid linear inequality \f$ v' A(x,X) v \ge 0 \f$.
+ *
+ *
+ * To identify which entries of the matrix X exist, we (the separator) iterate over the available expression constraints.
+ * For each constraint, we explore its expression tree and collect all nodes (expressions) of the form
+ * - x^2
+ * - y * z
+ * Then, we goes through the found bilinear terms (y * z) and if the corresponding y^2 and z^2 exist, then we have found
+ * a minor.
+ *
+ * For circle packing instances, the minor cuts are not really helpful (see Packing circles in a square: a theoretical
+ * comparison of various convexification techniques, http://www.optimization-online.org/DB_HTML/2017/03/5911.html).
+ * Furthermore, the performance was negatively affected, thus circle packing constraint are identified and ignored in
+ * the above algorithm. This behavior is controlled with the parameter "separating/minor/ignorepackingconss".
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
