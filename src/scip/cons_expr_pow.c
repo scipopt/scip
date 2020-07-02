@@ -2097,6 +2097,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
       assert(rowprep->varssize >= 1);
 
+      branchcand = TRUE;
+
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childvar, childlb, childub, refpoint, exponent,
             rowprep->coefs, &constant, &success, &islocal, &branchcand) );
 
