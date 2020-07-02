@@ -10453,6 +10453,11 @@ SCIP_DECL_CONSINIT(consInitExpr)
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
       SCIP_CALL( SCIPresetClock(scip, nlhdlr->reformulatetime) );
+
+      if( nlhdlr->init != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
+      }
    }
 
    /* reset statistics in constraint handler */
@@ -10516,6 +10521,18 @@ SCIP_DECL_CONSEXIT(consExitExpr)
    if( conshdlrdata->branchrandnumgen != NULL )
       SCIPfreeRandom(scip, &conshdlrdata->branchrandnumgen);
 
+   /* deinitialize nonlinear handlers */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      if( nlhdlr->exit != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->exit)(scip, nlhdlr) );
+      }
+   }
+
    ENFOLOG(
       if( enfologfile != NULL )
       {
@@ -10571,7 +10588,9 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* skip a number of initializations if we have solved already
     * if infeasibility was found by our boundtightening, then curvature check may also fail as some exprhdlr (e.g., pow)
@@ -10582,29 +10601,16 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
    {
       SCIP_Bool infeasible;
       int nchgbnds;
+      int i;
+
+      /* reset one of the number of detections counter to count only current round */
+      for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+         conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
 
       /* run with nchgbnds != NULL to get reverseprop calls on detected nlhdlrs, so that we will have
        * decent bounds for auxvars that will be added in INITLP soon
        */
       SCIP_CALL( initSolve(scip, conshdlr, conss, nconss, &infeasible, &nchgbnds) );
-   }
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* initialize nonlinear handlers */
-   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
-   {
-      SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-      nlhdlr = conshdlrdata->nlhdlrs[i];
-      if( nlhdlr->init != NULL )
-      {
-         SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
-      }
-
-      /* reset one of the number of detections counter to count only current round */
-      nlhdlr->ndetectionslast = 0;
    }
 
    if( conshdlrdata->branchpscostweight > 0.0 )
@@ -10626,24 +10632,11 @@ static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   int i;
 
    SCIP_CALL( deinitSolve(scip, conshdlr, conss, nconss) );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   /* deinitialize nonlinear handlers */
-   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
-   {
-      SCIP_CONSEXPR_NLHDLR* nlhdlr;
-
-      nlhdlr = conshdlrdata->nlhdlrs[i];
-      if( nlhdlr->exit != NULL )
-      {
-         SCIP_CALL( (*nlhdlr->exit)(scip, nlhdlr) );
-      }
-   }
 
    /* free hash table for bilinear terms */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
