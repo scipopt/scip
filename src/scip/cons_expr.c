@@ -2591,13 +2591,6 @@ SCIP_RETCODE initSolve(
    SCIP_CONSDATA* consdata;
    int c;
 
-   /* register non linear handlers */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible, nchgbds) );
-
-   /* if detect found out that the problem is infeasible, e.g., because of bounds, then stop */
-   if( *infeasible )
-      return SCIP_OKAY;
-
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
@@ -2654,6 +2647,9 @@ SCIP_RETCODE initSolve(
          }
       }
    }
+
+   /* register non linear handlers */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss, infeasible, nchgbds) );
 
    return SCIP_OKAY;
 }
