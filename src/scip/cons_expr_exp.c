@@ -230,7 +230,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateExp)
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
 {
-   SCIP_Real refpointsunder[3];
+   SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
    SCIP_Real lb;
@@ -264,8 +264,8 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
       SCIP_Real ubfinite;
 
       /* make bounds finite */
-      lbfinite = SCIPisInfinity(scip, -lb) ? MIN(-5.0, ub - 0.1*REALABS(ub)) : lb;
-      ubfinite = SCIPisInfinity(scip, ub) ? MAX( 3.0, lb + 0.1*REALABS(lb)) : ub;
+      lbfinite = SCIPisInfinity(scip, -lb) ? MIN(-5.0, ub - 0.1 * REALABS(ub)) : lb; /*lint !e666*/
+      ubfinite = SCIPisInfinity(scip, ub) ? MAX( 3.0, lb + 0.1 * REALABS(lb)) : ub; /*lint !e666*/
 
       refpointsunder[0] = (7.0 * lbfinite + ubfinite) / 8.0;
       refpointsunder[1] = (lbfinite + ubfinite) / 2.0;
@@ -283,7 +283,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
       if( overest[i] && (!overestimate || SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb)) )
          continue;
 
-      assert(overest[i] || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb)));
+      assert(overest[i] || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb))); /*lint !e661*/
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, overest[i]) );
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
@@ -292,7 +292,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
       success = TRUE;
 
       if( !overest[i] )
-         SCIPaddExpLinearization(scip, refpointsunder[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success);
+      {
+         assert(i < 3);
+         SCIPaddExpLinearization(scip, refpointsunder[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success); /*lint !e661*/
+      }
       else
          SCIPaddExpSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
 

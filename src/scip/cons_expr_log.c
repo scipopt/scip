@@ -363,7 +363,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
       if( (overest[i] && !overestimate) || (!overest[i] && (!underestimate || SCIPisInfinity(scip, ub))) )
          continue;
 
-      assert(i == 3 || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb)));
+      assert(i == 3 || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb))); /*lint !e661*/
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overest[i]) );
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
@@ -372,7 +372,10 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
       success = TRUE;
 
       if( overest[i] )
-         SCIPaddLogLinearization(scip, refpointsover[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success);
+      {
+         assert(i < 3);
+         SCIPaddLogLinearization(scip, refpointsover[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success); /*lint !e661*/
+      }
       else
          SCIPaddLogSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
 

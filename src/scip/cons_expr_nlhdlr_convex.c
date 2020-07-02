@@ -1736,7 +1736,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvexConcave)
 /** init sepa callback that initializes LP */
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
-{
+{  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* nlexpr;
    SCIP_EXPRCURV curvature;
    SCIP_Bool success;
@@ -1801,9 +1801,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
             ub = MAX( 10.0, lb + 0.1*REALABS(lb));  /*lint !e666 */
 
          if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
-            SCIPsetSolVal(scip, sol, var, lambda * ub + (1.0 - lambda) * lb);
+            SCIP_CALL( SCIPsetSolVal(scip, sol, var, lambda * ub + (1.0 - lambda) * lb) );
          else
-            SCIPsetSolVal(scip, sol, var, lambda * lb + (1.0 - lambda) * ub);
+            SCIP_CALL( SCIPsetSolVal(scip, sol, var, lambda * lb + (1.0 - lambda) * ub) );
       }
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );

@@ -484,7 +484,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
 static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
 {  /*lint --e{715}*/
-   SCIP_Real refpointsover[3];
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
    SCIP_Real lb;
@@ -516,7 +516,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
       return SCIP_OKAY;
 
    /* adjust lb */
-   lb = MAX(lb, SCIPepsilon(scip));
+   lb = MAX(lb, SCIPepsilon(scip)); /*lint !e666*/
 
    if( overestimate )
    {
@@ -533,14 +533,15 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
       if( (overest[i] && !overestimate) || (!overest[i] && (!underestimate || SCIPisInfinity(scip, ub))) )
          continue;
 
-      assert(i == 3 || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb)));
+      assert(i == 3 || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb))); /*lint !e661*/
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overest[i]) );
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
 
       if( overest[i] )
-      {
+      { /*lint !e661*/
          /* -x*(1+log(x*)) + x* <= -x*log(x) */
+         assert(i < 3);
          *(rowprep->coefs) = -(1.0 + log(refpointsover[i]));
          constant = refpointsover[i];
       }
