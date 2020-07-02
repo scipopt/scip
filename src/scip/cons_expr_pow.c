@@ -969,6 +969,7 @@ void estimateRoot(
          if( SCIPisZero(scip, xub) )
          {
             *success = FALSE;
+            *islocal = FALSE;
             return;
          }
 
@@ -2095,8 +2096,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
       /* make sure enough space is available in rowprep arrays */
       SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
       assert(rowprep->varssize >= 1);
-
-      branchcand = TRUE;
 
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childvar, childlb, childub, refpoint, exponent,
             rowprep->coefs, &constant, &success, &islocal, &branchcand) );
