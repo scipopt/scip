@@ -2439,7 +2439,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
          SCIP_Real lhsval;
          SCIP_Real rhsval;
          SCIP_Real disvarval;
-         int termstart;
          int ndisvars;
          int nterms;
          int i;
@@ -2460,7 +2459,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
             SCIP_VAR* var;
             SCIP_Real varval;
 
-            var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]];
+            var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
 
             SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
             rhsval += nlhdlrexprdata->transcoefs[i] * varval;
@@ -2481,7 +2480,6 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
             /* set value for each disaggregation variable corresponding to quadratic term */
             for( k = 0; k < ndisvars; ++k )
             {
-               termstart = nlhdlrexprdata->termbegins[k];
                lhsval = nlhdlrexprdata->offsets[k];
 
                for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k + 1]; ++i )
@@ -2489,7 +2487,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
                   SCIP_VAR* var;
                   SCIP_Real varval;
 
-                  var = nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]];
+                  var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
 
                   SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
                   lhsval += nlhdlrexprdata->transcoefs[i] * varval;
