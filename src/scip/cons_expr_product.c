@@ -1751,7 +1751,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
    SCIP_Bool success;
    SCIP_Real constant;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
-   SCIP_Bool overest[2];
+   SCIP_Bool overest[2] = {FALSE, TRUE};
    int i;
    int v;
 
@@ -1775,9 +1775,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaProduct)
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
-
-   overest[0] = FALSE;
-   overest[1] = TRUE;
 
    for( i = (underestimate ? 0 : 1); i <= (overestimate ? 1 : 0); ++i )
    {

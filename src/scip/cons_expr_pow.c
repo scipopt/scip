@@ -2025,11 +2025,11 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
    SCIP_Bool success;
    SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Bool overest[6] = {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
    SCIP_Real constant;
    int i;
    SCIP_ROWPREP* rowprep;
    SCIP_ROW* row;
-   SCIP_Bool* overest;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -2073,7 +2073,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
          overestimate) );
 
    *infeasible = FALSE;
-   overest = (SCIP_Bool[6]) {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
 
    for( i = 0; i < 6; ++i )
    {

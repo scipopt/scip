@@ -231,6 +231,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
 {
    SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Bool overest[4] = {FALSE, FALSE, FALSE, TRUE};
    SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* childvar;
    SCIP_Real lb;
@@ -239,7 +240,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
    SCIP_Real constant;
    SCIP_Bool success;
    int i;
-   SCIP_Bool* overest;
    SCIP_ROW* row;
 
    assert(scip != NULL);
@@ -273,7 +273,6 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
    }
 
    *infeasible = FALSE;
-   overest = (SCIP_Bool[4]) {FALSE, FALSE, FALSE, TRUE};
 
    for( i = 0; i < 4; ++i )
    {
