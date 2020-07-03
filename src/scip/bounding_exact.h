@@ -48,9 +48,10 @@
 extern "C" {
 #endif
 
+/** computes a safe bound for the current floating point LP */
 SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -60,8 +61,8 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             usefarkas,          /**< are we aiming to prove infeasibility? */
-   SCIP_Real*            safebound,          /**< store the calculated safebound here */
+   SCIP_Bool             usefarkas,          /**< should infeasiblity be proven? */
+   SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    );
