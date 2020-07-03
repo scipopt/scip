@@ -2653,15 +2653,6 @@ void SCIPintervalSin(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   /* set interval to [-1,1] if [inf,sup] is larger than 2 pi
-    * add a little tolerance to compensate for rounding error
-    */
-   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-
    if( operand.inf == operand.sup ) /*lint !e777 */
    {
       SCIP_Real tmp;
@@ -2670,6 +2661,24 @@ void SCIPintervalSin(
       tmp = sin(operand.inf);
       resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
       resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
+      return;
+   }
+
+   /* set interval to [-1,1] if we cannot reliably work out the difference between inf and sup
+    * double precision has almost 16 digits of precision; for now cut off at 12
+    */
+   if( operand.sup > 1e12 || operand.inf < -1e12 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   /* set interval to [-1,1] if [inf,sup] is larger than 2 pi
+    * add a little tolerance to compensate for rounding error
+    */
+   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
 
@@ -2754,12 +2763,6 @@ void SCIPintervalCos(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-
    if( operand.inf == operand.sup ) /*lint !e777 */
    {
       SCIP_Real tmp;
@@ -2768,6 +2771,21 @@ void SCIPintervalCos(
       tmp = cos(operand.inf);
       resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
       resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
+      return;
+   }
+
+   /* set interval to [-1,1] if we cannot reliably work out the difference between inf and sup
+    * double precision has almost 16 digits of precision; for now cut off at 12
+    */
+   if( operand.sup > 1e12 || operand.inf < -1e12 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
 
