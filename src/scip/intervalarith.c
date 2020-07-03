@@ -2635,9 +2635,7 @@ void SCIPintervalAbs(
    }
 }
 
-/** stores sine value of operand in resultant
- * NOTE: the operations are not applied rounding-safe here
- */
+/** stores sine value of operand in resultant */
 void SCIPintervalSin(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -2655,13 +2653,16 @@ void SCIPintervalSin(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   /* set interval to [-1,1] if [inf,sup] is larger than 2 pi */
-   if( operand.sup - operand.inf >= 2*M_PI )
+   /* set interval to [-1,1] if [inf,sup] is larger than 2 pi
+    * add a little tolerance to compensate for rounding error
+    */
+   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
-   else if( operand.inf == operand.sup ) /*lint !e777 */
+
+   if( operand.inf == operand.sup ) /*lint !e777 */
    {
       SCIP_Real tmp;
 
@@ -2674,7 +2675,7 @@ void SCIPintervalSin(
 
    /* compute extreme point that is left to operand.inf */
    k = (int) floor(operand.inf/M_PI - 0.5);
-   extr = ((2.0*k+1.0)*M_PI)/2.0;
+   extr = (2*k+1) * M_PI_2;   /*lint !e790*/
    assert(extr <= operand.inf);
 
    /* check how many minimums and maximums are contained in [inf,sup] */
@@ -2706,14 +2707,23 @@ void SCIPintervalSin(
    {
       assert(nbetween == 1);
 
-      /* check whether we have seen a minimum or maximum */
-      if( cos(operand.inf) >= 0.0 )
+      /* check whether the extremum in between inf and sup is a minimum or maximum
+       * - if derivative at inf is positive or derivative at sup is negative, then its a maximum in between,
+       *   so the resultant has a lower bound min(sin(inf),sin(sup)) = finf
+       *   and an upper bound of 1.0
+       * - if derivative at inf is negative or derivative at sup is positive, then its a minimum in between,
+       *   so the resultant has a lower bound of 1.0
+       *   and an upper bound max(sin(inf),sin(sup)) = fsup
+       * - we cannot be here if both derivatives are zero, since we have sup - inf < 2*M_PI - 1e-12 (see first if() above)
+       */
+      if( cos(operand.inf) > 0.0 || cos(operand.sup) < 0.0 )
       {
          finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
          fsup = 1.0;
       }
       else
       {
+         assert(cos(operand.inf) < 0.0 || cos(operand.sup) > 0.0);
          finf = -1.0;
          fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
       }
@@ -2726,9 +2736,7 @@ void SCIPintervalSin(
    SCIPintervalSetBounds(resultant, finf, fsup);
 }
 
-/** stores cosine value of operand in resultant
- * NOTE: the operations are not applied rounding-safe here
- */
+/** stores cosine value of operand in resultant */
 void SCIPintervalCos(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -2746,12 +2754,13 @@ void SCIPintervalCos(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup - operand.inf >= 2*M_PI )
+   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
-   else if( operand.inf == operand.sup ) /*lint !e777 */
+
+   if( operand.inf == operand.sup ) /*lint !e777 */
    {
       SCIP_Real tmp;
 
@@ -2796,14 +2805,23 @@ void SCIPintervalCos(
    {
       assert(nbetween == 1);
 
-      /* check whether we have seen a minimum or maximum */
-      if( sin(operand.inf) <= 0.0 )
+      /* check whether the extremum in between inf and sup is a minimum or maximum
+       * - if derivative at inf is positive or derivative at sup is negative, then its a maximum in between,
+       *   so the resultant has a lower bound min(cos(inf),cos(sup)) = finf
+       *   and an upper bound of 1.0
+       * - if derivative at inf is negative or derivative at sup is positive, then its a minimum in between,
+       *   so the resultant has a lower bound of 1.0
+       *   and an upper bound max(cos(inf),cos(sup)) = fsup
+       * - we cannot be here if both derivatives are zero, since we have sup - inf < 2*M_PI - 1e-12 (see first if() above)
+       */
+      if( sin(operand.inf) < 0.0 || sin(operand.sup) > 0.0 )
       {
          finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
          fsup = 1.0;
       }
       else
       {
+         assert(sin(operand.inf) > 0.0 || sin(operand.sup) < 0.0);
          finf = -1.0;
          fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
       }
