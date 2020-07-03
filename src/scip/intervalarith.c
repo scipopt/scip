@@ -2637,9 +2637,15 @@ void SCIPintervalAbs(
 
 /* double precision lower and upper bounds on pi
  * taken from boost::numeric::interval_lib::constants
+ * MSVC refuses to evaluate this at compile time
  */
+#ifndef _MSC_VER
 static const double pi_d_l = (3373259426.0 + 273688.0 / (1<<21)) / (1<<30);
 static const double pi_d_u = (3373259426.0 + 273689.0 / (1<<21)) / (1<<30);
+#else
+#define pi_d_l ((3373259426.0 + 273688.0 / (1<<21)) / (1<<30))
+#define pi_d_u ((3373259426.0 + 273689.0 / (1<<21)) / (1<<30))
+#endif
 
 /** stores sine value of operand in resultant */
 void SCIPintervalSin(
