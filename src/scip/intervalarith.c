@@ -2714,15 +2714,15 @@ void SCIPintervalCos(
    if( operand.inf < 0.0 || operand.inf >= 2*M_PI )
    {
       SCIP_INTERVAL tmp;
-      int k;
+      SCIP_Real k;
 
       SCIPintervalSetRoundingModeDownwards();
-      k = (int)floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)) / 2.0);
+      k = floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)) / 2.0);
       SCIPintervalSetRoundingMode(roundmode);
 
       /* operand <- operand - k * 2*pi */
       SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
-      SCIPintervalMulScalar(infinity, &tmp, tmp, 2*k);
+      SCIPintervalMulScalar(infinity, &tmp, tmp, 2.0*k);
       SCIPintervalSub(infinity, &operand, operand, tmp);
    }
    assert(operand.inf >= 0.0);
@@ -2764,7 +2764,11 @@ void SCIPintervalCos(
          resultant->sup = 1.0;
       else
       {
-         resultant->sup = SCIPnextafter(MAX(cos(operand.inf), cos(operand.sup)), SCIP_REAL_MAX);
+         SCIP_Real cinf;
+         SCIP_Real csup;
+         cinf = cos(operand.inf);
+         csup = cos(operand.sup);
+         resultant->sup = SCIPnextafter(MAX(cinf, csup), SCIP_REAL_MAX);
          resultant->sup = MIN(1.0, resultant->sup);
       }
    }
