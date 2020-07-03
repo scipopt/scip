@@ -66,7 +66,7 @@ SCIP_Bool fpLPisIntFeasible(
    int nfracs;
    int i;
 
-   assert( SCIPlpIsSolved(lp));
+   assert(SCIPlpIsSolved(lp));
 
    feasible = TRUE;
    for( i = 0; i < lp->ncols && feasible; i++ )
@@ -759,7 +759,7 @@ SCIP_RETCODE setupProjShiftOpt(
          pos++;
       }
    }
-   assert( pos == psnrows);
+   assert(pos == psnrows);
 
    if( !findintpoint )
    {
@@ -1145,7 +1145,7 @@ SCIP_RETCODE setupProjShiftArbDual(
          pos++;
       }
    }
-   assert( pos == psnrows);
+   assert(pos == psnrows);
 
    return SCIP_OKAY;
 }
@@ -1317,7 +1317,7 @@ SCIP_RETCODE setupProjShiftTwoStage(
          pos++;
       }
    }
-   assert( pos == psnrows);
+   assert(pos == psnrows);
 
    return SCIP_OKAY;
 }
@@ -2098,7 +2098,7 @@ SCIP_RETCODE projectShift(
    SCIP_EVENTFILTER*     eventfilter,
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Bool             usefarkas,          /**< to we aim to prove infeasibility ? */
+   SCIP_Bool             usefarkas,          /**< do we aim to prove infeasibility? */
    SCIP_Real*            safebound           /**< store the calculated safebound here */
    )
 {
@@ -2182,7 +2182,7 @@ SCIP_RETCODE projectShift(
    else
    {
       /* in this case, since projshiftdatafail != TRUE, projshifthasray should be true -- use it */
-      assert( projshiftdata->projshifthasray );
+      assert(projshiftdata->projshifthasray);
       useinteriorpoint = FALSE;
    }
 
@@ -2760,7 +2760,7 @@ char chooseBoundingMethod(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             dualfarkas,         /**< was the flating point lp infeasible? */
+   SCIP_Bool             dualfarkas,         /**< was the floating point LP infeasible? */
    char                  lastboundmethod     /**< the last method that was chosen */
    )
 {
@@ -2769,10 +2769,11 @@ char chooseBoundingMethod(
    assert(!lpexact->fplp->hasprovedbound);
 
    /* choose which bounding method to use; if we already had a lastboundmethod set,
-      then the previous iteration failed and we go to the next available method in order */
+    * then the previous iteration failed and we go to the next available method in order
+    */
    if( lastboundmethod != 'u' )
    {
-      switch(lastboundmethod)
+      switch( lastboundmethod )
       {
       /* bound-shift -> try project shift next if possible, otherwise exactlp */
       case 'n':
@@ -2782,7 +2783,8 @@ char chooseBoundingMethod(
       case 'p':
          dualboundmethod = 'e';
       /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
-       * otherwise try exactlp again */
+       * otherwise try exactlp again
+       */
       case 'e':
          if( SCIPlpExactBSpossible(lpexact) )
             dualboundmethod = 'n';
@@ -3249,7 +3251,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Bool abort =  FALSE;
    int nattempts = 0;
 
-   /* If we are not in exact solving mode, just return */
+   /* if we are not in exact solving mode, just return */
    if( !set->misc_exactsolve || lp->diving || lp->probing || lp->strongbranchprobing )
       return SCIP_OKAY;
 
@@ -3257,14 +3259,16 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    assert(set->misc_exactsolve);
    assert(!lp->hasprovedbound);
 
-   /* if the lp was solved to optimality and there are no fractional variables we solve exactly to generate a feasible solution */
+   /* if the LP was solved to optimality and there are no fractional variables we solve exactly to generate a feasible
+    * solution
+    */
    if( lpexact->forceexactsolve || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat))
         || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
    {
       lpexact->forceexactsolve = TRUE;
    }
 
-   while(!lp->hasprovedbound && !abort)
+   while( !lp->hasprovedbound && !abort )
    {
       dualboundmethod = chooseBoundingMethod(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                               prob, itlim, lperror, dualfarkas, lastboundmethod);
@@ -3273,9 +3277,9 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
       nattempts++;
 
-      switch(dualboundmethod)
+      switch( dualboundmethod )
       {
-         /* neumaier and scherbina */
+         /* Neumaier and Shcherbina */
          case 'n':
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                            prob, dualfarkas, safebound) );
