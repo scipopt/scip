@@ -2660,7 +2660,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
          assert(expr != NULL);
          assert(SCIPisConsExprExprVar(expr));
 
-         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNSeparationUsesActivity(expr);
+         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNSepaUsesActivity(expr);
       }
    }
 
