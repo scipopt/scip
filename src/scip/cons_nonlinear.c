@@ -7268,7 +7268,6 @@ SCIP_RETCODE enforceConstraint(
          {
             *result = SCIP_FEASIBLE;
             SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
-            assert(!SCIPisInfinity(scip, maxviol));
          }
          return SCIP_OKAY;
       }
