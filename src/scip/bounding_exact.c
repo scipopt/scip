@@ -232,9 +232,9 @@ SCIP_RETCODE allocIntMem(
 }
 
 #ifdef SCIP_WITH_GMP
-/** subroutine of constructPSdata(); chooses which columns of the matrix are designated as set S, used for projections */
+/** subroutine of constructProjShiftData(); chooses which columns of the matrix are designated as set S, used for projections */
 static
-SCIP_RETCODE psChooseS(
+SCIP_RETCODE projShiftChooseS(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -358,9 +358,9 @@ SCIP_RETCODE psChooseS(
    return SCIP_OKAY;
 }
 
-/** subroutine of constructPSdata(); computes the LU factorization used by the project-and-shift method */
+/** subroutine of constructProjShiftData(); computes the LU factorization used by the project-and-shift method */
 static
-SCIP_RETCODE psFactorizeD(
+SCIP_RETCODE projShiftFactorizeD(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -552,7 +552,7 @@ SCIP_RETCODE printlpiexacterr(
 
 /** setup the data for ps in optimal version */
 static
-SCIP_RETCODE setupPsOpt(
+SCIP_RETCODE setupProjShiftOpt(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -797,7 +797,7 @@ SCIP_RETCODE setupPsOpt(
 
 /** setup the data for ps in arbitrary-point version */
 static
-SCIP_RETCODE setupPsArb(
+SCIP_RETCODE setupProjShiftArb(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -969,7 +969,7 @@ SCIP_RETCODE setupPsArb(
 
 /** setup the data for ps in arb-dual version */
 static
-SCIP_RETCODE setupPsArbDual(
+SCIP_RETCODE setupProjShiftArbDual(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1152,7 +1152,7 @@ SCIP_RETCODE setupPsArbDual(
 
 /** setup the data for ps in two-stage version */
 static
-SCIP_RETCODE setupPsTwoStage(
+SCIP_RETCODE setupProjShiftTwoStage(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1324,7 +1324,7 @@ SCIP_RETCODE setupPsTwoStage(
 
 /** subroutine to compute number of nonzeros in lp-matrix */
 static
-int computePsNnonz(
+int computeProjShiftNnonz(
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    int*                  dvarincidence       /**< the columns with existing bounds */
    )
@@ -1352,9 +1352,9 @@ int computePsNnonz(
    return ret;
 }
 
-/** subroutine of constructPSdata(); computes S-interior point or ray which is used to do the shifting step */
+/** subroutine of constructProjShiftData(); computes S-interior point or ray which is used to do the shifting step */
 static
-SCIP_RETCODE psComputeSintPointRay(
+SCIP_RETCODE projShiftComputeSintPointRay(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1374,9 +1374,9 @@ SCIP_RETCODE psComputeSintPointRay(
    int psnrows;
    int psnnonz;
    int nobjnz;
-   SCIP_Rational* tmp;   
-   SCIP_Rational* alpha; 
-   SCIP_Rational* beta;  
+   SCIP_Rational* tmp;
+   SCIP_Rational* alpha;
+   SCIP_Rational* beta;
    SCIP_RETCODE retcode;
 
    /* lpiexact and data used for the aux. problem */
@@ -1478,7 +1478,7 @@ SCIP_RETCODE psComputeSintPointRay(
 
       psncols =  ndvarmap + 1;
       psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computePsNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
@@ -1498,7 +1498,7 @@ SCIP_RETCODE psComputeSintPointRay(
        * alpha := (1-beta)/||OBJ||
        */
 
-      SCIP_CALL( setupPsOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjShiftOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1600,14 +1600,14 @@ SCIP_RETCODE psComputeSintPointRay(
          }
       }
 
-      psnnonz = computePsNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
       psnnonz += nobjnz + 1 + 3 * ndvarmap;
 
       /* allocate memory for aux problem */
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupPsArb(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjShiftArb(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, nobjnz, findintpoint) );
 
@@ -1697,13 +1697,13 @@ SCIP_RETCODE psComputeSintPointRay(
        */
       psncols =  ndvarmap + 1 + projshiftdata->projshiftbasisdim;
       psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computePsNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim + ncols;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupPsArbDual(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjShiftArbDual(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1805,13 +1805,13 @@ SCIP_RETCODE psComputeSintPointRay(
        */
       psncols =  ndvarmap + 1;
       psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computePsNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupPsTwoStage(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjShiftTwoStage(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1992,7 +1992,7 @@ SCIP_RETCODE psComputeSintPointRay(
 
 /** constructs datas used to compute dual bounds by the project-and-shift method */
 static
-SCIP_RETCODE constructPSData(
+SCIP_RETCODE constructProjShiftData(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -2036,7 +2036,7 @@ SCIP_RETCODE constructPSData(
    /* now mark that this function has been called */
    projshiftdata->projshiftdatacon = TRUE;
 
-   SCIPdebugMessage("calling constructPSdata()\n");
+   SCIPdebugMessage("calling constructProjShiftData()\n");
    SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
@@ -2048,10 +2048,10 @@ SCIP_RETCODE constructPSData(
    projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
 
    /* call function to select the set S */
-   SCIP_CALL( psChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
+   SCIP_CALL( projShiftChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
 
    /* compute LU factorization of D == A|_S */
-   SCIP_CALL( psFactorizeD(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
+   SCIP_CALL( projShiftFactorizeD(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
 
    /* if no fail in LU factorization, compute S-interior point and/or ray */
    if( !projshiftdata->projshiftdatafail )
@@ -2060,13 +2060,13 @@ SCIP_RETCODE constructPSData(
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-         SCIP_CALL( psComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
+         SCIP_CALL( projShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
       }
       if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
-         SCIP_CALL( psComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
+         SCIP_CALL( projShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
       }
    }
 
@@ -2081,14 +2081,14 @@ SCIP_RETCODE constructPSData(
    projshiftdata->violationsize = lpexact->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
-   SCIPdebugMessage("exiting constructPSdata()\n");
+   SCIPdebugMessage("exiting constructProjShiftData()\n");
 
    return SCIP_OKAY;
 }
 
 /** computes safe dual bound by project-and-shift method or corrects dual ray for infeasibility proof */
 static
-SCIP_RETCODE getPSdual(
+SCIP_RETCODE projectShift(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -2138,18 +2138,24 @@ SCIP_RETCODE getPSdual(
     *   - take convex combination of projected approximate point bold(y) with interior point y*
     * 3. compute dual objective value of feasible dual solution and set bound
     */
-
-   /* if data has not been constructed, or it failed, then exit */
    projshiftdata = lpexact->projshiftdata;
 
+   /* if data has not been constructed, construct it */
+   if( !projshiftdata->projshiftdatacon )
+   {
+      SCIP_CALL( constructProjShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+                     prob, blkmem) );
+   }
+
    assert(projshiftdata->projshiftdatacon);
-   if( (projshiftdata->projshiftdatafail && !usefarkas) || (usefarkas && !projshiftdata->projshifthasray) )
+
+   /* if constructing the data failed, then exit */
+   if( projshiftdata->projshiftdatafail || (usefarkas && !projshiftdata->projshifthasray) )
    {
       lp->hasprovedbound = FALSE;
       return SCIP_OKAY;
    }
 
-   /* constructprojshiftdata should always be called first */
    if( usefarkas )
    {
       stat->nprojshift++;
@@ -2165,7 +2171,7 @@ SCIP_RETCODE getPSdual(
 
    lp->hasprovedbound = TRUE;
 
-   SCIPdebugMessage("calling getPSdual()\n");
+   SCIPdebugMessage("calling projectShift()\n");
 
    /* decide if we should use ray or point to compute bound */
    if( !usefarkas && projshiftdata->projshiftuseintpoint && projshiftdata->projshifthaspoint )
@@ -2571,7 +2577,7 @@ SCIP_RETCODE getPSdual(
          }
          for( i = 0; i < nrows + ncols; i++ )
          {
-            /* todo @exip: refactor this somehow. explanation: when the number of lp-rows increased 
+            /* todo @exip: refactor this somehow. explanation: when the number of lp-rows increased
             * the number of rows in the ps-data does not. so we have [1,...,nrows, ... extrarows ..., 1, ... ncols]
             * so if we map to the column part in the extended space, we have to subtract the difference */
             int map;
@@ -2740,6 +2746,7 @@ SCIP_RETCODE getPSdual(
 }
 #endif
 
+/* choose the next bounding method for safe dual bounding */
 static
 char chooseBoundingMethod(
    SCIP_LP*              lp,                 /**< LP data */
@@ -2753,42 +2760,57 @@ char chooseBoundingMethod(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             dualfarkas,
-   SCIP_Real*            safebound
+   SCIP_Bool             dualfarkas,         /**< was the flating point lp infeasible? */
+   char                  lastboundmethod     /**< the last method that was chosen */
    )
 {
    char dualboundmethod;
 
    assert(!lpexact->fplp->hasprovedbound);
 
-   if( dualfarkas )
+   /* choose which bounding method to use; if we already had a lastboundmethod set,
+      then the previous iteration failed and we go to the next available method in order */
+   if( lastboundmethod != 'u' )
    {
-      /* check if neumair-scher is possible */
-      if( SCIPlpExactBSpossible(lpexact) )
-         dualboundmethod = 'n';
-      /* check if project and shift is possible */
-#ifdef SCIP_WITH_GMP
-      else if( SCIPlpExactPSpossible(lpexact) )
+      switch(lastboundmethod)
       {
-         SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                        prob, blkmem) );
-         if( !lpexact->projshiftdata->projshiftdatafail )
-            dualboundmethod = 'p';
-         else
-            dualboundmethod = 'e';
-      }
-#endif
-      /* otherwise solve exactly */
-      else
+      /* bound-shift -> try project shift next if possible, otherwise exactlp */
+      case 'n':
+         dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
+         break;
+      /* project-shift -> try exactlp next */
+      case 'p':
          dualboundmethod = 'e';
+      /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
+       * otherwise try exactlp again */
+      case 'e':
+         if( SCIPlpExactBSpossible(lpexact) )
+            dualboundmethod = 'n';
+         else
+            dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
+      /* unknown -> return unknown */
+      default:
+         SCIPerrorMessage("unknown bounding method in chooseBoundingMethod \n");
+         SCIPABORT();
+         dualboundmethod = 'u';
+         break;
+      }
    }
+   /* we do not have a lastboundmethod set, first check if we need to solve exactly */
+   else if( lpexact->forceexactsolve )
+   {
+      dualboundmethod = 'e';
+      lpexact->forceexactsolve = FALSE;
+   }
+   /* if we are not in automatic mode, try an iteration with the static method */
+   else if( set->misc_dbmethod != 'a' )
+   {
+      dualboundmethod = set->misc_dbmethod;
+   }
+   /* select automatically which bounding method to apply */
    else
    {
-      /* decide whether we want to interleave with exact LP call/basis verification
-       * - given freq
-       * or
-       * - Neumair Shcherbina bound only nearly able to cutoff node
-       */
+      /* decide whether we want to interleave with exact LP call given freq */
       if( (lpexact->interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpexact->fplp)) && SCIPgetDepth(set->scip) > 0
             && SCIPgetDepth(set->scip) % (lpexact->interleavedbfreq) == 0)
          || (lpexact->interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
@@ -2801,28 +2823,20 @@ char chooseBoundingMethod(
          /* check if neumair-scher is possible */
          if( SCIPlpExactBSpossible(lpexact) )
             dualboundmethod = 'n';
-#ifdef SCIP_WITH_GMP
          /* check if project and shift is possible */
          else if( SCIPlpExactPSpossible(lpexact) )
-         {
-            SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                           prob, blkmem) );
-            if( !lpexact->projshiftdata->projshiftdatafail )
-               dualboundmethod = 'p';
-            else
-               dualboundmethod = 'e';
-         }
-#endif
+            dualboundmethod = 'p';
          /* otherwise solve exactly */
          else
             dualboundmethod = 'e';
       }
    }
+
    return dualboundmethod;
 }
 
-/** calculates a valid dual bound/farkas proof if all variables have lower and upper bounds 
- * Let (y,z) be the dual variables, y corresponding to primal rows, z to variable bounds. 
+/** calculates a valid dual bound/farkas proof if all variables have lower and upper bounds
+ * Let (y,z) be the dual variables, y corresponding to primal rows, z to variable bounds.
  * An exactly feasible dual solution is computed with y' = max{0,y}, z'=max{0,(c-A^Ty')}.
  * The bound is then computed as b^Ty'+s^Tz', with b being the lhs/rhs and s the lb/ub depending on the
  * sign of the dual value.
@@ -3211,6 +3225,7 @@ SCIP_RETCODE basisVerification(
 }
 #endif
 
+/** computes a safe bound for the current floating point lp */
 SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
@@ -3230,6 +3245,9 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    )
 {
    char dualboundmethod;
+   char lastboundmethod = 'u';
+   SCIP_Bool abort =  FALSE;
+   int nattempts = 0;
 
    /* If we are not in exact solving mode, just return */
    if( !set->misc_exactsolve || lp->diving || lp->probing || lp->strongbranchprobing )
@@ -3240,87 +3258,58 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    assert(!lp->hasprovedbound);
 
    /* if the lp was solved to optimality and there are no fractional variables we solve exactly to generate a feasible solution */
-   if( lpexact->forceexactsolve || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat)) )
-      lpexact->forceexactsolve = TRUE;
-
-   /* if the lp is fp-objlim then we solve exactly to hopefully achieve the same (exact) result
-      @todo exip maybe it makes more sense to just disable objlimit alltogether? */
-   if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
-      lpexact->forceexactsolve = TRUE;
-
-   /* choose which bounding method to use. only needed if automatic is enabled. */
-   if( lpexact->forceexactsolve )
+   if( lpexact->forceexactsolve || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lp, set, stat))
+        || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
    {
-      dualboundmethod = 'e';
-      lpexact->forceexactsolve = FALSE;
+      lpexact->forceexactsolve = TRUE;
    }
-   else if( set->misc_dbmethod == 'a' )
+
+   while(!lp->hasprovedbound && !abort)
    {
       dualboundmethod = chooseBoundingMethod(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                              prob, itlim, lperror, dualfarkas, safebound);
-   }
-   else
-      dualboundmethod = set->misc_dbmethod;
+                              prob, itlim, lperror, dualfarkas, lastboundmethod);
+      SCIPdebugMessage("Computing safe bound for lp with status: %d using bounding method %c \n",
+         SCIPlpGetSolstat(lp), dualboundmethod);
 
-   SCIPdebugMessage("Computing safe bound for lp with status: %d using bounding method %c \n", SCIPlpGetSolstat(lp), dualboundmethod);
+      nattempts++;
 
-   switch(dualboundmethod)
-   {
-      /* neumaier and scherbina */
-      case 'n':
-         SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                        prob, dualfarkas, safebound) );
-         if( !lp->hasprovedbound )
-         {
-            SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                        prob, blkmem) );
-            SCIP_CALL( getPSdual(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                        prob, blkmem, dualfarkas, safebound) );
-         }
-         break;
-      /* basis verification */
-      case 'v':
-         SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
-         SCIPABORT();
-         break;
-      /* repair lp basis */
-      case 'r':
-         SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
-         SCIPABORT();
-         break;
-#ifdef SCIP_WITH_GMP
-      /* project and shift */
-      case 'p':
-         SCIP_CALL( constructPSData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                        prob, blkmem) );
-         SCIP_CALL( getPSdual(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                        prob, blkmem, dualfarkas, safebound) );
-         break;
-#endif
-      /* exact LP */
-      case 'e':
-         SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim,
-               lperror, dualfarkas) );
-         *primalfeasible = lpexact->primalfeasible;
-         *dualfeasible = lpexact->dualfeasible;
+      switch(dualboundmethod)
+      {
+         /* neumaier and scherbina */
+         case 'n':
+            SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                           prob, dualfarkas, safebound) );
+            break;
+      #ifdef SCIP_WITH_GMP
+         /* project and shift */
+         case 'p':
+            SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+                           prob, blkmem, dualfarkas, safebound) );
+            break;
+      #endif
+         /* exact LP */
+         case 'e':
+            SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+                           prob, set->lp_iterlim, lperror, dualfarkas) );
+            *primalfeasible = lpexact->primalfeasible;
+            *dualfeasible = lpexact->dualfeasible;
+            break;
+         default:
+            SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
+            SCIPABORT();
+            break;
+      }
 
-         break;
-      default:
-         SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
-         SCIPABORT();
-         break;
-   }
-
-   if( !lp->hasprovedbound && !(*lperror) )
-   {
-      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, set->lp_iterlim,
-               lperror, dualfarkas) );
-      *primalfeasible = lpexact->primalfeasible;
-      *dualfeasible = lpexact->dualfeasible;
+      lastboundmethod = dualboundmethod;
+      /* we fail if we tried all available methods, or if we had to solve the lp exactly but could not */
+      if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) )
+      {
+         SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound \n", nattempts);
+         abort = TRUE;
+      }
    }
 #endif
 
-   /* choose which bounding method should be calles and return a safe objective bound */
    return SCIP_OKAY;
 }
 
