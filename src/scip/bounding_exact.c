@@ -232,9 +232,9 @@ SCIP_RETCODE allocIntMem(
 }
 
 #ifdef SCIP_WITH_GMP
-/** subroutine of constructProjShiftData(); chooses which columns of the matrix are designated as set S, used for projections */
+/** subroutine of constructProjectShiftData(); chooses which columns of the matrix are designated as set S, used for projections */
 static
-SCIP_RETCODE projShiftChooseS(
+SCIP_RETCODE projectShiftChooseS(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -358,9 +358,9 @@ SCIP_RETCODE projShiftChooseS(
    return SCIP_OKAY;
 }
 
-/** subroutine of constructProjShiftData(); computes the LU factorization used by the project-and-shift method */
+/** subroutine of constructProjectShiftData(); computes the LU factorization used by the project-and-shift method */
 static
-SCIP_RETCODE projShiftFactorizeD(
+SCIP_RETCODE projectShiftFactorizeD(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -552,7 +552,7 @@ SCIP_RETCODE printlpiexacterr(
 
 /** setup the data for ps in optimal version */
 static
-SCIP_RETCODE setupProjShiftOpt(
+SCIP_RETCODE setupProjectShiftOpt(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -797,7 +797,7 @@ SCIP_RETCODE setupProjShiftOpt(
 
 /** setup the data for ps in arbitrary-point version */
 static
-SCIP_RETCODE setupProjShiftArb(
+SCIP_RETCODE setupProjectShiftArb(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -969,7 +969,7 @@ SCIP_RETCODE setupProjShiftArb(
 
 /** setup the data for ps in arb-dual version */
 static
-SCIP_RETCODE setupProjShiftArbDual(
+SCIP_RETCODE setupProjectShiftArbDual(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1152,7 +1152,7 @@ SCIP_RETCODE setupProjShiftArbDual(
 
 /** setup the data for ps in two-stage version */
 static
-SCIP_RETCODE setupProjShiftTwoStage(
+SCIP_RETCODE setupProjectShiftTwoStage(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1324,7 +1324,7 @@ SCIP_RETCODE setupProjShiftTwoStage(
 
 /** subroutine to compute number of nonzeros in lp-matrix */
 static
-int computeProjShiftNnonz(
+int computeProjectShiftNnonz(
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    int*                  dvarincidence       /**< the columns with existing bounds */
    )
@@ -1352,9 +1352,9 @@ int computeProjShiftNnonz(
    return ret;
 }
 
-/** subroutine of constructProjShiftData(); computes S-interior point or ray which is used to do the shifting step */
+/** subroutine of constructProjectShiftData(); computes S-interior point or ray which is used to do the shifting step */
 static
-SCIP_RETCODE projShiftComputeSintPointRay(
+SCIP_RETCODE projectShiftComputeSintPointRay(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1478,7 +1478,7 @@ SCIP_RETCODE projShiftComputeSintPointRay(
 
       psncols =  ndvarmap + 1;
       psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
@@ -1498,7 +1498,7 @@ SCIP_RETCODE projShiftComputeSintPointRay(
        * alpha := (1-beta)/||OBJ||
        */
 
-      SCIP_CALL( setupProjShiftOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjectShiftOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1600,14 +1600,14 @@ SCIP_RETCODE projShiftComputeSintPointRay(
          }
       }
 
-      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += nobjnz + 1 + 3 * ndvarmap;
 
       /* allocate memory for aux problem */
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupProjShiftArb(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjectShiftArb(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, nobjnz, findintpoint) );
 
@@ -1697,13 +1697,13 @@ SCIP_RETCODE projShiftComputeSintPointRay(
        */
       psncols =  ndvarmap + 1 + projshiftdata->projshiftbasisdim;
       psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim + ncols;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupProjShiftArbDual(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjectShiftArbDual(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1805,13 +1805,13 @@ SCIP_RETCODE projShiftComputeSintPointRay(
        */
       psncols =  ndvarmap + 1;
       psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computeProjShiftNnonz(lpexact, dvarincidence);
+      psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim;
 
       SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
-      SCIP_CALL( setupProjShiftTwoStage(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
+      SCIP_CALL( setupProjectShiftTwoStage(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols, findintpoint) );
 
@@ -1992,7 +1992,7 @@ SCIP_RETCODE projShiftComputeSintPointRay(
 
 /** constructs datas used to compute dual bounds by the project-and-shift method */
 static
-SCIP_RETCODE constructProjShiftData(
+SCIP_RETCODE constructProjectShiftData(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -2036,7 +2036,7 @@ SCIP_RETCODE constructProjShiftData(
    /* now mark that this function has been called */
    projshiftdata->projshiftdatacon = TRUE;
 
-   SCIPdebugMessage("calling constructProjShiftData()\n");
+   SCIPdebugMessage("calling constructProjectShiftData()\n");
    SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
@@ -2048,10 +2048,10 @@ SCIP_RETCODE constructProjShiftData(
    projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
 
    /* call function to select the set S */
-   SCIP_CALL( projShiftChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
+   SCIP_CALL( projectShiftChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
 
    /* compute LU factorization of D == A|_S */
-   SCIP_CALL( projShiftFactorizeD(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
+   SCIP_CALL( projectShiftFactorizeD(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
 
    /* if no fail in LU factorization, compute S-interior point and/or ray */
    if( !projshiftdata->projshiftdatafail )
@@ -2060,13 +2060,13 @@ SCIP_RETCODE constructProjShiftData(
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-         SCIP_CALL( projShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
       }
       if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
-         SCIP_CALL( projShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
       }
    }
 
@@ -2081,7 +2081,7 @@ SCIP_RETCODE constructProjShiftData(
    projshiftdata->violationsize = lpexact->ncols;
 
    SCIPclockStop(stat->provedfeaspstime, set);
-   SCIPdebugMessage("exiting constructProjShiftData()\n");
+   SCIPdebugMessage("exiting constructProjectShiftData()\n");
 
    return SCIP_OKAY;
 }
@@ -2143,7 +2143,7 @@ SCIP_RETCODE projectShift(
    /* if data has not been constructed, construct it */
    if( !projshiftdata->projshiftdatacon )
    {
-      SCIP_CALL( constructProjShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                      prob, blkmem) );
    }
 
@@ -3247,13 +3247,17 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    )
 {
    char dualboundmethod;
-   char lastboundmethod = 'u';
-   SCIP_Bool abort =  FALSE;
-   int nattempts = 0;
+   char lastboundmethod;
+   SCIP_Bool abort;
+   int nattempts;
 
    /* if we are not in exact solving mode, just return */
    if( !set->misc_exactsolve || lp->diving || lp->probing || lp->strongbranchprobing )
       return SCIP_OKAY;
+
+   lastboundmethod = 'u';
+   abort = FALSE;
+   nattempts = 0;
 
 #ifdef SCIP_WITH_BOOST
    assert(set->misc_exactsolve);
