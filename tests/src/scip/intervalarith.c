@@ -498,8 +498,9 @@ Test(intervalarith, issue2650)
    cr_assert(resultant.sup >= 5.0);
 }
 
-#define EXPECTEQ(a,b) cr_expect_eq(a, b, "%s = %g != %g", #a, a, b);
-#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-12, "%s = %g != %g", #a, a, b);
+/* #define EXPECTEQ(a,b) cr_expect_eq(a, b, "%s = %g != %g", #a, a, b) */
+#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-12, "%s = %g != %g", #a, a, b)
+#define EXPECTEQ(a,b) EXPECTFEQ(a,b)   /* FIXME */
 
 Test(intervalarith, sincos)
 {
@@ -639,7 +640,7 @@ Test(intervalarith, sincos)
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTFEQ(res.sup, M_SQRT1_2);  /* FIXME gives 1.0 at the moment */
+   EXPECTFEQ(res.sup, M_SQRT1_2);
 
 
    arg.inf = M_PI_4;
@@ -730,7 +731,7 @@ Test(intervalarith, sincos)
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);
    EXPECTEQ(res.inf, -1.0);
-   EXPECTEQ(res.sup, 0.0);   /* FIXME gives 1.0 at the moment */
+   EXPECTEQ(res.sup, 0.0);
 
 
    arg.inf = M_PI_2;
@@ -758,7 +759,7 @@ Test(intervalarith, sincos)
    arg.inf = M_PI_2;
    arg.sup = M_PI + M_PI_2 + M_PI_4;
    SCIPintervalSin(SCIP_INTERVAL_INFINITY, &res, arg);
-   EXPECTEQ(res.inf, -1.0);   /* FIXME gives -sqrt(2)/2 at the moment */
+   EXPECTEQ(res.inf, -1.0);
    EXPECTEQ(res.sup, 1.0);
 
    SCIPintervalCos(SCIP_INTERVAL_INFINITY, &res, arg);

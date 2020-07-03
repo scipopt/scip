@@ -2635,6 +2635,12 @@ void SCIPintervalAbs(
    }
 }
 
+/* double precision lower and upper bounds on pi
+ * taken from boost::numeric::interval_lib::constants
+ */
+static const double pi_d_l = (3373259426.0 + 273688.0 / (1<<21)) / (1<<30);
+static const double pi_d_u = (3373259426.0 + 273689.0 / (1<<21)) / (1<<30);
+
 /** stores sine value of operand in resultant */
 void SCIPintervalSin(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -2642,107 +2648,13 @@ void SCIPintervalSin(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   SCIP_Real finf;
-   SCIP_Real fsup;
-   SCIP_Real infval;
-   SCIP_Real supval;
-   SCIP_Real extr;
-   int nbetween;
-   int k;
+   SCIP_INTERVAL pihalf;
 
-   assert(resultant != NULL);
-   assert(!SCIPintervalIsEmpty(infinity, operand));
-
-   if( operand.inf == operand.sup ) /*lint !e777 */
-   {
-      SCIP_Real tmp;
-
-      assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      tmp = sin(operand.inf);
-      resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
-      resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
-      return;
-   }
-
-   /* set interval to [-1,1] if we cannot reliably work out the difference between inf and sup
-    * double precision has almost 16 digits of precision; for now cut off at 12
-    */
-   if( operand.sup > 1e12 || operand.inf < -1e12 )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-
-   /* set interval to [-1,1] if [inf,sup] is larger than 2 pi
-    * add a little tolerance to compensate for rounding error
-    */
-   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-
-   /* compute extreme point that is left to operand.inf */
-   k = (int) floor(operand.inf/M_PI - 0.5);
-   extr = (2*k+1) * M_PI_2;   /*lint !e790*/
-   assert(extr <= operand.inf);
-
-   /* check how many minimums and maximums are contained in [inf,sup] */
-   nbetween = 0;
-   while( extr + M_PI*(nbetween + 1) <= operand.sup && nbetween < 3 )
-      ++nbetween;
-
-   /* at least one minimum and maximum are contained in [inf,sup] -> return [-1,1] */
-   if( nbetween > 1 )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-
-   infval = sin(operand.inf);
-   supval = sin(operand.sup);
-   finf = MIN(infval, supval);
-   fsup = MAX(infval, supval);
-
-   /* no extremum -> sin(x) is monotone in [inf,sup] */
-   if( nbetween == 0 )
-   {
-      assert(finf <= fsup);
-
-      finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-      fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
-   }
-   else
-   {
-      assert(nbetween == 1);
-
-      /* check whether the extremum in between inf and sup is a minimum or maximum
-       * - if derivative at inf is positive or derivative at sup is negative, then its a maximum in between,
-       *   so the resultant has a lower bound min(sin(inf),sin(sup)) = finf
-       *   and an upper bound of 1.0
-       * - if derivative at inf is negative or derivative at sup is positive, then its a minimum in between,
-       *   so the resultant has a lower bound of 1.0
-       *   and an upper bound max(sin(inf),sin(sup)) = fsup
-       * - we cannot be here if both derivatives are zero, since we have sup - inf < 2*M_PI - 1e-12 (see first if() above)
-       */
-      if( cos(operand.inf) > 0.0 || cos(operand.sup) < 0.0 )
-      {
-         finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-         fsup = 1.0;
-      }
-      else
-      {
-         assert(cos(operand.inf) < 0.0 || cos(operand.sup) > 0.0);
-         finf = -1.0;
-         fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
-      }
-   }
-   assert(finf <= fsup);
-
-   /* project [finf,fsup] to [-1,1] */
-   finf = MAX(finf, -1.0);
-   fsup = MIN(fsup, 1.0);
-   SCIPintervalSetBounds(resultant, finf, fsup);
+   /* sin(x) = cos(x-pi/2) */
+   SCIPintervalSetBounds(&pihalf, pi_d_l, pi_d_u);
+   SCIPintervalMulScalar(infinity, &pihalf, pihalf, 0.5);
+   SCIPintervalSub(infinity, &operand, operand, pihalf);
+   SCIPintervalCos(infinity, resultant, operand);
 }
 
 /** stores cosine value of operand in resultant */
@@ -2752,13 +2664,9 @@ void SCIPintervalCos(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   SCIP_Real finf;
-   SCIP_Real fsup;
-   SCIP_Real infval;
-   SCIP_Real supval;
-   SCIP_Real extr;
-   int nbetween;
-   int k;
+   /* this implementation follows boost::numeric::cos */
+   SCIP_ROUNDMODE roundmode;
+   SCIP_Real width;
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
@@ -2783,73 +2691,73 @@ void SCIPintervalCos(
       return;
    }
 
-   if( operand.sup - operand.inf >= 2*M_PI - 1e-12 )
+   roundmode = SCIPintervalGetRoundingMode();
+
+   /* set interval to [-1,1] if width is at least 2 pi */
+   SCIPintervalSetRoundingModeUpwards();
+   width = operand.sup - operand.inf;
+   SCIPintervalSetRoundingMode(roundmode);
+   if( width >= 2*pi_d_l )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
 
-   /* compute extreme point that is left to operand.inf */
-   k = (int) floor(operand.inf/M_PI);
-   extr = k*M_PI;
-   assert(extr <= operand.inf);
-
-   /* check how many minimums and maximums are contained in [inf,sup] */
-   nbetween = 0;
-   while( extr + M_PI*(nbetween + 1) <= operand.sup && nbetween < 3 )
-      ++nbetween;
-
-   /* at least one minimum and maximum are contained in [inf,sup] -> return [-1,1] */
-   if( nbetween > 1 )
+   /* get operand.inf into [0,2*pi] */
+   if( operand.inf < 0.0 || operand.inf >= 2*M_PI )
    {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      SCIP_INTERVAL tmp;
+      int k;
+
+      SCIPintervalSetRoundingModeDownwards();
+      k = (int)floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)) / 2.0);
+      SCIPintervalSetRoundingMode(roundmode);
+
+      /* operand <- operand - k * 2*pi */
+      SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
+      SCIPintervalMulScalar(infinity, &tmp, tmp, 2*k);
+      SCIPintervalSub(infinity, &operand, operand, tmp);
+   }
+   assert(operand.inf >= 0.0);
+   assert(operand.inf <= 2*pi_d_u);
+
+   /* get operand.inf into [0,pi] */
+   if( operand.inf > pi_d_u )
+   {
+      /* cos(x) = -cos(x-pi) */
+      SCIP_INTERVAL tmp;
+
+      SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
+      SCIPintervalSub(infinity, &operand, operand, tmp);
+      assert(operand.inf <= pi_d_u);
+
+      SCIPintervalCos(infinity, &tmp, operand);
+      SCIPintervalSetBounds(resultant, -tmp.sup, -tmp.inf);
       return;
    }
 
-   infval = cos(operand.inf);
-   supval = cos(operand.sup);
-   finf = MIN(infval, supval);
-   fsup = MAX(infval, supval);
-
-   /* no extremum -> cos(x) is monotone in [inf,sup] */
-   if( nbetween == 0 )
+   if( operand.sup <= pi_d_l )
    {
-      assert(finf <= fsup);
+      /* monotone decreasing */
+      resultant->inf = SCIPnextafter(cos(operand.sup), SCIP_REAL_MIN);
+      resultant->sup = SCIPnextafter(cos(operand.inf), SCIP_REAL_MAX);
+   }
+   else if( operand.sup <= 2*pi_d_l )
+   {
+      /* inf <= pi, sup >= pi: minimum at pi (=-1), maximum at inf or sup */
+      SCIP_Real cosinf;
+      SCIP_Real cossup;
 
-      finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-      fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
+      resultant->inf = -1.0;
+
+      cosinf = cos(operand.inf);
+      cossup = cos(operand.sup);
+      resultant->sup = SCIPnextafter(MAX(cosinf, cossup), SCIP_REAL_MAX);
    }
    else
    {
-      assert(nbetween == 1);
-
-      /* check whether the extremum in between inf and sup is a minimum or maximum
-       * - if derivative at inf is positive or derivative at sup is negative, then its a maximum in between,
-       *   so the resultant has a lower bound min(cos(inf),cos(sup)) = finf
-       *   and an upper bound of 1.0
-       * - if derivative at inf is negative or derivative at sup is positive, then its a minimum in between,
-       *   so the resultant has a lower bound of 1.0
-       *   and an upper bound max(cos(inf),cos(sup)) = fsup
-       * - we cannot be here if both derivatives are zero, since we have sup - inf < 2*M_PI - 1e-12 (see first if() above)
-       */
-      if( sin(operand.inf) < 0.0 || sin(operand.sup) > 0.0 )
-      {
-         finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-         fsup = 1.0;
-      }
-      else
-      {
-         assert(sin(operand.inf) > 0.0 || sin(operand.sup) < 0.0);
-         finf = -1.0;
-         fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
-      }
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
    }
-   assert(finf <= fsup);
-
-   /* project [finf,fsup] to [-1,1] */
-   finf = MAX(finf, -1.0);
-   fsup = MIN(fsup, 1.0);
-   SCIPintervalSetBounds(resultant, finf, fsup);
 }
 
 /** stores sign of operand in resultant */
