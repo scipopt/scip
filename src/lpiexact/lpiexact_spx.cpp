@@ -31,8 +31,6 @@
 #include "lpiexact/type_lpiexact.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/rational.h"
-#include "scip/config.h"
-
 
 #define STRONGBRANCH_RESTOREBASIS            /**< if defined then in SCIPlpiStrongbranch() we restore the basis after the
                                               *   down branch and after the up branch; if false only after the end of a
