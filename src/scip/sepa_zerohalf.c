@@ -364,14 +364,12 @@ SCIP_RETCODE transformNonIntegralRow(
    /* first add all integral variables to the transformed row and remember their positions in the row */
    for( i = 0; i < rowlen; ++i )
    {
-      SCIP_VAR* var;
       int probindex;
 
       if( !SCIPcolIsIntegral(rowcols[i]) )  /*lint !e613*/
          continue;
 
-      var = SCIPcolGetVar(rowcols[i]);
-      probindex = SCIPvarGetProbindex(var);
+      probindex = SCIPcolGetVarProbindex(rowcols[i]);
       transrowvars[transrowlen] = probindex;
       transrowvals[transrowlen] = sign * rowvals[i];
       intvarpos[probindex] = ++transrowlen;
@@ -1480,7 +1478,7 @@ void addOrigRow(
       SCIP_Real val;
       int probindex;
 
-      probindex = SCIPvarGetProbindex(SCIPcolGetVar(rowcols[i]));
+      probindex = SCIPcolGetVarProbindex(rowcols[i]);
       val = tmpcoefs[probindex];
       if( val == 0.0 )
       {
