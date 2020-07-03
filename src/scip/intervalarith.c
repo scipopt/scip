@@ -2649,12 +2649,19 @@ void SCIPintervalSin(
    )
 {
    SCIP_INTERVAL pihalf;
+   SCIP_INTERVAL shiftedop;
 
    /* sin(x) = cos(x-pi/2) */
    SCIPintervalSetBounds(&pihalf, pi_d_l, pi_d_u);
    SCIPintervalMulScalar(infinity, &pihalf, pihalf, 0.5);
-   SCIPintervalSub(infinity, &operand, operand, pihalf);
-   SCIPintervalCos(infinity, resultant, operand);
+   SCIPintervalSub(infinity, &shiftedop, operand, pihalf);
+   SCIPintervalCos(infinity, resultant, shiftedop);
+
+   /* some correction if inf or sup is 0, then sin(0) = 0 would be nice */
+   if( operand.inf == 0.0 && operand.sup < pi_d_l )
+      resultant->inf = 0.0;
+   else if( operand.sup == 0.0 && operand.inf > -pi_d_l )
+      resultant->sup = 0.0;
 }
 
 /** stores cosine value of operand in resultant */
@@ -2740,24 +2747,34 @@ void SCIPintervalCos(
    {
       /* monotone decreasing */
       resultant->inf = SCIPnextafter(cos(operand.sup), SCIP_REAL_MIN);
-      resultant->sup = SCIPnextafter(cos(operand.inf), SCIP_REAL_MAX);
+      resultant->inf = MAX(-1.0, resultant->inf);
+      if( operand.inf == 0.0 )
+         resultant->sup = 1.0;
+      else
+      {
+         resultant->sup = SCIPnextafter(cos(operand.inf), SCIP_REAL_MAX);
+         resultant->sup = MIN( 1.0, resultant->sup);
+      }
    }
    else if( operand.sup <= 2*pi_d_l )
    {
       /* inf <= pi, sup >= pi: minimum at pi (=-1), maximum at inf or sup */
-      SCIP_Real cosinf;
-      SCIP_Real cossup;
-
       resultant->inf = -1.0;
-
-      cosinf = cos(operand.inf);
-      cossup = cos(operand.sup);
-      resultant->sup = SCIPnextafter(MAX(cosinf, cossup), SCIP_REAL_MAX);
+      if( operand.inf == 0.0 )
+         resultant->sup = 1.0;
+      else
+      {
+         resultant->sup = SCIPnextafter(MAX(cos(operand.inf), cos(operand.sup)), SCIP_REAL_MAX);
+         resultant->sup = MIN(1.0, resultant->sup);
+      }
    }
    else
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
    }
+
+   assert(resultant->inf >= -1.0);
+   assert(resultant->sup <=  1.0);
 }
 
 /** stores sign of operand in resultant */
