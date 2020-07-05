@@ -4340,7 +4340,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
-   assert( propdata->symconsenabled );
+   assert( propdata->symconsenabled || propdata->sstenabled );
 
    /* possibly compute symmetry */
    if ( propdata->ofenabled )
