@@ -184,12 +184,12 @@
 
 /* default parameters for Schreier Sims constraints */
 #define DEFAULT_SSTTIEBREAKRULE   1          /**< index of tie break rule for selecting orbit for Schreier Sims constraints? */
-#define DEFAULT_SSTLEADERRULE     1          /**< index of rule for selecting leader variables for Schreier Sims constraints? */
+#define DEFAULT_SSTLEADERRULE     0          /**< index of rule for selecting leader variables for Schreier Sims constraints? */
 #define DEFAULT_SSTLEADERVARTYPE 14          /**< bitset encoding which variable types can be leaders (1: binary; 2: integer; 4: impl. int; 8: continuous);
                                               *   if multiple types are allowed, take the one with most affected vars */
 #define DEFAULT_ADDCONFLICTCUTS       TRUE   /**< Should Schreier Sims constraints be added if we use a conflict based rule? */
 #define DEFAULT_SSTADDCUTS            TRUE   /**< Should Schreier Sims constraints be added? */
-#define DEFAULT_SSTMIXEDCOMPONENTS    FALSE  /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
+#define DEFAULT_SSTMIXEDCOMPONENTS    TRUE   /**< Should Schreier Sims constraints be added if a symmetry component contains variables of different types? */
 
 /* event handler properties */
 #define EVENTHDLR_SYMMETRY_NAME    "symmetry"
