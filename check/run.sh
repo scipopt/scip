@@ -86,7 +86,9 @@ then
 fi
 
 echo                                >> $OUTFILE
-top -b -n 1 | head -n 15            >> $OUTFILE
+if test `uname` == Linux ; then   # -b does not work with top on macOS
+  top -b -n 1 | head -n 15          >> $OUTFILE
+fi
 echo                                >> $OUTFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT" >>$OUTFILE

@@ -17,8 +17,8 @@
  * @brief  exponential expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
+ * @author Ksenia Bestuzheva
  *
- * @todo initsepaExp
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -226,6 +226,110 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateExp)
    return SCIP_OKAY;
 }
 
+/** init sepa callback that initializes LP for an exponential expression */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaExp)
+{
+   SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Bool overest[4] = {FALSE, FALSE, FALSE, TRUE};
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_ROWPREP* rowprep;
+   SCIP_Real constant;
+   SCIP_Bool success;
+   int i;
+   SCIP_ROW* row;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   /* get expression data */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   lb = SCIPvarGetLbLocal(childvar);
+   ub = SCIPvarGetUbLocal(childvar);
+
+   if( underestimate )
+   {
+      SCIP_Real lbfinite;
+      SCIP_Real ubfinite;
+
+      /* make bounds finite */
+      lbfinite = SCIPisInfinity(scip, -lb) ? MIN(-5.0, ub - 0.1 * REALABS(ub)) : lb; /*lint !e666*/
+      ubfinite = SCIPisInfinity(scip, ub) ? MAX( 3.0, lb + 0.1 * REALABS(lb)) : ub; /*lint !e666*/
+
+      refpointsunder[0] = (7.0 * lbfinite + ubfinite) / 8.0;
+      refpointsunder[1] = (lbfinite + ubfinite) / 2.0;
+      refpointsunder[2] = (lbfinite + 7.0 * ubfinite) / 8.0;
+   }
+
+   *infeasible = FALSE;
+
+   for( i = 0; i < 4; ++i )
+   {
+      if( !overest[i] && !underestimate )
+         continue;
+
+      if( overest[i] && (!overestimate || SCIPisInfinity(scip, ub) || SCIPisInfinity(scip, -lb)) )
+         continue;
+
+      assert(overest[i] || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb))); /*lint !e661*/
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, overest[i]) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+      *(rowprep->coefs) = 0.0;
+      constant = 0.0;
+      success = TRUE;
+
+      if( !overest[i] )
+      {
+         assert(i < 3);
+         SCIPaddExpLinearization(scip, refpointsunder[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success); /*lint !e661*/
+      }
+      else
+         SCIPaddExpSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
+
+      if( success )
+      {
+         rowprep->nvars = 1;
+         rowprep->vars[0] = childvar;
+         rowprep->side = -constant;
+
+         /* add auxiliary variable */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+         /* straighten out numerics */
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
+               &success) );
+      }
+
+      /* if cleanup removed a variable, the cut is essentially a bound -> skip it */
+      if( success && rowprep->nvars == 2 )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropExp)
@@ -325,7 +429,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaExp, NULL, estimateExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffExp) );

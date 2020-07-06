@@ -16684,7 +16684,10 @@ SCIP_RETCODE rowprepRecordModifiedVar(
 
    /* do not record for fixed variables, as they are not suitable for branching */
    if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+   {
+      SCIPdebugMsg(scip, "skip recording modification for fixed variable <%s>[%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       return SCIP_OKAY;
+   }
 
    /* increase modifiedvars array size */
    if( rowprep->nmodifiedvars >= rowprep->modifiedvarssize )

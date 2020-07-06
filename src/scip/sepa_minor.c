@@ -357,7 +357,10 @@ SCIP_RETCODE detectMinors(
       root = SCIPgetExprConsExpr(scip, cons);
       assert(root != NULL);
 
-      /* ignore circle packing constraints */
+      /* ignore circle packing constraints; the motivation for this is that in circle packing instance not only the SDP
+       * relaxation is weak (see "Packing circles in a square: a theoretical comparison of various convexification
+       * techniques", http://www.optimization-online.org/DB_HTML/2017/03/5911.html), but it also hurts performance
+       */
       if( sepadata->ignorepackingconss && isPackingCons(scip, conshdlr, cons) )
       {
          SCIPdebugMsg(scip, "ignore packing constraints %s\n", SCIPconsGetName(cons));

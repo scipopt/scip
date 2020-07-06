@@ -9169,7 +9169,8 @@ SCIP_Bool isSingleLockedCand(
       && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPgetConsExprExprNLocksPos(expr)
       && SCIPgetConsExprExprVarNConss(expr) == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
       && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
-      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY;
+      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 }
 
 /** removes all variable expressions that are contained in a given expression from a hash map */
@@ -11939,6 +11940,10 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
 
    SCIP_CALL( expr->exprhdlr->bwdiff(scip, expr, childidx, derivative) );
 
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
+
    /* restore original evalvalues in children */
    if( childrenvals != NULL )
    {
@@ -11992,6 +11997,10 @@ SCIP_RETCODE SCIPevalConsExprExprHdlr(
 
    /* call expression eval callback */
    SCIP_CALL( expr->exprhdlr->eval(scip, expr, val, sol) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*val) )
+      *val = SCIP_INVALID;
 
    /* restore original evalvalues in children */
    if( origvals != NULL )
@@ -16475,14 +16484,15 @@ SCIP_RETCODE SCIPprocessConsExprRowprep(
             SCIP_CALL( addConsExprExprViolScoresAuxVars(scip, conshdlr, expr, violscore, rowprep->modifiedvars,
                                                         rowprep->nmodifiedvars, sol, &branchscoresuccess) );
 
-            /* addConsExprExprBranchScoresAuxVars can fail if the only var for which the coef was changed is this
-             * expr's auxvar
-             * I don't think it makes sense to branch on that one (would it?)
-             * it can also fail if everything is fixed
-             * or if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
+            /* addConsExprExprBranchScoresAuxVars can fail if the only vars for which the coef was changed
+             * - were fixed,
+             * - are this expr's auxvar (I don't think it makes sense to branch on that one (would it?)), or
+             * - if a variable in the rowprep is not in expr (can happen with indicator added by perspective)
+             * the first case came up again in #3085 and I don't see how to exclude this in the assert,
+             * so I'm disabling the assert for now
              */
-            assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
-                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0);
+            /* assert(branchscoresuccess || (rowprep->nmodifiedvars == 1 && rowprep->modifiedvars[0] == auxvar) ||
+                  strcmp(SCIPgetConsExprNlhdlrName(nlhdlr), "perspective")==0); */
          }
       }
    }

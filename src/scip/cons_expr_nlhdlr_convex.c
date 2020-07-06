@@ -52,6 +52,8 @@
 #define DEFAULT_CVXPRODCOMP    TRUE
 #define DEFAULT_HANDLETRIVIAL  FALSE
 
+#define INITLPMAXVARVAL          1000.0 /**< maximal absolute value of variable for still generating a linearization cut at that point in initlp */
+
 /*
  * Data structures
  */
@@ -1731,6 +1733,123 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvexConcave)
    return SCIP_OKAY;
 }
 
+/** init sepa callback that initializes LP */
+static
+SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* nlexpr;
+   SCIP_EXPRCURV curvature;
+   SCIP_Bool success;
+   SCIP_ROWPREP* rowprep = NULL;
+   SCIP_ROW* row;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real lambda;
+   SCIP_SOL* sol;
+   int k;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(nlhdlrexprdata != NULL);
+
+   nlexpr = nlhdlrexprdata->nlexpr;
+   assert(nlexpr != NULL);
+   assert(SCIPhashmapGetImage(nlhdlrexprdata->nlexpr2origexpr, (void*)nlexpr) == expr);
+
+   curvature = SCIPgetConsExprExprCurvature(nlexpr);
+   assert(curvature == SCIP_EXPRCURV_CONVEX || curvature == SCIP_EXPRCURV_CONCAVE);
+
+   /* we can only be estimating on the convex side */
+   if( curvature == SCIP_EXPRCURV_CONVEX )
+      overestimate = FALSE;
+   else if( curvature == SCIP_EXPRCURV_CONCAVE )
+      underestimate = FALSE;
+   if( !overestimate && !underestimate )
+      return SCIP_OKAY;
+
+   /* linearizes at 5 different points obtained as convex combination of the lower and upper bound of the variables
+    * present in the convex expression; whether more weight is given to the lower or upper bound of a variable depends
+    * on whether the fixing of the variable to that value is better for the objective function
+    */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   *infeasible = FALSE;
+
+   for( k = 0; k < 5; ++k )
+   {
+      int i;
+      lambda = 0.1 * (k+1); /* lambda = 0.1, 0.2, 0.3, 0.4, 0.5 */
+
+      for( i = 0; i < nlhdlrexprdata->nleafs; ++i )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
+
+         lb = SCIPvarGetLbGlobal(var);
+         ub = SCIPvarGetUbGlobal(var);
+
+         if( ub > -INITLPMAXVARVAL )
+            lb = MAX(lb, -INITLPMAXVARVAL);
+         if( lb <  INITLPMAXVARVAL )
+            ub = MIN(ub,  INITLPMAXVARVAL);
+
+         /* make bounds finite */
+         if( SCIPisInfinity(scip, -lb) )
+            lb = MIN(-10.0, ub - 0.1*REALABS(ub));  /*lint !e666 */
+         if( SCIPisInfinity(scip,  ub) )
+            ub = MAX( 10.0, lb + 0.1*REALABS(lb));  /*lint !e666 */
+
+         if( SCIPvarGetBestBoundType(var) == SCIP_BOUNDTYPE_LOWER )
+            SCIP_CALL( SCIPsetSolVal(scip, sol, var, lambda * ub + (1.0 - lambda) * lb) );
+         else
+            SCIP_CALL( SCIPsetSolVal(scip, sol, var, lambda * lb + (1.0 - lambda) * ub) );
+      }
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+      SCIP_CALL( estimateGradient(scip, conshdlr, nlhdlrexprdata, sol, 0.0, rowprep, &success) );
+      if( !success )
+      {
+         SCIPdebugMsg(scip, "failed to linearize for k = %d\n", k);
+         if( rowprep != NULL )
+            SCIPfreeRowprep(scip, &rowprep);
+         continue;
+      }
+
+      /* add auxiliary variable */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+      /* straighten out numerics */
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+      if( !success )
+      {
+         SCIPdebugMsg(scip, "failed to cleanup rowprep numerics for k = %d\n", k);
+         if( rowprep != NULL )
+            SCIPfreeRowprep(scip, &rowprep);
+         continue;
+      }
+
+      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_gradient%p_initsepa_%d", overestimate ? "over" : "under", (void*)expr, k);
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+      SCIPfreeRowprep(scip, &rowprep);
+
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "initsepa computed row: ");
+      SCIPprintRow(scip, row, NULL);
+#endif
+
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+
+      if( *infeasible )
+         break;
+   }
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+   return SCIP_OKAY;
+}
+
 /** estimator callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateConvex)
@@ -1860,7 +1979,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrfreeHdlrDataConvexConcave);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrConvex);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataConvexConcave);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, NULL, nlhdlrEstimateConvex, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaConvex, NULL, nlhdlrEstimateConvex, NULL);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitConvex);
 
    return SCIP_OKAY;
