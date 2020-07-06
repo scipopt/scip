@@ -2466,7 +2466,7 @@ SCIP_RETCODE markRowsXj(
       vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
 
       if( sepadata->useprojection && (vlb == vali || vub == vali) ) /* we aren't interested in products with variables that are at bound */
-         break;
+         continue;
 
       /* get the index of the bilinear product */
       idx = SCIPgetConsExprBilinTermIdx(conshdlr, xj, xi);
