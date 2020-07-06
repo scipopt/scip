@@ -800,11 +800,11 @@ SCIP_RETCODE computeOffValues(
 
       while( !SCIPexpriteratorIsEnd(it) )
       {
-         if( curexpr->auxvar != NULL )
+         auxvar = SCIPgetConsExprExprAuxVar(curexpr);
+
+         if( auxvar != NULL )
          {
             SCIP_Bool issc = TRUE;
-
-            auxvar = SCIPgetConsExprExprAuxVar(curexpr);
 
             if( hasnonsc )
             {
@@ -1215,16 +1215,13 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 }
 #endif
 
+#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 {  /*lint --e{715}*/
-   if( nlhdlr->ndetections != 0 )
-   {
-      SCIPinfoMessage(scip, NULL, "\nndetects = %d\n", nlhdlr->ndetections);
-   }
-
    return SCIP_OKAY;
 }
+#endif
 
 /** callback to detect structure in expression tree
  *
@@ -1892,7 +1889,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
            "whether variable semicontinuity is used to tighten variable bounds",
            &nlhdlrdata->tightenbounds, FALSE, DEFAULT_TIGHTENBOUNDS, NULL, NULL) );
 
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
