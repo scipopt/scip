@@ -12454,6 +12454,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(SCIPreversepropConsExprExprHdlr)
       SCIP_CALL( SCIPstopClock(scip, expr->exprhdlr->proptime) );
 
       /* update statistics */
+      assert(*nreductions >= 0);
       expr->exprhdlr->ndomreds += *nreductions;
       if( *infeasible )
          ++(expr->exprhdlr->ncutoffs);
