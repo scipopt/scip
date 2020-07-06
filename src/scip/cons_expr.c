@@ -13804,10 +13804,20 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
                int i;
                SCIPinfoMessage(scip, file, "   {");
 
-               for( i = 0; i < expr->nenfos - 1; ++i )
-                  SCIPinfoMessage(scip, file, "%s, ", expr->enfos[i]->nlhdlr->name);
+               for( i = 0; i < expr->nenfos; ++i )
+               {
+                  SCIPinfoMessage(scip, file, "%s:", expr->enfos[i]->nlhdlr->name);
+                  if( expr->enfos[i]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY )
+                     SCIPinfoMessage(scip, file, "a");
+                  if( expr->enfos[i]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPABELOW )
+                     SCIPinfoMessage(scip, file, "u");
+                  if( expr->enfos[i]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE )
+                     SCIPinfoMessage(scip, file, "o");
+                  if( i < expr->nenfos-1 )
+                     SCIPinfoMessage(scip, file, ", ");
+               }
 
-               SCIPinfoMessage(scip, file, "%s}", expr->enfos[i]->nlhdlr->name);
+               SCIPinfoMessage(scip, file, "}");
             }
 
             /* print aux var associated to expr */
