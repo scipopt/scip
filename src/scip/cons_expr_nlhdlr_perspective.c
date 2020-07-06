@@ -26,8 +26,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/scip_sol.h"
 #include "scip/cons_expr_iterator.h"
-#include "struct_cons_expr.h"
-#include "tree.h"
+#include "struct_cons_expr.h" /* TODO remove this */
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "perspective"
@@ -617,7 +616,7 @@ SCIP_RETCODE startProbing(
    SCIP_Real newub;
    SCIP_Bool propagate;
 
-   propagate = (int) SCIPgetCurrentNode(scip)->depth <= SCIPgetEffectiveRootDepth(scip);
+   propagate = SCIPgetDepth(scip) == 0;
 
    if( *solcopy == sol )
    {
@@ -1566,7 +1565,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    }
 
    if( nlhdlrdata->probingfreq == 0 ||
-      (nlhdlrdata->probingfreq == 1 && (int) SCIPgetCurrentNode(scip)->depth > SCIPgetEffectiveRootDepth(scip)) )
+      (nlhdlrdata->probingfreq == 1 && SCIPgetDepth(scip) != 0) )
       doprobing = FALSE;
 
    if( nlhdlrdata->probingonlyinsepa && addbranchscores )
@@ -1631,7 +1630,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       {
          SCIP_Bool propagate;
 
-         propagate = (int) SCIPgetCurrentNode(scip)->depth <= SCIPgetEffectiveRootDepth(scip);
+         propagate = SCIPgetDepth(scip) == 0;
 
 #ifndef NDEBUG
          SCIP_Real* solvals;
