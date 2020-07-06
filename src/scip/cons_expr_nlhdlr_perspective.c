@@ -105,6 +105,10 @@ struct SCIP_ConsExpr_NlhdlrData
  * Local methods
  */
 
+/*
+ * Semicontinuous variable methods
+ */
+
 /** adds an indicator to the data of a semicontinuous variable */
 static
 SCIP_RETCODE addSCVarIndicator(
@@ -667,7 +671,7 @@ SCIP_RETCODE addPerspectiveLinearisation(
 
 /* checks if an expression is semicontinuous
  *
- * An expression is semicontinuous if all of its variables are semicontinuous
+ * An expression is semicontinuous if all of its nonlinear variables are semicontinuous
  * and share at least one common indicator variable
  */
 static
@@ -1834,8 +1838,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       nlhdlr2 = expr->enfos[j]->nlhdlr;
 
-      if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) || nlhdlr2 == nlhdlr ) /* TODO if persp has no estimate, the latter is not needed */
+      if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
          continue;
+
+      assert(nlhdlr2 != nlhdlr);
 
       /* evalaux should have called evalaux of other nlhdlrs by now */
       SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, expr->enfos[j]->auxvalue, sol, &violation,
@@ -1960,7 +1966,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          nlhdlr2 = enfos[j]->nlhdlr;
 
-         assert(SCIPhasConsExprNlhdlrEstimate(nlhdlr2) && nlhdlr2 != nlhdlr); /* TODO if persp has no estimate, the latter is not needed */
+         assert(SCIPhasConsExprNlhdlrEstimate(nlhdlr2) && nlhdlr2 != nlhdlr);
 
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
