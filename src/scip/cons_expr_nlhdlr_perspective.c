@@ -627,7 +627,6 @@ SCIP_RETCODE computeOffValues(
    int norigvars;
    SCIP_Real* origvals0;
    SCIP_VAR** origvars;
-   SCIP_Bool var_is_sc;
    SCVARDATA* scvdata;
    SCIP_VAR* auxvar;
    SCIP_CONSEXPR_EXPR* curexpr;
@@ -698,19 +697,24 @@ SCIP_RETCODE computeOffValues(
                 * non-semicontinuous. In that case the auxvar is also non-semicontinuous, so
                 * we will skip on/off bounds computation.
                 */
-               SCIP_CONSEXPR_EXPR** childvarexprs;
-               int nchildvarexprs;
-               SCIP_VAR* var;
-
                if( SCIPgetConsExprExprHdlr(curexpr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
                {
                   /* easy case: curexpr is a variable, can check semicontinuity immediately */
-                  SCIP_CALL( varIsSemicontinuous(scip, SCIPgetConsExprExprVarVar(curexpr), hdlrdata->scvars,
-                        &var_is_sc) );
-                  issc = var_is_sc;
+                  scvdata = getSCVarDataInd(hdlrdata->scvars, SCIPgetConsExprExprVarVar(curexpr),
+                        exprdata->indicators[i], &pos);
+                  issc = scvdata != NULL;
                }
                else
                {
+                  /* curexpr is a non-variable expression; but since expr is semicontinuous with respect to
+                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous */
+                  issc = TRUE;
+
+#ifndef NDEBUG
+                  SCIP_CONSEXPR_EXPR** childvarexprs;
+                  int nchildvarexprs;
+                  SCIP_VAR* var;
+
                   SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, norigvars) );
                   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, curexpr, childvarexprs, &nchildvarexprs) );
 
@@ -718,20 +722,14 @@ SCIP_RETCODE computeOffValues(
                   for( v = 0; v < nchildvarexprs; ++v )
                   {
                      var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
-                     SCIP_CALL( varIsSemicontinuous(scip, var, hdlrdata->scvars, &var_is_sc) );
+                     scvdata = getSCVarDataInd(hdlrdata->scvars, var, exprdata->indicators[i], &pos);
+                     assert(scvdata != NULL);
 
-                     if( !var_is_sc )
-                     {
-                        issc = FALSE;
-                        break;
-                     }
-                  }
-
-                  for( v = 0; v < nchildvarexprs; ++v )
-                  {
                      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childvarexprs[v]) );
                   }
+
                   SCIPfreeBufferArray(scip, &childvarexprs);
+#endif
                }
             }
 
