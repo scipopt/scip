@@ -2746,60 +2746,23 @@ SCIP_RETCODE projectShift(
 }
 #endif
 
-/* choose the next bounding method for safe dual bounding */
+/** chooses which bounding method to use at first attempt to provide safe bound for current lp */
 static
-char chooseBoundingMethod(
-   SCIP_LP*              lp,                 /**< LP data */
+char chooseInitialBoundingMethod(
    SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
-   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             dualfarkas,         /**< was the floating point LP infeasible? */
-   char                  lastboundmethod     /**< the last method that was chosen */
-   )
+   SCIP_PROB*            prob                /**< problem data */
+)
 {
    char dualboundmethod;
 
-   assert(!lpexact->fplp->hasprovedbound);
+   assert(lpexact != NULL);
+   assert(set != NULL);
 
-   /* choose which bounding method to use; if we already had a lastboundmethod set,
-    * then the previous iteration failed and we go to the next available method in order
-    */
-   if( lastboundmethod != 'u' )
-   {
-      switch( lastboundmethod )
-      {
-      /* bound-shift -> try project shift next if possible, otherwise exactlp */
-      case 'n':
-         dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
-         break;
-      /* project-shift -> try exactlp next */
-      case 'p':
-         dualboundmethod = 'e';
-      /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
-       * otherwise try exactlp again
-       */
-      case 'e':
-         if( SCIPlpExactBSpossible(lpexact) )
-            dualboundmethod = 'n';
-         else
-            dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
-      /* unknown -> return unknown */
-      default:
-         SCIPerrorMessage("unknown bounding method in chooseBoundingMethod \n");
-         SCIPABORT();
-         dualboundmethod = 'u';
-         break;
-      }
-   }
+   dualboundmethod = 'u';
+
    /* we do not have a lastboundmethod set, first check if we need to solve exactly */
-   else if( lpexact->forceexactsolve )
+   if( lpexact->forceexactsolve )
    {
       dualboundmethod = 'e';
       lpexact->forceexactsolve = FALSE;
@@ -2835,6 +2798,71 @@ char chooseBoundingMethod(
    }
 
    return dualboundmethod;
+}
+
+/** chooses which bounding method to use after failed attempt to provide safe bound for current lp */
+static
+char chooseFallBackBoundingMethod(
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   char                  lastboundmethod     /**< last attempted dual bounding method */
+   )
+{
+   char dualboundmethod;
+
+   assert(lpexact != NULL);
+   assert(set != NULL);
+
+   dualboundmethod = 'u';
+
+   switch( lastboundmethod )
+   {
+   case 'n':
+      /* bound-shift -> try project shift next if possible, otherwise exactlp */
+      dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
+      break;
+   case 'p':
+      /* project-shift -> try exactlp next */
+      dualboundmethod = 'e';
+      break;
+   case 'e':
+      /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
+         * otherwise try exactlp again
+         */
+      if( SCIPlpExactBSpossible(lpexact) )
+         dualboundmethod = 'n';
+      else
+         dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
+      break;
+   default:
+      /* else -> return unknown */
+      SCIPerrorMessage("unknown bounding method in chooseBoundingMethod \n");
+      SCIPABORT();
+      dualboundmethod = 'u';
+      break;
+   }
+
+   return dualboundmethod;
+}
+
+/* choose the next bounding method for safe dual bounding */
+static
+char chooseBoundingMethod(
+   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   char                  lastboundmethod     /**< the last method that was chosen */
+   )
+{
+   char dualboundmethod;
+
+   assert(!lpexact->fplp->hasprovedbound);
+
+   /* choose which bounding method to use */
+   if( lastboundmethod == 'u' )
+      return chooseInitialBoundingMethod(lpexact, set, prob);
+   else
+      return chooseFallBackBoundingMethod(lpexact, set, lastboundmethod);
 }
 
 /** calculates a valid dual bound/farkas proof if all variables have lower and upper bounds
@@ -3274,8 +3302,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
    while( !lp->hasprovedbound && !abort )
    {
-      dualboundmethod = chooseBoundingMethod(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                              prob, itlim, lperror, dualfarkas, lastboundmethod);
+      dualboundmethod = chooseBoundingMethod(lpexact, set, prob, lastboundmethod);
       SCIPdebugMessage("Computing safe bound for lp with status: %d using bounding method %c \n",
          SCIPlpGetSolstat(lp), dualboundmethod);
 
@@ -3303,7 +3330,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *dualfeasible = lpexact->dualfeasible;
             break;
          default:
-            SCIPerrorMessage("bounding method %c not implemented yet \n", set->misc_dbmethod);
+            SCIPerrorMessage("bounding method %c not implemented yet \n", dualboundmethod);
             SCIPABORT();
             break;
       }
