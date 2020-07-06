@@ -269,18 +269,16 @@ SCVARDATA* getSCVarDataInd(
    return NULL;
 }
 
-/** checks if a variable is semicontinuous and, if needed, updates the hashmap
+/** checks if a variable is semicontinuous and, if needed, updates the scvars hashmap
  *
- * A variable is semicontinuous if its bounds depend on the binary variable bvar and bvar == 0 => var = v_off for some
- * real constant v_off. If the bvar is not specified, find the first binary variable that var depends on.
+ * A variable x is semicontinuous if its bounds depend on at least one binary variable called the indicator,
+ * and indicator == 0 => x == x^0 for some real constant x^0.
  */
 static
 SCIP_RETCODE varIsSemicontinuous(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< the variable to check */
    SCIP_HASHMAP*         scvars,             /**< semicontinuous variable information */
-   SCIP_VAR*             indicator,          /**< indicator variable which var should depend on (NULL if doesn't matter) */
-   SCIP_Real*            val0,               /**< buffer to store value of var when indicator == 0 (NULL if not interested) */
    SCIP_Bool*            result              /**< buffer to store whether var is semicontinuous */
    )
 {
@@ -313,16 +311,6 @@ SCIP_RETCODE varIsSemicontinuous(
    if( scvdata != NULL )
    {
       *result = TRUE;
-
-      if( indicator != NULL )
-      { /* if the indicator variable matters, look for it */
-         exists = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
-         if( !exists )
-            *result = FALSE;
-         else if( val0 != NULL )
-            *val0 = scvdata->vals0[pos];
-      }
-
       return SCIP_OKAY;
    }
 
@@ -498,7 +486,7 @@ SCIP_RETCODE exprIsSemicontinuous(
             var = SCIPgetConsExprExprVarVar(child);
 
             /* save information on semicontinuity of child */
-            SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+            SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
 
             /* mark the variable as linear */
             found = SCIPsortedvecFindPtr((void**) nlhdlrexprdata->vars, SCIPvarComp, (void*) var,
@@ -519,7 +507,7 @@ SCIP_RETCODE exprIsSemicontinuous(
          for( v = 0; v < nchildvarexprs; ++v )
          {
             var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
-            SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+            SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
 
             if( !var_is_sc )
             {
@@ -546,7 +534,7 @@ SCIP_RETCODE exprIsSemicontinuous(
       /* all variables of a non-sum on/off term should be semicontinuous */
       for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
-         SCIP_CALL( varIsSemicontinuous(scip, nlhdlrexprdata->vars[v], nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+         SCIP_CALL( varIsSemicontinuous(scip, nlhdlrexprdata->vars[v], nlhdlrdata->scvars, &var_is_sc) );
          if( !var_is_sc )
             return SCIP_OKAY;
       }
@@ -645,6 +633,7 @@ SCIP_RETCODE computeOffValues(
    SCIP_CONSEXPR_EXPR* curexpr;
    SCIP_HASHMAP* auxvarmap;
    SCIP_Bool hasnonsc;
+   int pos;
 
    assert(expr != NULL);
 
@@ -669,13 +658,11 @@ SCIP_RETCODE computeOffValues(
       /* set sol to the off value of all expr vars for this indicator */
       for( v = 0; v < norigvars; ++v )
       {
-         SCIP_CALL( varIsSemicontinuous(scip, origvars[v], hdlrdata->scvars, exprdata->indicators[i], &origvals0[v],
-               &var_is_sc) );
-
-         /* set vals0[v] = 0 if var is non-sc - then it will not contribute to exprvals0[i] since any
-          * non-sc var must be linear
+         /* set vals0[v] = 0 if var is non-sc with respect to indicators[i] - then it will not
+          * contribute to exprvals0[i] since any non-sc var must be linear
           */
-         if( !var_is_sc )
+         scvdata = getSCVarDataInd(hdlrdata->scvars, origvars[v], exprdata->indicators[i], &pos);
+         if( scvdata == NULL )
          {
             origvals0[v] = 0.0;
             hasnonsc = TRUE;
@@ -718,8 +705,8 @@ SCIP_RETCODE computeOffValues(
                if( SCIPgetConsExprExprHdlr(curexpr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
                {
                   /* easy case: curexpr is a variable, can check semicontinuity immediately */
-                  SCIP_CALL( varIsSemicontinuous(scip, SCIPgetConsExprExprVarVar(curexpr), hdlrdata->scvars, NULL,
-                        NULL, &var_is_sc) );
+                  SCIP_CALL( varIsSemicontinuous(scip, SCIPgetConsExprExprVarVar(curexpr), hdlrdata->scvars,
+                        &var_is_sc) );
                   issc = var_is_sc;
                }
                else
@@ -731,7 +718,7 @@ SCIP_RETCODE computeOffValues(
                   for( v = 0; v < nchildvarexprs; ++v )
                   {
                      var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
-                     SCIP_CALL( varIsSemicontinuous(scip, var, hdlrdata->scvars, NULL, NULL, &var_is_sc) );
+                     SCIP_CALL( varIsSemicontinuous(scip, var, hdlrdata->scvars, &var_is_sc) );
 
                      if( !var_is_sc )
                      {
@@ -1566,7 +1553,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       int minidx;
       int maxidx;
       int r;
-      SCIP_Bool var_is_sc;
       SCIP_Real val0;
       SCIP_VAR** probingvars;
       SCIP_INTERVAL* probingdoms;
@@ -1657,6 +1643,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          for( r = minidx; r <= maxidx; ++r )
          {
             SCIP_Real maxcoef;
+            int pos;
+            SCVARDATA* scvdata;
 
             rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps2, r);
             assert(rowprep != NULL);
@@ -1683,10 +1671,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                   maxcoef = REALABS(rowprep->coefs[v]);
                }
 
-               /* is var sc with respect to this indicator? */
-               SCIP_CALL(varIsSemicontinuous(scip, rowprep->vars[v], nlhdlrdata->scvars, indicator, &val0, &var_is_sc));
-
-               if( !var_is_sc )
+               scvdata = getSCVarDataInd(nlhdlrdata->scvars, rowprep->vars[v], indicator, &pos);
+               if( scvdata == NULL )
                   continue;
 
                cst0 -= rowprep->coefs[v] * val0;
