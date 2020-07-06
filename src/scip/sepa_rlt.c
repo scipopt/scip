@@ -58,6 +58,7 @@
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 #define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
 #define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
+#define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
 
 #define MAXVARBOUND                1e+5 /**< maximum allowed variable bound for computing an RLT-cut */
 
@@ -109,12 +110,13 @@ struct SCIP_SepaData
    int                   maxncuts;           /**< maximum number of cuts that will be added per round */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
-   SCIP_Bool             onlyeqrows;         /**< indicates whether only equality rows should be used for rlt cuts */
-   SCIP_Bool             onlycontrows;       /**< indicates whether only continuous rows should be used for rlt cuts */
-   SCIP_Bool             onlyinitial;        /**< indicates whether only initial rows should be used for rlt cuts */
-   SCIP_Bool             useinsubscip;       /**< indicates whether the separator should also be used in sub-scips */
-   SCIP_Bool             useprojection;      /**< indicates whether the separator should first check projected rows */
-   SCIP_Bool             detecthidden;       /**< indicates whether the separator should use implicit products */
+   SCIP_Bool             onlyeqrows;         /**< whether only equality rows should be used for rlt cuts */
+   SCIP_Bool             onlycontrows;       /**< whether only continuous rows should be used for rlt cuts */
+   SCIP_Bool             onlyinitial;        /**< whether only initial rows should be used for rlt cuts */
+   SCIP_Bool             useinsubscip;       /**< whether the separator should also be used in sub-scips */
+   SCIP_Bool             useprojection;      /**< whether the separator should first check projected rows */
+   SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
+   SCIP_Bool             hiddenrlt;          /**< whether RLT cuts should be added for hidden products */
 
    /* TODO remove this when done with cliques */
    SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
@@ -2470,6 +2472,9 @@ SCIP_RETCODE markRowsXj(
       idx = SCIPgetConsExprBilinTermIdx(conshdlr, xj, xi);
       assert(idx >= 0 && idx < SCIPgetConsExprNBilinTerms(conshdlr));
 
+      if( !sepadata->hiddenrlt && !terms[idx].existing )
+         continue;
+
       /* use the most violated under- and overestimators for this product;
        * if equality cuts are computed, we might end up using a different linearisation;
        * so this is an optimistic (i.e. taking the largest possible violation) estimation
@@ -3270,8 +3275,12 @@ SCIP_RETCODE SCIPincludeSepaRlt(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "separating/" SEPA_NAME "/detecthidden",
-      "if set to true, projected rows are checked first",
+      "if set to true, hidden products are detected and separated by McCormick cuts",
       &sepadata->detecthidden, FALSE, DEFAULT_DETECTHIDDEN, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/hiddenrlt",
+           "if set to true, RLT cuts are added for hidden products",
+           &sepadata->hiddenrlt, FALSE, DEFAULT_HIDDENRLT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
