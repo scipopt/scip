@@ -154,7 +154,8 @@
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
-#define DEFAULT_INTERLEAVEDBFREQ      0 /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
+#define DEFAULT_INTERLEAVEDBFREQ        0 /**< frequency at which dual bounding strategy is interleaved with exact LP
+                                           *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
 
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
  *       maybe in fullDualPresolve(), see convertLongEquality()
@@ -17331,7 +17332,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/exactlp/interleavedbfreq",
-         "frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node)",
+         "frequency at which dual bounding strategy is interleaved with exact LP * solve (-1: never, 0: automatic, n > 0: every n-th node)",
          NULL, TRUE, DEFAULT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    /* add info about using MPFR to external codes information */
