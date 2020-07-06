@@ -64,26 +64,17 @@ void setup(void)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
-   /* get perspective nlhdlr */
+   /* get perspective and convex nlhdlrs */
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "perspective") == 0 )
-      {
          nlhdlr = conshdlrdata->nlhdlrs[h];
-         if( nlhdlr != NULL )
-            break;
-      }
-   }
 
-   /* get convex nlhdlr */
-   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
-   {
       if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "convex") == 0 )
-      {
          nlhdlr_conv = conshdlrdata->nlhdlrs[h];
-         if( nlhdlr_conv != NULL )
-            break;
-      }
+
+      if( nlhdlr != NULL && nlhdlr_conv != NULL )
+         break;
    }
 
    cr_assert_not_null(nlhdlr);
@@ -192,7 +183,7 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
    SCIPaddVarVub(scip, x_1, z_3, 4.0, 1.0, &infeas, &nbndchgs);
 
    /* check if the var is semicontinuous */
-   SCIP_CALL( varIsSemicontinuous(scip, x_1, scvars, NULL, &val0, &result) );
+   SCIP_CALL( varIsSemicontinuous(scip, x_1, scvars, &result) );
 
    /* check result */
    cr_expect_eq(SCIPhashmapGetNElements(scvars), 1, "Expected 1 semicontinuous variable, got %d", SCIPhashmapGetNElements(scvars));
@@ -532,73 +523,4 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-}
-
-/* tests finding the intersection of disconnected domains */
-Test(nlhdlrperspective, domintersect, .init = setup, .fini = teardown)
-{
-   SCIP_INTERVAL intervals1[2];
-   SCIP_INTERVAL intervals2[2];
-   SCIP_INTERVAL intervalsres[3];
-   int nres;
-
-   /* two connected domains */
-   intervals1[0].inf = 0.0;
-   intervals1[0].sup = 2.0;
-   intervals2[0].inf = 1.0;
-   intervals2[0].sup = 3.0;
-
-   intersectDisconnectedDomains(intervals1, intervals2, intervalsres, 1, 1, &nres);
-
-   cr_expect_eq(nres, 1, "Expecting 1 resulting interval, got %d\n", nres);
-   cr_expect_eq(intervalsres[0].inf, 1.0, "Expecting resulting interval inf = 1.0, got %g\n", intervalsres[0].inf);
-   cr_expect_eq(intervalsres[0].sup, 2.0, "Expecting resulting interval sup = 2.0, got %g\n", intervalsres[0].sup);
-
-   /* disconnected semicontinuous domains with the same off point */
-   intervals1[0].inf = 0.0;
-   intervals1[0].sup = 0.0;
-   intervals1[1].inf = 1.0;
-   intervals1[1].sup = 3.0;
-   intervals2[0].inf = 0.0;
-   intervals2[0].sup = 0.0;
-   intervals2[1].inf = 1.0;
-   intervals2[1].sup = 4.0;
-
-   intersectDisconnectedDomains(intervals1, intervals2, intervalsres, 2, 2, &nres);
-
-   cr_expect_eq(nres, 2, "Expecting 2 resulting intervals, got %d\n", nres);
-   cr_expect_eq(intervalsres[0].inf, 0.0, "Expecting resulting interval 0 inf = 0.0, got %g\n", intervalsres[0].inf);
-   cr_expect_eq(intervalsres[0].sup, 0.0, "Expecting resulting interval 0 sup = 0.0, got %g\n", intervalsres[0].sup);
-   cr_expect_eq(intervalsres[1].inf, 1.0, "Expecting resulting interval 1 inf = 1.0, got %g\n", intervalsres[1].inf);
-   cr_expect_eq(intervalsres[1].sup, 3.0, "Expecting resulting interval 1 sup = 3.0, got %g\n", intervalsres[1].sup);
-
-   /* disconnected semicontinuous domains with different off points */
-   intervals1[0].inf = 0.0;
-   intervals1[0].sup = 0.0;
-   intervals1[1].inf = 2.0;
-   intervals1[1].sup = 3.0;
-   intervals2[0].inf = 1.0;
-   intervals2[0].sup = 1.0;
-   intervals2[1].inf = 2.0;
-   intervals2[1].sup = 4.0;
-
-   intersectDisconnectedDomains(intervals1, intervals2, intervalsres, 2, 2, &nres);
-
-   cr_expect_eq(nres, 1, "Expecting 1 resulting intervals, got %d\n", nres);
-   cr_expect_eq(intervalsres[0].inf, 2.0, "Expecting resulting interval inf = 2.0, got %g\n", intervalsres[0].inf);
-   cr_expect_eq(intervalsres[0].sup, 3.0, "Expecting resulting interval sup = 3.0, got %g\n", intervalsres[0].sup);
-
-   /* disconnected non-intersecting semicontinuous domains */
-   intervals1[0].inf = 0.0;
-   intervals1[0].sup = 0.0;
-   intervals1[1].inf = 2.0;
-   intervals1[1].sup = 3.0;
-   intervals2[0].inf = 1.0;
-   intervals2[0].sup = 1.0;
-   intervals2[1].inf = 4.0;
-   intervals2[1].sup = 5.0;
-
-   intersectDisconnectedDomains(intervals1, intervals2, intervalsres, 2, 2, &nres);
-
-   cr_expect_eq(nres, 0, "Expecting 0 resulting intervals, got %d\n", nres);
 }
