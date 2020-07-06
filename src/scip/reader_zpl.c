@@ -494,6 +494,10 @@ SCIP_RETCODE addConsTerm(
             {
                SCIP_Rational* quotient;
                SCIP_Bool isupper;
+               SCIP_Bool consneeded;
+
+               consneeded = FALSE;
+
                assert(!numb_equal(mono_get_coeff(term_get_element(term, 0)), numb_zero()));
                assert(mono_is_linear(term_get_element(term, 0)));
 
@@ -508,11 +512,21 @@ SCIP_RETCODE addConsTerm(
 
                   if( isupper && RatIsLT(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
                   {
-                     SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                     if( RatIsGE(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
                   }
                   else if( !isupper && RatIsGT(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
                   {
-                     SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                     if( RatIsLE(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
                   }
                }
                if( !RatIsNegInfinity(ratlhs) )
@@ -522,12 +536,30 @@ SCIP_RETCODE addConsTerm(
 
                   if( isupper && RatIsLT(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
                   {
-                     SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                     if( RatIsGE(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarUbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
                   }
                   else if( !isupper && RatIsGT(quotient, SCIPvarGetLbGlobalExact(scipvar)) )
                   {
-                     SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                     if( RatIsLE(quotient, SCIPvarGetUbGlobalExact(scipvar)) )
+                     {
+                        SCIP_CALL( SCIPchgVarLbGlobalExact(scip, scipvar, quotient) );
+                     }
+                     else
+                        consneeded = TRUE;
                   }
+               }
+
+               if( consneeded )
+               {
+                  SCIP_CALL( SCIPcreateConsExactLinear(scip, &cons, name, 0, NULL, NULL, ratlhs, ratrhs,
+                  initial, separate, enforce, check, propagate, local, modifiable, readerdata->dynamicconss, readerdata->dynamicrows, FALSE) );
+                  SCIP_CALL( SCIPaddCons(scip, cons) );
+                  SCIP_CALL( SCIPaddCoefExactLinear(scip, cons, scipvar, scipvalrat) );
                }
 
                RatFreeBlock(SCIPblkmem(scip), &scipvalrat);
