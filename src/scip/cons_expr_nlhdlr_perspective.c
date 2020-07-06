@@ -692,6 +692,7 @@ SCIP_RETCODE exprIsSemicontinuous(
    int nbnds0;
    int c;
    SCIP_VAR** indicators;
+   SCIP_Bool* linear;
 
    *res = FALSE;
 
@@ -706,18 +707,30 @@ SCIP_RETCODE exprIsSemicontinuous(
       /* sums are treated separately because if there are variables that are non-semicontinuous but
        * appear only linearly, we still want to apply perspective to expr
        */
+
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &linear, nlhdlrexprdata->nvars) );
+
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
       {
          SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[c];
          SCIP_CONSEXPR_EXPR** childvarexprs;
          int nchildvarexprs;
+         int pos;
          SCIP_Bool issc;
+         SCIP_Bool found;
 
          if( SCIPisConsExprExprVar(child) )
          {
+            var = SCIPgetConsExprExprVarVar(child);
+
             /* save information on semicontinuity of child */
-            SCIP_CALL( varIsSemicontinuous(scip, SCIPgetConsExprExprVarVar(child), nlhdlrdata->scvars, NULL, NULL,
-                  &var_is_sc) );
+            SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, NULL, NULL, &var_is_sc) );
+
+            /* mark the variable as linear */
+            found = SCIPsortedvecFindPtr((void**) nlhdlrexprdata->vars, SCIPvarComp, (void*) var,
+                  nlhdlrexprdata->nvars, &pos);
+            assert(found);
+            linear[pos] = TRUE;
 
             /* since child is a variable, go on regardless of the value of var_is_sc */
             continue;
@@ -749,11 +762,13 @@ SCIP_RETCODE exprIsSemicontinuous(
          SCIPfreeBufferArray(scip, &childvarexprs);
 
          if( !issc )
-            return SCIP_OKAY;
+            goto TERMINATE;
       }
    }
    else
    {
+      linear = NULL;
+
       /* all variables of a non-sum on/off term should be semicontinuous */
       for( v = 0; v < nlhdlrexprdata->nvars; ++v )
       {
@@ -776,8 +791,14 @@ SCIP_RETCODE exprIsSemicontinuous(
 #endif
       scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*) nlhdlrexprdata->vars[v]);
 
-      if( scvdata == NULL )
+      if( linear != NULL && linear[v] )
+      {
+         linear[v] = FALSE;
          continue;
+      }
+
+      /* we should have exited earlier if there is a nonlinear nonsemicontinuous variable */
+      assert(scvdata != NULL);
 
       if( indicators == NULL )
       {
@@ -795,14 +816,14 @@ SCIP_RETCODE exprIsSemicontinuous(
       if( indicators != NULL && nindicators == 0 )
       {
          SCIPfreeBlockMemoryArray(scip, &indicators, nbnds0);
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
    }
 
    /* this can happen if all children are linear vars and none are semicontinuous */
    if( indicators == NULL )
    {
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
    assert(nindicators > 0 && nindicators <= nbnds0);
 
@@ -818,6 +839,9 @@ SCIP_RETCODE exprIsSemicontinuous(
    nlhdlrexprdata->indicators = indicators;
    nlhdlrexprdata->nindicators = nindicators;
    *res = TRUE;
+
+ TERMINATE:
+   SCIPfreeCleanBufferArrayNull(scip, &linear);
 
    return SCIP_OKAY;
 }
@@ -1612,6 +1636,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
       SCIP_CALL( SCIPcaptureVar(scip, (*nlhdlrexprdata)->vars[i]) );
    }
+   SCIPsortPtr((void**) (*nlhdlrexprdata)->vars, SCIPvarComp, (*nlhdlrexprdata)->nvars);
    SCIPfreeBufferArray(scip, &varexprs);
 
    /* check if expr is semicontinuous and save indicator variables */
