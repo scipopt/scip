@@ -183,6 +183,8 @@ struct SCIP_ConsExpr_QuadExprTerm
    int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
    int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
    int*                  adjbilin;           /**< indices of associated bilinear terms */
+
+   SCIP_CONSEXPR_EXPR*   sqrexpr;            /**< expression that was found to be the square of expr, or NULL if no square term (sqrcoef==0) */
 };
 
 /** data structure to store a single bilinear term coef * expr1 * expr2  (similar to SCIP_CONSEXPR_QUADELEM)
@@ -194,6 +196,8 @@ struct SCIP_ConsExpr_BilinExprTerm
    SCIP_CONSEXPR_EXPR*   expr2;              /**< second factor of bilinear term */
    SCIP_Real             coef;               /**< coefficient of bilinear term */
    int                   pos2;               /**< position of expr2's quadexprterm in quadexprterms */
+
+   SCIP_CONSEXPR_EXPR*   prodexpr;           /**< expression that was found to be the product of expr1 and expr2 */
 };
 
 /** generic data and callback methods of an nonlinear handler */

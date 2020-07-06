@@ -2728,7 +2728,7 @@ SCIP_RETCODE printRow(
          SCIP_Real lincoef;
 
          /* get linear coefficient and variable of quadratic term */
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, &lincoef, NULL, NULL, NULL);
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, &lincoef, NULL, NULL, NULL, NULL);
          assert(expr != NULL);
          assert(SCIPisConsExprExprVar(expr));
 
@@ -2759,7 +2759,7 @@ SCIP_RETCODE printRow(
          SCIP_Real sqrcoef;
 
          /* get square coefficient and variable of quadratic term */
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, NULL, &sqrcoef, NULL, NULL);
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &expr, NULL, &sqrcoef, NULL, NULL, NULL);
          assert(expr != NULL);
          assert(SCIPisConsExprExprVar(expr));
 
@@ -2789,7 +2789,7 @@ SCIP_RETCODE printRow(
          SCIP_Real bilincoef;
 
          /* get coefficient and variables of bilinear */
-         SCIPgetConsExprQuadraticBilinTermData(quaddata, v, &expr1, &expr2, &bilincoef, NULL);
+         SCIPgetConsExprQuadraticBilinTermData(quaddata, v, &expr1, &expr2, &bilincoef, NULL, NULL);
          assert(expr1 != NULL);
          assert(SCIPisConsExprExprVar(expr1));
          assert(expr2 != NULL);

@@ -7179,7 +7179,7 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
       return SCIP_OKAY;
 
    /* get bilinear term */
-   SCIPgetConsExprQuadraticBilinTermData(quaddata, 0, &expr1, &expr2, &bilincoef, NULL);
+   SCIPgetConsExprQuadraticBilinTermData(quaddata, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
    bilinvars[0] = SCIPgetConsExprExprVarVar(expr1);
    bilinvars[1] = SCIPgetConsExprExprVarVar(expr2);
 
@@ -7191,10 +7191,10 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
       return SCIP_OKAY;
 
    /* get data of quadratic terms */
-   SCIPgetConsExprQuadraticQuadTermData(quaddata, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL);
+   SCIPgetConsExprQuadraticQuadTermData(quaddata, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefx = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
-   SCIPgetConsExprQuadraticQuadTermData(quaddata, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL);
+   SCIPgetConsExprQuadraticQuadTermData(quaddata, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefy = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
    /* divide constraint by coefficient of x*y */

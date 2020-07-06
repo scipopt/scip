@@ -4315,7 +4315,7 @@ SCIP_RETCODE SCIPwriteMps(
          {
             SCIP_CONSEXPR_EXPR* qexpr;
 
-            SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &qexpr, &quadvarlincoefs[j], NULL, NULL, NULL);
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &qexpr, &quadvarlincoefs[j], NULL, NULL, NULL, NULL);
 
             assert(SCIPisConsExprExprVar(qexpr));
             quadvars[j] = SCIPgetConsExprExprVarVar(qexpr);
@@ -4767,7 +4767,7 @@ SCIP_RETCODE SCIPwriteMps(
             SCIP_VAR* qvar;
             SCIP_Real sqrcoef;
 
-            SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &qexpr, NULL, &sqrcoef, NULL, NULL);
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, v, &qexpr, NULL, &sqrcoef, NULL, NULL, NULL);
             if( sqrcoef == 0.0 )
                continue;
 
@@ -4797,7 +4797,7 @@ SCIP_RETCODE SCIPwriteMps(
             SCIP_VAR* var2;
             SCIP_Real coef;
 
-            SCIPgetConsExprQuadraticBilinTermData(quaddata, v, &expr1, &expr2, &coef, NULL);
+            SCIPgetConsExprQuadraticBilinTermData(quaddata, v, &expr1, &expr2, &coef, NULL, NULL);
             assert(SCIPisConsExprExprVar(expr1));
             assert(SCIPisConsExprExprVar(expr2));
 

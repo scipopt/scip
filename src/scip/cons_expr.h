@@ -1858,7 +1858,8 @@ void SCIPgetConsExprQuadraticQuadTermData(
    SCIP_Real*                    lincoef,          /**< buffer to store linear coefficient of variable, or NULL */
    SCIP_Real*                    sqrcoef,          /**< buffer to store square coefficient of variable, or NULL */
    int*                          nadjbilin,        /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
-   int**                         adjbilin          /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   int**                         adjbilin,         /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   SCIP_CONSEXPR_EXPR**          sqrexpr           /**< buffer to store pointer to square expression (the 'x^2') of this term or NULL if no square expression, or NULL */
    );
 
 /** gives the data of a bilinear expression term
@@ -1873,7 +1874,8 @@ void SCIPgetConsExprQuadraticBilinTermData(
    SCIP_CONSEXPR_EXPR**          expr1,            /**< buffer to store first factor, or NULL */
    SCIP_CONSEXPR_EXPR**          expr2,            /**< buffer to store second factor, or NULL */
    SCIP_Real*                    coef,             /**< buffer to coefficient, or NULL */
-   int*                          pos2              /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   int*                          pos2,             /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   SCIP_CONSEXPR_EXPR**          prodexpr          /**< buffer to store pointer to expression that is product if first and second factor, or NULL */
    );
 
 /** returns whether all expressions that are used in a quadratic expression are variable expression

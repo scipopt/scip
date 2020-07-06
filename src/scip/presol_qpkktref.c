@@ -1306,7 +1306,7 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
       int i;
 
       /* get variables of the bilinear term */
-      SCIPgetConsExprQuadraticBilinTermData(quaddata, j, &expr1, &expr2, &coef, NULL);
+      SCIPgetConsExprQuadraticBilinTermData(quaddata, j, &expr1, &expr2, &coef, NULL, NULL);
       assert(expr1 != NULL && SCIPisConsExprExprVar(expr1));
       assert(expr2 != NULL && SCIPisConsExprExprVar(expr2));
 
@@ -1381,7 +1381,7 @@ SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
       SCIP_VAR* quadvar;
 
       /* get variable of the quadratic term */
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &expr, NULL, &sqrcoef, NULL, NULL);
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &expr, NULL, &sqrcoef, NULL, NULL, NULL);
       assert(expr != NULL && SCIPisConsExprExprVar(expr));
       quadvar = SCIPgetConsExprExprVarVar(expr);
       assert(quadvar != NULL);
@@ -1483,7 +1483,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
       SCIP_VAR* var;
       int ind;
 
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &expr, &coef, NULL, NULL, NULL);
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &expr, &coef, NULL, NULL, NULL, NULL);
       assert(expr != NULL);
       assert(SCIPisConsExprExprVar(expr));
 

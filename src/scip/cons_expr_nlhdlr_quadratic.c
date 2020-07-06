@@ -94,13 +94,36 @@ SCIP_Bool isPropagable(
       SCIP_Real sqrcoef;
       int nadjbilin;
 
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, NULL, &lincoef, &sqrcoef, &nadjbilin, NULL);
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, NULL, &lincoef, &sqrcoef, &nadjbilin, NULL, NULL);
 
       if( (lincoef != 0.0) + (sqrcoef != 0.0) + nadjbilin >= 2 )  /*lint !e514*/ /* actually MIN(2, nadjbilin), but we check >= 2 */
          return TRUE;
    }
 
    return FALSE;
+}
+
+/** returns whether a quadratic form is "propagable"
+ *
+ * It is propagable, if a variable (aka child expr) appears at least twice, which is the case if at least two of the following hold:
+ * - it appears as a linear term (coef*expr)
+ * - it appears as a square term (coef*expr^2)
+ * - it appears in a bilinear term
+ * - it appears in another bilinear term
+ */
+static
+SCIP_Bool isPropagableTerm(
+   SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic representation data */
+   int                     idx               /**< index of quadratic term to consider */
+   )
+{
+   SCIP_Real lincoef;
+   SCIP_Real sqrcoef;
+   int nadjbilin;
+
+   SCIPgetConsExprQuadraticQuadTermData(quaddata, idx, NULL, &lincoef, &sqrcoef, &nadjbilin, NULL,  NULL);
+
+   return (lincoef != 0.0) + (sqrcoef != 0.0) + nadjbilin >= 2;  /*lint !e514*/ /* actually MIN(2, nadjbilin), but we check >= 2 */
 }
 
 /** solves a quadratic equation \f$ a expr^2 + b expr \in rhs \f$ (with b an interval) and reduces bounds on expr or
@@ -141,6 +164,45 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    /* compute solution of a*x^2 + b*x in rhs */
    SCIPintervalSet(&a, sqrcoef);
    SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, SCIPgetConsExprExprActivity(scip, expr));
+
+#ifdef DEBUG_PROP
+   SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
+#endif
+
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, newrange, force, reversepropqueue, infeasible, nreductions) );
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear equation \f$ b expr \in rhs \f$ (with b a scalar) and reduces bounds on expr or deduces infeasibility if possible */
+static
+SCIP_RETCODE propagateBoundsLinExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to solve */
+   SCIP_Real             b,                  /**< linear coefficient */
+   SCIP_INTERVAL         rhs,                /**< interval acting as rhs */
+   SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
+   SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
+   int*                  nreductions,        /**< buffer to store the number of interval reductions */
+   SCIP_Bool             force               /**< to force tightening */
+   )
+{
+   SCIP_INTERVAL newrange;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+#ifdef DEBUG_PROP
+   SCIPinfoMessage(scip, NULL, "Propagating <expr> by solving %g <expr> in [%g, %g], where <expr> is: ", b, rhs.inf, rhs.sup);
+   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+   /* compute solution of b*x in rhs */
+   SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &newrange, rhs, b);
 
 #ifdef DEBUG_PROP
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
@@ -310,13 +372,87 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       /* notify children of quadratic that we will need their activity for propagation */
       for( i = 0; i < nlinexprs; ++i )
          SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, linexprs[i], FALSE, TRUE, FALSE, FALSE) );
+
       for( i = 0; i < nquadexprs; ++i )
       {
          SCIP_CONSEXPR_EXPR* argexpr;
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, &nbilin, NULL);
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE, FALSE) );
-         if( !unboundedquad && nbilin > 0 && SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, argexpr)) )
-            unboundedquad = TRUE;
+         if( isPropagableTerm(quaddata, i) )
+         {
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, &nbilin, NULL, NULL);
+            SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE, FALSE) );
+            if( !unboundedquad && nbilin > 0 && SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, argexpr)) )
+               unboundedquad = TRUE;
+
+#ifdef DEBUG_DETECT
+            SCIPinfoMessage(scip, NULL, "quadterm %d propagable, using %p, unbounded=%d\n", i, (void*)argexpr, nbilin > 0 && SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, argexpr)));
+#endif
+         }
+         else
+         {
+            /* non-propagable quadratic is either a single square term or a single bilinear term
+             * we should make use nlhdlrs in pow or product for this term, so we register usage of the square or product expr instead of argexpr
+             */
+            SCIP_CONSEXPR_EXPR* sqrexpr;
+            int* adjbilin;
+
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &argexpr, NULL, NULL, &nbilin, &adjbilin, &sqrexpr);
+
+            if( sqrexpr != NULL )
+            {
+               SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, sqrexpr, FALSE, TRUE, FALSE, FALSE) );
+               assert(nbilin == 0);
+
+#ifdef DEBUG_DETECT
+               SCIPinfoMessage(scip, NULL, "quadterm %d non-propagable square, using %p\n", i, (void*)sqrexpr);
+#endif
+            }
+            else
+            {
+               SCIP_CONSEXPR_EXPR* expr1;
+               SCIP_CONSEXPR_EXPR* prodexpr;
+
+               assert(nbilin == 1);
+               SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[0], &expr1, NULL, NULL, NULL, &prodexpr);
+
+               if( expr1 == argexpr )
+               {
+                  /* if argexpr is expr1, then the propagation in quadratic assumes that this product belongs to the i'th quadratic term
+                   * so we register usage of the product expression
+                   */
+                  SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, prodexpr, FALSE, TRUE, FALSE, FALSE) );
+
+#ifdef DEBUG_DETECT
+                  SCIPinfoMessage(scip, NULL, "quadterm %d non-propagable product, using %p\n", i, (void*)prodexpr);
+#endif
+               }
+               else
+               {
+                  int j;
+                  /* if argexpr is not expr1, then this product is handled as part of the quadratic term corresponding to expr1
+                   * if this other quadratic term is propagable, then it will use the bounds for argexpr
+                   * to avoid that we have to iterate through all bilinear terms, we register usage of argexpr here
+                   * currently iterate through all quadterms to find the one corresponding to expr1, so can check whether expr1 is propagable
+                   * TODO this should be done faster, maybe store pos1 in bilinexprterm or store quadexprterm's in bilinexprterm
+                   */
+                  for( j = 0; j < nquadexprs; ++j )
+                  {
+                     SCIP_CONSEXPR_EXPR* exprj;
+                     SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &exprj, NULL, NULL, NULL, NULL, NULL);
+                     if( expr1 == exprj )
+                     {
+                        if( isPropagableTerm(quaddata, j) )
+                        {
+                           SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, argexpr, FALSE, TRUE, FALSE, FALSE) );
+#ifdef DEBUG_DETECT
+                           SCIPinfoMessage(scip, NULL, "quadterm %d non-propagable alien product, using %p\n", i, (void*)argexpr);
+#endif
+                        }
+                        break;
+                     }
+                  }
+               }
+            }
+         }
       }
 
       if( !unboundedquad )
@@ -408,7 +544,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       for( i = 0; i < nquadexprs; ++i ) /* expressions appearing quadratically */
       {
          SCIP_CONSEXPR_EXPR* quadexpr;
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &quadexpr, NULL, NULL, NULL, NULL);
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &quadexpr, NULL, NULL, NULL, NULL, NULL);
          SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, quadexpr, TRUE, FALSE, FALSE, FALSE) );
       }
 
@@ -519,7 +655,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
       SCIP_Real lincoef;
       int nadjbilin;
 
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &qexpr, &lincoef, &sqrcoef, &nadjbilin, NULL);
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, j, &qexpr, &lincoef, &sqrcoef, &nadjbilin, NULL, NULL);
       assert(qexpr != NULL);
 
       var = SCIPgetConsExprExprAuxVar(qexpr);
@@ -552,7 +688,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateQuadratic)
       SCIP_VAR* var2;
       SCIP_Real qcoef;
 
-      SCIPgetConsExprQuadraticBilinTermData(quaddata, j, &qexpr1, &qexpr2, &qcoef, NULL);
+      SCIPgetConsExprQuadraticBilinTermData(quaddata, j, &qexpr1, &qexpr2, &qcoef, NULL, NULL);
 
       var1 = SCIPgetConsExprExprAuxVar(qexpr1);
       var2 = SCIPgetConsExprExprAuxVar(qexpr2);
@@ -680,74 +816,151 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
 
       for( i = 0; i < nquadexprs; ++i )
       {
-         int j;
-         SCIP_INTERVAL b;
-         SCIP_Real quadub;
          SCIP_Real quadlb;
+         SCIP_Real quadub;
          SCIP_CONSEXPR_EXPR* qexpr;
          SCIP_Real lincoef;
          SCIP_Real sqrcoef;
          int nadjbilin;
          int* adjbilin;
+         SCIP_CONSEXPR_EXPR* sqrexpr;
 
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, &nadjbilin, &adjbilin);
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, &nadjbilin, &adjbilin, &sqrexpr);
 
-         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, qexpr)) )
+         if( !isPropagableTerm(quaddata, i) )
          {
-            SCIPintervalSetEmpty(interval);
-            return SCIP_OKAY;
+            SCIP_INTERVAL tmp;
+
+            assert(lincoef == 0.0);
+
+            if( sqrcoef != 0.0 )
+            {
+               assert(sqrexpr != NULL);
+               assert(nadjbilin == 0);
+
+               tmp = SCIPgetConsExprExprActivity(scip, sqrexpr);
+               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, tmp) )
+               {
+                  SCIPintervalSetEmpty(interval);
+                  return SCIP_OKAY;
+               }
+
+               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &tmp, tmp, sqrcoef);
+               quadlb = tmp.inf;
+               quadub = tmp.sup;
+
+#ifdef DEBUG_PROP
+               SCIPinfoMessage(scip, NULL, "Computing activity for quadratic term %g <expr>, where <expr> is: ", sqrcoef);
+               SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), sqrexpr, NULL) );
+#endif
+            }
+            else
+            {
+               SCIP_CONSEXPR_EXPR* expr1;
+               SCIP_CONSEXPR_EXPR* prodexpr;
+               SCIP_Real prodcoef;
+
+               assert(nadjbilin == 1);
+               SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[0], &expr1, NULL, &prodcoef, NULL, &prodexpr);
+
+               if( expr1 == qexpr )
+               {
+                  /* if qexpr is expr1, then we treat this product as if belonging to the current (i'th) quadratic term
+                   * so we register usage of the product expression
+                   */
+
+                  tmp = SCIPgetConsExprExprActivity(scip, prodexpr);
+                  if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, tmp) )
+                  {
+                     SCIPintervalSetEmpty(interval);
+                     return SCIP_OKAY;
+                  }
+
+                  SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &tmp, tmp, prodcoef);
+                  quadlb = tmp.inf;
+                  quadub = tmp.sup;
+
+#ifdef DEBUG_PROP
+                  SCIPinfoMessage(scip, NULL, "Computing activity for quadratic term %g <expr>, where <expr> is: ", prodcoef);
+                  SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), prodexpr, NULL) );
+#endif
+               }
+               else
+               {
+                  /* if qexpr is not expr1, then this product is handled as part of another quadratic term and so this quadratic term gets activity [0,0] */
+                  SCIPintervalSet(&nlhdlrexprdata->quadactivities[i], 0.0);
+                  continue;
+               }
+            }
          }
-
-         /* b = [c_l] */
-         SCIPintervalSet(&b, lincoef);
-         for( j = 0; j < nadjbilin; ++j )
+         else
          {
-            SCIP_INTERVAL bterm;
-            SCIP_CONSEXPR_EXPR* expr1;
-            SCIP_CONSEXPR_EXPR* expr2;
-            SCIP_Real bilincoef;
+            int j;
+            SCIP_INTERVAL b;
 
-            SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[j], &expr1, &expr2, &bilincoef, NULL);
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, &nadjbilin, &adjbilin, NULL);
 
-            if( expr1 != qexpr )
-               continue;
-
-            bterm = SCIPgetConsExprExprActivity(scip, expr2);
-            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bterm) )
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, qexpr)) )
             {
                SCIPintervalSetEmpty(interval);
                return SCIP_OKAY;
             }
 
-            /* b += [b_jl * expr_j] for j \in P_l */
-            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, bterm, bilincoef);
-            SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
+            /* b = [c_l] */
+            SCIPintervalSet(&b, lincoef);
+#ifdef DEBUG_PROP
+            SCIPinfoMessage(scip, NULL, "b := %g\n", lincoef);
+#endif
+            for( j = 0; j < nadjbilin; ++j )
+            {
+               SCIP_INTERVAL bterm;
+               SCIP_CONSEXPR_EXPR* expr1;
+               SCIP_CONSEXPR_EXPR* expr2;
+               SCIP_Real bilincoef;
+
+               SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[j], &expr1, &expr2, &bilincoef, NULL, NULL);
+
+               if( expr1 != qexpr )
+                  continue;
+
+               bterm = SCIPgetConsExprExprActivity(scip, expr2);
+               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bterm) )
+               {
+                  SCIPintervalSetEmpty(interval);
+                  return SCIP_OKAY;
+               }
+
+               /* b += [b_jl * expr_j] for j \in P_l */
+               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, bterm, bilincoef);
+               SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
 
 #ifdef DEBUG_PROP
-            SCIPinfoMessage(scip, NULL, "b += %g * [expr2], where <expr2> is:", bilincoef);
-            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr2, NULL) );
-            SCIPinfoMessage(scip, NULL, "\n");
+               SCIPinfoMessage(scip, NULL, "b += %g * [expr2], where <expr2> is: ", bilincoef);
+               SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr2, NULL) );
+               SCIPinfoMessage(scip, NULL, " [%g,%g]\n", SCIPgetConsExprExprActivity(scip, expr2).inf, SCIPgetConsExprExprActivity(scip, expr2).sup);
 #endif
-         }
+            }
 
-         /* TODO: under which assumptions do we know that we just need to compute min or max? its probably the locks that give some information here */
-         quadub = SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, sqrcoef, b,
+            /* TODO: under which assumptions do we know that we just need to compute min or max? its probably the locks that give some information here */
+            quadub = SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, sqrcoef, b,
                SCIPgetConsExprExprActivity(scip, qexpr));
 
-         /* TODO: implement SCIPintervalQuadLowerBound */
-         {
-            SCIP_INTERVAL minusb;
-            SCIPintervalSetBounds(&minusb, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
+            /* TODO: implement SCIPintervalQuadLowerBound */
+            {
+               SCIP_INTERVAL minusb;
+               SCIPintervalSetBounds(&minusb, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
 
-            quadlb = -SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, -sqrcoef, minusb,
+               quadlb = -SCIPintervalQuadUpperBound(SCIP_INTERVAL_INFINITY, -sqrcoef, minusb,
                   SCIPgetConsExprExprActivity(scip, qexpr));
-         }
+            }
 
 #ifdef DEBUG_PROP
-         SCIPinfoMessage(scip, NULL, "Computing activity for quadratic term a <expr>^2 + b <expr>, where <expr> is:");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), qexpr, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-         SCIPinfoMessage(scip, NULL, "a = %g, b = [%g, %g] and activity [%g, %g]\n", sqrcoef, b.inf, b.sup, quadlb, quadub);
+            SCIPinfoMessage(scip, NULL, "Computing activity for quadratic term %g <expr>^2 + [%g,%g] <expr>, where <expr> is: ", sqrcoef, b.inf, b.sup);
+            SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), qexpr, NULL) );
+#endif
+         }
+#ifdef DEBUG_PROP
+         SCIPinfoMessage(scip, NULL, " -> [%g, %g]\n", quadlb, quadub);
 #endif
 
          SCIPintervalSetBounds(&nlhdlrexprdata->quadactivities[i], quadlb, quadub);
@@ -916,8 +1129,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
 
    for( i = 0; i < nquadexprs; ++i )
    {
-      int j;
-      SCIP_INTERVAL b;
       SCIP_INTERVAL rhs_i;
       SCIP_INTERVAL rest_i;
       SCIP_CONSEXPR_EXPR* qexpr;
@@ -925,31 +1136,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
       SCIP_Real sqrcoef;
       int nadjbilin;
       int* adjbilin;
+      SCIP_CONSEXPR_EXPR* sqrexpr;
 
-      SCIP_CONSEXPR_EXPR* expr1 = NULL;
-      SCIP_CONSEXPR_EXPR* expr2 = NULL;
-      SCIP_Real bilincoef = 0.0;
-      int pos2 = 0;
-
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, &nadjbilin, &adjbilin);
-
-      /* set b to [c_l] */
-      SCIPintervalSet(&b, lincoef);
-
-      /* compute [\sum_{j \in P_l} b_lj expr_j + c_l] in b*/
-      for( j = 0; j < nadjbilin; ++j )
-      {
-         SCIP_INTERVAL bterm;
-
-         SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[j], &expr1, &expr2, &bilincoef, &pos2);
-
-         if( expr1 != qexpr )
-            continue;
-
-         /* b += [b_lj * expr_j] for j \in P_l */
-         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprActivity(scip, expr2), bilincoef);
-         SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
-      }
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, &nadjbilin, &adjbilin, &sqrexpr);
 
       /* rhs_i = rhs - rest_i.
        * to compute rest_i = [\sum_{k \neq i} q_k] we just have to substract
@@ -963,7 +1152,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
        */
       /* compute rest_i.sup */
       if( SCIPintervalGetSup(nlhdlrexprdata->quadactivities[i]) < SCIP_INTERVAL_INFINITY &&
-            nlhdlrexprdata->nposinfinityquadact == 0 )
+         nlhdlrexprdata->nposinfinityquadact == 0 )
       {
          SCIP_ROUNDMODE roundmode;
 
@@ -974,14 +1163,14 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          SCIPintervalSetRoundingMode(roundmode);
       }
       else if( SCIPintervalGetSup(nlhdlrexprdata->quadactivities[i]) >= SCIP_INTERVAL_INFINITY &&
-            nlhdlrexprdata->nposinfinityquadact == 1 )
+         nlhdlrexprdata->nposinfinityquadact == 1 )
          rest_i.sup = nlhdlrexprdata->maxquadfiniteact;
       else
          rest_i.sup = SCIP_INTERVAL_INFINITY;
 
       /* compute rest_i.inf */
       if( SCIPintervalGetInf(nlhdlrexprdata->quadactivities[i]) > -SCIP_INTERVAL_INFINITY &&
-            nlhdlrexprdata->nneginfinityquadact == 0 )
+         nlhdlrexprdata->nneginfinityquadact == 0 )
       {
          SCIP_ROUNDMODE roundmode;
 
@@ -992,7 +1181,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          SCIPintervalSetRoundingMode(roundmode);
       }
       else if( SCIPintervalGetInf(nlhdlrexprdata->quadactivities[i]) <= -SCIP_INTERVAL_INFINITY &&
-            nlhdlrexprdata->nneginfinityquadact == 1 )
+         nlhdlrexprdata->nneginfinityquadact == 1 )
          rest_i.inf = nlhdlrexprdata->minquadfiniteact;
       else
          rest_i.inf = -SCIP_INTERVAL_INFINITY;
@@ -1020,37 +1209,98 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
       if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, rhs_i) )
          continue;
 
-      /* solve a_i expr_i^2 + b expr_i = rhs_i */
-      SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+
+      /* try to propagate */
+      if( !isPropagableTerm(quaddata, i) )
+      {
+         assert(lincoef == 0.0);
+
+         if( sqrcoef != 0.0 )
+         {
+            assert(sqrexpr != NULL);
+            assert(nadjbilin == 0);
+
+            /* solve sqrcoef sqrexpr = rhs_i */
+            SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, sqrexpr, sqrcoef, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+         }
+         else
+         {
+            SCIP_CONSEXPR_EXPR* expr1;
+            SCIP_CONSEXPR_EXPR* prodexpr;
+            SCIP_Real prodcoef;
+
+            assert(nadjbilin == 1);
+            SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[0], &expr1, NULL, &prodcoef, NULL, &prodexpr);
+
+            if( expr1 == qexpr )
+            {
+               /* if qexpr is expr1, then we treat this product as if belonging to the current (i'th) quadratic term */
+
+               /* solve prodcoef prodexpr = rhs_i */
+               SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, prodexpr, prodcoef, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+            }
+            /* else: if qexpr is not expr1, then this product is handled as part of another quadratic term, maybe using the "special case" */
+         }
+      }
+      else
+      {
+         SCIP_INTERVAL b;
+         SCIP_CONSEXPR_EXPR* expr1 = NULL;
+         SCIP_CONSEXPR_EXPR* expr2 = NULL;
+         SCIP_Real bilincoef = 0.0;
+         int pos2 = 0;
+         int j;
+
+         /* set b to [c_l] */
+         SCIPintervalSet(&b, lincoef);
+
+         /* compute [\sum_{j \in P_l} b_lj expr_j + c_l] in b*/
+         for( j = 0; j < nadjbilin; ++j )
+         {
+            SCIP_INTERVAL bterm;
+
+            SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[j], &expr1, &expr2, &bilincoef, &pos2, NULL);
+
+            if( expr1 != qexpr )
+               continue;
+
+            /* b += [b_lj * expr_j] for j \in P_l */
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprActivity(scip, expr2), bilincoef);
+            SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
+         }
+
+         /* solve a_i expr_i^2 + b expr_i = rhs_i */
+         SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+
+         /* handle special case: check if the quadratic expr is of the form expr_i * expr_k and expr_i appears only once
+          * (if nadjbilin == 1, then expr1, expr2, bilincoef, pos2 are still set to SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[0], ...))
+          */
+         if( lincoef == 0.0 && sqrcoef == 0.0 && nadjbilin == 1 && expr1 == qexpr && !*infeasible )
+         {
+            /* expr_k should also only appear in expr_i * expr_k */
+            SCIP_Real sqrcoef2;
+#ifndef NDEBUG
+            SCIP_Real lincoef2;
+            int nadjbilin2;
+            int* adjbilin2;
+
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, pos2, NULL, &lincoef2, &sqrcoef2, &nadjbilin2, &adjbilin2, NULL);
+            assert(lincoef2 == 0.0 && sqrcoef2 == 0.0 && nadjbilin2 == 1 && adjbilin[0] == adjbilin2[0]);
+#else
+            SCIPgetConsExprQuadraticQuadTermData(quaddata, pos2, NULL, NULL, &sqrcoef2, NULL, NULL, NULL);
+#endif
+
+            /* propagate expr_k; rhs_k is equal to rhs_i; but b must change now */
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &b, SCIPgetConsExprExprActivity(scip, expr1), bilincoef);
+
+            /* solve a_k expr_k^2 + b expr_k = rhs_k */
+            SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, expr2, sqrcoef2, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+         }
+      }
 
       /* stop if we find infeasibility */
       if( *infeasible )
          return SCIP_OKAY;
-
-      /* handle special case: check if the quadratic expr is of the form expr_i * expr_k and expr_i appears only once
-       * (if nadjbilin == 1, then expr1, expr2, bilincoef, pos2 are still set to SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[0], ...))
-       */
-      if( lincoef == 0.0 && sqrcoef == 0.0 && nadjbilin == 1 && expr1 == qexpr )
-      {
-         /* expr_k should also only appear in expr_i * expr_k */
-         SCIP_Real sqrcoef2;
-#ifndef NDEBUG
-         SCIP_Real lincoef2;
-         int nadjbilin2;
-         int* adjbilin2;
-
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, pos2, NULL, &lincoef2, &sqrcoef2, &nadjbilin2, &adjbilin2);
-         assert(lincoef2 == 0.0 && sqrcoef2 == 0.0 && nadjbilin2 == 1 && adjbilin[0] == adjbilin2[0]);
-#else
-         SCIPgetConsExprQuadraticQuadTermData(quaddata, pos2, NULL, NULL, &sqrcoef2, NULL, NULL);
-#endif
-
-         /* propagate expr_k; rhs_k is equal to rhs_i; but b must change now */
-         SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &b, SCIPgetConsExprExprActivity(scip, expr1), bilincoef);
-
-         /* solve a_k expr_k^2 + b expr_k = rhs_k */
-         SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, expr2, sqrcoef2, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
-      }
    }
 
    return SCIP_OKAY;
