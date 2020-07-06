@@ -663,6 +663,10 @@ SCIP_RETCODE computeOffValues(
             origvals0[v] = 0.0;
             hasnonsc = TRUE;
          }
+         else
+         {
+            origvals0[v] = scvdata->vals0[pos];
+         }
       }
       SCIPsetSolVals(scip, sol, norigvars, origvars, origvals0);
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
@@ -1548,7 +1552,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       int minidx;
       int maxidx;
       int r;
-      SCIP_Real val0;
       SCIP_VAR** probingvars;
       SCIP_INTERVAL* probingdoms;
       int nprobingvars;
@@ -1670,7 +1673,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                if( scvdata == NULL )
                   continue;
 
-               cst0 -= rowprep->coefs[v] * val0;
+               cst0 -= rowprep->coefs[v] * scvdata->vals0[pos];
             }
 
             /* only perspectivy when the absolute value of cst0 is not too small */
