@@ -554,10 +554,7 @@ SCIP_RETCODE exprIsSemicontinuous(
       scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*) nlhdlrexprdata->vars[v]);
 
       if( linear != NULL && linear[v] )
-      {
-         linear[v] = FALSE;
          continue;
-      }
 
       /* we should have exited earlier if there is a nonlinear nonsemicontinuous variable */
       assert(scvdata != NULL);
@@ -603,7 +600,7 @@ SCIP_RETCODE exprIsSemicontinuous(
    *res = TRUE;
 
  TERMINATE:
-   SCIPfreeCleanBufferArrayNull(scip, &linear);
+   SCIPfreeBufferArrayNull(scip, &linear);
 
    return SCIP_OKAY;
 }
