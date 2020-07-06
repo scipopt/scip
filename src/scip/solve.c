@@ -3000,32 +3000,42 @@ SCIP_RETCODE solveNodeLP(
          SCIP_SOL* sol;
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
 
-         SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
+         if( set->misc_exactsolve && lp->lpexact->solved )
+         {
+            SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, primal, tree, lp->lpexact, NULL) );
 
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
-            checklprows = FALSE;
+            SCIP_CALL( SCIPprimalTrySolFreeExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpexact,
+               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
+         }
          else
-            checklprows = TRUE;
+         {
+            SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
+
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+               checklprows = FALSE;
+            else
+               checklprows = TRUE;
 
 #ifndef NDEBUG
-         /* in the debug mode we want to explicitly check if the solution is feasible if it was stored */
-         SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
+            /* in the debug mode we want to explicitly check if the solution is feasible if it was stored */
+            SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+                  eventqueue, eventfilter, sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
 
-         if( stored )
-         {
-            SCIP_Bool feasible;
+            if( stored )
+            {
+               SCIP_Bool feasible;
 
-            SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, FALSE, FALSE, TRUE, TRUE,
-                  checklprows, &feasible) );
-            assert(feasible);
-         }
+               SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, FALSE, FALSE, TRUE, TRUE,
+                     checklprows, &feasible) );
+               assert(feasible);
+            }
 
-         SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
+            SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
 #else
-         SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
-               eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
+            SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
+                  eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, checklprows, &stored) );
 #endif
+         }
          if( stored )
          {
             stat->nlpsolsfound++;
