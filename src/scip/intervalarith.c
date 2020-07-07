@@ -2680,9 +2680,12 @@ void SCIPintervalCos(
    /* this implementation follows boost::numeric::cos */
    SCIP_ROUNDMODE roundmode;
    SCIP_Real negwidth;
+   SCIP_Real k = 0.0;
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   SCIPdebugMessage("cos([%.16g,%.16g])\n", operand.inf, operand.sup);
 
    if( operand.inf == operand.sup ) /*lint !e777 */
    {
@@ -2716,38 +2719,24 @@ void SCIPintervalCos(
       return;
    }
 
-   /* get operand.inf into [0,2*pi] */
-   if( operand.inf < 0.0 || operand.inf >= 2.0 * pi_d_l )
+   /* get operand.inf into [0,pi] */
+   if( operand.inf < 0.0 || operand.inf >= pi_d_l )
    {
       SCIP_INTERVAL tmp;
-      SCIP_Real k;
 
-      k = floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)) / 2.0);
+      k = floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)));
 
-      /* operand <- operand - k * 2*pi */
+      /* operand <- operand - k * pi */
       SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
-      SCIPintervalMulScalar(infinity, &tmp, tmp, 2.0*k);
+      SCIPintervalMulScalar(infinity, &tmp, tmp, k);
       SCIPintervalSub(infinity, &operand, operand, tmp);
    }
    assert(operand.inf >= 0.0);
-   assert(operand.inf <= 2.0*pi_d_u);
+   assert(operand.inf <= pi_d_u);
+
+   SCIPdebugMessage("shifted operand by %g*pi = [%.16g,%.16g])\n", k, operand.inf, operand.sup);
 
    SCIPintervalSetRoundingMode(roundmode);
-
-   /* get operand.inf into [0,pi] */
-   if( operand.inf > pi_d_u )
-   {
-      /* cos(x) = -cos(x-pi) */
-      SCIP_INTERVAL tmp;
-
-      SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
-      SCIPintervalSub(infinity, &operand, operand, tmp);
-      assert(operand.inf <= pi_d_u);
-
-      SCIPintervalCos(infinity, &tmp, operand);
-      SCIPintervalSetBounds(resultant, -tmp.sup, -tmp.inf);
-      return;
-   }
 
    if( operand.sup <= pi_d_l )
    {
@@ -2761,6 +2750,7 @@ void SCIPintervalCos(
          resultant->sup = SCIPnextafter(cos(operand.inf), SCIP_REAL_MAX);
          resultant->sup = MIN( 1.0, resultant->sup);
       }
+      SCIPdebugMessage("cos([%.16g,%.16g]) = [%.16g,%.16g]\n", operand.inf, operand.sup, resultant->inf, resultant->sup);
    }
    else if( operand.sup <= 2*pi_d_l )
    {
@@ -2777,10 +2767,20 @@ void SCIPintervalCos(
          resultant->sup = SCIPnextafter(MAX(cinf, csup), SCIP_REAL_MAX);
          resultant->sup = MIN(1.0, resultant->sup);
       }
+      SCIPdebugMessage("cos([%.16g,%.16g]) = [%.16g,%.16g]\n", operand.inf, operand.sup, resultant->inf, resultant->sup);
    }
    else
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
+   }
+
+   /* back to original operand using cos(x + k pi) = (-1)^k cos(x) */
+   if( (int)k % 2 != 0 )
+   {
+      SCIP_Real tmp = -resultant->sup;
+      resultant->sup = -resultant->inf;
+      resultant->inf = tmp;
+      SCIPdebugMessage("shifted back -> [%.16g,%.16g]\n", resultant->inf, resultant->sup);
    }
 
    assert(resultant->inf >= -1.0);
