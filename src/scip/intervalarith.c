@@ -2657,11 +2657,29 @@ void SCIPintervalSin(
    SCIP_INTERVAL pihalf;
    SCIP_INTERVAL shiftedop;
 
-   /* sin(x) = cos(x-pi/2) */
+   /* sin(x) = cos(x-pi/2) = -cos(x+pi/2)*/
    SCIPintervalSetBounds(&pihalf, pi_d_l, pi_d_u);
    SCIPintervalMulScalar(infinity, &pihalf, pihalf, 0.5);
-   SCIPintervalSub(infinity, &shiftedop, operand, pihalf);
-   SCIPintervalCos(infinity, resultant, shiftedop);
+
+   /* intervalCos() will move operand.inf into [0,pi]
+    * if we can achieve this here by add pi/2 instead of subtracting it, then use the sin(x) = -cos(x+pi/2) identity
+    */
+   if( operand.inf < 0.0 && operand.inf > -pi_d_l )
+   {
+      SCIP_Real tmp;
+
+      SCIPintervalAdd(infinity, &shiftedop, operand, pihalf);
+      SCIPintervalCos(infinity, resultant, shiftedop);
+
+      tmp = -resultant->sup;
+      resultant->sup = -resultant->inf;
+      resultant->inf = tmp;
+   }
+   else
+   {
+      SCIPintervalSub(infinity, &shiftedop, operand, pihalf);
+      SCIPintervalCos(infinity, resultant, shiftedop);
+   }
 
    /* some correction if inf or sup is 0, then sin(0) = 0 would be nice */
    if( operand.inf == 0.0 && operand.sup < pi_d_l )
