@@ -2679,7 +2679,7 @@ void SCIPintervalCos(
 {
    /* this implementation follows boost::numeric::cos */
    SCIP_ROUNDMODE roundmode;
-   SCIP_Real width;
+   SCIP_Real negwidth;
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
@@ -2707,24 +2707,22 @@ void SCIPintervalCos(
    roundmode = SCIPintervalGetRoundingMode();
 
    /* set interval to [-1,1] if width is at least 2 pi */
-   SCIPintervalSetRoundingModeUpwards();
-   width = operand.sup - operand.inf;
-   SCIPintervalSetRoundingMode(roundmode);
-   if( width >= 2*pi_d_l )
+   SCIPintervalSetRoundingModeDownwards();
+   negwidth = operand.inf - operand.sup;
+   if( -negwidth >= 2.0*pi_d_l )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      SCIPintervalSetRoundingMode(roundmode);
       return;
    }
 
    /* get operand.inf into [0,2*pi] */
-   if( operand.inf < 0.0 || operand.inf >= 2*M_PI )
+   if( operand.inf < 0.0 || operand.inf >= 2.0 * pi_d_l )
    {
       SCIP_INTERVAL tmp;
       SCIP_Real k;
 
-      SCIPintervalSetRoundingModeDownwards();
       k = floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)) / 2.0);
-      SCIPintervalSetRoundingMode(roundmode);
 
       /* operand <- operand - k * 2*pi */
       SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
@@ -2732,7 +2730,9 @@ void SCIPintervalCos(
       SCIPintervalSub(infinity, &operand, operand, tmp);
    }
    assert(operand.inf >= 0.0);
-   assert(operand.inf <= 2*pi_d_u);
+   assert(operand.inf <= 2.0*pi_d_u);
+
+   SCIPintervalSetRoundingMode(roundmode);
 
    /* get operand.inf into [0,pi] */
    if( operand.inf > pi_d_u )
