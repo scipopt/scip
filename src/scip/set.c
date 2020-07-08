@@ -731,7 +731,7 @@ SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
-      SCIPerrorMessage("Exact solving mode can only be changed in SICP_STAGE_INIT.\n");
+      SCIPerrorMessage("Exact solving mode can only be changed in SCIP_STAGE_INIT.\n");
       return SCIP_ERROR;
    }
 
