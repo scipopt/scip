@@ -926,7 +926,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
 
          if( indvalue == 0 )
          {
-            assert(sclb == scub);
+            assert(sclb == scub); /*lint !e777*/
             SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
          }
          else
