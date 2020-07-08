@@ -165,22 +165,23 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
    SCIP_HASHMAP* scvars;
    SCIP_HASHMAPENTRY* entry;
    SCVARDATA* scvdata;
-   SCIP_Bool result, infeas;
-   int nbndchgs, c;
-   SCIP_Real val0;
+   SCIP_Bool result;
+   SCIP_Bool infeas;
+   int nbndchgs;
+   int c;
 
    /* allocate memory */
-   SCIPhashmapCreate(&scvars, SCIPblkmem(scip), 1);
+   SCIP_CALL( SCIPhashmapCreate(&scvars, SCIPblkmem(scip), 1) );
 
    /* add bound information to the vars */
    /* z1 <= x1 <= 3*z1 */
-   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs) );
    /* x1 <= 2*z2 */
-   SCIPaddVarVub(scip, x_1, z_2, 2.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 2.0, 0.0, &infeas, &nbndchgs) );
    /* -z3 + 1 <= x1 <= 4*z3 + 1 */
-   SCIPaddVarVlb(scip, x_1, z_3, -1.0, 1.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_3, 4.0, 1.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_3, -1.0, 1.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_3, 4.0, 1.0, &infeas, &nbndchgs) );
 
    /* check if the var is semicontinuous */
    SCIP_CALL( varIsSemicontinuous(scip, x_1, scvars, &result) );
@@ -223,7 +224,8 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
 
@@ -234,25 +236,25 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    /* add implied variable bounds */
    /* -3z1 + 3 <= x1 <= 3*z1 + 3 */
-   SCIPaddVarVlb(scip, x_1, z_1, -3.0, 3.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_1, 3.0, 3.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, -3.0, 3.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_1, 3.0, 3.0, &infeas, &nbndchgs) );
    /* z1 <= y1 <= 3*z1 */
-   SCIPaddVarVlb(scip, y_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, y_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, y_1, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, y_1, z_1, 3.0, 0.0, &infeas, &nbndchgs) );
    /* -z1 <= x2 <= 5*z1 */
-   SCIPaddVarVlb(scip, x_2, z_1, -1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_1, 5.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_1, -1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_1, 5.0, 0.0, &infeas, &nbndchgs) );
 
    /* add bounds with z_2 */
    /* z2 <= x1 <= 3*z2 */
-   SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
    /* -z2 <= y1 <= 3*z2 */
-   SCIPaddVarVlb(scip, y_1, z_2, -1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, y_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, y_1, z_2, -1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, y_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
    /* -z2 <= x2 <= 5*z2 */
-   SCIPaddVarVlb(scip, x_2, z_2, -1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_2, -1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs) );
 
    /* for a sum, detect wants another (non default) nlhdlr to have detected; pretend that convex has detected */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
@@ -301,7 +303,8 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
 
@@ -312,11 +315,11 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
 
    /* z1 <= x1 <= 3*z1 */
-   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs) );
    /* z2 <= x1 <= 3*z2 */
-   SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
@@ -350,7 +353,8 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
 
@@ -360,20 +364,20 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
 
    /* z1 <= x1 <= 3*z1 */
-   SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_1, 3.0, 0.0, &infeas, &nbndchgs) );
    /* z2 <= x1 <= 3*z2 */
-   SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
    /* z1 <= x2 <= 3*z1 */
-   SCIPaddVarVlb(scip, x_2, z_1, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_1, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_1, 3.0, 0.0, &infeas, &nbndchgs) );
    /* z2 <= x2 <= 3*z2 */
-   SCIPaddVarVlb(scip, x_2, z_2, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_2, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
    /* z3 <= x2 <= 3*z3 */
-   SCIPaddVarVlb(scip, x_2, z_3, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_3, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs) );
 
    /* detect */
    provided = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
@@ -408,7 +412,8 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_Bool enforcebelow;
    SCIP_Bool enforceabove;
-   SCIP_Bool success, infeas;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
    SCIP_SOL* sol;
@@ -431,19 +436,19 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 
    /* add implied variable bounds */
    /* -3z1 + 3 <= x1 <= 3*z1 + 3 */
-   SCIPaddVarVlb(scip, x_1, z_1, -3.0, 3.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_1, 3.0, 3.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, -3.0, 3.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_1, 3.0, 3.0, &infeas, &nbndchgs) );
    /* -z1 <= x2 <= 5*z1 */
-   SCIPaddVarVlb(scip, x_2, z_1, -1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_1, 5.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_1, -1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_1, 5.0, 0.0, &infeas, &nbndchgs) );
 
    /* add bounds with z_2 */
    /* z2 <= x1 <= 3*z2 */
-   SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
    /* -z2 <= x2 <= 5*z2 */
-   SCIPaddVarVlb(scip, x_2, z_2, -1.0, 0.0, &infeas, &nbndchgs);
-   SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs);
+   SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_2, -1.0, 0.0, &infeas, &nbndchgs) );
+   SCIP_CALL( SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs) );
 
    /* detect by convex handler */
    provided = SCIP_CONSEXPR_EXPRENFO_NONE;
@@ -489,11 +494,11 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 
    /* separate */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIPsetSolVal(scip, sol, x_1, 0.0);
-   SCIPsetSolVal(scip, sol, x_2, 4.0);
-   SCIPsetSolVal(scip, sol, z_1, 0.5);
-   SCIPsetSolVal(scip, sol, z_2, 0.5);
-   SCIPsetSolVal(scip, sol, auxvar, 10);
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x_1, 0.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x_2, 4.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z_1, 0.5) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z_2, 0.5) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 10) );
 
    SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &(expr->enfos[1]->auxvalue), sol) );
    cr_expect_eq(expr->enfos[1]->auxvalue, 16.0);
@@ -517,7 +522,7 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    /* free memory */
    SCIP_CALL( SCIPclearCuts(scip) );
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
-   SCIPfreeSol(scip, &sol);
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) ); /* convex nlhdlr is freed when expr is released */
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
