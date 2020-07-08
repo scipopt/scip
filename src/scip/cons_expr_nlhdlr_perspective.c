@@ -479,7 +479,6 @@ SCIP_RETCODE exprIsSemicontinuous(
          int nchildvarexprs;
          int pos;
          SCIP_Bool issc;
-         SCIP_Bool found;
 
          if( SCIPisConsExprExprVar(child) )
          {
@@ -489,9 +488,9 @@ SCIP_RETCODE exprIsSemicontinuous(
             SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
 
             /* mark the variable as linear */
-            found = SCIPsortedvecFindPtr((void**) nlhdlrexprdata->vars, SCIPvarComp, (void*) var,
-                  nlhdlrexprdata->nvars, &pos);
-            assert(found);
+            (void) SCIPsortedvecFindPtr((void**) nlhdlrexprdata->vars, SCIPvarComp, (void*) var, nlhdlrexprdata->nvars,
+                  &pos);
+            assert(0 <= pos && pos < nlhdlrexprdata->nvars);
             linear[pos] = TRUE;
 
             /* since child is a variable, go on regardless of the value of var_is_sc */
@@ -692,6 +691,11 @@ SCIP_RETCODE computeOffValues(
          if( auxvar != NULL )
          {
             SCIP_Bool issc = TRUE;
+#ifndef NDEBUG
+            SCIP_CONSEXPR_EXPR** childvarexprs;
+            int nchildvarexprs;
+            SCIP_VAR* var;
+#endif
 
             if( hasnonsc )
             {
@@ -713,10 +717,6 @@ SCIP_RETCODE computeOffValues(
                   issc = TRUE;
 
 #ifndef NDEBUG
-                  SCIP_CONSEXPR_EXPR** childvarexprs;
-                  int nchildvarexprs;
-                  SCIP_VAR* var;
-
                   SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, norigvars) );
                   SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, curexpr, childvarexprs, &nchildvarexprs) );
 
