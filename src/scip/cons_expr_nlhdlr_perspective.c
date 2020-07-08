@@ -1024,8 +1024,8 @@ SCIP_RETCODE analyseOnoffBounds(
    SCIP_VAR* var;
    SCIP_Bool infeas;
    int b;
-   SCIP_Real probinglb;
-   SCIP_Real probingub;
+   SCIP_Real probinglb = SCIP_INVALID;
+   SCIP_Real probingub = SCIP_INVALID;
    SCIP_Bool changed;
    SCIP_Bool reduceddom;
 
