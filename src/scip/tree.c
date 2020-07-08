@@ -816,7 +816,7 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
-      if( set->misc_exactsolve )
+      if( set->exact_enabled )
          RatSet(node->lowerboundexact, parent->lowerboundexact);
 
       if( parent->depth >= SCIP_MAXTREEDEPTH )
@@ -980,7 +980,7 @@ SCIP_RETCODE nodeCreate(
    (*node)->cutoff = FALSE;
    (*node)->reprop = FALSE;
    (*node)->repropsubtreemark = 0;
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
       RatCreateBlock(blkmem, &(*node)->lowerboundexact);
 
    return SCIP_OKAY;
@@ -1175,7 +1175,7 @@ SCIP_RETCODE SCIPnodeFree(
       tree->probingroot = NULL;
    }
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
       RatFreeBlock(blkmem, &(*node)->lowerboundexact);
 
    BMSfreeBlockMemory(blkmem, node);
@@ -2431,14 +2431,14 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
 
    assert(set != NULL);
    assert(lp->hasprovedbound);
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
 
    /* in case of iteration or time limit, the LP value may not be a valid dual bound */
    /* @todo check for dual feasibility of LP solution and use sub-optimal solution if they are dual feasible */
    if( lp->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT || lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
-   if( set->misc_exactsolve && !lp->hasprovedbound )
+   if( set->exact_enabled && !lp->hasprovedbound )
    {
       SCIPerrorMessage("Trying to update lower bound with non-proven value in exact solving mode \n.");
       SCIPABORT();
@@ -2475,14 +2475,14 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    if( lp->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT || lp->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
       return SCIP_OKAY;
 
-   if( set->misc_exactsolve && !lp->hasprovedbound )
+   if( set->exact_enabled && !lp->hasprovedbound )
    {
       SCIPerrorMessage("Trying to update lower bound with non-proven value in exact solving mode \n.");
       SCIPABORT();
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( set->misc_exactsolve && lpobjval > SCIPnodeGetLowerbound(node) )
+   if( set->exact_enabled && lpobjval > SCIPnodeGetLowerbound(node) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);

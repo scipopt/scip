@@ -366,12 +366,6 @@ struct SCIP_Set
    SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-   SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
-   SCIP_Bool             misc_usefprelax;    /**< should the fp-approximation of the exact problem also be a relaxation? */
-   char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
-                                              *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
-                                              *   'p'roject and scale, 'e'xact LP, 'i'nterval neumaier and shcherbina,
-                                              *   e'x'act neumaier and shcherbina, 'a'utomatic) */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
@@ -586,6 +580,13 @@ struct SCIP_Set
    SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
    SCIP_Bool             visual_displb;      /**< should lower bound information be visualized? */
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
+
+   /* exact SCIP settings */
+   SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (with proven dual bounds)? */
+   SCIP_Bool             exact_interleavedbfreq; /**< frequency at which dual bounding strategy is interleaved with exact LP * solve
+                                                  *   (-1: never, 0: automatic, n > 0: every n-th node) */
+   char                  exact_dbmethod;     /**< method for computing truely valid dual bounds at the nodes
+                                              *   ('n'eumaier and shcherbina, 'p'roject and shift, 'e'xact LP, 'a'utomatic) */
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */

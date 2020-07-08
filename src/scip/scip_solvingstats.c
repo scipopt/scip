@@ -3405,7 +3405,7 @@ void SCIPprintLPStatistics(
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
 
-   if( scip->set->misc_exactsolve )
+   if( scip->set->exact_enabled )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails\n");
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",

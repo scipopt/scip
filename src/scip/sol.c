@@ -1510,7 +1510,7 @@ SCIP_RETCODE SCIPsolSetVal(
       {
          oldval = solGetArrayVal(sol, var);
 
-         if( !SCIPsetIsEQ(set, val, oldval) || set->misc_exactsolve )
+         if( !SCIPsetIsEQ(set, val, oldval) || set->exact_enabled )
          {
             SCIP_Real obj;
             SCIP_Real objcont;
@@ -1561,7 +1561,7 @@ SCIP_RETCODE SCIPsolSetVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
          || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
-      if( !SCIPsetIsEQ(set, val, oldval) || set->misc_exactsolve )
+      if( !SCIPsetIsEQ(set, val, oldval) || set->exact_enabled )
       {
          SCIP_Real obj;
          SCIP_Real objcont;
@@ -2457,7 +2457,7 @@ SCIP_RETCODE SCIPsolCheck(
    *feasible = TRUE;
 
    /* have to check bounds without tolerances in exact solving mode */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       SCIP_CALL( solCheckExact(sol, set, messagehdlr, blkmem, stat, prob, printreason,
             completely, checkbounds, checkintegrality, checklprows, feasible) );
@@ -3001,7 +3001,7 @@ SCIP_Bool SCIPsolsAreEqual(
    assert((SCIPsolIsOriginal(sol1) && SCIPsolIsOriginal(sol2)) || transprob != NULL);
 
    /* exact solutions should be checked exactly */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       return solsAreEqualExact(sol1, sol2, set, stat, origprob, transprob);
    }

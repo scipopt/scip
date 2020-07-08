@@ -3861,7 +3861,7 @@ SCIP_Bool SCIPconflictApplicable(
    )
 {
    /* conflict analysis is not yet safe to us in exact solving mode */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
       return FALSE;
 
    /* check, if propagation conflict analysis is enabled */
@@ -8522,7 +8522,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    assert(success == NULL || *success == FALSE);
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_enable || set->conf_useinflp == 'o' || set->misc_exactsolve )
+   if( !set->conf_enable || set->conf_useinflp == 'o' || set->exact_enabled )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -8599,7 +8599,7 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    assert(success == NULL || *success == FALSE);
 
    /* check, if bound exceeding LP conflict analysis is enabled */
-   if( !set->conf_enable || set->conf_useboundlp == 'o' || set->misc_exactsolve)
+   if( !set->conf_enable || set->conf_useboundlp == 'o' || set->exact_enabled)
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -8671,7 +8671,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !set->conf_enable || (set->conf_useinflp == 'o' && set->conf_useboundlp == 'o') || set->misc_exactsolve )
+   if( !set->conf_enable || (set->conf_useinflp == 'o' && set->conf_useboundlp == 'o') || set->exact_enabled )
       return SCIP_OKAY;
 
    /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
@@ -9012,7 +9012,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usesb || set->misc_exactsolve )
+   if( !set->conf_enable || !set->conf_usesb || set->exact_enabled )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -9408,7 +9408,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       *success = FALSE;
 
    /* check, if pseudo solution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usepseudo || set->misc_exactsolve )
+   if( !set->conf_enable || !set->conf_usepseudo || set->exact_enabled )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */

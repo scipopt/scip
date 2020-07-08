@@ -1,1 +1,1 @@
-misc/exactsolve = FALSE
+exact/enabled = FALSE

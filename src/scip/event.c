@@ -80,7 +80,7 @@ SCIP_RETCODE updateLpexBdChg(
    )
 {
    /* do nothing if not in exact solving mode */
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
     return SCIP_OKAY;
 
    assert(var != NULL);
@@ -1706,7 +1706,7 @@ SCIP_RETCODE SCIPeventProcess(
       }
 
       /* if in exact solving mode, adjust rational lp data */
-      if( set->misc_exactsolve )
+      if( set->exact_enabled )
       {
          SCIP_Rational* newobj;
          SCIP_Rational* oldobj;
