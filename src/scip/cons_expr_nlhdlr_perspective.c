@@ -1588,8 +1588,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       {
          SCIP_Bool propagate;
 
-         propagate = SCIPgetDepth(scip) == 0;
-
 #ifndef NDEBUG
          SCIP_Real* solvals;
          SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nlhdlrexprdata->nvars) );
@@ -1598,6 +1596,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             solvals[v] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[v]);
          }
 #endif
+
+         propagate = SCIPgetDepth(scip) == 0;
 
          SCIP_CALL( SCIPstartClock(scip, nlhdlr->probingtime) );
          SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, probingvars, probingdoms, nprobingvars, sol, &solcopy) );
