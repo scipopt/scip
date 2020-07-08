@@ -245,6 +245,8 @@ SCIP_RETCODE estimate(
    SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
 
    /* detect */
+   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
