@@ -544,6 +544,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    indicators = NULL;
    nindicators = 0;
+   nbnds0 = 0;
 
    SCIPdebugMsg(scip, "Array intersection for vars %s, *nbvars = %d\n", SCIPvarGetName(nlhdlrexprdata->vars[0]), nindicators);
    for( v = 0; v < nlhdlrexprdata->nvars; ++v )
@@ -668,10 +669,10 @@ SCIP_RETCODE computeOffValues(
             origvals0[v] = scvdata->vals0[pos];
          }
       }
-      SCIPsetSolVals(scip, sol, norigvars, origvars, origvals0);
+      SCIP_CALL( SCIPsetSolVals(scip, sol, norigvars, origvars, origvals0) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
 
-      if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID )
+      if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
       {
          SCIPdebugMsg(scip, "expression evaluation failed for %p, removing the indicator\n", (void*)expr);
          removeIndicator(exprdata, i);
@@ -909,7 +910,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
       /* first check for infeasibility */
       if( SCIPisFeasGT(scip, sclb, SCIPvarGetUbLocal(var)) )
       {
-         SCIP_CALL( SCIPfixVar(scip, indicator, !indvalue, infeas, &bndchgsuccess) );
+         SCIP_CALL( SCIPfixVar(scip, indicator, indvalue ? 0.0 : 1.0, infeas, &bndchgsuccess) );
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -946,7 +947,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
       /* first check for infeasibility */
       if( SCIPisFeasLT(scip, scub, SCIPvarGetLbLocal(var)) )
       {
-         SCIP_CALL( SCIPfixVar(scip, indicator, !indvalue, infeas, &bndchgsuccess) );
+         SCIP_CALL( SCIPfixVar(scip, indicator, indvalue ? 0.0 : 1.0, infeas, &bndchgsuccess) );
          *reduceddom += bndchgsuccess;
          if( *infeas )
          {
@@ -962,7 +963,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
 
          if( indvalue == 0 )
          {
-            assert(sclb == scub);
+            assert(sclb == scub); /*lint !e777*/
             SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
          }
          else
@@ -1075,9 +1076,9 @@ SCIP_RETCODE analyseOnoffBounds(
             continue;
 
          /* if bounds to be applied in probing have been found, store them */
-         if( probinglb != SCIP_INVALID )
+         if( probinglb != SCIP_INVALID ) /*lint !e777*/
          {
-            assert(probingub != SCIP_INVALID);
+            assert(probingub != SCIP_INVALID); /*lint !e777*/
 
             SCIP_CALL( SCIPreallocBufferArray(scip, probingvars, *nprobingvars + 1) );
             SCIP_CALL( SCIPreallocBufferArray(scip, probingdoms, *nprobingvars + 1) );
@@ -1113,16 +1114,20 @@ SCIP_RETCODE tightenOnBounds(
    SCIP_VAR* var;
    SCVARDATA* scvdata;
    int pos;
+   SCIP_Real lb;
+   SCIP_Real ub;
 
    for( v = 0; v < nlhdlrexprdata->nvars; ++v )
    {
       var = nlhdlrexprdata->vars[v];
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
       scvdata = getSCVarDataInd(scvars, var, indicator, &pos);
 
       if( scvdata != NULL )
       {
-         scvdata->lbs1[pos] = MAX(scvdata->lbs1[pos], SCIPvarGetLbLocal(var));
-         scvdata->ubs1[pos] = MIN(scvdata->ubs1[pos], SCIPvarGetUbLocal(var));
+         scvdata->lbs1[pos] = MAX(scvdata->lbs1[pos], lb);
+         scvdata->ubs1[pos] = MIN(scvdata->ubs1[pos], ub);
       }
    }
 
@@ -1155,7 +1160,6 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
    SCIP_HASHMAPENTRY* entry;
    SCVARDATA* data;
    int c;
-   int i;
 
    if( (*nlhdlrdata)->scvars != NULL )
    {
@@ -1385,7 +1389,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
       SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
             &expr->enfos[e]->auxvalue, sol) );
 
-      if( REALABS(expr->enfos[e]->auxvalue - auxvarvalue) > maxdiff && expr->enfos[e]->auxvalue != SCIP_INVALID )
+      if( REALABS(expr->enfos[e]->auxvalue - auxvarvalue) > maxdiff && expr->enfos[e]->auxvalue != SCIP_INVALID ) /*lint !e777*/
       {
          maxdiff = REALABS(expr->enfos[e]->auxvalue - auxvarvalue);
          *auxvalue = expr->enfos[e]->auxvalue;
@@ -1608,7 +1612,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 #ifndef NDEBUG
          for( v = 0; v < nlhdlrexprdata->nvars; ++v )
          {
-            assert(solvals[v] == SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]));
+            assert(solvals[v] == SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v])); /*lint !e777*/
          }
          SCIPfreeBufferArray(scip, &solvals);
 #endif
