@@ -582,11 +582,11 @@ struct SCIP_Set
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* exact SCIP settings */
-   SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (with proven dual bounds)? */
-   SCIP_Bool             exact_interleavedbfreq; /**< frequency at which dual bounding strategy is interleaved with exact LP * solve
-                                                  *   (-1: never, 0: automatic, n > 0: every n-th node) */
-   char                  exact_safedbmethod; /**< method for computing truely valid dual bounds at the nodes
-                                              *   ('n'eumaier and shcherbina, 'p'roject and shift, 'e'xact LP, 'a'utomatic) */
+   SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (without numerical tolerances)? */
+   SCIP_Bool             exact_interleavedbfreq; /**< frequency at which safe dual bounding method is interleaved with exact LP
+                                              *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
+   char                  exact_safedbmethod; /**< method for computing safe dual bounds
+                                              *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */
