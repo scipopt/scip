@@ -1756,20 +1756,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectConvex)
    return SCIP_OKAY;
 }
 
-/** init sepa callback that initializes LP */
-static
-SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
-{ /*lint --e{715}*/
-   assert(nlhdlrexprdata != NULL);
-
-   /* setup nlhdlrexprdata->leafexprs */
-   SCIP_CALL( collectLeafs(scip, conshdlr, nlhdlrexprdata) );
-
-   /* TODO add some initial cutting planes, Ksenia&Felipe work on this */
-
-   return SCIP_OKAY;
-}
-
 /** auxiliary evaluation callback */
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxConvexConcave)
@@ -1802,6 +1788,9 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
+
+   /* setup nlhdlrexprdata->leafexprs */
+   SCIP_CALL( collectLeafs(scip, conshdlr, nlhdlrexprdata) );
 
    nlexpr = nlhdlrexprdata->nlexpr;
    assert(nlexpr != NULL);
