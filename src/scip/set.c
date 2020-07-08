@@ -491,7 +491,7 @@
 
 /* exact SCIP parameters */
 #define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
-#define SCIP_DEFAULT_EXACT_DBMETHOD         'a' /**< method for computing truely safe dual bounds
+#define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing truely safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 #define SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ   0 /**< frequency at which dual bounding strategy is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
@@ -2646,9 +2646,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->exact_enabled, FALSE, SCIP_DEFAULT_EXACT_ENABLED,
          paramChgdExactSolve, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
-         "exact/dbmethod",
+         "exact/safedbmethod",
          "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)",
-         &(*set)->exact_dbmethod, FALSE, SCIP_DEFAULT_EXACT_DBMETHOD, "npea",
+         &(*set)->exact_safedbmethod, FALSE, SCIP_DEFAULT_EXACT_SAFEDBMETHOD, "npea",
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "exact/interleavedbfreq",

@@ -1,5 +1,5 @@
 # exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)
 # [type: char, range: {nvrpeixa}, default: a]
-exact/dbmethod = p
+exact/safedbmethod = p
 exact/enabled = TRUE
 misc/improvingsols = TRUE

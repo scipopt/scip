@@ -585,7 +585,7 @@ struct SCIP_Set
    SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (with proven dual bounds)? */
    SCIP_Bool             exact_interleavedbfreq; /**< frequency at which dual bounding strategy is interleaved with exact LP * solve
                                                   *   (-1: never, 0: automatic, n > 0: every n-th node) */
-   char                  exact_dbmethod;     /**< method for computing truely valid dual bounds at the nodes
+   char                  exact_safedbmethod; /**< method for computing truely valid dual bounds at the nodes
                                               *   ('n'eumaier and shcherbina, 'p'roject and shift, 'e'xact LP, 'a'utomatic) */
 
    /* CERTIFICATE tool settings */

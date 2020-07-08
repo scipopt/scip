@@ -168,7 +168,7 @@ char SCIPdualBoundMethod(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (scip->set->exact_dbmethod);
+   return (scip->set->exact_safedbmethod);
 }
 
 /** Transforms a given linear sum of variables, that is a_1*x_1 + ... + a_n*x_n + c into a corresponding linear sum of

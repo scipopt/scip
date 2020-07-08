@@ -2777,9 +2777,9 @@ char chooseInitialBoundingMethod(
    else if( SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OBJLIMIT )
       dualboundmethod = 'e';
    /* if we are not in automatic mode, try an iteration with the static method */
-   else if( set->exact_dbmethod != 'a' )
+   else if( set->exact_safedbmethod != 'a' )
    {
-      dualboundmethod = set->exact_dbmethod;
+      dualboundmethod = set->exact_safedbmethod;
    }
    /* select automatically which bounding method to apply */
    else
