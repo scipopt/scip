@@ -573,6 +573,7 @@ SCIP_RETCODE exprIsSemicontinuous(
       /* if we have found out that the intersection is empty, expr is not semicontinuous */
       if( indicators != NULL && nindicators == 0 )
       {
+         SCIPfreeBlockMemoryArray(scip, &indicators, nbnds0);
          goto TERMINATE;
       }
    }
@@ -598,7 +599,6 @@ SCIP_RETCODE exprIsSemicontinuous(
    *res = TRUE;
 
  TERMINATE:
-   SCIPfreeBlockMemoryArrayNull(scip, &indicators, nbnds0);
    SCIPfreeBufferArrayNull(scip, &linear);
 
    return SCIP_OKAY;
