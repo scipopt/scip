@@ -684,11 +684,17 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
 static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert( scip != NULL );
    assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
-   SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+   retcode = SCIPenableReoptimization(scip, SCIPparamGetBool(param));
+
+   /* an appropriate error message is already printed in the above method */
+   if( retcode == SCIP_INVALIDCALL )
+      return SCIP_PARAMETERWRONGVAL;
 
    return SCIP_OKAY;
 }
