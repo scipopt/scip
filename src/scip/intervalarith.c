@@ -2635,123 +2635,87 @@ void SCIPintervalAbs(
    }
 }
 
-/** stores sine value of operand in resultant
- * NOTE: the operations are not applied rounding-safe here
+/* double precision lower and upper bounds on pi
+ * taken from boost::numeric::interval_lib::constants
+ * MSVC refuses to evaluate this at compile time
  */
+#ifndef _MSC_VER
+static const double pi_d_l = (3373259426.0 + 273688.0 / (1<<21)) / (1<<30);
+static const double pi_d_u = (3373259426.0 + 273689.0 / (1<<21)) / (1<<30);
+#else
+#define pi_d_l ((3373259426.0 + 273688.0 / (1<<21)) / (1<<30))
+#define pi_d_u ((3373259426.0 + 273689.0 / (1<<21)) / (1<<30))
+#endif
+
+/** stores sine value of operand in resultant */
 void SCIPintervalSin(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   SCIP_Real finf;
-   SCIP_Real fsup;
-   SCIP_Real infval;
-   SCIP_Real supval;
-   SCIP_Real extr;
-   int nbetween;
-   int k;
+   /* the function evaluates sine transforming it to a cosine via sin(x) = cos(x-pi/2) = -cos(x+pi/2) */
+   SCIP_INTERVAL pihalf;
+   SCIP_INTERVAL shiftedop;
 
-   assert(resultant != NULL);
-   assert(!SCIPintervalIsEmpty(infinity, operand));
+   /* sin(x) = cos(x-pi/2) = -cos(x+pi/2)*/
+   SCIPintervalSetBounds(&pihalf, pi_d_l, pi_d_u);
+   SCIPintervalMulScalar(infinity, &pihalf, pihalf, 0.5);
 
-   /* set interval to [-1,1] if [inf,sup] is larger than 2 pi */
-   if( operand.sup - operand.inf >= 2*M_PI )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-   else if( operand.inf == operand.sup ) /*lint !e777 */
+   /* intervalCos() will move operand.inf into [0,pi]
+    * if we can achieve this here by add pi/2 instead of subtracting it, then use the sin(x) = -cos(x+pi/2) identity
+    */
+   if( operand.inf < 0.0 && operand.inf > -pi_d_l )
    {
       SCIP_Real tmp;
 
-      assert(SCIPintervalGetRoundingMode() == SCIP_ROUND_NEAREST);
-      tmp = sin(operand.inf);
-      resultant->inf = SCIPnextafter(tmp, SCIP_REAL_MIN);
-      resultant->sup = SCIPnextafter(tmp, SCIP_REAL_MAX);
-      return;
-   }
+      SCIPintervalAdd(infinity, &shiftedop, operand, pihalf);
+      SCIPintervalCos(infinity, resultant, shiftedop);
 
-   /* compute extreme point that is left to operand.inf */
-   k = (int) floor(operand.inf/M_PI - 0.5);
-   extr = ((2.0*k+1.0)*M_PI)/2.0;
-   assert(extr <= operand.inf);
-
-   /* check how many minimums and maximums are contained in [inf,sup] */
-   nbetween = 0;
-   while( extr + M_PI*(nbetween + 1) <= operand.sup && nbetween < 3 )
-      ++nbetween;
-
-   /* at least one minimum and maximum are contained in [inf,sup] -> return [-1,1] */
-   if( nbetween > 1 )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-
-   infval = sin(operand.inf);
-   supval = sin(operand.sup);
-   finf = MIN(infval, supval);
-   fsup = MAX(infval, supval);
-
-   /* no extremum -> sin(x) is monotone in [inf,sup] */
-   if( nbetween == 0 )
-   {
-      assert(finf <= fsup);
-
-      finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-      fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
+      tmp = -resultant->sup;
+      resultant->sup = -resultant->inf;
+      resultant->inf = tmp;
    }
    else
    {
-      assert(nbetween == 1);
-
-      /* check whether we have seen a minimum or maximum */
-      if( cos(operand.inf) >= 0.0 )
-      {
-	 finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-	 fsup = 1.0;
-      }
-      else
-      {
-	 finf = -1.0;
-	 fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
-      }
+      SCIPintervalSub(infinity, &shiftedop, operand, pihalf);
+      SCIPintervalCos(infinity, resultant, shiftedop);
    }
-   assert(finf <= fsup);
 
-   /* project [finf,fsup] to [-1,1] */
-   finf = MAX(finf, -1.0);
-   fsup = MIN(fsup, 1.0);
-   SCIPintervalSetBounds(resultant, finf, fsup);
+   /* some correction if inf or sup is 0, then sin(0) = 0 would be nice */
+   if( operand.inf == 0.0 && operand.sup < pi_d_l )
+      resultant->inf = 0.0;
+   else if( operand.sup == 0.0 && operand.inf > -pi_d_l )
+      resultant->sup = 0.0;
 }
 
-/** stores cosine value of operand in resultant
- * NOTE: the operations are not applied rounding-safe here
- */
+/** stores cosine value of operand in resultant */
 void SCIPintervalCos(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   SCIP_Real finf;
-   SCIP_Real fsup;
-   SCIP_Real infval;
-   SCIP_Real supval;
-   SCIP_Real extr;
-   int nbetween;
-   int k;
+   /* this implementation follows boost::numeric::cos
+    * cos is decreasing in [0, pi] and increasing in [pi, 2pi].
+    * If operand = [a,b] and a is in [0, pi], then
+    * cos([a,b]) = [-1, 1] if b >= 2pi
+    * cos([a,b]) = [-1, max(cos(a), cos(b))] if b is in [pi, 2pi]
+    * cos([a,b]) = [cos(b), cos(a)] if b is in [0, pi]
+    *
+    * To make sure that a is always between [0, pi] we use the identity cos(x) = (-1)^k cos(x + k pi), i.e.,
+    * we compute k such that a + k pi \in [0,pi], compute cos([a,b] + k pi) and then multiply by (-1)^k.
+    */
+   SCIP_ROUNDMODE roundmode;
+   SCIP_Real negwidth;
+   SCIP_Real k = 0.0;
 
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup - operand.inf >= 2*M_PI )
-   {
-      SCIPintervalSetBounds(resultant, -1.0, 1.0);
-      return;
-   }
-   else if( operand.inf == operand.sup ) /*lint !e777 */
+   SCIPdebugMessage("cos([%.16g,%.16g])\n", operand.inf, operand.sup);
+
+   if( operand.inf == operand.sup ) /*lint !e777 */
    {
       SCIP_Real tmp;
 
@@ -2762,58 +2726,93 @@ void SCIPintervalCos(
       return;
    }
 
-   /* compute extreme point that is left to operand.inf */
-   k = (int) floor(operand.inf/M_PI);
-   extr = k*M_PI;
-   assert(extr <= operand.inf);
-
-   /* check how many minimums and maximums are contained in [inf,sup] */
-   nbetween = 0;
-   while( extr + M_PI*(nbetween + 1) <= operand.sup && nbetween < 3 )
-      ++nbetween;
-
-   /* at least one minimum and maximum are contained in [inf,sup] -> return [-1,1] */
-   if( nbetween > 1 )
+   /* set interval to [-1,1] if we cannot reliably work out the difference between inf and sup
+    * double precision has almost 16 digits of precision; for now cut off at 12
+    */
+   if( operand.sup > 1e12 || operand.inf < -1e12 )
    {
       SCIPintervalSetBounds(resultant, -1.0, 1.0);
       return;
    }
 
-   infval = cos(operand.inf);
-   supval = cos(operand.sup);
-   finf = MIN(infval, supval);
-   fsup = MAX(infval, supval);
+   roundmode = SCIPintervalGetRoundingMode();
 
-   /* no extremum -> cos(x) is monotone in [inf,sup] */
-   if( nbetween == 0 )
+   /* set interval to [-1,1] if width is at least 2 pi */
+   SCIPintervalSetRoundingModeDownwards();
+   negwidth = operand.inf - operand.sup;
+   if( -negwidth >= 2.0*pi_d_l )
    {
-      assert(finf <= fsup);
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      SCIPintervalSetRoundingMode(roundmode);
+      return;
+   }
 
-      finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-      fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
+   /* get operand.inf into [0,pi] */
+   if( operand.inf < 0.0 || operand.inf >= pi_d_l )
+   {
+      SCIP_INTERVAL tmp;
+
+      k = floor((operand.inf / (operand.inf < 0.0 ? pi_d_l : pi_d_u)));
+
+      /* operand <- operand - k * pi */
+      SCIPintervalSetBounds(&tmp, pi_d_l, pi_d_u);
+      SCIPintervalMulScalar(infinity, &tmp, tmp, k);
+      SCIPintervalSub(infinity, &operand, operand, tmp);
+   }
+   assert(operand.inf >= 0.0);
+   assert(operand.inf <= pi_d_u);
+
+   SCIPdebugMessage("shifted operand by %g*pi = [%.16g,%.16g])\n", k, operand.inf, operand.sup);
+
+   SCIPintervalSetRoundingMode(roundmode);
+
+   if( operand.sup <= pi_d_l )
+   {
+      /* monotone decreasing */
+      resultant->inf = SCIPnextafter(cos(operand.sup), SCIP_REAL_MIN);
+      resultant->inf = MAX(-1.0, resultant->inf);
+      if( operand.inf == 0.0 )
+         resultant->sup = 1.0;
+      else
+      {
+         resultant->sup = SCIPnextafter(cos(operand.inf), SCIP_REAL_MAX);
+         resultant->sup = MIN( 1.0, resultant->sup);
+      }
+      SCIPdebugMessage("cos([%.16g,%.16g]) = [%.16g,%.16g]\n", operand.inf, operand.sup, resultant->inf, resultant->sup);
+   }
+   else if( operand.sup <= 2*pi_d_l )
+   {
+      /* inf <= pi, sup >= pi: minimum at pi (=-1), maximum at inf or sup */
+      resultant->inf = -1.0;
+      if( operand.inf == 0.0 )
+         resultant->sup = 1.0;
+      else
+      {
+         SCIP_Real cinf;
+         SCIP_Real csup;
+         cinf = cos(operand.inf);
+         csup = cos(operand.sup);
+         resultant->sup = SCIPnextafter(MAX(cinf, csup), SCIP_REAL_MAX);
+         resultant->sup = MIN(1.0, resultant->sup);
+      }
+      SCIPdebugMessage("cos([%.16g,%.16g]) = [%.16g,%.16g]\n", operand.inf, operand.sup, resultant->inf, resultant->sup);
    }
    else
    {
-      assert(nbetween == 1);
-
-      /* check whether we have seen a minimum or maximum */
-      if( sin(operand.inf) <= 0.0 )
-      {
-	 finf = (finf == 0.0) ? 0.0 : SCIPnextafter(finf, SCIP_REAL_MIN);
-	 fsup = 1.0;
-      }
-      else
-      {
-	 finf = -1.0;
-	 fsup = (fsup == 0.0) ? 0.0 : SCIPnextafter(fsup, SCIP_REAL_MAX);
-      }
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
    }
-   assert(finf <= fsup);
 
-   /* project [finf,fsup] to [-1,1] */
-   finf = MAX(finf, -1.0);
-   fsup = MIN(fsup, 1.0);
-   SCIPintervalSetBounds(resultant, finf, fsup);
+   /* back to original operand using cos(x + k pi) = (-1)^k cos(x) */
+   if( (int)k % 2 != 0 )
+   {
+      SCIP_Real tmp = -resultant->sup;
+      resultant->sup = -resultant->inf;
+      resultant->inf = tmp;
+      SCIPdebugMessage("shifted back -> [%.16g,%.16g]\n", resultant->inf, resultant->sup);
+   }
+
+   assert(resultant->inf >= -1.0);
+   assert(resultant->sup <=  1.0);
 }
 
 /** stores sign of operand in resultant */

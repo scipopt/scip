@@ -15,8 +15,6 @@
 #
 #  IPOPT_INCLUDE_DIRS - Directories to include to use IPOPT
 #  IPOPT_LIBRARIES    - Default library to link against to use IPOPT
-#  IPOPT_DEFINITIONS  - Flags to be added to linker's options
-#  IPOPT_LINK_FLAGS   - Flags to be added to linker's options
 #  IPOPT_FOUND        - If false, don't try to use IPOPT
 
 #=============================================================================
@@ -35,11 +33,31 @@
 # (To distribute this file outside of YCM, substitute the full
 #  License text for the above reference.)
 
-
 if(NOT WIN32)
   # On non Windows systems we use PkgConfig to find IPOPT
   find_package(PkgConfig QUIET)
-  if(PKG_CONFIG_FOUND AND NOT IPOPT_DIR)
+
+  if(NOT IPOPT_DIR)
+    set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
+    if(IPOPT_DIR_TEST)
+      set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
+    else()
+      set(IPOPT_DIR /usr            CACHE PATH "Path to IPOPT build directory")
+    endif()
+  endif()
+
+  # try to find dep file, if yes, ipopt <= 3.12, don't use package-config
+  # if not, ipopt >= 3.13, use package-config
+  find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
+                                                 ${IPOPT_DIR}/share/coin-or/doc/Ipopt
+                                                 ${IPOPT_DIR}/share/doc/coin/Ipopt
+                                                 ${IPOPT_DIR}/share/coin/doc/Ipopt
+                                                 NO_DEFAULT_PATH)
+
+  if(PKG_CONFIG_FOUND AND NOT EXISTS ${IPOPT_DEP_FILE})
+    if(IPOPT_DIR)
+      set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig/:$ENV{PKG_CONFIG_PATH}")
+    endif()
 
     if(IPOPT_FIND_VERSION)
       if(IPOPT_FIND_VERSION_EXACT)
@@ -51,55 +69,41 @@ if(NOT WIN32)
       pkg_check_modules(_PC_IPOPT QUIET ipopt)
     endif()
 
-
-    if(_PC_IPOPT_FOUND)
-      set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
-      set(IPOPT_DEFINITIONS ${_PC_IPOPT_CFLAGS_OTHER} CACHE STRING "Additional compiler flags for IPOPT")
-      set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
-      foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
-        find_library(${_LIBRARY}_PATH
-                     NAMES ${_LIBRARY}
-                     PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-        list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
-      endforeach()
-    else()
-      set(IPOPT_DEFINITIONS "")
-    endif()
-
   endif()
 
-  set(IPOPT_LINK_FLAGS "")
+  if(_PC_IPOPT_FOUND)
+    set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
+    set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
+    foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
+      find_library(${_LIBRARY}_PATH
+                   NAMES ${_LIBRARY}
+                   PATHS ${_PC_IPOPT_LIBRARY_DIRS}
+                   NO_DEFAULT_PATH)
+      find_library(${_LIBRARY}_PATH
+                   NAMES ${_LIBRARY}
+                   PATHS ${_PC_IPOPT_LIBRARY_DIRS})
+      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
+    endforeach()
+    string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
+    list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
 
-  # If pkg-config fails, try to find the package using IPOPT_DIR
-  if(NOT _PC_IPOPT_FOUND)
-    set(IPOPT_DIR_TEST $ENV{IPOPT_DIR})
-    if(IPOPT_DIR_TEST)
-      set(IPOPT_DIR $ENV{IPOPT_DIR} CACHE PATH "Path to IPOPT build directory")
-    else()
-      set(IPOPT_DIR /usr            CACHE PATH "Path to IPOPT build directory")
-    endif()
+  else()
+  # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
     # version ipopt >= 3.13
     set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
-    find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
-                                     ${IPOPT_DIR}/lib/coin-or
-                                     NO_DEFAULT_PATH)
 
     if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
         # version ipopt <= 3.12
         set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
-        find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
-                                         ${IPOPT_DIR}/lib/coin
-                                         NO_DEFAULT_PATH)
     endif()
 
-    if(IPOPT_LIBRARIES)
-      find_file(IPOPT_DEP_FILE ipopt_addlibs_cpp.txt ${IPOPT_DIR}/share/doc/coin-or/Ipopt
-         ${IPOPT_DIR}/share/coin-or/doc/Ipopt
-         ${IPOPT_DIR}/share/doc/coin/Ipopt
-         ${IPOPT_DIR}/share/coin/doc/Ipopt
-         NO_DEFAULT_PATH)
+    find_library(IPOPT_LIBRARIES ipopt ${IPOPT_DIR}/lib
+                                     ${IPOPT_DIR}/lib/coin
+                                     ${IPOPT_DIR}/lib/coin-or
+                                     NO_DEFAULT_PATH)
 
+    if(IPOPT_LIBRARIES)
       if(IPOPT_DEP_FILE)
         # add libraries from ipopt_addlibs_cpp.txt
         file(READ ${IPOPT_DEP_FILE} IPOPT_DEP)
@@ -108,8 +112,6 @@ if(NOT WIN32)
       endif()
     endif()
 
-    set(IPOPT_DEFINITIONS "")
-    set(IPOPT_LINK_FLAGS "")
   endif()
 
 # Windows platforms
@@ -120,22 +122,20 @@ else()
 
   # version ipopt >= 3.13
   set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
-  find_library(IPOPT_IPOPT_LIBRARY_RELEASE libipopt ${IPOPT_DIR}/lib
-                                                    ${IPOPT_DIR}/lib/coin-or
-                                                    NO_DEFAULT_PATH)
-  find_library(IPOPT_IPOPT_LIBRARY_DEBUG   libipoptD ${IPOPT_DIR}/lib
-                                                     ${IPOPT_DIR}/lib/coin-or
-                                                     NO_DEFAULT_PATH)
+
   if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
       # version ipopt <= 3.12
       set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
-      find_library(IPOPT_IPOPT_LIBRARY_RELEASE libipopt ${IPOPT_DIR}/lib
-                                                        ${IPOPT_DIR}/lib/coin
-                                                        NO_DEFAULT_PATH)
-      find_library(IPOPT_IPOPT_LIBRARY_DEBUG   libipoptD ${IPOPT_DIR}/lib
-                                                         ${IPOPT_DIR}/lib/coin
-                                                         NO_DEFAULT_PATH)
   endif()
+
+  find_library(IPOPT_IPOPT_LIBRARY_RELEASE libipopt ${IPOPT_DIR}/lib
+                                                    ${IPOPT_DIR}/lib/coin
+                                                    ${IPOPT_DIR}/lib/coin-or
+                                                    NO_DEFAULT_PATH)
+  find_library(IPOPT_IPOPT_LIBRARY_DEBUG   libipoptD ${IPOPT_DIR}/lib
+                                                     ${IPOPT_DIR}/lib/coin
+                                                     ${IPOPT_DIR}/lib/coin-or
+                                                     NO_DEFAULT_PATH)
 
   select_library_configurations(IPOPT_IPOPT)
   set(IPOPT_LIBRARIES ${IPOPT_IPOPT_LIBRARY})
@@ -189,8 +189,6 @@ else()
     endif()
   endif()
 
-  set(IPOPT_DEFINITIONS "")
-  set(IPOPT_LINK_FLAGS "")
 endif()
 
 # parse the version number
@@ -203,14 +201,15 @@ foreach( INCLUDE_DIR ${IPOPT_INCLUDE_DIRS} )
         string(REGEX REPLACE "\"" "" IPOPT_VERSION ${IPOPT_VERSION})
       endif()
     endforeach()
-    #MESSAGE("found Ipopt ${IPOPT_VERSION}")
   endif()
 endforeach()
 
 mark_as_advanced(IPOPT_INCLUDE_DIRS
                  IPOPT_LIBRARIES
-                 IPOPT_DEFINITIONS
-                 IPOPT_LINK_FLAGS)
+                 IPOPT_MODERN)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(IPOPT FOUND_VAR IPOPT_FOUND REQUIRED_VARS IPOPT_LIBRARIES VERSION_VAR IPOPT_VERSION)
+find_package_handle_standard_args(IPOPT
+  FOUND_VAR IPOPT_FOUND
+  REQUIRED_VARS IPOPT_LIBRARIES
+  VERSION_VAR IPOPT_VERSION)

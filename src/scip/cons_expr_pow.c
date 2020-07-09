@@ -16,8 +16,8 @@
 /**@file   cons_expr_pow.c
  * @brief  power expression handler
  * @author Benjamin Mueller
+ * @author Ksenia Bestuzheva
  *
- * @todo initsepaPow
  * @todo signpower for exponent < 1 ?
  */
 
@@ -969,6 +969,7 @@ void estimateRoot(
          if( SCIPisZero(scip, xub) )
          {
             *success = FALSE;
+            *islocal = FALSE;
             return;
          }
 
@@ -984,6 +985,291 @@ void estimateRoot(
    }
 }
 
+/** builds an estimator for a power function */
+static
+SCIP_RETCODE buildPowEstimator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_Bool             overestimate,       /**< is this an overestimator? */
+   SCIP_VAR*             childvar,           /**< child variable */
+   SCIP_Real             childlb,            /**< lower bound on the child variable */
+   SCIP_Real             childub,            /**< upper bound on the child variable */
+   SCIP_Real             refpoint,           /**< reference point */
+   SCIP_Real             exponent,           /**< esponent */
+   SCIP_Real*            coef,               /**< pointer to store the coefficient of the estimator */
+   SCIP_Real*            constant,           /**< pointer to store the constant of the estimator */
+   SCIP_Bool*            success,            /**< pointer to store whether the estimator was built successfully */
+   SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is local */
+   SCIP_Bool*            branchcand          /**< pointer to indicate whether to consider child for branching (initialized to TRUE) */
+)
+{
+   SCIP_Bool isinteger;
+   SCIP_Bool iseven;
+
+   assert(scip != NULL);
+   assert(exprdata != NULL);
+   assert(childvar != NULL);
+   assert(coef != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
+   assert(islocal != NULL);
+   assert(branchcand != NULL);
+
+   isinteger = EPSISINT(exponent, 0.0);
+   iseven = isinteger && EPSISINT(exponent / 2.0, 0.0);
+
+   if( exponent == 2.0 )
+   {
+      /* important special case: quadratic case */
+      /* initialize, because SCIPaddSquareXyz only adds to existing values */
+      *success = TRUE;
+      *coef = 0.0;
+      *constant = 0.0;
+
+      if( overestimate )
+      {
+         SCIPaddSquareSecant(scip, 1.0, childlb, childub, coef, constant, success);
+         *islocal = TRUE; /* secants are only valid locally */
+      }
+      else
+      {
+         SCIPaddSquareLinearization(scip, 1.0, refpoint, SCIPvarIsIntegral(childvar), coef, constant, success);
+         *islocal = FALSE; /* linearizations are globally valid */
+         *branchcand = FALSE;  /* there is no improvement due to branching */
+      }
+   }
+   else if( exponent > 0.0 && iseven )
+   {
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
+      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
+      *branchcand = *islocal;
+   }
+   else if( exponent > 1.0 && childlb >= 0.0 )
+   {
+      SCIP_Real glb;
+
+      /* make sure we linearize in convex region (if we will linearize) */
+      if( refpoint < 0.0 )
+         refpoint = 0.0;
+
+      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
+
+      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
+      *branchcand = *islocal;
+
+      /* if odd power, then check whether tangent on parabola is also globally valid, that is reference point is right of -root*global-lower-bound */
+      glb = SCIPvarGetLbGlobal(childvar);
+      if( !*islocal && !iseven && glb < 0.0 )
+      {
+         if( SCIPisInfinity(scip, -glb) )
+            *islocal = TRUE;
+         else
+         {
+            if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
+            {
+               SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+            }
+            *islocal = refpoint < exprdata->root * (-glb);
+         }
+      }
+   }
+   else if( exponent > 1.0 )  /* and !iseven && childlb < 0.0 due to previous if */
+   {
+      /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
+      if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 ) /*lint !e777*/
+      {
+         SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+      }
+      estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
+                          SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coef, islocal, branchcand, success);
+   }
+   else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
+   {
+      /* compute root if not known yet; only needed if mixed sign (globally) and iseven */
+      if( exprdata->root == SCIP_INVALID && iseven ) /*lint !e777*/
+      {
+         SCIP_CALL( computeHyperbolaRoot(scip, &exprdata->root, exponent) );
+      }
+      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coef, islocal, branchcand, success);
+   }
+   else if( exponent < 0.0 )
+   {
+      assert(!iseven); /* should hold due to previous if */
+      assert(childlb < 0.0); /* should hold due to previous if */
+      assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
+
+      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coef, islocal, branchcand, success);
+   }
+   else
+   {
+      assert(exponent < 1.0); /* the only case that should be left */
+      assert(exponent > 0.0); /* should hold due to previous if */
+
+      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
+
+      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
+      *branchcand = *islocal;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** fills an array of reference points for estimating on the convex side */
+static
+void addTangentRefpoints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             lb,                 /**< lower bound on the child variable */
+   SCIP_Real             ub,                 /**< upper bound on the child variable */
+   SCIP_Real*            refpoints           /**< array to store the reference points */
+)
+{
+   assert(refpoints != NULL);
+
+   /* make bounds finite */
+   if( SCIPisInfinity(scip, -lb) )
+      lb = MIN(-10.0, ub - 0.1*REALABS(ub));  /*lint !e666 */
+   if( SCIPisInfinity(scip,  ub) )
+      ub = MAX( 10.0, lb + 0.1*REALABS(lb));  /*lint !e666 */
+
+   refpoints[0] = (7.0 * lb + ub) / 8.0;
+   refpoints[1] = (lb + ub) / 2.0;
+   refpoints[2] = (lb + 7.0 * ub) / 8.0;
+
+}
+
+/** fills an array of reference points for sign(x)*abs(x)^n or x^n (n odd),
+ *  where x has mixed signs
+ *
+ *  the reference points are: the lower and upper bounds (one for secant and one for tangent);
+ *  and for the second tangent, the point on the convex part of the function between the point
+ *  deciding between tangent and secant and the corresponding bound
+ */
+static
+SCIP_RETCODE addSignpowerRefpoints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_Real             lb,                 /**< lower bound on the child variable */
+   SCIP_Real             ub,                 /**< upper bound on the child variable */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             underestimate,      /**< are the refpoints for an underestimator */
+   SCIP_Real*            refpoints           /**< array to store the reference points */
+)
+{
+   assert(refpoints != NULL);
+
+   if( (underestimate && SCIPisInfinity(scip, -lb)) || (!underestimate && SCIPisInfinity(scip, ub)) )
+      return SCIP_OKAY;
+
+   if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
+   {
+      SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+   }
+
+   /* make bounds finite (due to a previous if, only one can be infinite here) */
+   if( SCIPisInfinity(scip, -lb) )
+      lb = -ub * exprdata->root - 1.0;
+   else if( SCIPisInfinity(scip,  ub) )
+      ub = -lb * exprdata->root + 1.0;
+
+   if( underestimate )
+   {
+      /* secant point */
+      refpoints[0] = lb;
+
+      /* tangent points, depending on the special point */
+      if( -lb * exprdata->root < ub - 2.0 )
+         refpoints[2] = ub;
+      if( -lb * exprdata->root < ub - 4.0 )
+         refpoints[1] = (-lb * exprdata->root + ub) / 2.0;
+   }
+
+   if( !underestimate )
+   {
+      /* secant point */
+      refpoints[2] = ub;
+
+      /* tangent points, depending on the special point */
+      if( -ub * exprdata->root > lb + 2.0 )
+         refpoints[0] = lb;
+      if( -ub * exprdata->root > lb + 4.0 )
+         refpoints[1] = (lb - ub * exprdata->root) / 2.0;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** choose reference points for adding initsepa cuts for a power expression */
+static
+SCIP_RETCODE chooseRefpointsPow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_Real             lb,                 /**< lower bound on the child variable */
+   SCIP_Real             ub,                 /**< upper bound on the child variable */
+   SCIP_Real*            refpointsunder,     /**< array to store reference points for underestimators */
+   SCIP_Real*            refpointsover,      /**< array to store reference points for overestimators */
+   SCIP_Bool             underestimate,      /**< whether refpoints for underestimation are needed */
+   SCIP_Bool             overestimate        /**< whether refpoints for overestimation are needed */
+)
+{
+   SCIP_Bool convex;
+   SCIP_Bool concave;
+   SCIP_Bool mixedsign;
+   SCIP_Bool even;
+   SCIP_Real exponent;
+
+   assert(scip != NULL);
+   assert(exprdata != NULL);
+   assert(refpointsunder != NULL && refpointsover != NULL);
+
+   exponent = exprdata->exponent;
+   even = EPSISINT(exponent, 0.0) && EPSISINT(exponent / 2.0, 0.0);
+
+   convex = FALSE;
+   concave = FALSE;
+   mixedsign = lb < 0.0 && ub > 0.0;
+
+   /* convex case:
+    * - parabola with an even degree or positive domain
+    * - hyperbola with a positive domain
+    * - even hyperbola with a negative domain
+    */
+   if( (exponent > 1.0 && (lb >= 0 || even)) || (exponent < 0.0 && lb >= 0) || (exponent < 0.0 && even && ub <= 0.0) )
+      convex = TRUE;
+   /* concave case:
+    * - parabola or hyperbola with a negative domain and (due to previous if) an uneven degree
+    * - root
+    */
+   else if( ub <= 0 || (exponent > 0.0 && exponent < 1.0) )
+      concave = TRUE;
+
+   if( underestimate )
+   {
+      if( convex )
+         addTangentRefpoints(scip, lb, ub, refpointsunder);
+      else if( (concave && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub)) ||
+               (exponent < 0.0 && even && mixedsign) ) /* concave with finite bounds or mixed even hyperbola */
+         /* for secant, refpoint doesn't matter, but we add it to signal that the corresponding cut should be created */
+         refpointsunder[0] = (lb + ub) / 2.0;
+      else if( exponent > 1.0 && !even && mixedsign ) /* mixed signpower */
+         SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, TRUE, refpointsunder) );
+      else /* mixed odd hyperbola or an infinite bound */
+         assert((exponent < 0.0 && !even && mixedsign) || SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub));
+   }
+
+   if( overestimate )
+   {
+      if( convex && !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+         refpointsover[0] = (lb + ub) / 2.0;
+      else if( concave )
+         addTangentRefpoints(scip, lb, ub, refpointsover);
+      else if( exponent > 1.0 && !even && mixedsign ) /* mixed signpower */
+         SCIP_CALL( addSignpowerRefpoints(scip, exprdata, lb, ub, exponent, FALSE, refpointsover) );
+      else /* mixed hyperbola or an infinite bound */
+         assert((exponent < 0.0 && mixedsign) || SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub));
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of expression handler
@@ -1567,7 +1853,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    SCIP_Real exponent;
    SCIP_Real refpoint;
    SCIP_Bool isinteger;
-   SCIP_Bool iseven;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1613,7 +1898,6 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
 
    isinteger = EPSISINT(exponent, 0.0);
-   iseven = isinteger && EPSISINT(exponent/2.0, 0.0);
 
    /* if exponent is not integral, then child must be non-negative */
    if( !isinteger && childlb < 0.0 )
@@ -1627,98 +1911,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
    }
    assert(isinteger || childlb >= 0.0);
 
-   if( exponent == 2.0 )
-   {
-      /* initialize, because SCIPaddSquareXyz only adds to existing values */
-      *success = TRUE;
-      *coefs = 0.0;
-      *constant = 0.0;
-
-      /* important special case: quadratic case */
-      if( overestimate )
-      {
-         SCIPaddSquareSecant(scip, 1.0, childlb, childub, coefs, constant, success);
-         *islocal = TRUE; /* secants are only valid locally */
-      }
-      else
-      {
-         SCIPaddSquareLinearization(scip, 1.0, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);
-         *islocal = FALSE; /* linearizations are globally valid */
-         *branchcand = FALSE;  /* there is no improvement due to branching */
-      }
-   }
-   else if( exponent > 0.0 && iseven )
-   {
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
-      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
-      *branchcand = *islocal;
-   }
-   else if( exponent > 1.0 && childlb >= 0.0 )
-   {
-      SCIP_Real glb;
-
-      /* make sure we linearize in convex region (if we will linearize) */
-      if( refpoint < 0.0 )
-         refpoint = 0.0;
-
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
-
-      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
-      *branchcand = *islocal;
-
-      /* if odd power, then check whether tangent on parabola is also globally valid, that is reference point is right of -root*global-lower-bound */
-      glb = SCIPvarGetLbGlobal(childvar);
-      if( !*islocal && !iseven && glb < 0.0 )
-      {
-         if( SCIPisInfinity(scip, -glb) )
-            *islocal = TRUE;
-         else
-         {
-            if( exprdata->root == SCIP_INVALID ) /*lint !e777*/
-            {
-               SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
-            }
-            *islocal = refpoint < exprdata->root * (-glb);
-         }
-      }
-   }
-   else if( exponent > 1.0 )  /* and !iseven && childlb < 0.0 due to previous if */
-   {
-      /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
-      if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 ) /*lint !e777*/
-      {
-         SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
-      }
-      estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
-            SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
-   }
-   else if( exponent < 0.0 && (iseven || childlb >= 0.0) )
-   {
-      /* compute root if not known yet; only needed if mixed sign (globally) and iseven */
-      if( exprdata->root == SCIP_INVALID && iseven ) /*lint !e777*/
-      {
-         SCIP_CALL( computeHyperbolaRoot(scip, &exprdata->root, exponent) );
-      }
-      estimateHyperbolaPositive(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
-   }
-   else if( exponent < 0.0 )
-   {
-      assert(!iseven); /* should hold due to previous if */
-      assert(childlb < 0.0); /* should hold due to previous if */
-      assert(isinteger); /* should hold because childlb < 0.0 (same as assert above) */
-
-      estimateHyperbolaMixed(scip, exponent, overestimate, childlb, childub, refpoint, SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), constant, coefs, islocal, branchcand, success);
-   }
-   else
-   {
-      assert(exponent < 1.0); /* the only case that should be left */
-      assert(exponent > 0.0); /* should hold due to previous if */
-
-      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
-
-      /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
-      *branchcand = *islocal;
-   }
+   SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childvar, childlb, childub, refpoint, exponent, coefs,
+         constant, success, islocal, branchcand) );
 
    return SCIP_OKAY;
 }
@@ -1812,6 +2006,130 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    /* try to tighten the bounds of the child node */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,
          nreductions) );
+
+   return SCIP_OKAY;
+}
+
+/** init sepa callback that initializes LP for a power expression */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaPow)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real childlb;
+   SCIP_Real childub;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Real exponent;
+   SCIP_Bool isinteger;
+   SCIP_Bool islocal;
+   SCIP_Bool branchcand;
+   SCIP_Bool success;
+   SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Bool overest[6] = {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
+   SCIP_Real constant;
+   int i;
+   SCIP_ROWPREP* rowprep;
+   SCIP_ROW* row;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(infeasible != NULL);
+
+   /* get aux variables: we over- and/or underestimate childvar^exponent  */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
+
+   /* if child is essentially constant, then there should be no point in separation */
+   if( SCIPisEQ(scip, childlb, childub) )
+   {
+      SCIPdebugMsg(scip, "skip initsepa as child <%s> seems essentially fixed [%.15g,%.15g]\n", SCIPvarGetName(childvar), childlb, childub);
+      return SCIP_OKAY;
+   }
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   exponent = exprdata->exponent;
+   assert(exponent != 1.0 && exponent != 0.0); /* this should have been simplified */
+
+   isinteger = EPSISINT(exponent, 0.0);
+
+   /* if exponent is not integral, then child must be non-negative */
+   if( !isinteger && childlb < 0.0 )
+   {
+      /* somewhere we should have tightened the bound on x, but small tightening are not always applied by SCIP
+       * it is ok to do this tightening here, but let's assert that we were close to 0.0 already
+       */
+      assert(SCIPisFeasZero(scip, childlb));
+      childlb = 0.0;
+   }
+   assert(isinteger || childlb >= 0.0);
+
+   SCIP_CALL( chooseRefpointsPow(scip, exprdata, childlb, childub, refpointsunder, refpointsover, underestimate,
+         overestimate) );
+
+   *infeasible = FALSE;
+
+   for( i = 0; i < 6; ++i )
+   {
+      SCIP_Real refpoint;
+
+      if( (overest[i] && !overestimate) || (!overest[i] && !underestimate) )
+         continue;
+
+      assert(overest[i] || i < 3); /* make sure that no out-of-bounds array access will be attempted */
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i]; /*lint !e661 !e662*/
+
+      if( refpoint == SCIP_INVALID )  /*lint !e777*/
+         continue;
+
+      assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
+
+      /* built a cut at refpoint */
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+      /* make sure enough space is available in rowprep arrays */
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+      assert(rowprep->varssize >= 1);
+
+      branchcand = TRUE;
+
+      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childvar, childlb, childub, refpoint, exponent,
+            rowprep->coefs, &constant, &success, &islocal, &branchcand) );
+
+      if( success )
+      {
+         rowprep->nvars = 1;
+         rowprep->vars[0] = childvar;
+         rowprep->side = -constant;
+
+         /* add auxiliary variable */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+         /* straighten out numerics */
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
+               &success) );
+      }
+
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      if( rowprep != NULL )
+         SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
+   }
 
    return SCIP_OKAY;
 }
@@ -2386,6 +2704,145 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSignpower)
    return SCIP_OKAY;
 }
 
+/** init sepa callback that initializes LP for a signpower expression */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaSignpower)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real childlb;
+   SCIP_Real childub;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Real exponent;
+   SCIP_Bool branchcand;
+   SCIP_Bool success;
+   SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Bool overest[6] = {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
+   SCIP_Real refpoint;
+   SCIP_Real constant;
+   int i;
+   SCIP_ROWPREP* rowprep;
+   SCIP_ROW* row;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "signpower") == 0);
+
+   /* get aux variables: we over- and/or underestimate signpower(childvar,exponent) */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   childlb = SCIPvarGetLbLocal(childvar);
+   childub = SCIPvarGetUbLocal(childvar);
+
+   /* if child is essentially constant, then there should be no point in separation */
+   if( SCIPisEQ(scip, childlb, childub) )
+   {
+      SCIPdebugMsg(scip, "skip initsepa as child <%s> seems essentially fixed [%.15g,%.15g]\n", SCIPvarGetName(childvar), childlb, childub);
+      return SCIP_OKAY;
+   }
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   exponent = exprdata->exponent;
+   assert(exponent > 1.0); /* this should have been simplified */
+
+   if( childlb >= 0.0 )
+   {
+      if( underestimate )
+         addTangentRefpoints(scip, childlb, childub, refpointsunder);
+      if( overestimate && !SCIPisInfinity(scip, childub) )
+         refpointsover[0] = (childlb + childub) / 2.0;
+   }
+   else if( childub <= 0.0 )
+   {
+      if( underestimate && !SCIPisInfinity(scip, -childlb) )
+         refpointsunder[0] = (childlb + childub) / 2.0;
+      if( overestimate )
+         addTangentRefpoints(scip, childlb, childub, refpointsunder);
+   }
+   else
+   {
+      if( underestimate )
+         SCIP_CALL( addSignpowerRefpoints(scip, exprdata, childlb, childub, exponent, TRUE, refpointsunder) );
+      if( overestimate )
+         SCIP_CALL( addSignpowerRefpoints(scip, exprdata, childlb, childub, exponent, FALSE, refpointsover) );
+   }
+
+   /* add cuts for all refpoints */
+   *infeasible = FALSE;
+   for( i = 0; i < 6; ++i )
+   {
+      if( (overest[i] && !overestimate) || (!overest[i] && !underestimate) )
+         continue;
+
+      assert(overest[i] || i < 3); /* make sure that no out-of-bounds array access will be attempted */
+      refpoint = overest[i] ? refpointsover[i % 3] : refpointsunder[i]; /*lint !e661 !e662*/
+      if( refpoint == SCIP_INVALID ) /*lint !e777*/
+         continue;
+      assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+
+      /* make sure enough space is available in rowprep arrays */
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+      assert(rowprep->varssize >= 1);
+
+      if( childlb >= 0 )
+      {
+         estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, &constant, rowprep->coefs,
+               &rowprep->local, &success);
+      }
+      else
+      {
+         /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
+         if( exprdata->root == SCIP_INVALID && SCIPvarGetUbGlobal(childvar) > 0.0 ) /*lint !e777*/
+         {
+            SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
+         }
+         branchcand = TRUE;
+         estimateSignedpower(scip, exponent, exprdata->root, overest[i], childlb, childub, refpoint,
+               SCIPvarGetLbGlobal(childvar), SCIPvarGetUbGlobal(childvar), &constant, rowprep->coefs, &rowprep->local,
+               &branchcand, &success);
+      }
+
+      if( success )
+      {
+         rowprep->nvars = 1;
+         rowprep->vars[0] = childvar;
+         rowprep->side = -constant;
+
+         /* add auxiliary variable */
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+         /* straighten out numerics */
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
+               &success) );
+      }
+
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      if( rowprep != NULL )
+         SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSignpower)
@@ -2521,7 +2978,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalPow) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimatePow) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaPow, NULL, estimatePow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashPow) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );
@@ -2555,7 +3012,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSignpower(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSignpower) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateSignpower) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaSignpower, NULL, estimateSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSignpower) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, comparePow) );

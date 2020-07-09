@@ -17,6 +17,7 @@
  * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
+ * @author Ksenia Bestuzheva
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -447,7 +448,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
 
       *islocal = TRUE;
    }
-   /* use gradient cut for underestimate (globally valid) */
+   /* use gradient cut for overestimate (globally valid) */
    else
    {
       SCIP_Real refpoint;
@@ -459,10 +460,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
          if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
             return SCIP_OKAY;
 
-         if( SCIPvarGetUbLocal(childvar) < 0.2 )
-            refpoint = 0.5 * SCIPvarGetLbLocal(childvar) + 0.5 * SCIPvarGetUbLocal(childvar);
-         else
-            refpoint = 0.1;
+         refpoint = SCIPepsilon(scip);
       }
 
       /* -x*(1+log(x*)) + x* <= -x*log(x) */
@@ -478,6 +476,108 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateEntropy)
       return SCIP_OKAY;
 
    *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** init sepa callback that initializes LP */
+static
+SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaEntropy)
+{  /*lint --e{715}*/
+   SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
+   SCIP_Bool overest[4] = {TRUE, TRUE, TRUE, FALSE};
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_VAR* childvar;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_ROWPREP* rowprep;
+   SCIP_Real constant;
+   SCIP_Bool success;
+   int i;
+   SCIP_ROW* row;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   /* get expression data */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprAuxVar(child);
+   assert(childvar != NULL);
+
+   lb = SCIPvarGetLbLocal(childvar);
+   ub = SCIPvarGetUbLocal(childvar);
+
+   if( SCIPisEQ(scip, lb, ub) )
+      return SCIP_OKAY;
+
+   /* adjust lb */
+   lb = MAX(lb, SCIPepsilon(scip)); /*lint !e666*/
+
+   if( overestimate )
+   {
+      refpointsover[0] = lb;
+      refpointsover[1] = SCIPisInfinity(scip, ub) ? lb + 2.0 : (lb + ub) / 2;
+      refpointsover[2] = SCIPisInfinity(scip, ub) ? lb + 20.0 : ub;
+   }
+
+   *infeasible = FALSE;
+
+   for( i = 0; i < 4; ++i )
+   {
+      if( (overest[i] && !overestimate) || (!overest[i] && (!underestimate || SCIPisInfinity(scip, ub))) )
+         continue;
+
+      assert(!overest[i] || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb))); /*lint !e661*/
+
+      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overest[i]) );
+      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 2) );
+
+      if( overest[i] )
+      { /*lint !e661*/
+         /* -x*(1+log(x*)) + x* <= -x*log(x) */
+         assert(i < 3);
+         *(rowprep->coefs) = -(1.0 + log(refpointsover[i]));
+         constant = refpointsover[i];
+      }
+      else
+      {
+         assert(lb > 0.0 && ub >= 0.0);
+         assert(ub - lb != 0.0);
+
+         *(rowprep->coefs) = (-ub * log(ub) + lb * log(lb)) / (ub - lb);
+         constant = -ub * log(ub) - *(rowprep->coefs) * ub;
+         assert(SCIPisEQ(scip, constant, -lb * log(lb) - *(rowprep->coefs) * lb));
+      }
+
+      rowprep->nvars = 1;
+      rowprep->vars[0] = childvar;
+      rowprep->side = -constant;
+
+      /* add auxiliary variable */
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
+
+      /* straighten out numerics */
+      SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
+            &success) );
+
+      if( success )
+      {
+         /* add the cut */
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+
+      SCIPfreeRowprep(scip, &rowprep);
+
+      if( *infeasible )
+         break;
+   }
 
    return SCIP_OKAY;
 }
@@ -621,7 +721,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalEntropy) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateEntropy) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaEntropy, NULL, estimateEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashEntropy) );
    SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffEntropy) );
