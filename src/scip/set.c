@@ -729,10 +729,10 @@ SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
    assert( scip != NULL );
    assert( param != NULL );
 
-   if ( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
       SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
-      return SCIP_ERROR;
+      return SCIP_PARAMETERWRONGVAL;
    }
 
    return SCIP_OKAY;

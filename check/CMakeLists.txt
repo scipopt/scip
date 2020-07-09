@@ -119,8 +119,8 @@ set(settings_fastMIP
   )
 set(settings_MIPEX
     "exact-auto"
-    "exactlp"
-    "projshift"
+    "exact-exactlp"
+    "exact-projshift"
     )
 set(settings_MINLP
 #    "emphasis_numerics"
