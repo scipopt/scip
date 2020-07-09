@@ -1262,9 +1262,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
        */
       SCIP_Bool hasnondefault = FALSE;
 
-      for( i = 0; i < expr->nenfos; ++i )
+      for( i = 0; i < SCIPgetConsExprExprNEnfos(expr); ++i )
       {
-         if( strcmp(SCIPgetConsExprNlhdlrName(expr->enfos[i]->nlhdlr), "default") != 0 )
+         if( strcmp(SCIPgetConsExprNlhdlrName(SCIPgetConsExprExprEnfoNlhdlr(expr, i)), "default") != 0 )
          {
             hasnondefault = TRUE;
             break;
@@ -1370,6 +1370,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
    int e;
    SCIP_Real maxdiff;
    SCIP_Real auxvarvalue;
+   SCIP_Real enfoauxval;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1382,18 +1383,20 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
    /* use the auxvalue from one of the other nlhdlrs that handle this expr: take the one that is farthest
     * from the current value of auxvar
     */
-   for( e = 0; e < expr->nenfos; ++e )
+   for( e = 0; e < SCIPgetConsExprExprNEnfos(expr); ++e )
    {
-      if( !SCIPhasConsExprNlhdlrEstimate(expr->enfos[e]->nlhdlr) )
+      if( !SCIPhasConsExprNlhdlrEstimate(SCIPgetConsExprExprEnfoNlhdlr(expr, e)) )
          continue;
 
-      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, expr->enfos[e]->nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-            &expr->enfos[e]->auxvalue, sol) );
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, SCIPgetConsExprExprEnfoNlhdlr(expr, e), expr,
+            SCIPgetConsExprExprEnfoNlhdlrExprData(expr, e), &enfoauxval, sol) );
 
-      if( REALABS(expr->enfos[e]->auxvalue - auxvarvalue) > maxdiff && expr->enfos[e]->auxvalue != SCIP_INVALID ) /*lint !e777*/
+      SCIPsetConsExprExprEnfoAuxValue(expr, e, enfoauxval);
+
+      if( REALABS(enfoauxval - auxvarvalue) > maxdiff && enfoauxval != SCIP_INVALID ) /*lint !e777*/
       {
-         maxdiff = REALABS(expr->enfos[e]->auxvalue - auxvarvalue);
-         *auxvalue = expr->enfos[e]->auxvalue;
+         maxdiff = REALABS(enfoauxval - auxvarvalue);
+         *auxvalue = enfoauxval;
       }
    }
 
@@ -1450,7 +1453,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_BOOLARRAY* addedbranchscores2;
    SCIP_Bool stop;
    int nenfos;
-   SCIP_CONSEXPR_EXPRENFO** enfos;
+   int* enfoposs;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1485,22 +1488,22 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    assert(auxvar != NULL);
 
    /* detect should have picked only those expressions for which at least one other nlhdlr can enforce */
-   assert(expr->nenfos > 1);
+   assert(SCIPgetConsExprExprNEnfos(expr) > 1);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &enfos, expr->nenfos - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &enfoposs, SCIPgetConsExprExprNEnfos(expr) - 1) );
 
    doprobing = FALSE;
    nenfos = 0;
 
    /* find suitable nlhdlrs and check if there is enough violation to do probing */
-   for( j = 0; j < expr->nenfos; ++j )
+   for( j = 0; j < SCIPgetConsExprExprNEnfos(expr); ++j )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr2;
       SCIP_Real violation;
       SCIP_Bool underestimate2;
       SCIP_Bool overestimate2;
 
-      nlhdlr2 = expr->enfos[j]->nlhdlr;
+      nlhdlr2 = SCIPgetConsExprExprEnfoNlhdlr(expr, j);
 
       if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
          continue;
@@ -1508,8 +1511,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       assert(nlhdlr2 != nlhdlr);
 
       /* evalaux should have called evalaux of other nlhdlrs by now */
-      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, expr->enfos[j]->auxvalue, sol, &violation,
-            &underestimate2, &overestimate2) );
+      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, SCIPgetConsExprExprEnfoAuxValue(expr, j),
+            sol, &violation, &underestimate2, &overestimate2) );
       assert(violation >= 0.0);
 
       if( (overestimate && !overestimate2) || (!overestimate && !underestimate2) )
@@ -1518,7 +1521,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       if( !allowweakcuts && violation < SCIPfeastol(scip) )
          continue;
 
-      enfos[nenfos] = expr->enfos[j];
+      enfoposs[nenfos] = j;
       ++nenfos;
 
       if( violation >= nlhdlrdata->minviolprobing )
@@ -1626,16 +1629,17 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIP_CONSEXPR_NLHDLR* nlhdlr2;
          SCIP_Bool success2;
 
-         nlhdlr2 = enfos[j]->nlhdlr;
+         nlhdlr2 = SCIPgetConsExprExprEnfoNlhdlr(expr, enfoposs[j]);
 
          assert(SCIPhasConsExprNlhdlrEstimate(nlhdlr2) && nlhdlr2 != nlhdlr);
 
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the nonlinear handler for an estimator */
-         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr, enfos[j]->nlhdlrexprdata, solcopy,
-               enfos[j]->auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar), rowpreps2, &success2,
-               FALSE, &addedbranchscores2j) );
+         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr,
+               SCIPgetConsExprExprEnfoNlhdlrExprData(expr, enfoposs[j]), solcopy,
+               SCIPgetConsExprExprEnfoAuxValue(expr, enfoposs[j]), overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
+               rowpreps2, &success2, FALSE, &addedbranchscores2j) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
@@ -1776,7 +1780,7 @@ TERMINATE:
    {
       SCIP_CALL( SCIPfreeSol(scip, &solcopy) );
    }
-   SCIPfreeBufferArray(scip, &enfos);
+   SCIPfreeBufferArray(scip, &enfoposs);
 
    return SCIP_OKAY;
 }
