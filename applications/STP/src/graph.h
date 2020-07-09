@@ -535,6 +535,7 @@ extern void   graph_path_st_pcmw_extendOut(SCIP*, const GRAPH*, int, STP_Bool*, 
 extern void   graph_add2ndTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_add3rdTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_add4thTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
+extern void   graph_get2nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_get3nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_get4nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
@@ -551,6 +552,7 @@ extern void             graph_tpathsAdd1st(const GRAPH*, const SCIP_Real*, const
 extern void             graph_tpathsAdd2nd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd3rd(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsAdd4th(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
+extern void             graph_tpathsSetAll2(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsSetAll3(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsSetAll4(GRAPH*, const SCIP_Real*, const SCIP_Real*, const SDPROFIT*, TPATHS*);
 extern void             graph_tpathsGetClosestTerm(const GRAPH*, const TPATHS*, int,

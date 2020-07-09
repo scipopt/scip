@@ -627,8 +627,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    /* perform initial reductions? */
    if( reducegraph )
    {
-      const RPARAMS parameters = { .dualascent = TRUE, .boundreduce = FALSE, .nodereplacing = TRUE,
-                                                 .reductbound = reductbound, .userec = TRUE, .fullreduce = fullreduce };
+      const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                                 .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
       SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
             vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
@@ -674,6 +674,9 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          i = SLACKPRUNE_MAXREDROUNDS;
       }
 
+      int todo;
+      // todo: check wheter soledge is valid, and if so, don't rerun!
+
       /* compute potential new guiding solution */
       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, prunegraph->source, &apsuccess, FALSE) );
 
@@ -704,8 +707,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
       {
-         const RPARAMS parameters = { .dualascent = TRUE, .boundreduce = FALSE, .nodereplacing = TRUE,
-                                                         .reductbound = reductbound, .userec = TRUE, .fullreduce = fullreduce };
+         const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                                         .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
          SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
                vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );

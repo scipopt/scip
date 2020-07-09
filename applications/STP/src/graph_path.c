@@ -2344,7 +2344,29 @@ void graph_add4thTermPaths(
    graph_tpathsAdd4th(g, cost, costrev, NULL, &tpaths);
 }
 
-/** gets non-terminal shortest paths to 4 closest terminal for each non-terminal
+
+
+/** gets non-terminal shortest paths to 2 closest terminal for each non-terminal
+ *  NOTE: legacy wrapper */
+void graph_get2nextTermPaths(
+   GRAPH*                g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   PATH*                 path2,              /**< path data structure (leading to first, second terminal) */
+   int*                  vbase2,             /**< first, second and third nearest terminal to each non terminal */
+   int*                  state2              /**< array to mark the state of each node during calculation */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+   TPATHS tpaths = { .termpaths = path2, .termbases = vbase2, .state = state2, .nnodes = nnodes };
+
+   assert(path2 && vbase2 && state2);
+
+   graph_tpathsSetAll2(g, cost, costrev, NULL, &tpaths);
+}
+
+
+/** gets non-terminal shortest paths to 3 closest terminal for each non-terminal
  *  NOTE: legacy wrapper */
 void graph_get3nextTermPaths(
    GRAPH*                g,                  /**< graph data structure */
@@ -2947,6 +2969,46 @@ void graph_tpathsAdd4th(
    return;
 }
 
+
+
+/** computes 2 next terminal to all non-terminal nodes */
+void graph_tpathsSetAll2(
+   GRAPH*                g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   const SDPROFIT*       sdprofit,           /**< SD bias for nodes or NULL */
+   TPATHS*               tpaths              /**< storage for terminal paths */
+)
+{
+   assert(g      != NULL);
+   assert(cost   != NULL);
+   assert(costrev   != NULL);
+   assert(tpaths      != NULL);
+
+   if( !graph_pc_isPcMw(g) )
+      graph_mark(g);
+
+   graph_tpathsAdd1st(g, cost, sdprofit, tpaths);
+   graph_tpathsAdd2nd(g, cost, costrev, sdprofit, tpaths);
+
+#ifndef NDEBUG
+   if( !sdprofit )
+   {
+      const PATH* RESTRICT path2 = tpaths->termpaths;
+      const int nnodes = graph_get_nNodes(g);
+
+      for( int level = 0; level < 1; level++ )
+      {
+         for( int k = 0; k < nnodes; ++k )
+         {
+            assert(LE_FEAS_EPS(path2[level * nnodes + k].dist, path2[(level + 1) * nnodes + k].dist, EPSILON));
+         }
+      }
+   }
+#endif
+
+   return;
+}
 
 /** computes 3 next terminal to all non-terminal nodes */
 void graph_tpathsSetAll3(

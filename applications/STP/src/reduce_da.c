@@ -2638,23 +2638,16 @@ SCIP_RETCODE reduce_daSlackPrune(
    SCIP_Bool             solgiven            /**< solution provided? */
    )
 {
-   IDX** ancestors;
-   IDX** revancestors;
    SCIP_Real obj;
    SCIP_Real tmpcost;
    SCIP_Real lpobjval;
    SCIP_Real objprune;
    SCIP_Real minpathcost;
-   SCIP_Real* sd;
-   SCIP_Real* ecost;
    SCIP_Bool rpc;
    SCIP_Bool success;
    SCIP_Bool eliminate;
 
    int* grad;
-   int* adjvert;
-   int* incedge;
-   int* reinsert;
    int i;
    int k;
    int e;
@@ -2698,22 +2691,6 @@ SCIP_RETCODE reduce_daSlackPrune(
       return SCIP_OKAY;
 
    marked = edgearrchar;
-
-   /* allocate length-4 buffer memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sd, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ecost, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &adjvert, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &reinsert, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &incedge, 4) );
-
-   for( i = 0; i < 4; i++ )
-   {
-      sd[i] = 0.0;
-      ancestors[i] = NULL;
-      revancestors[i] = NULL;
-   }
 
    k = 0;
    nterms = 0;
@@ -2917,7 +2894,7 @@ SCIP_RETCODE reduce_daSlackPrune(
       costrev[e] = FARAWAY;
 
    /* build Voronoi diagram */
-   graph_get4nextTermPaths(graph, costrev, costrev, vnoi, vbase, state);
+   graph_get2nextTermPaths(graph, costrev, costrev, vnoi, vbase, state);
 
 #ifndef NDEBUG
    for( k = 0; k < nnodes; k++ )
@@ -3120,21 +3097,6 @@ SCIP_RETCODE reduce_daSlackPrune(
 
  TERMINATE:
    *nelims = nfixed;
-
-   /* free memory */
-   for( k = 0; k < 4; k++ )
-   {
-      SCIPintListNodeFree(scip, &(ancestors[k]));
-      SCIPintListNodeFree(scip, &(revancestors[k]));
-   }
-
-   SCIPfreeBufferArray(scip, &incedge);
-   SCIPfreeBufferArray(scip, &reinsert);
-   SCIPfreeBufferArray(scip, &adjvert);
-   SCIPfreeBufferArray(scip, &ecost);
-   SCIPfreeBufferArray(scip, &revancestors);
-   SCIPfreeBufferArray(scip, &ancestors);
-   SCIPfreeBufferArray(scip, &sd);
 
    if( edgearrchar == NULL )
       SCIPfreeBufferArray(scip, &marked);
