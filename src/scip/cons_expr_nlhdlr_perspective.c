@@ -1603,9 +1603,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          propagate = SCIPgetDepth(scip) == 0;
 
-         SCIP_CALL( SCIPstartClock(scip, nlhdlr->probingtime) );
          SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, probingvars, probingdoms, nprobingvars, sol, &solcopy) );
-         SCIP_CALL( SCIPstopClock(scip, nlhdlr->probingtime) );
 
          if( propagate )
          {
@@ -1715,9 +1713,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       if( doprobingind )
       {
-         SCIP_CALL( SCIPstartClock(scip, nlhdlr->probingtime) );
          SCIP_CALL( SCIPendProbing(scip) );
-         SCIP_CALL( SCIPstopClock(scip, nlhdlr->probingtime) );
       }
 
       /* add all cuts found for indicator i */
