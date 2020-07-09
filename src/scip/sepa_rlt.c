@@ -547,8 +547,8 @@ SCIP_RETCODE extractProducts(
    y = vars[2];
 
    /* cannot use a global bound on x to detect a product */
-   if( (coefs1[1] == 0 && coefs1[2] == 0) ||
-       (coefs2[1] == 0 && coefs2[2] == 0) )
+   if( (coefs1[1] == 0.0 && coefs1[2] == 0.0) ||
+       (coefs2[1] == 0.0 && coefs2[2] == 0.0) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "binary var = %s, its coefs: %g\n", SCIPvarGetName(vars[0]), coefs1[0]*coefs2[0]);
@@ -577,10 +577,10 @@ SCIP_RETCODE extractProducts(
    /* from here on, we consider only the flipped (by multiplying by signi) rows */
 
    /* at least one w coefficient must be nonzero */
-   assert( coefs1[1] != 0 || coefs2[1] != 0 );
+   assert( coefs1[1] != 0.0 || coefs2[1] != 0.0 );
 
    /* cannot use a global bound on y to detect a non-redundant product relation */
-   if( coefs2[0] == 0 && coefs2[1] == 0 ) /* only check the 2nd relation because the 1st at least has x */
+   if( coefs2[0] == 0.0 && coefs2[1] == 0.0 ) /* only check the 2nd relation because the 1st at least has x */
    {
       SCIPdebugMsg(scip, "Ignoring a global bound on y\n");
       return SCIP_OKAY;
@@ -2246,7 +2246,7 @@ SCIP_RETCODE createProjLP(
          val = SCIPgetSolVal(scip, sol, var);
          vlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
          vub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
-         if( vlb == val || vub == val )
+         if( SCIPisEQ(scip, vlb, val) || SCIPisEQ(scip, vub, val) )
          {
             /* add var as a constant to row of projlp */
             if( !SCIPisInfinity(scip, -(*projlp)->lhss[i]) )
@@ -2443,7 +2443,7 @@ SCIP_RETCODE markRowsXj(
    vlb = local ? SCIPvarGetLbLocal(xj) : SCIPvarGetLbGlobal(xj);
    vub = local ? SCIPvarGetUbLocal(xj) : SCIPvarGetUbGlobal(xj);
 
-   if( sepadata->useprojection && (vlb == valj || vub == valj) )
+   if( sepadata->useprojection && (SCIPisEQ(scip, vlb, valj) || SCIPisEQ(scip, vub, valj)) )
    {
       /* we don't want to multiply by variables that are at bound */
       SCIPdebugMsg(scip, "Rejected multiplier %s in [%g,%g] because it is at bound (current value %g)\n", SCIPvarGetName(xj), vlb, vub, valj);
@@ -2465,7 +2465,7 @@ SCIP_RETCODE markRowsXj(
       vlb = local ? SCIPvarGetLbLocal(xi) : SCIPvarGetLbGlobal(xi);
       vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
 
-      if( sepadata->useprojection && (vlb == vali || vub == vali) ) /* we aren't interested in products with variables that are at bound */
+      if( sepadata->useprojection && (SCIPisEQ(scip, vlb, vali) || SCIPisEQ(scip, vub, vali)) ) /* we aren't interested in products with variables that are at bound */
          continue;
 
       /* get the index of the bilinear product */
