@@ -4434,7 +4434,11 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(param != NULL);
+
+   retcode = SCIP_OKAY;
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramTestBool(param, messagehdlr, value) );
@@ -4443,9 +4447,12 @@ SCIP_RETCODE SCIPparamSetBool(
    if( initialize || (param->data.boolparam.valueptr != NULL && *param->data.boolparam.valueptr != value)
       || (param->data.boolparam.valueptr == NULL && param->data.boolparam.curvalue != value) )
    {
+      SCIP_Bool oldvalue;
+
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetBool(param);
       if( param->data.boolparam.valueptr != NULL )
          *param->data.boolparam.valueptr = value;
       else
@@ -4454,7 +4461,19 @@ SCIP_RETCODE SCIPparamSetBool(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.boolparam.valueptr != NULL )
+               *param->data.boolparam.valueptr = oldvalue;
+            else
+               param->data.boolparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4463,7 +4482,7 @@ SCIP_RETCODE SCIPparamSetBool(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** sets value of int parameter */
