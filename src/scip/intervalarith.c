@@ -2654,6 +2654,7 @@ void SCIPintervalSin(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
+   /* the function evaluates sine transforming it to a cosine via sin(x) = cos(x-pi/2) = -cos(x+pi/2) */
    SCIP_INTERVAL pihalf;
    SCIP_INTERVAL shiftedop;
 
@@ -2695,7 +2696,16 @@ void SCIPintervalCos(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
 {
-   /* this implementation follows boost::numeric::cos */
+   /* this implementation follows boost::numeric::cos
+    * cos is decreasing in [0, pi] and increasing in [pi, 2pi].
+    * If operand = [a,b] and a is in [0, pi], then
+    * cos([a,b]) = [-1, 1] if b >= 2pi
+    * cos([a,b]) = [-1, max(cos(a), cos(b))] if b is in [pi, 2pi]
+    * cos([a,b]) = [cos(b), cos(a)] if b is in [0, pi]
+    *
+    * To make sure that a is always between [0, pi] we use the identity cos(x) = (-1)^k cos(x + k pi), i.e.,
+    * we compute k such that a + k pi \in [0,pi], compute cos([a,b] + k pi) and then multiply by (-1)^k.
+    */
    SCIP_ROUNDMODE roundmode;
    SCIP_Real negwidth;
    SCIP_Real k = 0.0;
