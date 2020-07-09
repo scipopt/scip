@@ -783,7 +783,7 @@ void recomputeSafeLooseObjectiveValue(
    assert(set != NULL);
    assert(prob != NULL);
    assert(!lp->looseobjvalid);
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
 
    vars = prob->vars;
    nvars = prob->nvars;
@@ -842,7 +842,7 @@ void recomputeLooseObjectiveValue(
    nvars = prob->nvars;
    lp->looseobjval = 0.0;
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       recomputeSafeLooseObjectiveValue(lp, set, prob);
       return;
@@ -889,7 +889,7 @@ void recomputeSafePseudoObjectiveValue(
    assert(set != NULL);
    assert(prob != NULL);
    assert(!lp->pseudoobjvalid);
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
 
    vars = prob->vars;
    nvars = prob->nvars;
@@ -939,13 +939,13 @@ void recomputePseudoObjectiveValue(
    assert(set != NULL);
    assert(prob != NULL);
    assert(!lp->pseudoobjvalid);
-   assert(!set->misc_exactsolve);
+   assert(!set->exact_enabled);
 
    vars = prob->vars;
    nvars = prob->nvars;
    lp->pseudoobjval = 0.0;
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       recomputeSafePseudoObjectiveValue(lp, set, prob);
       return;
@@ -12214,7 +12214,7 @@ SCIP_RETCODE lpSolve(
       /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
        * reached if the LP objective value is greater than the cutoff bound
        */
-      assert(lpCutoffDisabled(set) || set->misc_exactsolve || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+      assert(lpCutoffDisabled(set) || set->exact_enabled || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
@@ -12538,7 +12538,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->exact_enabled
       || (set->conf_enable && set->conf_useinflp != 'o'));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
@@ -12605,7 +12605,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       }
 
       /* compute safe bound might change the solstat so we have to compute it before we evaluate the solution status */
-      if( lp->solved && set->misc_exactsolve && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      if( lp->solved && set->exact_enabled && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
          if( SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE )
             SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid);
@@ -12653,7 +12653,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lp->dualchecked = FALSE;
          }
 
-         if( !set->misc_exactsolve )
+         if( !set->exact_enabled )
          {
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
          }
@@ -12728,9 +12728,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve || set->lp_alwaysgetduals )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->exact_enabled || set->lp_alwaysgetduals )
          {
-            if( (set->misc_exactsolve && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact)) )
+            if( (set->exact_enabled && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact)) )
                farkasvalid = TRUE;
             else if( SCIPlpiHasDualRay(lp->lpi) )
             {
@@ -12884,7 +12884,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
           * FASTMIP and solve again. */
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+         if( !SCIPprobAllColsInLP(prob, set, lp) || set->exact_enabled )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -13026,14 +13026,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                    * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
                    * this was already done in the lpSolve() method
                    */
-                  if( (!set->misc_exactsolve && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) ||
+                  if( (!set->exact_enabled && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) ||
                         objval >=  lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
                   {
                      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
                      lp->lpobjval = SCIPsetInfinity(set);
                   }
                   /* not cutoff without tolerances -> just disable cutoff and solve again */
-                  if( set->misc_exactsolve && objval < lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
+                  if( set->exact_enabled && objval < lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
                   {
                      /** @todo exip: recover the old cutoffbound somehow after this? */
                      lp->cutoffbound = SCIPlpiInfinity(lpi);
@@ -13062,7 +13062,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
 
-                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve )
+                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->exact_enabled )
                   {
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
@@ -13466,7 +13466,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    int pseudoobjvalinf;
    SCIP_Real obj;
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
       return SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
 
    pseudoobjval = getFinitePseudoObjval(lp, set, prob);
@@ -13983,7 +13983,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       if( oldobj != newobj ) /*lint !e777*/
       {
@@ -14043,7 +14043,7 @@ SCIP_RETCODE SCIPlpUpdateVarLbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
@@ -14081,7 +14081,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
@@ -14122,7 +14122,7 @@ SCIP_RETCODE SCIPlpUpdateVarUbGlobal(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
@@ -14160,7 +14160,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    assert(set != NULL);
    assert(var != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
@@ -14355,7 +14355,7 @@ SCIP_RETCODE SCIPlpUpdateVarColumn(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       SCIP_CALL( lpUpdateVarColumnProved(lp, set, var) );
    }
@@ -14479,7 +14479,7 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
 {
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       SCIP_CALL( lpUpdateVarLooseProved(lp, set, var) );
    }

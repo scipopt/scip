@@ -1501,7 +1501,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    assert(transprob != NULL);
    assert(origprob != NULL);
 
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
       return SCIPprobCheckObjIntegralExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
@@ -1621,7 +1621,7 @@ SCIP_RETCODE varScaleObjExact(
    assert(var != NULL);
    assert(set != NULL);
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(var->exactdata != NULL);
@@ -1659,7 +1659,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /** @todo exip: make obj scaling safe and integrate it in certificate printing */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
       return SCIP_OKAY;
 
    /* do not change objective if there are pricers involved */
@@ -2166,7 +2166,7 @@ void SCIPprobExternObjvalExact(
    assert(transprob != NULL);
    assert(transprob->transformed);
    assert(transprob->objscale > 0.0);
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
 
    RatCreateBuffer(set->buffer, &tmpval);
 
@@ -2527,7 +2527,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
 
    assert(transprob != NULL);
    assert(origprob != NULL);
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
 
    /* if we know already, that the objective value is integral, nothing has to be done */
    if( transprob->objisintegral )

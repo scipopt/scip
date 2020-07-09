@@ -1462,7 +1462,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    assert(set != NULL);
 
    /* only print if not -infinity and certificate is active */
-   if( !set->misc_exactsolve || !SCIPcertificateIsActive(certificate) || SCIPsetIsInfinity(set, -psval) )
+   if( !set->exact_enabled || !SCIPcertificateIsActive(certificate) || SCIPsetIsInfinity(set, -psval) )
       return SCIP_OKAY;
 
    if( psval < SCIPnodeGetLowerbound(node) )

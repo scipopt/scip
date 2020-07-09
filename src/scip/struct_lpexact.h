@@ -246,7 +246,6 @@ struct SCIP_LpExact
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
    int                   lpirefactorinterval;/**< current refactorization interval */
-   int                   interleavedbfreq;   /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */

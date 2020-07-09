@@ -154,23 +154,8 @@ SCIP_Bool SCIPisExactSolve(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (scip->set->misc_exactsolve);
+   return (scip->set->exact_enabled);
 }
-
-/* CERT: we probably want to use an FP approximation since we do not use bounding method 'n' */
-/** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
- *  only relevant for solving the problem provably correct
- */
-SCIP_Bool SCIPuseFPRelaxation(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return (scip->set->misc_usefprelax);
-}
-
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
@@ -183,7 +168,7 @@ char SCIPdualBoundMethod(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   return (scip->set->misc_dbmethod);
+   return (scip->set->exact_safedbmethod);
 }
 
 /** Transforms a given linear sum of variables, that is a_1*x_1 + ... + a_n*x_n + c into a corresponding linear sum of

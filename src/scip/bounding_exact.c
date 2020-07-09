@@ -2777,9 +2777,9 @@ char chooseInitialBoundingMethod(
    else if( SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OBJLIMIT )
       dualboundmethod = 'e';
    /* if we are not in automatic mode, try an iteration with the static method */
-   else if( set->misc_dbmethod != 'a' )
+   else if( set->exact_safedbmethod != 'a' )
    {
-      dualboundmethod = set->misc_dbmethod;
+      dualboundmethod = set->exact_safedbmethod;
    }
    /* select automatically which bounding method to apply */
    else
@@ -2787,9 +2787,9 @@ char chooseInitialBoundingMethod(
       /* decide whether we want to interleave with exact LP call given freq
        * we do this if a) at depth-levels that are multiples of interleavedbfreq
        * b) if we are almost at cutoffbound */
-      if( (lpexact->interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpexact->fplp)) && SCIPgetDepth(set->scip) > 0
-            && SCIPgetDepth(set->scip) % (lpexact->interleavedbfreq) == 0)
-         || (lpexact->interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
+      if( (set->exact_interleavedbfreq > 0 && SCIPsetIsInfinity(set, SCIPlpGetCutoffbound(lpexact->fplp)) && SCIPgetDepth(set->scip) > 0
+            && SCIPgetDepth(set->scip) % (set->exact_interleavedbfreq) == 0)
+         || (set->exact_interleavedbfreq == 0 && SCIPsetIsGE(set, SCIPlpGetObjval(lpexact->fplp, set, prob), SCIPlpGetCutoffbound(lpexact->fplp))
             && SCIPlpGetObjval(lpexact->fplp, set, prob) < SCIPlpGetCutoffbound(lpexact->fplp)) )
       {
          dualboundmethod = 'e';
@@ -3293,7 +3293,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    int nattempts;
 
    /* if we are not in exact solving mode, just return */
-   if( !set->misc_exactsolve || lp->diving || lp->probing || lp->strongbranchprobing )
+   if( !set->exact_enabled || lp->diving || lp->probing || lp->strongbranchprobing )
       return SCIP_OKAY;
 
    lastboundmethod = 'u';
@@ -3301,7 +3301,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    nattempts = 0;
 
 #ifdef SCIP_WITH_BOOST
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
    assert(!lp->hasprovedbound);
 
    while( !lp->hasprovedbound && !abort )

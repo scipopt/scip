@@ -75,15 +75,6 @@ SCIP_Bool SCIPisExactSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* CERT: we probably want to use an FP approximation since we do not use bounding method 'n' */
-/** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
- *  only relevant for solving the problem provably correct
- */
-SCIP_EXPORT
-SCIP_Bool SCIPuseFPRelaxation(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina,
  *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP,'i'nterval neumaier and shcherbina,
  *  e'x'act neumaier and shcherbina, 'a'utomatic); only relevant for solving the problem provably correct

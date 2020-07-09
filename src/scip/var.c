@@ -2754,7 +2754,7 @@ SCIP_RETCODE varFreeExactData(
    assert(blkmem != NULL);
    assert(var != NULL);
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
    {
       assert( var->exactdata == NULL );
       return SCIP_OKAY;
@@ -3634,7 +3634,7 @@ SCIP_RETCODE SCIPvarColumnExact(
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(var != NULL);
@@ -6369,7 +6369,7 @@ SCIP_RETCODE SCIPvarChgObjExact(
    assert(var != NULL);
    assert(set != NULL);
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(var->exactdata != NULL);
@@ -6443,7 +6443,7 @@ SCIP_RETCODE SCIPvarChgUbGlobalExact(
    assert(var != NULL);
    assert(set != NULL);
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    RatCreateBuffer(set->buffer, &scipbound);
@@ -6484,7 +6484,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
    assert(var != NULL);
    assert(set != NULL);
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    RatCreateBuffer(set->buffer, &scipbound);
@@ -7856,7 +7856,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* todo: exip this is temporary */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       assert(var->exactdata != NULL);
 
@@ -8031,7 +8031,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* todo: exip this is temporary */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       assert(var->exactdata != NULL);
 
