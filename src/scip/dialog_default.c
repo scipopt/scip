@@ -2439,9 +2439,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
+         SCIP_RETCODE retcode;
+
          assert(SCIPisBoolParamValid(scip, param, boolval));
 
-         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
+         retcode = SCIPchgBoolParam(scip, param, boolval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for bool parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         boolval = SCIPparamGetBool(param);
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
