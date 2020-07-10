@@ -146,9 +146,11 @@ struct SCIP_SepaData
    SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
    SCIP_Bool             sepflowcover;       /**< whether flowcover cuts should be separated in the current call */
+   SCIP_Bool             sepknapsackcover;   /**< whether knapsack cover cuts should be separated in the current call */
    SCIP_Bool             sepcmir;            /**< whether cMIR cuts should be separated in the current call */
    SCIP_SEPA*            cmir;               /**< separator for adding cmir cuts */
    SCIP_SEPA*            flowcover;          /**< separator for adding flowcover cuts */
+   SCIP_SEPA*            knapsackcover;      /**< separator for adding knapsack cover cuts */
 };
 
 /** data used for aggregation of row */
@@ -278,6 +280,7 @@ tryagain:
          if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            printf("added cut %s\n", cutname);
          }
          else
          {
@@ -851,6 +854,9 @@ SCIP_RETCODE aggregation(
       SCIP_Bool flowcoversuccess;
       SCIP_Real flowcoverefficacy;
       SCIP_Bool flowcovercutislocal = FALSE;
+      SCIP_Bool knapsackcoversuccess;
+      SCIP_Real knapsackcoverefficacy;
+      SCIP_Bool knapsackcovercutislocal = FALSE;
       SCIP_ROW* cut = NULL;
       SCIP_Real cutrhs = SCIP_INVALID;
       SCIP_Real cutefficacy;
@@ -865,12 +871,8 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepflowcover )
       {
-#if 0
-         /* todo: change functions to take the most efficacious cut */
+
          SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
-            cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
-#endif
-         SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
             cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
       }
       else
@@ -878,11 +880,23 @@ SCIP_RETCODE aggregation(
          flowcoversuccess = FALSE;
       }
 
+      knapsackcoverefficacy = flowcoverefficacy;
+
+      if( sepadata->sepknapsackcover )
+      {
+         SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
+            cutcoefs, &cutrhs, cutinds, &cutnnz, &knapsackcoverefficacy, &cutrank, &knapsackcovercutislocal, &knapsackcoversuccess) );
+      }
+      else
+      {
+         knapsackcoversuccess = FALSE;
+      }
+
       /* initialize the cutefficacy variable with the flowcoverefficacy, so that only CMIR cuts
        * that have a higher efficacy than that of a flowcover cut possibly found in the call above
        * are returned since the flowcover cut is overwritten in that case.
        */
-      cutefficacy = flowcoverefficacy;
+      cutefficacy = knapsackcoverefficacy;
 
       if( sepadata->sepcmir )
       {
@@ -897,6 +911,11 @@ SCIP_RETCODE aggregation(
       if( cmirsuccess )
       {
          SCIP_CALL( addCut(scip, sol, sepadata->cmir, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal, sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts, &cut) ); /*lint !e644*/
+      }
+      else if ( knapsackcoversuccess )
+      {
+         /* cppcheck-suppress uninitvar */
+         SCIP_CALL( addCut(scip, sol, sepadata->knapsackcover, FALSE, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, knapsackcovercutislocal, sepadata->dynamiccuts, cutrank, "lci", cutoff, ncuts, &cut) ); /*lint !e644*/
       }
       else if ( flowcoversuccess )
       {
@@ -1056,15 +1075,18 @@ SCIP_RETCODE separateCuts(
    {
       int cmirfreq;
       int flowcoverfreq;
+      int knapsackcoverfreq;
 
       cmirfreq = SCIPsepaGetFreq(sepadata->cmir);
       flowcoverfreq = SCIPsepaGetFreq(sepadata->flowcover);
+      knapsackcoverfreq = SCIPsepaGetFreq(sepadata->knapsackcover);
 
       sepadata->sepcmir = cmirfreq > 0 ? (depth % cmirfreq) == 0 : cmirfreq == depth;
       sepadata->sepflowcover = flowcoverfreq > 0 ? (depth % flowcoverfreq) == 0 : flowcoverfreq == depth;
+      sepadata->sepknapsackcover = knapsackcoverfreq > 0 ? (depth % knapsackcoverfreq) == 0 : knapsackcoverfreq == depth;
    }
 
-   if( ! sepadata->sepcmir && ! sepadata->sepflowcover )
+   if( ! sepadata->sepcmir && ! sepadata->sepflowcover && ! sepadata->sepknapsackcover )
       return SCIP_OKAY;
 
    /* get all rows and number of columns */
@@ -1472,6 +1494,11 @@ SCIP_RETCODE SCIPincludeSepaAggregation(
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
 
    assert(sepadata->cmir != NULL);
+
+    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->knapsackcover, "knapsackcover", "separator for knapsack cover cuts", -100000, SEPA_FREQ, 0.0,
+      SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
+
+   assert(sepadata->knapsackcover != NULL);
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
