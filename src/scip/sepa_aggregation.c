@@ -865,7 +865,12 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepflowcover )
       {
+#if 0
+         /* todo: change functions to take the most efficacious cut */
          SCIP_CALL( SCIPcalcFlowCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
+            cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
+#endif
+         SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, POSTPROCESS, BOUNDSWITCH, allowlocal, aggrdata->aggrrow, /*lint !e644*/
             cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
       }
       else
