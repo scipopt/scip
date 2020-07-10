@@ -280,7 +280,6 @@ tryagain:
          if( !cutislocal )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-            printf("added cut %s\n", cutname);
          }
          else
          {
