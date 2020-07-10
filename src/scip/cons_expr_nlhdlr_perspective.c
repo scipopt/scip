@@ -45,7 +45,13 @@
  * Data structures
  */
 
-/** data structure to store information of a semicontinuous variable */
+/** data structure to store information of a semicontinuous variable
+ *
+ * For a variable x (not stored in the struct), this stores the data of nbnds implications
+ *   bvars[i] = 0 -> x = vals[i]
+ *   bvars[i] = 1 -> lbs[i] <= x <= ubs[i]
+ * where bvars[i] are binary variables.
+ */
 struct SCVarData
 {
    SCIP_Real*            vals0;              /**< values of the variable when the corresponding bvars[i] = 0 */
@@ -57,7 +63,14 @@ struct SCVarData
 };
 typedef struct SCVarData SCVARDATA;
 
-/** nonlinear handler expression data */
+/** nonlinear handler expression data
+ *
+ * For an expression expr (not stored in the struct), this stores the data of nindicators implications
+ *   indicators[i] = 0 -> expr = exprvals[0]
+ * where indicators[i] is an indicator (binary) variable, corresponding to some bvars entry in SCVarData.
+ *
+ * Also stores the variables the expression depends on.
+ */
 struct SCIP_ConsExpr_NlhdlrExprData
 {
    SCIP_Real*            exprvals0;          /**< 'off' values of the expression for each indicator variable */
@@ -71,7 +84,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_ConsExpr_NlhdlrData
 {
-   SCIP_HASHMAP*         scvars;             /**< maps semicontinuous variables to their on/off bounds */
+   SCIP_HASHMAP*         scvars;             /**< maps semicontinuous variables to their on/off bounds (SCVarData) */
 
    /* parameters */
    int                   maxproprounds;      /**< maximal number of propagation rounds in probing */
@@ -120,10 +133,10 @@ SCIP_RETCODE freeNlhdlrExprData(
    return SCIP_OKAY;
 }
 
-/* remove an indicator from nonlinear expression data */
+/* remove an indicator from nlhdlr expression data */
 static
 void removeIndicator(
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlexprdata, /**< nlhdlr expression data */
    int                    pos                /**< position of the indicator */
    )
 {
@@ -143,7 +156,7 @@ void removeIndicator(
 static
 SCIP_RETCODE addAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    SCIP_HASHMAP*         auxvarmap,          /**< hashmap linking auxvars to positions in nlhdlrexprdata->vars */
    SCIP_VAR*             auxvar              /**< variable to be added */
    )
@@ -380,7 +393,7 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(vubvars != NULL || nvubs == 0);
    for( c = 0; c < nvubs; ++c )
    {
-      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY)  /*lint !e613*/
+      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
          continue;
 
       bvar = vubvars[c];  /*lint !e613*/
@@ -457,11 +470,9 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    *res = FALSE;
 
-   /* constant expression is not semicontinuous */
+   /* constant expression is not semicontinuous; variable expressions are of no interest here */
    if( nlhdlrexprdata->nvars == 0 )
-   {
       return SCIP_OKAY;
-   }
 
    indicators = NULL;
    nindicators = 0;
@@ -530,7 +541,8 @@ SCIP_RETCODE exprIsSemicontinuous(
       }
    }
    else
-   { /* non-sum expression */
+   {
+      /* non-sum expression */
       linear = NULL;
 
       /* all variables of a non-sum on/off expression should be semicontinuous */
@@ -544,7 +556,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    /* look for common binary variables for all variables of the expression */
 
-   SCIPdebugMsg(scip, "Array intersection for vars %s, *nbvars = %d\n", SCIPvarGetName(nlhdlrexprdata->vars[0]), nindicators);
+   SCIPdebugMsg(scip, "Array intersection for var <%s>\n", SCIPvarGetName(nlhdlrexprdata->vars[0]));
    for( v = 0; v < nlhdlrexprdata->nvars; ++v )
    {
       SCIPdebugMsg(scip, "%s; \n", SCIPvarGetName(nlhdlrexprdata->vars[v]));
@@ -554,7 +566,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 
       scvdata = (SCVARDATA*)SCIPhashmapGetImage(nlhdlrdata->scvars, (void*) nlhdlrexprdata->vars[v]);
 
-      /* we should have exited earlier if there is a nonlinear nonsemicontinuous variable */
+      /* we should have exited earlier if there is a nonlinear non-semicontinuous variable */
       assert(scvdata != NULL);
 
       if( indicators == NULL )
@@ -611,7 +623,7 @@ SCIP_RETCODE computeOffValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
@@ -697,7 +709,7 @@ SCIP_RETCODE computeOffValues(
 
             if( hasnonsc )
             {
-               /* expr is a sum with non-semicontinuous terms. Therefore, curexpr might be
+               /* expr is a sum with non-semicontinuous linear terms. Therefore, curexpr might be
                 * non-semicontinuous. In that case the auxvar is also non-semicontinuous, so
                 * we will skip on/off bounds computation.
                 */
@@ -710,8 +722,10 @@ SCIP_RETCODE computeOffValues(
                }
                else
                {
-                  /* curexpr is a non-variable expression; but since expr is semicontinuous with respect to
-                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous */
+                  /* curexpr is a non-variable expression, so it belongs to the non-linear part of expr
+                   * since the non-linear part of expr must be semicontinuous with respect to
+                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                   */
                   issc = TRUE;
 
 #ifndef NDEBUG
@@ -781,7 +795,7 @@ static
 SCIP_RETCODE startProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    SCIP_VAR**            probingvars,        /**< array of vars whose bounds we will change in probing */
    SCIP_INTERVAL*        probingdoms,        /**< array of intervals to which bounds of probingvars will be changed in probing */
    int                   nprobingvars,       /**< number of probing vars */
@@ -1007,7 +1021,7 @@ static
 SCIP_RETCODE analyseOnoffBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    SCIP_VAR*             indicator,          /**< indicator variable */
    SCIP_VAR***           probingvars,        /**< array to store variables whose bounds will be changed in probing */
    SCIP_INTERVAL**       probingdoms,        /**< array to store bounds to be applied in probing */
@@ -1101,7 +1115,7 @@ SCIP_RETCODE analyseOnoffBounds(
  * */
 static
 SCIP_RETCODE tightenOnBounds(
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear expression data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
    SCIP_HASHMAP*         scvars,             /**< hashmap with semicontinuous variables */
    SCIP_VAR*             indicator           /**< indicator variable */
    )
@@ -1236,7 +1250,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    *success = FALSE;
 
    /* do not run in presolve, as we only do separation */
-   if( SCIPgetStage(scip) <= SCIP_STAGE_INITSOLVE )
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
    {
       return SCIP_OKAY;
    }
