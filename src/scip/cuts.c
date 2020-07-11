@@ -7614,9 +7614,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
 {
    SCIP_Real* bestbds;
    int i;
-   int numbinvars;
    int aggrrowbinstart;
-   int nvars;
    int firstnonbinvar;
    SCIP_VAR** vars;
 
@@ -7638,7 +7636,6 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    SCIPsortDownInt(cutinds, *nnz);
 
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
    firstnonbinvar = SCIPgetNBinVars(scip);
 
    /* determine best bounds for the continous and general integer variables such that they will have a positive coefficient in the transformation */
@@ -7778,10 +7775,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       SCIP_Real simplebound;
       SCIP_Real bestlb;
       SCIP_Real bestub;
-      int bestlbtype;
-      int bestubtype;
       SCIP_Bool setzero;
-      SCIP_BOUNDTYPE selectedbound;
       int v = cutinds[i];
 
       assert( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY );
@@ -7800,8 +7794,6 @@ SCIP_RETCODE cutsTransformKnapsackCover(
          /* perform bound substitution */
          if( QUAD_TO_DBL(coef) < 0 )
          {
-            selectedbound = SCIP_BOUNDTYPE_UPPER;
-
             SCIP_CALL( findBestUb(scip, vars[v], sol, FALSE, allowlocal, &bestub, &simplebound, boundtype + i) );
             if( SCIPisZero(scip, bestub) )
             {
@@ -7819,8 +7811,6 @@ SCIP_RETCODE cutsTransformKnapsackCover(
          }
          else
          {
-            selectedbound = SCIP_BOUNDTYPE_LOWER;
-
             SCIP_CALL( findBestLb(scip, vars[v], sol, FALSE, allowlocal, &bestlb, &simplebound, boundtype + i) );
 
             if( !SCIPisZero(scip, bestlb) )
