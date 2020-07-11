@@ -8003,13 +8003,15 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    {
       SCIP_Real solval;
       int v = tmpinds[k];
+      SCIP_Real QUAD(coef);
+      QUAD_ARRAY_LOAD(coef, tmpcoefs, v);
 
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       if( varsign[k] == -1 )
          solval = 1 - solval;
 
       Cpos[k] = k;
-      C[k] = solval;
+      C[k] = solval * QUAD_TO_DBL(coef);
       coverstatus[k] = 0;
    }
 
