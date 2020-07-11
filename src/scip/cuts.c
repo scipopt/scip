@@ -7999,36 +7999,39 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    }
    vars = SCIPgetVars(scip);
 
-   QUAD_ASSIGN(coverweight, 0);
-   coversize = 0;
    for( k = 0; k < nnz; ++k )
    {
       SCIP_Real solval;
-      SCIP_Real QUAD(coef);
       int v = tmpinds[k];
 
       solval = SCIPgetSolVal(scip, sol, vars[v]);
       if( varsign[k] == -1 )
          solval = 1 - solval;
 
-      if( SCIPisFeasPositive(scip, solval) )
-      {
-         coverstatus[k] = 1;
-         Cpos[coversize] = k;
-         QUAD_ARRAY_LOAD(coef, tmpcoefs, v);
-         C[coversize] = QUAD_TO_DBL(coef);
-         SCIPquadprecSumQQ(coverweight, coverweight, coef);
-         ++coversize;
-         //printf("%s is in the cover with transformed sol val %g\n", SCIPvarGetName(vars[v]), solval);
-      }
-      else
-         coverstatus[k] = 0;
+      Cpos[k] = k;
+      C[k] = solval;
+      coverstatus[k] = 0;
    }
 
-   SCIPquadprecSumQQ(roh, coverweight, -rhs);
+   SCIPsortDownRealInt(C, Cpos, nnz);
 
-   /* cover is not violated */
-   if( SCIPisFeasLE(scip, QUAD_TO_DBL(roh), 0.0) )
+   QUAD_ASSIGN(coverweight, 0);
+   coversize = 0;
+
+   while( coversize < nnz && SCIPisFeasLE(scip, QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs)) )
+   {
+      SCIP_Real QUAD(coef);
+      k = Cpos[coversize];
+      int v = tmpinds[k];
+      coverstatus[k] = 1;
+      QUAD_ARRAY_LOAD(coef, tmpcoefs, v);
+      C[coversize] = QUAD_TO_DBL(coef);
+      SCIPquadprecSumQQ(coverweight, coverweight, coef);
+      ++coversize;
+   }
+
+   /* cover is not violated or is a simple fixing that should be found elsewhere */
+   if( coversize < 2 || SCIPisFeasLE(scip, QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs)) )
       goto TERMINATE;
 
    //printf("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
@@ -8038,6 +8041,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIPsortDownRealInt(C, Cpos, coversize);
    /* set \bar{a} = l_1 */
    QUAD_ARRAY_LOAD(abar, tmpcoefs, tmpinds[Cpos[0]]);
+   SCIPquadprecSumQQ(roh, coverweight, -rhs);
 
    for( k = 1; k < coversize; ++k )
    {
@@ -8087,7 +8091,14 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       {
          /* coefficient is in C^+ because it is greater than \bar{a} and contributes only \bar{a} to the sum */
          SCIPquadprecSumQQ(tmp, tmp, abar);
-         ++cplussize;
+
+         /* rather be on the safe side in numerical corner cases and relax the coefficient to exactly \bar{a}.
+          * In that case the coefficient is not treated as in C^+ but as being <= \bar{a} and therefore in C^-.
+          */
+         if( QUAD_TO_DBL(coefminusabar) > SCIPepsilon(scip) )
+            ++cplussize;
+         else
+            coverstatus[Cpos[k]] = -1;
       }
       else
       {
