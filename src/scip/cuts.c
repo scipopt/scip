@@ -8017,9 +8017,10 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    while( coversize < nnz && SCIPisFeasLE(scip, QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs)) )
    {
+      int v;
       SCIP_Real QUAD(coef);
       k = Cpos[coversize];
-      int v = tmpinds[k];
+      v = tmpinds[k];
       coverstatus[k] = 1;
       QUAD_ARRAY_LOAD(coef, tmpcoefs, v);
       C[coversize] = QUAD_TO_DBL(coef);
