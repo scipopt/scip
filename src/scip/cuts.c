@@ -8070,7 +8070,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       SCIPquadprecProdQD(abar, rhs, oneoverc);
    }
 
-   //printf("abar is %g\n", QUAD_TO_DBL(abar));
+   SCIPdebugMessage("abar is %g\n", QUAD_TO_DBL(abar));
 
    QUAD_ASSIGN(tmp, 0);
    cplussize = 0;
@@ -8100,8 +8100,10 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          SCIPquadprecSumQQ(tmp, tmp, coef);
       }
       C[k] = QUAD_TO_DBL(tmp);
-      //printf("S^-(%d) = %g\n", k + 1, C[k]);
+      SCIPdebugMessage("S^-(%d) = %g\n", k + 1, C[k]);
    }
+
+   SCIPdebugMessage("rhs is %g\n", QUAD_TO_DBL(rhs));
 
    /* compute lifted cover inequality */
    QUAD_ASSIGN(rhs, (coversize - 1));
@@ -8125,6 +8127,8 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
           * contributed to the running sum stored in C is \bar{a}
           * therefore we start the search at floor(a_k / \bar{a})
           */
+
+         SCIPdebugMessage("coef is %g, coversize is %d\n", QUAD_TO_DBL(coef), coversize );
 
          SCIPquadprecProdQQ(hfrac, coef, abar);
 
@@ -8152,15 +8156,17 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
          assert(h > 0);
 
-         /* decrease by one to make sure rounding errors did not push h too far */
-         --h;
+         /* decrease by one to make sure rounding errors or coefficients that are larger than the right hand side by themselves
+          * did not push h too far */
+         h = MIN(h, coversize) - 1;
 
          /* now increase coefficient to its lifted value */
-         SCIPquadprecSumQD(tmp, coef, -C[h]);
-         while( QUAD_TO_DBL(tmp) > QUAD_EPSILON )
+         while( h < coversize )
          {
-            ++h;
             SCIPquadprecSumQD(tmp, coef, -C[h]);
+            if( QUAD_TO_DBL(tmp) <= QUAD_EPSILON )
+               break;
+            ++h;
          }
 
          //printf("lifted coef %g < %g <= %g to %d\n", h == 0 ? 0 : C[h-1], QUAD_TO_DBL(coef), C[h], h);
@@ -8243,7 +8249,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    {
       if(tmpcoefs[k] != 0.0)
       {
-         printf("tmpcoefs have not been reset\n");
+         SCIPdebugMessage("tmpcoefs have not been reset\n");
          SCIPABORT();
       }
    }
