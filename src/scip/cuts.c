@@ -8202,7 +8202,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
        * prevent numerical rounding errors
        */
 
-      *cutislocal = aggrrow->local || localbdsused;
+      *cutislocal = aggrrow->local || localbdsused; /*lint !e644*/
       if( postprocess )
       {
          SCIP_CALL( postprocessCutQuad(scip, *cutislocal, tmpinds, tmpcoefs, &nnz, QUAD(&rhs), success) );
