@@ -7978,7 +7978,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       */
    local = aggrrow->local;
    SCIP_CALL( cutsTransformKnapsackCover(scip, sol, allowlocal,
-         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &freevariable, &local) );
+         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &local, &freevariable) );
 
    assert(allowlocal || !local);
 
