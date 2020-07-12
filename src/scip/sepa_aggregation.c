@@ -414,8 +414,8 @@ SCIP_RETCODE setupAggregationData(
 
             for( k = 0; k < ncolnonzeros; ++k )
             {
-               /* ignore modifiable rows */
-               if( SCIProwIsModifiable(colrows[k]) )
+               /* ignore modifiable rows and local rows if those are not permitted */
+               if( SCIProwIsModifiable(colrows[k]) || (!allowlocal && SCIProwIsLocal(colrows[k])) )
                   continue;
 
                ++aggrdata->nbadvarsinrow[SCIProwGetLPPos(colrows[k])];
@@ -1221,9 +1221,9 @@ SCIP_RETCODE separateCuts(
       assert(SCIProwGetLPPos(rows[r]) == r);
 
       nnonz = SCIProwGetNLPNonz(rows[r]);
-      if( nnonz == 0 )
+      if( nnonz == 0 || (!allowlocal && SCIProwIsLocal(rows[r])) )
       {
-         /* ignore empty rows */
+         /* ignore empty rows and local rows if they are not allowed */
          rowlhsscores[r] = 0.0;
          rowrhsscores[r] = 0.0;
       }
@@ -1258,7 +1258,6 @@ SCIP_RETCODE separateCuts(
          slack = (activity - lhs)/rownorm;
          dualscore = MAX(fracscore * dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, -lhs) && SCIPisLE(scip, slack, maxslack)
-            && (allowlocal || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
@@ -1271,7 +1270,6 @@ SCIP_RETCODE separateCuts(
          slack = (rhs - activity)/rownorm;
          dualscore = MAX(-fracscore * dualsol/objnorm, 0.0001);
          if( !SCIPisInfinity(scip, rhs) && SCIPisLE(scip, slack, maxslack)
-            && (allowlocal || !SCIProwIsLocal(rows[r])) /*lint !e506 !e774*/
             && rowdensity <= sepadata->maxrowdensity
             && rowdensity <= sepadata->maxaggdensity )  /*lint !e774*/
          {
