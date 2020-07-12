@@ -7610,8 +7610,8 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
-   SCIP_Bool*            freevariable,       /**< stores whether a free variable was found in MIR row -> invalid summation */
-   SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
+   SCIP_Bool*            localbdsused,       /**< pointer to store whether local bounds were used in transformation */
+   SCIP_Bool*            freevariable        /**< stores whether a free variable was found in MIR row -> invalid summation */
    )
 {
    SCIP_Real* bestbds;
@@ -7626,7 +7626,6 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    assert(localbdsused != NULL);
 
    *freevariable = FALSE;
-   *localbdsused = FALSE;
 
    /* allocate temporary memory to store best bounds and bound types */
    SCIP_CALL( SCIPallocBufferArray(scip, &bestbds, 2*(*nnz)) );
@@ -7903,7 +7902,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIP_Real QUAD(abar);
    SCIP_Real QUAD(roh);
    SCIP_Bool freevariable;
-   SCIP_Bool localbdsused;
+   SCIP_Bool local;
    SCIP_Real efficacy;
    int k;
    int nvars;
@@ -7977,10 +7976,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
       *   a_{zu_j} := a_{zu_j} + a_j * bu_j
       */
+   local = aggrrow->local;
    SCIP_CALL( cutsTransformKnapsackCover(scip, sol, allowlocal,
-         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &freevariable, &localbdsused) );
+         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &freevariable, &local) );
 
-   assert(allowlocal || !localbdsused);
+   assert(allowlocal || !local);
 
    if( freevariable )
       goto TERMINATE;
@@ -8200,7 +8200,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
        * prevent numerical rounding errors
        */
 
-      *cutislocal = aggrrow->local || localbdsused; /*lint !e644*/
+      *cutislocal = local;
       if( postprocess )
       {
          SCIP_CALL( postprocessCutQuad(scip, *cutislocal, tmpinds, tmpcoefs, &nnz, QUAD(&rhs), success) );
