@@ -7919,8 +7919,6 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    assert(success != NULL);
    assert(cutislocal != NULL);
 
-   SCIPdebugMessage("calculating lifted knapsack cover cut\n");
-
    *success = FALSE;
 
    if( aggrrow->nnz == 0 )
@@ -7947,51 +7945,49 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    nnz = aggrrow->nnz;
    QUAD_ASSIGN_Q(rhs, aggrrow->rhs);
 
-   if( nnz > 0 )
+   BMScopyMemoryArray(tmpinds, aggrrow->inds, nnz);
+
+   for( k = 0; k < nnz; ++k )
    {
-      BMScopyMemoryArray(tmpinds, aggrrow->inds, nnz);
-      //SCIPsortDownInt(tmpinds, nnz);
+      SCIP_Real QUAD(coef);
+      int j = tmpinds[k];
 
-      for( k = 0; k < nnz; ++k )
-      {
-         SCIP_Real QUAD(coef);
-         int j = tmpinds[k];
+      QUAD_ARRAY_LOAD(coef, aggrrow->vals, j);
 
-         QUAD_ARRAY_LOAD(coef, aggrrow->vals, j);
+      QUAD_HI(coef) = NONZERO(QUAD_HI(coef));
+      assert(QUAD_HI(coef) != 0.0);
 
-         QUAD_HI(coef) = NONZERO(QUAD_HI(coef));
-         assert(QUAD_HI(coef) != 0.0);
-
-         QUAD_ARRAY_STORE(tmpcoefs, j, coef);
-      }
-      //printf("INITIAL ");
-      //printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, *cutnnz, FALSE, FALSE);
-
-      /* Transform equation  a*x == b, lb <= x <= ub  into standard form
-       *   a'*x' == b, 0 <= x' <= ub'.
-       *
-       * Transform variables (lb or ub):
-       *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
-       *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
-       * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
-       *
-       * Transform variables (vlb or vub):
-       *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
-       *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
-       * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
-       *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
-       *   a_{zu_j} := a_{zu_j} + a_j * bu_j
-       */
-      SCIP_CALL( cutsTransformKnapsackCover(scip, sol, allowlocal,
-            tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &freevariable, &localbdsused) );
-
-      assert(allowlocal || !localbdsused);
-
-      if( freevariable )
-         goto TERMINATE;
-      //printf("TRANSFORMED ");
-      //printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE);
+      QUAD_ARRAY_STORE(tmpcoefs, j, coef);
    }
+   SCIPdebugMessage("Computing lifted knapsack cover for ");
+   SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, *cutnnz, FALSE, FALSE));
+
+   /* Transform equation  a*x == b, lb <= x <= ub  into standard form
+      *   a'*x' == b, 0 <= x' <= ub'.
+      *
+      * Transform variables (lb or ub):
+      *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+      *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+      * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+      *
+      * Transform variables (vlb or vub):
+      *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+      *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+      * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+      *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+      *   a_{zu_j} := a_{zu_j} + a_j * bu_j
+      */
+   SCIP_CALL( cutsTransformKnapsackCover(scip, sol, allowlocal,
+         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &freevariable, &localbdsused) );
+
+   assert(allowlocal || !localbdsused);
+
+   if( freevariable )
+      goto TERMINATE;
+
+   SCIPdebugMessage("Transformed knapsack relaxation ");
+   SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
+
    vars = SCIPgetVars(scip);
 
    for( k = 0; k < nnz; ++k )
@@ -8032,7 +8028,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    if( coversize < 2 || SCIPisFeasLE(scip, QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs)) )
       goto TERMINATE;
 
-   //printf("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
+   SCIPdebugMessage("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
    assert(coversize > 0);
 
    /* compute \bar{a} */
@@ -8174,7 +8170,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
             ++h;
          }
 
-         //printf("lifted coef %g < %g <= %g to %d\n", h == 0 ? 0 : C[h-1], QUAD_TO_DBL(coef), C[h], h);
+         SCIPdebugMessage("lifted coef %g < %g <= %g to %d\n", h == 0 ? 0 : C[h-1], QUAD_TO_DBL(coef), C[h], h);
          cutcoef += h;
       }
 
@@ -8195,7 +8191,8 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    efficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, nnz);
    *success = efficacy > *cutefficacy;
 
-   //printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE);
+   SCIPdebugMessage("FINAL LCI:");
+   SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
    if( *success )
    {
