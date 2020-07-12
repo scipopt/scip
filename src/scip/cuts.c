@@ -7795,6 +7795,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
          if( QUAD_TO_DBL(coef) < 0 )
          {
             SCIP_CALL( findBestUb(scip, vars[v], sol, FALSE, allowlocal, &bestub, &simplebound, boundtype + i) );
+
             if( SCIPisZero(scip, bestub) )
             {
                /* binary variable is fixed to zero */
@@ -7826,10 +7827,10 @@ SCIP_RETCODE cutsTransformKnapsackCover(
                setzero = FALSE;
             }
          }
-      }
 
-      assert(boundtype[i] == -1 || boundtype[i] == -2);
-      *localbdsused = *localbdsused || (boundtype[i] == -2);
+         assert(boundtype[i] == -1 || boundtype[i] == -2);
+         *localbdsused = *localbdsused || (boundtype[i] == -2);
+      }
 
       /* increase i or shift last nonzero to current position */
       if( setzero )
