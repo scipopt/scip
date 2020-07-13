@@ -488,19 +488,22 @@ SCIP_RETCODE exprIsSemicontinuous(
 
    if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
+      SCIP_CONSEXPR_ITERATOR* it;
+      SCIP_CONSEXPR_EXPR* child;
+      SCIP_CONSEXPR_EXPR* curexpr;
+      int pos;
+      SCIP_Bool issc;
+
       /* sums are treated separately because if there are variables that are non-semicontinuous but
        * appear only linearly, we still want to apply perspective to expr
        */
 
       SCIP_CALL( SCIPallocClearBufferArray(scip, &linear, nlhdlrexprdata->nvars) );
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
       for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
       {
-         SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[c];
-         SCIP_CONSEXPR_EXPR** childvarexprs;
-         int nchildvarexprs;
-         int pos;
-         SCIP_Bool issc;
+         child = SCIPgetConsExprExprChildren(expr)[c];
 
          if( SCIPisConsExprExprVar(child) )
          {
@@ -519,34 +522,44 @@ SCIP_RETCODE exprIsSemicontinuous(
             continue;
          }
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, nlhdlrexprdata->nvars) );
-         SCIP_CALL( SCIPgetConsExprExprVarExprs(scip, conshdlr, child, childvarexprs, &nchildvarexprs) );
-
          issc = TRUE;
 
-         /* all nonlinear terms of a sum should be semicontinuous */
-         for( v = 0; v < nchildvarexprs; ++v )
-         {
-            var = SCIPgetConsExprExprVarVar(childvarexprs[v]);
-            SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
+         SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+         curexpr = SCIPexpriteratorGetCurrent(it);
 
-            if( !var_is_sc )
+         /* all nonlinear terms of a sum should be semicontinuous in original variables */
+         while( !SCIPexpriteratorIsEnd(it) )
+         {
+            assert(curexpr != NULL);
+
+            if( SCIPisConsExprExprVar(curexpr) )
             {
-               /* non-semicontinuous child which is (due to a previous check) not a var -> expr is non-semicontinuous */
-               issc = FALSE;
-               break;
-            }
-         }
+               var = SCIPgetConsExprExprVarVar(child);
 
-         for( v = 0; v < nchildvarexprs; ++v )
-         {
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childvarexprs[v]) );
+               if( !SCIPvarIsRelaxationOnly(var) )
+               {
+                  SCIP_CALL( varIsSemicontinuous(scip, var, nlhdlrdata->scvars, &var_is_sc) );
+
+                  if( !var_is_sc )
+                  {
+                     /* non-semicontinuous child which is (due to a previous check) not a var ->
+                      * expr is non-semicontinuous
+                      */
+                     issc = FALSE;
+                     break;
+                  }
+               }
+            }
+            curexpr = SCIPexpriteratorGetNext(it);
          }
-         SCIPfreeBufferArray(scip, &childvarexprs);
 
          if( !issc )
+         {
+            SCIPexpriteratorFree(&it);
             goto TERMINATE;
+         }
       }
+      SCIPexpriteratorFree(&it);
    }
    else
    {
