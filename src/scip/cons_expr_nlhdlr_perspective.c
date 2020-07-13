@@ -817,7 +817,7 @@ SCIP_RETCODE startProbing(
    SCIP_INTERVAL*        probingdoms,        /**< array of intervals to which bounds of probingvars will be changed in probing */
    int                   nprobingvars,       /**< number of probing vars */
    SCIP_SOL*             sol,                /**< solution to be separated */
-   SCIP_SOL**            solcopy             /**< buffer to store a copy of sol before going into probing */
+   SCIP_SOL**            solcopy             /**< buffer for a copy of sol before going into probing; if *solcopy == sol, then copy is created */
    )
 {
    int v;
@@ -827,7 +827,9 @@ SCIP_RETCODE startProbing(
 
    propagate = SCIPgetDepth(scip) == 0;
 
-   /* copy the relevant var values from sol into solcopy, because sol can change after SCIPstartProbing */
+   /* if a copy of sol has not been created yet, then create one now and copy the relevant var values from sol,
+    * because sol can change after SCIPstartProbing, e.g., when linked to the LP solution
+    */
    if( *solcopy == sol )
    {
       SCIP_CALL( SCIPcreateSol(scip, solcopy, NULL) );
