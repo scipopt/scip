@@ -667,15 +667,10 @@ SCIP_RETCODE computeOffValues(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators) );
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &origvars, nlhdlrexprdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &origvals0, nlhdlrexprdata->nvars) );
    SCIP_CALL( SCIPhashmapCreate(&auxvarmap, SCIPblkmem(scip), 10) );
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-
-   for( v = 0; v < nlhdlrexprdata->nvars; ++v )
-   {
-      origvars[v] = nlhdlrexprdata->vars[v];
-   }
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &origvars, nlhdlrexprdata->vars, nlhdlrexprdata->nvars) );
    norigvars = nlhdlrexprdata->nvars;
 
    for( i = 0; i < nlhdlrexprdata->nindicators; ++i )
