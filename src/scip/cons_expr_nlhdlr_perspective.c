@@ -819,7 +819,7 @@ SCIP_RETCODE startProbing(
    int                   nprobingvars,       /**< number of probing vars */
    SCIP_SOL*             sol,                /**< solution to be separated */
    SCIP_SOL**            solcopy,            /**< buffer for a copy of sol before going into probing; if *solcopy == sol, then copy is created */
-   SCIP_RESULT*          result              /**< pointer to store the result (updated here if there is a cutoff) */
+   SCIP_Bool*            cutoff_probing      /**< pointer to store whether indicator == 1 is infeasible */
    )
 {
    int v;
@@ -873,26 +873,8 @@ SCIP_RETCODE startProbing(
    if( propagate )
    {
       SCIP_Longint ndomreds;
-      SCIP_Bool cutoff_probing;
-      SCIP_Bool cutoff;
-      SCIP_Bool fixed;
 
-      SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, &cutoff_probing, &ndomreds) );
-
-      if( ndomreds > 0 )
-      {
-         *result = SCIP_REDUCEDDOM;
-      }
-
-      if( cutoff_probing )
-      {
-         /* indicator == 1 is infeasible -> set indicator to 0 */
-         SCIP_CALL( SCIPfixVar(scip, indicator, 0.0, &cutoff, &fixed) );
-         if( cutoff )
-         {
-            *result = SCIP_CUTOFF;
-         }
-      }
+      SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, cutoff_probing, &ndomreds) );
    }
 
    return SCIP_OKAY;
@@ -1649,6 +1631,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       if( doprobingind )
       {
          SCIP_Bool propagate;
+         SCIP_Bool cutoff_probing;
+         SCIP_Bool cutoff;
+         SCIP_Bool fixed;
 
 #ifndef NDEBUG
          SCIP_Real* solvals;
@@ -1662,7 +1647,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          propagate = SCIPgetDepth(scip) == 0;
 
          SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, indicator, probingvars, probingdoms, nprobingvars,
-               sol, &solcopy, result) );
+               sol, &solcopy, &cutoff_probing) );
 
 #ifndef NDEBUG
          for( v = 0; v < nlhdlrexprdata->nvars; ++v )
@@ -1674,18 +1659,22 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          if( propagate )
          { /* we are in the root node and startProbing did propagation */
-            /* probing propagation might have detected infeasibility or fixed the indicator */
-            if( *result == SCIP_CUTOFF )
+            /* probing propagation might have detected infeasibility */
+            if( cutoff_probing )
             {
+               /* indicator == 1 is infeasible -> set indicator to 0 */
                SCIPfreeBufferArrayNull(scip, &probingvars);
                SCIPfreeBufferArrayNull(scip, &probingdoms);
-               goto TERMINATE;
-            }
+               SCIP_CALL( SCIPfixVar(scip, indicator, 0.0, &cutoff, &fixed) );
 
-            if( SCIPvarGetUbGlobal(indicator) < 0.5 )
-            {
-               SCIPfreeBufferArrayNull(scip, &probingvars);
-               SCIPfreeBufferArrayNull(scip, &probingdoms);
+               SCIP_CALL( SCIPendProbing(scip) );
+
+               if( cutoff )
+               {
+                  *result = SCIP_CUTOFF;
+                  goto TERMINATE;
+               }
+
                continue;
             }
 
