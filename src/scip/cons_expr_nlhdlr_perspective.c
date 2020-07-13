@@ -213,7 +213,15 @@ SCIP_RETCODE addSCVarIndicator(
    assert(indicator != NULL);
 
    /* find the position where to insert */
-   found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
+   if( scvdata->bvars == NULL )
+   {
+      found = FALSE;
+      pos = 0;
+   }
+   else
+   {
+      found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
+   }
 
    if( found )
       return SCIP_OKAY;
