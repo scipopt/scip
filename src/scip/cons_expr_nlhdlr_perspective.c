@@ -1802,11 +1802,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, r);
          resultr = SCIP_DIDNOTFIND;
 
-         (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_perspective_cut_%p_lp%d_binvar_%s",
-                             overestimate ? "over" : "under",
-                             (void*)expr,
-                             SCIPgetNLPs(scip),
-                             SCIPvarGetName(indicator));
+         (void) strcat(rowprep->name, "_persp_indicator_");
+         (void) strcat(rowprep->name, SCIPvarGetName(indicator));
 
          SCIP_CALL( SCIPprocessConsExprRowprep(scip, conshdlr, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
                auxvalue, allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), addbranchscores, solcopy,
