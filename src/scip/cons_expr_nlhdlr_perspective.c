@@ -199,9 +199,9 @@ SCIP_RETCODE addSCVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCVARDATA*            scvdata,            /**< semicontinuous variable data */
    SCIP_VAR*             indicator,          /**< indicator to be added */
-   SCIP_Real             val0,               /**< value of the variable when indicator = 0 */
-   SCIP_Real             lb1,                /**< lower bound of the variable when indicator = 1 */
-   SCIP_Real             ub1                 /**< upper bound of the variable when indicator = 1 */
+   SCIP_Real             val0,               /**< value of the variable when indicator == 0 */
+   SCIP_Real             lb1,                /**< lower bound of the variable when indicator == 1 */
+   SCIP_Real             ub1                 /**< upper bound of the variable when indicator == 1 */
    )
 {
    int newsize;
@@ -211,6 +211,12 @@ SCIP_RETCODE addSCVarIndicator(
 
    assert(scvdata != NULL);
    assert(indicator != NULL);
+
+   /* find the position where to insert */
+   found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
+
+   if( found )
+      return SCIP_OKAY;
 
    /* ensure sizes */
    if( scvdata->nbnds + 1 > scvdata->bndssize )
@@ -223,12 +229,6 @@ SCIP_RETCODE addSCVarIndicator(
       scvdata->bndssize = newsize;
    }
    assert(scvdata->nbnds + 1 <= scvdata->bndssize);
-
-   /* find the position where to insert */
-   found = SCIPsortedvecFindPtr((void**)scvdata->bvars, SCIPvarComp, (void*)indicator, scvdata->nbnds, &pos);
-
-   if( found )
-      return SCIP_OKAY;
 
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
