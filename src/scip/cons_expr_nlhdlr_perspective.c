@@ -215,6 +215,7 @@ SCIP_RETCODE addSCVarIndicator(
    /* find the position where to insert */
    if( scvdata->bvars == NULL )
    {
+      assert(scvdata->nbnds == 0 && scvdata->bndssize == 0);
       found = FALSE;
       pos = 0;
    }
@@ -237,6 +238,7 @@ SCIP_RETCODE addSCVarIndicator(
       scvdata->bndssize = newsize;
    }
    assert(scvdata->nbnds + 1 <= scvdata->bndssize);
+   assert(scvdata->bvars != NULL);
 
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
