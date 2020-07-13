@@ -877,10 +877,12 @@ SCIP_RETCODE startProbing(
 }
 
 /** analyse on/off bounds on a variable for: 1) tightening bounds in probing for indicator = 1,
-  * 2) fixing indicator / detecting cutoff if one or both states is infeasible,
+  * 2) fixing indicator / detecting cutoff if one or both states are infeasible,
   * 3) tightening local bounds if indicator is fixed.
   *
-  * probinglb and probingub are set to SCIP_INVALID if bounds on var shouldn't be changed in probing.
+  * probinglb and probingub are only set if doprobing is TRUE.
+  * They are either set to bounds that should be used in probing or to SCIP_INVALID if bounds on
+  * var shouldn't be changed in probing.
   */
 static
 SCIP_RETCODE analyseVarOnoffBounds(
@@ -892,7 +894,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
    SCIP_Bool*            infeas,             /**< pointer to store whether infeasibility has been detected */
    SCIP_Real*            probinglb,          /**< pointer to store the lower bound to be applied in probing */
    SCIP_Real*            probingub,          /**< pointer to store the upper bound to be applied in probing */
-   SCIP_Bool             doprobing,          /**< whether we want to go into probing */
+   SCIP_Bool             doprobing,          /**< whether we currently consider to go into probing */
    SCIP_Bool*            reduceddom          /**< pointer to store whether any variables were fixed */
    )
 {
@@ -1417,6 +1419,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
     */
    for( e = 0; e < SCIPgetConsExprExprNEnfos(expr); ++e )
    {
+      /* TODO when available, this should be extended by a check whether the nlhdlr will participate in separation (below or above) */
       if( !SCIPhasConsExprNlhdlrEstimate(SCIPgetConsExprExprEnfoNlhdlr(expr, e)) )
          continue;
 
