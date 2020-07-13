@@ -37,7 +37,7 @@
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
 #define DEFAULT_MINVIOLPROBING    1e-05 /**< minimal violation w.r.t. auxiliary variables for applying probing */
 #define DEFAULT_PROBINGONLYINSEPA TRUE  /**< whether to do probing only in separation loop */
-#define DEFAULT_PROBINGFREQ       2     /**< probing frequency (-1 - no probing, 0 - root node only) */
+#define DEFAULT_PROBINGFREQ       1     /**< probing frequency (-1 - no probing, 0 - root node only) */
 #define DEFAULT_CONVEXONLY        FALSE /**< whether perspective cuts are added only for convex expressions */
 #define DEFAULT_TIGHTENBOUNDS     TRUE  /**< whether variable semicontinuity is used to tighten variable bounds */
 
