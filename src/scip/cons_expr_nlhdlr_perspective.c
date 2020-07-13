@@ -1552,7 +1552,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       assert(nlhdlr2 != nlhdlr);
 
-      /* evalaux should have called evalaux of other nlhdlrs by now */
+      /* evalaux should have called evalaux of other nlhdlrs by now
+       * check whether handling the violation for nlhdlr2 required under- or overestimation
+       */
       SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, SCIPgetConsExprExprEnfoAuxValue(expr, j),
             sol, &violation, &underestimate2, &overestimate2) );
       assert(violation >= 0.0);
@@ -1560,6 +1562,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       if( (overestimate && !overestimate2) || (!overestimate && !underestimate2) )
          continue;
 
+      /* if violation is small, cuts would likely be weak - skip perspectification */
       if( !allowweakcuts && violation < SCIPfeastol(scip) )
          continue;
 
@@ -1574,6 +1577,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       (nlhdlrdata->probingfreq == 1 && SCIPgetDepth(scip) != 0) )
       doprobing = FALSE;
 
+   /* if addbranchscores is TRUE, then we can assume to be in enforcement and not in separation */
    if( nlhdlrdata->probingonlyinsepa && addbranchscores )
       doprobing = FALSE;
 
