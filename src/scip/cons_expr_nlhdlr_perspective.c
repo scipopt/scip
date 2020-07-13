@@ -665,7 +665,6 @@ SCIP_RETCODE computeOffValues(
    assert(expr != NULL);
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators) );
-
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &origvals0, nlhdlrexprdata->nvars) );
    SCIP_CALL( SCIPhashmapCreate(&auxvarmap, SCIPblkmem(scip), 10) );
@@ -673,7 +672,7 @@ SCIP_RETCODE computeOffValues(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &origvars, nlhdlrexprdata->vars, nlhdlrexprdata->nvars) );
    norigvars = nlhdlrexprdata->nvars;
 
-   for( i = 0; i < nlhdlrexprdata->nindicators; ++i )
+   for( i = nlhdlrexprdata->nindicators - 1; i >= 0; --i )
    {
       hasnonsc = FALSE;
 
@@ -699,7 +698,9 @@ SCIP_RETCODE computeOffValues(
 
       if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
       {
-         SCIPdebugMsg(scip, "expression evaluation failed for %p, removing the indicator\n", (void*)expr);
+         SCIPdebugMsg(scip, "expression evaluation failed for %p, removing indicator %s\n",
+                             (void*)expr, SCIPvarGetName(nlhdlrexprdata->indicators[i]));
+         /* since the loop is backwards, this only modifies the already processed part of nlhdlrexprdata->indicators */
          removeIndicator(nlhdlrexprdata, i);
          continue;
       }
