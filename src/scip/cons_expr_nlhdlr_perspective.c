@@ -1731,8 +1731,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-            /* perspectivy the estimator by adding (1-z)(g0 - c - sum aix0i),
-             * where sum aixi + c = rowprep */
+            /* given a rowprep: sum aixi + sum biyi + c, where xi are semicontinuous variables and yi are
+             * non-semicontinuous variables (which appear in expr linearly, which detect must have ensured),
+             * perspectivy the semicontinuous part by adding (1-z)(g0 - c - sum aix0i) (the constant is
+             * treated as belonging to the semicontinuous part)
+             */
 
             /* we want cst0 = g0 - c - sum aix0i; first add g0 - c */
             cst0 = nlhdlrexprdata->exprvals0[i] + rowprep->side;
@@ -1747,6 +1750,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                }
 
                scvdata = getSCVarDataInd(nlhdlrdata->scvars, rowprep->vars[v], indicator, &pos);
+
+               /* a non-semicontinuous variable must be linear in expr; skip it */
                if( scvdata == NULL )
                   continue;
 
