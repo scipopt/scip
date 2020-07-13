@@ -1186,28 +1186,6 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrPerspective)
 static
 SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataPerspective)
 { /*lint --e{715}*/
-   SCIP_HASHMAPENTRY* entry;
-   SCVARDATA* data;
-   int c;
-
-   if( (*nlhdlrdata)->scvars != NULL )
-   {
-      for( c = 0; c < SCIPhashmapGetNEntries((*nlhdlrdata)->scvars); ++c )
-      {
-         entry = SCIPhashmapGetEntry((*nlhdlrdata)->scvars, c);
-         if( entry != NULL )
-         {
-            data = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
-            SCIPfreeBlockMemoryArray(scip, &data->ubs1, data->bndssize);
-            SCIPfreeBlockMemoryArray(scip, &data->lbs1, data->bndssize);
-            SCIPfreeBlockMemoryArray(scip, &data->vals0, data->bndssize);
-            SCIPfreeBlockMemoryArray(scip, &data->bvars, data->bndssize);
-            SCIPfreeBlockMemory(scip, &data);
-         }
-      }
-      SCIPhashmapFree(&((*nlhdlrdata)->scvars));
-   }
-
    SCIPfreeBlockMemory(scip, nlhdlrdata);
 
    return SCIP_OKAY;
@@ -1234,13 +1212,37 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 #endif
 
 /** callback to be called in deinitialization */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
 {  /*lint --e{715}*/
+   SCIP_HASHMAPENTRY* entry;
+   SCVARDATA* data;
+   int c;
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   if( nlhdlrdata->scvars != NULL )
+   {
+      for( c = 0; c < SCIPhashmapGetNEntries(nlhdlrdata->scvars); ++c )
+      {
+         entry = SCIPhashmapGetEntry(nlhdlrdata->scvars, c);
+         if( entry != NULL )
+         {
+            data = (SCVARDATA*) SCIPhashmapEntryGetImage(entry);
+            SCIPfreeBlockMemoryArray(scip, &data->ubs1, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->lbs1, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->vals0, data->bndssize);
+            SCIPfreeBlockMemoryArray(scip, &data->bvars, data->bndssize);
+            SCIPfreeBlockMemory(scip, &data);
+         }
+      }
+      SCIPhashmapFree(&nlhdlrdata->scvars);
+   }
+
    return SCIP_OKAY;
 }
-#endif
 
 /** callback to detect structure in expression tree
  *
@@ -1880,6 +1882,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoPerspective, NULL, NULL);
 
    return SCIP_OKAY;
