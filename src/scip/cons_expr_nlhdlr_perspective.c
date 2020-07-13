@@ -1665,9 +1665,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                /* indicator == 1 is infeasible -> set indicator to 0 */
                SCIPfreeBufferArrayNull(scip, &probingvars);
                SCIPfreeBufferArrayNull(scip, &probingdoms);
-               SCIP_CALL( SCIPfixVar(scip, indicator, 0.0, &cutoff, &fixed) );
 
                SCIP_CALL( SCIPendProbing(scip) );
+
+               SCIP_CALL( SCIPfixVar(scip, indicator, 0.0, &cutoff, &fixed) );
 
                if( cutoff )
                {
