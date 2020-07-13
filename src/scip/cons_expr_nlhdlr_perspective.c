@@ -813,11 +813,13 @@ SCIP_RETCODE startProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nonlinear handler data */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   SCIP_VAR*             indicator,          /**< indicator variable */
    SCIP_VAR**            probingvars,        /**< array of vars whose bounds we will change in probing */
    SCIP_INTERVAL*        probingdoms,        /**< array of intervals to which bounds of probingvars will be changed in probing */
    int                   nprobingvars,       /**< number of probing vars */
    SCIP_SOL*             sol,                /**< solution to be separated */
-   SCIP_SOL**            solcopy             /**< buffer for a copy of sol before going into probing; if *solcopy == sol, then copy is created */
+   SCIP_SOL**            solcopy,            /**< buffer for a copy of sol before going into probing; if *solcopy == sol, then copy is created */
+   SCIP_RESULT*          result              /**< pointer to store the result (updated here if there is a cutoff) */
    )
 {
    int v;
@@ -849,6 +851,9 @@ SCIP_RETCODE startProbing(
    /* create a probing node */
    SCIP_CALL( SCIPnewProbingNode(scip) );
 
+   /* set indicator to 1 */
+   SCIP_CALL( SCIPchgVarLbProbing(scip, indicator, 1.0) );
+
    /* apply stored bounds */
    for( v = 0; v < nprobingvars; ++v )
    {
@@ -868,9 +873,26 @@ SCIP_RETCODE startProbing(
    if( propagate )
    {
       SCIP_Longint ndomreds;
+      SCIP_Bool cutoff_probing;
       SCIP_Bool cutoff;
+      SCIP_Bool fixed;
 
-      SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, &cutoff, &ndomreds) );
+      SCIP_CALL( SCIPpropagateProbing(scip, nlhdlrdata->maxproprounds, &cutoff_probing, &ndomreds) );
+
+      if( ndomreds > 0 )
+      {
+         *result = SCIP_REDUCEDDOM;
+      }
+
+      if( cutoff_probing )
+      {
+         /* indicator == 1 is infeasible -> set indicator to 0 */
+         SCIP_CALL( SCIPfixVar(scip, indicator, 0.0, &cutoff, &fixed) );
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -1639,13 +1661,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          propagate = SCIPgetDepth(scip) == 0;
 
-         SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, probingvars, probingdoms, nprobingvars, sol, &solcopy) );
-
-         if( propagate )
-         {
-            /* probing propagation in the root node can provide better on/off bounds */
-            SCIP_CALL( tightenOnBounds(nlhdlrexprdata, nlhdlrdata->scvars, indicator) );
-         }
+         SCIP_CALL( startProbing(scip, nlhdlrdata, nlhdlrexprdata, indicator, probingvars, probingdoms, nprobingvars,
+               sol, &solcopy, result) );
 
 #ifndef NDEBUG
          for( v = 0; v < nlhdlrexprdata->nvars; ++v )
@@ -1654,6 +1671,27 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
          SCIPfreeBufferArray(scip, &solvals);
 #endif
+
+         if( propagate )
+         { /* we are in the root node and startProbing did propagation */
+            /* probing propagation might have detected infeasibility or fixed the indicator */
+            if( *result == SCIP_CUTOFF )
+            {
+               SCIPfreeBufferArrayNull(scip, &probingvars);
+               SCIPfreeBufferArrayNull(scip, &probingdoms);
+               goto TERMINATE;
+            }
+
+            if( SCIPvarGetUbGlobal(indicator) < 0.5 )
+            {
+               SCIPfreeBufferArrayNull(scip, &probingvars);
+               SCIPfreeBufferArrayNull(scip, &probingdoms);
+               continue;
+            }
+
+            /* probing propagation in the root node can provide better on/off bounds */
+            SCIP_CALL( tightenOnBounds(nlhdlrexprdata, nlhdlrdata->scvars, indicator) );
+         }
       }
 
       /* use cuts from every suitable nlhdlr */
