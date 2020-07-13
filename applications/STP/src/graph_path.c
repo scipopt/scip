@@ -16,6 +16,7 @@
 /**@file   graph_path.c
  * @brief  Shortest path based graph algorithms for Steiner problems
  * @author Thorsten Koch
+ * @author Henriette Franz
  * @author Daniel Rehfeldt
  *
  * This file encompasses various (heap-based) shortest path based algorithms including
@@ -2265,6 +2266,404 @@ void graph_path_st_rpcmw(
       }
    }
 #endif
+}
+
+
+
+/**
+ * todo refactor, was copied from Henriette's branch
+ */
+SCIP_RETCODE graph_path_st_brmwcs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   const SCIP_Real*      prize,              /**< (possibly biased) prize */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   int                   start,              /**< start vertex */
+   STP_Bool*             connected,          /**< array to mark whether a vertex is part of computed Steiner tree */
+   SCIP_Bool*            solfound            /**< could a solution be found? */
+   )
+{
+
+   /* node utilities */
+   const SCIP_Real* nodeweight = prize;
+   /* node costs */
+   const SCIP_Real* nodebudget = g->costbudget;
+   /* given budget */
+   const SCIP_Real budget = g->budget;
+   /* number of nodes */
+   const int nnodes = g->knots;
+
+   /* number of terminals which are not part of the solution yet */
+   int numberTerminals;
+   /* current available budget */
+   SCIP_Real newBudget;
+   /* positive sum of all negative utilities */
+   double smallestWeight;
+   /* alpha (in [0,1]) is used by the key of the heap */
+   double alpha;
+
+   /* upper bound for node costs (pi) and the corresponding node utilities (my) */
+   double* pi;
+   double* my;
+
+   int lookNeighbour;
+
+   int* alreadyContained;
+
+  // printf("\n\n start = %d \n", start+1);
+
+   *solfound = TRUE;
+
+   graph_pc_markOrgGraph(g);
+
+   assert( pathdist != NULL );
+   assert( pathedge != NULL );
+   assert( g != NULL );
+   assert( start >= 0 );
+   assert( start < g->knots );
+   assert( prize != NULL );
+   assert( connected != NULL );
+   assert( g->mark[start] );
+   assert( Is_term( g->term[start] ) );
+
+   SCIP_CALL( SCIPallocBufferArray( scip, &alreadyContained, nnodes ) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &my, nnodes ) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &pi, nnodes ) );
+
+   numberTerminals = g->terms;
+   newBudget = budget - nodebudget[start];
+   smallestWeight = 1.0;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      /* node costs have to be positive */
+      if( (nodebudget[k] < 0.0) && g->mark[k] )
+      {
+         printf("all costs have to be non-negativ! \n");
+         SCIPfreeBufferArray(scip, &pi);
+         SCIPfreeBufferArray(scip, &my);
+         SCIPfreeBufferArray(scip, &alreadyContained);
+         return SCIP_ERROR;
+      }
+
+      if( (nodeweight[k] < 0) && g->mark[k] )
+         smallestWeight = smallestWeight + ((-1.0) * nodeweight[k]);
+   }
+
+   /* add start vertex to the solution */
+   connected[start] = TRUE;
+
+   /* at the beginning set alpha equal one */
+   alpha = 1.0;
+
+  /* first find a solution containing all terminals
+   * second expand the solution by adding additional nodes until no further budget is available */
+   while( ( (alpha >= 0.0) && (numberTerminals > 0) ) || ( (alpha >= 0.0) && (newBudget >= 0.0) ) )
+   {
+
+      /* construct a heap */
+      int* heap = g->path_heap;
+      int* state = g->path_state;
+      int count = 0;
+
+      /* calculate number of terminals again if alpha + 0.1 does not work for the key
+       * and no feasible solution is found yet */
+      if( numberTerminals > 0 )
+            numberTerminals = g->terms;
+
+      /* initialize heap and define node start as start solution
+       * if no feasible solution is found yet */
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( (k != start) && (numberTerminals > 0) )
+            connected[k] = FALSE;
+
+         alreadyContained[k] = FALSE;
+
+         if( !g->mark[k] && (numberTerminals > 0) )
+            numberTerminals--;
+
+         state[k] = UNKNOWN;
+         pathedge[k] = -1;
+
+         if( connected[k] && (numberTerminals <= 0) )
+         {
+            pathdist[k] = 0.0;
+         }else
+         {
+            pathdist[k] = FARAWAY;
+         }
+      }
+
+      /* reduce number of searched terminals if start is a terminal and
+       * no feasible solution is found yet */
+      if( g->mark[start] && Is_term( g->term[start] ) && (numberTerminals > 0) )
+            numberTerminals--;
+
+      /* initialize pi and my and add nodes contained by the solution to the heap;
+       * if a feasible solution is already found, then add all nodes to the heap */
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( g->mark[k] )
+         {
+            if( connected[k] )
+            {
+               pi[k] = 0.0;
+               my[k] = 0.0;
+
+               resetX(pathdist, heap, state, &count, k, 0.0 );
+            }else
+            {
+               if( Is_term( g->term[k] ) && (numberTerminals > 0) ){
+                  my[k] = 0.0;
+               }else
+               {
+                  my[k] = nodeweight[k];
+               }
+               pi[k] = DBL_MAX;
+               if( numberTerminals <= 0 ){
+                  resetX(pathdist, heap, state, &count, k, pathdist[k] );
+               }
+            }
+         }
+      }
+
+      /* return if the heap is empty */
+      if( count == 0 )
+      {
+         SCIPfreeBufferArray( scip, &pi );
+         SCIPfreeBufferArray( scip, &my );
+         SCIPfreeBufferArray( scip, &alreadyContained );
+         return SCIP_OKAY;
+      }
+
+           /* TRUE if we want to consider the neighbor nodes of node k */
+      lookNeighbour = TRUE;
+
+      /* repeat until the heap is empty */
+      while( count > 0 )
+      {
+         /* get first node  */
+         int k = nearestX( heap, state, &count, pathdist );
+         alreadyContained[k] = TRUE;
+
+         /* TRUE if we want to consider the neighbor nodes of node k */
+         lookNeighbour = TRUE;
+
+         /*if( numberTerminals <= 0 )
+            state[k] = UNKNOWN;*/
+
+         /* if k is a terminal node that is  not contained in the current solution,
+          * add k and its path to the solution */
+         if( ( numberTerminals > 0 ) && !connected[k] && Is_term( g->term[k] ) && g->mark[k] )
+         { //numberTerminals>0 braucht man nicht eigentlich
+
+            lookNeighbour = FALSE;
+
+            /* if the costs of the path are greater than the current budget,
+            * then no feasible solution exists for alpha, decrease alpha by 0.1 */
+            if( ( newBudget - pi[k] ) < 0.0 )
+            {
+               alpha = alpha - 0.1;
+               count = 0;
+
+               /* if alpha smaller than zero, no feasible solution could be found */
+               if( alpha < 0.0 )
+               {
+          //        printf("No feasible solution found! \n" );
+
+                  *solfound = FALSE;
+
+                  SCIPfreeBufferArray( scip, &pi );
+                  SCIPfreeBufferArray( scip, &my );
+                  SCIPfreeBufferArray( scip, &alreadyContained );
+
+                  return SCIP_OKAY;
+               }
+            /* otherwise, add k and its path to the solution and update the current budget */
+            }else
+            {
+               int v = k;
+
+               newBudget = newBudget - pi[k];
+
+               while( !connected[v] )
+               {
+                  connected[v] = TRUE;
+                  pi[v] = 0.0;
+                  my[v] = 0.0;
+                  if( pathedge[v] != -1 )
+                     v = g->tail[pathedge[v]];
+               }
+
+
+               /* update the number of terminals */
+               numberTerminals = numberTerminals - 1;
+
+               /* neu */
+               heap = g->path_heap;
+               state = g->path_state;
+               count = 0;
+
+               /* initialize heap and define node start as start solution
+                * if no feasible solution is found yet */
+               for( int n = 0; n < nnodes; n++ )
+               {
+                  state[n] = UNKNOWN;
+                  pathedge[n] = -1;
+                  alreadyContained[n] = FALSE;
+
+                  if( connected[n] )
+                  {
+                     pathdist[n] = 0.0;
+                     resetX(pathdist, heap, state, &count, n, 0.0 );
+                  }else
+                  {
+                     pathdist[n] = FARAWAY;
+                          if( Is_term( g->term[n] ) ){
+                        my[n] = 0.0;
+                     }else
+                     {
+                        my[n] = nodeweight[n];
+                     }
+                     pi[n] = DBL_MAX;
+                  }
+               } /* bis hier ist der heap jetzt leer? */
+
+               /* break the while-loop if all terminals are contained in the solution */
+               if( numberTerminals == 0 )
+                  count = 0;
+            }
+         }
+         /* iterate over incident edges */
+         for( int e = g->outbeg[k]; lookNeighbour && e != EAT_LAST; e = g->oeat[e]  )
+         {
+            /* get neighbor head of node k */
+              const int head = g->head[e];
+            assert( state[head] );
+
+            /* calculate new key value for head if neighbor head is not contained in the solution
+             * and no feasible solution is found yet or neighbor head is still part of the heap
+             */
+            //if( g->mark[head] && !connected[head] && ( ( numberTerminals > 0 ) || ( state[head] != UNKNOWN ) ) )
+//if( g->mark[head] && !connected[head] && ( ( numberTerminals > 0 ) || !alreadyContained[head] ) )
+            if( g->mark[head] && !connected[head] && ( ( numberTerminals > 0 && pathedge[head]==-1 ) || !alreadyContained[head] ) )
+            {
+               int j = k;
+               int isConnected = TRUE;
+
+               double possibleUtility;
+               if( Is_term( g->term[head] ) && (numberTerminals > 0) )
+               {
+                  if( my[k] >= 0.0 )
+                  {
+                     possibleUtility = ( 1.0 - alpha ) * ( pi[k] + nodebudget[head] ) + ( alpha * ( pi[k] + nodebudget[head] ) /( my[k] + 1.0 ) );
+                  }else
+                  {
+                     possibleUtility = ( 1.0 - alpha ) * ( pi[k] + nodebudget[head] ) + ( alpha * ( pi[k] + nodebudget[head] ) / ( ( my[k] + smallestWeight ) / smallestWeight ) );
+                  }
+               }else
+               {
+                  if( ( my[k] + nodeweight[head] ) >= 0.0 )
+                  {
+                     possibleUtility = ( 1.0 - alpha ) * ( pi[k] + nodebudget[head] )
+                               + ( alpha * ( pi[k] + nodebudget[head] ) / ( my[k] + nodeweight[head] + 1.0 ) );
+                  }else
+                  {
+                     possibleUtility = ( 1.0 - alpha ) * ( pi[k] + nodebudget[head] )
+                               + ( alpha * ( pi[k] + nodebudget[head] ) / ( ( my[k] + nodeweight[head] + smallestWeight ) / smallestWeight ) );
+                  }
+               }
+
+               while( !connected[j] && isConnected && ( pathedge[j] != -1 ) )
+               {
+                  if( j == head )
+                     isConnected = FALSE;
+
+                  if( pathedge[j] != -1 )
+                     j = g->tail[pathedge[j]];
+               }
+
+               /* if this the new key value is smaller than the current key value,
+                * then update the pu, my, and the heap */
+               if( ( pathdist[head] > possibleUtility ) && isConnected )
+               {
+                  pi[head] = pi[k] + nodebudget[head];
+
+
+
+                  if( Is_term(g->term[head] ) )
+                  {
+                     my[head] = my[k];
+                  }else
+                  {
+                     my[head] = my[k] + nodeweight[head];
+                  }
+                  correctX( heap, state, &count, pathdist, pathedge, head, k, e, (-1.0) * pathdist[k] + possibleUtility );
+               }
+            }
+         }
+      }
+      /* if a feasible solution is already found, then expand the solution by a suitable node and its path
+       * If such a node cannot be found, then decrease alpha by 0.1 */
+      if( numberTerminals <= 0 && lookNeighbour ) //lookNeighbor neu
+      {
+         int foundVertex = FALSE;
+
+         /* add all nodes to the heap which are not contained in the solution */
+         for( int n = 0; n < nnodes; n++ )
+         {
+            if( !connected[n] && g->mark[n] )
+               resetX(pathdist, heap, state, &count, n, pathdist[n]);
+         }
+         /* find a suitable node */
+
+         while( count > 0 && !foundVertex )
+         {
+           /* get first node n from the heap */
+            int n = nearestX( heap, state, &count, pathdist );
+
+            /* if the cost of node n are smaller than the current budget,
+             * then add the node n and its path to the solution and update the
+             * available budget */
+            if( g->mark[n] && ( newBudget - pi[n] >= 0.0 ) && ( my[n] > 0.0 ) )
+            {
+               int v = n;
+
+//printf("budget=%f\n", newBudget);
+ //printf("pi[%d]=%f\n",n, pi[n]);
+               newBudget = newBudget - pi[n];
+               foundVertex = TRUE;
+
+               while( !connected[v] )
+               {
+//printf("nodebudget[%d]=%f \n", v, nodebudget[v]);
+                  connected[v] = TRUE;
+                  if( pathedge[v] != -1 )
+                     v = g->tail[ pathedge[v] ];
+               }
+            }
+         }
+         /* decrease alpha by 0.1 if such a node cannot be found */
+         if( !foundVertex )
+            alpha = alpha - 0.1;
+      }
+   }
+   SCIPfreeBufferArray( scip, &pi );
+   SCIPfreeBufferArray( scip, &my );
+   SCIPfreeBufferArray( scip, &alreadyContained );
+
+#if 0
+   for( int n = 0; n < nnodes; n++ )
+   {
+      if(connected[n])// && g->mark[n])
+      printf("$%d ist in solution\n", n+1);
+   }
+   printf("solution exists \n");
+#endif
+
+   return SCIP_OKAY;
 }
 
 

@@ -1612,7 +1612,7 @@ SCIP_RETCODE createInitialCuts(
    {
       SCIP_CALL( dualascent_execPcMw(scip, graph, NULL, &lpobjval, TRUE, TRUE, 1) );
    }
-   else
+   else if( graph->stp_type != STP_BRMWCSP )
    {
       const SCIP_Bool doAscendPrune = (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph));
       DAPARAMS daparams = { .addcuts = TRUE, .ascendandprune = doAscendPrune, .root = graph->source,

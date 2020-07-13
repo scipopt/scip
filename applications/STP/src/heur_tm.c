@@ -962,6 +962,32 @@ SCIP_RETCODE computeSteinerTreeDijk(
    return SCIP_OKAY;
 }
 
+
+/** Dijkstra based shortest paths heuristic for PCSTP and MWCSP */
+static
+SCIP_RETCODE computeSteinerTreeDijkBMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   const SCIP_Real*      cost_org,           /**< (un-biased) edge costs, only needed for PC/RPC */
+   const SCIP_Real*      prize,              /**< (possibly biased) vertex prizes */
+   int                   start,              /**< start vertex */
+   TMBASE*               tmbase,             /**< data */
+   SCIP_Bool*            solfound
+   )
+{
+   assert(g->stp_type == STP_BRMWCSP);
+   *solfound = TRUE;
+
+   SCIP_CALL( graph_path_st_brmwcs(scip, g, prize, tmbase->nodes_dist, tmbase->nodes_pred, start,
+         tmbase->connected, solfound) );
+
+   if( *solfound )
+      SCIP_CALL( solstp_pruneFromTmHeur(scip, g, cost_org, tmbase->result, tmbase->connected));
+
+   return SCIP_OKAY;
+}
+
+
 /** Dijkstra based shortest paths heuristic for PCSTP and MWCSP */
 static
 SCIP_RETCODE computeSteinerTreeDijkPcMw(
@@ -1861,7 +1887,7 @@ void initCostsAndPrioLP(
    for( int k = 0; k < nnodes; k++ )
       nodepriority[k] = 0.0;
 
-   if( graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP )
+   if( !graph_pc_isMw(graph) )
    {
       for( int e = 0; e < nedges; e++ )
       {
@@ -1903,7 +1929,7 @@ void initCostsAndPrioLP(
    else
    {
       /* swap costs; set a high cost if the variable is fixed to 0 */
-      if( graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
+      if( graph_pc_isMw(graph) )
       {
          for( int e = 0; e < nedges; e++ )
             nodepriority[gHead[e]] += xval[e];
@@ -1914,6 +1940,8 @@ void initCostsAndPrioLP(
                cost[e] = gCost[e];
             else if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[flipedge_Uint(e)]) < 0.5 )
                cost[e] = MAX(gCost[e], BLOCKED);
+            else if( LT(gCost[e], FARAWAY ) && GE(gCost[flipedge_Uint(e)], FARAWAY) )
+               cost[e] = (1.0 - xval[e]) * gCost[e];
             else
                cost[e] = gCost[e] * (1.0 - MIN(1.0, nodepriority[gHead[e]]));
          }
@@ -1943,7 +1971,7 @@ void initCostsAndPrioLP(
             if( partrand )
                cost[e] = cost[e] * randval;
          }
-      } /* graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP */
+      }
    } /* graph->stp_type != STP_DHCSTP */
 
 
@@ -2255,6 +2283,9 @@ SCIP_RETCODE runTmPcMW_mode(
    SCIP_CALL( SCIPallocBufferArray(scip, &startnodes, graph->terms) );
    pcmwGetStartNodes(scip, nodepriority, maxruns, bestincstart, graph, startnodes);
 
+   if( graph->stp_type == STP_BRMWCSP )
+      startnodes[0] = graph->source;
+
    pcmwSetEdgeCosts(graph, cost, costorg, costfullbiased, pcmwmode, tmbase);
 
    /* main loop */
@@ -2262,6 +2293,9 @@ SCIP_RETCODE runTmPcMW_mode(
    {
       const int start = startnodes[r];
       SCIPdebugMessage("TM run=%d start=%d\n", r, start);
+
+      if( graph->stp_type == STP_BRMWCSP && !graph_pc_knotIsFixedTerm(graph, start) )
+         continue;
 
       if( graph->grad[start] == 0 )
       {
@@ -2274,7 +2308,28 @@ SCIP_RETCODE runTmPcMW_mode(
             continue;
       }
 
-      if( pcmwmode == pcmode_fulltree )
+      // todo do that  properly...
+      if( graph->stp_type == STP_BRMWCSP )
+      {
+         SCIP_Bool solfound = FALSE;
+         SCIP_CALL( computeSteinerTreeDijkBMw(scip, graph, costorg, prize_in, start, tmbase, &solfound) );
+
+         if( solfound )
+         {
+            const SCIP_Real obj = solstp_getObjBounded(graph, tmbase->result, 0.0, nedges);
+            *success = TRUE;
+
+            if( LT(obj, tmbase->best_obj) )
+            {
+               tmbase->best_obj = obj;
+               BMScopyMemoryArray(tmbase->best_result, tmbase->result, nedges);
+               (*success) = TRUE;
+            }
+         }
+
+         continue;
+      }
+      else if( pcmwmode == pcmode_fulltree )
       {
          SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph, costorg, start, tmbase) );
       }
@@ -2329,8 +2384,15 @@ SCIP_RETCODE runTmPcMW(
 )
 {
    SCIP_HEURDATA* heurdata = getTMheurData(scip);
-   const enum PCMW_TmMode pcmw_mode = (pcmw_tmmode == pcmode_fromheurdata) ? heurdata->pcmw_mode : pcmw_tmmode;
-   const SCIP_Bool run_all = (pcmw_mode == pcmode_all);
+   enum PCMW_TmMode pcmw_mode = (pcmw_tmmode == pcmode_fromheurdata) ? heurdata->pcmw_mode : pcmw_tmmode;
+   SCIP_Bool run_all = (pcmw_mode == pcmode_all);
+
+   // todo do that properly
+   if( graph->stp_type == STP_BRMWCSP )
+   {
+      pcmw_mode = pcmode_bias;
+      run_all = FALSE;
+   }
 
    assert(graph_pc_isPcMw(graph));
    assert(graph_pc_isPc(graph) || pcmw_mode != pcmode_simple);
@@ -2502,9 +2564,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
-   if( graph->stp_type == STP_BRMWCSP )
-      return SCIP_OKAY;
-
    runs = 0;
 
    /* set the runs, i.e. number of different starting points for the heuristic */
@@ -2573,7 +2632,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
       SCIP_CALL( SCIPStpValidateSol(scip, graph, nval, FALSE, &success) );
 
-      assert(success);
+      assert(success || graph->stp_type == STP_BRMWCSP);
 
       if( success )
       {
@@ -3191,11 +3250,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
       SCIP_CALL(SCIPfreeSol(scip, &sol));
    }
 
-#if 0
-   if( graph_pc_isPcMw(graph) )
-      SCIP_CALL(SCIPallocBufferArray(scip, &prize, nnodes));
-#endif
-
    /* no LP solution? */
    if( xval == NULL )
    {
@@ -3232,6 +3286,10 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    }
    else /* with LP solution */
    {
+      /* NOTE does not seem to work well with other PC/MW variants to to bias the prizes... */
+      if( graph->stp_type == STP_BRMWCSP )
+         SCIP_CALL(SCIPallocBufferArray(scip, &prize, nnodes));
+
       SCIP_CALL(SCIPallocBufferArray(scip, &nodepriority, nnodes));
       initCostsAndPrioLP(scip, heurdata, vars, graph, randupper, randlower, xval, nodepriority, prize, cost);
    }

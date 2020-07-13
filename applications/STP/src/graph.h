@@ -526,6 +526,7 @@ extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_rpcmw(GRAPH*, SCIP_Real*, int*, const SCIP_Real*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern SCIP_RETCODE   graph_path_st_brmwcs(SCIP*, GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw(GRAPH*, SCIP_Real*, int*, const SCIP_Real*, const SCIP_Real*, SCIP_Bool, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_full(GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
