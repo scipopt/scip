@@ -955,7 +955,7 @@ SCIP_RETCODE aggregation(
 
          if( startrow < 0 )
          {
-            printf("separated objective with cutoffbound with efficacy %g using %d additional aggregations\n", SCIPgetCutEfficacy(scip, sol, cut), naggrs);
+            printf("separated objective cut %s with cutoffbound with efficacy %g using %d additional aggregations\n", SCIProwGetName(cut), SCIPgetCutEfficacy(scip, sol, cut), naggrs);
          }
 
          rowinds = SCIPaggrRowGetRowInds(aggrdata->aggrrow);
