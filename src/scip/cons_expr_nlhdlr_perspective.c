@@ -1367,9 +1367,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( !(*success) )
    {
-      SCIP_CALL( freeNlhdlrExprData(scip, *nlhdlrexprdata) );
-      SCIPfreeBlockMemory(scip, nlhdlrexprdata);
-      *nlhdlrexprdata = NULL;
+      SCIP_CALL( nlhdlrFreeExprDataPerspective(scip, nlhdlr, expr, nlhdlrexprdata) );
    }
 
    return SCIP_OKAY;
