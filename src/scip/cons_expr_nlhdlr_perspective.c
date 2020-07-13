@@ -1241,6 +1241,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
          }
       }
       SCIPhashmapFree(&nlhdlrdata->scvars);
+      assert(nlhdlrdata->scvars == NULL);
    }
 
    return SCIP_OKAY;
