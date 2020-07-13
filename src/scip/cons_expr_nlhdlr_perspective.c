@@ -534,7 +534,7 @@ SCIP_RETCODE exprIsSemicontinuous(
 
             if( SCIPisConsExprExprVar(curexpr) )
             {
-               var = SCIPgetConsExprExprVarVar(child);
+               var = SCIPgetConsExprExprVarVar(curexpr);
 
                if( !SCIPvarIsRelaxationOnly(var) )
                {
