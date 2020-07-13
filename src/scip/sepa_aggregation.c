@@ -1337,8 +1337,6 @@ SCIP_RETCODE separateCuts(
       oldncuts = ncuts;
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
                -1, 2 * maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
-      if( ncuts != oldncuts )
-         printf("objective separated a cut\n");
    }
 
    for( r = 0; r < nnonzrows && ntries < maxtries && ncuts < maxsepacuts && !SCIPisStopped(scip); r++ )
