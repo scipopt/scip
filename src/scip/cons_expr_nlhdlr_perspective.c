@@ -37,7 +37,7 @@
 #define DEFAULT_MINDOMREDUCTION   0.1   /**< minimal relative reduction in a variable's domain for applying probing */
 #define DEFAULT_MINVIOLPROBING    1e-05 /**< minimal violation w.r.t. auxiliary variables for applying probing */
 #define DEFAULT_PROBINGONLYINSEPA TRUE  /**< whether to do probing only in separation loop */
-#define DEFAULT_PROBINGFREQ       2     /**< if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable) */
+#define DEFAULT_PROBINGFREQ       2     /**< probing frequency (-1 - no probing, 0 - root node only) */
 #define DEFAULT_CONVEXONLY        FALSE /**< whether perspective cuts are added only for convex expressions */
 #define DEFAULT_TIGHTENBOUNDS     TRUE  /**< whether variable semicontinuity is used to tighten variable bounds */
 
@@ -1573,8 +1573,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          doprobing = TRUE;
    }
 
-   if( nlhdlrdata->probingfreq == 0 ||
-      (nlhdlrdata->probingfreq == 1 && SCIPgetDepth(scip) != 0) )
+   if( nlhdlrdata->probingfreq == -1 || (nlhdlrdata->probingfreq == 0 && SCIPgetDepth(scip) != 0) ||
+      (nlhdlrdata->probingfreq > 0 && SCIPgetDepth(scip) % nlhdlrdata->probingfreq != 0)  )
       doprobing = FALSE;
 
    /* if addbranchscores is TRUE, then we can assume to be in enforcement and not in separation */
@@ -1906,8 +1906,8 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
            &nlhdlrdata->probingonlyinsepa, FALSE, DEFAULT_PROBINGONLYINSEPA, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/probingfreq",
-           "if and when to do probing (0 - no probing, 1 - root node only, 2 - always when applicable)",
-           &nlhdlrdata->probingfreq, FALSE, DEFAULT_PROBINGFREQ, 0, 2, NULL, NULL) );
+           "probing frequency (-1 - no probing, 0 - root node only)",
+           &nlhdlrdata->probingfreq, FALSE, DEFAULT_PROBINGFREQ, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/convexonly",
            "whether perspective cuts are added only for convex expressions",
