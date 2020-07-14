@@ -45,6 +45,8 @@ static SCIP_VAR* z;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
 
+#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
+
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
 void setup(void)
@@ -467,7 +469,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE, "got %d\n", enforcing);  /* does not enforce activity, because x is unbounded */
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -515,7 +517,7 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
-   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE, "got %d\n", enforcing);   /* see TODO in cons_expr_nlhldr_quadratic why this is like this for now */
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -584,35 +586,59 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
  * BACKWARDS see mathematica code below. Now that we use the intervals of qx, qy, qz, qw
  * as computed by the forward propagation and not just doing the interval evaluation!
  *
- * Mathematicas code to generate answer
+ * Mathematicas code to generate answer: not very smart
  *
-Ix = Interval[{-1.01,1.01}]; Iy = Interval[{0.07, 0.09}]; Iz = Interval[{-0.9, 0.7}]; Iw = Interval[{1.49, 1.51}];
-q[x_,y_,z_,w_] = x^2 - 3.1*x*y + 12.2*z*w + w^2 + 1.3*z*x - 4.8754*z^2 - 0.5*y^2 - 17.1*x + 22.02*y + 5*z - w;
-qx[x_,y_,z_] = x^2 + x*(-3.1*y - 17.1 + 1.3*z);
-qz[z_, w_] = -4.8754*z^2 + z*(5 + 12.2*w);
-qy[y_] = -0.5*y^2 + 22.02*y;
-qw[w_] = w^2 - 1 * w;
+ *
+Ix=Interval[{-101/100,101/100}];Iy=Interval[{7/100,9/100}];Iz=Interval[{-9/10,7/10}];Iw=Interval[{149/100,151/100}];
+q[x_,y_,z_,w_]=x^2-3.1*x*y+12.2*z*w+w^2+16.3*z*x-4.8754*z^2-0.5*y^2-17.1*x+22.02*y+5*z-w;
+qx[x_,y_,z_]=x^2+x*(-3.1*y-17.1+16.3*z);
+qz[z_,w_]=-4.8754*z^2+z*(5+12.2*w);
+qy[y_]=-0.5*y^2+22.02*y;
+qw[w_]=w^2-1*w;
 SetPrecision[q[Ix,Iy,Iz,Iw],15]
-(* returns Interval[{-40.474214, 36.508894}] *)
-QXU = MaxValue[{qx[x,y,z], Element[{x}, Ix] && Element[{y}, Iy] && Element[{z}, Iz]}, {x,y,z}];
-QYU = MaxValue[{qy[y], Element[{y}, Iy]}, {y}];
-QWU = MaxValue[{qw[w], Element[{w}, Iw]}, {w}];
-QZU = MaxValue[{qz[z,w], Element[{z}, Iz] && Element[{w}, Iw]}, {z,w}];
-QXL = MinValue[{qx[x,y,z], Element[{x}, Ix] && Element[{y}, Iy] && Element[{z}, Iz]}, {x,y,z}];
-QYL = MinValue[{qy[y], Element[{y}, Iy]}, {y}];
-QWL = MinValue[{qw[w], Element[{w}, Iw]}, {w}];
-QZL = MinValue[{qz[z,w], Element[{z}, Iz] && Element[{w}, Iw]}, {z,w}];
-SetPrecision[QXU+QYU+QWU+QZU,15] (* computes upper bound *)
-SetPrecision[QXL+QYL+QWL+QZL,15] (* computes lower bound *)
-QX = Interval[{QXL, QXU}]; QY = Interval[{QYL, QYU}]; QW = Interval[{QWL, QWU}]; QZ = Interval[{QZL, QZU}];
-(* reverse propagation *)
-Iq = Interval[{35,35}];
-Reduce[Exists[{y,z,r}, qx[x,y,z] == r && Element[{y}, Iy] && Element[{z}, Iz] && Element[{r}, Iq - (QY + QW + QZ)]],Reals]
-Reduce[Exists[{r}, qy[y] == r && Element[{r}, Iq - (QX + QW + QZ)]],Reals]
-Reduce[Exists[{w,r}, qz[z,w] == r && Element[{w}, Iw] && Element[{r}, Iq - (QX + QY + QW)]],Reals]
-Reduce[Exists[{r}, qw[w] == r && Element[{r}, Iq - (QX + QZ + QY)]],Reals]
- *
- * Note that the best values are [-40.3716, 34.4081] for interval evaluation
+QXU=MaxValue[{qx[x,y,z],Element[{x},Ix]&&Element[{y},Iy]&&Element[{z},Iz]},{x,y,z}];
+QYU=MaxValue[{qy[y],Element[{y},Iy]},{y}];
+QWU=MaxValue[{qw[w],Element[{w},Iw]},{w}];
+QZU=MaxValue[{qz[z,w],Element[{z},Iz]&&Element[{w},Iw]},{z,w}];
+QXL=MinValue[{qx[x,y,z],Element[{x},Ix]&&Element[{y},Iy]&&Element[{z},Iz]},{x,y,z}];
+QYL=MinValue[{qy[y],Element[{y},Iy]},{y}];
+QWL=MinValue[{qw[w],Element[{w},Iw]},{w}];
+QZL=MinValue[{qz[z,w],Element[{z},Iz]&&Element[{w},Iw]},{z,w}];
+SetPrecision[QXL+QYL+QWL+QZL,20] (*computes lower bound*)
+SetPrecision[QXU+QYU+QWU+QZU,20] (*computes upper bound*)
+QX=Interval[{QXL,QXU}];QY=Interval[{QYL,QYU}];QW=Interval[{QWL,QWU}];QZ=Interval[{QZL,QZU}];
+(*reverse propagation*)
+Iq=Interval[{35,35}];
+(* Propagating qx: first standard then bilinear terms *)
+rhsx=Iq-(QY+QW+QZ); rx=Reduce[Exists[{y,z},Element[{y},Iy]&&Element[{z},Iz]&&Element[{qx[x,y,z]},rhsx]],Reals];
+newIx=Interval[{MinValue[x,(rx)&&Element[{x},Ix],x],MaxValue[x,(rx)&&Element[{x},Ix],x]}]; (*improves x*)
+Print["new Ix : ",newIx]
+
+bilinxrhs = Interval[{MinValue[y/x-x,Element[{x},newIx]&&Element[{y},rhsx],{x,y}],MaxValue[y/x-x,Element[{x},newIx]&&Element[{y},rhsx],{x,y}]}];
+Print["bilinxrhs ", bilinxrhs, " compare to ", rhsx/newIx - newIx]
+consxforyz=Element[{-3.1*y-17.1+16.3*z},bilinxrhs];
+newIy=Interval[{MinValue[y,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}],MaxValue[y,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}]}]; (* doesn't improve y*)
+Print["new Iy : ",newIy]
+newIz=Interval[{MinValue[z,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}],MaxValue[z,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}]}]; (*improves z*)
+Print["new Iz : ",newIz]
+(* Propagating qz *)
+rhsz=Iq-(QX+QY+QW); rz=Reduce[Exists[{w},Element[{w},Iw]&&Element[{qz[z,w]},rhsz]],Reals];
+newIz=Interval[{MinValue[z,(rz)&&Element[{z},newIz],z],MaxValue[z,(rz)&&Element[{z},newIz],z]}];
+Print["new Iz : ",newIz]
+
+(* 0 is in newIz so we don't do the following *)
+(*conszforw=Element[{5+12.2*w},rhsz/newIz - newIz];
+newIw=Interval[{MinValue[w,conszforw&&Element[{w},Iw],{w}],MaxValue[w,conszforw&&Element[{w},Iw],{w}]}]; (* doesn't improve y*)
+Print["new Iw : ",newIw]*)
+newIw=Iw;
+(* Propagating qy *)
+rhsy=Iq-(QX+QW+QZ); ry=Reduce[Element[{qy[y]},rhsy],Reals];
+newIy=Interval[{MinValue[y,(ry)&&Element[{y},newIy],y],MaxValue[y,(ry)&&Element[{y},newIy],y]}];
+Print["new Iy : ",newIy]
+(* Propagating qw *)
+rhsw=Iq-(QX+QZ+QY); rw=Reduce[Element[{qw[w]},rhsw],Reals];
+newIw=Interval[{MinValue[w,(rw)&&Element[{w},newIw],w],MaxValue[w,(rw)&&Element[{w},newIw],w]}];
+Print["new Iw : ",newIw]
  */
 Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
 {
@@ -624,8 +650,6 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_INTERVAL interval;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
-   SCIP_Real matinf = -40.474214;
-   SCIP_Real matsup = 36.508894;
 
    /* set bounds: is important to do it here so that interval evaluations work */
    SCIPchgVarLb(scip, x, -1.01); SCIPchgVarUb(scip, x, 1.01);
@@ -634,7 +658,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIPchgVarLb(scip, w,  1.49); SCIPchgVarUb(scip, w, 1.51);
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 - 3.1*<x>*<y> + 12.2*<z>*<w> + <w>^2 + 1.3*<z>*<x> - 4.8754*<z>^2 - 0.5*<y>^2 - 17.1*<x> + 22.02*<y> + 5*<z> - <w>", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 - 3.1*<x>*<y> + 12.2*<z>*<w> + <w>^2 + 16.3*<z>*<x> - 4.8754*<z>^2 - 0.5*<y>^2 - 17.1*<x> + 22.02*<y> + 5*<z> - <w>", NULL, &expr) );
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
@@ -679,8 +703,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, FALSE, NULL) );
 
-   cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
-   cr_expect_float_eq(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); cr_expect_geq(interval.sup, matsup);
+   EXPECTFEQ(interval.inf, -54.1092139000245);
+   EXPECTFEQ(interval.sup, 50.1438939955093);
 
    /* test reverse propagation */
    {
@@ -692,10 +716,12 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
-      cr_expect_eq(nreductions, 2);
+      cr_expect_eq(nreductions, 3); /* three because the z improved twice */
       cr_expect_not(infeasible);
-      cr_expect_float_eq(SCIPvarGetLbLocal(z), 0.611389821, 1e-7, "expecting %g, got %g\n", 0.61139, SCIPvarGetLbLocal(z));
-      cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.936379, 1e-6, "expecting %g, got %g\n", -0.936379, SCIPvarGetUbLocal(x));
+
+      EXPECTFEQ(SCIPvarGetLbLocal(z), -0.0485777477946283);
+      EXPECTFEQ(SCIPvarGetUbLocal(z), 0.0198745061962769);
+      EXPECTFEQ(SCIPvarGetUbLocal(x), -0.559537393062365);
       SCIPqueueFree(&queue);
    }
 
@@ -711,6 +737,58 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
+/* code to generate an answer:
+ * MinValue[y/x + 1/2*x, Element[{x}, Ix] && Element[{y}, Ir], {x, y}]
+ * MaxValue[y/x + 1/2*x, Element[{x}, Ix] && Element[{y}, Ir], {x, y}]
+ * for some intervals Ix and Ir (one can also change the coef 1/2 above)
+ */
+Test(nlhdlrquadratic, bilin_rhs_range, .init = setup, .fini = teardown)
+{
+   SCIP_INTERVAL rhs;
+   SCIP_INTERVAL exprdom;
+   SCIP_INTERVAL range;
+
+   rhs.inf = -8.0;
+   rhs.sup = -4.0;
+
+   exprdom.inf = 1.0;
+   exprdom.sup = 10.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   EXPECTFEQ(range.inf, -8.25);
+   EXPECTFEQ(range.sup, -2.0);
+
+   exprdom.inf = -10.0;
+   exprdom.sup = -1.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   EXPECTFEQ(range.inf, 2.0);
+   EXPECTFEQ(range.sup, 8.25);
+
+   rhs.inf = -8.0;
+   rhs.sup = 4.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   EXPECTFEQ(range.inf, -3.75);
+   EXPECTFEQ(range.sup, 8.25);
+
+   computeRangeForBilinearProp(exprdom, 0.0, rhs, &range);
+   EXPECTFEQ(range.inf, -4.0);
+   EXPECTFEQ(range.sup, 8.0);
+
+   rhs.inf = 0.0;
+   rhs.sup = 4.0;
+
+   computeRangeForBilinearProp(exprdom, -0.5, rhs, &range);
+   EXPECTFEQ(range.inf, -5.4);
+   EXPECTFEQ(range.sup, -0.5);
+
+   exprdom.inf = -1.0;
+   exprdom.sup = 10.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, range));
+}
 
 /* test propagation of x*y + z + z^2; this is interesting to see how reverse propagation handles the term x*y.
  *
