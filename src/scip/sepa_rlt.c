@@ -59,6 +59,7 @@
 #define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
 #define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
 #define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
+#define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
 
 #define MAXVARBOUND                1e+5 /**< maximum allowed variable bound for computing an RLT-cut */
 
@@ -117,6 +118,7 @@ struct SCIP_SepaData
    SCIP_Bool             useprojection;      /**< whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
    SCIP_Bool             hiddenrlt;          /**< whether RLT cuts should be added for hidden products */
+   SCIP_Bool             addtopool;          /**< whether RLT cuts are added to the global cut pool */
 
    /* TODO remove this when done with cliques */
    SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
@@ -2700,26 +2702,35 @@ SCIP_RETCODE separateRltCuts(
             /* if the cut was created successfully and is violated, it is added to SCIP */
             if( success )
             {
-               if( SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
+               if( sepadata->addtopool )
                {
-                  /* add the row to SCIP; equality cuts are forced to be added to the LP */
-                  SCIP_CALL( SCIPaddRow(scip, cut, buildeqcut, &infeasible) );
-                  ++*ncuts;
-
-                  if( infeasible )
-                  {
-                     SCIPinfoMessage(scip, NULL, "CUTOFF! The cut obtained from row %d and multiplied with id %d (%s, %s, eq = %s) revealed infeasibility\n",
-                                     SCIProwGetIndex(row), SCIPvarGetIndex(xj), uselb[k] ? "lb" : "ub", uselhs[k] ? "lhs" : "rhs", buildeqcut ? "true" : "false");
-                     *result = SCIP_CUTOFF;
-                  }
-                  else
-                  {
-                     SCIPdebugMsg(scip, "SEPARATED: added cut to scip\n");
-                     *result = SCIP_SEPARATED;
-                  }
+                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
                else
-                  SCIPdebugMsg(scip,"\nthe cut from row %d and mult %d was created successfully, but is not violated", SCIProwGetIndex(row), SCIPvarGetIndex(xj));
+               {
+                  if( SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
+                  {
+                     /* add the row to SCIP; equality cuts are forced to be added to the LP */
+                     SCIP_CALL( SCIPaddRow(scip, cut, buildeqcut, &infeasible) );
+
+                     ++*ncuts;
+
+                     if( infeasible )
+                     {
+                        SCIPinfoMessage(scip, NULL, "CUTOFF! The cut obtained from row %d and multiplied with id %d (%s, %s, eq = %s) revealed infeasibility\n",
+                                        SCIProwGetIndex(row), SCIPvarGetIndex(xj), uselb[k] ? "lb" : "ub", uselhs[k] ? "lhs" : "rhs", buildeqcut ? "true" : "false");
+                        *result = SCIP_CUTOFF;
+                     }
+                     else
+                     {
+                        SCIPdebugMsg(scip, "SEPARATED: added cut to scip\n");
+                        *result = SCIP_SEPARATED;
+                     }
+                  }
+                  else
+                     SCIPdebugMsg(scip,"\nthe cut from row %d and mult %d was created successfully, but is not violated", SCIProwGetIndex(row), SCIPvarGetIndex(xj));
+               }
+
             } else
                SCIPdebugMsg(scip, "the generation of the cut failed\n");
 
@@ -3281,6 +3292,10 @@ SCIP_RETCODE SCIPincludeSepaRlt(
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/hiddenrlt",
            "if set to true, RLT cuts are added for hidden products",
            &sepadata->hiddenrlt, FALSE, DEFAULT_HIDDENRLT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/addtopool",
+        "if set to true, RLT cuts are added to the global cut pool",
+        &sepadata->addtopool, FALSE, DEFAULT_ADDTOPOOL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
