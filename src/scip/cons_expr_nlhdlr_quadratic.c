@@ -1012,6 +1012,34 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuadratic)
    return SCIP_OKAY;
 }
 
+/** returns max of a/x - c*x for x in {x1, x2} with x1, x2 > 0 */
+static
+SCIP_Real computeMaxBoundaryForBilinearProp(
+   SCIP_Real a,
+   SCIP_Real c,
+   SCIP_Real x1,
+   SCIP_Real x2
+   )
+{
+   SCIP_Real cneg;
+   SCIP_Real cand1;
+   SCIP_Real cand2;
+   SCIP_ROUNDMODE roundmode;
+
+   assert(x1 > 0.0);
+   assert(x2 > 0.0);
+
+   cneg = SCIPintervalNegateReal(c);
+
+   roundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeUpwards();
+   cand1 = a/x1 + cneg*x1;
+   cand2 = a/x2 + cneg*x2;
+   SCIPintervalSetRoundingMode(roundmode);
+
+   return MAX(cand1, cand2);
+}
+
 /** returns max of a/x - c*x for x in dom; it assumes that dom is contained in (0, +inf) */
 static
 SCIP_Real computeMaxForBilinearProp(
@@ -1020,29 +1048,53 @@ SCIP_Real computeMaxForBilinearProp(
    SCIP_INTERVAL dom
    )
 {
-   SCIP_Real maxboundary;
+   SCIP_ROUNDMODE roundmode;
+   SCIP_INTERVAL argmax;
+   SCIP_Real negunresmax;
+   SCIP_Real boundarymax;
    assert(dom.inf > 0);
 
-   maxboundary = MAX(a / dom.inf - c * dom.inf, a / dom.sup - c * dom.sup);
    /* if a >= 0, then the function is convex which means the maximum is at one of the boundaries
+    *
     * if c = 0, then the function is monotone which means the maximum is also at one of the boundaries
-    */
-   if( a >= 0.0 || c == 0.0 )
-      return maxboundary;
-
-   /* a < 0, so the function is concave. The function has a minimum if and only if there is a point with derivative 0,
+    *
+    * if a < 0, then the function is concave. The function then has a maximum if and only if there is a point with derivative 0,
     * that is, iff -a/x^2 - c = 0 has a solution; i.e. if -a/c >= 0, i.e. (using a<0 and c != 0), c > 0.
     * Otherwise (that is, c<0), the maximum is at one of the boundaries.
     */
-   if( c < 0.0 )
-      return maxboundary;
+   if( a >= 0.0 || c <= 0.0 )
+      return computeMaxBoundaryForBilinearProp(a, c, dom.inf, dom.sup);
 
-   /* now, if the argmax is not in the interior of dom then the solution is at a boundary */
-   if( -a/c <= SQR(dom.inf) || -a/c >= SQR(dom.sup) )
-      return maxboundary;
+   /* now, the (unrestricted) maximum is at sqrt(-a/c).
+    * if the argmax is not in the interior of dom then the solution is at a boundary, too
+    * we check this by computing an interval that contains sqrt(-a/c) first
+    */
+   SCIPintervalSet(&argmax, -a);
+   SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &argmax, argmax, c);
+   SCIPintervalSquareRoot(SCIP_INTERVAL_INFINITY, &argmax, argmax);
 
-   /* finally, the solution is at the maximum */
-   return -2.0 * SQRT(- a * c );
+   /* if the interval containing sqrt(-a/c) does not intersect with the interior of dom, then
+    * the (restricted) maximum is at a boundary (we could even say at which boundary, but that doesn't save much)
+    */
+   if( argmax.sup <= dom.inf || argmax.inf >= dom.sup )
+      return computeMaxBoundaryForBilinearProp(a, c, dom.inf, dom.sup);
+
+   /* the maximum at sqrt(-a/c) is -2*sqrt(-a*c), so we compute an upper bound for that by computing a lower bound for 2*sqrt(-a*c) */
+   roundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeDownwards();
+   negunresmax = 2.0*SCIPnextafter(sqrt(SCIPintervalNegateReal(a)*c), 0.0);
+   SCIPintervalSetRoundingMode(roundmode);
+
+   /* if the interval containing sqrt(-a/c) is contained in dom, then we can return -negunresmax */
+   if( argmax.inf >= dom.inf && argmax.sup <= dom.sup )
+      return -negunresmax;
+
+   /* now what is left is the case where we cannot say for sure whether sqrt(-a/c) is contained in dom or not
+    * so we are conservative and return the max of both cases, i.e.,
+    * the max of the upper bounds on -2*sqrt(-a*c), a/dom.inf-c*dom.inf, a/dom.sup-c*dom.sup.
+    */
+   boundarymax = computeMaxBoundaryForBilinearProp(a, c, dom.inf, dom.sup);
+   return MAX(boundarymax, -negunresmax);
 }
 
 /** computes the range of rhs/x - coef * x for x in exprdom; this is used for the propagation of bilinear terms
