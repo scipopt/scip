@@ -45,6 +45,7 @@
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -984,8 +985,10 @@ SCIP_RETCODE applyVbounds(
    {
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
-      if( cutoff )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result)
+       * if we are not in exact solving mode
+       */
+      if( cutoff && !SCIPisExactSolve(scip) )
       {
          SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          goto TERMINATE;
