@@ -54,6 +54,7 @@
 #define DEFAULT_MAXFREQLOC    FALSE
 #define DEFAULT_MAXNBESTSOLS  30
 #define DEFAULT_NBESTSOLS     15
+#define DEFAULT_NELITESOLS    3
 #define DEFAULT_MINNBESTSOLS  10
 #define DEFAULT_RANDSEED      1492          /**< random seed                                                                       */
 #define LOCAL_MAXRESTARTS  10
@@ -3716,8 +3717,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( (v > heurdata->nbestsols && !(heurdata->maxfreq)) )
       return SCIP_OKAY;
 
-   /* has the new solution been found by this very heuristic? */
-   if( SCIPsolGetHeur(initialsol) == heur )
+   /* has the new solution been found by this very heuristic
+    * and not among the elite solutions? (note that there can still be an improvement because heuristic is aborted early) */
+   if( SCIPsolGetHeur(initialsol) == heur && v > DEFAULT_NELITESOLS )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;

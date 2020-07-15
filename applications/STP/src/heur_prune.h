@@ -40,13 +40,9 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    GRAPH*                prunegraph,         /**< pruned graph data structure */
-   PATH*                 path,               /**< shortest path struct */
-   int*                  nodearrint,         /**< array */
-   int*                  edgearrint,         /**< array */
    int*                  solnode,            /**< array for best solution nodes wrt prunegraph */
    int*                  soledge,            /**< array for best solution edges wrt prunegraph */
    int*                  globalsoledge,      /**< array storing best solution wrt g */
-   STP_Bool*             nodearrchar,        /**< array */
    SCIP_Real*            globalobj,          /**< pointer to objective value of best solution wrt g */
    SCIP_Bool             incumbentgiven,     /**< incumbent solution for pruned graph given? */
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */

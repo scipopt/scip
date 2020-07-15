@@ -687,8 +687,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
          assert(solstp_isValid(scip, prunegraph, soledge));
 
-         SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, path, nodearrint, edgearrint2, solnode, soledge,
-               globalsoledge, nodearrchar, &globalobj, TRUE, success) );
+         SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, solnode, soledge,
+               globalsoledge, &globalobj, TRUE, success) );
 
          /* calculate objective value of solution */
          obj = solstp_getObjBounded(prunegraph, soledge, offsetnew, nedges);
@@ -714,15 +714,11 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
                vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
       }
 
-      /* graph vanished? */
-      if( prunegraph->grad[prunegraph->source] == 0 )
-         break;
-
       /* get number of remaining edges */
       graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
-
    } /* reduction loop */
 
+   /* NOTE: might still help, even though heuristic was already called */
    SCIP_CALL(SCIPStpHeurLocalRun(scip, g, globalsoledge));
 
    graph_path_exit(scip, prunegraph);

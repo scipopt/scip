@@ -168,8 +168,8 @@ SCIP_RETCODE computeNewSols(
 
    SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
 
-   SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, path, nodearrint, edgearrint, solnode, soledge,
-         globalsoledge, nodearrchar, globalobj, incumbentgiven, success) );
+   SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, solnode, soledge,
+         globalsoledge, globalobj, incumbentgiven, success) );
 
    return SCIP_OKAY;
 }
@@ -478,20 +478,16 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    GRAPH*                prunegraph,         /**< pruned graph data structure */
-   PATH*                 path,               /**< shortest path struct */
-   int*                  nodearrint,         /**< array */
-   int*                  edgearrint,         /**< array */
    int*                  solnode,            /**< array for best solution nodes wrt prunegraph */
    int*                  soledge,            /**< array for best solution edges wrt prunegraph */
    int*                  globalsoledge,      /**< array storing best solution wrt g */
-   STP_Bool*             nodearrchar,        /**< array */
    SCIP_Real*            globalobj,          /**< pointer to objective value of best solution wrt g */
    SCIP_Bool             incumbentgiven,     /**< incumbent solution for pruned graph given? */
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
    SCIP_Real objnew;
-   int* const pmark = prunegraph->mark;
+   int* RESTRICT edgearrint;
    const int nnodes = g->knots;
    const int nedges = g->edges;
    const int probtype = g->stp_type;
@@ -500,11 +496,9 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
    assert(g != NULL);
    assert(scip != NULL);
    assert(soledge != NULL);
-   assert(path != NULL);
    assert(solnode != NULL);
-   assert(edgearrint != NULL);
-   assert(nodearrint != NULL);
-   assert(nodearrchar != NULL);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
 
    /*
     * compare new solution on pruned graph with (reconstructed) incumbent
@@ -512,7 +506,10 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
    if( incumbentgiven )
    {
+      PATH* path;
       SCIP_Real objold;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
 
       objnew = solstp_getObjBounded(prunegraph, soledge, 0.0, nedges);
 
@@ -538,6 +535,8 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
          assert(SCIPisEQ(scip, objold, solstp_getObjBounded(prunegraph, soledge, 0.0, nedges)));
       }
+
+      SCIPfreeBufferArray(scip, &path);
    }
 
    assert(solstp_isValid(scip, prunegraph, soledge));
@@ -583,10 +582,11 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
 
    assert(*globalobj < FARAWAY);
 
-   for( int k = 0; k < nnodes; k++ )
-      pmark[k] = (prunegraph->grad[k] > 0);
+   graph_mark(prunegraph);
 
    *success = TRUE;
+
+   SCIPfreeBufferArray(scip, &edgearrint);
 
    return SCIP_OKAY;
 }
