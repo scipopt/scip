@@ -1059,6 +1059,19 @@ void SCIPintervalMulScalar(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand1));
 
+   if( operand2 == 1.0 )  /*lint !e777*/
+   {
+      *resultant = operand1;
+      return;
+   }
+
+   if( operand2 == -1.0 )  /*lint !e777*/
+   {
+      resultant->inf = -operand1.sup;
+      resultant->sup = -operand1.inf;
+      return;
+   }
+
    roundmode = intervalGetRoundingMode();
 
    /* compute infimum result */
