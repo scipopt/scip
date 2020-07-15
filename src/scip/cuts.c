@@ -8089,7 +8089,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          /* rather be on the safe side in numerical corner cases and relax the coefficient to exactly \bar{a}.
           * In that case the coefficient is not treated as in C^+ but as being <= \bar{a} and therefore in C^-.
           */
-         if( QUAD_TO_DBL(coefminusabar) > SCIPepsilon(scip) )
+         if( QUAD_TO_DBL(coefminusabar) > SCIPfeastol(scip) )
             ++cplussize;
          else
             coverstatus[Cpos[k]] = -1;
