@@ -652,8 +652,9 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 #endif
 
       /*  perform reductions */
-      SCIP_CALL( reduce_daSlackPrune(scip, vars, prunegraph, vnoi, cost, costrev, nodearrreal, &ubnew,
-            soledge, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph)) );
+      SCIP_CALL( reduce_daSlackPrune(scip, prunegraph, vnoi, cost, costrev, nodearrreal, &ubnew,
+            soledge, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph),
+            &apsuccess) );
 
       /* delete all vertices not reachable from the root */
       SCIP_CALL( reduceLevel0(scip, prunegraph) );
@@ -674,15 +675,14 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          i = SLACKPRUNE_MAXREDROUNDS;
       }
 
-      int todo;
-      // todo: check wheter soledge is valid, and if so, don't rerun!
-
       /* compute potential new guiding solution */
-      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, prunegraph->source, &apsuccess, FALSE) );
+    //  SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, prunegraph->source, &apsuccess, FALSE) );
 
       /* solution found by ascend and prune? */
       if( apsuccess )
       {
+         assert(solstp_isValid(scip, prunegraph, soledge));
+
          SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
 
          assert(solstp_isValid(scip, prunegraph, soledge));

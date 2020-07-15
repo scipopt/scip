@@ -2618,14 +2618,13 @@ SCIP_RETCODE reduce_da(
 /** dual ascent reduction for slack-and-prune heuristic */
 SCIP_RETCODE reduce_daSlackPrune(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< problem variables or NULL */
    GRAPH*                graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            cost,               /**< array to store reduced costs */
    SCIP_Real*            costrev,            /**< reverse edge costs */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    SCIP_Real*            upperbound,         /**< pointer to store new upper bound */
-   int*                  edgearrint,         /**< int edges array to store solution value  */
+   int*                  soledge,            /**< solution edges (in/out) */
    int*                  edgearrint2,        /**< int edges array for internal computations */
    int*                  vbase,              /**< array for Voronoi bases */
    int*                  pathedge,           /**< array for predecessor edge on a path */
@@ -2635,7 +2634,8 @@ SCIP_RETCODE reduce_daSlackPrune(
    STP_Bool*             edgearrchar,        /**< STP_Bool edge array for internal computations  */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   minelims,           /**< minimum number of edges to eliminate */
-   SCIP_Bool             solgiven            /**< solution provided? */
+   SCIP_Bool             solgiven,           /**< solution provided? */
+   SCIP_Bool*            solImproved         /**< solution provided? */
    )
 {
    SCIP_Real obj;
@@ -2671,7 +2671,7 @@ SCIP_RETCODE reduce_daSlackPrune(
    assert(costrev != NULL);
    assert(pathedge != NULL);
    assert(upperbound != NULL);
-   assert(edgearrint != NULL);
+   assert(soledge != NULL);
    assert(edgearrint2 != NULL);
    assert(nodearrchar != NULL);
    assert(edgearrchar != NULL);
@@ -2679,6 +2679,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    /* 1. step: initialize */
 
+   *solImproved = FALSE;
    rpc = (graph->stp_type == STP_RPCSPG);
    grad = graph->grad;
    root = graph->source;
@@ -2722,7 +2723,6 @@ SCIP_RETCODE reduce_daSlackPrune(
       graph_pc_2trans(scip, graph);
    }
 
-
    if( !solgiven )
    {
       /* try to build MST on solnode nodes */
@@ -2730,7 +2730,7 @@ SCIP_RETCODE reduce_daSlackPrune(
          graph->mark[i] = (solnode[i] == CONNECT);
 
       for( e = 0; e < nedges; e++ )
-         edgearrint[e] = UNKNOWN;
+         soledge[e] = UNKNOWN;
 
       graph_path_exec(scip, graph, MST_MODE, root, graph->cost, vnoi);
 
@@ -2739,7 +2739,7 @@ SCIP_RETCODE reduce_daSlackPrune(
          e = vnoi[i].edge;
          if( e >= 0 )
          {
-            edgearrint[e] = CONNECT;
+            soledge[e] = CONNECT;
          }
          else if( Is_term(graph->term[i]) && i != root )
          {
@@ -2762,7 +2762,7 @@ SCIP_RETCODE reduce_daSlackPrune(
                   continue;
 
                for( e = graph->outbeg[l]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( edgearrint[e] == CONNECT )
+                  if( soledge[e] == CONNECT )
                      break;
 
                if( e == EAT_LAST )
@@ -2770,9 +2770,9 @@ SCIP_RETCODE reduce_daSlackPrune(
                   /* there has to be exactly one incoming edge */
                   for( e = graph->inpbeg[l]; e != EAT_LAST; e = graph->ieat[e] )
                   {
-                     if( edgearrint[e] == CONNECT )
+                     if( soledge[e] == CONNECT )
                      {
-                        edgearrint[e] = UNKNOWN;
+                        soledge[e] = UNKNOWN;
                         solnode[l] = UNKNOWN;
                         count++;
                         break;
@@ -2790,9 +2790,9 @@ SCIP_RETCODE reduce_daSlackPrune(
    {
       DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
                   .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
-      obj = getSolObj(scip, graph, edgearrint);
+      obj = getSolObj(scip, graph, soledge);
 
-      SCIP_CALL( dualascent_exec(scip, graph, edgearrint, &daparams, cost, &lpobjval) );
+      SCIP_CALL( dualascent_exec(scip, graph, soledge, &daparams, cost, &lpobjval) );
    }
    else
    {
@@ -2856,13 +2856,15 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    if( success && SCIPisLT(scip, objprune, obj ) )
    {
+      *solImproved = TRUE;
+
       for( i = 0; i < nnodes; i++ )
          solnode[i] = UNKNOWN;
 
       for( e = 0; e < nedges; e++ )
       {
-         edgearrint[e] = edgearrint2[e];
-         if( edgearrint[e] == CONNECT )
+         soledge[e] = edgearrint2[e];
+         if( soledge[e] == CONNECT )
          {
             solnode[graph->tail[e]] = CONNECT;
             solnode[graph->head[e]] = CONNECT;
@@ -2874,7 +2876,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    for( e = 0; e < nedges; e++ )
    {
-      if( edgearrint[e] == CONNECT )
+      if( soledge[e] == CONNECT )
          obj += graph->cost[e];
 
       marked[e] = FALSE;
@@ -3007,7 +3009,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 
                /* for rpc no artificial terminal arcs should be deleted; in general: delete no solution edges */
                if( (rpc && !graph->mark[head])
-                  || (edgearrint[e] == CONNECT) || (edgearrint[flipedge(e)] == CONNECT) )
+                  || (soledge[e] == CONNECT) || (soledge[flipedge(e)] == CONNECT) )
                {
                   e = etmp;
                   continue;
@@ -3097,9 +3099,6 @@ SCIP_RETCODE reduce_daSlackPrune(
 
  TERMINATE:
    *nelims = nfixed;
-
-   if( edgearrchar == NULL )
-      SCIPfreeBufferArray(scip, &marked);
 
    return SCIP_OKAY;
 }
