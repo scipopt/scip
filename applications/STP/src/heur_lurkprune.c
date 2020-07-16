@@ -33,6 +33,7 @@
 #include "scip/cons_linear.h"
 #include "heur_lurkprune.h"
 #include "heur_ascendprune.h"
+#include "dualascent.h"
 #include "heur_local.h"
 #include "heur_prune.h"
 #include "graph.h"
@@ -55,8 +56,8 @@
 
 #define DEFAULT_LURKPRUNE_MAXFREQ   FALSE       /**< executions of the heuristic at maximum frequency?                             */
 #define LURKPRUNE_NTMRUNS           30          /**< TM heur runs */
-#define LURKPRUNE_MINREDELIMS       2           /**< minimum number of eliminations for reduction package when called by lurk-and-prune heuristic */
-#define LURKPRUNE_MAXREDROUNDS      5           /**< maximum number of reduction rounds in lurk-prune heuristic */
+#define LURKPRUNE_MINREDELIMS       10           /**< minimum number of eliminations for reduction package when called by lurk-and-prune heuristic */
+#define LURKPRUNE_MAXREDROUNDS      10           /**< maximum number of reduction rounds in lurk-prune heuristic */
 #define LURKPRUNE_MINLURKEDGE_RATIO 0.05
 #define LURKPRUNE_MINSTALLPROPORTION   0.25      /**< minimum proportion of arcs to be fixed before restarting lurk-prune heuristic */
 #define LURKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting lurk-prune heuristic */
@@ -430,11 +431,22 @@ SCIP_RETCODE updateSolution(
    int* soledge = lurkprune->soledge;
    int* solnode = lurkprune->solnode;
 
-   if( 0 )
+   if( graph_pc_isRootedPcMw(g) || graph_typeIsSpgLike(g) )
    {
-     int todo; // probably call da here and also use it for reductions?
-     // SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, redcost, soledge, prunegraph->source, &success, FALSE) );
+      SCIP_Real* redcost;
+      SCIP_Real obj = 0.0;
+      DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = prunegraph->source,
+                      .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
 
+      SCIP_CALL( SCIPallocBufferArray(scip, &redcost, g->edges) );
+
+      SCIP_CALL( dualascent_exec(scip, g, NULL, &daparams, redcost, &obj) );
+
+      SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, redcost, soledge, -1, &success, FALSE) );
+
+      int todo; // do reducctions based on redcost
+
+      SCIPfreeBufferArray(scip, &redcost);
    }
    else
    {
@@ -754,7 +766,7 @@ SCIP_RETCODE SCIPStpHeurLurkPruneRun(
    lurkpruneFinalize(scip, g, prunegraph, soledge, &lurkprune, solimproved);
    assert(solstp_isValid(scip, g, soledge));
 
-   exit(1);
+   //exit(1);
 
    return SCIP_OKAY;
 }
