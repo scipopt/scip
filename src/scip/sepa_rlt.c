@@ -36,6 +36,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_setppc.h"
 #include "scip/struct_scip.h"
+#include "scip/lp.h"
 
 
 #define SEPA_NAME              "rlt"
@@ -118,7 +119,7 @@ struct SCIP_SepaData
    SCIP_Bool             useprojection;      /**< whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
    SCIP_Bool             hiddenrlt;          /**< whether RLT cuts should be added for hidden products */
-   SCIP_Bool             addtopool;          /**< whether RLT cuts are added to the global cut pool */
+   SCIP_Bool             addtopool;          /**< whether globally valid RLT cuts are added to the global cut pool */
 
    /* TODO remove this when done with cliques */
    SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
@@ -2702,8 +2703,10 @@ SCIP_RETCODE separateRltCuts(
             /* if the cut was created successfully and is violated, it is added to SCIP */
             if( success )
             {
-               if( sepadata->addtopool )
+               if( sepadata->addtopool && (SCIPgetDepth(scip) == 0 || !allowlocal ) )
                {
+                  /* the cut is globally valid and adding cuts to the global cut pool is enabled */
+                  SCIP_CALL( SCIProwChgLocal(cut, FALSE) );
                   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
                else
@@ -3294,7 +3297,7 @@ SCIP_RETCODE SCIPincludeSepaRlt(
            &sepadata->hiddenrlt, FALSE, DEFAULT_HIDDENRLT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/addtopool",
-        "if set to true, RLT cuts are added to the global cut pool",
+        "if set to true, globally valid RLT cuts are added to the global cut pool",
         &sepadata->addtopool, FALSE, DEFAULT_ADDTOPOOL, NULL, NULL) );
 
    return SCIP_OKAY;
