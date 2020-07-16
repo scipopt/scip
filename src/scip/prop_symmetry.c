@@ -2298,6 +2298,7 @@ SCIP_RETCODE determineSymmetry(
    {
       propdata->ofenabled = FALSE;
       propdata->symconsenabled = FALSE;
+      propdata->sstenabled = FALSE;
       return SCIP_OKAY;
    }
 
