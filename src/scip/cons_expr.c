@@ -2444,6 +2444,11 @@ SCIP_RETCODE detectNlhdlrs(
          SCIPdebugMsg(scip, "infeasibility detected while detecting nlhdlr\n");
          break;
       }
+
+      /* propagate constraint again, even if there is no boundchange, to make sure we don't miss any boundchange
+       * TODO we should not need this, since we have run reverseprop in detectNlhdlr(), but this seems to help primal heuristics on sfacloc2_4_80 permutation 4
+       */
+      consdata->ispropagated = FALSE;
    }
 
 #if 0
@@ -2458,7 +2463,7 @@ SCIP_RETCODE detectNlhdlrs(
    /* ensure that all activities are reevaluated in a following propConss
     * The SCIPregisterConsExprExprUsage() for each constraint (see above) will already have reevaluated all activities,
     * which means that a following propConss will skip all constraints. But in propagation we collect candidates for
-    * re-propagate during forwardPropExpr(), so we need to make sure that it will be run again. (TODO: this should work differently)
+    * reversepropagation during forwardPropExpr(), so we need to make sure that it will be run again. (TODO: this should work differently)
     */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
 #endif
