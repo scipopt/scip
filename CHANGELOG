@@ -9,10 +9,10 @@ Features
 - Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
   are now deleted when during a restart.
 
-- in-tree restarts due to tree size estimation have been made compatible with orbital fixing
-
 Performance improvements
 ------------------------
+
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 
 Examples and applications
 -------------------------
