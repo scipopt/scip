@@ -28,8 +28,8 @@ endif()
 
 set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 0)
-set(SCIP_VERSION_SUB 2)
+set(SCIP_VERSION_PATCH 1)
+set(SCIP_VERSION_SUB 3)
 set(SCIP_VERSION_API 68)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
@@ -470,7 +470,7 @@ else()
     endif()
 endif()
 
-find_package(Criterion)
+find_package(CRITERION)
 
 # export compilation settings to header file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${CMAKE_BINARY_DIR}/scip/config.h @ONLY)

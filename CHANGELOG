@@ -14,6 +14,8 @@ Features
 Performance improvements
 ------------------------
 
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
+
 Examples and applications
 -------------------------
 
@@ -86,7 +88,7 @@ Known bugs
 
 @page RN70 Release notes for SCIP 7.0
 
-@section RN701 SCIP 7.0.1
+@section RN000 SCIP 7.0.2
 *************************
 
 Features
@@ -131,31 +133,56 @@ Build system
 
 ### Cmake
 
-adjust cmake module for Ipopt 3.13
-add cmake variable BLISS_LIBRARY_DIR to pass a bliss library
-add warning to require minimal gcc version 4.8
-
 ### Makefile
-
-update make/make.project for mac
-fix a typo in SANITIZERFLAGS, if SHARED=true, add SANITZERFLAGS also to LIBBUILDFLAGS and always add SANITZERFLAGS to LDFLAGS
-fix GCC version check in Makefiles
 
 Fixed bugs
 ----------
 
-- Fixed handling of constant term in quadratic objective of pip-reader.
+- Fixed overflow in inference information of cumulative constraint handler
+- Fixed problem with propfreq == 0 in cons_linear.c
+- Fixed problem with incompatibility of symmetry handling in Benders decomposition
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+@section RN701 SCIP 7.0.1
+*************************
+
+Build system
+------------
+
+### Cmake
+
+- Fixed cmake module for Ipopt to support Ipopt 3.13
+- Added cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+- Added warning to require minimal GCC version 4.8
+- Renamed FindCriterion cmake findmodule to FindCRITERION
+
+### Makefile
+
+- Updated make/make.project for macOS
+- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS)
+- Fixed GCC version check in make/make.linux.gnu.dbg
+
+Fixed bugs
+----------
+
+- Fixed handling of constant term in quadratic objective of pip-reader
 - Fixed incorrect value string for parameter estimation/completiontype
 - Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
+- Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
+- Fixed inability to set a value in a solution if it was within epsilon to the current value
+- Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
+  to end of SCIP structs
 
 Miscellaneous
 -------------
 
 - Variables that are marked as relaxation-only are no longer checked against debug solutions if
   they are captured by the transformed problem only.
-
-Known bugs
-----------
 
 @section RN700 SCIP 7.0.0
 *************************

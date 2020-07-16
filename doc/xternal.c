@@ -58,6 +58,7 @@
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
  *  - @subpage CHG                 Release notes and changelog
  *  - @subpage AUTHORS             SCIP Authors
+ *  - @subpage EXTERNALDOC         Links to external documentation
  *
  *
  * @section QUICKSTART Quickstart
@@ -76,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.0.2
+ * @version  7.0.1.3
  *
  * \image html scippy.png
  */
@@ -231,6 +232,12 @@
  * A list of all current and former developers as well as contributors can
  * be found on the
  * <a class="el" href="http://scipopt.org/#developers">Main Web Page</a>.
+ *
+ */
+
+/**@page EXTERNALDOC  Links to external documentation
+ *
+ * <a class="el" href="https://www.cgudapati.com/integer-programming/2019/12/15/Getting-Started-With-SCIP-Optimization-Suite.html">Getting Started with SCIP optimization in C++: A toy example</a> by Chaitanya Gudapati.
  *
  */
 

@@ -16126,7 +16126,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
       rangedrowpropagation = rangedrowpropagation && !SCIPinRepropagation(scip);
       rangedrowpropagation = rangedrowpropagation && (depth <= conshdlrdata->rangedrowmaxdepth);
       rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
-      rangedrowpropagation = rangedrowpropagation && (depth % rangedrowfreq == 0);
+      rangedrowpropagation = rangedrowpropagation && (conshdlrdata->rangedrowfreq >= 0)
+         && ((rangedrowfreq == 0 && depth == 0) || (rangedrowfreq >= 1 && (depth % rangedrowfreq == 0)));
    }
 
    cutoff = FALSE;

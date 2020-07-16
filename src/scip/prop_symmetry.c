@@ -2293,6 +2293,14 @@ SCIP_RETCODE determineSymmetry(
       return SCIP_OKAY;
    }
 
+   /* do not compute symmetry if Benders decomposition enabled */
+   if ( SCIPgetNActiveBenders(scip) > 0 )
+   {
+      propdata->ofenabled = FALSE;
+      propdata->symconsenabled = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* skip symmetry computation if no graph automorphism code was linked */
    if ( ! SYMcanComputeSymmetry() )
    {
