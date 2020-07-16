@@ -200,6 +200,70 @@ SCIP_Bool SCIPlpExactIsSolved(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets objective value of current exact LP (which is the sum of column and loose objective value)
+ *
+ *  @return the objective value of current LP (which is the sum of column and loose objective value).
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible
+ *        if a limit was hit during solving. It must not be used as a dual bound if the LP solution status returned by
+ *        SCIPgetLPSolstat() is SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_Rational* SCIPgetLPExactObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** changes variable's lower bound in current exact dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPchgVarLbExactDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   );
+
+/** changes variable's upper bound in current exact dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPchgVarUbExactDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   );
+
+/** quits exact LP diving and resets bounds and objective values of columns to the current node's values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPendExactDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -60,6 +60,7 @@
 #include "scip/scip_copy.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_general.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_nlp.h"
@@ -1183,6 +1184,32 @@ SCIP_RETCODE SCIPlinkLPSol(
    }
 
    SCIP_CALL( SCIPsolLinkLPSol(sol, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+/** links a primal solution to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPlinkLPSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpExactIsSolved(scip) )
+   {
+      SCIPerrorMessage("Exact LP solution does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolLinkLPSolExact(sol, scip->lpexact) );
 
    return SCIP_OKAY;
 }

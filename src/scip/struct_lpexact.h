@@ -82,6 +82,46 @@
 extern "C" {
 #endif
 
+/** collected values of a exact column which depend on the LP solution
+ *  We store these values in each column to recover the LP solution at start of diving or probing mode, say, without
+ *  having to resolve the LP.  Note that we do not store the farkascoef value since we do expect a node with infeasible
+ *  LP to be pruned anyway.
+ */
+struct SCIP_ColExactSolVals
+{
+   SCIP_Rational*        primsol;            /**< primal solution value in LP, is 0 if col is not in LP */
+   SCIP_Rational*        redcost;            /**< reduced cost value in LP, or SCIP_INVALID if not yet calculated */
+   unsigned int          basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
+};
+
+/** collected values of a exact row which depend on the LP solution
+ *  We store these values in each row to recover the LP solution at start of diving or probing mode, say, without having
+ *  to resolve the LP.  We do not store the dualfarkas value since we expect a node with infeasible LP to be pruned
+ *  anyway. In this unlikely case, we have to resolve the LP.
+ */
+struct SCIP_RowExactSolVals
+{
+   SCIP_Rational*        dualsol;            /**< dual solution value in LP, is 0 if row is not in LP */
+   SCIP_Rational*        activity;           /**< row activity value in LP, or SCIP_INVALID if not yet calculated */
+   unsigned int          basisstatus:2;      /**< basis status of row in last LP solution, invalid for non-LP rows */
+};
+
+/** collected values of the exact LP data which depend on the exact LP solution
+ *  We store these values to recover the exact LP solution at start of diving or probing mode, say, without having
+ *  to resolve the exact LP.
+ */
+struct SCIP_LpExactSolVals
+{
+   SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
+   SCIP_Rational*        lpobjval;           /**< objective value of LP without loose variables, or SCIP_INVALID */
+   SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
+   SCIP_Bool             primalchecked;      /**< was current LP solution checked for primal feasibility? */
+   SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
+   SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
+   SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             lpissolved;         /**< is current LP solved? */
+};
+
 /** LP column;
  *  The row vector of the LP column is partitioned into two parts: The first col->nlprows rows in the rows array
  *  are the ones that belong to the current LP (col->rows[j]->lppos >= 0) and that are linked to the column
@@ -106,6 +146,7 @@ struct SCIP_ColExact
    SCIP_Rational**       vals;               /**< coefficients of column entries */
    SCIP_Longint          validredcostlp;     /**< LP number for which reduced cost value is valid */
    SCIP_Longint          validfarkaslp;      /**< LP number for which Farkas coefficient is valid */
+   SCIP_COLEXACTSOLVALS* storedsolvals;      /**< values stored before entering diving or probing mode */
    int*                  linkpos;            /**< position of col in col vector of the row, or -1 if not yet linked */
    int                   index;              /**< consecutively numbered column identifier */
    int                   size;               /**< size of the row- and val-arrays */
@@ -146,6 +187,7 @@ struct SCIP_RowExact
    SCIP_Rational**       vals;               /**< coefficients of row entries */
    SCIP_INTERVAL*        valsinterval;       /**< interval-array of coefficients rounded up and down, respectively */
    SCIP_COLEXACT**       cols;               /**< columns of row entries, that may have a nonzero primal solution value */
+   SCIP_ROWEXACTSOLVALS* storedsolvals;      /**< values stored before entering diving or probing mode */
    int*                  cols_index;         /**< copy of cols[i]->index for avoiding expensive dereferencing */
    int*                  linkpos;            /**< position of row in row vector of the column, or -1 if not yet linked */
    SCIP_Longint          validactivitylp;    /**< LP number for which activity value is valid */
@@ -167,6 +209,8 @@ struct SCIP_RowExact
    unsigned int          coefchanged:1;      /**< was the coefficient vector changed, and has LP solver to be updated? */
    unsigned int          integral:1;         /**< is activity (without constant) of row always integral in feasible solution? */
    unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
+   unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
 };
 
 struct SCIP_ProjShiftData
@@ -210,15 +254,22 @@ struct SCIP_LpExact
                                               *   ignoring variables, with infinite best bound */
    SCIP_Rational*        pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
                                               *   ignoring variables, with infinite best bound */
+   SCIP_Rational**       divechgsides;       /**< stores the lhs/rhs changed in the current diving */
+   SCIP_SIDETYPE*        divechgsidetypes;   /**< stores the side type of the changes done in the current diving */
+   SCIP_ROWEXACT**       divechgrows;        /**< stores the rows changed in the current diving */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
    SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
    SCIP_LPIEXACT*        lpiexact;           /**< exact LP solver interface */
+   SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before exact diving starts */
    SCIP_COLEXACT**       lpicols;            /**< array with columns currently stored in the LP solver */
    SCIP_ROWEXACT**       lpirows;            /**< array with rows currently stored in the LP solver */
    SCIP_COLEXACT**       chgcols;            /**< array of changed columns not yet applied to the LP solver */
    SCIP_ROWEXACT**       chgrows;            /**< array of changed rows not yet applied to the LP solver */
    SCIP_COLEXACT**       cols;               /**< array with current LP columns in correct order */
    SCIP_ROWEXACT**       rows;               /**< array with current LP rows in correct order */
+   SCIP_Longint          divenolddomchgs;    /**< number of domain changes before diving has started */
+   SCIP_LPEXACTSOLVALS*  storedsolvals;      /**< collected values of the LP data which depend on the LP solution */
+
    int                   lpicolssize;        /**< available slots in lpicols vector */
    int                   nlpicols;           /**< number of columns in the LP solver */
    int                   lpifirstchgcol;     /**< first column of the LP which differs from the column in the LP solver */
@@ -246,6 +297,9 @@ struct SCIP_LpExact
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
    int                   lpirefactorinterval;/**< current refactorization interval */
+   int                   ndivingrows;        /**< number of rows when entering diving mode */
+   int                   ndivechgsides;      /**< number of side changes in current diving */
+   int                   divinglpiitlim;     /**< LPI iteration limit when entering diving mode */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -268,6 +322,16 @@ struct SCIP_LpExact
    SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */
    SCIP_Bool             boundshiftviable;   /**< is bound-shift viable? set to FALSE if success rate too low */
    SCIP_Bool             forceexactsolve;    /**< should the next safe bounding step be forced to solve the lp exactly? */
+
+   SCIP_Bool             diving;             /**< LP is used for exact diving: col bounds and obj don't correspond to variables */
+   SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
+   SCIP_Bool             divelpwasprimchecked;/**< primal feasibility was checked when diving started */
+   SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
+   SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
+   SCIP_Bool             divingobjchg;       /**< objective values were changed in diving or probing: LP objective is invalid */
+
+
+
 };
 
 #ifdef __cplusplus

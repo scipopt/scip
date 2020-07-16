@@ -6833,3 +6833,881 @@ void SCIPlpExactForceExactSolve(
 
    lpexact->forceexactsolve = TRUE;
 }
+
+/** save current LP solution values stored in each column */
+static
+SCIP_RETCODE colExactStoreSolVals(
+   SCIP_COLEXACT*        col,                /**< exact LP column */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_COLEXACTSOLVALS* storedsolvals;
+
+   assert(col != NULL);
+   assert(blkmem != NULL);
+
+   /* allocate memory for storage */
+   if( col->storedsolvals == NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &col->storedsolvals) );
+   }
+   storedsolvals = col->storedsolvals;
+
+   /* store values */
+   storedsolvals->primsol = col->primsol;
+   storedsolvals->redcost = col->redcost;
+   storedsolvals->basisstatus = col->basisstatus; /*lint !e641 !e732*/
+
+   return SCIP_OKAY;
+}
+
+/** restore LP solution values in column */
+static
+SCIP_RETCODE colExactRestoreSolVals(
+   SCIP_COLEXACT*        col,                /**< LP column */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Longint          validlp,            /**< number of lp for which restored values are valid */
+   SCIP_Bool             freebuffer          /**< should buffer for LP solution values be freed? */
+   )
+{
+   SCIP_COLEXACTSOLVALS* storedsolvals;
+
+   assert(col != NULL);
+   assert(blkmem != NULL);
+
+   /* if stored values are available, restore them */
+   storedsolvals = col->storedsolvals;
+   if( storedsolvals != NULL )
+   {
+      col->primsol = storedsolvals->primsol;
+      col->redcost = storedsolvals->redcost;
+      col->validredcostlp = validlp;
+      col->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
+
+      /* we do not save the farkas coefficient, since it can be recomputed; thus, we invalidate it here */
+      col->validfarkaslp = -1;
+   }
+   /* if the column was created after performing the storage (possibly during probing), we treat it as implicitly zero;
+    * we make sure to invalidate the reduced cost and farkas coefficient, which are not available
+    */
+   else
+   {
+      RatSetReal(col->primsol, 0.0);
+      col->validredcostlp = -1;
+      col->validfarkaslp = -1;
+      col->basisstatus = SCIP_BASESTAT_ZERO; /*lint !e641*/
+   }
+
+   /* free memory */
+   if( freebuffer )
+   {
+      BMSfreeBlockMemoryNull(blkmem, &col->storedsolvals);
+      assert(col->storedsolvals == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** save current LP solution values stored in each column */
+static
+SCIP_RETCODE rowExactStoreSolVals(
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Bool             infeasible          /**< is the solution infeasible? */
+   )
+{
+   SCIP_ROWEXACTSOLVALS* storedsolvals;
+
+   assert(row != NULL);
+   assert(blkmem != NULL);
+
+   /* allocate memory for storage */
+   if( row->storedsolvals == NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &row->storedsolvals) );
+   }
+   storedsolvals = row->storedsolvals;
+
+   /* store values */
+   if ( infeasible )
+   {
+      RatSetReal(storedsolvals->activity, SCIP_INVALID);
+      storedsolvals->dualsol = row->dualfarkas;
+      storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
+   }
+   else
+   {
+      storedsolvals->dualsol = row->dualsol;
+      storedsolvals->activity = row->activity;
+      storedsolvals->basisstatus = row->basisstatus; /*lint !e641 !e732*/
+   }
+
+   return SCIP_OKAY;
+}
+
+/** restore LP solution values in row */
+static
+SCIP_RETCODE rowExactRestoreSolVals(
+   SCIP_ROWEXACT*        row,                /**< LP column */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Longint          validlp,            /**< number of lp for which restored values are valid */
+   SCIP_Bool             freebuffer,         /**< should buffer for LP solution values be freed? */
+   SCIP_Bool             infeasible          /**< is the solution infeasible? */
+   )
+{
+   SCIP_ROWEXACTSOLVALS* storedsolvals;
+
+   assert(row != NULL);
+   assert(blkmem != NULL);
+
+   /* if stored values are available, restore them */
+   storedsolvals = row->storedsolvals;
+   if( storedsolvals != NULL )
+   {
+      if ( infeasible )
+         row->dualfarkas = storedsolvals->dualsol;
+      else
+         row->dualsol = storedsolvals->dualsol;
+      row->activity = storedsolvals->activity;
+      row->validactivitylp = validlp;
+      row->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
+   }
+   /* if the row was created after performing the storage (possibly during probing), we treat it as basic;
+    * we make sure to invalidate the reduced cost and farkas coefficient, which are not available
+    */
+   else
+   {
+      RatSetReal(row->dualsol, 0.0);
+      RatSetReal(row->dualfarkas, 0.0);
+      RatSetReal(row->activity, SCIP_INVALID);
+      row->validactivitylp = -1;
+      row->basisstatus = SCIP_BASESTAT_BASIC; /*lint !e641*/
+   }
+
+   /* free memory */
+   if( freebuffer )
+   {
+      BMSfreeBlockMemoryNull(blkmem, &row->storedsolvals);
+      assert(row->storedsolvals == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** save current LP values dependent on the solution */
+static
+SCIP_RETCODE lpExactStoreSolVals(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_LPEXACTSOLVALS* storedsolvals;
+
+   assert(lpexact != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+
+   /* allocate memory for storage */
+   if( lpexact->storedsolvals == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemory(&lpexact->storedsolvals) );
+   }
+   storedsolvals = lpexact->storedsolvals;
+
+   /* store values */
+   storedsolvals->lpsolstat = lpexact->lpsolstat;
+   storedsolvals->lpobjval = lpexact->lpobjval;
+   storedsolvals->primalfeasible = lpexact->primalfeasible;
+   storedsolvals->primalchecked = lpexact->primalchecked;
+   storedsolvals->dualfeasible = lpexact->dualfeasible;
+   storedsolvals->dualchecked = lpexact->dualchecked;
+   storedsolvals->solisbasic = lpexact->solisbasic;
+   //storedsolvals->lpissolved = lp->solved;
+
+   return SCIP_OKAY;
+}
+
+/** restore LP solution values in column */
+static
+SCIP_RETCODE lpExactRestoreSolVals(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Longint          validlp             /**< number of lp for which restored values are valid */
+   )
+{
+   SCIP_LPEXACTSOLVALS* storedsolvals;
+
+   assert(lpexact != NULL);
+   assert(blkmem != NULL);
+
+   /* if stored values are available, restore them */
+   storedsolvals = lpexact->storedsolvals;
+   if( storedsolvals != NULL )
+   {
+      lpexact->solved = storedsolvals->lpissolved;
+      //lpexact->validsollp = validlp;
+
+      lpexact->lpsolstat = storedsolvals->lpsolstat;
+      lpexact->lpobjval = storedsolvals->lpobjval;
+      lpexact->primalfeasible = storedsolvals->primalfeasible;
+      lpexact->primalchecked = storedsolvals->primalchecked;
+      lpexact->dualfeasible = storedsolvals->dualfeasible;
+      lpexact->dualchecked = storedsolvals->dualchecked;
+      lpexact->solisbasic = storedsolvals->solisbasic;
+
+      /* solution values are stored only for LPs solved to optimality or unboundedness */
+      assert(lpexact->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
+         lpexact->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
+         lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+         lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+         lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
+         lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
+         lpexact->validsollp == -1);
+   }
+   /* no values available, mark LP as unsolved */
+   else
+   {
+      lpexact->solved = FALSE;
+      //lpexact->validsollp = -1;
+
+      RatSetReal(lpexact->lpobjval, SCIP_INVALID);
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      lpexact->primalfeasible = FALSE;
+      lpexact->primalchecked = FALSE;
+      lpexact->dualfeasible = FALSE;
+      lpexact->dualchecked = FALSE;
+      lpexact->solisbasic = FALSE;
+      //lpexact->validfarkaslp = -1;
+   }
+
+   //lpexact->validdegeneracylp = -1;
+
+   /* intentionally keep storage space allocated */
+
+   return SCIP_OKAY;
+}
+
+/** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
+void SCIProwExactLock(
+   SCIP_ROWEXACT*        row                 /**< exact LP row */
+   )
+{
+   assert(row != NULL);
+
+   /* check, if row is modifiable */
+   if( !row->modifiable )
+   {
+      //SCIPdebugMessage("lock row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
+      row->nlocks++;
+   }
+}
+
+/** unlocks a lock of an unmodifiable row; a row with no sealed lock may be modified; has no effect on modifiable rows */
+void SCIProwExactUnlock(
+   SCIP_ROWEXACT*        row                 /**< exact LP row */
+   )
+{
+   assert(row != NULL);
+
+   /* check, if row is modifiable */
+   if( !row->modifiable )
+   {
+      //SCIPdebugMessage("unlock row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
+      assert(row->nlocks > 0);
+      row->nlocks--;
+   }
+}
+
+/** removes and releases all rows after the given number of rows from the exact LP */
+SCIP_RETCODE SCIPlpExactShrinkRows(
+   SCIP_LPEXACT*         lpexact,            /**< LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   int                   newnrows            /**< new number of rows in the LP */
+   )
+{
+   SCIP_ROWEXACT* row;
+   int r;
+
+   assert(lpexact != NULL);
+   assert(0 <= newnrows && newnrows <= lpexact->nrows);
+
+   SCIPsetDebugMsg(set, "shrinking exact LP from %d to %d rows\n", lpexact->nrows, newnrows);
+   if( newnrows < lpexact->nrows )
+   {
+      for( r = lpexact->nrows-1; r >= newnrows; --r )
+      {
+         row = lpexact->rows[r];
+         assert(row != NULL);
+         assert(row->len == 0 || row->cols != NULL);
+         assert(row->lppos == r);
+
+         /* mark row to be removed from the LP */
+         row->lppos = -1;
+         row->lpdepth = -1;
+         lpexact->nrows--;
+
+         /* count removable rows */
+         if( row->removable )
+            lpexact->nremovablerows--;
+
+         /* update row arrays of all linked columns */
+         rowExactUpdateDelLP(row, set);
+
+         SCIProwExactUnlock(lpexact->rows[r]);
+
+         /* check, if row deletion events are tracked
+          * if so, issue ROWDELETEDLP event
+          */
+         //if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDLP) != 0 )
+         //{
+         //   SCIP_EVENT* event;
+
+         //   SCIP_CALL( SCIPeventCreateRowDeletedLP(&event, blkmem, lp->rows[r]) );
+         //   SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+         //}
+
+         SCIP_CALL( SCIProwExactRelease(&lpexact->rows[r], blkmem, set, lpexact) );
+      }
+      assert(lpexact->nrows == newnrows);
+      lpexact->lpifirstchgrow = MIN(lpexact->lpifirstchgrow, newnrows);
+
+      /* mark the current LP unflushed */
+      lpexact->flushed = FALSE;
+
+      checkLinks(lpexact);
+   }
+   assert(lpexact->nremovablerows <= lpexact->nrows);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that chgrows array can store at least num entries */
+static
+SCIP_RETCODE ensureChgrowsSizeExact(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lpexact->nchgrows <= lpexact->chgrowssize);
+
+   if( num > lpexact->chgrowssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lpexact->chgrows, newsize) );
+      lpexact->chgrowssize = newsize;
+   }
+   assert(num <= lpexact->chgrowssize);
+
+   return SCIP_OKAY;
+}
+
+
+/** notifies exact LP row, that its sides were changed */
+static
+SCIP_RETCODE rowExactSideChanged(
+   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_SIDETYPE         sidetype            /**< type of side: left or right hand side */
+   )
+{
+   assert(row != NULL);
+   assert(lpexact != NULL);
+
+   if( row->lpipos >= 0 )
+   {
+      /* insert row in the chgrows list (if not already there) */
+      if( !row->lhschanged && !row->rhschanged )
+      {
+         SCIP_CALL( ensureChgrowsSizeExact(lpexact, set, lpexact->nchgrows+1) );
+         lpexact->chgrows[lpexact->nchgrows] = row;
+         lpexact->nchgrows++;
+      }
+
+      /* mark side change in the row */
+      switch( sidetype )
+      {
+      case SCIP_SIDETYPE_LEFT:
+         row->lhschanged = TRUE;
+         break;
+      case SCIP_SIDETYPE_RIGHT:
+         row->rhschanged = TRUE;
+         break;
+      default:
+         SCIPerrorMessage("unknown exact row side type\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA;  /*lint !e527*/
+      }
+
+      /* mark the current LP unflushed */
+      lpexact->flushed = FALSE;
+
+      assert(lpexact->nchgrows > 0);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes left hand side of exact LP row */
+SCIP_RETCODE SCIProwExactChgLhs(
+   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        lhs                 /**< new left hand side */
+   )
+{
+   assert(row != NULL);
+   assert(lpexact != NULL);
+
+   if( !RatIsEqual(row->lhs, lhs) )
+   {
+      SCIP_Rational* oldlhs;
+
+      oldlhs = row->lhs;
+
+      row->lhs = lhs;
+      SCIP_CALL( rowExactSideChanged(row, set, lpexact, SCIP_SIDETYPE_LEFT) );
+
+      //if( !lpexact->diving )
+      //{
+      //   /* issue row side changed event */
+      //   SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_LEFT, oldlhs, lhs) );
+      //}
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes right hand side of exact LP row */
+SCIP_RETCODE SCIProwExactChgRhs(
+   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        rhs                 /**< new right hand side */
+   )
+{
+   assert(row != NULL);
+   assert(lpexact != NULL);
+
+   if( !RatIsEqual(row->rhs, rhs) )
+   {
+      SCIP_Rational* oldrhs;
+
+      oldrhs = row->rhs;
+
+      row->rhs = rhs;
+      SCIP_CALL( rowExactSideChanged(row, set, lpexact, SCIP_SIDETYPE_RIGHT) );
+
+      //if( !lp->diving )
+      //{
+      //   /* issue row side changed event */
+      //   SCIP_CALL( rowEventSideChanged(row, blkmem, set, eventqueue, SCIP_SIDETYPE_RIGHT, oldrhs, rhs) );
+      //}
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the exact LP is in exact diving mode */
+SCIP_Bool SCIPlpExactDiving(
+   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
+   )
+{
+   assert(lpexact != NULL);
+
+   return lpexact->diving;
+}
+
+/** initiates exact LP diving */
+SCIP_RETCODE SCIPlpExactStartDive(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   int c;
+   int r;
+
+   assert(lpexact != NULL);
+   assert(lpexact->flushed || !lpexact->solved);
+   assert(!lpexact->diving);
+   //assert(!lp->probing); /* not implemented yet */
+   assert(lpexact->divelpistate == NULL);
+   assert(lpexact->divelpwasprimfeas);
+   assert(lpexact->divelpwasdualfeas);
+   //assert(lp->validsollp <= stat->lpcount);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(lpexact->ndivechgsides == 0);
+
+   SCIPsetDebugMsg(set, "exact diving started (LP flushed: %u, LP solved: %u, solstat: %d)\n",
+      lpexact->flushed, lpexact->solved, SCIPlpExactGetSolstat(lpexact));
+
+/*
+#ifndef NDEBUG
+   for( c = 0; c < lp->ncols; ++c )
+   {
+      assert(lp->cols[c] != NULL);
+      assert(lp->cols[c]->var != NULL);
+      assert(SCIPvarGetStatus(lp->cols[c]->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetCol(lp->cols[c]->var) == lp->cols[c]);
+      assert(SCIPsetIsFeasEQ(set, SCIPvarGetObj(lp->cols[c]->var), lp->cols[c]->obj));
+      assert(SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(lp->cols[c]->var), lp->cols[c]->lb));
+      assert(SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(lp->cols[c]->var), lp->cols[c]->ub));
+   }
+#endif
+*/
+
+   /* save current LPI state (basis information) */
+   SCIP_CALL( SCIPlpiExactGetState(lpexact->lpiexact, blkmem, &lpexact->divelpistate) );
+   lpexact->divelpwasprimfeas = lpexact->primalfeasible;
+   lpexact->divelpwasdualfeas = lpexact->dualfeasible;
+   lpexact->divelpwasprimchecked = lpexact->primalchecked;
+   lpexact->divelpwasdualchecked = lpexact->dualchecked;
+
+
+   /* save current LP values dependent on the solution */
+   SCIP_CALL( lpExactStoreSolVals(lpexact, stat, blkmem) );
+   assert(lpexact->storedsolvals != NULL);
+   if( !set->lp_resolverestore && lpexact->solved )
+   {
+      SCIP_Bool store = TRUE;
+
+      switch ( lpexact->lpsolstat )
+      {
+      case SCIP_LPSOLSTAT_OPTIMAL:
+         SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, FALSE) );
+         //assert(lp->validsollp == stat->lpcount);
+         break;
+      case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+         SCIP_CALL( SCIPlpExactGetUnboundedSol(lpexact, set, stat, NULL, NULL) );
+         //assert(lp->validsollp == stat->lpcount);
+         break;
+      case SCIP_LPSOLSTAT_OBJLIMIT:
+      case SCIP_LPSOLSTAT_ITERLIMIT:
+      case SCIP_LPSOLSTAT_TIMELIMIT:
+         SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, FALSE) );
+         //assert(lp->validsollp == stat->lpcount);
+         break;
+      case SCIP_LPSOLSTAT_INFEASIBLE:
+         SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, NULL, FALSE) );
+         break;
+      case SCIP_LPSOLSTAT_NOTSOLVED:
+      case SCIP_LPSOLSTAT_ERROR:
+      default:
+         store = FALSE;
+      }
+
+      if ( store )
+      {
+         for( c = 0; c < lpexact->ncols; ++c )
+         {
+            SCIP_CALL( colExactStoreSolVals(lpexact->cols[c], blkmem) );
+         }
+         for( r = 0; r < lpexact->nrows; ++r )
+         {
+            SCIP_CALL( rowExactStoreSolVals(lpexact->rows[r], blkmem, lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
+         }
+      }
+   }
+
+   /* store LPI iteration limit */
+   SCIP_CALL( SCIPlpiExactGetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPITLIM, &lpexact->divinglpiitlim) );
+
+   /* remember the number of domain changes */
+   lpexact->divenolddomchgs = stat->domchgcount;
+
+   /* store current number of rows */
+   lpexact->ndivingrows = lpexact->nrows;
+
+   /* switch to diving mode */
+   lpexact->diving = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** quits exact LP diving and resets bounds and objective values of columns to the current node's values */
+SCIP_RETCODE SCIPlpExactEndDive(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR**            vars,               /**< array with all active variables */
+   int                   nvars               /**< number of active variables */
+   )
+{
+   SCIP_VAR* var;
+   int v;
+
+   assert(lpexact != NULL);
+   assert(lpexact->diving);
+   assert(blkmem != NULL);
+   assert(nvars == 0 || vars != NULL);
+
+   SCIPsetDebugMsg(set, "exact diving ended (LP flushed: %u, solstat: %d)\n", lpexact->flushed, SCIPlpExactGetSolstat(lpexact));
+
+   /* reset all columns' objective values and bounds to its original values */
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert(var != NULL);
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      {
+         SCIP_CALL( SCIPcolExactChgObj(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetObjExact(var)) );
+         SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetLbLocalExact(var)) );
+         SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetUbLocalExact(var)) );
+      }
+   }
+
+   /* remove rows which were added in diving mode */
+   SCIP_CALL( SCIPlpExactShrinkRows(lpexact, blkmem, set, eventqueue, eventfilter, lpexact->ndivingrows) );
+
+   /* undo changes to left hand sides and right hand sides */
+   while( lpexact->ndivechgsides > 0 )
+   {
+      SCIP_Rational* oldside;
+      SCIP_SIDETYPE sidetype;
+      SCIP_ROWEXACT* row;
+
+      lpexact->ndivechgsides--;
+      oldside = lpexact->divechgsides[lpexact->ndivechgsides];
+      sidetype = lpexact->divechgsidetypes[lpexact->ndivechgsides];
+      row = lpexact->divechgrows[lpexact->ndivechgsides];
+
+      if( sidetype == SCIP_SIDETYPE_LEFT )
+      {
+         SCIP_CALL( SCIProwExactChgLhs(row, blkmem, set, eventqueue, lpexact, oldside) );
+      }
+      else
+      {
+         SCIP_CALL( SCIProwExactChgRhs(row, blkmem, set, eventqueue, lpexact, oldside) );
+      }
+   }
+
+   /* restore LPI iteration limit */
+   SCIP_CALL( lpExactSetIterationLimit(lpexact, lpexact->divinglpiitlim) );
+
+   /* reload LPI state saved at start of diving and free it afterwards; it may be NULL, in which case simply nothing
+    * happens
+    */
+   SCIP_CALL( SCIPlpExactSetState(lpexact, blkmem, set, eventqueue, lpexact->divelpistate,
+         lpexact->divelpwasprimfeas, lpexact->divelpwasprimchecked, lpexact->divelpwasdualfeas, lpexact->divelpwasdualchecked) );
+   SCIP_CALL( SCIPlpExactFreeState(lpexact, blkmem, &lpexact->divelpistate) );
+   lpexact->divelpwasprimfeas = TRUE;
+   lpexact->divelpwasdualfeas = TRUE;
+   lpexact->divelpwasprimchecked = TRUE;
+   lpexact->divelpwasdualchecked = TRUE;
+   assert(lpexact->divelpistate == NULL);
+
+   /* switch to standard (non-diving) mode */
+   lpexact->diving = FALSE;
+   lpexact->divingobjchg = FALSE;
+
+   /* if the LP was solved before starting the dive, but not to optimality (or unboundedness), then we need to solve the
+    * LP again to reset the solution (e.g. we do not save the Farkas proof for infeasible LPs, because we assume that we
+    * are not called in this case, anyway); restoring by solving the LP again in either case can be forced by setting
+    * the parameter resolverestore to TRUE
+    * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
+    */
+   assert(lpexact->storedsolvals != NULL);
+   if( lpexact->storedsolvals->lpissolved
+      && (set->lp_resolverestore || lpexact->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lpexact->divenolddomchgs < stat->domchgcount) )
+   {
+      SCIP_Bool lperror;
+
+      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lpexact->fplp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1LL, &lperror, FALSE) );
+      if( lperror )
+      {
+         //lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved when resolving exact LP after diving");
+         lpexact->resolvelperror = TRUE;
+      }
+      else if( SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OPTIMAL
+         && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_INFEASIBLE
+         && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+         && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OBJLIMIT )
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "exact LP was not resolved to a sufficient status after diving\n");
+         lpexact->resolvelperror = TRUE;
+      }
+   }
+   /* otherwise, we can just reload the buffered LP solution values at start of diving; this has the advantage that we
+    * are guaranteed to continue with the same LP status as before diving, while in numerically difficult cases, a
+    * re-solve as above can lead to a different LP status
+    */
+   else
+   {
+      int c;
+      int r;
+
+      /* if there are lazy bounds, remove them from the LP */
+      //if( lp->nlazycols > 0 )
+      //{
+         /* @todo avoid loosing primal feasibility here after changing the objective already did destroy dual feasibility;
+          * first resolve LP?
+          */
+      //   SCIP_CALL( updateLazyBounds(lp, set) );
+      //   assert(lp->diving == lp->divinglazyapplied);
+
+         /* flush changes to the LP solver */
+      //   SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
+      //}
+
+      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */
+      //SCIPstatIncrement(stat, set, lpcount);
+
+      /* restore LP solution values in lp data, columns and rows */
+      if( lpexact->storedsolvals->lpissolved &&
+         (lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
+            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
+            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
+            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
+            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
+            lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE)
+         )
+      {
+         SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem, stat->lpcount) );
+
+         for( c = 0; c < lpexact->ncols; ++c )
+         {
+            SCIP_CALL( colExactRestoreSolVals(lpexact->cols[c], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
+         }
+         for( r = 0; r < lpexact->nrows; ++r )
+         {
+            SCIP_CALL( rowExactRestoreSolVals(lpexact->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers, lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
+         }
+      }
+      else
+      {
+         SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem, -1LL) );
+      }
+   }
+
+#ifndef NDEBUG
+   //{
+   //   int c;
+   //   for( c = 0; c < lp->ncols; ++c )
+   //   {
+   //      assert(lp->cols[c] != NULL);
+   //      assert(lp->cols[c]->var != NULL);
+   //      assert(SCIPvarGetStatus(lp->cols[c]->var) == SCIP_VARSTATUS_COLUMN);
+   //      assert(SCIPvarGetCol(lp->cols[c]->var) == lp->cols[c]);
+   //      assert(SCIPsetIsEQ(set, SCIPvarGetObj(lp->cols[c]->var), lp->cols[c]->obj));
+   //      assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(lp->cols[c]->var), lp->cols[c]->lb));
+   //      assert(SCIPsetIsEQ(set, SCIPvarGetUbLocal(lp->cols[c]->var), lp->cols[c]->ub));
+   //   }
+   //}
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** gets solution status of current exact LP */
+SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
+   SCIP_LPEXACT*         lpexact              /**< current LP data */
+   )
+{
+   assert(lpexact != NULL);
+   assert(lpexact->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
+
+   return (lpexact->flushed ? lpexact->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
+}
+
+/** stores exact LP state (like basis information) into LP state object */
+SCIP_RETCODE SCIPlpExactGetState(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(lpexact != NULL);
+   assert(lpexact->flushed);
+   assert(lpexact->solved);
+   assert(blkmem != NULL);
+   assert(lpistate != NULL);
+
+   /* check whether there is no lp */
+   if( lpexact->nlpicols == 0 && lpexact->nlpirows == 0 )
+      *lpistate = NULL;
+   else
+   {
+      SCIP_CALL( SCIPlpiExactGetState(lpexact->lpiexact, blkmem, lpistate) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** loads exact LP state (like basis information) into solver */
+SCIP_RETCODE SCIPlpExactSetState(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
+   SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
+   SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
+   )
+{
+   assert(lpexact != NULL);
+   assert(blkmem != NULL);
+
+   /* flush changes to the LP solver */
+   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+   assert(lpexact->flushed);
+
+   if( lpexact->solved && lpexact->solisbasic )
+      return SCIP_OKAY;
+
+   /* set LPI state in the LP solver */
+   if( lpistate == NULL )
+      lpexact->solisbasic = FALSE;
+   else
+   {
+      SCIP_CALL( SCIPlpiExactSetState(lpexact->lpiexact, blkmem, lpistate) );
+      lpexact->solisbasic = SCIPlpiExactHasStateBasis(lpexact->lpiexact, lpistate);
+   }
+   /* @todo: setting feasibility to TRUE might be wrong because in probing mode, the state is even saved when the LP was
+    *        flushed and solved, also, e.g., when we hit the iteration limit
+    */
+   lpexact->primalfeasible = wasprimfeas;
+   lpexact->primalchecked = wasprimchecked;
+   lpexact->dualfeasible = wasdualfeas;
+   lpexact->dualchecked = wasdualchecked;
+
+   return SCIP_OKAY;
+}
+
+/** frees exact LP state information */
+SCIP_RETCODE SCIPlpExactFreeState(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(lpexact != NULL);
+
+   if( *lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiExactFreeState(lpexact->lpiexact, blkmem, lpistate) );
+   }
+
+   return SCIP_OKAY;
+}

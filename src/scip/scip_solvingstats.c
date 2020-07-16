@@ -1679,6 +1679,33 @@ SCIP_Real SCIPgetCutoffbound(
    return scip->primal->cutoffbound;
 }
 
+/** gets global cutoff bound of exact transformed problem: a sub problem with lower bound larger than the cutoff
+ *  cannot contain a better feasible solution; usually, this bound is equal to the upper bound, but if the
+ *  objective value is always integral, the cutoff bound is (nearly) one less than the upper bound;
+ *  additionally, due to objective function domain propagation, the cutoff bound can be further reduced
+ *
+ *  @return global cutoff bound in transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Rational* SCIPgetCutoffboundExact(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCutoffbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->primal->cutoffboundexact;
+}
+
 /** updates the cutoff bound
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

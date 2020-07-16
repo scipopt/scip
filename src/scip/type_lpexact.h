@@ -29,6 +29,11 @@
 extern "C" {
 #endif
 
+typedef struct SCIP_ColExactSolVals SCIP_COLEXACTSOLVALS;   /**< collected values of a column which depend on the LP solution */
+typedef struct SCIP_RowExactSolVals SCIP_ROWEXACTSOLVALS;   /**< collected values of a row which depend on the LP solution */
+typedef struct SCIP_LpExactSolVals SCIP_LPEXACTSOLVALS;/**< collected values of the exact LP data which depend on the LP solution */
+
+
 /** column of an LP
  *
  *  - \ref PublicColumnMethods "List of all available methods"
