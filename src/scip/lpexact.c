@@ -3420,7 +3420,6 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->looseobjvalinf = 0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->glbpseudoobjvalinf = 0;
-   (*lp)->interleavedbfreq = 10;
    (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
    (*lp)->cutoffbound = SCIPsetInfinity(set);
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpobjval) );
@@ -3442,7 +3441,7 @@ SCIP_RETCODE SCIPlpExactFree(
 {
    int i;
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(lp != NULL);
@@ -3488,7 +3487,7 @@ SCIP_RETCODE SCIPlpExactAddCol(
    int                   depth               /**< depth in the tree where the column addition is performed */
    )
 {
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(lp != NULL);
@@ -3598,7 +3597,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    assert(lpexact->fplp != NULL);
    assert(set != NULL);
    assert(lperror != NULL);
-   assert(set->misc_exactsolve);
+   assert(set->exact_enabled);
 
    SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->disp_lpinfo);
    algo = set->lp_initalgorithm;
@@ -5583,7 +5582,7 @@ SCIP_RETCODE SCIPlpExactUpdateAddVar(
 {
    SCIP_Rational* tmp;
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(lpexact != NULL);
@@ -6701,7 +6700,7 @@ SCIP_RETCODE SCIPlpExactReset(
    SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
    )
 {
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(stat != NULL);
@@ -6827,7 +6826,7 @@ void SCIPlpExactForceExactSolve(
 {
    assert(set != NULL);
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return;
 
    assert(lpexact != NULL);

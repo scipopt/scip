@@ -1553,7 +1553,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexeclp != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
-      && (!set->misc_exactsolve || branchrule->isexact) )
+      && (!set->exact_enabled || branchrule->isexact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1661,7 +1661,7 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecext != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) 
-      && (!set->misc_exactsolve || branchrule->isexact) )
+      && (!set->exact_enabled || branchrule->isexact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
@@ -1767,7 +1767,7 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
    *result = SCIP_DIDNOTRUN;
    if( branchrule->branchexecps != NULL
       && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree))
-      && (!set->misc_exactsolve || branchrule->isexact) )
+      && (!set->exact_enabled || branchrule->isexact) )
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;

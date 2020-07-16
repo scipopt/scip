@@ -294,7 +294,7 @@ SCIP_RETCODE primalSetCutoffbound(
    primal->cutoffbound = MIN(cutoffbound, primal->upperbound); /* get rid of numerical issues */
 
    /* possibly update the exact cutoffbound */
-   if( set->misc_exactsolve )
+   if( set->exact_enabled )
    {
       SCIP_Rational* tmp;
 
@@ -1513,7 +1513,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    assert(stored != NULL);
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->misc_exactsolve;
+   checklprows = checklprows || set->exact_enabled;
 
    insertpos = -1;
 
@@ -1585,7 +1585,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    *stored = FALSE;
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
-   checklprows = checklprows || set->misc_exactsolve;
+   checklprows = checklprows || set->exact_enabled;
 
    insertpos = -1;
 

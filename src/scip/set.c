@@ -275,11 +275,6 @@
 #define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
 #define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
 #define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
-#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
-#define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< should the fp approximation of the exact problem be a relaxation? */
-#define SCIP_DEFAULT_MISC_DBMETHOD          'a' /**< method for computing truely safe dual bounds
-                                                 *   ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift,
-                                                 *   'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic) */
 #define SCIP_DEFAULT_MISC_RESETSTAT        TRUE /**< should the statistics be reset if the transformed problem is
                                                  *   freed otherwise the statistics get reset after original problem is
                                                  *   freed (in case of Benders' decomposition this parameter should be set
@@ -494,6 +489,12 @@
 #define SCIP_DEFAULT_VISUAL_DISPLB        FALSE /**< should lower bound information be visualized? */
 #define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
 
+/* exact SCIP parameters */
+#define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
+#define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
+                                                 *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
+#define SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ   0 /**< frequency at which safe dual bounding method is interleaved with exact LP
+                                                 *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
 
 /* certificate output */
 #define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
@@ -728,10 +729,10 @@ SCIP_DECL_PARAMCHGD(paramChgdExactSolve)
    assert( scip != NULL );
    assert( param != NULL );
 
-   if ( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
-      SCIPerrorMessage("Exact solving mode can only be changed in SICP_STAGE_INIT.\n");
-      return SCIP_ERROR;
+      SCIPerrorMessage("Exact solving mode can only be enabled/disabled before reading/creating a problem.\n");
+      return SCIP_PARAMETERWRONGVAL;
    }
 
    return SCIP_OKAY;
@@ -1919,23 +1920,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
          &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
-#ifdef SCIP_WITH_BOOST
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/exactsolve",
-         "should the problem be solved exactly (with proven dual bounds)? (Only possible if no problem has been read in yet)",
-         &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
-         paramChgdExactSolve, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "misc/usefprelax",
-         "exip: should floating-point problem be a relaxation of the original problem (instead of an approximation)? Change BEFORE reading in an instance!",
-         &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
-         "misc/dbmethod",
-         "exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'v'erify basis, 'p'roject-and-shift, 'e'xact LP, 'i'nterval n-s, e'x'act n-s, 'a'utomatic)",
-         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpeixa",
-         NULL, NULL) );
-#endif
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/resetstat",
          "should the statistics be reset if the transformed problem is freed (in case of a Benders' decomposition this parameter should be set to FALSE)",
@@ -2653,6 +2637,24 @@ SCIP_RETCODE SCIPsetCreate(
          "should be output the external value of the objective?",
          &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
          NULL, NULL) );
+
+   /* exact SCIP parameters */
+#ifdef SCIP_WITH_BOOST
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/enabled",
+         "should the problem be solved exactly (without numerical tolerances)?",
+         &(*set)->exact_enabled, FALSE, SCIP_DEFAULT_EXACT_ENABLED,
+         paramChgdExactSolve, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "exact/safedbmethod",
+         "method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)",
+         &(*set)->exact_safedbmethod, FALSE, SCIP_DEFAULT_EXACT_SAFEDBMETHOD, "npea",
+         NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "exact/interleavedbfreq",
+         "frequency at which safe dual bounding method is interleaved with exact LP solve (-1: never, 0: automatic, n > 0: every n-th node)",
+         &(*set)->exact_interleavedbfreq, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
+#endif
 
    /* CERTIFICATE tool parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,

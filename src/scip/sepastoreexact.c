@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPsepastoreExactCreate(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(sepastoreexact != NULL);
@@ -209,7 +209,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    int nadded;
    int i;
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    fplp = lpexact->fplp;
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
 {
    int c;
 
-   if( !set->misc_exactsolve )
+   if( !set->exact_enabled )
       return SCIP_OKAY;
 
    assert(sepastoreexact != NULL);

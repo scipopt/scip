@@ -934,7 +934,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    assert(varmap != NULL);
    assert(success != NULL);
 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/exactsolve", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
 
    if( uselprows )
    {

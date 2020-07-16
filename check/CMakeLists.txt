@@ -119,8 +119,8 @@ set(settings_fastMIP
   )
 set(settings_MIPEX
     "exact-auto"
-    "exactlp"
-    "projshift"
+    "exact-exactlp"
+    "exact-projshift"
     )
 set(settings_MINLP
 #    "emphasis_numerics"
@@ -911,8 +911,8 @@ if(TEST_MIPEX)
         # loop over all settings
         #
 
-        add_test(NAME MIPEX-fpsolve-${basename}
-                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/fpsolve.set
+        add_test(NAME MIPEX-default-${basename}
+                    COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/default.set
                         read ${PROJECT_SOURCE_DIR}/check/${path}
                         o q"
                     )

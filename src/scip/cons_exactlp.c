@@ -154,7 +154,6 @@
 
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
-#define DEFAULT_INTERLEAVEDBFREQ      0 /**< frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node) */
 
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
  *       maybe in fullDualPresolve(), see convertLongEquality()
@@ -7169,24 +7168,17 @@ SCIP_RETCODE createRows(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
-   if( !SCIPuseFPRelaxation(scip) )
-   {
-      /** create row for fp relaxation */
-      SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhsreal, consdata->rhsreal,
-         SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-      SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->valsreal) );
+   /** create row for fp approximation */
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &consdata->row, cons, SCIPconsGetName(cons), consdata->lhsreal, consdata->rhsreal,
+      SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-      /** create exact row */
-      SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->row, consdata->lhs, consdata->rhs) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, consdata->row, consdata->nvars, consdata->vars, consdata->valsreal) );
 
-      SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
-   }
-   else
-   {
-      SCIPerrorMessage("fp relaxation not implemented yet \n");
-      SCIPABORT();
-   }
+   /** create exact row */
+   SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->row, consdata->lhs, consdata->rhs) );
+
+   SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 
    return SCIP_OKAY;
 }
@@ -17329,10 +17321,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/exactlp/interleavedbfreq",
-         "frequency at which dual bounding strategy is interleaved (-1: never, 0: if prommising, x: xth node)",
-         NULL, TRUE, DEFAULT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    /* add info about using MPFR to external codes information */
    (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
