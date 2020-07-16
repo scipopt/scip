@@ -1617,7 +1617,6 @@ SCIP_RETCODE reduce_sd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure */
-   SCIP_Real*            edgepreds,          /**< array to store edge predecessors of auxiliary graph */
    SCIP_Real*            mstsdist,           /**< array to store mst distances in auxiliary graph */
    int*                  state,              /**< array to indicate whether a node has been scanned during SP calculation */
    int*                  vbase,              /**< Voronoi base to each vertex */
@@ -1637,6 +1636,7 @@ SCIP_RETCODE reduce_sd(
    SCIP_Real dist;
    int neighbterms1[4];
    int neighbterms2[4];
+   int* edgepreds;
    int e;
    int i;
    int j;
@@ -1668,7 +1668,6 @@ SCIP_RETCODE reduce_sd(
    assert(nodesid != NULL);
    assert(mstsdist != NULL);
    assert(nodesorg != NULL);
-   assert(edgepreds != NULL);
    assert(forbidden != NULL);
 
    nnodes = g->knots;
@@ -1680,6 +1679,8 @@ SCIP_RETCODE reduce_sd(
    /* only one terminal left? */
    if( nterms == 1 )
       return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgepreds, nedges) );
 
    /* compute nearest four terminals to all non-terminals */
    graph_get4nextTermPaths(g, g->cost, g->cost, vnoi, vbase, state);
@@ -1787,10 +1788,10 @@ SCIP_RETCODE reduce_sd(
    for( k = 1; k < netgraph->knots; k++ )
    {
       assert(mst[k].edge != -1);
-      assert((int) edgepreds[mst[k].edge] != -1);
-      assert((int) edgepreds[flipedge(mst[k].edge)] != -1);
+      assert(edgepreds[mst[k].edge] != -1);
+      assert(edgepreds[flipedge(mst[k].edge)] != -1);
 
-      e = (int) edgepreds[mst[k].edge];
+      e = edgepreds[mst[k].edge];
 
       assert(vbase[g->tail[e]] == nodesorg[k] || vbase[g->head[e]] == nodesorg[k]);
 
@@ -1999,6 +2000,8 @@ SCIP_RETCODE reduce_sd(
    SCIPfreeBufferArray(scip, &mst);
    graph_path_exit(scip, netgraph);
    graph_free(scip, &netgraph, TRUE);
+
+   SCIPfreeBufferArray(scip, &edgepreds);
 
    return SCIP_OKAY;
 }

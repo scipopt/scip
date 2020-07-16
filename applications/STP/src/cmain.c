@@ -36,6 +36,7 @@
 #include "heur_prune.h"
 #include "heur_ascendprune.h"
 #include "heur_slackprune.h"
+#include "heur_lurkprune.h"
 #include "heur_rec.h"
 #include "pricer_stp.h"
 #include "event_bestsol.h"
@@ -88,6 +89,8 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPStpIncludeHeurAscendPrune(scip) );
 
    SCIP_CALL( SCIPStpIncludeHeurSlackPrune(scip) );
+
+   SCIP_CALL( SCIPStpIncludeHeurLurkPrune(scip) );
 
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );

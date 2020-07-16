@@ -34,6 +34,7 @@
 #include "extreduce.h"
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
+#include "heur_lurkprune.h"
 #include "heur_local.h"
 #include "heur_rec.h"
 #include "solpool.h"
@@ -3245,6 +3246,15 @@ SCIP_RETCODE reduce_daPcMw(
    /* edges from result might have been deleted! */
    havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
    assert(!havenewsol || solstp_isValid(scip, graph, result));
+
+   if( 0 && havenewsol )
+   {
+      SCIP_Bool success;
+      graph_pc_2trans(scip, graph);
+      SCIP_CALL( SCIPStpHeurLurkPruneRun(scip, NULL, edgefixingbounds, graph, TRUE, FALSE, result, &success) );
+      graph_pc_2org(scip, graph);
+   }
+
 
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);

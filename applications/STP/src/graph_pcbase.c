@@ -1222,7 +1222,7 @@ SCIP_Bool graph_pc_edgeIsExtended(
       return TRUE;
    }
 
-   assert(LT(g->cost[edge], FARAWAY) || LT(g->cost[flipedge(edge)], FARAWAY));
+   assert(LT(g->cost[edge], FARAWAY) && LT(g->cost[flipedge(edge)], FARAWAY));
 
    return FALSE;
 }

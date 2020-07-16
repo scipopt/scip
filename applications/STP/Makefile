@@ -84,6 +84,7 @@ CMAINOBJ	=	cmain.o \
 			graph_util.o \
 			graph_vnoi.o \
 			heur_ascendprune.o \
+			heur_lurkprune.o \
 			heur_slackprune.o \
 			heur_tm.o \
 			heur_local.o \

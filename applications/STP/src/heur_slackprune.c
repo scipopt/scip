@@ -630,7 +630,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                  .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
-      SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
+      SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
             vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
    }
 
@@ -710,7 +710,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                          .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
-         SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, cost, heap, state,
+         SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
                vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
       }
 

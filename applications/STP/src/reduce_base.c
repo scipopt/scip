@@ -420,7 +420,6 @@ SCIP_RETCODE redLoopStp_inner(
    PATH*                 vnoi,               /**< Voronoi data structure */
    PATH*                 path,               /**< path data structure */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
-   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
    int*                  heap,               /**< heap array */
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< Voronoi base array  */
@@ -496,7 +495,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sd || extensive )
       {
-         SCIP_CALL( reduce_sd(scip, g, vnoi, edgearrreal, nodearrreal, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims,
+         SCIP_CALL( reduce_sd(scip, g, vnoi, nodearrreal, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims,
                nodereplacing, NULL));
 
          if( sdnelims <= reductbound )
@@ -1062,7 +1061,6 @@ SCIP_RETCODE reduceStp(
    PATH* vnoi;
    PATH* path;
    SCIP_Real*  nodearrreal;
-   SCIP_Real*  edgearrreal;
    int*    heap;
    int*    state;
    int*    vbase;
@@ -1093,7 +1091,6 @@ SCIP_RETCODE reduceStp(
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
@@ -1107,7 +1104,7 @@ SCIP_RETCODE reduceStp(
       const RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing,
                                    .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
 
-      SCIP_CALL( redLoopStp(scip, &parameters, g, vnoi, path, nodearrreal, edgearrreal, heap, state,
+      SCIP_CALL( redLoopStp(scip, &parameters, g, vnoi, path, nodearrreal, heap, state,
          vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed) );
    }
 
@@ -1119,7 +1116,6 @@ SCIP_RETCODE reduceStp(
    SCIPfreeBufferArray(scip, &nodearrint2);
    SCIPfreeBufferArray(scip, &nodearrint);
    SCIPfreeBufferArray(scip, &vbase);
-   SCIPfreeBufferArray(scip, &edgearrreal);
    SCIPfreeBufferArray(scip, &nodearrreal);
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &heap);
@@ -1956,7 +1952,6 @@ SCIP_RETCODE redLoopStp(
    PATH*                 vnoi,               /**< Voronoi data structure */
    PATH*                 path,               /**< path data structure */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
-   SCIP_Real*            edgearrreal,        /**< edges-sized array  */
    int*                  heap,               /**< heap array */
    int*                  state,              /**< shortest path array  */
    int*                  vbase,              /**< Voronoi base array  */
@@ -1994,7 +1989,7 @@ SCIP_RETCODE redLoopStp(
    {
       rerun = FALSE;
 
-      SCIP_CALL( redLoopStp_inner(scip, redparameters, randnumgen, g, vnoi, path, nodearrreal, edgearrreal, heap, state,
+      SCIP_CALL( redLoopStp_inner(scip, redparameters, randnumgen, g, vnoi, path, nodearrreal, heap, state,
             vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, fixed) );
 
       if( fullreduce && !SCIPisStopped(scip) )
