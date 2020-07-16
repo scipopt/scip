@@ -260,7 +260,9 @@ SCIP_RETCODE reduceLurk(
    const int nelims_min = (nedges / 2) * LURKPRUNE_MINLURKEDGE_RATIO;
    const SCIP_Bool isPcMw = graph_pc_isPcMw(prunegraph);
 
+   assert(ancestors && lurkingbounds_half && soledge);
    assert(solstp_isValid(scip, prunegraph, soledge));
+
    *success = FALSE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lurkhalfedges, nedges / 2) );
@@ -281,7 +283,14 @@ SCIP_RETCODE reduceLurk(
          bound += lurkingbounds_half[edge_ancestor / 2];
          nancestors++;
       }
-      bound /= (SCIP_Real) nancestors;
+
+      if( nancestors != 0 )
+         bound /= (SCIP_Real) nancestors;
+      else
+      {
+         assert(graph_edge_isDeleted(prunegraph, edge));
+
+      }
 
       lurkingbounds_local[i] = bound;
       lurkhalfedges[i] = i;
@@ -374,8 +383,6 @@ SCIP_RETCODE updateSolution(
    SCIP_Real obj;
    int* soledge = lurkprune->soledge;
    int* solnode = lurkprune->solnode;
-
-   assert(solstp_isValid(scip, prunegraph, soledge));
 
    if( 0 )
    {
@@ -683,6 +690,7 @@ SCIP_RETCODE SCIPStpHeurLurkPruneRun(
    if( initialreduce )
    {
       SCIP_CALL( reduceExact(scip, &lurkprune, prunegraph) );
+      SCIP_CALL( updateSolution(scip, g, &lurkprune, prunegraph) );
    }
 
    /* main reduction loop */
@@ -707,6 +715,9 @@ SCIP_RETCODE SCIPStpHeurLurkPruneRun(
 
    lurkpruneFinalize(scip, prunegraph, soledge, &lurkprune);
    assert(solstp_isValid(scip, g, soledge));
+
+   assert(0);
+
 
    return SCIP_OKAY;
 }

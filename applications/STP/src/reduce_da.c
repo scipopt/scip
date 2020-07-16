@@ -3251,6 +3251,8 @@ SCIP_RETCODE reduce_daPcMw(
    {
       SCIP_Bool success;
       graph_pc_2trans(scip, graph);
+      assert(solstp_isValid(scip, graph, result));
+
       SCIP_CALL( SCIPStpHeurLurkPruneRun(scip, NULL, edgefixingbounds, graph, TRUE, FALSE, result, &success) );
       graph_pc_2org(scip, graph);
    }
