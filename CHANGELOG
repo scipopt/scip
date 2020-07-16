@@ -88,6 +88,8 @@ Interface changes
 
 ### New API functions
 
+- new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+
 ### Command line interface
 
 ### Interfaces to external software
