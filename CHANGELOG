@@ -12,6 +12,8 @@ Features
 Performance improvements
 ------------------------
 
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
+
 Examples and applications
 -------------------------
 
