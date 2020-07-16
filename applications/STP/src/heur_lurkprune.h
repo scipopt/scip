@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPStpHeurLurkPruneRun(
    SCIP_Bool             initialreduce,      /**< try to reduce graph initially? */
    SCIP_Bool             ascendprune,        /**< use ascend-prune? */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
-   SCIP_Bool*            success             /**< feasible solution found? */
+   SCIP_Bool*            solimproved         /**< could a better solution be found? */
    );
 
 #ifdef __cplusplus

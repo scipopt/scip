@@ -24,6 +24,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -85,6 +86,8 @@ typedef struct lurking_prune
    SCIP_Real             ubbest;
    SCIP_Real             offsetnew;
    SCIP_Real             globalobj;
+   SCIP_Real             obj_old;
+   int                   minlurkelims;
 } LURKPRUNE;
 
 
@@ -94,6 +97,23 @@ typedef struct lurking_prune
  */
 
 
+/** initializes prune graph */
+static
+SCIP_RETCODE prunegraphInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph */
+   GRAPH**               prunegraph          /**< graph */
+)
+{
+   SCIP_CALL( graph_copy(scip, g, prunegraph) );
+   SCIP_CALL( graph_init_history(scip, *prunegraph) );
+   SCIP_CALL( graph_path_init(scip, *prunegraph) );
+   graph_mark(*prunegraph);
+
+   return SCIP_OKAY;
+}
+
+
 /** initializes */
 static
 SCIP_RETCODE lurkpruneInit(
@@ -101,7 +121,8 @@ SCIP_RETCODE lurkpruneInit(
    const GRAPH*          g,                  /**< graph */
    const SCIP_Real*      lurkingbounds,      /**< lurking edge bounds */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
-   LURKPRUNE*            lurkprune           /**< lurking-prune data */
+   LURKPRUNE*            lurkprune,          /**< lurking-prune data */
+   GRAPH**               prunegraph          /**< graph */
    )
 {
    SCIP_Real* lurkingbounds_half;
@@ -109,6 +130,9 @@ SCIP_RETCODE lurkpruneInit(
    int* globalsoledge;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
+   int nedges_red;
+
+   SCIP_CALL( prunegraphInit(scip, g, prunegraph) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lurkingbounds_half, nedges / 2) );
@@ -138,6 +162,9 @@ SCIP_RETCODE lurkpruneInit(
       lurkingbounds_half[e / 2] = min;
    }
 
+   graph_get_nVET(g, NULL, &nedges_red, NULL);
+
+   lurkprune->minlurkelims = (nedges_red / 2) * LURKPRUNE_MINLURKEDGE_RATIO;
    lurkprune->ubbest = solstp_getObjBounded(g, soledge, 0.0, nedges);
    lurkprune->globalobj = lurkprune->ubbest;
    lurkprune->offsetnew = 0.0;
@@ -146,6 +173,12 @@ SCIP_RETCODE lurkpruneInit(
    lurkprune->lurkingbounds_half = lurkingbounds_half;
    lurkprune->solnode = solnode;
    lurkprune->soledge = soledge;
+   lurkprune->obj_old = solstp_getObj(g, soledge, 0.0);
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("lurking-prune starts \n");
+   graph_printInfoReduced(g);
+#endif
 
    return SCIP_OKAY;
 }
@@ -155,12 +188,19 @@ SCIP_RETCODE lurkpruneInit(
 static
 void lurkpruneFinalize(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                prunegraph,          /**< graph */
+   const GRAPH*          g,                  /**< graph */
+   GRAPH*                prunegraph,         /**< graph */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
-   LURKPRUNE*            lurkprune           /**< lurking-prune data */
+   LURKPRUNE*            lurkprune,          /**< lurking-prune data */
+   SCIP_Bool*            solimproved         /**< could a better solution be found? */
    )
 {
    const int nedges = graph_get_nEdges(prunegraph);
+   const SCIP_Real obj_new = solstp_getObj(g, lurkprune->globalsoledge, 0.0);
+   const SCIP_Real obj_old = lurkprune->obj_old;
+
+   SCIPdebugMessage("lurk-prune: obj_old=%f obj_new=%f \n", obj_old, obj_new);
+   *solimproved = (LT(obj_new, obj_old));
 
    graph_path_exit(scip, prunegraph);
    BMScopyMemoryArray(soledge, lurkprune->globalsoledge, nedges);
@@ -257,7 +297,7 @@ SCIP_RETCODE reduceLurk(
    const int nedges = graph_get_nEdges(prunegraph);
    int i;
    int nelims = 0;
-   const int nelims_min = (nedges / 2) * LURKPRUNE_MINLURKEDGE_RATIO;
+   const int nelims_min = lurkprune->minlurkelims;
    const SCIP_Bool isPcMw = graph_pc_isPcMw(prunegraph);
 
    assert(ancestors && lurkingbounds_half && soledge);
@@ -285,11 +325,12 @@ SCIP_RETCODE reduceLurk(
       }
 
       if( nancestors != 0 )
+      {
          bound /= (SCIP_Real) nancestors;
+      }
       else
       {
          assert(graph_edge_isDeleted(prunegraph, edge));
-
       }
 
       lurkingbounds_local[i] = bound;
@@ -298,7 +339,7 @@ SCIP_RETCODE reduceLurk(
 
    SCIPsortDownRealInt(lurkingbounds_local, lurkhalfedges, nedges / 2);
 
-   printf("first/last %f %f \n", lurkingbounds_local[0], lurkingbounds_local[nedges / 2 - 1]);
+   SCIPdebugMessage("first/last %f %f \n", lurkingbounds_local[0], lurkingbounds_local[nedges / 2 - 1]);
 
    for( i = 0; i < nedges / 2; i++ )
    {
@@ -306,9 +347,9 @@ SCIP_RETCODE reduceLurk(
       const int edge_rev = edge + 1;
 
       assert(flipedge(edge) == edge_rev);
-      assert((prunegraph->oeat[edge] == EAT_FREE) == (prunegraph->oeat[edge_rev] == EAT_FREE));
+      assert(graph_edge_isDeleted(prunegraph, edge) == graph_edge_isDeleted(prunegraph, edge_rev));
 
-      if( prunegraph->oeat[edge] == EAT_FREE )
+      if( graph_edge_isDeleted(prunegraph, edge) )
          continue;
 
       if( soledge[edge] == CONNECT || soledge[edge_rev] == CONNECT )
@@ -332,6 +373,11 @@ SCIP_RETCODE reduceLurk(
 
    SCIPfreeBufferArray(scip, &lurkingbounds_local);
    SCIPfreeBufferArray(scip, &lurkhalfedges);
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("reduce-lurk: nelims=%d nelims_min=%d \n", nelims, nelims_min);
+   graph_printInfoReduced(prunegraph);
+#endif
 
    return SCIP_OKAY;
 }
@@ -413,11 +459,11 @@ SCIP_RETCODE updateSolution(
 
    obj = solstp_getObj(prunegraph, soledge, lurkprune->offsetnew);
 
-   /* obj <= incumbent objective value? */
-   if( SCIPisLE(scip, obj, lurkprune->ubbest) )
+   /* obj < incumbent objective value? */
+   if( LT(obj, lurkprune->ubbest) )
       lurkprune->ubbest = obj;
 
-   printf("old solution: %f new solution %f \n\n", lurkprune->ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
+   SCIPdebugMessage("old solution: %f new solution %f \n\n", lurkprune->ubbest, obj);
 
    return SCIP_OKAY;
 }
@@ -662,24 +708,18 @@ SCIP_RETCODE SCIPStpHeurLurkPruneRun(
    SCIP_Bool             initialreduce,      /**< try to reduce graph initially? */
    SCIP_Bool             ascendprune,        /**< use ascend-prune? */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
-   SCIP_Bool*            success             /**< feasible solution found? */
+   SCIP_Bool*            solimproved         /**< could a better solution be found? */
    )
 {
    LURKPRUNE lurkprune;
    GRAPH *prunegraph;
-   const SCIP_Real obj_old = solstp_getObj(g, soledge, 0.0);
 
-   assert(scip && soledge && success && lurkingbounds);
+   assert(scip && soledge && solimproved && lurkingbounds);
    assert(!graph_pc_isPcMw(g) || g->extended);
    assert(solstp_isValid(scip, g, soledge));
 
-   *success = TRUE;
-   SCIP_CALL( lurkpruneInit(scip, g, lurkingbounds, soledge, &lurkprune) );
-
-   SCIP_CALL( graph_copy(scip, g, &prunegraph) );
-   SCIP_CALL( graph_init_history(scip, prunegraph) );
-   SCIP_CALL( graph_path_init(scip, prunegraph) );
-   graph_mark(prunegraph);
+   *solimproved = FALSE;
+   SCIP_CALL( lurkpruneInit(scip, g, lurkingbounds, soledge, &lurkprune, &prunegraph) );
 
    if( vars != NULL )
    {
@@ -698,26 +738,23 @@ SCIP_RETCODE SCIPStpHeurLurkPruneRun(
    {
       SCIP_Bool lurksuccess;
 
-      printf("starting round %d \n", i);
+      SCIPdebugMessage("starting round %d \n", i);
 
       SCIP_CALL( reduceLurk(scip, &lurkprune, prunegraph, &lurksuccess) );
       SCIP_CALL( reduceExact(scip, &lurkprune, prunegraph) );
       SCIP_CALL( updateSolution(scip, g, &lurkprune, prunegraph) );
 
       if( !lurksuccess )
+      {
+         SCIPdebugMessage("breaking early \n");
          break;
+      }
    }
 
-   {
-      const SCIP_Real obj_new = solstp_getObj(g, lurkprune.globalsoledge, 0.0);
-      printf("lurk-prune: obj_old=%f obj_new=%f \n", obj_old, obj_new);
-   }
-
-   lurkpruneFinalize(scip, prunegraph, soledge, &lurkprune);
+   lurkpruneFinalize(scip, g, prunegraph, soledge, &lurkprune, solimproved);
    assert(solstp_isValid(scip, g, soledge));
 
-   assert(0);
-
+   exit(1);
 
    return SCIP_OKAY;
 }
