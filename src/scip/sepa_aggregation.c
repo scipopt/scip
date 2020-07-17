@@ -836,6 +836,12 @@ SCIP_RETCODE aggregation(
          rhs = SCIPgetUpperbound(scip);
 
       SCIP_CALL( SCIPaggrRowAddObjectiveFunction(scip, aggrdata->aggrrow, rhs, 1.0) );
+
+      if( SCIPaggrRowGetNNz(aggrdata->aggrrow) == 0 )
+      {
+         SCIPaggrRowClear(aggrdata->aggrrow);
+         return SCIP_OKAY;
+      }
    }
    else
    {
