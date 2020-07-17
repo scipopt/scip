@@ -856,7 +856,7 @@ SCIP_RETCODE pcmwEnumerationTry(
       SCIPfreeBufferArray(scip, &result);
    }
 
-   if( graph_pc_isRootedPcMw(g) )
+   if( g->stp_type == STP_RPCSPG )
       g->mark[g->source] = FALSE;
 
    return SCIP_OKAY;
