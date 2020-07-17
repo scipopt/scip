@@ -1300,7 +1300,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    {
       /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
        * Since the sum will then be linear in auxiliary variables, perspective can't improve anything for it
-       * FIXME: SCIPgetConsExprExprNEnfos(expr) is always 0 here, since we are still in the detect of this expr!
        */
       SCIP_Bool hasnondefault = FALSE;
 

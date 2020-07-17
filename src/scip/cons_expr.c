@@ -2144,7 +2144,6 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to run detection routines */
    SCIP_CONS*            cons,               /**< constraint for which expr == consdata->expr, otherwise NULL */
-   SCIP_CONSEXPR_EXPRENFO** nlhdlrenfobuffer,/**< buffer for enfodata */
    SCIP_Bool*            infeasible,         /**< buffer to indicate whether infeasibility has been detected */
    int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
@@ -2155,12 +2154,11 @@ SCIP_RETCODE detectNlhdlr(
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrenforcemethods;
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipating;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;
-   int nsuccess;
+   int enfossize;  /* allocated length of expr->enfos array */
    int h;
 
    assert(conshdlr != NULL);
    assert(expr != NULL);
-   assert(nlhdlrenfobuffer != NULL);
    assert(infeasible != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2194,7 +2192,9 @@ SCIP_RETCODE detectNlhdlr(
    /* it doesn't make sense to have been called on detectNlhdlr, if the expr isn't used for anything */
    assert(enforcemethods != SCIP_CONSEXPR_EXPRENFO_ALL);
 
-   nsuccess = 0;
+   expr->nenfos = 0;
+   enfossize = 2;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, enfossize) );
    conshdlrdata->indetect = TRUE;
 
    SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); requiring%s%s%s\n",
@@ -2249,15 +2249,20 @@ SCIP_RETCODE detectNlhdlr(
          ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0) ? "participating" : "no",
          ((nlhdlrenforcemethods & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) != 0) ? "participating" : "no");
 
-      /* remember nlhdlr and its data */
-      SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrenfobuffer[nsuccess]) );  /*lint !e866*/
-      nlhdlrenfobuffer[nsuccess]->nlhdlr = nlhdlr;
-      nlhdlrenfobuffer[nsuccess]->nlhdlrexprdata = nlhdlrexprdata;
-      nlhdlrenfobuffer[nsuccess]->nlhdlrparticipation = nlhdlrparticipating;
-      nlhdlrenfobuffer[nsuccess]->issepainit = FALSE;
-      nlhdlrenfobuffer[nsuccess]->sepabelowusesactivity = conshdlrdata->registerusesactivitysepabelow;
-      nlhdlrenfobuffer[nsuccess]->sepaaboveusesactivity = conshdlrdata->registerusesactivitysepaabove;
-      ++nsuccess;
+      /* store nlhdlr and its data */
+      if( expr->nenfos == enfossize )
+      {
+         enfossize = SCIPcalcMemGrowSize(scip, expr->nenfos+1);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr->enfos, expr->nenfos, enfossize) );
+      }
+      SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[expr->nenfos]) );  /*lint !e866*/
+      expr->enfos[expr->nenfos]->nlhdlr = nlhdlr;
+      expr->enfos[expr->nenfos]->nlhdlrexprdata = nlhdlrexprdata;
+      expr->enfos[expr->nenfos]->nlhdlrparticipation = nlhdlrparticipating;
+      expr->enfos[expr->nenfos]->issepainit = FALSE;
+      expr->enfos[expr->nenfos]->sepabelowusesactivity = conshdlrdata->registerusesactivitysepabelow;
+      expr->enfos[expr->nenfos]->sepaaboveusesactivity = conshdlrdata->registerusesactivitysepaabove;
+      expr->nenfos++;
 
       /* update enforcement flags */
       enforcemethods = enforcemethodsnew;
@@ -2312,15 +2317,14 @@ SCIP_RETCODE detectNlhdlr(
       return SCIP_ERROR;
    }
 
-   assert(nsuccess > 0);
+   assert(expr->nenfos > 0);
 
    /* sort nonlinear handlers by enforcement priority, in decreasing order */
-   if( nsuccess > 1 )
-      SCIPsortDownPtr((void**)nlhdlrenfobuffer, enfodataCmp, nsuccess);
+   if( expr->nenfos > 1 )
+      SCIPsortDownPtr((void**)expr->enfos, enfodataCmp, expr->nenfos);
 
-   /* copy collected nlhdlrs into expr->enfos */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &expr->enfos, nlhdlrenfobuffer, nsuccess) );
-   expr->nenfos = nsuccess;
+   /* resize expr->enfos array to be nenfos long */
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &expr->enfos, enfossize, expr->nenfos) );
 
    return SCIP_OKAY;
 }
@@ -2336,7 +2340,6 @@ SCIP_RETCODE detectNlhdlrs(
    int*                  nchgbds             /**< buffer to add number of bound tightenings found during reverseprop calls, set to NULL to disable these calls! */
    )
 {
-   SCIP_CONSEXPR_EXPRENFO** nlhdlrenfobuffer;   /* buffer for nlhdlrs that had success detecting structure at expression */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONSEXPR_EXPR* expr;
@@ -2353,9 +2356,6 @@ SCIP_RETCODE detectNlhdlrs(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
-
-   /* allocate some buffer for temporary storage of nlhdlr detect result */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nlhdlrenfobuffer, conshdlrdata->nnlhdlrs) );
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
@@ -2422,7 +2422,7 @@ SCIP_RETCODE detectNlhdlrs(
           */
          if( expr->nauxvaruses > 0 || expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 )
          {
-            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, nlhdlrenfobuffer, infeasible, nchgbds) );
+            SCIP_CALL( detectNlhdlr(scip, conshdlr, expr, expr == consdata->expr ? conss[i] : NULL, infeasible, nchgbds) );
 
             if( *infeasible )
                break;
@@ -2469,7 +2469,6 @@ SCIP_RETCODE detectNlhdlrs(
 #endif
 
    SCIPexpriteratorFree(&it);
-   SCIPfreeBufferArray(scip, &nlhdlrenfobuffer);
 
    return SCIP_OKAY;
 }
