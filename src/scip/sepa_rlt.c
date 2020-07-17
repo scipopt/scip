@@ -36,7 +36,6 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_setppc.h"
 #include "scip/struct_scip.h"
-#include "scip/lp.h"
 
 
 #define SEPA_NAME              "rlt"
@@ -2039,7 +2038,7 @@ SCIP_RETCODE computeRltCuts(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "rlt_cut_%s_%s_%s_%s_%d", SCIProwGetName(row), uselhs ? "lhs" : "rhs",
                        SCIPvarGetName(var), uselb ? "lb" : "ub", SCIPgetNLPs(scip));
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip),
-         TRUE, FALSE, FALSE) );
+         SCIPgetDepth(scip) > 0 && local, FALSE, FALSE) );
 
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < SCIProwGetNNonz(row); ++i )
@@ -2703,10 +2702,9 @@ SCIP_RETCODE separateRltCuts(
             /* if the cut was created successfully and is violated, it is added to SCIP */
             if( success )
             {
-               if( sepadata->addtopool && (SCIPgetDepth(scip) == 0 || !allowlocal ) )
+               if( sepadata->addtopool && !SCIProwIsLocal(cut) )
                {
                   /* the cut is globally valid and adding cuts to the global cut pool is enabled */
-                  SCIP_CALL( SCIProwChgLocal(cut, FALSE) );
                   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
                }
                else
