@@ -15676,6 +15676,68 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    return NULL;
 }
 
+/* returns the number of enforcements for an expression */
+int SCIPgetConsExprExprNEnfos(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   return expr->nenfos;
+}
+
+/** returns the nonlinear handler for enforcement i of an expression */
+SCIP_CONSEXPR_NLHDLR* SCIPgetConsExprExprEnfoNlhdlr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i                   /**< position of enforcement in enfos array */
+   )
+{
+   assert(expr != NULL);
+   assert(i < expr->nenfos);
+   assert(expr->enfos[i] != NULL);
+
+   return expr->enfos[i]->nlhdlr;
+}
+
+/** returns the auxiliary value of expression for enforcement i of an expression */
+SCIP_Real SCIPgetConsExprExprEnfoAuxValue(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i                   /**< position of enforcement in enfos array */
+)
+{
+   assert(expr != NULL);
+   assert(i < expr->nenfos);
+   assert(expr->enfos[i] != NULL);
+
+   return expr->enfos[i]->auxvalue;
+}
+
+/** sets the auxiliary value of expression for enforcement i of an expression */
+void SCIPsetConsExprExprEnfoAuxValue(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i,                  /**< position of enforcement in enfos array */
+   SCIP_Real             auxvalue            /**< the new value of auxval */
+)
+{
+   assert(expr != NULL);
+   assert(i < expr->nenfos);
+   assert(expr->enfos[i] != NULL);
+
+   expr->enfos[i]->auxvalue = auxvalue;
+}
+
+/** returns the nonlinear expression data for enforcement i of an expression */
+SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprExprEnfoNlhdlrExprData(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i                   /**< position of enforcement in enfos array */
+)
+{
+   assert(expr != NULL);
+   assert(i < expr->nenfos);
+   assert(expr->enfos[i] != NULL);
+
+   return expr->enfos[i]->nlhdlrexprdata;
+}
+
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(
