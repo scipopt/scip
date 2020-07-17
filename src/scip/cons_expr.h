@@ -1314,7 +1314,42 @@ SCIP_RETCODE bilinearTermsInsertImplicit(
    SCIP_Real             coefy,
    SCIP_Real             cst,
    SCIP_Bool             overestimate
-);
+   );
+
+/** returns the number of enforcements for an expression */
+SCIP_EXPORT
+int SCIPgetConsExprExprNEnfos(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** returns the nonlinear handler for enforcement i of an expression */
+SCIP_EXPORT
+SCIP_CONSEXPR_NLHDLR* SCIPgetConsExprExprEnfoNlhdlr(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i                   /**< position of enforcement in enfos array */
+   );
+
+/** returns the auxiliary value of expression for enforcement i of an expression */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprEnfoAuxValue(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i                   /**< position of enforcement in enfos array */
+   );
+
+/** returns the nonlinear expression data for enforcement i of an expression */
+SCIP_EXPORT
+SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprExprEnfoNlhdlrExprData(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i                   /**< position of enforcement in enfos array */
+   );
+
+/** sets the auxiliary value of expression for enforcement i of an expression */
+SCIP_EXPORT
+void SCIPsetConsExprExprEnfoAuxValue(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   int                   i,                  /**< position of enforcement in enfos array */
+   SCIP_Real             auxvalue            /**< the new value of auxval */
+   );
 
 /** upgrading method for expression constraints into more specific constraints
  *
