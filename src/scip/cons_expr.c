@@ -2606,35 +2606,23 @@ SCIP_RETCODE initSolve(
 
       if( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
-         /* call curvature detection of expression handlers; TODO do we really need this? */
-         SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, consdata->expr) );
-
-         /* call the curvature detection algorithm of the convex nonlinear handler if the curvature
-          * detection of the expression handlers could not detect anything
+         /* call the curvature detection algorithm of the convex nonlinear handler
+          * Check only for those curvature that may result in a convex inequality, i.e.,
+          * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
+          * Also we can assume that we are nonlinear, so do not check for convex if already concave.
           */
-         if( consdata->curv == SCIP_EXPRCURV_UNKNOWN && SCIPgetConsExprExprCurvature(consdata->expr) == SCIP_EXPRCURV_UNKNOWN )
+         SCIP_Bool success = FALSE;
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            /* Check only for those curvature that may result in a convex inequality, i.e.,
-             * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
-             * Also we can assume that we are nonlinear, so do not check for convex if already concave.
-             */
-            SCIP_Bool success = FALSE;
-            if( !SCIPisInfinity(scip, -consdata->lhs) )
-            {
-               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
-               if( success )
-                  consdata->curv = SCIP_EXPRCURV_CONCAVE;
-            }
-            if( !success && !SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
-               if( success )
-                  consdata->curv = SCIP_EXPRCURV_CONVEX;
-            }
+            SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+            if( success )
+               consdata->curv = SCIP_EXPRCURV_CONCAVE;
          }
-         else
+         if( !success && !SCIPisInfinity(scip, consdata->rhs) )
          {
-            consdata->curv = SCIPgetConsExprExprCurvature(consdata->expr);
+            SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+            if( success )
+               consdata->curv = SCIP_EXPRCURV_CONVEX;
          }
          SCIPdebugMsg(scip, "root curvature of constraint %s = %d\n", SCIPconsGetName(conss[c]), consdata->curv);
 
