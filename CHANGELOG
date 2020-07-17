@@ -14,6 +14,7 @@ Performance improvements
 
 - Use the objective cutoff row as base row for separation in sepa_aggregation.c
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 
 Examples and applications
 -------------------------
@@ -89,6 +90,8 @@ Interface changes
 
 ### New API functions
 
+- new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -120,6 +123,7 @@ Fixed bugs
 
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
+- Fixed problem with incompatibility of symmetry handling in Benders decomposition
 
 Miscellaneous
 -------------

@@ -116,6 +116,12 @@ int SCIPcolGetIndex(
    SCIP_COL*             col                 /**< LP col */
    );
 
+/** gets probindex of corresponding variable */
+SCIP_EXPORT
+int SCIPcolGetVarProbindex(
+   SCIP_COL*             col                 /**< LP col */
+   );
+
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
 SCIP_EXPORT
 SCIP_Bool SCIPcolIsIntegral(
