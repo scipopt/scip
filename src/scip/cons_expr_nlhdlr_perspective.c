@@ -1286,27 +1286,46 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       return SCIP_OKAY;
    }
 
-   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   if( nlhdlrdata->convexonly || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
       /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
        * Since the sum will then be linear in auxiliary variables, perspective can't improve anything for it
+       *
+       * If we are supposed to run only on convex expressions, than check whether there is a nlhdlr
+       * that participates in separation without using activity for it.
        */
       SCIP_Bool hasnondefault = FALSE;
+      SCIP_Bool alluseactivity = TRUE;
 
       for( i = 0; i < SCIPgetConsExprExprNEnfos(expr); ++i )
       {
          SCIP_CONSEXPR_NLHDLR* nlhdlr2;
-         SCIPgetConsExprExprEnfoData(expr, i, &nlhdlr2, NULL, NULL, NULL, NULL, NULL);
+         SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlr2participates;
+         SCIP_Bool sepabelowusesactivity;
+         SCIP_Bool sepaaboveusesactivity;
+         SCIPgetConsExprExprEnfoData(expr, i, &nlhdlr2, NULL, &nlhdlr2participates, &sepabelowusesactivity, &sepaaboveusesactivity, NULL);
+
+         if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+            continue;
 
          if( strcmp(SCIPgetConsExprNlhdlrName(nlhdlr2), "default") != 0 )
-         {
             hasnondefault = TRUE;
-            break;
-         }
+
+         if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !sepabelowusesactivity )
+            alluseactivity = FALSE;
+         if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && !sepaaboveusesactivity )
+            alluseactivity = FALSE;
       }
 
-      if( !hasnondefault )
+      if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && !hasnondefault )
       {
+         SCIPdebugMsg(scip, "sum expr only has default exprhdlr, not running perspective detection\n");
+         return SCIP_OKAY;
+      }
+
+      if( nlhdlrdata->convexonly && alluseactivity )
+      {
+         SCIPdebugMsg(scip, "expr only has nlhdlr that use activity for sepa, but convexonly is set, not running perspective detection\n");
          return SCIP_OKAY;
       }
    }

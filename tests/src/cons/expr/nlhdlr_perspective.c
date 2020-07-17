@@ -260,6 +260,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
    expr->nenfos = 2;
    expr->enfos[0]->nlhdlr = nlhdlr_conv;
+   expr->enfos[0]->nlhdlrparticipation = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
    expr->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect */
