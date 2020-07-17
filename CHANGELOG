@@ -54,7 +54,7 @@ Fixed bugs
 
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
-- Fixed aggregation heuristic to not use local rows when that is requested
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 
 Miscellaneous
