@@ -1395,6 +1395,7 @@ SCIP_RETCODE reduce_ans(
    *nelims = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nnodes) );
+   graph_mark(g);
 
    /* unmark all nodes */
    for( int k = 0; k < nnodes; k++ )
@@ -2010,6 +2011,8 @@ SCIP_RETCODE reduce_npv(
    SCIP_CALL( SCIPallocBufferArray(scip, &pathhead, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &memlbltail, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &memlblhead, nnodes + 1) );
+
+   graph_mark(g);
 
    /* initialize arrays */
    for( int i = 0; i < nnodes; i++ )
