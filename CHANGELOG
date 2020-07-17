@@ -21,6 +21,8 @@ Interface changes
 
 ### New API functions
 
+- new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -53,6 +55,7 @@ Fixed bugs
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
 - Fixed aggregation heuristic to not use local rows when that is requested
+- Fixed problem with incompatibility of symmetry handling in Benders decomposition
 
 Miscellaneous
 -------------

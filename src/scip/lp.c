@@ -16741,6 +16741,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPcolGetBasisStatus
 #undef SCIPcolGetVar
 #undef SCIPcolGetIndex
+#undef SCIPcolGetVarProbindex
 #undef SCIPcolIsIntegral
 #undef SCIPcolIsRemovable
 #undef SCIPcolGetLPPos
@@ -16915,6 +16916,16 @@ int SCIPcolGetIndex(
    assert(col != NULL);
 
    return col->index;
+}
+
+/** gets probindex of corresponding variable */
+int SCIPcolGetVarProbindex(
+   SCIP_COL*             col                 /**< LP col */
+   )
+{
+   assert(col != NULL);
+
+   return col->var_probindex;
 }
 
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
