@@ -50,6 +50,8 @@ Build system
 Fixed bugs
 ----------
 
+- fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
+
 Miscellaneous
 -------------
 
