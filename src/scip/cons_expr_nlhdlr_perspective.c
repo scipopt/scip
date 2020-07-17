@@ -1286,16 +1286,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       return SCIP_OKAY;
    }
 
-   /* some other nonlinear handler should be able to separate */
-   /* TODO since there is an auxvar, some nlhdlr will be here to separate
-    * does it matter to check that it has already detected?
-   if( !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !(*enforcemethods & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) )
-   {
-      SCIPdebugMsg(scip, "\nno enforcement method, exiting detect");
-      return SCIP_OKAY;
-   }
-   */
-
    if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
    {
       /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
@@ -1305,7 +1295,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
       for( i = 0; i < SCIPgetConsExprExprNEnfos(expr); ++i )
       {
-         if( strcmp(SCIPgetConsExprNlhdlrName(SCIPgetConsExprExprEnfoNlhdlr(expr, i)), "default") != 0 )
+         SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+         SCIPgetConsExprExprEnfoData(expr, i, &nlhdlr2, NULL, NULL, NULL, NULL, NULL);
+
+         if( strcmp(SCIPgetConsExprNlhdlrName(nlhdlr2), "default") != 0 )
          {
             hasnondefault = TRUE;
             break;
@@ -1412,17 +1405,22 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
    maxdiff = 0.0;
    *auxvalue = auxvarvalue;
 
-   /* use the auxvalue from one of the other nlhdlrs that handle this expr: take the one that is farthest
+   /* use the auxvalue from one of the other nlhdlrs that estimates for this expr: take the one that is farthest
     * from the current value of auxvar
     */
    for( e = 0; e < SCIPgetConsExprExprNEnfos(expr); ++e )
    {
-      /* TODO when available, this should be extended by a check whether the nlhdlr will participate in separation (below or above) */
-      if( !SCIPhasConsExprNlhdlrEstimate(SCIPgetConsExprExprEnfoNlhdlr(expr, e)) )
+      SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlr2exprdata;
+      SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlr2participation;
+
+      SCIPgetConsExprExprEnfoData(expr, e, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participation, NULL, NULL, NULL);
+
+      /* skip nlhdlr that do not participate or do not provide  */
+      if( (nlhdlr2participation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 || !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
          continue;
 
-      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, SCIPgetConsExprExprEnfoNlhdlr(expr, e), expr,
-            SCIPgetConsExprExprEnfoNlhdlrExprData(expr, e), &enfoauxval, sol) );
+      SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr2, expr, nlhdlr2exprdata, &enfoauxval, sol) );
 
       SCIPsetConsExprExprEnfoAuxValue(expr, e, enfoauxval);
 
@@ -1532,25 +1530,34 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    for( j = 0; j < SCIPgetConsExprExprNEnfos(expr); ++j )
    {
       SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlr2exprdata;
+      SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlr2participate;
+      SCIP_Real nlhdlr2auxvalue;
       SCIP_Real violation;
-      SCIP_Bool underestimate2;
-      SCIP_Bool overestimate2;
+      SCIP_Bool violbelow;
+      SCIP_Bool violabove;
 
-      nlhdlr2 = SCIPgetConsExprExprEnfoNlhdlr(expr, j);
+      SCIPgetConsExprExprEnfoData(expr, j, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participate, NULL, NULL, &nlhdlr2auxvalue);
 
+      if( nlhdlr2 == nlhdlr )
+         continue;
+
+      /* if nlhdlr2 cannot estimate, then cannot use it */
       if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
          continue;
 
-      assert(nlhdlr2 != nlhdlr);
+      /* if nlhdlr2 does not participate in the separation on the desired side (overestimate), then skip it */
+      if( (nlhdlr2participate & (overestimate ? SCIP_CONSEXPR_EXPRENFO_SEPAABOVE : SCIP_CONSEXPR_EXPRENFO_SEPABELOW)) == 0 )
+         continue;
 
-      /* evalaux should have called evalaux of other nlhdlrs by now
-       * check whether handling the violation for nlhdlr2 required under- or overestimation
+      /* evalaux should have called evalaux of nlhdlr2 by now
+       * check whether handling the violation for nlhdlr2 requires under- or overestimation and this fits to overestimate flag
        */
-      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, SCIPgetConsExprExprEnfoAuxValue(expr, j),
-            sol, &violation, &underestimate2, &overestimate2) );
+      SCIP_CALL( SCIPgetConsExprExprAbsAuxViolation(scip, conshdlr, expr, nlhdlr2auxvalue,
+            sol, &violation, &violbelow, &violabove) );
       assert(violation >= 0.0);
 
-      if( (overestimate && !overestimate2) || (!overestimate && !underestimate2) )
+      if( (overestimate && !violabove) || (!overestimate && !violbelow) )
          continue;
 
       /* if violation is small, cuts would likely be weak - skip perspectification */
@@ -1686,18 +1693,19 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       {
          SCIP_Bool addedbranchscores2j;
          SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+         SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlr2exprdata;
+         SCIP_Real nlhdlr2auxvalue;
          SCIP_Bool success2;
 
-         nlhdlr2 = SCIPgetConsExprExprEnfoNlhdlr(expr, enfoposs[j]);
-
+         SCIPgetConsExprExprEnfoData(expr, j, &nlhdlr2, &nlhdlr2exprdata, NULL, NULL, NULL, &nlhdlr2auxvalue);
          assert(SCIPhasConsExprNlhdlrEstimate(nlhdlr2) && nlhdlr2 != nlhdlr);
 
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the nonlinear handler for an estimator */
          SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr,
-               SCIPgetConsExprExprEnfoNlhdlrExprData(expr, enfoposs[j]), solcopy,
-               SCIPgetConsExprExprEnfoAuxValue(expr, enfoposs[j]), overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
+               nlhdlr2exprdata, solcopy,
+               nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
                rowpreps2, &success2, FALSE, &addedbranchscores2j) );
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);

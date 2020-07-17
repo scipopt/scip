@@ -1296,32 +1296,24 @@ int SCIPgetConsExprExprNEnfos(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** returns the nonlinear handler for enforcement i of an expression */
+/** returns the data for one of the enforcements of an expression */
 SCIP_EXPORT
-SCIP_CONSEXPR_NLHDLR* SCIPgetConsExprExprEnfoNlhdlr(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
+void SCIPgetConsExprExprEnfoData(
+   SCIP_CONSEXPR_EXPR*   expr,                         /**< expression */
+   int                   idx,                          /**< position of enforcement in enfos array */
+   SCIP_CONSEXPR_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_Bool*            sepabelowusesactivity,        /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
+   SCIP_Bool*            sepaaboveusesactivity,        /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
+   SCIP_Real*            auxvalue                      /**< buffer to store current auxvalue, or NULL */
    );
 
-/** returns the auxiliary value of expression for enforcement i of an expression */
-SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprEnfoAuxValue(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
-   );
-
-/** returns the nonlinear expression data for enforcement i of an expression */
-SCIP_EXPORT
-SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprExprEnfoNlhdlrExprData(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
-   );
-
-/** sets the auxiliary value of expression for enforcement i of an expression */
+/** sets the auxiliary value of expression for one of the enforcements of an expression */
 SCIP_EXPORT
 void SCIPsetConsExprExprEnfoAuxValue(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i,                  /**< position of enforcement in enfos array */
+   int                   idx,                /**< position of enforcement in enfos array */
    SCIP_Real             auxvalue            /**< the new value of auxval */
 );
 

@@ -15684,57 +15684,55 @@ int SCIPgetConsExprExprNEnfos(
    return expr->nenfos;
 }
 
-/** returns the nonlinear handler for enforcement i of an expression */
-SCIP_CONSEXPR_NLHDLR* SCIPgetConsExprExprEnfoNlhdlr(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
+/** returns the data for one of the enforcements of an expression */
+void SCIPgetConsExprExprEnfoData(
+   SCIP_CONSEXPR_EXPR*   expr,                         /**< expression */
+   int                   idx,                          /**< position of enforcement in enfos array */
+   SCIP_CONSEXPR_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_Bool*            sepabelowusesactivity,        /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
+   SCIP_Bool*            sepaaboveusesactivity,        /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
+   SCIP_Real*            auxvalue                      /**< buffer to store current auxvalue, or NULL */
    )
 {
    assert(expr != NULL);
-   assert(i < expr->nenfos);
-   assert(expr->enfos[i] != NULL);
+   assert(idx >= 0);
+   assert(idx < expr->nenfos);
+   assert(expr->enfos[idx] != NULL);
+   assert(nlhdlr != NULL);
 
-   return expr->enfos[i]->nlhdlr;
+   *nlhdlr = expr->enfos[idx]->nlhdlr;
+
+   if( nlhdlrexprdata != NULL )
+      *nlhdlrexprdata = expr->enfos[idx]->nlhdlrexprdata;
+
+   if( nlhdlrparticipation != NULL )
+      *nlhdlrparticipation = expr->enfos[idx]->nlhdlrparticipation;
+
+   if( sepabelowusesactivity != NULL )
+      *sepabelowusesactivity = expr->enfos[idx]->sepabelowusesactivity;
+
+   if( sepaaboveusesactivity != NULL )
+      *sepaaboveusesactivity = expr->enfos[idx]->sepaaboveusesactivity;
+
+   if( auxvalue != NULL )
+      *auxvalue = expr->enfos[idx]->auxvalue;
 }
 
-/** returns the auxiliary value of expression for enforcement i of an expression */
-SCIP_Real SCIPgetConsExprExprEnfoAuxValue(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
-)
-{
-   assert(expr != NULL);
-   assert(i < expr->nenfos);
-   assert(expr->enfos[i] != NULL);
-
-   return expr->enfos[i]->auxvalue;
-}
-
-/** sets the auxiliary value of expression for enforcement i of an expression */
+/** sets the auxiliary value of expression for one of the enforcements of an expression */
 void SCIPsetConsExprExprEnfoAuxValue(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i,                  /**< position of enforcement in enfos array */
+   int                   idx,                /**< position of enforcement in enfos array */
    SCIP_Real             auxvalue            /**< the new value of auxval */
 )
 {
    assert(expr != NULL);
-   assert(i < expr->nenfos);
-   assert(expr->enfos[i] != NULL);
+   assert(idx >= 0);
+   assert(idx < expr->nenfos);
+   assert(expr->enfos[idx] != NULL);
 
-   expr->enfos[i]->auxvalue = auxvalue;
-}
-
-/** returns the nonlinear expression data for enforcement i of an expression */
-SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprExprEnfoNlhdlrExprData(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
-)
-{
-   assert(expr != NULL);
-   assert(i < expr->nenfos);
-   assert(expr->enfos[i] != NULL);
-
-   return expr->enfos[i]->nlhdlrexprdata;
+   expr->enfos[idx]->auxvalue = auxvalue;
 }
 
 /** create and include conshdlr to SCIP and set everything except for expression handlers */

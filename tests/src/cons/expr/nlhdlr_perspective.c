@@ -441,6 +441,7 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    expr->nenfos = 2;
    expr->enfos[0]->nlhdlr = nlhdlr_conv;
    expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_conv;
+   expr->enfos[0]->nlhdlrparticipation = participating;
    expr->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect by perspective handler */
