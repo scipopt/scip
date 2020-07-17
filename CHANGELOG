@@ -119,6 +119,7 @@ Build system
 Fixed bugs
 ----------
 
+- Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
