@@ -149,6 +149,78 @@ void setMinMaxElims(
 }
 
 
+
+/** does exact reductions */
+static
+SCIP_RETCODE reduceExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                prunegraph,         /**< graph data structure */
+   int                   reductbound,
+   SCIP_Bool             fullreduce,         /**< use full reduction techniques? */
+   int*                  soledge,            /**< solution edges (in/out) */
+   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed (in/out) */
+   SCIP_Real*            offset
+   )
+{
+   PATH* vnoi;
+   PATH* path;
+   SCIP_Real* nodearrreal;
+   int* heap;
+   int* state;
+   int* vbase;
+   int* nodearrint;
+   int* edgearrint;
+   int* nodearrint2;
+   STP_Bool* nodearrchar;
+   const int nnodes = graph_get_nNodes(prunegraph);
+   const int nedges = graph_get_nEdges(prunegraph);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
+
+   if( graph_pc_isPc(prunegraph) )
+   {
+      SCIP_CALL( redLoopPc(scip, NULL, prunegraph, vnoi, path, nodearrreal, heap, state,
+            vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, offset,
+            FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
+   }
+   else if( graph_pc_isMw(prunegraph) )
+   {
+      SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, nodearrreal, state,
+            vbase, nodearrint, NULL, nodearrchar, offset,
+            FALSE, FALSE, FALSE, reductbound, FALSE) );
+   }
+   else
+   {
+      const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+                                                    .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
+
+      SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
+            vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, offset) );
+   }
+
+   SCIPfreeBufferArray(scip, &path);
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &nodearrint2);
+   SCIPfreeBufferArray(scip, &edgearrint);
+   SCIPfreeBufferArray(scip, &nodearrint);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &nodearrreal);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &heap);
+   SCIPfreeBufferArray(scip, &nodearrchar);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of primal heuristic
  */
@@ -498,25 +570,20 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    GRAPH*                g,                  /**< graph data structure */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   SCIP_Bool             reducegraph,        /**< try to reduce graph initially? */
+   SCIP_Bool             initialreduce,      /**< try to reduce graph initially? */
    SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    )
 {
    GRAPH*    prunegraph;
-   PATH*    vnoi;
-   PATH*    path;
    SCIP_Real    ubnew;
    SCIP_Real    ubbest;
    SCIP_Real    offsetnew;
    SCIP_Real    globalobj;
-   SCIP_Real*    cost;
-   SCIP_Real*    costrev;
-   SCIP_Real*    nodearrreal;
    int     i;
    int     k;
    int     e;
-   int     nnodes;
-   int     nedges;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
    int     anterms;
    int     anedges;
    int     annodes;
@@ -524,36 +591,24 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    int     minnelims;
    int     lminnelims;
    int     reductbound;
-   int*     heap;
-   int*     state;
-   int*     vbase;
    int*     solnode;
-   int*     edgearrint2;
-   int*     nodearrint;
-   int*     nodearrint2;
    int*     globalsoledge;
-   STP_Bool*     nodearrchar;
-   STP_Bool*     edgearrchar;
 
    assert(g != NULL);
    assert(scip != NULL);
    assert(soledge != NULL);
    assert(solstp_isValid(scip, g, soledge));
 
-   nedges = g->edges;
-   nnodes = g->knots;
    probtype = g->stp_type;
 
-   /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &solnode, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );
+   BMScopyMemoryArray(globalsoledge, soledge, nedges);
 
    /* mark solution vertices */
    for( k = 0; k < nnodes; k++ )
       solnode[k] = UNKNOWN;
 
-   /* set solution array and get solution value */
    for( e = 0; e < nedges; e++ )
    {
       if( soledge[e] == CONNECT )
@@ -564,35 +619,13 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    }
 
    ubbest = solstp_getObjBounded(g, soledge, 0.0, nedges);
-
    globalobj = ubbest;
-
-   /* set offset (within new graph) to 0.0 */
-   offsetnew = 0.0;
-
-   /* allocate memory for reduction methods */
-   SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrchar, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint2, nedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
-
-   BMScopyMemoryArray(globalsoledge, soledge, nedges);
+   offsetnew = 0.0;    /* set offset (within new graph) to 0.0 */
 
    if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
       g->stp_type = STP_SPG;
 
-   /* copy the graph */
    SCIP_CALL( graph_copy(scip, g, &prunegraph) );
-
-   /* set ancestors of the new graph */
    SCIP_CALL( graph_init_history(scip, prunegraph) );
 
    reductbound = getRedBound(0, nedges);
@@ -615,7 +648,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       }
       SCIPdebugMessage("fixed edges in slack and prune: %d \n", nfixededges);
 
-      if( nfixededges > reductbound && reducegraph )
+      if( nfixededges > reductbound && initialreduce )
       {
          graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
          reductbound = getRedBound(0, anedges);
@@ -625,13 +658,9 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP_CALL( graph_path_init(scip, prunegraph) );
 
    /* perform initial reductions? */
-   if( reducegraph )
+   if( initialreduce )
    {
-      const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
-                                                 .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
-
-      SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
-            vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
+      SCIP_CALL( reduceExact(scip, prunegraph, reductbound, fullreduce, soledge, solnode, &offsetnew) );
    }
 
    /* get number of remaining vertices, edges and terminals */
@@ -643,6 +672,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       SCIP_Real obj;
       SCIP_Bool apsuccess;
       int danelims;
+      SCIP_Bool solgiven;
 
       /* update reduction bounds */
       setMinMaxElims(scip, &minnelims, &lminnelims, annodes, anedges, anterms, i + 1, SLACKPRUNE_MAXREDROUNDS);
@@ -651,10 +681,10 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          return SCIP_ERROR;
 #endif
 
-      /*  perform reductions */
-      SCIP_CALL( reduce_daSlackPrune(scip, prunegraph, vnoi, cost, costrev, nodearrreal, &ubnew,
-            soledge, edgearrint2, vbase, nodearrint, state, solnode, nodearrchar, edgearrchar, &danelims, minnelims, ((i == 0) && !reducegraph),
-            &apsuccess) );
+      solgiven = ((i == 0) && !initialreduce);
+
+      /*  perform heuristic reductions */
+      SCIP_CALL( reduce_daSlackPrune(scip, prunegraph, minnelims, solgiven, soledge, solnode, &danelims, &ubnew, &apsuccess) );
 
       /* delete all vertices not reachable from the root */
       SCIP_CALL( reduceLevel0(scip, prunegraph) );
@@ -700,19 +730,10 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          SCIPdebugMessage("old solution: %f new solution %f \n\n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
       }
 
-      /* get number of remaining edges */
       graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
-
       reductbound = getRedBound(i, anedges);
 
-      /* reduce graph, using the new upper bound and not letting BND eliminate solution edges */
-      {
-         const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
-                                                         .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
-
-         SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
-               vbase, nodearrint, soledge, nodearrint2, solnode, nodearrchar, &offsetnew) );
-      }
+      SCIP_CALL( reduceExact(scip, prunegraph, reductbound, fullreduce, soledge, solnode, &offsetnew) );
 
       /* get number of remaining edges */
       graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
@@ -736,24 +757,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
    /* free memory */
    graph_free(scip, &prunegraph, TRUE);
-
-   SCIPfreeBufferArray(scip, &path);
-   SCIPfreeBufferArray(scip, &vnoi);
-   SCIPfreeBufferArray(scip, &edgearrint2);
-   SCIPfreeBufferArray(scip, &nodearrint2);
-   SCIPfreeBufferArray(scip, &nodearrint);
-   SCIPfreeBufferArray(scip, &vbase);
-   SCIPfreeBufferArray(scip, &nodearrreal);
-   SCIPfreeBufferArray(scip, &state);
-   SCIPfreeBufferArray(scip, &heap);
-   SCIPfreeBufferArray(scip, &edgearrchar);
-   SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &globalsoledge);
-
-   SCIPfreeBufferArray(scip, &costrev);
-   SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &solnode);
-
 
    if( probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP )
       g->stp_type = probtype;

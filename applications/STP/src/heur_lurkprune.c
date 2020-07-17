@@ -434,18 +434,19 @@ SCIP_RETCODE updateSolution(
    if( graph_pc_isRootedPcMw(g) || graph_typeIsSpgLike(g) )
    {
       SCIP_Real* redcost;
-      SCIP_Real obj = 0.0;
       DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = prunegraph->source,
                       .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
+      obj = 0.0;
+
 
       SCIP_CALL( SCIPallocBufferArray(scip, &redcost, g->edges) );
 
       SCIP_CALL( dualascent_exec(scip, g, NULL, &daparams, redcost, &obj) );
 
       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, redcost, soledge, -1, &success, FALSE) );
-
-      int todo; // do reducctions based on redcost
-
+      {
+         int todo; // do reducctions based on redcost
+      }
       SCIPfreeBufferArray(scip, &redcost);
    }
    else

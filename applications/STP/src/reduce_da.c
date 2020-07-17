@@ -2620,108 +2620,81 @@ SCIP_RETCODE reduce_da(
 SCIP_RETCODE reduce_daSlackPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
-   PATH*                 vnoi,               /**< Voronoi data structure */
-   SCIP_Real*            cost,               /**< array to store reduced costs */
-   SCIP_Real*            costrev,            /**< reverse edge costs */
-   SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
-   SCIP_Real*            upperbound,         /**< pointer to store new upper bound */
-   int*                  soledge,            /**< solution edges (in/out) */
-   int*                  edgearrint2,        /**< int edges array for internal computations */
-   int*                  vbase,              /**< array for Voronoi bases */
-   int*                  pathedge,           /**< array for predecessor edge on a path */
-   int*                  state,              /**< int 4 * nnodes array for internal computations */
-   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
-   STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations  */
-   STP_Bool*             edgearrchar,        /**< STP_Bool edge array for internal computations  */
-   int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   minelims,           /**< minimum number of edges to eliminate */
    SCIP_Bool             solgiven,           /**< solution provided? */
+   int*                  soledge,            /**< solution edges (in/out) */
+   int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed (in/out) */
+   int*                  nelims,             /**< pointer to store number of reduced edges */
+   SCIP_Real*            upperbound,         /**< pointer to store new upper bound */
    SCIP_Bool*            solImproved         /**< solution provided? */
    )
 {
+   const int* grad;
+   PATH *vnoi;
+   SCIP_Real *cost;
+   SCIP_Real *costrev;
+   SCIP_Real *pathdist;
+   int *state;
+   int *vbase;
+   int *edgearrint2;
+   int *pathprededge;
    SCIP_Real obj;
    SCIP_Real tmpcost;
    SCIP_Real lpobjval;
    SCIP_Real objprune;
    SCIP_Real minpathcost;
-   SCIP_Bool rpc;
    SCIP_Bool success;
    SCIP_Bool eliminate;
-
-   int* grad;
-   int i;
+   int i = -1;
    int k;
    int e;
-   int e2;
-   int e3;
    int etmp;
-   int root;
    int head;
-   int nterms;
-   int nedges;
-   int nnodes;
+   const int nedges = graph_get_nEdges(graph);
+   const int nnodes = graph_get_nNodes(graph);
+   const int root = graph->source;
+   const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
+
    int nfixed;
    int redrounds;
    STP_Bool* marked;
 
    assert(scip != NULL);
-   assert(cost != NULL);
    assert(graph != NULL);
    assert(nelims != NULL);
    assert(solnode != NULL);
-   assert(costrev != NULL);
-   assert(pathedge != NULL);
-   assert(upperbound != NULL);
    assert(soledge != NULL);
-   assert(edgearrint2 != NULL);
-   assert(nodearrchar != NULL);
-   assert(edgearrchar != NULL);
    assert(!graph_pc_isPcMw(graph));
 
    /* 1. step: initialize */
 
    *solImproved = FALSE;
-   rpc = (graph->stp_type == STP_RPCSPG);
    grad = graph->grad;
-   root = graph->source;
    nfixed = 0;
-   nedges = graph->edges;
-   nnodes = graph->knots;
 
-   /* graph vanished? */
-   if( grad[graph->source] == 0 )
-      return SCIP_OKAY;
-
-   marked = edgearrchar;
-
-   k = 0;
-   nterms = 0;
-   for( i = 0; i < nnodes; i++ )
-   {
-      if( !rpc )
-         graph->mark[i] = (grad[i] > 0);
-      if( graph->mark[i] )
-      {
-         k++;
-         if( Is_term(graph->term[i]) )
-            nterms++;
-      }
-   }
-
-   /* not more than two terminals? */
-   if( nterms <= 2 )
+   if( graph->terms <= 2 )
       goto TERMINATE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathprededge, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint2, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
 
    /* 2. step: - if not provided, compute lower bound and reduced costs
     *          - try to eliminate edges and nodes                        */
 
-   for( i = 0; i < nnodes; i++ )
-      if( Is_term(graph->term[i]) )
-         assert(grad[i] > 0);
-
-   if( rpc )
+   if( rpcmw )
    {
       graph_pc_2trans(scip, graph);
+   }
+   else
+   {
+      graph_mark(graph);
    }
 
    if( !solgiven )
@@ -2804,53 +2777,9 @@ SCIP_RETCODE reduce_daSlackPrune(
       SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, cost, &lpobjval) );
    }
 
-#if 0
-      SCIP_QUEUE* queue;
-      SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
-
-      GRAPH* prunegraph = graph;
-      int* mark = graph->mark;
-      int* pnode;
-      int a;
-      for( k = 0; k < nnodes; k++ )
-         mark[k] = FALSE;
-
-
-      /* BFS from root along incoming arcs of zero cost */
-
-      mark[prunegraph->source] = TRUE;
-
-      SCIP_CALL( SCIPqueueInsert(queue, &(prunegraph->source)) );
-
-      while( !SCIPqueueIsEmpty(queue) )
-      {
-         pnode = (SCIPqueueRemove(queue));
-         k = *pnode;
-
-         /* traverse outgoing arcs */
-         for( a = prunegraph->outbeg[k]; a != EAT_LAST; a = prunegraph->oeat[a] )
-         {
-            head = prunegraph->head[a];
-
-            if( SCIPisEQ(scip, cost[a], 0.0) )
-            {
-               /* vertex not labeled yet? */
-               if( !mark[head] )
-               {
-                  mark[head] = TRUE;
-                  SCIP_CALL( SCIPqueueInsert(queue, &(prunegraph->head[a])) );
-               }
-            }
-         }
-      }
-      SCIPqueueFree(&queue);
-      for( k = 0; k < nnodes; k++ )
-         if( Is_term(prunegraph->term[k]) && !mark[k]  )
-            printf("in bnd  FAIL %d not marked, but terminal, \n", k);
-#endif
+   assert(dualascent_allTermsReachable(scip, graph, root, cost));
 
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, cost, edgearrint2, root, &success, FALSE) );
-
    objprune = getSolObj(scip, graph, edgearrint2);
 
    assert(success);
@@ -2874,7 +2803,6 @@ SCIP_RETCODE reduce_daSlackPrune(
    }
 
    obj = 0.0;
-
    for( e = 0; e < nedges; e++ )
    {
       if( soledge[e] == CONNECT )
@@ -2885,12 +2813,10 @@ SCIP_RETCODE reduce_daSlackPrune(
    }
 
    *upperbound = obj;
-
-   for( k = 0; k < nnodes; k++ )
-      graph->mark[k] = (grad[k] > 0);
+   graph_mark(graph);
 
    /* distance from root to all nodes */
-   graph_path_execX(scip, graph, root, cost, pathdist, pathedge);
+   graph_path_execX(scip, graph, root, cost, pathdist, pathprededge);
 
    /* no paths should go back to the root */
    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -2906,7 +2832,7 @@ SCIP_RETCODE reduce_daSlackPrune(
 #endif
 
    /* RPC? If yes, restore original graph */
-   if( rpc )
+   if( rpcmw )
    {
       graph_pc_2org(scip, graph);
       graph->mark[root] = FALSE;
@@ -2976,6 +2902,12 @@ SCIP_RETCODE reduce_daSlackPrune(
          if( nfixed > minelims )
             break;
 
+         if( rpcmw && !graph->mark[k] )
+         {
+            assert(graph_pc_knotIsDummyTerm(graph, k) || k == root);
+            continue;
+         }
+
          if( !Is_term(graph->term[k]) && (!eliminate || pathdist[k] + vnoi[k].dist >= minpathcost) && solnode[k] != CONNECT  )
          {
             if( !eliminate )
@@ -2984,10 +2916,9 @@ SCIP_RETCODE reduce_daSlackPrune(
 
                for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
                {
+                  const int e2 = flipedge(e);
                   if( SCIPisGT(scip, tmpcost, costrev[e]) )
                      costrev[e] = tmpcost;
-
-                  e2 = flipedge(e);
 
                   if( SCIPisGT(scip, tmpcost, costrev[e2]) )
                      costrev[e2] = tmpcost;
@@ -2997,8 +2928,8 @@ SCIP_RETCODE reduce_daSlackPrune(
             }
             nfixed += grad[k];
 
-            while( graph->outbeg[k] != EAT_LAST )
-               graph_edge_del(scip, graph, graph->outbeg[k], TRUE);
+            assert(!rpcmw || !graph_pc_knotIsDummyTerm(graph, k));
+            graph_knot_del(scip, graph, k, TRUE);
          }
          else
          {
@@ -3008,9 +2939,14 @@ SCIP_RETCODE reduce_daSlackPrune(
                etmp = graph->oeat[e];
                head = graph->head[e];
 
-               /* for rpc no artificial terminal arcs should be deleted; in general: delete no solution edges */
-               if( (rpc && !graph->mark[head])
-                  || (soledge[e] == CONNECT) || (soledge[flipedge(e)] == CONNECT) )
+               if( rpcmw && !graph->mark[head] )
+               {
+                  assert(graph_pc_knotIsDummyTerm(graph, head) || head == root);
+                  e = etmp;
+                  continue;
+               }
+
+               if( (soledge[e] == CONNECT) || (soledge[flipedge(e)] == CONNECT) )
                {
                   e = etmp;
                   continue;
@@ -3060,6 +2996,8 @@ SCIP_RETCODE reduce_daSlackPrune(
 
             if( !eliminate || tmpcost >= minpathcost )
             {
+               int e2;
+               int e3;
                e = graph->outbeg[k];
                assert(graph->oeat[e] != EAT_LAST);
                e2 = graph->oeat[e];
@@ -3094,12 +3032,21 @@ SCIP_RETCODE reduce_daSlackPrune(
    }
    SCIPdebugMessage("deleted by da: %d \n", nfixed );
 
-   if( rpc )
+   if( rpcmw )
       graph_pc_2trans(scip, graph);
    assert(graph->mark[root]);
 
  TERMINATE:
    *nelims = nfixed;
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &edgearrint2);
+   SCIPfreeBufferArray(scip, &pathprededge);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &pathdist);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &marked);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
 
    return SCIP_OKAY;
 }

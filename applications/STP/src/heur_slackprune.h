@@ -45,10 +45,10 @@ SCIP_RETCODE SCIPStpIncludeHeurSlackPrune(
 SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables or NULL */
-   GRAPH*                g,                  /**< the graph */
+   GRAPH*                g,                  /**< graph data structure */
    int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
    SCIP_Bool*            success,            /**< feasible solution found? */
-   SCIP_Bool             reducegraph,        /**< try to reduce graph initially? */
+   SCIP_Bool             initialreduce,      /**< try to reduce graph initially? */
    SCIP_Bool             fullreduce          /**< use full reduction techniques? */
    );
 
