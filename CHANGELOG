@@ -12,6 +12,7 @@ Features
 Performance improvements
 ------------------------
 
+- Use the objective cutoff row as base row for separation in sepa_aggregation.c
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 
 Examples and applications
