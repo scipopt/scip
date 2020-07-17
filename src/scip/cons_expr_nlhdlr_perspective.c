@@ -1507,14 +1507,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrdata != NULL);
 
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   if( nlhdlrdata->convexonly )
-   {
-      if( (!overestimate && SCIPgetConsExprExprCurvature(expr) != SCIP_EXPRCURV_CONVEX) ||
-          (overestimate && SCIPgetConsExprExprCurvature(expr) != SCIP_EXPRCURV_CONCAVE) )
-         return SCIP_OKAY;
-   }
-
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
 
@@ -1536,8 +1528,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       SCIP_Real violation;
       SCIP_Bool violbelow;
       SCIP_Bool violabove;
+      SCIP_Bool sepausesactivity;
 
-      SCIPgetConsExprExprEnfoData(expr, j, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participate, NULL, NULL, &nlhdlr2auxvalue);
+      SCIPgetConsExprExprEnfoData(expr, j, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participate, !overestimate ? &sepausesactivity : NULL, overestimate ? &sepausesactivity: NULL, &nlhdlr2auxvalue);
 
       if( nlhdlr2 == nlhdlr )
          continue;
@@ -1548,6 +1541,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
       /* if nlhdlr2 does not participate in the separation on the desired side (overestimate), then skip it */
       if( (nlhdlr2participate & (overestimate ? SCIP_CONSEXPR_EXPRENFO_SEPAABOVE : SCIP_CONSEXPR_EXPRENFO_SEPABELOW)) == 0 )
+         continue;
+
+      /* if only working on convex-looking expressions, then skip nlhdlr if it uses activity for estimates */
+      if( nlhdlrdata->convexonly && sepausesactivity )
          continue;
 
       /* evalaux should have called evalaux of nlhdlr2 by now
@@ -1567,10 +1564,19 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       enfoposs[nenfos] = j;
       ++nenfos;
 
-      if( violation >= nlhdlrdata->minviolprobing )
+      /* enable probing if tightening the domain could be useful for nlhdlr and violation is above threshold */
+      if( sepausesactivity && violation >= nlhdlrdata->minviolprobing )
          doprobing = TRUE;
    }
 
+   if( nenfos == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      SCIPfreeBufferArray(scip, &enfoposs);
+      return SCIP_OKAY;
+   }
+
+   /* check probing frequency against depth in b&b tree */
    if( nlhdlrdata->probingfreq == -1 || (nlhdlrdata->probingfreq == 0 && SCIPgetDepth(scip) != 0) ||
       (nlhdlrdata->probingfreq > 0 && SCIPgetDepth(scip) % nlhdlrdata->probingfreq != 0)  )
       doprobing = FALSE;
@@ -1579,13 +1585,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    if( nlhdlrdata->probingonlyinsepa && addbranchscores )
       doprobing = FALSE;
 
-   /* only do probing if tightening the domain of expr is useful (using curvature for now)
-    * and we are not in probing or a subscip
-    * TODO use (updated) ndomainuses
-    */
-   if( SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 ||
-      (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONVEX && !overestimate) ||
-      (SCIPgetConsExprExprCurvature(expr) == SCIP_EXPRCURV_CONCAVE && overestimate) )
+   /* disable probing if already being in probing or if in a subscip */
+   if( SCIPinProbing(scip) || SCIPgetSubscipDepth(scip) != 0 )
       doprobing = FALSE;
 
    nrowpreps = 0;
