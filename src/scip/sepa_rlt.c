@@ -1505,21 +1505,18 @@ SCIP_RETCODE createSepaData(
 
    nvars = SCIPgetNVars(scip);
 
-   sepadata->nbilinvars = 0;
-
    /* create variable map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* create the empty map for bilinear terms */
    SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), nvars) );
 
-   /* initialise arrays to NULL */
+   /* initialise some fields of sepadata */
    sepadata->varssorted = NULL;
    sepadata->bilinvardatas = NULL;
+   sepadata->eqlinexpr = NULL;
    sepadata->sbilinvars = 0;
    sepadata->nbilinvars = 0;
-
-   sepadata->eqlinexpr = NULL;
 
    /* get all bilinear terms from the expression constraint handler */
    bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
@@ -1558,31 +1555,37 @@ SCIP_RETCODE createSepaData(
       }
    }
 
+   SCIPhashmapFree(&varmap);
    sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
-   /* mark positions of equality relations */
-   if( sepadata->nbilinterms > 0 )
+   if( sepadata->nbilinterms == 0 )
    {
-      SCIP_CONSEXPR_BILINTERM* terms;
+      SCIPhashmapFree(&sepadata->bilinvarsmap);
+      return SCIP_OKAY;
+   }
 
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms) );
-      terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   if( sepadata->detecthidden )
+   {
+      /* update bilinterms, as detectHiddenProducts might have found new terms */
+      bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
+   }
 
-      /* find positions of equality relations */
-      for( i = 0; i < sepadata->nbilinterms; ++i )
+   /* mark positions of equality relations */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms) );
+
+   for( i = 0; i < sepadata->nbilinterms; ++i )
+   {
+      int j;
+
+      sepadata->eqlinexpr[i] = -1;
+      for( j = 0; j < bilinterms[i].nauxexprs; ++j )
       {
-         int j;
+         assert(bilinterms[i].auxexprs[j] != NULL);
 
-         sepadata->eqlinexpr[i] = -1;
-         for( j = 0; j < terms[i].nauxexprs; ++j )
+         if( bilinterms[i].auxexprs[j]->underestimate && bilinterms[i].auxexprs[j]->overestimate )
          {
-            assert(terms[i].auxexprs[j] != NULL);
-
-            if( terms[i].auxexprs[j]->underestimate && terms[i].auxexprs[j]->overestimate )
-            {
-               sepadata->eqlinexpr[i] = j;
-               break;
-            }
+            sepadata->eqlinexpr[i] = j;
+            break;
          }
       }
    }
@@ -1590,8 +1593,6 @@ SCIP_RETCODE createSepaData(
    /* sort maxnumber of variables according to their occurrences */
    SCIPselectDownPtrPtr((void**) sepadata->bilinvardatas, (void**) sepadata->varssorted, bilinVarDataComp,
          sepadata->maxusedvars, sepadata->nbilinvars);
-
-   SCIPhashmapFree(&varmap);
 
    /* capture all variables */
    for( i = 0; i < sepadata->nbilinvars; ++i )
