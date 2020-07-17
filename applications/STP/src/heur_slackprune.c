@@ -60,8 +60,8 @@
 #define SLACKPRUNE_MINSTALLPROPORTION   0.25      /**< minimum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define BREAKONERROR FALSE
-#define MAXNTERMINALS 500
-#define MAXNEDGES     10000
+#define MAXNTERMINALS 1000
+#define MAXNEDGES     20000
 #define SLACK_MAXTOTNEDGES 5000
 
 /*
@@ -148,6 +148,15 @@ void setMinMaxElims(
 
 }
 
+/** can the problem class be used? */
+static inline
+SCIP_Bool probtypeIsValidForSlackPrune(
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+   const int probtype = graph->stp_type;
+   return (graph_typeIsSpgLike(graph) || probtype == STP_RMWCSP || probtype == STP_RPCSPG);
+}
 
 
 /** does exact reductions */
@@ -422,8 +431,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    nedges = graph->edges;
    *result = SCIP_DIDNOTRUN;
 
-   /* if not STP like variant, return */
-   if( graph->stp_type != STP_SPG && graph->stp_type != STP_RSMT && graph->stp_type != STP_OARSMT && graph->stp_type != STP_GSTP )
+   if( !probtypeIsValidForSlackPrune(graph) )
       return SCIP_OKAY;
 
    if( (graph->edges > MAXNEDGES) && (graph->terms > MAXNTERMINALS) )
@@ -512,6 +520,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
       }
 
       SCIPdebugMessage("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
+     // printf("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
 
       /* try to add new solution to pool */
       SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
@@ -593,8 +602,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    int     reductbound;
    int*     solnode;
    int*     globalsoledge;
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
 
-   assert(g != NULL);
    assert(scip != NULL);
    assert(soledge != NULL);
    assert(solstp_isValid(scip, g, soledge));
@@ -627,6 +636,9 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
    SCIP_CALL( graph_copy(scip, g, &prunegraph) );
    SCIP_CALL( graph_init_history(scip, prunegraph) );
+   if( graph_pc_isPcMw(prunegraph) )
+      prunegraph->norgmodelknots = prunegraph->knots;
+   SCIP_CALL( graph_path_init(scip, prunegraph) );
 
    reductbound = getRedBound(0, nedges);
 
@@ -642,10 +654,13 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          if( SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[e + 1]) < 0.5
             && soledge[e] != CONNECT && soledge[e + 1] != CONNECT )
          {
+            if( isPcMw && graph_pc_edgeIsExtended(g, e) )
+               continue;
             graph_edge_del(scip, prunegraph, e, TRUE);
             nfixededges++;
          }
       }
+
       SCIPdebugMessage("fixed edges in slack and prune: %d \n", nfixededges);
 
       if( nfixededges > reductbound && initialreduce )
@@ -654,8 +669,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
          reductbound = getRedBound(0, anedges);
       }
    }
-
-   SCIP_CALL( graph_path_init(scip, prunegraph) );
 
    /* perform initial reductions? */
    if( initialreduce )
@@ -669,7 +682,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 2; i++ )
    {
-      SCIP_Real obj;
       SCIP_Bool apsuccess;
       int danelims;
       SCIP_Bool solgiven;
@@ -711,6 +723,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       /* solution found by ascend and prune? */
       if( apsuccess )
       {
+         SCIP_Real obj;
          assert(solstp_isValid(scip, prunegraph, soledge));
 
          SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
@@ -735,7 +748,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
 
       SCIP_CALL( reduceExact(scip, prunegraph, reductbound, fullreduce, soledge, solnode, &offsetnew) );
 
-      /* get number of remaining edges */
       graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
    } /* reduction loop */
 
@@ -755,7 +767,6 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    }
 #endif
 
-   /* free memory */
    graph_free(scip, &prunegraph, TRUE);
    SCIPfreeBufferArray(scip, &globalsoledge);
    SCIPfreeBufferArray(scip, &solnode);

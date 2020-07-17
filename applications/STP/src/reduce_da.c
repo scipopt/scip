@@ -2664,7 +2664,7 @@ SCIP_RETCODE reduce_daSlackPrune(
    assert(nelims != NULL);
    assert(solnode != NULL);
    assert(soledge != NULL);
-   assert(!graph_pc_isPcMw(graph));
+   assert(!graph_pc_isPcMw(graph) || rpcmw);
 
    /* 1. step: initialize */
 
@@ -2688,14 +2688,9 @@ SCIP_RETCODE reduce_daSlackPrune(
    /* 2. step: - if not provided, compute lower bound and reduced costs
     *          - try to eliminate edges and nodes                        */
 
-   if( rpcmw )
-   {
-      graph_pc_2trans(scip, graph);
-   }
-   else
-   {
-      graph_mark(graph);
-   }
+   assert(!rpcmw || graph->extended);
+
+   graph_mark(graph);
 
    if( !solgiven )
    {
