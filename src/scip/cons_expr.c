@@ -2446,7 +2446,7 @@ SCIP_RETCODE detectNlhdlrs(
       }
 
       /* propagate constraint again, even if there is no boundchange, to make sure we don't miss any boundchange
-       * TODO we should not need this, since we have run reverseprop in detectNlhdlr(), but this seems to help primal heuristics on sfacloc2_4_80 permutation 4
+       * TODO we should not need this, since we have run reverseprop in detectNlhdlr(), but this seems to help primal heuristics on sfacloc2_4_80 permutation 4, but has bad effects on primal heuristics ex8_2_5b
        */
       consdata->ispropagated = FALSE;
    }
