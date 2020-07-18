@@ -702,6 +702,7 @@ SCIP_RETCODE computeOffValues(
       {
          SCIPdebugMsg(scip, "expression evaluation failed for %p, removing indicator %s\n",
                              (void*)expr, SCIPvarGetName(nlhdlrexprdata->indicators[i]));
+         /* TODO should we fix the indicator variable to 1? */
          /* since the loop is backwards, this only modifies the already processed part of nlhdlrexprdata->indicators */
          removeIndicator(nlhdlrexprdata, i);
          continue;
@@ -1363,27 +1364,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
    if( success )
    {
-      int sindicators;
-
-      sindicators = (*nlhdlrexprdata)->nindicators;
-
-      /* compute 'off' values of expr and subexprs (and thus auxvars too) */
-      SCIP_CALL( computeOffValues(scip, conshdlr, nlhdlrdata, *nlhdlrexprdata, expr) );
-
-      /* some indicator variables might have been removed if evaluation failed, check how many remain */
-      if( (*nlhdlrexprdata)->nindicators == 0 )
-      {
-         success = FALSE;
-      }
-      else if( (*nlhdlrexprdata)->nindicators < sindicators )
-      {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->indicators, sindicators, (*nlhdlrexprdata)->nindicators) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->exprvals0, sindicators, (*nlhdlrexprdata)->nindicators) );
-      }
-   }
-
-   if( success )
-   {
       assert(*nlhdlrexprdata != NULL);
       assert((*nlhdlrexprdata)->nindicators > 0);
 
@@ -1435,7 +1415,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
 
       SCIPgetConsExprExprEnfoData(expr, e, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participation, NULL, NULL, NULL);
 
-      /* skip nlhdlr that do not participate or do not provide  */
+      /* skip nlhdlr that do not participate or do not provide estimate */
       if( (nlhdlr2participation & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 || !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
          continue;
 
@@ -1453,17 +1433,31 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxPerspective)
    return SCIP_OKAY;
 }
 
-/** callback to detect structure in expression tree */
-#if 0
+/** separation initialization method of a nonlinear handler */
 static
 SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
 { /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   int sindicators;
+
+   sindicators = nlhdlrexprdata->nindicators;
+
+   /* compute 'off' values of expr and subexprs (and thus auxvars too) */
+   SCIP_CALL( computeOffValues(scip, conshdlr, SCIPgetConsExprNlhdlrData(nlhdlr), nlhdlrexprdata, expr) );
+
+   /* some indicator variables might have been removed if evaluation failed, check how many remain */
+   if( nlhdlrexprdata->nindicators == 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->indicators, sindicators);
+      SCIPfreeBlockMemoryArray(scip, &nlhdlrexprdata->exprvals0, sindicators);
+   }
+   else if( nlhdlrexprdata->nindicators < sindicators )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->indicators, sindicators, nlhdlrexprdata->nindicators) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &nlhdlrexprdata->exprvals0, sindicators, nlhdlrexprdata->nindicators) );
+   }
 
    return SCIP_OKAY;
 }
-#endif
 
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
@@ -1525,6 +1519,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    assert(conshdlr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(nlhdlrdata != NULL);
+
+   if( nlhdlrexprdata->nindicators == 0 )
+   {
+      /* we might have removed all indicators in initsepa */
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    auxvar = SCIPgetConsExprExprAuxVar(expr);
    assert(auxvar != NULL);
@@ -1777,8 +1778,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                cst0 -= rowprep->coefs[v] * scvdata->vals0[pos];
             }
 
-            /* only perspectivy when the absolute value of cst0 is not too small */
-            if( maxcoef / REALABS(cst0) <= SCIP_CONSEXPR_CUTMAXRANGE )
+            /* only perspectivy when the absolute value of cst0 is not too small
+             * TODO on ex1252a there was cst0=0 - ok to still use the cut?
+            */
+            if( cst0 == 0.0 || maxcoef / REALABS(cst0) <= SCIP_CONSEXPR_CUTMAXRANGE )
             {
                /* update the rowprep by adding cst0 - cst0*z */
                SCIPaddRowprepConstant(rowprep, cst0);
@@ -1942,7 +1945,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoPerspective, NULL, NULL);
+   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaPerspective, nlhdlrEnfoPerspective, NULL, NULL);
 
    return SCIP_OKAY;
 }
