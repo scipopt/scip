@@ -121,7 +121,7 @@ SCIP_RETCODE freeNlhdlrExprData(
          SCIP_CALL( SCIPreleaseVar(scip, &(nlhdlrexprdata->indicators[v])) );
       }
       SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->indicators), nlhdlrexprdata->nindicators);
-      SCIPfreeBlockMemoryArray(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators);
+      SCIPfreeBlockMemoryArrayNull(scip, &(nlhdlrexprdata->exprvals0), nlhdlrexprdata->nindicators);
    }
 
    for( v = nlhdlrexprdata->nvars - 1; v >= 0; --v )
