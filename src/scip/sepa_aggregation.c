@@ -1335,7 +1335,6 @@ SCIP_RETCODE separateCuts(
 
    if( !SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
    {
-      oldncuts = ncuts;
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sol, allowlocal, rowlhsscores, rowrhsscores,
                -1, 2 * maxaggrs, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
    }
