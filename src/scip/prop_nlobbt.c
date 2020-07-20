@@ -74,9 +74,9 @@
  */
 
 /* status of bound candidates */
-#define UNSOLVED                   0x1u      /**< did not solve LB or UB problem */
-#define SOLVEDLB                   0x2u      /**< solved LB problem */
-#define SOLVEDUB                   0x4u      /**< solved UB problem */
+#define UNSOLVED                      1      /**< did not solve LB or UB problem */
+#define SOLVEDLB                      2      /**< solved LB problem */
+#define SOLVEDUB                      4      /**< solved UB problem */
 
 /** propagator data */
 struct SCIP_PropData
