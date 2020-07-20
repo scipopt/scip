@@ -73,14 +73,10 @@
  * Data structures
  */
 
-/** status of bound candidates */
-enum BoundStatus
-{
-   UNSOLVED = 1,                             /**< did not solve LB or UB problem */
-   SOLVEDLB = 2,                             /**< solved LB problem */
-   SOLVEDUB = 4                              /**< solved UB problem */
-};
-typedef enum BoundStatus Boundstatus;
+/* status of bound candidates */
+#define UNSOLVED                   0x1u      /**< did not solve LB or UB problem */
+#define SOLVEDLB                   0x2u      /**< solved LB problem */
+#define SOLVEDUB                   0x4u      /**< solved UB problem */
 
 /** propagator data */
 struct SCIP_PropData
@@ -91,7 +87,7 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   Boundstatus*          status;             /**< array containing a bound status for each candidate */
+   unsigned int*         status;             /**< array containing a bound status for each candidate */
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
