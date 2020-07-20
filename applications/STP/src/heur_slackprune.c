@@ -431,6 +431,9 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    nedges = graph->edges;
    *result = SCIP_DIDNOTRUN;
 
+   // todo test
+   return SCIP_OKAY;
+
    if( !probtypeIsValidForSlackPrune(graph) )
       return SCIP_OKAY;
 

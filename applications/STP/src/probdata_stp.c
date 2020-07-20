@@ -55,6 +55,9 @@
 #include "branch_stp.h"
 #endif
 
+#include "heur_tm.h"
+#include "heur_slackprune.h"
+
 #define VERSION_SCIPJACK "1.3"
 
 #define STP_SYM_PRIZE
@@ -479,8 +482,12 @@ SCIP_RETCODE freeConstraintsCutModel(
    /* PC variant STP? */
    if( probdata->stp_type == STP_PCSPG || probdata->stp_type == STP_RPCSPG || probdata->stp_type == STP_MWCSP )
    {
+
+
+
+
 #if FLOWB
-      for( e = 0; e < probdata->nnonterms; e++ )
+      for( int e = 0; e < probdata->nnonterms; e++ )
          SCIP_CALL( SCIPreleaseCons(scip, &(probdata->flowbcons[e])) );
 
       SCIPfreeMemoryArrayNull(scip, &(probdata->flowbcons));
@@ -832,6 +839,157 @@ SCIP_RETCODE createFlowBalanceConstraints(
    return SCIP_OKAY;
 }
 
+#endif
+
+#if 0
+/** create constraints (in Flow or Price Mode) */
+static
+SCIP_RETCODE createC4Cuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   const GRAPH* graph = probdata->graph;
+   int* nodes_mark;
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+   int c4nodes[4];
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_mark, nnodes) );
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      nodes_mark[i] = 0;
+   }
+
+   for( int basenode = 0; basenode < nnodes; basenode++  )
+   {
+      if( Is_term(graph->term[basenode]) )
+         continue;
+
+      c4nodes[0] = basenode;
+      nodes_mark[basenode] = -nedges - 1;
+
+      // mark neighbors
+      for( int e = graph->outbeg[basenode]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int neighbor = graph->head[e];
+         nodes_mark[neighbor] = -e - 1;
+      }
+
+      // look for cycles
+      for( int e = graph->outbeg[basenode]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int neighbor = graph->head[e];
+         if( Is_term(graph->term[neighbor]) )
+            continue;
+
+         for( int e2 = graph->outbeg[neighbor]; e2 != EAT_LAST; e2 = graph->oeat[e2] )
+         {
+            const int neighbor2 = graph->head[e2];
+            if( Is_term(graph->term[neighbor2]) )
+               continue;
+
+            // not visited yet?
+            if( nodes_mark[neighbor2] == 0 )
+            {
+               nodes_mark[neighbor2] = e2 + 1;
+            }
+            // cycle closed?
+            else if( nodes_mark[neighbor2] > 0 )
+            {
+               SCIP_Bool addCut = TRUE;
+
+               const int e3 = nodes_mark[neighbor2] - 1;
+               const int neighbor_alt = graph->tail[e3];
+               int e4;
+
+               assert(nodes_mark[neighbor_alt] < 0);
+
+               e4 = -nodes_mark[neighbor_alt] - 1;
+               assert(graph_edge_isInRange(graph, e3));
+               assert(graph_edge_isInRange(graph, e4));
+               assert(graph->tail[e4] == basenode);
+               assert(neighbor != neighbor_alt);
+
+               c4nodes[1] = neighbor;
+               c4nodes[2] = neighbor2;
+               c4nodes[3] = neighbor_alt;
+
+               addCut = FALSE;
+               for( int q = 0; q < 4; q++ )
+                  if( Is_pseudoTerm(graph->term[c4nodes[q]]) )
+                     addCut = TRUE;
+
+               for( int q = 1; q < 4; q++ )
+               {
+                  const int node = c4nodes[q];
+                  if( node < basenode )
+                  {
+                     addCut = FALSE;
+                     break;
+                  }
+               }
+
+
+
+               if( addCut )
+               {
+                  int c4edges[4] = { e, e2, e3, e4 };
+                  for( int i = 0; i < 4; ++i )
+                  {
+                     SCIP_CONS* cons = NULL;
+
+                     const int node_i = c4nodes[i];
+
+                     SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "c4", 0, NULL, NULL,
+                                           -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+
+                     // add cycle edges
+                     for( int q = 0; q < 4; q++ )
+                     {
+                        const int edge = c4edges[q];
+                        SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->edgevars[edge], 1.0) );
+                        SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->edgevars[flipedge(edge)], 1.0) );
+                     }
+
+                     // add in-edges
+                     for( int j = 0; j < 4; j++ )
+                     {
+                        const int node_j = c4nodes[j];
+                        if( i == j )
+                           continue;
+
+                        for( int inedge_j = graph->inpbeg[node_j]; inedge_j != EAT_LAST; inedge_j = graph->ieat[inedge_j] )
+                        {
+                           SCIP_CALL( SCIPaddCoefLinear(scip, cons, probdata->edgevars[inedge_j], -1.0) );
+                        }
+                     }
+
+                     graph_knot_printInfo(graph, node_i);
+
+                     SCIP_CALL( SCIPaddCons(scip, cons) );
+                     SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+                  }
+
+               }
+            }
+         }
+      }
+
+
+     //  nodes_mark[basenode] = 0;
+      for( int i = 0; i < nnodes; ++i )
+      {
+         nodes_mark[i] = 0;
+      }
+
+   }
+
+   SCIPfreeBuffer(scip, &nodes_mark);
+
+   return SCIP_OKAY;
+}
 #endif
 
 /** create constraints (in Flow or Price Mode) */
@@ -1601,7 +1759,7 @@ SCIP_RETCODE createInitialCuts(
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
-   GRAPH* const graph = probdata->graph;
+   GRAPH*  graph = probdata->graph;
    SCIP_Real lpobjval;
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
@@ -1618,7 +1776,25 @@ SCIP_RETCODE createInitialCuts(
       DAPARAMS daparams = { .addcuts = TRUE, .ascendandprune = doAscendPrune, .root = graph->source,
                    .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
 
-      SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
+      if( graph_typeIsSpgLike(graph) || graph_pc_isRootedPcMw(graph) )
+      {
+         int* soledge;
+         SCIP_Bool success;
+         SCIP_CALL( SCIPallocBufferArray(scip, &soledge, graph->edges) );
+
+         SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+            graph, NULL, NULL, soledge, 32, graph->source, graph->cost, graph->cost, NULL, NULL, &success));
+         SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, NULL, graph, soledge, &success, FALSE, FALSE) );
+         SCIP_CALL( solstp_addSolToProb(scip, graph, soledge, &success) );
+         assert(success);
+         SCIP_CALL( dualascent_exec(scip, graph, soledge, &daparams, NULL, &lpobjval) );
+
+         SCIPfreeBufferArray(scip, &soledge);
+      }
+      else
+      {
+         SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
+      }
    }
 
    return SCIP_OKAY;
