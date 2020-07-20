@@ -8,6 +8,8 @@ Features
 
 - Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
   are now deleted when during a restart.
+- New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
+  which is able to handle symmetries of arbitrary kinds of variables.
 
 Performance improvements
 ------------------------
@@ -25,16 +27,35 @@ Interface changes
 - If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
   variable is added to the transformed problem (SCIPaddVar()).
   SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+- SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
+  changed from SCIP_Shortbool* to unsigned*.
 
 ### New API functions
 ### Command line interface
 ### Interfaces to external software
 ### Changed parameters
+
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
+
 ### New parameters
 
 - It is now possible to add orbitope constraints to handle symmetries even if not all variables
   in a component of the symmetry group are binary. This feature can be enabled using the
   parameter "propagating/symmetry/onlybinorbitope".
+
+- new parameter "propagating/symmetry/sstleaderrule" to select a rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/ssttiebreakrule" to select a tiebreak rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/sstleadervartype" to select the possible variable types
+  for a leader in SST cuts
+- new parameter "propagating/symmetry/addconflictcuts" to control whether SST cuts are added if
+  a binary leader variable is in conflict with a variable in its orbit
+- new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
+- new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
+  if a symmetry component contains variables of different types
+
+
 
 ### Data structures
 
