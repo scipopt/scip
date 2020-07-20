@@ -2055,13 +2055,13 @@ SCIP_Real getEnsembleEstimation(
       estim = 0.0;
       coeffs = coeffs_early;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
    }
    else if( treedata->weight <= 0.6 )
    {
       coeffs = coeffs_intermediate;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
 
       /* initialize by intermediate WBE coefficient */
       estim = 0.156 * treeDataGetWbe(treedata);
@@ -2070,7 +2070,7 @@ SCIP_Real getEnsembleEstimation(
    {
       coeffs = coeffs_late;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
 
       /* initialize by late WBE coefficient */
       estim = 0.579 * treeDataGetWbe(treedata);
@@ -2379,13 +2379,13 @@ SCIP_Bool isRestartApplicable(
    return TRUE;
 }
 
-/** should a restart be applied based on the value of the selected completion method? */
+/** should a restart be applied based on the value of the selected completion method? */   /*lint --e{715}*/
 static
 SCIP_Bool shouldApplyRestartCompletion(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real completion;
 
    SCIP_CALL_ABORT( getSearchCompletion(eventhdlrdata, &completion) );
