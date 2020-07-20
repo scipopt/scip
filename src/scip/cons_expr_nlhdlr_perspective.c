@@ -1548,9 +1548,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       SCIP_Real violation;
       SCIP_Bool violbelow;
       SCIP_Bool violabove;
-      SCIP_Bool sepausesactivity;
+      SCIP_Bool sepausesactivity = FALSE;
 
-      SCIPgetConsExprExprEnfoData(expr, j, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participate, !overestimate ? &sepausesactivity : NULL, overestimate ? &sepausesactivity: NULL, &nlhdlr2auxvalue);
+      SCIPgetConsExprExprEnfoData(expr, j, &nlhdlr2, &nlhdlr2exprdata, &nlhdlr2participate, !overestimate ? &sepausesactivity : NULL, overestimate ? &sepausesactivity: NULL, &nlhdlr2auxvalue);  /*lint !e826*/
 
       if( nlhdlr2 == nlhdlr )
          continue;

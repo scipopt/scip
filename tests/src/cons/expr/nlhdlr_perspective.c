@@ -273,7 +273,8 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
-   /* check the 'off' values */
+   /* compute and check the 'off' values */
+   SCIP_CALL( nlhdlrInitSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
    cr_assert_eq(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
    cr_assert_eq(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
 
@@ -453,7 +454,8 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
 
-   /* check the 'off' values */
+   /* compute and check the 'off' values */
+   SCIP_CALL( nlhdlrInitSepaPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
    cr_assert_eq(nlhdlrexprdata->indicators[0], z_1, "Expecting the first indicator to be z_1, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[0]));
    cr_assert_eq(nlhdlrexprdata->exprvals0[0], 9.0, "Expecting off value = 9.0, got %f\n", nlhdlrexprdata->exprvals0[0]);
 
