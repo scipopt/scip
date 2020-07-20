@@ -948,7 +948,6 @@ SCIP_RETCODE pruneSteinerTreePc_csr(
  */
 
 
-
 /** Gets root of solution for unrooted PC/MW.
  *  Returns -1 if the solution is empty. */
 int solstp_pcGetSolRoot(
@@ -1086,6 +1085,33 @@ void solstp_pcConnectDummies(
       connected[gRoot] = TRUE;
 
    assert(connected[gRoot]);
+}
+
+
+/** add new solution to SCIP */
+SCIP_RETCODE solstp_addSolToProb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const int*            soledge,            /**< solution */
+   SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
+   )
+{
+   SCIP_Real* nval;
+   const int nedges = graph_get_nEdges(g);
+
+   assert(scip && soledge);
+   assert(solstp_isValid(scip, g, soledge));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nval, nedges) );
+
+   for( int e = 0; e < nedges; e++ )
+      nval[e] = (CONNECT == soledge[e]) ? 1.0 : 0.0;
+
+   SCIP_CALL(SCIPprobdataAddNewSol(scip, nval, NULL, success));
+
+   SCIPfreeBufferArray(scip, &nval);
+
+   return SCIP_OKAY;
 }
 
 
@@ -1707,7 +1733,7 @@ SCIP_Real solstp_getObjBounded(
 SCIP_Real solstp_getObj(
    const GRAPH*          g,                  /**< the graph */
    const int*            soledge,            /**< solution */
-   SCIP_Real             offset             /**< offset */
+   SCIP_Real             offset              /**< offset */
    )
 {
    assert(g);

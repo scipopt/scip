@@ -36,6 +36,7 @@ extern void solstp_pcConnectDummies(const GRAPH*, int, int* RESTRICT, STP_Bool* 
 extern SCIP_Real solstp_pcGetObjCsr(const GRAPH*, const CSR*, const int*, const STP_Bool*);
 extern int solstp_pcGetSolRoot(SCIP*, const GRAPH*, const STP_Bool*);
 
+extern SCIP_RETCODE solstp_addSolToProb(SCIP*, const GRAPH*, const int*, SCIP_Bool*);
 extern void   solstp_setNodeList(const GRAPH*, STP_Bool*, IDX*);
 extern void   solstp_setVertexFromEdge(const GRAPH*, const int*, STP_Bool*);
 extern void   solstp_print(const GRAPH*, const int*);
