@@ -3000,7 +3000,7 @@ SCIP_RETCODE solveNodeLP(
          SCIP_SOL* sol;
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
 
-         if( set->misc_exactsolve && lp->lpexact->solved )
+         if( set->exact_enabled && lp->lpexact->solved )
          {
             SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, primal, tree, lp->lpexact, NULL) );
 

@@ -2919,7 +2919,7 @@ SCIP_RETCODE boundShift(
 
    assert(lpexact != NULL);
    assert(lp != NULL);
-   assert(lp->solved);
+   assert(lp->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
    assert(set != NULL);
    assert(safebound != NULL);
 
@@ -3303,6 +3303,13 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 #ifdef SCIP_WITH_BOOST
    assert(set->exact_enabled);
    assert(!lp->hasprovedbound);
+
+   /* we need to construct projshiftdata at the root node */
+   if( !lpexact->projshiftdata->projshiftdatacon )
+   {
+      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+                     prob, blkmem) );
+   }
 
    while( !lp->hasprovedbound && !abort )
    {
