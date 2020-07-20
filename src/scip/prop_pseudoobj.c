@@ -759,8 +759,8 @@ SCIP_Real getVarObjchg(
    )
 {
    assert(SCIPvarIsBinary(var));
-   assert((int)SCIP_BOUNDTYPE_LOWER == 0);
-   assert((int)SCIP_BOUNDTYPE_UPPER == 1);
+   assert((int)SCIP_BOUNDTYPE_LOWER == 0); /*lint !e506*/
+   assert((int)SCIP_BOUNDTYPE_UPPER == 1); /*lint !e506*/
 
    /* collect contribution of variable itself */
    return (SCIP_Real)((int)bound - (int)(boundtype == SCIP_BOUNDTYPE_UPPER)) * SCIPvarGetObj(var);
@@ -871,8 +871,8 @@ SCIP_RETCODE collectMinactImplicVars(
    assert(ncontributors != NULL);
    assert(*ncontributors == 0);
 
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
    varfixing = (SCIP_Bool)bound;
 
    cliques = SCIPvarGetCliques(var, varfixing);
@@ -1138,8 +1138,8 @@ SCIP_RETCODE getMaxactImplicObjchg(
    assert(objchg != NULL);
 
    varfixing = (SCIP_Bool)bound;
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
 
    *objchg = 0.0;
    ncliques = SCIPvarGetNCliques(var, varfixing);
@@ -1402,8 +1402,8 @@ SCIP_RETCODE collectMinactVar(
       int nlbcontributors;
       int nubcontributors;
 
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
 
       /* get contribution of variable by fixing it to its lower bound w.r.t. minimum activity of the objective function */
       SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_LOWER, binobjvarmap, collectedlbvars, nbinobjvars,
@@ -2045,8 +2045,8 @@ SCIP_RETCODE adjustCutoffbound(
       assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)));
       assert(inferinfo >= 0);
       assert(inferinfo < propdata->nminactvars);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
 
       objimplics = propdata->minactimpls[inferinfo];
       assert(objimplics != NULL);

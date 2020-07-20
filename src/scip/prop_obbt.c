@@ -2415,7 +2415,7 @@ unsigned int getScore(
    assert(maxnlcount >= nlcount);
 
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
-   score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 );
+   score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 ); /*lint !e414*/
    switch( SCIPvarGetType(bound->var) )
    {
    case SCIP_VARTYPE_INTEGER:
