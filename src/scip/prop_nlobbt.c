@@ -87,7 +87,7 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   unsigned int*         status;             /**< array containing a bound status for each candidate */
+   int*                  status;             /**< array containing a bound status for each candidate */
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
@@ -546,7 +546,7 @@ SCIP_RETCODE applyNlobbt(
    /* sort variables w.r.t. their nlscores if we did not solve any NLP for this node */
    if( propdata->currpos == 0 )
    {
-      SCIPsortDownRealPtrPtr(propdata->nlscore, (void*)propdata->status, (void**)propdata->nlpivars, propdata->nlpinvars);
+      SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void**)propdata->nlpivars, propdata->nlpinvars);
    }
 
    /* set parameters of NLP solver */
