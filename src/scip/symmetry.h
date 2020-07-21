@@ -217,6 +217,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
 /** generate variable matrix for orbitope constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
+   SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR****          vars,               /**< pointer to matrix of orbitope variables */
    int                   nrows,              /**< number of rows of orbitope */
    int                   ncols,              /**< number of columns of orbitope */
@@ -226,7 +227,11 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
    SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the potential orbitope is not an orbitope */
+   SCIP_Bool             storelexorder,      /**< whether the lexicographic order induced by the orbitope shall be stored */
+   int**                 lexorder,           /**< pointer to array storing the lexorder (or NULL) */
+   int*                  nvarsorder,         /**< pointer to store number of variables in lexorder (or NULL) */
+   int*                  maxnvarsorder       /**< pointer to store maximum number of variables in lexorder (or NULL) */
    );
 
 

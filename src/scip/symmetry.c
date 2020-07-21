@@ -950,8 +950,12 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
 }
 
 
-/** generate variable matrix for orbitope constraint handler */
+/** generate variable matrix for orbitope constraint handler
+ *
+ * @pre if storelexorder is TRUE, then the permutations define an orbitope
+ */
 SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
+   SCIP*                 scip,               /**< SCIP instance */
    SCIP_VAR****          vars,               /**< pointer to matrix of orbitope variables */
    int                   nrows,              /**< number of rows of orbitope */
    int                   ncols,              /**< number of columns of orbitope */
@@ -961,13 +965,18 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
    SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables (or NULL) */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the potential orbitope is not an orbitope */
+   SCIP_Bool             storelexorder,      /**< whether the lexicographic order induced by the orbitope shall be stored */
+   int**                 lexorder,           /**< pointer to array storing the lexorder (or NULL) */
+   int*                  nvarsorder,         /**< pointer to store number of variables in lexorder (or NULL) */
+   int*                  maxnvarsorder       /**< pointer to store maximum number of variables in lexorder (or NULL) */
    )
 {
    int nfilledcols = 0;
    int curcolumn;
    int i;
    int cnt;
+   int nvarsorderold;
 
    assert( vars != NULL );
    assert( nrows > 0 );
@@ -978,6 +987,33 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    assert( columnorder != NULL );
    assert( nusedelems != NULL );
    assert( infeasible != NULL );
+   assert( ! storelexorder || lexorder != NULL );
+   assert( ! storelexorder || nvarsorder != NULL );
+   assert( ! storelexorder || maxnvarsorder != NULL );
+
+   /* possibly store lexicographic order defined by orbitope
+    *
+    * position (i,j) of orbitope has position nrows * j + i in lexicographic order
+    */
+   if ( storelexorder )
+   {
+      if ( *maxnvarsorder == 0 )
+      {
+         *maxnvarsorder = nrows * ncols;
+         *nvarsorder = 0;
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
+      }
+      else
+      {
+         assert( *nvarsorder == *maxnvarsorder );
+
+         *maxnvarsorder += nrows * ncols;
+
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
+      }
+      nvarsorderold = *nvarsorder;
+   }
 
    curcolumn = ncols - 1;
 
@@ -998,9 +1034,15 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          if ( nfilledcols == 0 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
          {
             *infeasible = TRUE;
+            assert( ! storelexorder );
             break;
          }
 
+         if ( storelexorder )
+         {
+            (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][curcolumn];
+            *nvarsorder += 1;
+         }
          (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
       }
       --curcolumn;
@@ -1028,6 +1070,11 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          assert( orbitopevaridx[i][1] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][1]]) );
 
+         if ( storelexorder )
+         {
+            (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][1];
+            *nvarsorder += 1;
+         }
          (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][1]];
       }
       ++nfilledcols;
@@ -1043,6 +1090,11 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          assert( orbitopevaridx[i][0] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][0]]) );
 
+         if ( storelexorder )
+         {
+            (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][0];
+            *nvarsorder += 1;
+         }
          (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][0]];
       }
       ++nfilledcols;
@@ -1071,9 +1123,15 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
                if ( nfilledcols == ncols - 1 && nusedelems[orbitopevaridx[i][curcolumn]] > 1 )
                {
                   *infeasible = TRUE;
+                  assert( ! storelexorder );
                   break;
                }
 
+               if ( storelexorder )
+               {
+                  (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][curcolumn];
+                  *nvarsorder += 1;
+               }
                (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
             }
             ++curcolumn;

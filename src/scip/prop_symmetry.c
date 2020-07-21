@@ -847,7 +847,7 @@ SCIP_RETCODE freeSymmetryData(
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms);
       propdata->ngenorbconss = 0;
    }
 
@@ -972,7 +972,7 @@ SCIP_RETCODE delSymConss(
    if ( propdata->ngenorbconss == 0 )
    {
       if ( propdata->genorbconss != NULL )
-         SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+         SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms);
    }
    else
    {
@@ -989,7 +989,7 @@ SCIP_RETCODE delSymConss(
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms);
       propdata->ngenorbconss = 0;
    }
 
@@ -1035,7 +1035,7 @@ SCIP_RETCODE delSymConss(
    /* free pointers to symmetry group and binary variables */
    assert( propdata->nperms > 0 );
    assert( propdata->nperms >= propdata->ngenorbconss );
-   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, 2 * propdata->nperms);
    propdata->ngenorbconss = 0;
    propdata->triedaddconss = FALSE;
 
@@ -3487,7 +3487,10 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int                   nrows,              /**< number of rows in the orbitope  */
    int                   ncols,              /**< number of columns in the orbitope  */
    int*                  firstvaridx,        /**< buffer to store the index of the largest variable (or NULL) */
-   int*                  compidxfirstrow     /**< buffer to store the comp index for the first row (or NULL) */
+   int*                  compidxfirstrow,    /**< buffer to store the comp index for the first row (or NULL) */
+   int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
+   int*                  nvarslexorder,      /**< number of variables in lexicographic order */
+   int*                  maxnvarslexorder    /**< maximum number of variables in lexicographic order */
    )
 {  /*lint --e{571}*/
    SCIP_VAR*** orbitopevarmatrix;
@@ -3510,6 +3513,9 @@ SCIP_RETCODE addOrbitopeSubgroup(
    assert( nusedperms > 0 );
    assert( nrows > 0 );
    assert( ncols > 0 );
+   assert( lexorder != NULL );
+   assert( nvarslexorder != NULL );
+   assert( maxnvarslexorder != NULL );
 
    /* create hashset to mark variables */
    SCIP_CALL( SCIPhashsetCreate(&activevars, SCIPblkmem(scip), nrows * ncols) );
@@ -3617,9 +3623,9 @@ SCIP_RETCODE addOrbitopeSubgroup(
    }
 
    /* build the matrix containing the actual variables of the orbitope */
-   SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&orbitopevarmatrix, nrows, ncols,
+   SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(scip, &orbitopevarmatrix, nrows, ncols,
          propdata->permvars, propdata->npermvars, orbitopevaridx, columnorder,
-         nusedelems, NULL, &infeasible) );
+         nusedelems, NULL, &infeasible, TRUE, lexorder, nvarslexorder, maxnvarslexorder) );
 
    assert( ! infeasible );
    assert( firstvaridx == NULL || propdata->permvars[*firstvaridx] == orbitopevarmatrix[0][0] );
@@ -3866,6 +3872,87 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    return SCIP_OKAY;
 }
 
+
+/** temporarily adapt symmetry data to new variable order given by Schreier Sims */
+static
+SCIP_RETCODE adaptSymmetryDataSST(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 origperms,          /**< permutation matrix w.r.t. original variable ordering */
+   int**                 modifiedperms,      /**< memory for permutation matrix w.r.t. new variable ordering */
+   int                   nperms,             /**< number of permutations */
+   SCIP_VAR**            origpermvars,       /**< array of permutation vars w.r.t. original variable ordering */
+   SCIP_VAR**            modifiedpermvars,   /**< memory for array of permutation vars w.r.t. new variable ordering */
+   int                   npermvars,          /**< length or modifiedpermvars array */
+   int*                  leaders,            /**< leaders of Schreier Sims constraints */
+   int                   nleaders            /**< number of leaders */
+   )
+{
+   int* permvaridx;
+   int* posinpermvar;
+   int leader;
+   int curposleader;
+   int varidx;
+   int lidx;
+   int i;
+   int l;
+   int p;
+
+   assert( scip != NULL );
+   assert( origperms != NULL );
+   assert( modifiedperms != NULL );
+   assert( nperms > 0 );
+   assert( origpermvars != NULL );
+   assert( modifiedpermvars != NULL );
+   assert( npermvars > 0 );
+   assert( leaders != NULL );
+   assert( nleaders > 0 );
+
+   /* initialize map from position in lexicographic order to index of original permvar */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permvaridx, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      permvaridx[i] = i;
+
+   /* initialize map from permvaridx to its current position in the reordered permvars array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &posinpermvar, npermvars) );
+   for (i = 0; i < npermvars; ++i)
+      posinpermvar[i] = i;
+
+   /* Iterate over leaders and put the l-th leader to the l-th position of the lexicographic order.
+    * We do this by swapping the l-th leader with the element at position l of the current permvars array. */
+   for (l = 0; l < nleaders; ++l)
+   {
+      leader = leaders[l];
+      curposleader = posinpermvar[leader];
+      varidx = permvaridx[curposleader];
+      lidx = permvaridx[l];
+
+      /* swap the permvar at position l with the l-th leader */
+      permvaridx[curposleader] = lidx;
+      permvaridx[l] = varidx;
+
+      /* update the position map */
+      posinpermvar[lidx] = curposleader;
+      posinpermvar[leader] = l;
+   }
+
+   /* update the permvars array to new variable order */
+   for (i = 0; i < npermvars; ++i)
+      modifiedpermvars[i] = origpermvars[permvaridx[i]];
+
+   /* update the permutation to the new variable order */
+   for (p = 0; p < nperms; ++p)
+   {
+      for (i = 0; i < npermvars; ++i)
+         modifiedperms[p][i] = posinpermvar[origperms[p][permvaridx[i]]];
+   }
+
+   SCIPfreeBufferArray(scip, &permvaridx);
+   SCIPfreeBufferArray(scip, &posinpermvar);
+
+   return SCIP_OKAY;
+}
+
+
 /** checks whether subgroups of the components are symmetric groups and adds SBCs for them */
 static
 SCIP_RETCODE detectAndHandleSubgroups(
@@ -3882,6 +3969,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
    SCIP_Real rowcolumnratio;
    SCIP_Real orbitopepctbinrows;
+   int** modifiedperms;
+   SCIP_VAR** modifiedpermvars;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -3910,6 +3999,14 @@ SCIP_RETCODE detectAndHandleSubgroups(
    /* create array for permutation order */
    SCIP_CALL( SCIPallocBufferArray(scip, &genorder, propdata->nperms) );
 
+   /* create arrays for modified permutations in case we adapt the lexicographic order because of suborbitopes */
+   SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms, propdata->nperms) );
+   for (i = 0; i < propdata->nperms; ++i)
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &modifiedperms[i], propdata->npermvars) );
+   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &modifiedpermvars, propdata->npermvars) );
+
    SCIPdebugMsg(scip, "starting subgroup detection routine for %d components\n", propdata->ncomponents);
 
    /* iterate over components */
@@ -3930,6 +4027,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int ntrivialcolors = 0;
       int j;
       SCIP_Bool useorbitope;
+      int* lexorder = NULL;
+      int nvarslexorder = 0;
+      int maxnvarslexorder = 0;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4153,7 +4253,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* add the orbitope constraint for this color */
             SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
                   graphcompbegins, graphcomponents, j, nbinarycomps, largestcompsize,
-                  firstvaridx, chosencomp) );
+                  firstvaridx, chosencomp, &lexorder, &nvarslexorder, &maxnvarslexorder) );
 
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] >= 0 );
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] < propdata->npermvars );
@@ -4169,6 +4269,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             ++norbitopes;
 #endif
          }
+#if 0
          /* if no (useable) orbitope was found, possibly add strong SBCs */
          else if ( ! propdata->onlybinsubgroups )
          {
@@ -4213,10 +4314,49 @@ SCIP_RETCODE detectAndHandleSubgroups(
                chosencomppercolor[j] = -1; /*lint !e613*/
             }
          }
+#endif
       }
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
+      /* if suborbitopes or strong group actions have been found, potentially add symresacks adapted to
+       * variable order given by lexorder
+       */
+      if ( nvarslexorder > 0 )
+      {
+         int k;
+
+         SCIP_CALL( adaptSymmetryDataSST(scip, propdata->perms, modifiedperms, npermsincomp,
+               propdata->permvars, modifiedpermvars, propdata->npermvars, lexorder, nvarslexorder) );
+
+         for (k = 0; k < npermsincomp; ++k)
+         {
+            SCIP_CONS* cons;
+            char name[SCIP_MAXSTRLEN];
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_comp%d_perm%d", i, k);
+
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[k], modifiedpermvars, propdata->npermvars, FALSE,
+                  propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, cons));
+
+            /* do not release constraint here - will be done later */
+            propdata->genorbconss[propdata->ngenorbconss++] = cons;
+            ++propdata->nsymresacks;
+
+            if ( ! propdata->componentblocked[i] )
+            {
+               propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
+               ++propdata->componentblocked;
+            }
+
+            SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d adapted to suborbitope lexorder\n", k, i);
+         }
+
+         SCIPfreeBlockMemoryArrayNull(scip, &lexorder, maxnvarslexorder);
+      }
+
+#if 0
       /* possibly add weak SBCs for enclosing orbit of first component */
       if ( propdata->addweaksbcs && propdata->componentblocked[i] && nusedperms < npermsincomp )
       {
@@ -4237,6 +4377,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       }
       else
          SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used or the settings forbid it\n");
+#endif
 
       SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
@@ -4252,6 +4393,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIPdebugMsg(scip, "total number of added weak sbcs: %d\n", nweaksbcs);
 #endif
 
+   SCIPfreeBufferArray(scip, &modifiedpermvars);
+   for (i = propdata->nperms - 1; i >= 0; --i)
+   {
+      SCIPfreeBufferArray(scip, &modifiedperms[i]);
+   }
+   SCIPfreeBufferArray(scip, &modifiedperms);
    SCIPfreeBufferArray(scip, &genorder);
 
    return SCIP_OKAY;
@@ -4415,8 +4562,8 @@ SCIP_RETCODE detectOrbitopes(
 
       /* prepare variable matrix (reorder columns of orbitopevaridx) */
       infeasibleorbitope = FALSE;
-      SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(&vars, ntwocyclescomp, npermsincomponent + 1, permvars,
-            npermvars, orbitopevaridx, columnorder, nusedelems, rowisbinary, &infeasibleorbitope) );
+      SCIP_CALL( SCIPgenerateOrbitopeVarsMatrix(scip, &vars, ntwocyclescomp, npermsincomponent + 1, permvars,
+            npermvars, orbitopevaridx, columnorder, nusedelems, rowisbinary, &infeasibleorbitope, FALSE, NULL, NULL, NULL) );
 
       if ( ! infeasibleorbitope )
       {
@@ -4764,86 +4911,6 @@ SCIP_RETCODE freeConflictGraphSST(
 
    /* free conflict graph */
    SCIPdigraphFree(conflictgraph);
-
-   return SCIP_OKAY;
-}
-
-
-/** temporarily adapt symmetry data to new variable order given by Schreier Sims */
-static
-SCIP_RETCODE adaptSymmetryDataSST(
-   SCIP*                 scip,               /**< SCIP instance */
-   int**                 origperms,          /**< permutation matrix w.r.t. original variable ordering */
-   int**                 modifiedperms,      /**< memory for permutation matrix w.r.t. new variable ordering */
-   int                   nperms,             /**< number of permutations */
-   SCIP_VAR**            origpermvars,       /**< array of permutation vars w.r.t. original variable ordering */
-   SCIP_VAR**            modifiedpermvars,   /**< memory for array of permutation vars w.r.t. new variable ordering */
-   int                   npermvars,          /**< length or modifiedpermvars array */
-   int*                  leaders,            /**< leaders of Schreier Sims constraints */
-   int                   nleaders            /**< number of leaders */
-   )
-{
-   int* permvaridx;
-   int* posinpermvar;
-   int leader;
-   int curposleader;
-   int varidx;
-   int lidx;
-   int i;
-   int l;
-   int p;
-
-   assert( scip != NULL );
-   assert( origperms != NULL );
-   assert( modifiedperms != NULL );
-   assert( nperms > 0 );
-   assert( origpermvars != NULL );
-   assert( modifiedpermvars != NULL );
-   assert( npermvars > 0 );
-   assert( leaders != NULL );
-   assert( nleaders > 0 );
-
-   /* initialize map from position in lexicographic order to index of original permvar */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permvaridx, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-      permvaridx[i] = i;
-
-   /* initialize map from permvaridx to its current position in the reordered permvars array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &posinpermvar, npermvars) );
-   for (i = 0; i < npermvars; ++i)
-      posinpermvar[i] = i;
-
-   /* Iterate over leaders and put the l-th leader to the l-th position of the lexicographic order.
-    * We do this by swapping the l-th leader with the element at position l of the current permvars array. */
-   for (l = 0; l < nleaders; ++l)
-   {
-      leader = leaders[l];
-      curposleader = posinpermvar[leader];
-      varidx = permvaridx[curposleader];
-      lidx = permvaridx[l];
-
-      /* swap the permvar at position l with the l-th leader */
-      permvaridx[curposleader] = lidx;
-      permvaridx[l] = varidx;
-
-      /* update the position map */
-      posinpermvar[lidx] = curposleader;
-      posinpermvar[leader] = l;
-   }
-
-   /* update the permvars array to new variable order */
-   for (i = 0; i < npermvars; ++i)
-      modifiedpermvars[i] = origpermvars[permvaridx[i]];
-
-   /* update the permutation to the new variable order */
-   for (p = 0; p < nperms; ++p)
-   {
-      for (i = 0; i < npermvars; ++i)
-         modifiedperms[p][i] = posinpermvar[origperms[p][permvaridx[i]]];
-   }
-
-   SCIPfreeBufferArray(scip, &permvaridx);
-   SCIPfreeBufferArray(scip, &posinpermvar);
 
    return SCIP_OKAY;
 }
@@ -5802,7 +5869,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( propdata->symconsenabled )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms) );
 
       if ( propdata->detectorbitopes )
       {
@@ -5850,7 +5917,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims constraints are active) */
       if ( propdata->ngenorbconss == 0 )
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, 2 * propdata->nperms);
    }
 
    return SCIP_OKAY;
