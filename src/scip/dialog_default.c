@@ -2408,6 +2408,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    char charval;
    SCIP_Bool endoffile;
    SCIP_Bool error;
+   SCIP_RETCODE retcode;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2439,8 +2440,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_RETCODE retcode;
-
          assert(SCIPisBoolParamValid(scip, param, boolval));
 
          retcode = SCIPchgBoolParam(scip, param, boolval);
@@ -2473,8 +2472,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
-
       if( sscanf(valuestr, "%d", &intval) != 1 || !SCIPisIntParamValid(scip, param, intval) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for int parameter <%s>. Must be integral in range [%d,%d].\n\n",
@@ -2482,8 +2479,20 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgIntParam(scip, param, intval) );
+         retcode = SCIPchgIntParam(scip, param, intval);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for int parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
          SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
 
       break;
@@ -2500,8 +2509,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
-
       if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 || !SCIPisLongintParamValid(scip, param, longintval) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for longint parameter <%s>. Must be integral in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n\n",
@@ -2509,8 +2516,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgLongintParam(scip, param, longintval) );
+         retcode = SCIPchgLongintParam(scip, param, longintval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for longint parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
          SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
@@ -2526,8 +2544,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
-
       if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &realval) != 1 || !SCIPisRealParamValid(scip, param, realval) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid real parameter value <%s> for parameter <%s>. Must be in range [%.15g,%.15g].\n\n",
@@ -2535,8 +2551,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgRealParam(scip, param, realval) );
+         retcode = SCIPchgRealParam(scip, param, realval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for real parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
          SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
@@ -2551,8 +2578,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
-
       /* coverity[secure_coding] */
       if( sscanf(valuestr, "%c", &charval) != 1 || !SCIPisCharParamValid(scip, param, charval) )
       {
@@ -2561,8 +2586,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgCharParam(scip, param, charval) );
+         retcode = SCIPchgCharParam(scip, param, charval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for char parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
          SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
@@ -2577,16 +2613,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
-
       if ( !SCIPisStringParamValid(scip, param, valuestr) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid character in string parameter.\n\n");
       }
       else
       {
-         SCIP_CALL( SCIPchgStringParam(scip, param, valuestr) );
+         retcode = SCIPchgStringParam(scip, param, valuestr);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for string parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
