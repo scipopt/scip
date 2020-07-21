@@ -4159,7 +4159,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             if ( ! propdata->componentblocked[i] )
             {
-               propdata->componentblocked[i] = TRUE;
+               propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
                ++propdata->ncompblocked;
             }
 
@@ -4192,7 +4192,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             if ( ! propdata->componentblocked[i] )
             {
-               propdata->componentblocked[i] = TRUE;
+               propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
                ++propdata->ncompblocked;
             }
 
