@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1096,7 +1096,7 @@ SCIP_RETCODE SCIPsolSetVal(
       {
          oldval = solGetArrayVal(sol, var);
 
-         if( !SCIPsetIsEQ(set, val, oldval) )
+         if( val != oldval )  /*lint !e777*/
          {
             SCIP_Real obj;
             SCIP_Real objcont;
@@ -1147,7 +1147,7 @@ SCIP_RETCODE SCIPsolSetVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
          || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
-      if( !SCIPsetIsEQ(set, val, oldval) )
+      if( val != oldval )  /*lint !e777*/
       {
          SCIP_Real obj;
          SCIP_Real objcont;
@@ -1189,7 +1189,7 @@ SCIP_RETCODE SCIPsolSetVal(
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
       oldval = SCIPvarGetLbGlobal(var);
-      if( !SCIPsetIsEQ(set, val, oldval) )
+      if( val != oldval )  /*lint !e777*/
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), oldval, val);

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1164,7 +1164,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    for( j = 0; j < nmyitems && intprofits; ++j )
       intprofits = intprofits && SCIPisIntegral(scip, myprofits[j]);
 
-
    /* if no item is left then goto end */
    if( nmyitems == 0 )
    {
@@ -1379,7 +1378,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    intcap = (int)capacity;
    assert(intcap >= 0);
    assert(nmyitems > 0);
-   assert(sizeof(size_t) >= sizeof(int)); /* no following conversion should be messed up */
+   assert(sizeof(size_t) >= sizeof(int)); /*lint !e506*/ /* no following conversion should be messed up */
 
    /* this condition checks whether we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation
@@ -6920,7 +6919,6 @@ SCIP_RETCODE checkParallelObjective(
 
          SCIPdebugMsg(scip, "constraint <%s> is parallel to objective function and provids a cutoff bound <%g>\n",
             SCIPconsGetName(cons), cutoffbound);
-
 
          /* increase the cutoff bound value by an epsilon to ensue that solution with the value of the cutoff bound are
           * still excepted

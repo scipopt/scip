@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -7907,7 +7907,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
                ++ndisabled;
 #endif
             SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
-         }
+         } /*lint !e438*/
 
          assert(conshdlr->storednmarkedpropconss - ndisabled <= conshdlr->npropconss);
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
@@ -7961,7 +7961,7 @@ int SCIPlinConsStatsGetTypeCount(
    )
 {
    assert(linconsstats != NULL);
-   assert((int)linconstype < SCIP_NLINCONSTYPES);
+   assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587 !e685 !e568*/
    assert(linconsstats->counter != NULL);
 
    return linconsstats->counter[(int)linconstype];
@@ -7986,7 +7986,7 @@ void SCIPlinConsStatsIncTypeCount(
 {
    assert(linconsstats != NULL);
    assert(increment >= 1);
-   assert((int)linconstype < SCIP_NLINCONSTYPES);
+   assert(0 <= (int)linconstype && (int)linconstype < SCIP_NLINCONSTYPES); /*lint !e587 !e685 !e568*/
    assert(linconsstats->counter != NULL);
 
    linconsstats->counter[(int)linconstype] += increment;

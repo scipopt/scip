@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -238,7 +238,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_Bool             resolveprop,        /**< should propagation be resolved?                         */
    SCIP_Bool             usedynamicprop,     /**< whether we use a dynamic version of the propagation routine */
    SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
-)
+   )
 {
    int i;
    int j;
@@ -1997,7 +1997,6 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    else
       nrowsused = m;
    roworder = consdata->roworder;
-
 
    assert( inferinfo <= consdata->nspcons );
 

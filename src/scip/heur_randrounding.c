@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -63,7 +63,7 @@
 #define DEFAULT_ONCEPERNODE   FALSE          /**< should the heuristic only be called once per node? */
 #define DEFAULT_RANDSEED         23          /**< default random seed */
 #define DEFAULT_USESIMPLEROUNDING    FALSE   /**< should the heuristic apply the variable lock strategy of simple rounding,
-                                               *  if possible? */
+                                              *   if possible? */
 #define DEFAULT_MAXPROPROUNDS 1              /**< limit of rounds for each propagation call */
 #define DEFAULT_PROPAGATEONLYROOT TRUE       /**< should the probing part of the heuristic be applied exclusively at the root node */
 

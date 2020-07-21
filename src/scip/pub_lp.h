@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -113,6 +113,12 @@ SCIP_VAR* SCIPcolGetVar(
 /** gets unique index of col */
 SCIP_EXPORT
 int SCIPcolGetIndex(
+   SCIP_COL*             col                 /**< LP col */
+   );
+
+/** gets probindex of corresponding variable */
+SCIP_EXPORT
+int SCIPcolGetVarProbindex(
    SCIP_COL*             col                 /**< LP col */
    );
 

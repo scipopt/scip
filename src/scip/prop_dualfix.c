@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -42,7 +42,7 @@
 #define PROP_PRIORITY               +8000000 /**< propagation priority */
 #define PROP_FREQ                          0 /**< propagation frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators found
-                                             *   reductions? */
+                                              *   reductions? */
 #define PROP_PRESOL_PRIORITY        +8000000 /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of propving rounds the propver participates in (-1: no limit) */
 #define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */

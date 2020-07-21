@@ -6,8 +6,15 @@
 Features
 --------
 
+- Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
+  are now deleted when during a restart.
+- New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
+  which is able to handle symmetries of arbitrary kinds of variables.
+
 Performance improvements
 ------------------------
+
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 
 Examples and applications
 -------------------------
@@ -16,15 +23,39 @@ Interface changes
 -----------------
 ### New and changed callbacks
 ### Deleted and changed API methods
+
+- If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
+  variable is added to the transformed problem (SCIPaddVar()).
+  SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+- SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
+  changed from SCIP_Shortbool* to unsigned*.
+
 ### New API functions
 ### Command line interface
 ### Interfaces to external software
 ### Changed parameters
+
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
+
 ### New parameters
 
 - It is now possible to add orbitope constraints to handle symmetries even if not all variables
   in a component of the symmetry group are binary. This feature can be enabled using the
   parameter "propagating/symmetry/onlybinorbitope".
+
+- new parameter "propagating/symmetry/sstleaderrule" to select a rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/ssttiebreakrule" to select a tiebreak rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/sstleadervartype" to select the possible variable types
+  for a leader in SST cuts
+- new parameter "propagating/symmetry/addconflictcuts" to control whether SST cuts are added if
+  a binary leader variable is in conflict with a variable in its orbit
+- new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
+- new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
+  if a symmetry component contains variables of different types
+
+
 
 ### Data structures
 
@@ -48,10 +79,113 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+- when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
+  only captured by the transformed problem.
+
 Known bugs
 ----------
 
 @page RN70 Release notes for SCIP 7.0
+
+@section RN000 SCIP 7.0.2
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+- new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+
+- Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
+- Fixed overflow in inference information of cumulative constraint handler
+- Fixed problem with propfreq == 0 in cons_linear.c
+- Fixed problem with incompatibility of symmetry handling in Benders decomposition
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+@section RN701 SCIP 7.0.1
+*************************
+
+Build system
+------------
+
+### Cmake
+
+- Fixed cmake module for Ipopt to support Ipopt 3.13
+- Added cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+- Added warning to require minimal GCC version 4.8
+- Renamed FindCriterion cmake findmodule to FindCRITERION
+
+### Makefile
+
+- Updated make/make.project for macOS
+- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS)
+- Fixed GCC version check in make/make.linux.gnu.dbg
+
+Fixed bugs
+----------
+
+- Fixed handling of constant term in quadratic objective of pip-reader
+- Fixed incorrect value string for parameter estimation/completiontype
+- Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
+- Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
+- Fixed inability to set a value in a solution if it was within epsilon to the current value
+- Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
+  to end of SCIP structs
+
+Miscellaneous
+-------------
+
+- Variables that are marked as relaxation-only are no longer checked against debug solutions if
+  they are captured by the transformed problem only.
 
 @section RN700 SCIP 7.0.0
 *************************
@@ -99,6 +233,14 @@ Features
 
 - added option to adjust weights of different scores in relpscost (hybrid) branching rule based on degeneracy information
   and skip strong branching for very high degeneracy rates
+
+- added new SCIP_DECOMP* object to store user decompositions. The user can specify one or several decompositions by assigning variable
+  and/or constraint labels either through the API or by reading a file in DEC format (which is one of the formats that GCG writes).
+  This format specifies constraint labels, variable labels are inferred from that. The decomposition is transformed after presolving.
+- statistics regarding the number of blocks, the largest and smallest blocks, the border, and the constraint graph are printed for the original decomposition,
+  and for each decomposition after presolving.
+- the decomposition can be used as initial decomposition for the Benders functionality of SCIP.
+- new subsection "How to provide a problem decomposition" in the SCIP documentation
 
 - GINS heuristic can make use of a user-provided decomposition labels in two ways:
  1. by selecting a block of variables that maximizes the potential, and randomly selecting a start variable for the neighborhood and/or
@@ -149,7 +291,7 @@ Features
 - Using the parameter "constraints/symresack/checkmonotonicity" one can now decide to upgrade to packing/partitioning
   symresacks even if the underlying permutation is not monotone.
 
-- New branching rule `vanillastrongbranch`, mostly for scientific purpose, with the following features:
+- New branching rule `vanillafullstrong`, mostly for scientific purpose, with the following features:
   1) no cutoff or domain reduction: only branching;
   2) idempotent (optional): leave SCIP, as much as possible, in the same state before / after the strong branching calls
      - basically, do not update any statistic;
@@ -199,8 +341,9 @@ Features
   the parameters decomposition/benderslabels and decomposition/applybenders must be set to TRUE.
 
 - new event handler event_estim.c/h that approximates search tree completion and estimates tree size
-  to (optionally) trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
+  to trigger restarts; many approximations of search tree completion and estimation, including WBE, SSG, and tree profile method
 - new display column that reports approx. search tree completion during the search, and an overview in the statistics table
+- added resources (script, tutorial, test data) to adapt tree size estimation to user instances.
 
 - Orbital Fixing uses a list of variables that have been fixed globally since the computation of symmetries to filter
   symmetries. Previously, some plugins were disabled, which is not necessary anymore.
@@ -212,6 +355,8 @@ Features
 - To be able to calculate better bounds for the dual variables, the presolver "dualinfer" was extended by the ability to perform convex combinations of continuous columns.
 
 - allow disabling of pricers during solving process
+
+- added emphasis setting for numerically challenging instances
 
 Performance improvements
 ------------------------
@@ -256,6 +401,8 @@ Performance improvements
 
 - improved detection of packing/partitioning orbitopes
 
+- enable an in-tree restart if after a reasonable initialization, the estimated size of the remaining tree is large.
+
 
 Examples and applications
 -------------------------
@@ -287,6 +434,7 @@ Interface changes
     LPITLIM and BARRIERCONVTOL positive or zero; FEASTOL, DUALFEASTOL, LPTILIM strictly positive
   + now projecting SCIP_LPPAR values on feasible values for each lp interface
   + add interface to Glop
+  + fixed mapping between scaling parameter values in Gurobi LPI lpi_grb
 - Symmetry:
   + removed method SCIPseparateCoversOrbisack() in cons_orbisack.h since the orbitope constraint
     handler has its own implementation of this routine with advanced features now
@@ -299,7 +447,7 @@ Interface changes
   + the function SCIPgetSymmetry() no longer accepts the parameter recompute, but has parameter permvarmap as new input
   + removed SCIPgetPermvarsObjSymmetry(), SCIPsetSymmetryComponentblocked(), SCIPgetSymmetryComponentblocked(),
     SCIPgetSyminfoGloballyFixedVars(), SCIPcomputeGroupOrbitsSymbreak, SCIPincludePresolSymmetry(),SCIPincludePresolSymbreak(),
-	and SCIPincludePropOrbitalfixing()
+    and SCIPincludePropOrbitalfixing()
   + add function SCIPcomputeOrbitsComponentsSym() to compute orbits without filtering permutations and indices of orbits for each variable
 - SCIPallowObjProp() and SCIPallowDualReds() are deprecated and replaced by SCIPallowWeakDualReds() and SCIPallowStrongDualReds(), respectively
 - Benders' decomposition
@@ -337,7 +485,7 @@ Interface changes
   because they involved relaxation-only variables. Thus, a copy is already regarded as valid if all checked or enforced constraints were copied successfully.
 
 - linking constraint handler:
-  - changed type of vals argument from int *to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
+  - changed type of vals argument from int* to SCIP_Real* in SCIPcreateConsLinking() and SCIPcreateConsBasicLinking()
   - SCIPgetIntvarLinking() has been renamed to SCIPgetLinkvarLinking().
   - changed return value of SCIPgetValsLinking() from int* to SCIP_Real*.
   - new method SCIPgetBinvarsDataLinking().
@@ -412,14 +560,11 @@ Interface changes
 - New function SCIPcalcChildEstimateIncrease() to compute the increase in the child estimation
 - new API functions SCIPisOrbitalfixingEnabled() and SCIPgetSymmetryNGenerators() to check whether orbital fixing is
   enabled and to get the number of generators of the current symmetry group, respectively
+- new API function SCIPdelNlRow() to remove a row from the NLP
 
 ### Event system
 
 - new event type SCIP_EVENTTYPE_NODEDELETE to react on nodes that are about to be deleted from the tree
-
-### Command line interface
-
-### Interfaces to external software
 
 ### Changed parameters
 
@@ -445,16 +590,18 @@ Interface changes
 - deleted parameter "propagating/orbitalfixing/symcomptiming"
 - deleted parameter "propagating/orbitalfixing/performpresolving"
 - deleted parameter "propagating/orbitalfixing/recomputerestart"
-- changed default value of "heur/coefdiving/freq" (old: 10, new: -1)
-- changed default value of "heur/conflictdiving/freq" (old: -1, new: 10)
-- changed default value of "heur/conflictdiving/lockweight" (old: 1.0, new: 0.75)
+- changed default value of "heuristics/coefdiving/freq" (old: 10, new: -1)
+- changed default value of "heuristics/conflictdiving/freq" (old: -1, new: 10)
+- changed default value of "heuristics/conflictdiving/lockweight" (old: 1.0, new: 0.75)
 - replaced parameter "numerics/lpfeastol" by "numerics/lpfeastolfactor" to specify which factor should be applied to the SCIP feasibility
   tolerance to initialize the primal feasibility tolerance of the LP solver
 - enabling aggressive presolving now activates all available presolving plugins,
   and decreases the presolving/restartfac parameter correctly with respect to default.
-- change default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
+- changed default value of heuristics/rins/nodesquot to 0.3 (was 0.1), to compensate
   the removal of a hard coded factor of 3.0 in the code without affecting the default behavior
   of the RINS heuristic.
+- changed default value of "constraints/quadratic/empathy4and" (old: 0, new: 2)
+- changed default value of "propagating/redcost/useimplics" (old: TRUE, new: FALSE)
 
 ### New parameters
 
@@ -524,6 +671,7 @@ Interface changes
   - new parameter "propagating/symmetry/compresssymmetries"
   - new parameter "propagating/symmetry/compressthreshold"
   - new parameter "propagating/symmetry/disableofrestart"
+  - new parameter "propagating/symmetry/symfixnonbinaryvars"
 
 - new parameter for enabling shared memory parallelisation for solving Benders' decomposition subproblems. The parameter
   benders/<bendersname>/numthreads sets the number of threads used for parallel subproblem solving.
@@ -616,9 +764,6 @@ Interface changes
   to handle compilation dependencies is to additionally use $(DFLAGS) when compiling the object files (.o) and
   to include the generated .d files in the Makefile, see also "Build system / Makefile" below.
 
-Deleted files
--------------
-
 Unit tests
 ----------
  - new unit test for treemodel.
@@ -626,10 +771,14 @@ Unit tests
 Testing
 -------
 
+ - fixed an issue that may have lead to wrong status reports in the evaluation scripts
+
 Build system
 ------------
 
 ### Cmake
+
+- avoid problem with doubly defined object together with CPLEX
 
 ### Makefile
 
@@ -637,6 +786,7 @@ Build system
   files are now dynamically created and updated during build. The new dependency files (*.d) reside next to each object
   file (.o) in the corresponding obj subdirectory.
 - added support for building against Ipopt >= 3.13
+- unify compiler switches for Intel compiler and avoid problem with doubly defined object together with CPLEX
 
 Fixed bugs
 ----------
@@ -687,9 +837,24 @@ Fixed bugs
 - fixed bug in pricestore, which resulted in too many problem variables being added
 - fixed bug in cons_knapsack where weight of clique was not reset after an infeasibility was detected
 - fixed bug in presol_inttobinary which did not take into account that the aggregation could be rejected due to numerics
+- fixed bug in debug solution mechanism in connection to variables created by presol_inttobinary
 - fixed wrong indexing while undoing the implications from a redundant variable in SCIPshrinkDisjunctiveVarSet
 - redundancy checks in SCIPnodeAddBoundinfer now take a possible change to an active variable into account
 - fixed adding already added quadratic rows to NLP relaxation during solve
+- fixed issue related to variable locks in the varbound constraint handler
+- fixed bug in the quadratic constraint handler when changing infinite constraint sides
+- fixed sorting of variables in linear constraint handler
+- added additional checks to ensure numerical stability of dual proofs
+- fixed a case when activities of a linear constraint got unreliable but where still used for reductions
+- ensure that lhs <= rhs for linear constraints (without tolerances)
+- make handling of read errors in SCIPfread() consistent between version with and without ZLIB
+- correctly drop variable events in cons_indicator in restart
+- fixed bug in cons_orbitope with upgrading of orbitope constraints
+- additional checks in some presolvers for time limit being exceeded
+- fixed bug in presolving of cons_varbound with multi-aggregated variables
+- improve numerics in conflict analysis by using double-double arithmetic
+- fixed bound acceptance condition to avoid inconsistencies
+- fixed numerics in pseudoobj propagator by using double-double arithmetic
 
 Miscellaneous
 -------------
@@ -703,9 +868,8 @@ Miscellaneous
 - checks in debug mode that clean buffer memory is really clean when being freed are now disabled by default
 - don't compute symmetries if reoptimization is enabled
 - prefer integral values when fixing an almost-fixed continuous variable in the trivial presolver
-
-Known bugs
-----------
+- changed the name of the variable that is added by the OSiL reader to represent the quadratic or nonlinear parts of the objective function
+- SCIP_EXPORT is now defined as __attribute__((__visibility__("default"))) if GCC and no SCIP config header is used
 
 @page RN60 Release notes for SCIP 6.0
 
@@ -807,6 +971,7 @@ Performance improvements
 
 - try greedy solution first before solving knapsack exactly using dynamic programming in SCIPsolveKnapsackExactly,
   compute greedy solution by weighted median selection.
+- don't consider implied redcost by default in the reduced cost propagator
 
 Interface changes
 -----------------
@@ -2087,7 +2252,7 @@ Fixed bugs
   - fixed bug during coefficient tightening in varbound constraint handler
   - handle cutoffs in cons_indicator detected by infeasible inequalities
   - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
-  - fixed	initsol and exitsol of cons_indicator, if problem has already been solved
+  - fixed initsol and exitsol of cons_indicator, if problem has already been solved
   - fixed bug in cons_indicator with changing type of slackvariable
 
 @section RN320 SCIP 3.2.0
@@ -2409,7 +2574,7 @@ Interface changes
 - `constraints/SOS1/strthenboundcuts` to define whether to strengthen bound (clique) cuts in case bound variables are available
 - `constraints/SOS1/updateconflpresol` to update the conflict graph during the presolving procedure
 - `display/allviols` to print all violated constraints of the best solution during checksol in the scip shell
-- `heur/indicator/improvesols` that turns on the improvement of external solutions by one-opt
+- `heuristics/indicator/improvesols` that turns on the improvement of external solutions by one-opt
 - `heuristics/*diving/lpresolvedomchgquot` to determine the percentage of changed domains since previous LP to trigger
   an LP resolve [default: 0.15] (* stands for eight diving heuristics to support this feature)
 - `heuristics/*diving/lpsolvefreq` to determine the frequency for resolving LP's during the execution of
@@ -5186,7 +5351,7 @@ Build system
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
   `clean` is changed as described here:
-  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+  http://scipopt.org/download/bugfixes/scip-1.2.0/make.txt.
 
 Fixed bugs
 ----------

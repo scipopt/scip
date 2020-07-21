@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -168,7 +168,7 @@ SCIP_DECL_HASHKEYVAL(indexesHashval)
    binfo = (BLOCKINFO*) key;
 
    return SCIPhashFour(SCIPrealHashCode((double)binfo->block), SCIPrealHashCode((double)binfo->otherblock),
-                        SCIPrealHashCode((double)binfo->linkvaridx), SCIPrealHashCode((double)binfo->linkvaridx));
+                       SCIPrealHashCode((double)binfo->linkvaridx), SCIPrealHashCode((double)binfo->linkvaridx));
 }
 
 /** primal heuristic data */
@@ -234,6 +234,7 @@ SCIP_RETCODE freeBlock(
    {
       SCIPfreeBufferArray(block->problem->scip, &(block->subvars));
    }
+
    if( block->subscip != NULL )
    {
       SCIP_CALL( SCIPfree(&block->subscip) );
@@ -454,7 +455,7 @@ SCIP_RETCODE blockCreateSubscip(
           * we use this value to determine the nodelimit
           */
          block->size = (SCIP_Real)(SCIPgetNOrigVars(block->subscip) + SCIPgetNOrigIntVars(block->subscip) + SCIPgetNOrigBinVars(block->subscip)) /
-                        (SCIPgetNVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
+                       (SCIPgetNVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
       }
    }
    else
@@ -623,8 +624,8 @@ SCIP_RETCODE reuseSolution(
    SCIP_CALL( SCIPsetSolVals(subscip, newsol, nvars, blockvars, blockvals) );
 
    /* correct each coupling constraint;
-      orig_var + slackpos - slackneg == side
-      adapt slack variables so that constraint is feasible */
+    * orig_var + slackpos - slackneg == side
+    * adapt slack variables so that constraint is feasible */
    for( c = 0; c < block->ncoupling; c++ )
    {
       SCIP_Real solval; /* old solution values of variables; [0] original variable, [1] slackpos, [2] slackneg */
@@ -1223,9 +1224,9 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                   lb = SCIPvarGetLbOriginal(binfo->linkvar);
                   initval = MAX(lb, 0.0);
-                  
+
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
-                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
+                        name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
 
                   /* set initial value of linking variable */
                   binfo->linkvarval = initval;
@@ -1241,7 +1242,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                      initval = SCIPround(scip, initval);
 
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),
-                                                   name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
+                        name, COUPLINGSIZE, tmpcouplingvars, tmpcouplingcoef, initval, initval) );
 
                   /* set initial value of linking variable */
                   binfo->linkvarval = initval;
@@ -1508,12 +1509,11 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
 
                /* free solving data in order to change problem */
                SCIP_CALL( SCIPfreeTransform((problem->blocks[b]).subscip) );
-
             }
             while( status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_GAPLIMIT &&
                    !(status == SCIP_STATUS_NODELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0) &&
                    !(status == SCIP_STATUS_TIMELIMIT && SCIPgetNSols((problem->blocks[b]).subscip) > 0 && 
-                    SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
+                   SCIPisEQ(scip, SCIPgetSolOrigObj((problem->blocks[b]).subscip, SCIPgetBestSol((problem->blocks[b]).subscip)), 0.0) ) );
          }
       }
 
@@ -1702,7 +1702,6 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       *result = SCIP_DIDNOTFIND;
    }
 
-
 TERMINATE:
    /* release variables, constraints and free memory */
    if( problem != NULL )
@@ -1799,12 +1798,10 @@ SCIP_RETCODE SCIPincludeHeurPADM(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
+   SCIP_HEUR* heur = NULL;
 
    /* create PADM primal heuristic data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
-
-   heur = NULL;
 
    /* include primal heuristic */
 

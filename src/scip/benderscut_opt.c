@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -33,19 +33,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_linear.h"
 #include "scip/pub_var.h"
-#include "scip/scip_benders.h"
-#include "scip/scip_cons.h"
-#include "scip/scip_cut.h"
-#include "scip/scip_general.h"
-#include "scip/scip_lp.h"
-#include "scip/scip_mem.h"
-#include "scip/scip_message.h"
-#include "scip/scip_nlp.h"
-#include "scip/scip_numerics.h"
-#include "scip/scip_param.h"
-#include "scip/scip_prob.h"
-#include "scip/scip_probing.h"
-#include "scip/scip_var.h"
+#include "scip/scip.h"
 #include <string.h>
 
 #define BENDERSCUT_NAME             "optimality"
@@ -98,6 +86,58 @@ SCIP_RETCODE polishSolution(
 
    /* resetting the solution polishing parameter */
    SCIP_CALL( SCIPsetIntParam(subproblem, "lp/solutionpolishing", oldpolishing) );
+
+   return SCIP_OKAY;
+}
+
+/** verifying the activity of the cut when master variables are within epsilon of their upper or lower bounds
+ *
+ *  When setting up the Benders' decomposition subproblem, master variables taking values that are within epsilon
+ *  greater than their upper bound or less than their lower bound are set to their upper and lower bounds respectively.
+ *  As such, there can be a difference between the subproblem dual solution objective and the optimality cut activity,
+ *  when computed using the master problem solution directly. This check is to verify whether this difference is an
+ *  actual error or due to the violation of the upper and lower bounds when setting up the Benders' decomposition
+ *  subproblem.
+ */
+static
+SCIP_RETCODE checkSetupTolerances(
+   SCIP*                 masterprob,         /**< the SCIP data structure */
+   SCIP_SOL*             sol,                /**< the master problem solution */
+   SCIP_VAR**            vars,               /**< pointer to array of variables in the generated cut with non-zero coefficient */
+   SCIP_Real*            vals,               /**< pointer to array of coefficients of the variables in the generated cut */
+   SCIP_Real             lhs,                /**< the left hand side of the cut */
+   SCIP_Real             checkobj,           /**< the objective of the subproblem computed from the dual solution */
+   int                   nvars,              /**< the number of variables in the cut */
+   SCIP_Bool*            valid               /**< returns true is the cut is valid */
+   )
+{
+   SCIP_Real verifyobj;
+   int i;
+
+   assert(masterprob != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+
+   /* initialising the verify objective with the left hand side of the optimality cut */
+   verifyobj = lhs;
+
+   /* computing the activity of the cut from the master solution and the constraint values */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_Real solval;
+
+      solval = SCIPgetSolVal(masterprob, sol, vars[i]);
+
+      /* checking whether the solution value is less than or greater than the variable bounds */
+      if( !SCIPisLT(masterprob, solval, SCIPvarGetUbLocal(vars[i])) )
+         solval = SCIPvarGetUbLocal(vars[i]);
+      else if( !SCIPisGT(masterprob, solval, SCIPvarGetLbLocal(vars[i])) )
+         solval = SCIPvarGetLbLocal(vars[i]);
+
+      verifyobj -= solval*vals[i];
+   }
+
+   (*valid) = SCIPisFeasEQ(masterprob, checkobj, verifyobj);
 
    return SCIP_OKAY;
 }
@@ -417,10 +457,8 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
    (*success) = FALSE;
 
-   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
-         && row2idx == NULL && var2idx == NULL)
-      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
-         && row2idx != NULL && var2idx != NULL) )
+   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL && row2idx == NULL && var2idx == NULL)
+      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL && row2idx != NULL && var2idx != NULL) ) /*lint !e845*/
    {
       SCIPerrorMessage("The optimality cut must generated from either a SCIP instance or all of the dual solutions and indices must be supplied");
       (*success) = FALSE;
@@ -874,19 +912,35 @@ SCIP_RETCODE SCIPgenerateAndApplyBendersOptCut(
        */
       if( !feasibilitycut && !SCIPisFeasEQ(masterprob, checkobj, verifyobj) )
       {
-         success = FALSE;
-         SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
-            verifyobj);
+         SCIP_Bool valid;
+
+         /* the difference in the checkobj and verifyobj could be due to the setup tolerances. This is checked, and if
+          * so, then the generated cut is still valid
+          */
+         SCIP_CALL( checkSetupTolerances(masterprob, sol, vars, vals, lhs, checkobj, nvars, &valid) );
+
+         if( !valid )
+         {
+            success = FALSE;
+            SCIPdebugMsg(masterprob, "The objective function and cut activity are not equal (%g != %g).\n", checkobj,
+               verifyobj);
 
 #ifdef SCIP_DEBUG
-         /* we only need to abort if cut strengthen is not used. If cut strengthen has been used in this round and the
-          * cut could not be generated, then another subproblem solving round will be executed
-          */
-         if( !SCIPbendersInStrengthenRound(benders) )
-         {
-            SCIPABORT();
-         }
+            /* we only need to abort if cut strengthen is not used. If cut strengthen has been used in this round and the
+             * cut could not be generated, then another subproblem solving round will be executed
+             */
+            if( !SCIPbendersInStrengthenRound(benders) )
+            {
+#ifdef SCIP_MOREDEBUG
+               int i;
+
+               for( i = 0; i < nvars; i++ )
+                  printf("<%s> %g %g\n", SCIPvarGetName(vars[i]), vals[i], SCIPgetSolVal(masterprob, sol, vars[i]));
 #endif
+               SCIPABORT();
+            }
+#endif
+         }
       }
 
       if( success )

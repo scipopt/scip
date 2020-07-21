@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -94,6 +94,8 @@
 #ifndef SCIP_EXPORT
 #if defined(_WIN32) || defined(_WIN64)
 #define SCIP_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#define SCIP_EXPORT __attribute__((__visibility__("default")))
 #else
 #define SCIP_EXPORT
 #endif
@@ -119,8 +121,8 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                700 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_VERSION                701 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
 #define SCIP_APIVERSION              68 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 

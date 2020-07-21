@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -163,8 +163,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP_Real subprobobj;   /* the objective function value of the subproblem */
    SCIP_Real lhs;          /* the left hand side of the cut */
    int i;
-   SCIP* subproblem;
-   SCIP_SOL* subprobsol;
+   SCIPdebug( SCIP* subproblem; )
 
 #ifndef NDEBUG
    SCIP_Real verifyobj = 0;
@@ -179,16 +178,12 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    /* getting the best solution from the subproblem */
 
-#ifdef SCIP_DEBUG
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
-   subprobsol = SCIPgetBestSol(subproblem);
-#endif
-
    subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
-   SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
-      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol)*(int)SCIPgetObjsense(subproblem),
-      cutconstant);
+   SCIPdebug( subproblem = SCIPbendersSubproblem(benders, probnumber); )
+   SCIPdebug( SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
+      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem))*(int)SCIPgetObjsense(subproblem),
+      cutconstant); )
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);

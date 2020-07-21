@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -42,9 +42,6 @@ extern "C" {
 struct SCIP_SolNode
 {
    SCIP_SOL*             sol;                /**< the stored solution */
-#ifndef NDEBUG
-   SCIP_VAR*             var;                /**< variable represented by this node */
-#endif
    SCIP_SOLNODE*         father;             /**< pointer to the parent node */
    SCIP_SOLNODE*         child;              /**< pointer to left most child node, i.e., node representing the variable
                                                *  with smallest solution value
@@ -53,6 +50,9 @@ struct SCIP_SolNode
    SCIP_Real             value;              /**< solution value represented by this node */
    SCIP_Bool             updated;            /**< flag if the solution is already updated
                                               *   w.r.t. the new objective function */
+#ifndef NDEBUG
+   SCIP_VAR*             var;                /**< variable represented by this node */
+#endif
 };
 
 /** tree for solution */

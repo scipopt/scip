@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2756,7 +2756,7 @@ static
 SCIP_RETCODE fixMatchingSolutionValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sols,               /**< array of 2 or more solutions. It is okay for the array to contain one element
-                                               *  equal to NULL to represent the current LP solution */
+                                              *   equal to NULL to represent the current LP solution */
    int                   nsols,              /**< number of solutions in the array */
    SCIP_VAR**            vars,               /**< variable array for which solution values must agree */
    int                   nvars,              /**< number of variables, or -1 for all binary and integer variables */
@@ -3643,7 +3643,6 @@ SCIP_RETCODE includeNeighborhoods(
    SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &dins, "dins",
          DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS, DEFAULT_ACTIVE_DINS, DEFAULT_PRIORITY_DINS,
          varFixingsDins, changeSubscipDins, NULL, NULL, nhFreeDins, nhRefsolIncumbent, nhDeactivateBinVars) );
-
 
    /* allocate data for DINS to include the parameter */
    SCIP_CALL( SCIPallocBlockMemory(scip, &dins->data.dins) );

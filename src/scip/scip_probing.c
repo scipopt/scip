@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1097,7 +1097,6 @@ char* SCIPsnprintfProbingStats(
          int ntypevars = vartypeend[p] - (p == 0 ? 0 : vartypeend[p - 1]);
          ptr += SCIPsnprintf(ptr, len, "%d / %d %s%s", nvartypefixed[p], ntypevars, vartypenames[p], p < (nvartypes - 1) ? ", " : ")");
       }
-
    }
    else
    {
@@ -1105,7 +1104,6 @@ char* SCIPsnprintfProbingStats(
    }
 
    return strbuf;
-
 }
 
 /** gets the candidate score and preferred rounding direction for a candidate variable */

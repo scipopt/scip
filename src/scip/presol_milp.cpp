@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -344,14 +344,14 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
 
    /* set tolerances */
-   presolve.setEpsilon(SCIPepsilon(scip));
-   presolve.setFeasTol(SCIPfeastol(scip));
+   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
+   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
 
    /* adjust output settings of presolve libary */
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
    problem.setName(SCIPgetProbName(scip));
 #else
-   presolve.setVerbosityLevel(VerbosityLevel::QUIET);
+   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
 #endif
 
    /* communicate the time limit */
@@ -370,22 +370,22 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    /* evaluate the result */
    switch(res.status)
    {
-      case PresolveStatus::INFEASIBLE:
+      case PresolveStatus::kInfeasible:
          *result = SCIP_CUTOFF;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver detected infeasibility\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::UNBND_OR_INFEAS:
-      case PresolveStatus::UNBOUNDED:
+      case PresolveStatus::kUnbndOrInfeas:
+      case PresolveStatus::kUnbounded:
          *result = SCIP_UNBOUNDED;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) MILP presolver detected unboundedness\n",
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::UNCHANGED:
+      case PresolveStatus::kUnchanged:
          *result = SCIP_DIDNOTFIND;
          data->lastncols = nvars;
          data->lastnrows = nconss;
@@ -394,7 +394,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
                SCIPgetSolvingTime(scip));
          SCIPmatrixFree(scip, &matrix);
          return SCIP_OKAY;
-      case PresolveStatus::REDUCED:
+      case PresolveStatus::kReduced:
          data->lastncols = problem.getNCols();
          data->lastnrows = problem.getNRows();
          *result = SCIP_SUCCESS;
@@ -445,8 +445,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          int rowlen = rowvec.getLength();
 
          /* retrieve SCIP compatible left and right hand sides */
-         SCIP_Real lhs = rflags[i].test(RowFlag::LHS_INF) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
-         SCIP_Real rhs = rflags[i].test(RowFlag::RHS_INF) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
+         SCIP_Real lhs = rflags[i].test(RowFlag::kLhsInf) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
+         SCIP_Real rhs = rflags[i].test(RowFlag::kRhsInf) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
 
          /* create variable array matching the value array */
          tmpvars.clear();
@@ -475,7 +475,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
       switch( type )
       {
-      case ReductionType::FIXED_COL:
+      case ReductionType::kFixedCol:
       {
          SCIP_Bool infeas;
          SCIP_Bool fixed;
@@ -492,7 +492,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          assert(fixed);
          break;
       }
-      case ReductionType::SUBSTITUTED_COL:
+      case ReductionType::kSubstitutedCol:
       {
          int col = res.postsolve.indices[first];
          SCIP_Real side = res.postsolve.values[first];
@@ -589,7 +589,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          break;
       }
       default:
-      case ReductionType::PARALLEL_COL:
+      case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
       }
    }
@@ -601,7 +601,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       for( int i = 0; i != problem.getNCols(); ++i )
       {
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
-         if( !varDomains.flags[i].test(ColFlag::LB_INF) )
+         if( !varDomains.flags[i].test(ColFlag::kLbInf) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
@@ -617,7 +617,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             }
          }
 
-         if( !varDomains.flags[i].test(ColFlag::UB_INF) )
+         if( !varDomains.flags[i].test(ColFlag::kUbInf) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;

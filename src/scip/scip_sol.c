@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -678,7 +678,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
          SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
          break;
       default:
-         assert(FALSE);
+         assert(FALSE); /*lint !e506*/
       }  /*lint !e788*/
    }
 
@@ -2592,6 +2592,7 @@ SCIP_RETCODE readSolFile(
       char varname[SCIP_MAXSTRLEN];
       char valuestring[SCIP_MAXSTRLEN];
       char objstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real value;
       int nread;
@@ -2609,8 +2610,8 @@ SCIP_RETCODE readSolFile(
          continue;
 
       /* parse the line */
-      /* cppcheck-suppress invalidscanf */
-      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, valuestring, objstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2055,13 +2055,13 @@ SCIP_Real getEnsembleEstimation(
       estim = 0.0;
       coeffs = coeffs_early;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
    }
    else if( treedata->weight <= 0.6 )
    {
       coeffs = coeffs_intermediate;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
 
       /* initialize by intermediate WBE coefficient */
       estim = 0.156 * treeDataGetWbe(treedata);
@@ -2070,7 +2070,7 @@ SCIP_Real getEnsembleEstimation(
    {
       coeffs = coeffs_late;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
 
       /* initialize by late WBE coefficient */
       estim = 0.579 * treeDataGetWbe(treedata);
@@ -2367,10 +2367,6 @@ SCIP_Bool isRestartApplicable(
    if( eventhdlrdata->restartlimit != -1 && eventhdlrdata->nrestartsperformed >= eventhdlrdata->restartlimit )
       return FALSE;
 
-   /* check whether orbital fixing is active */
-   if ( SCIPgetSymmetryNGenerators(scip) > 0 && SCIPisOrbitalfixingEnabled(scip) )
-      return FALSE;
-
    /* check if number of nodes exceeds the minimum number of nodes */
    if( eventhdlrdata->countonlyleaves )
       nnodes = eventhdlrdata->treedata->nleaves;
@@ -2383,13 +2379,13 @@ SCIP_Bool isRestartApplicable(
    return TRUE;
 }
 
-/** should a restart be applied based on the value of the selected completion method? */
+/** should a restart be applied based on the value of the selected completion method? */   /*lint --e{715}*/
 static
 SCIP_Bool shouldApplyRestartCompletion(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real completion;
 
    SCIP_CALL_ABORT( getSearchCompletion(eventhdlrdata, &completion) );
@@ -2932,7 +2928,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    SCIP_CALL( SCIPaddCharParam(scip, "estimation/completiontype",
          "approximation of search tree completion: (a)uto, (g)ap, tree (w)eight, (m)onotone regression, (r)egression forest, (s)sg",
-         &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agpmrs", NULL, NULL) );
+         &eventhdlrdata->completiontypeparam, FALSE, DEFAULT_COMPLETIONTYPE, "agmrsw", NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "estimation/treeprofile/enabled",
          "should the event handler collect data?",

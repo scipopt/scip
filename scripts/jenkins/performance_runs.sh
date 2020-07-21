@@ -97,7 +97,8 @@ export MODE=performance
 
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+#export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.13-static-build
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 export DATESTR=$(date "+%Y-%m-%d %H:%M:%S")
@@ -168,6 +169,7 @@ if [ "${UPDATE_PERF_BRANCH}" == "yes" ]; then
 
   # cmake scip for presolvelib papilo
   cd ..
+  rm -rf scip-build
   mkdir -p scip-build
   cd scip-build
   cmake .. -DCMAKE_BUILD_TYPE=Release -DSOPLEX_DIR=${SOPLEX_DIR}
@@ -222,11 +224,12 @@ if [ "${TRS_CONFIG}" != "custom" ]; then
     TRIGGER[6,3]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_presolve_master_weekly/build?token=weeklysaptoken"
 
     # jobs running on sunday
-    JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+    JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
   elif [ "${GITBRANCH}" == "consexpr" ]; then
     # running on saturday
     JOBS[6,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640 TEST=minlpdev-solvable TIME=3600 SETTINGS=minlp_default PERFORMANCE=performance PERMUTE=4"
+    echo ""
 
   else # on bugfix
     # running on saturday
@@ -235,7 +238,7 @@ if [ "${TRS_CONFIG}" != "custom" ]; then
     TRIGGER[6,1]="https://adm_timo:11d1846ee478c8ff7b7e116b4dd0ddbe86@cijenkins.zib.de/job/SCIP_SAP_perfrun_${GITBRANCH}_weekly/build?token=weeklysaptoken"
 
     # jobs running on sunday
-    JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M630v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
+    JOBS[7,1]="EXECUTABLE=scipoptspx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptspx_${GITBRANCH}_${RANDOMSEED} SLURMACCOUNT=scip EXCLUSIVE=true MEM=50000 QUEUE=M640v2 TEST=sap-benchmark TIME=3 SETTINGS=${SAPSETTINGS} PERFORMANCE=performance SEEDS=2"
 
   fi
 fi
@@ -293,7 +296,7 @@ if [ "${TODAYS_N_JOBS}" != "0" ]; then
   BUILD_DIR=scipoptspx_${GITBRANCH}_${RANDOMSEED}
   mkdir -p ${BUILD_DIR}
   cd ${BUILD_DIR}
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR}
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLPS=spx -DSOPLEX_DIR=${SOPLEX_DIR} -DPAPILO_DIR=${PAPILO_DIR} -LA
   make -j4
   cd ..
 

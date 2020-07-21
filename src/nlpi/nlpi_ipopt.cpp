@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -629,9 +629,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetNumericValue("diverging_iterates_tol", data->infinity, false);
    /* (*problem)->ipopt->Options()->SetStringValue("dependency_detector", "ma28"); */
    /* if the expression interpreter does not give hessians, tell Ipopt to approximate hessian */
-#ifdef SCIP_DEBUG
-   (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
-#endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
    setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
@@ -1149,6 +1146,10 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             else
                problem->nlp->approxhessian = false;
          }
+
+#ifdef SCIP_DEBUG
+         problem->ipopt->Options()->SetStringValue("derivative_test", problem->nlp->approxhessian ? "first-order" : "second-order");
+#endif
 
          status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
       }

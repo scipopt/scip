@@ -279,7 +279,7 @@ SCIP_Real calcEfficacyNormQuad(
       break;
    default:
       SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
-      assert(FALSE);
+      assert(FALSE); /*lint !e506*/
    }
 
    return norm;
@@ -453,7 +453,6 @@ SCIP_Bool removeZeros(
          isfixed = TRUE;
       else
          isfixed = FALSE;
-
 
       if( EPSZ(val, minval) || isfixed )
       {
@@ -6865,7 +6864,7 @@ SCIP_RETCODE getFlowCover(
       }
    }
    /* get capacity of knapsack constraint in KP^SNF_rat */
-   transcapacityreal = - snf->transrhs + QUAD_TO_DBL(flowcoverweight) + n1itemsweight;
+   transcapacityreal = - snf->transrhs + QUAD_TO_DBL(flowcoverweight) + n1itemsweight; /*lint !e644*/
    SCIPdebugMsg(scip, "     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n",
       snf->transrhs, QUAD_TO_DBL(flowcoverweight), n1itemsweight, transcapacityreal);
 

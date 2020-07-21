@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -79,36 +79,38 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_NODESOFS      500           /**< number of nodes added to the contingent of the total nodes */
-#define DEFAULT_MAXNODES      5000          /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MINIMPROVE    0.01          /**< factor by which Gins should at least improve the incumbent */
-#define DEFAULT_MINNODES      50            /**< minimum number of nodes to regard in the subproblem */
-#define DEFAULT_MINFIXINGRATE 0.66          /**< minimum percentage of integer variables that have to be fixed */
-#define DEFAULT_NODESQUOT     0.15          /**< subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_NWAITINGNODES 100           /**< number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS     FALSE         /**< should subproblem be created out of the rows in the LP rows,
-                                             **< otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE          /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                             **< cutpool of the original scip be copied to constraints of the subscip */
+#define DEFAULT_NODESOFS      500            /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_MAXNODES      5000           /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MINIMPROVE    0.01           /**< factor by which Gins should at least improve the incumbent */
+#define DEFAULT_MINNODES      50             /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_MINFIXINGRATE 0.66           /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_NODESQUOT     0.15           /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_NWAITINGNODES 100            /**< number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_USELPROWS     FALSE          /**< should subproblem be created out of the rows in the LP rows,
+                                              *   otherwise, the copy constructors of the constraints handlers are used */
+#define DEFAULT_COPYCUTS      TRUE           /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
+                                              *   cutpool of the original scip be copied to constraints of the subscip */
 #define DEFAULT_BESTSOLLIMIT    3            /**< limit on number of improving incumbent solutions in sub-CIP */
-#define DEFAULT_FIXCONTVARS FALSE           /**< should continuous variables outside the neighborhoods get fixed? */
-#define DEFAULT_POTENTIAL      'r'          /**< the reference point to compute the neighborhood potential: (r)oot, (l)ocal lp, or (p)seudo solution */
-#define DEFAULT_MAXDISTANCE     3           /**< maximum distance to selected variable to enter the subproblem, or -1 to
-                                             *   select the distance that best approximates the minimum fixing rate from below */
+#define DEFAULT_FIXCONTVARS FALSE            /**< should continuous variables outside the neighborhoods get fixed? */
+#define DEFAULT_POTENTIAL      'r'           /**< the reference point to compute the neighborhood potential: (r)oot, (l)ocal lp, or (p)seudo solution */
+#define DEFAULT_MAXDISTANCE     3            /**< maximum distance to selected variable to enter the subproblem, or -1 to
+                                              *   select the distance that best approximates the minimum fixing rate from below */
 #define DEFAULT_RANDSEED       71
-#define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
-                                             *   ignored by connectivity graph? */
-#define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-#define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
-                                             *   horizon approach */
-#define DEFAULT_USEDECOMP    TRUE           /**< should user decompositions be considered, if available? */
-#define DEFAULT_USEDECOMPROLLHORIZON FALSE  /**< should user decompositions be considered for initial selection in rolling horizon, if available? */
-#define DEFAULT_USESELFALLBACK  TRUE        /**< should random initial variable selection be used if decomposition was not successful? */
-#define DEFAULT_OVERLAP          0.0        /**< overlap of blocks between runs - 0.0: no overlap, 1.0: shift by only 1 block */
-#define DEFAULT_CONSECUTIVEBLOCKS TRUE      /**< should blocks be treated consecutively (sorted by ascending label?) */
+#define DEFAULT_RELAXDENSECONSS FALSE        /**< should dense constraints (at least as dense as 1 - minfixingrate) be
+                                              *   ignored by connectivity graph? */
+#define DEFAULT_USEROLLINGHORIZON TRUE       /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
+#define DEFAULT_ROLLHORIZONLIMFAC  0.4       /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
+                                              *   horizon approach */
+#define DEFAULT_USEDECOMP    TRUE            /**< should user decompositions be considered, if available? */
+#define DEFAULT_USEDECOMPROLLHORIZON FALSE   /**< should user decompositions be considered for initial selection in rolling horizon, if available? */
+#define DEFAULT_USESELFALLBACK  TRUE         /**< should random initial variable selection be used if decomposition was not successful? */
+#define DEFAULT_OVERLAP          0.0         /**< overlap of blocks between runs - 0.0: no overlap, 1.0: shift by only 1 block */
+#define DEFAULT_CONSECUTIVEBLOCKS TRUE       /**< should blocks be treated consecutively (sorted by ascending label?) */
 #ifdef SCIP_STATISTIC
-#define NHISTOGRAMBINS         10           /* number of bins for histograms */
+#define NHISTOGRAMBINS         10            /**< number of bins for histograms */
 #endif
+
+
 /*
  * Data structures
  */
@@ -498,12 +500,12 @@ SCIP_DECL_SORTINDCOMP(sortIndCompDecompHorizon)
    DECOMPHORIZON* decomphorizon = (DECOMPHORIZON*)dataptr;
    SCIP_Real potentialbysize1;
    SCIP_Real potentialbysize2;
+
    assert(decomphorizon != NULL);
    assert(ind1 >= 0);
    assert(ind2 >= 0);
    assert(ind1 < decomphorizon->nblocks);
    assert(ind2 < decomphorizon->nblocks);
-
 
    if( ind1 == ind2 )
       return 0;
@@ -668,7 +670,6 @@ int decompHorizonGetFirstPosBestPotential(
    SCIP_Real maxpotential;
    SCIP_Bool withlinkvars;
    SCIP_Bool linkvarsexist;
-
 
    assert(scip != NULL);
    assert(decomphorizon != NULL);
@@ -1915,7 +1916,6 @@ SCIP_RETCODE determineVariableFixingsDecomp(
       int p;
       int b;
 
-
       SCIPdebugMsg(scip, "Fix %s variables (%scluding linking variables) except blocks %d (label %d) -- %d (label %d)\n",
          heurdata->fixcontvars ? "all" : "discrete",
          fixlinkvars ? "in" : "ex",
@@ -2466,7 +2466,6 @@ SCIP_DECL_HEUREXIT(heurExitGins)
    /* free some data structures that must be reset for a new problem */
    freeTabooList(scip, &heurdata->taboolist);
    SCIPfreeRandom(scip, &heurdata->randnumgen);
-
 
    heurdata->taboolist = NULL;
    heurdata->randnumgen = NULL;

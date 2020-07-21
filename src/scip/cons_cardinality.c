@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2514,12 +2514,9 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 static
 SCIP_DECL_CONSPRESOL(consPresolCardinality)
 {  /*lint --e{715}*/
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnupgdconss;
+   SCIPdebug( int oldnfixedvars; )
+   SCIPdebug( int oldndelconss; )
+   SCIPdebug( int oldnupgdconss; )
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
    int c;
@@ -2582,9 +2579,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, \
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, \
         and upgraded %d constraints.\n", *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss,
-        *nupgdconss - oldnupgdconss);
+        *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }
@@ -3318,7 +3315,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
                                               *   in cardinality constraint, or NULL if new indicator variables should be
                                               *   introduced automatically */
    SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be
-                                                  ordered in the same way they were added to the constraint */
+                                              *   ordered in the same way they were added to the constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1482,9 +1482,9 @@ SCIP_RETCODE nodeActivate(
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
-   SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, node->depth,
+   SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, (int) node->depth,
          (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE)) );
-   SCIP_CALL( SCIPdomchgApply(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue, node->depth, cutoff) );
+   SCIP_CALL( SCIPdomchgApply(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue, (int) node->depth, cutoff) );
 
    /* mark node active */
    node->active = TRUE;
@@ -1620,7 +1620,7 @@ SCIP_RETCODE SCIPnodeAddCons(
 #endif
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
-   SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth,
+   SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, (int) node->depth,
          (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE), node->active) );
    assert(node->conssetchg != NULL);
    assert(node->conssetchg->addedconss != NULL);
@@ -1852,7 +1852,9 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
    assert((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, oldlb))
-         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub)));
+         || (boundtype == SCIP_BOUNDTYPE_LOWER && newbound > oldlb && newbound * oldlb <= 0.0)
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, oldub))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < oldub && newbound * oldub <= 0.0));
 
    SCIPsetDebugMsg(set, "adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -2059,7 +2061,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
        */
       assert(SCIPtreeGetCurrentNode(tree) == node); 
       SCIP_CALL( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
-            blkmem, set, stat, lp, branchcand, eventqueue, node->depth, node->domchg->domchgdyn.nboundchgs-1, &cutoff) );
+            blkmem, set, stat, lp, branchcand, eventqueue, (int) node->depth, node->domchg->domchgdyn.nboundchgs-1, &cutoff) );
       assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
       assert(!cutoff);
    }
@@ -3225,11 +3227,11 @@ SCIP_RETCODE subrootConstructLP(
 
    for( c = 0; c < ncols; ++c )
    {
-      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], subroot->depth) );
+      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], (int) subroot->depth) );
    }
    for( r = 0; r < nrows; ++r )
    {
-      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], subroot->depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], (int) subroot->depth) );
    }
 
    return SCIP_OKAY;
@@ -3270,11 +3272,11 @@ SCIP_RETCODE forkAddLP(
 
    for( c = 0; c < ncols; ++c )
    {
-      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], fork->depth) );
+      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], (int) fork->depth) );
    }
    for( r = 0; r < nrows; ++r )
    {
-      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], fork->depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], (int) fork->depth) );
    }
 
    return SCIP_OKAY;
@@ -3315,11 +3317,11 @@ SCIP_RETCODE pseudoforkAddLP(
 
    for( c = 0; c < ncols; ++c )
    {
-      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], pseudofork->depth) );
+      SCIP_CALL( SCIPlpAddCol(lp, set, cols[c], (int) pseudofork->depth) );
    }
    for( r = 0; r < nrows; ++r )
    {
-      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], pseudofork->depth) );
+      SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, rows[r], (int) pseudofork->depth) );
    }
 
    return SCIP_OKAY;
@@ -3456,7 +3458,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
          || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(lpfork) == SCIP_NODETYPE_SUBROOT);
       assert(lpfork->active);
       assert(tree->path[lpfork->depth] == lpfork);
-      lpforkdepth = lpfork->depth;
+      lpforkdepth = (int) lpfork->depth;
    }
    assert(lpforkdepth < tree->pathlen-1); /* lpfork must not be the last (the focus) node of the active path */
 
@@ -3478,7 +3480,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
       if( tree->focussubroot != NULL )
       {
          SCIP_CALL( subrootConstructLP(tree->focussubroot, blkmem, set, eventqueue, eventfilter, lp) );
-         tree->correctlpdepth = tree->focussubroot->depth; 
+         tree->correctlpdepth = (int) tree->focussubroot->depth;
       }
    }
 
@@ -3571,7 +3573,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    assert(SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
    assert(lpstatefork->active);
    assert(tree->path[lpstatefork->depth] == lpstatefork);
-   lpstateforkdepth = lpstatefork->depth;
+   lpstateforkdepth = (int) lpstatefork->depth;
    assert(lpstateforkdepth < tree->pathlen-1); /* lpstatefork must not be the last (the focus) node of the active path */
    assert(lpstateforkdepth <= tree->correctlpdepth); /* LP must have been constructed at least up to the fork depth */
    assert(tree->pathnlpcols[tree->correctlpdepth] >= tree->pathnlpcols[lpstateforkdepth]); /* LP can only grow */
@@ -4527,7 +4529,7 @@ SCIP_RETCODE SCIPnodeFocus(
             if( selectedchild )
             {
                lpfork = tree->focusnode;
-               tree->correctlpdepth = tree->focusnode->depth;
+               tree->correctlpdepth = (int) tree->focusnode->depth;
                lpstatefork = tree->focusnode;
                tree->focuslpstateforklpcount = stat->lpcount;
             }
@@ -4552,7 +4554,7 @@ SCIP_RETCODE SCIPnodeFocus(
          if( selectedchild )
          {
             lpfork = tree->focusnode;
-            tree->correctlpdepth = tree->focusnode->depth;
+            tree->correctlpdepth = (int) tree->focusnode->depth;
          }
       }
       else
@@ -7553,9 +7555,9 @@ void SCIPnodeGetNDomchg(
          if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             (*nbranchings)++;
          else if( count_consprop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
-            (*nconsprop)++;
+            (*nconsprop)++; /*lint !e413*/
          else if( count_prop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
-            (*nprop)++;
+            (*nprop)++; /*lint !e413*/
       }
    }
 }

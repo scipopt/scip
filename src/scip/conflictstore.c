@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -958,7 +958,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
-                                               *  the current relaxation only? */
+                                              *   the current relaxation only? */
    )
 {
    int nvars;
@@ -1047,7 +1047,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
    SCIP_Bool             updateside,         /**< should the side be updated if a new incumbent is found */
    SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
-                                               *  the current relaxation only? */
+                                              *   the current relaxation only? */
    )
 {
    int nvars;

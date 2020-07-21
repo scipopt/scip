@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1825,7 +1825,7 @@ SCIP_RETCODE multihashResize(
             /* get the hash key and its hash value */
             key = multihash->hashgetkey(multihash->userptr, multihashlist->element);
             keyval = multihash->hashkeyval(multihash->userptr, key);
-            hashval = keyval % nnewlists; /*lint !e573*/
+            hashval = (unsigned int) (keyval % (unsigned) nnewlists); /*lint !e573*/
 
             /* if the old hash table list consists of only one entry, we still can use this old memory block instead
              * of creating a new one
@@ -1987,7 +1987,7 @@ SCIP_RETCODE SCIPmultihashInsert(
    /* get the hash key and its hash value */
    key = multihash->hashgetkey(multihash->userptr, element);
    keyval = multihash->hashkeyval(multihash->userptr, key);
-   hashval = keyval % multihash->nlists; /*lint !e573*/
+   hashval = (unsigned int) (keyval % (unsigned) multihash->nlists); /*lint !e573*/
 
    /* append element to the list at the hash position */
    SCIP_CALL( multihashlistAppend(&multihash->lists[hashval], multihash->blkmem, element) );
@@ -2039,7 +2039,7 @@ void* SCIPmultihashRetrieve(
 
    /* get the hash value of the key */
    keyval = multihash->hashkeyval(multihash->userptr, key);
-   hashval = keyval % multihash->nlists; /*lint !e573*/
+   hashval = (unsigned int) (keyval % (unsigned) multihash->nlists); /*lint !e573*/
 
    return multihashlistRetrieve(multihash->lists[hashval], multihash->hashgetkey, multihash->hashkeyeq,
       multihash->hashkeyval, multihash->userptr, keyval, key);
@@ -2076,7 +2076,7 @@ void* SCIPmultihashRetrieveNext(
       unsigned int hashval;
 
       /* get the hash value of the key */
-      hashval = keyval % multihash->nlists; /*lint !e573*/
+      hashval = (unsigned int) (keyval % (unsigned) multihash->nlists); /*lint !e573*/
 
       *multihashlist = multihash->lists[hashval];
    }
@@ -2106,7 +2106,7 @@ SCIP_Bool SCIPmultihashExists(
    /* get the hash key and its hash value */
    key = multihash->hashgetkey(multihash->userptr, element);
    keyval = multihash->hashkeyval(multihash->userptr, key);
-   hashval = keyval % multihash->nlists; /*lint !e573*/
+   hashval = (unsigned int) (keyval % (unsigned) multihash->nlists); /*lint !e573*/
 
    return (multihashlistFind(multihash->lists[hashval], multihash->hashgetkey, multihash->hashkeyeq,
          multihash->hashkeyval, multihash->userptr, keyval, key) != NULL);
@@ -2133,7 +2133,7 @@ SCIP_RETCODE SCIPmultihashRemove(
    /* get the hash key and its hash value */
    key = multihash->hashgetkey(multihash->userptr, element);
    keyval = multihash->hashkeyval(multihash->userptr, key);
-   hashval = keyval % multihash->nlists; /*lint !e573*/
+   hashval = (unsigned int) (keyval % (unsigned) multihash->nlists); /*lint !e573*/
 
    /* remove element from the list at the hash position */
    if( multihashlistRemove(&multihash->lists[hashval], multihash->blkmem, element) )
@@ -2262,7 +2262,7 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-   (*hashtable)->shift -= (int)ceil(LOG2(MAX(32.0, tablesize / 0.9)));
+   (*hashtable)->shift -= (unsigned int)ceil(LOG2(MAX(32.0, tablesize / 0.9)));
 
    /* compute size from shift */
    nslots = 1u << (32 - (*hashtable)->shift);
@@ -3030,7 +3030,7 @@ SCIP_RETCODE SCIPhashmapCreate(
     * to the next power of two.
     */
    (*hashmap)->shift = 32;
-   (*hashmap)->shift -= (int)ceil(log(MAX(32, mapsize / 0.9)) / log(2.0));
+   (*hashmap)->shift -= (unsigned int)ceil(log(MAX(32, mapsize / 0.9)) / log(2.0));
    nslots = 1u << (32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
@@ -3716,7 +3716,7 @@ SCIP_RETCODE SCIPhashsetCreate(
     * to the next power of two.
     */
    (*hashset)->shift = 64;
-   (*hashset)->shift -= (int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
+   (*hashset)->shift -= (unsigned int)ceil(log(MAX(8.0, size / 0.9)) / log(2.0));
    nslots = (uint32_t)SCIPhashsetGetNSlots(*hashset);
    (*hashset)->nelements = 0;
 
@@ -7894,7 +7894,6 @@ SCIP_RETCODE SCIPdigraphGetArticulationPoints(
    int*                  narticulations      /**< number of the computed articulation points, or NULL */
    )
 {
-
    BMS_BLKMEM* blkmem;
    SCIP_Bool* visited;
    SCIP_Bool* articulationflag;

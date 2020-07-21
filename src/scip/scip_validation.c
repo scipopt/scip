@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -64,11 +64,11 @@ SCIP_RETCODE SCIPvalidateSolve(
    SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
-                                               *  or NULL */
+                                              *   or NULL */
    SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
-                                               *  value, or NULL */
+                                              *   value, or NULL */
    SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
-                                               *  value, or NULL */
+                                              *   value, or NULL */
    )
 {
    SCIP_Bool localfeasible;

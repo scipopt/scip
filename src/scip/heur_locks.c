@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -58,26 +58,25 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE                       /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_MAXNODES      5000LL                     /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_ROUNDUPPROBABILITY 0.67                  /**< probability for rounding a variable up in case of ties */
-#define DEFAULT_MINFIXINGRATE 0.65                       /**< minimum percentage of variables that have to be fixed */
-#define DEFAULT_MINIMPROVE    0.01                       /**< factor by which locks heuristic should at least improve the
-                                                          *   incumbent
-                                                          */
-#define DEFAULT_MINNODES      500LL                      /**< minimum number of nodes to regard in the subproblem */
-#define DEFAULT_NODESOFS      500LL                      /**< number of nodes added to the contingent of the total nodes */
-#define DEFAULT_NODESQUOT     0.1                        /**< subproblem nodes in relation to nodes of the original problem */
-#define DEFAULT_MAXPROPROUNDS 2                          /**< maximum number of propagation rounds during probing */
-#define DEFAULT_UPDATELOCKS   TRUE                       /**< should the locks be updated based on LP rows? */
-#define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
-                                                          *   original scip be copied to constraints of the subscip? */
-#define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
-                                                          *   solution if the LP was not roundable? */
-#define DEFAULT_RANDSEED      73                         /**< initial random seed */
-#define DEFAULT_MINFIXINGRATELP 0.0                      /**< minimum fixing rate over all variables (including continuous)
-                                                          *   to solve LP */
+#define DEFAULT_MAXNODES      5000LL         /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_ROUNDUPPROBABILITY 0.67      /**< probability for rounding a variable up in case of ties */
+#define DEFAULT_MINFIXINGRATE 0.65           /**< minimum percentage of variables that have to be fixed */
+#define DEFAULT_MINIMPROVE    0.01           /**< factor by which locks heuristic should at least improve the
+                                              *   incumbent */
+#define DEFAULT_MINNODES      500LL          /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_NODESOFS      500LL          /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_MAXPROPROUNDS 2              /**< maximum number of propagation rounds during probing */
+#define DEFAULT_UPDATELOCKS   TRUE           /**< should the locks be updated based on LP rows? */
+#define DEFAULT_COPYCUTS      TRUE           /**< should all active cuts from the cutpool of the
+                                              *   original scip be copied to constraints of the subscip? */
+#define DEFAULT_USEFINALSUBMIP TRUE          /**< should a final sub-MIP be solved to construct a feasible
+                                              *   solution if the LP was not roundable? */
+#define DEFAULT_RANDSEED      73             /**< initial random seed */
+#define DEFAULT_MINFIXINGRATELP 0.0          /**< minimum fixing rate over all variables (including continuous)
+                                              *   to solve LP */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -765,7 +764,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
          if( nfixedvars < nminfixings )
             goto TERMINATE;
-
       }
 
       /* print probing stats before LP */

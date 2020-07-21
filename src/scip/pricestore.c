@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -450,7 +450,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                }
 
                /* add variable if feasibility is negative, i.e., the reduced costs are negative */
-               if( SCIPsetIsNegative(set, feasibility) )
+               if( !SCIPsetIsPositive(set, feasibility) )
                {
                   SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, -feasibility / (col->len+1), root) );
                   pricestore->nprobvarsfound++;

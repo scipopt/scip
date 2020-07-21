@@ -83,7 +83,7 @@ RANDOMSEED=$(date +%Y%m%d%H%M)
 if [ "${TESTMODE}" == "short" ]; then
   JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} OPT=dbg EXCLUSIVE=false MEM=50 QUEUE=opt TEST=short TIME=10 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest SEEDS=0"
 elif [ "${TESTMODE}" == "minlp" ]; then
-  JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} OPT=dbg EXCLUSIVE=false MEM=6000 QUEUE=M620,M620v2,M630,M630v2 TEST=MINLP_debug TIME=60 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest"
+  JOB="EXECUTABLE=scipoptcpx_${GITBRANCH}_${RANDOMSEED}/bin/scip BINID=scipoptcpx_${GITBRANCH}_${RANDOMSEED} OPT=dbg EXCLUSIVE=false MEM=6000 QUEUE=M620,M620v2,M630,M630v2,mip-dbg TEST=MINLP_debug TIME=60 SETTINGS=${MRSETTINGS} PERFORMANCE=mergerequest"
 fi
 
 
@@ -106,7 +106,8 @@ fi
 
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+#export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.13-static-build
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 ###################
@@ -120,7 +121,7 @@ BUILD_DIR=scipoptcpx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx -LA
 make -j4
 cd ..
 

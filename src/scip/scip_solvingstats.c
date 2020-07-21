@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3107,7 +3107,6 @@ void SCIPprintHeuristicStatistics(
             for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
             {
                SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
-
 
                SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d",
                         SCIPdivesetGetName(diveset),

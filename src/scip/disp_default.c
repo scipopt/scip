@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -776,12 +776,11 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
    else
    {
       /* for memory output, we only use 5 characters because this is easier to decipher */
-      assert(DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY>0);
+      assert(DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY>0); /*lint !e506*/
       SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, "");
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMONLY);
       SCIPinfoMessage(scip, file, " ");
    }
-
 
    return SCIP_OKAY;
 }

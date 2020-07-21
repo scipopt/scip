@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2130,9 +2130,7 @@ SCIP_RETCODE displayRelevantStats(
                SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
             if( scip->primal->nsolsfound > 0 )
             {
-               SCIPmessagePrintInfo(scip->messagehdlr, ", best solution %+.14e",
-                  SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
-
+               SCIPmessagePrintInfo(scip->messagehdlr, ", best solution %+.14e", SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
             }
             SCIPmessagePrintInfo(scip->messagehdlr, ")\n");
          }

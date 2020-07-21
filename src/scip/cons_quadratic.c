@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3752,7 +3752,7 @@ SCIP_RETCODE getImpliedBounds(
 
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * 
- *  For a product x*y, with y a binary variable and x a continous variable with finite bounds,
+ *  For a product x*y, with y a binary variable and x a continuous variable with finite bounds,
  *  an auxiliary variable z and the inequalities \f$ x^L y \leq z \leq x^U y \f$ and \f$ x - (1-y) x^U \leq z \leq x - (1-y) x^L \f$ are added.
  * 
  *  If x is a linear term consisting of more than one variable, it is split up in groups of linear terms of length at most maxnrvar.
@@ -5854,7 +5854,7 @@ SCIP_RETCODE sortAllBilinTerms(
    int                   nbilinterms,        /**< total number of bilinear terms */
    SCIP_CONS**           bilinconss,         /**< array for mapping each term to its constraint */
    int*                  bilinposs           /**< array for mapping each term to its position in the corresponding
-                                               *  bilinconss constraint */
+                                              *   bilinconss constraint */
    )
 {
    int* perm;
@@ -14204,7 +14204,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/empathy4and",
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
-         &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
+         &conshdlrdata->empathy4and, FALSE, 2, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreforminitial",
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",

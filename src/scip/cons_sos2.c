@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1525,10 +1525,8 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
 {  /*lint --e{715}*/
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
    int nremovedvars;
    SCIP_EVENTHDLR* eventhdlr;
    int c;
@@ -1539,8 +1537,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldndelconss = *ndelconss; )
    nremovedvars = 0;
 
    /* only run if success is possible */
@@ -1587,8 +1583,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
-      *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss);
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
+      *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss); )
 
    return SCIP_OKAY;
 }

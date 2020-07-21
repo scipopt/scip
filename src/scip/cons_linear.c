@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -5522,9 +5522,6 @@ SCIP_RETCODE tightenVarBoundsEasy(
    if( !consdata->validminact )
       consdataRecomputeMinactivity(scip, consdata);
    assert(consdata->validminact);
-   if( !consdata->validmaxact )
-      consdataRecomputeMaxactivity(scip, consdata);
-   assert(consdata->validmaxact);
 
    if( val > 0.0 )
    {
@@ -5533,6 +5530,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
+
+         /* min activity should be valid at this point (if this is not true, then some decisions might be wrong!) */
+         assert(consdata->validminact);
 
          /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
@@ -5583,12 +5583,19 @@ SCIP_RETCODE tightenVarBoundsEasy(
          SCIP_Real slack;
          SCIP_Real alpha;
 
+         /* make sure the max activity is reliable */
+         if( !consdata->validmaxact )
+         {
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+         assert(consdata->validmaxact);
+
+
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
          {
             SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, maxactivity=%.15g < lhs=%.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), consdata->maxactivity, lhs);
-
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
@@ -5630,6 +5637,9 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
+
+         /* min activity should be valid at this point (if this is not true, then some decisions might be wrong!) */
+         assert(consdata->validminact);
 
          /* if the minactivity is larger than the right hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, rhs, consdata->minactivity) )
@@ -5678,6 +5688,13 @@ SCIP_RETCODE tightenVarBoundsEasy(
       {
          SCIP_Real slack;
          SCIP_Real alpha;
+
+         /* make sure the max activity is reliable */
+         if( !consdata->validmaxact )
+         {
+            consdataRecomputeMaxactivity(scip, consdata);
+         }
+         assert(consdata->validmaxact);
 
          /* if the maxactivity is smaller than the left hand side by feasibility epsilon, the constraint is infeasible */
          if( SCIPisFeasLT(scip, consdata->maxactivity, lhs) )
@@ -7731,12 +7748,10 @@ SCIP_RETCODE propagateCons(
       {
          int nfixedvars;
          int naddconss;
-         /* cppcheck-suppress unassignedVariable */
-         int oldnchgbds;
+         SCIPdebug( int oldnchgbds = *nchgbds; )
 
          nfixedvars = 0;
          naddconss = 0;
-         SCIPdebug( oldnchgbds = *nchgbds; )
 
          SCIP_CALL( rangedRowPropagation(scip, cons, cutoff, &nfixedvars, nchgbds, &naddconss) );
 
@@ -7746,7 +7761,7 @@ SCIP_RETCODE propagateCons(
          }
          else
          {
-            SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes and %d fixings\n", SCIPconsGetName(cons), *nchgbds - oldnchgbds, nfixedvars);
+            SCIPdebug( SCIPdebugMsg(scip, "linear constraint <%s> found %d bound changes and %d fixings\n", SCIPconsGetName(cons), *nchgbds - oldnchgbds, nfixedvars); )
          }
 
          if( nfixedvars > 0 )
@@ -14328,11 +14343,9 @@ SCIP_RETCODE presolStuffing(
       int bestdownlocks = 1;
       int downlocks;
       int uplocks;
-      int oldnfixedvars;
-      int oldnchgbds;
+      SCIPdebug( int oldnfixedvars = *nfixedvars; )
+      SCIPdebug( int oldnchgbds = *nchgbds; )
 
-      SCIPdebug( oldnfixedvars = *nfixedvars; )
-      SCIPdebug( oldnchgbds = *nchgbds; )
       /* loop over all variables to identify the best and second-best ratio */
       for( v = 0; v < nvars; ++v )
       {
@@ -14547,7 +14560,7 @@ SCIP_RETCODE presolStuffing(
                if( tightened )
                   ++(*nfixedvars);
             }
-            SCIPdebugMsg(scip, "### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+            SCIPdebug( SCIPdebugMsg(scip, "### new stuffing fixed %d vars, tightened %d bounds\n", *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds); )
          }
       }
    }
@@ -15784,7 +15797,6 @@ SCIP_DECL_CONSTRANS(consTransLinear)
    }
 #endif
 
-
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
@@ -16114,7 +16126,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
       rangedrowpropagation = rangedrowpropagation && !SCIPinRepropagation(scip);
       rangedrowpropagation = rangedrowpropagation && (depth <= conshdlrdata->rangedrowmaxdepth);
       rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
-      rangedrowpropagation = rangedrowpropagation && (depth % rangedrowfreq == 0);
+      rangedrowpropagation = rangedrowpropagation && (conshdlrdata->rangedrowfreq >= 0)
+         && ((rangedrowfreq == 0 && depth == 0) || (rangedrowfreq >= 1 && (depth % rangedrowfreq == 0)));
    }
 
    cutoff = FALSE;
@@ -18692,13 +18705,13 @@ SCIP_RETCODE SCIPupgradeConsLinear(
     * TODO: this needs to be fixed on master by changing the API and passing a pointer to whether the constraint is
     *       proven to be infeasible.
     */
-   if( infeasible )
+   if( infeasible )   /*lint !e774*/
       return SCIP_OKAY;
 
    /* tighten sides */
    SCIP_CALL( tightenSides(scip, cons, &nchgsides, &infeasible) );
 
-   if( infeasible )
+   if( infeasible )   /*lint !e774*/
       return SCIP_OKAY;
 
    /*

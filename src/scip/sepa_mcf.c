@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -5283,7 +5283,6 @@ SCIP_RETCODE nodepartitionCreate(
       NODEPAIRENTRY* nodepair;
       int node1;
       int node2;
-      SCIP_Real weight;
       int node1rep;
       int node2rep;
 
@@ -5292,7 +5291,6 @@ SCIP_RETCODE nodepartitionCreate(
       assert(nodepair != NULL);
       node1 = nodepair->node1;
       node2 = nodepair->node2;
-      SCIPdebug( weight = nodepair->weight; )
 
       assert(node1 >= 0 && node1 < mcfnetwork->nnodes);
       assert(node2 >= 0 && node2 < mcfnetwork->nnodes);
@@ -5309,7 +5307,7 @@ SCIP_RETCODE nodepartitionCreate(
 
       /* shrink nodepair by joining the two clusters */
       SCIPdebugMsg(scip, "shrinking nodepair (%d,%d) with weight %g: join representatives %d and %d\n",
-                       node1, node2, weight, node1rep, node2rep);
+                       node1, node2, nodepair->weight, node1rep, node2rep);
       nodepartitionJoin(*nodepartition, node1rep, node2rep);
       nclustersleft--;
    }

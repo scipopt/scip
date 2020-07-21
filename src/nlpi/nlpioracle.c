@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1180,7 +1180,7 @@ SCIP_RETCODE hessLagAddExprtree(
 
          values[hesoffset[row] + idx] += weight * *hh;
       }
-      hh += nvars - j;
+      hh += nvars - j; /*lint !e679*/
    }
 
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -1870,10 +1870,6 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       {
          /* constraint should not be deleted and is kept on position c */
          delstats[c] = c;
-
-         if( c == lastgood )
-            break;
-
          continue;
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
@@ -1887,9 +1883,9 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       assert(oracle->conss[c] != NULL);
       delstats[lastgood] = c; /* mark that lastgood constraint is now at position c */
       oracle->conss[lastgood] = NULL;
+      --lastgood;
 
       /* move lastgood forward, delete constraints on the way */
-      --lastgood;
       while( lastgood > c && delstats[lastgood] == 1)
       {
          freeConstraint(oracle->blkmem, &oracle->conss[lastgood]);
@@ -1898,7 +1894,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
          --lastgood;
       }
    }
-   assert(c == lastgood);
+   assert(c == lastgood+1);
 
    oracle->nconss = lastgood+1;
 
@@ -2774,7 +2770,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       }
 
       /* do dense eval @todo could do it sparse */
-      retcode = SCIPnlpiOracleEvalConstraintGradient(oracle, i, x, isnewx, (convals ? &convals[i] : &nlval), grad);
+      retcode = SCIPnlpiOracleEvalConstraintGradient(oracle, i, x, isnewx, (convals ? &convals[i] : &nlval), grad); /*lint !e838*/
       if( retcode != SCIP_OKAY )
          break;
 

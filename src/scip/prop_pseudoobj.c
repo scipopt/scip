@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -53,6 +53,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/dbldblarith.h"
 #include <string.h>
 
 #define PROP_NAME              "pseudoobj"
@@ -758,8 +759,8 @@ SCIP_Real getVarObjchg(
    )
 {
    assert(SCIPvarIsBinary(var));
-   assert((int)SCIP_BOUNDTYPE_LOWER == 0);
-   assert((int)SCIP_BOUNDTYPE_UPPER == 1);
+   assert((int)SCIP_BOUNDTYPE_LOWER == 0); /*lint !e506*/
+   assert((int)SCIP_BOUNDTYPE_UPPER == 1); /*lint !e506*/
 
    /* collect contribution of variable itself */
    return (SCIP_Real)((int)bound - (int)(boundtype == SCIP_BOUNDTYPE_UPPER)) * SCIPvarGetObj(var);
@@ -870,8 +871,8 @@ SCIP_RETCODE collectMinactImplicVars(
    assert(ncontributors != NULL);
    assert(*ncontributors == 0);
 
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
    varfixing = (SCIP_Bool)bound;
 
    cliques = SCIPvarGetCliques(var, varfixing);
@@ -1137,8 +1138,8 @@ SCIP_RETCODE getMaxactImplicObjchg(
    assert(objchg != NULL);
 
    varfixing = (SCIP_Bool)bound;
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+   assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
 
    *objchg = 0.0;
    ncliques = SCIPvarGetNCliques(var, varfixing);
@@ -1401,8 +1402,8 @@ SCIP_RETCODE collectMinactVar(
       int nlbcontributors;
       int nubcontributors;
 
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
 
       /* get contribution of variable by fixing it to its lower bound w.r.t. minimum activity of the objective function */
       SCIP_CALL( collectMinactObjchg(scip, var, SCIP_BOUNDTYPE_LOWER, binobjvarmap, collectedlbvars, nbinobjvars,
@@ -2044,8 +2045,8 @@ SCIP_RETCODE adjustCutoffbound(
       assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, var, bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, var, bdchgidx, TRUE)));
       assert(inferinfo >= 0);
       assert(inferinfo < propdata->nminactvars);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e506*/
+      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);  /*lint !e506*/
 
       objimplics = propdata->minactimpls[inferinfo];
       assert(objimplics != NULL);
@@ -2307,7 +2308,13 @@ SCIP_RETCODE propagateCutoffboundVar(
    /* depending on the objective contribution we can try to tighten the lower or upper bound of the variable */
    if( objchg > 0.0 )
    {
-      newbd = lb + (cutoffbound - pseudoobjval) / objchg;
+      SCIP_Real QUAD(newbdq);
+
+      /* the new variable bound is lb + (cutoffbound - pseudoobjval) / objchg */
+      SCIPquadprecSumDD(newbdq, cutoffbound, -pseudoobjval);
+      SCIPquadprecDivQD(newbdq, newbdq, objchg);
+      SCIPquadprecSumQD(newbdq, newbdq, lb);
+      newbd = QUAD_TO_DBL(newbdq);
 
       if( local )
       {
@@ -2334,7 +2341,13 @@ SCIP_RETCODE propagateCutoffboundVar(
    }
    else
    {
-      newbd = ub + (cutoffbound - pseudoobjval) / objchg;
+      SCIP_Real QUAD(newbdq);
+
+      /* the new variable bound is ub + (cutoffbound - pseudoobjval) / objchg */
+      SCIPquadprecSumDD(newbdq, cutoffbound, -pseudoobjval);
+      SCIPquadprecDivQD(newbdq, newbdq, objchg);
+      SCIPquadprecSumQD(newbdq, newbdq, ub);
+      newbd = QUAD_TO_DBL(newbdq);
 
       if( local )
       {
@@ -3736,7 +3749,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-         "minimal number of successive non-binary variable propagator whithout a bound reduction before aborted",
+         "minimal number of successive non-binary variable propagations without a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
@@ -3746,7 +3759,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-         "do we want to propagate all non-binary variables if we are propagating the root node",
+         "whether to propagate all non-binary variables when we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3761,7 +3774,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxnewvars",
-         "number of variable added after the propgatore is reinitialized?",
+         "number of variables added after the propagator is reinitialized?",
          &propdata->maxnewvars, TRUE, DEFAULT_MAXNEWVARS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

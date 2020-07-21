@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,7 +25,7 @@
  * @author Stefan Heinz
  * @author Jens Schulz
  *
- * This example contains several readers and \ref heur_listscheduling.h "one primal heuristic" for scheduling
+ * This example contains several readers and @subpage LISTHEUR "one primal heuristic" for scheduling
  * problems. Via this example three different type of scheduling problem can be parsed and solved with \SCIP. These are:
  *
  *  - resource-constrained project scheduling problems (RCPSP) (see reader_sm.h)

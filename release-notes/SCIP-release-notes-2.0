@@ -76,7 +76,7 @@ Additional Notes
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
   "clean" is changed as described here:
-  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+  http://scipopt.org/download/bugfixes/scip-1.2.0/make.txt.
 
 - The additional NLPI library requires a change in the Makefile of SCIP's project:
   The $(MAINFILE) target now has $(NLPILIBFILE) as additional dependency and the linking

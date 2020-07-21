@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -52,7 +52,7 @@
 
 #define DEFAULT_MAXDOMAINSIZE  SCIP_LONGINT_MAX   /**< absolute value of maximum domain size which will be converted */
 #define DEFAULT_ONLYPOWERSOFTWO           FALSE   /**< should only integer variables with a domain size of 2^p - 1 be
-                                                    *   converted(, there we don't need an knapsack-constraint) */
+                                                   *   converted(, there we don't need an knapsack-constraint) */
 #define DEFAULT_SAMELOCKSINBOTHDIRECTIONS FALSE   /**< should only integer variables with uplocks equals downlocks be converted */
 
 /** presolver data */

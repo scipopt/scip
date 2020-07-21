@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -312,6 +312,14 @@ SCIP_RETCODE SCIPmatrixGetParallelRows(
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real*            scale,              /**< scale factors of rows */
    int*                  pclass              /**< parallel row classes */
+   );
+
+/** removes the bounds of a column and updates the activities accordingly */
+SCIP_EXPORT
+void SCIPmatrixRemoveColumnBounds(
+   SCIP*                 scip,               /**< current scip instance */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
+   int                   col                 /**< column variable to remove bounds from */
    );
 
 /** detect parallel columns, obj ignored */

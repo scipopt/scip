@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -384,7 +384,8 @@ struct SCIP_Set
    SCIP_Bool             misc_allowweakdualreds;  /**< should weak dual reductions be allowed in propagation and presolving? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
    int                   misc_usesymmetry;   /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
-                                              *   2: orbital fixing; 3: orbitopes and orbital fixing) */
+                                              *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
+                                              *   symresacks) */
    char*                 misc_debugsol;      /**< path to a debug solution */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 

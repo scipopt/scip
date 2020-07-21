@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -86,22 +86,22 @@ struct SCIP_BranchruleData
 /** selects a variable from a set of candidates by strong branching */
 static
 SCIP_RETCODE runVanillaStrongBranching(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_VAR**            cands,            /**< branching candidates */
-   int                   ncands,           /**< number of branching candidates */
-   int                   npriocands,       /**< number of branching candidates with highest priority */
-   SCIP_Bool             scoreall,         /**< should strong branching scores be computed for all candidates, or can
-                                            *   we early stop when a node is detected infeasible ? */
-   SCIP_Bool             idempotent,       /**< should strong branching side-effects be prevented (e.g., domain
-                                            *   changes, stat updates etc.) ? */
-   SCIP_Real*            scores,           /**< candidate scores */
-   int*                  bestcand,         /**< best candidate for branching */
-   SCIP_Real*            bestdown,         /**< objective value of the down branch for bestcand */
-   SCIP_Real*            bestup,           /**< objective value of the up branch for bestcand */
-   SCIP_Real*            bestscore,        /**< score for bestcand */
-   SCIP_Bool*            bestdownvalid,    /**< is bestdown a valid dual bound for the down branch? */
-   SCIP_Bool*            bestupvalid,      /**< is bestup a valid dual bound for the up branch? */
-   SCIP_Real*            provedbound       /**< proved dual bound for current subtree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            cands,              /**< branching candidates */
+   int                   ncands,             /**< number of branching candidates */
+   int                   npriocands,         /**< number of branching candidates with highest priority */
+   SCIP_Bool             scoreall,           /**< should strong branching scores be computed for all candidates, or can
+                                              *   we early stop when a node is detected infeasible ? */
+   SCIP_Bool             idempotent,         /**< should strong branching side-effects be prevented (e.g., domain
+                                              *   changes, stat updates etc.) ? */
+   SCIP_Real*            scores,             /**< candidate scores */
+   int*                  bestcand,           /**< best candidate for branching */
+   SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand */
+   SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand */
+   SCIP_Real*            bestscore,          /**< score for bestcand */
+   SCIP_Bool*            bestdownvalid,      /**< is bestdown a valid dual bound for the down branch? */
+   SCIP_Bool*            bestupvalid,        /**< is bestup a valid dual bound for the up branch? */
+   SCIP_Real*            provedbound         /**< proved dual bound for current subtree */
    )
 {  /*lint --e{715}*/
    SCIP_Real lpobjval;

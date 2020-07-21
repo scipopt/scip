@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3085,7 +3085,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    cliquetable->ncleanupaggrvars = stat->npresolaggrvars;
    assert(*infeasible || cliquetable->ndirtycliques == 0);
 
-   assert(*infeasible || checkNEntries(cliquetable));
+   assert(*infeasible || checkNEntries(cliquetable)); /*lint !e506*/
 
    SCIPsetDebugMsg(set, "cleaned up clique table has %d cliques left (with %" SCIP_LONGINT_FORMAT " entries)\n", cliquetable->ncliques, cliquetable->nentries);
 

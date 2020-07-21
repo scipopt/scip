@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -531,7 +531,6 @@ SCIP_RETCODE consdataCreate(
    assert(linkvar != NULL);
    assert(binvars != NULL || nbinvars == 0);
    assert(SCIPvarGetType(linkvar) != SCIP_VARTYPE_CONTINUOUS || nbinvars > 0);
-
 
    /* allocate memory for consdata */
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -2392,7 +2391,7 @@ SCIP_DECL_CONSPROP(consPropLinking)
 
       SCIP_CALL( processRealBoundChg(scip, conss[c], &cutoff, &nchgbds, &mustcheck) );
       SCIP_CALL( processBinvarFixings(scip, conss[c], &cutoff, &nchgbds, &addcut, &mustcheck) );
-   }
+   } /*lint !e438*/
 
    /* return the correct result */
    if( cutoff )
@@ -2575,8 +2574,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
             SCIPconsGetName(cons));
 
          /* search unfixed variable */
-         var = NULL;
-
          /* intentional empty for loop to increment counter to proper position */
          /* TODO speed up loop by considering only variables between firstnonfixed and lastnonfixed */
          for( v = 0; v < consdata->nbinvars && SCIPvarGetUbGlobal(consdata->binvars[v]) < 0.5; ++v ); /*lint !e722*/
@@ -3164,7 +3161,6 @@ SCIP_DECL_CONSPARSE(consParseLinking)
          /* convert SCIP_Real to integer */
          for( v = 0; v < nbinvars;  ++v )
          {
-
             if( SCIPisIntegral(scip, vals[v]) )
                vals[v] = SCIPconvertRealToInt(scip, vals[v]);
          }
@@ -3392,7 +3388,6 @@ SCIP_RETCODE SCIPcreateConsLinking(
    {
       SCIPdebugMsg(scip, "Var %d : <%s>\n", k, SCIPvarGetName(binvars[k]));
    }
-
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

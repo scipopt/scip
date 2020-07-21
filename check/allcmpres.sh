@@ -38,6 +38,6 @@ for i in $TESTSETS
 do
     echo
     echo ====vvvv==== $i ====vvvv====
-    awk -f cmpres.awk $AWKARGS texcmpfile="cmpres.$i.tex" `ls -1 $FILES | grep "$i\..*\.res"`
+    awk -f cmpres.awk $AWKARGS texcmpfile="cmpres.$i.tex" `ls -1f $FILES | grep "$i\..*\.res"`
     echo ====^^^^==== $i ====^^^^====
 done

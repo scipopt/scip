@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1170,10 +1170,9 @@ SCIP_RETCODE extensionOperatorSOS1(
 #ifdef SCIP_DEBUG
    for (i = 0; i < nexts; ++i)
    {
-      int vertex = workingset[i];
       for (j = nexts; j < nworkingset; ++j)
       {
-         assert( isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) );
+         assert( isConnectedSOS1(adjacencymatrix, NULL, workingset[i], workingset[j]) );
       }
    }
 #endif
@@ -9224,14 +9223,10 @@ static
 SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnfixedvars;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnchgbds;
-   /* cppcheck-suppress unassignedVariable */
-   int oldndelconss;
-   /* cppcheck-suppress unassignedVariable */
-   int oldnupgdconss;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldnchgbds = *nchgbds; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
+   SCIPdebug( int oldnupgdconss = *nupgdconss; )
    int nremovedvars;
 
    assert( scip != NULL );
@@ -9246,10 +9241,6 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldnchgbds = *nchgbds; )
-   SCIPdebug( oldndelconss = *ndelconss; )
-   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9339,8 +9330,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+   SCIPdebug( SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss); )
 
    return SCIP_OKAY;
 }

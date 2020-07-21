@@ -46,8 +46,8 @@
  */
 #define DEFAULT_SELTYPE 'w'
 #define DEFAULT_SCORETYPE 'c'                /**< score parameter for selection: minimize either average 'n'odes, LP 'i'terations,
-                                               *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
-                                               *  1 / solutions'u'ccess */
+                                              *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
+                                              *  1 / solutions'u'ccess */
 #define DEFAULT_USEADAPTIVECONTEXT FALSE
 #define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
 #define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
@@ -552,7 +552,6 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
 
    if( lpiterlimit <= 0 )
       return SCIP_OKAY;
-
 
    /* select the next diving strategy based on previous success */
    SCIP_CALL( selectDiving(scip, heur, heurdata, &selection) );

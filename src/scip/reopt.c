@@ -1304,7 +1304,7 @@ SCIP_RETCODE checkMemGlbCons(
    assert(blkmem != NULL);
    assert(mem > 0);
 
-   if( mem > 0 )
+   if( mem > 0 ) /*lint !e774*/
    {
       if( reopt->glbconss == NULL )
       {
@@ -3100,7 +3100,7 @@ SCIP_RETCODE addNode(
          }
       }
 #endif
-   }
+   } /*lint !e438*/
 
    switch( reopttype )
    {
@@ -3572,9 +3572,8 @@ SCIP_RETCODE changeAncestorBranchings(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE*            node,               /**< node of the branch and bound tree */
    unsigned int          id,                 /**< id of stored node */
-   SCIP_Bool             afterdualintobranching /**< convert all bound changes made directly after the first bound
-                                                 *   changes based on dual information into normal branchings
-                                                 */
+   SCIP_Bool             afterdualbranching  /**< convert all bound changes made directly after the first bound
+                                              *   changes based on dual information into normal branchings */
    )
 {
    SCIP_REOPTTREE* reopttree;
@@ -3648,7 +3647,7 @@ SCIP_RETCODE changeAncestorBranchings(
 #endif
    }
 
-   if( afterdualintobranching && reoptnode->nafterdualvars > 0 )
+   if( afterdualbranching && reoptnode->nafterdualvars > 0 )
    {
       /* check the memory to convert this bound changes into 'normal' */
       SCIP_CALL( reoptnodeCheckMemory(reopttree->reoptnodes[id], set, blkmem,
@@ -6802,8 +6801,7 @@ SCIP_RETCODE transformDualredsToLinear(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTCONSDATA*   consdata,           /**< reoptimization constraint data that should represent to set of solutions
-                                               *  pruned by the dual reductions
-                                               */
+                                              *  pruned by the dual reductions */
    SCIP_REOPTCONSDATA*   dualreds            /**< set of dual reductions */
    )
 {
@@ -6865,8 +6863,7 @@ SCIP_RETCODE transformDualredsToBounddisjunction(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTCONSDATA*   consdata,           /**< reoptimization constraint data that should represent to set of solutions
-                                               *  pruned by the dual reductions
-                                               */
+                                              *  pruned by the dual reductions */
    SCIP_REOPTCONSDATA*   dualreds            /**< set of dual reductions */
    )
 {
@@ -8046,12 +8043,12 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    assert(set != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
-   assert(REOPT_CONSTYPE_CUT || boundtypes != NULL);
+   assert(constype == REOPT_CONSTYPE_CUT || boundtypes != NULL);
    assert(nvars > 0);
    assert(blkmem != NULL);
 
    /* the constraint can be interpreted as a normal bound change */
-   if( nvars == 1 )
+   if( nvars == 1 && constype != REOPT_CONSTYPE_CUT )
    {
       assert(constype == REOPT_CONSTYPE_DUALREDS || constype == REOPT_CONSTYPE_INFSUBTREE);
 
@@ -8068,6 +8065,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
          SCIP_BOUNDTYPE newboundtype;
 
          assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_INTEGER);
+         assert(boundtypes != NULL);
 
          if( boundtypes[0] == SCIP_BOUNDTYPE_UPPER )
          {

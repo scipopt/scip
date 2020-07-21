@@ -164,8 +164,8 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
                                               *   component i in components array */
    int*                  vartocomponent,     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   SCIP_Shortbool*       componentblocked,   /**< array to store whether a component is blocked to be considered by
-                                              *   further symmetry handling techniques */
+   unsigned*             componentblocked,   /**< array to store which symmetry methods have been used on a component
+                                              *   using the same bitset information as for misc/usesymmetry */
    int                   ncomponents,        /**< number of components of symmetry group */
    int                   nmovedpermvars      /**< number of variables moved by any permutation in a symmetry component
                                               *   that is handled by orbital fixing */
@@ -763,8 +763,8 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
                                               *   component i in components array */
    int**                 vartocomponent,     /**< array containing for each permvar the index of the component it is
                                               *   contained in (-1 if not affected) */
-   SCIP_Shortbool**      componentblocked,   /**< array to store whether a component is blocked to be considered by
-                                              *   further symmetry handling techniques */
+   unsigned**            componentblocked,   /**< array to store which symmetry methods have been used on a component
+                                              *   using the same bitset information as for misc/usesymmetry */
    int*                  ncomponents         /**< pointer to store number of components of symmetry group */
    )
 {
@@ -927,7 +927,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    /* init componentblocked */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, componentblocked, *ncomponents) );
    for (i = 0; i < *ncomponents; ++i)
-      (*componentblocked)[i] = FALSE;
+      (*componentblocked)[i] = 0;
 
    SCIPfreeBufferArray(scip, &permtocomponent);
    SCIPfreeBufferArray(scip, &permtovarcomp);

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2733,7 +2733,7 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 /** resets parameters changed by SCIPparamsetSetHeuristicsXyz functions to their default values
  *
  *  @note fixed parameters stay as they are; you need to unfix them first if they should be changed, too
- */
+ */ /*lint --e{715}*/
 static
 SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3362,7 +3362,7 @@ SCIP_RETCODE paramsetSetPresolvingOff(
 /** reset parameters that may have been changed by other SCIPparamsetSetSeparatingXyz to their default values
  *
  *  @note fixed parameters stay as they are; you need to unfix them first if they should be changed, too
- */
+ */ /*lint !e715*/
 static
 SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
