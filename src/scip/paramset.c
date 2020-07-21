@@ -4434,11 +4434,9 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(param != NULL);
-
-   retcode = SCIP_OKAY;
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramTestBool(param, messagehdlr, value) );
