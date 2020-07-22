@@ -3138,11 +3138,13 @@ SCIP_RETCODE boundShift(
             {
                stat->nboundshiftinf++;
                stat->nfailboundshiftinf++;
+               SCIPclockStop(stat->provedinfeasbstime, set);
             }
             else
             {
                stat->nboundshift++;
                stat->nfailboundshift++;
+               SCIPclockStop(stat->provedfeasbstime, set);
             }
             goto CLEANUP;
          }
