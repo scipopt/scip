@@ -3590,6 +3590,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_Bool solveagain;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
+   SCIP_Real lptimelimit;
    char algo;
    SCIP_LP* lp;
 
@@ -3609,6 +3610,26 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
 
    assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
+
+   /* check if a time limit is set, and set time limit for LP solver accordingly */
+   lptimelimit = SCIPlpiExactInfinity(lpexact->lpiexact);
+   if( set->istimelimitfinite )
+      lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+
+   success = FALSE;
+   if( lptimelimit > 0.0 )
+      SCIP_CALL( lpExactSetRealpar(lpexact, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+
+   if( lptimelimit <= 0.0 || !success )
+   {
+      SCIPsetDebugMsg(set, "time limit of %f seconds could not be set\n", lptimelimit);
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
+      SCIPsetDebugMsg(set, "time limit exceeded before solving LP\n");
+      lp->solved = TRUE;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->lpobjval = -SCIPsetInfinity(set);
+      return SCIP_OKAY;
+   }
 
    /* set the correct basis information for warmstart */
    if( !fromscratch )
