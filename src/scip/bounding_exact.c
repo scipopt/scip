@@ -514,43 +514,6 @@ SCIP_RETCODE projectShiftFactorizeD(
    return SCIP_OKAY;
 }
 
-/** prints error related to the current lpiexact status, if there is one */
-static
-SCIP_RETCODE printlpiexacterr(
-   SCIP_LPIEXACT*        lpiexact            /**< lpiexact interface */
-   )
-{
-   if( SCIPlpiExactIsOptimal(lpiexact) )
-   {
-      return SCIP_OKAY;
-   }
-   else if( SCIPlpiExactIsObjlimExc(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
-   }
-   else if( SCIPlpiExactIsPrimalInfeasible(lpiexact) )
-   {
-      SCIPerrorMessage(" Exact LP infeas.\n");
-   }
-   else if( SCIPlpiExactExistsPrimalRay(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
-   }
-   else if( SCIPlpiExactIsIterlimExc(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
-   }
-   else if( SCIPlpiExactIsTimelimExc(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
-   }
-   else
-   {
-      SCIPerrorMessage("lpiexact not solved, or other error\n");
-   }
-   return SCIP_OKAY;
-}
-
 /** setup the data for ps in optimal version */
 static
 SCIP_RETCODE setupProjectShiftOpt(
@@ -1551,7 +1514,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexacterr( pslpiexact ) );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
@@ -1666,7 +1628,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexacterr( pslpiexact ) );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
@@ -1780,7 +1741,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         printlpiexacterr( pslpiexact );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
@@ -1931,7 +1891,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexacterr(pslpiexact) );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
