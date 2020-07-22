@@ -4326,7 +4326,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       {
          int k;
 
-         SCIP_CALL( adaptSymmetryDataSST(scip, propdata->perms, modifiedperms, npermsincomp,
+         SCIP_CALL( adaptSymmetryDataSST(scip, propdata->perms, modifiedperms, propdata->nperms,
                propdata->permvars, modifiedpermvars, propdata->npermvars, lexorder, nvarslexorder) );
 
          for (k = 0; k < npermsincomp; ++k)
@@ -4336,7 +4336,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_comp%d_perm%d", i, k);
 
-            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[k], modifiedpermvars, propdata->npermvars, FALSE,
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[propdata->components[propdata->componentbegins[i] + k]],
+                  modifiedpermvars, propdata->npermvars, FALSE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, cons));
 
