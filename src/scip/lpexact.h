@@ -586,6 +586,12 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    SCIP_Bool             overwritefplp       /**< should the floating point values be overwritten, e.g. if fp lp was infeasible */
    );
 
+/** get number of iterations used in last LP solve */
+SCIP_RETCODE SCIPlpExactGetIterations(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   int*                  iterations          /**< pointer to store the iteration count */
+   );
+
 /** gets objective value of current LP
  *
  *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible

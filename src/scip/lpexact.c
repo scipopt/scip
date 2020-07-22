@@ -3764,6 +3764,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_Bool fromscratch;
    SCIP_Bool wasfromscratch;
    SCIP_Longint oldnlps;
+   int iterations;
 
    assert(lp != NULL);
    assert(lpexact != NULL);
@@ -3800,6 +3801,12 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
          prob, eventqueue, harditlim, fromscratch, lperror) );
    assert(!(*lperror) || !lp->solved);
+
+   SCIPlpExactGetIterations(lpexact, &iterations);
+   if( usefarkas )
+      SCIPstatAdd(stat, set, niterationsexlpinf, iterations);
+   else
+      SCIPstatAdd(stat, set, niterationsexlp, iterations);
 
    /* check for error */
    if( *lperror )
@@ -6544,6 +6551,19 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    RatFreeBuffer(set->buffer, &tmp);
    RatFreeBuffer(set->buffer, &farkaslhs);
    RatFreeBuffer(set->buffer, &maxactivity);
+
+   return SCIP_OKAY;
+}
+
+/** get number of iterations used in last LP solve */
+SCIP_RETCODE SCIPlpExactGetIterations(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   int*                  iterations          /**< pointer to store the iteration count */
+   )
+{
+   assert(lpexact != NULL);
+
+   SCIP_CALL( SCIPlpiExactGetIterations(lpexact->lpiexact, iterations) );
 
    return SCIP_OKAY;
 }
