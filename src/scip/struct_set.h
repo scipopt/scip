@@ -587,6 +587,10 @@ struct SCIP_Set
                                               *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
    char                  exact_safedbmethod; /**< method for computing safe dual bounds
                                               *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
+   int                   exact_psintpointselection;/**< method to select interior point (0: arbitrary interior point, 1: optimized interior point
+                                              *   2: Arbitrary interior point in dual form, 3: two stage optimized interior point) */
+   int                   exact_psdualcolselection; /**< strategy to select which dual columns to use for lp to compute interior point
+                                              *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
    SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
 
    /* CERTIFICATE tool settings */

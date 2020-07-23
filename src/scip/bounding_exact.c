@@ -272,7 +272,7 @@ SCIP_RETCODE projectShiftChooseS(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->includedrows, nextendedrows) );
    for( i = 0; i < nextendedrows; i++ )
       projshiftdata->includedrows[i] = 0;
-   if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( set->exact_psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* determine which dual variables to included in the problem
        * (ones with finite dual objective coef. in [lhs',-rhs',lb',-ub'])
@@ -292,7 +292,7 @@ SCIP_RETCODE projectShiftChooseS(
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
-   else if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
+   else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
    {
       /* determone which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -328,7 +328,7 @@ SCIP_RETCODE projectShiftChooseS(
       RatFreeBufferArray(set->buffer, &rootactivity, nrows);
       RatFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
-   else if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
+   else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
       /* determine which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -1427,7 +1427,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    ndvarmap = pos;
 
    /* if we are finding an interior ray, always use the optimized selection */
-   if( projshiftdata->psintpointselection == PS_INTPOINTSEL_OPT || !findintpoint )
+   if( set->exact_psintpointselection == PS_INTPOINTSEL_OPT || !findintpoint )
    {
       /* in this case we will find an optimized interior point for which we will try to push it interior and
        * optimize over its objective value.  To do this we will solve the following problem
@@ -1531,7 +1531,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
    }
    /* use 'a'rbitrary interior point */
-   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_ARB )
+   else if( set->exact_psintpointselection == PS_INTPOINTSEL_ARB )
    {
       SCIPdebugMessage("building aux. problem with arbitrary interior point\n");
 
@@ -1656,7 +1656,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
    }
    /* use 'A'rbitrary interior point in transposed form*/
-   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_ARBDUAL )
+   else if( set->exact_psintpointselection == PS_INTPOINTSEL_ARBDUAL )
    {
       SCIPdebugMessage("building new version of arbitrary interior point aux. problem\n");
 
@@ -1779,7 +1779,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
-   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_TWOSTAGE )
+   else if( set->exact_psintpointselection == PS_INTPOINTSEL_TWOSTAGE )
    {
       /* in this case we will find an optimized interior point for which we will try to push it interior and
        * optimize over its objective value.  To do this we will solve the following two problems
@@ -1943,7 +1943,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    else
    {
       SCIPerrorMessage("invalid parameter setting <%d> for selection method to compute interior point\n",
-         projshiftdata->psintpointselection);
+         set->exact_psintpointselection);
       return SCIP_PARAMETERWRONGVAL;
    }
 

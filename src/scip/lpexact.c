@@ -3255,8 +3255,6 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata->projshiftobjweight = FALSE;
    projshiftdata->scaleobj = FALSE;
    projshiftdata->projshiftuseintpoint = TRUE;
-   projshiftdata->psdualcolselection = PS_DUALCOSTSEL_ACTIVE_FPLP;
-   projshiftdata->psintpointselection = PS_INTPOINTSEL_OPT;
 
    return SCIP_OKAY;
 }

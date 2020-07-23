@@ -191,10 +191,6 @@ struct SCIP_ProjShiftData
    unsigned int          projshiftobjweight:1;/**< weight of the original objective function in lp to compute interior point */
    unsigned int          scaleobj:1;         /**< should the objective be scaled to be integral if possible? */
    unsigned int          projshiftuseintpoint:1;/**< should correction shift use an interior pt? (otherwise use interior ray of recession cone) */
-   unsigned int          psdualcolselection:2;/**< strategy to select which dual columns to use for lp to compute interior point
-                                              *   ('n'o sel, 'a'ctive rows of exact primal LP, 'A'ctive rows of inexact primal LP) */
-   unsigned int          psintpointselection:3;/**< method to select interior point ('a'rbitrary interior point, 'o'ptimized interior point
-                                              *   'A'rbitrary interior point in dual form, 't'wo stage optimized interior point) */
 };
 
 
