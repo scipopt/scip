@@ -3234,11 +3234,7 @@ SCIP_RETCODE cutsTransformMIR(
    /* perform bound substitution for continuous variables */
    for( i = 0; i < aggrrowintstart; ++i )
    {
-      SCIP_Real QUAD(coef);
       int v = cutinds[i];
-      SCIP_VAR* var = vars[v];
-
-      QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
       if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
       {
@@ -7737,7 +7733,6 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    while( i < *nnz )
    {
       SCIP_Real QUAD(coef);
-      SCIP_Real QUAD(tmp);
       SCIP_Real simplebound;
       SCIP_Real bestlb;
       SCIP_Real bestub;
@@ -8374,7 +8369,6 @@ SCIP_RETCODE cutsTransformStrongCG(
    while( i < *nnz )
    {
       SCIP_Real QUAD(coef);
-      SCIP_Real QUAD(tmp);
       SCIP_Real bestlb;
       SCIP_Real bestub;
       int bestlbtype;
