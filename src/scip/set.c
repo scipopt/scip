@@ -495,6 +495,7 @@
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 #define SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ   0 /**< frequency at which safe dual bounding method is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
+#define SCIP_DEFAULT_EXACT_LPINFO          FALSE/**< should the exact LP solver display status messages? */
 
 /* certificate output */
 #define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
@@ -2654,6 +2655,11 @@ SCIP_RETCODE SCIPsetCreate(
          "exact/interleavedbfreq",
          "frequency at which safe dual bounding method is interleaved with exact LP solve (-1: never, 0: automatic, n > 0: every n-th node)",
          &(*set)->exact_interleavedbfreq, FALSE, SCIP_DEFAULT_EXACT_INTERLEAVEDBFREQ, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/lpinfo",
+         "should the exact LP solver display status messages?",
+         &(*set)->exact_lpinfo, FALSE, SCIP_DEFAULT_EXACT_LPINFO,
+         NULL, NULL) );
 #endif
 
    /* CERTIFICATE tool parameters */

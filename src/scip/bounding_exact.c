@@ -1322,6 +1322,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
+   SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
@@ -1338,6 +1339,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    int psnrows;
    int psnnonz;
    int nobjnz;
+   SCIP_Real lptimelimit;
+   SCIP_Bool success;
    SCIP_Rational* tmp;
    SCIP_Rational* alpha;
    SCIP_Rational* beta;
@@ -1475,6 +1478,16 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
       /* solve the LP */
       retcode = SCIPlpiExactSolveDual(pslpiexact);
       if( retcode == SCIP_LPERROR )
@@ -1586,6 +1599,17 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,
             NULL, psnnonz, psbeg, psind, psval) );
 
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
+
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
       retcode = SCIPlpiExactSolveDual(pslpiexact);
@@ -1680,6 +1704,17 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,
             NULL, psnnonz, psbeg, psind, psval) );
+
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
 
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
@@ -1795,6 +1830,17 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,
             NULL, psnnonz, psbeg, psind, psval) );
+
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
 
       /* solve the LP */
       retcode = SCIPlpiExactSolveDual(pslpiexact);
@@ -2020,13 +2066,13 @@ SCIP_RETCODE constructProjectShiftData(
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
       }
       if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
-         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, TRUE) );
       }
    }
 

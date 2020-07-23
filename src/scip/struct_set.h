@@ -587,6 +587,7 @@ struct SCIP_Set
                                               *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
    char                  exact_safedbmethod; /**< method for computing safe dual bounds
                                               *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
+   SCIP_Bool             exact_lpinfo;       /**< should exact the LP solver display status messages? */
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */

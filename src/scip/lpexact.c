@@ -3600,7 +3600,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    assert(lperror != NULL);
    assert(set->exact_enabled);
 
-   SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->disp_lpinfo);
+   SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
    algo = set->lp_initalgorithm;
    lp = lpexact->fplp;
    solveagain = FALSE;
