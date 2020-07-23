@@ -110,6 +110,7 @@ typedef struct reduce_costs_reduction_parameters
    int                   prevrounds;         /**< number of reduction rounds that have been performed already */
    SCIP_Bool             useRec;             /**< use recombination heuristic? */
    SCIP_Bool             useExtRed;          /**< use extended tests? */
+   SCIP_Bool             useSlackPrune;      /**< use slack-prune heuristic? */
    SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
    /* PC/MW only values: */
    SCIP_Bool             pcmw_solbasedda;    /**< rerun Da based on best primal solution */

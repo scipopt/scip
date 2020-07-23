@@ -57,8 +57,10 @@
 #define DEFAULT_SLACKPRUNE_MAXFREQ   FALSE       /**< executions of the heuristic at maximum frequency?                             */
 #define SLACKPRUNE_MINREDELIMS       2           /**< minimum number of eliminations for reduction package when called by slack-and-prune heuristic */
 #define SLACKPRUNE_MAXREDROUNDS      10          /**< maximum number of reduction rounds in slack-prune heuristic */
-#define SLACKPRUNE_MINSTALLPROPORTION   0.25      /**< minimum proportion of arcs to be fixed before restarting slack-prune heuristic */
+#define SLACKPRUNE_MINSTALLPROPORTION   0.1      /**< minimum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
+#define SLACKPRUNE_HARDREDRATIO  0.97
+
 #define BREAKONERROR FALSE
 #define MAXNTERMINALS 1000
 #define MAXNEDGES     20000
@@ -74,6 +76,7 @@ struct SCIP_HeurData
    int                   lastnfixededges;    /**< number of fixed edges before the previous run                     */
    int                   bestsolindex;       /**< best solution during the previous run                             */
    int                   nfailures;          /**< number of failures since last successful call                     */
+   int                   nexecuted;          /**< number of executions                     */
    SCIP_Bool             maxfreq;            /**< should the heuristic be called at maximum frequency?              */
 };
 
@@ -148,6 +151,7 @@ void setMinMaxElims(
 
 }
 
+
 /** can the problem class be used? */
 static inline
 SCIP_Bool probtypeIsValidForSlackPrune(
@@ -156,6 +160,55 @@ SCIP_Bool probtypeIsValidForSlackPrune(
 {
    const int probtype = graph->stp_type;
    return (graph_typeIsSpgLike(graph) || probtype == STP_RMWCSP || probtype == STP_RPCSPG);
+}
+
+
+/** should we abort early? */
+static inline
+SCIP_Bool abortSlackPruneEarly(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_HEURDATA*        heurdata
+)
+{
+	const int nedges = graph->edges;
+	SCIP_Bool beAggressive;
+	SCIP_Real redratio;
+
+	assert(nedges > 0);
+	assert(SCIPprobdataGetNorgEdges(scip) >= nedges);
+
+	if( !probtypeIsValidForSlackPrune(graph) )
+	   return TRUE;
+
+	redratio = (SCIP_Real) nedges / (SCIP_Real) SCIPprobdataGetNorgEdges(scip);
+	beAggressive = (redratio > SLACKPRUNE_HARDREDRATIO);
+
+	if( !beAggressive && heurdata->nexecuted >= 3 )
+	   return TRUE;
+
+	if( !beAggressive && heurdata->nfailures >= 1 )
+	   return TRUE;
+
+	if( SCIPgetNSols(scip) <= 4 )
+	   return TRUE;
+
+	if( (graph->edges > MAXNEDGES) && (graph->terms > MAXNTERMINALS) )
+	   return TRUE;
+
+	if( heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
+	   return TRUE;
+
+	/* after first call? Then only execute once enough edges have been fixed */
+	if( !beAggressive && heurdata->nexecuted >= 1 )
+	{
+	   const SCIP_Real stallproportion = SLACKPRUNE_MINSTALLPROPORTION;
+
+	   if( (SCIPStpNfixedEdges(scip) - heurdata->lastnfixededges) < (int) (stallproportion * nedges) )
+	      return TRUE;
+	}
+
+    return FALSE;
 }
 
 
@@ -377,9 +430,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolSlackPrune)
    assert(heurdata != NULL);
 
    /* initialize data */
+   heurdata->nexecuted = 0;
    heurdata->nfailures = 0;
    heurdata->bestsolindex = -1;
-   heurdata->lastnfixededges = -1;
+
+   /* NOTE: postpones slack-prune */
+   heurdata->lastnfixededges = 0;
 
    return SCIP_OKAY;
 }
@@ -409,80 +465,41 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    int e;
    int nvars;
    int nedges;
-   int*  soledge;
+   int* soledge;
 
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
-   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   /* get problem data */
    probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
-
-   /* get graph */
    graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
 
-   nedges = graph->edges;
+   assert(heurdata && graph);
+
    *result = SCIP_DIDNOTRUN;
 
-   // todo test
-   return SCIP_OKAY;
+   if( abortSlackPruneEarly(scip, graph, heurdata) )
+	  return SCIP_OKAY;
 
-   if( !probtypeIsValidForSlackPrune(graph) )
-      return SCIP_OKAY;
-
-   if( (graph->edges > MAXNEDGES) && (graph->terms > MAXNTERMINALS) )
-      return SCIP_OKAY;
-
-   if( !(heurdata->maxfreq) && heurdata->nfailures > 0 )
-      return SCIP_OKAY;
-
-   /* get best current solution */
    bestsol = SCIPgetBestSol(scip);
-
-   /* no solution available? */
    if( bestsol == NULL )
       return SCIP_OKAY;
 
-   /* heuristic not at maximum or ...*/
-   if( !(heurdata->maxfreq)
-      /* has the new solution been found by this very heuristic or is new best solution available? */
-      || (SCIPsolGetHeur(bestsol) == heur || heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip))) )
-   {
-      if( heurdata->lastnfixededges >= 0 )
-      {
-         SCIP_Real stallproportion;
-
-         stallproportion = (1.0 + heurdata->nfailures) * SLACKPRUNE_MINSTALLPROPORTION;
-
-         if( SCIPisGT(scip, stallproportion, SLACKPRUNE_MAXSTALLPROPORTION) )
-            stallproportion = SLACKPRUNE_MAXSTALLPROPORTION;
-
-         if( (SCIPStpNfixedEdges(scip) - heurdata->lastnfixededges) < (int) (stallproportion * nedges) )
-            return SCIP_OKAY;
-      }
-   }
-
-   /* deactivate as expensive is too expensive to be reiterated todo: do this properly */
-   heurdata->nfailures = 1;
-
    xval = SCIPprobdataGetXval(scip, bestsol);
-
    if( xval == NULL )
       return SCIP_OKAY;
 
+   heurdata->nexecuted++;
    heurdata->lastnfixededges = SCIPStpNfixedEdges(scip);
 
    vars = SCIPprobdataGetVars(scip);
    nvars = SCIPprobdataGetNVars(scip);
+   nedges = graph->edges;
 
    assert(vars != NULL);
+   assert(nvars == nedges);
 
    /* allocate array to store primal solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &soledge, nedges) );
@@ -495,7 +512,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
          soledge[e] = UNKNOWN;
    }
 
-   /* execute slackprune heuristic */
+   /* execute actual slackprune heuristic */
    SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, (graph->edges < SLACK_MAXTOTNEDGES)) );
 
    /* solution found by slackprune heuristic? */
@@ -523,7 +540,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
       }
 
       SCIPdebugMessage("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
-     // printf("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
+      printf("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
 
       /* try to add new solution to pool */
       SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
@@ -536,15 +553,10 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
 
          assert(solstp_isValid(scip, graph, soledge));
 
-         /* is the solution the new incumbent? */
-         if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
+         /* is the solution NOT the new incumbent? */
+         if( SCIPisLE(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
          {
-            /* deactivated subsequent runs since heuristics seems to be to expensive */
-            heurdata->nfailures = 1;
-         }
-         else
-         {
-            success = FALSE;
+             success = FALSE;
          }
       }
 
@@ -558,7 +570,9 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
 
    /* solution could not be found, added or is not best? */
    if( !success )
+   {
       heurdata->nfailures++;
+   }
 
    /* store index of incumbent solution */
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
@@ -612,6 +626,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    assert(solstp_isValid(scip, g, soledge));
 
    probtype = g->stp_type;
+   *success = FALSE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &solnode, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &globalsoledge, nedges) );

@@ -1772,11 +1772,13 @@ SCIP_RETCODE createInitialCuts(
    }
    else if( graph->stp_type != STP_BRMWCSP )
    {
+	  int todo; // try damaxdeviation 10 percent here...
       const SCIP_Bool doAscendPrune = (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph));
       DAPARAMS daparams = { .addcuts = TRUE, .ascendandprune = doAscendPrune, .root = graph->source,
                    .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
 
-      if( graph_typeIsSpgLike(graph) || graph_pc_isRootedPcMw(graph) )
+#if 0
+      if( (graph_typeIsSpgLike(graph) || graph_pc_isRootedPcMw(graph)) )
       {
          int* soledge;
          SCIP_Bool success;
@@ -1795,6 +1797,8 @@ SCIP_RETCODE createInitialCuts(
       {
          SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
       }
+#endif
+      SCIP_CALL( dualascent_exec(scip, graph, NULL, &daparams, NULL, &lpobjval) );
    }
 
    return SCIP_OKAY;
@@ -1816,6 +1820,7 @@ SCIP_RETCODE setParams(
 #ifndef WITH_UG
    if( (graph->edges > CUT_MAXTOTNEDGES) || ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)) )
    {
+	   int todo; // try to always call me...or deactivate if small?
 	   const SCIP_Real redratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
 	   assert(LE(redratio, 1.0));
 

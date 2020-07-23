@@ -35,6 +35,7 @@
 #include "heur_tm.h"
 #include "heur_ascendprune.h"
 #include "heur_lurkprune.h"
+#include "heur_slackprune.h"
 #include "heur_local.h"
 #include "heur_rec.h"
 #include "solpool.h"
@@ -252,7 +253,8 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data */
-   SCIP_Bool             userec,             /**< use recombination? */
+   SCIP_Bool             useSlackPrune,      /**< use slack prune? */
+   SCIP_Bool             useRec,             /**< use recombination? */
    STPSOLPOOL*           pool,               /**< solution pool */
    int*                  result,             /**< result array */
    SCIP_Bool*            bestimproved,       /**< could best solution be improved ? */
@@ -277,11 +279,11 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
 
    objval = getSolObj(scip, graph, result);
 
-   if( userec )
+   if( useRec )
       SCIP_CALL(solpool_addSol(scip, objval, result, pool, &soladded));
 
    /* should we try recombination? */
-   if( userec && soladded && pool->size >= 2 && objval < *bestobjval )
+   if( useRec && soladded && pool->size >= 2 && objval < *bestobjval )
    {
       /* get index of just added solution */
       int solindex = pool->maxindex;
@@ -321,6 +323,20 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
             if( objval < solobjval )
                SCIP_CALL(solpool_addSol(scip, objval, result, pool, &solfound));
          }
+      }
+   }
+
+   if( useSlackPrune )
+   {
+      SCIP_Real upperbound_sp;
+      SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, NULL, graph, result, &success, FALSE, FALSE) );
+      upperbound_sp = getSolObj(scip, graph, result);
+    //  printf("old %f \n", objval);
+    //  printf("new %f \n", upperbound_sp);
+
+      if( LT(upperbound_sp, objval) )
+      {
+          objval = upperbound_sp;
       }
    }
 
@@ -2432,7 +2448,7 @@ SCIP_RETCODE reduce_da(
 
    if( isRpcmw )
    {
-	  graph_pc_2trans(scip, graph);
+          graph_pc_2trans(scip, graph);
    }
 
    nruns = MIN(nFixedTerms, DEFAULT_DARUNS);
@@ -2440,8 +2456,6 @@ SCIP_RETCODE reduce_da(
 
    /* select roots for dual ascent */
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
-
-   // todo maybe inside the loop?
    damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
 
    for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
@@ -2472,7 +2486,9 @@ SCIP_RETCODE reduce_da(
 
          if( !isDirected )
          {
-            SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, &redcostdata, userec, pool, result, &havenewsol, &upperbound) );
+                const SCIP_Bool useSlackPrune = (outerrounds == 0 && run == 1 && paramsda->useSlackPrune);
+            SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, &redcostdata, useSlackPrune,
+                        userec, pool, result, &havenewsol, &upperbound) );
          }
 
          setCutoff(upperbound, &redcostdata, &cutoffbound);
@@ -3189,6 +3205,7 @@ SCIP_RETCODE reduce_daPcMw(
    havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
    assert(!havenewsol || solstp_isValid(scip, graph, result));
 
+#if 0
    if( 0 && havenewsol )
    {
       SCIP_Bool success;
@@ -3198,7 +3215,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIP_CALL( SCIPStpHeurLurkPruneRun(scip, NULL, edgefixingbounds, graph, TRUE, FALSE, result, &success) );
       graph_pc_2org(scip, graph);
    }
-
+#endif
 
    if( userec )
       SCIPdebugMessage("DA: 1. NFIXED %d \n", nfixed);
