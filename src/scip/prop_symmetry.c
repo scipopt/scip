@@ -4322,7 +4322,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       /* if suborbitopes or strong group actions have been found, potentially add symresacks adapted to
        * variable order given by lexorder
        */
-      if ( nvarslexorder > 0 )
+      if ( nvarslexorder > 0 && propdata->addsymresacks )
       {
          int k;
 
