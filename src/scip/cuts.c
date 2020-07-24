@@ -7631,7 +7631,9 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    int*                  boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
    SCIP_Bool*            localbdsused,       /**< pointer to store whether local bounds were used in transformation */
-   SCIP_Bool*            freevariable        /**< stores whether a free variable was found in MIR row -> invalid summation */
+   SCIP_Bool*            success             /**< stores whether the row could successfully be transformed into a knapsack constraint.
+                                              *   Returns FALSE in case a continuous or general integer variable is unbounded in the
+                                              *   required direction. */
    )
 {
    SCIP_Real* bestbds;
@@ -7642,24 +7644,25 @@ SCIP_RETCODE cutsTransformKnapsackCover(
 
    assert(varsign != NULL);
    assert(boundtype != NULL);
-   assert(freevariable != NULL);
+   assert(success != NULL);
    assert(localbdsused != NULL);
 
-   *freevariable = FALSE;
+   *success = FALSE;
 
    /* allocate temporary memory to store best bounds and bound types */
    SCIP_CALL( SCIPallocBufferArray(scip, &bestbds, 2*(*nnz)) );
 
-   /* start with continuous variables, because using variable bounds can affect the untransformed integral
-    * variables, and these changes have to be incorporated in the transformation of the integral variables
-    * (continuous variables have largest problem indices!)
+   /* start with continuous variables, because using variable bounds can affect the untransformed binary
+    * variables, and these changes have to be incorporated in the transformation of the binary variables
+    * (binary variables have the smallest problem indices!)
     */
    SCIPsortDownInt(cutinds, *nnz);
 
    vars = SCIPgetVars(scip);
    firstnonbinvar = SCIPgetNBinVars(scip);
 
-   /* determine best bounds for the continous and general integer variables such that they will have a positive coefficient in the transformation */
+   /* determine best bounds for the continous and general integer variables such that they will have
+    * a positive coefficient in the transformation */
    for( i = 0; i < *nnz && cutinds[i] >= firstnonbinvar; ++i )
    {
       SCIP_Real QUAD(coef);
@@ -7671,15 +7674,13 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       {
          SCIP_Real simplebound;
 
-         /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
+         /* find closest lower bound in standard lower bound or variable lower bound for continuous variable
+          * so that it will have a positive coefficient */
          SCIP_CALL( findBestLb(scip, vars[v], sol, 1, allowlocal, bestbds + i, &simplebound, boundtype + i) );
 
-         /* cannot create transformation for strongcg cut */
+         /* cannot transform into knapsack */
          if( SCIPisInfinity(scip, -bestbds[i]) )
-         {
-            *freevariable = TRUE;
             goto TERMINATE;
-         }
 
          varsign[i] = +1;
       }
@@ -7687,15 +7688,13 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       {
          SCIP_Real simplebound;
 
-         /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
+         /* find closest upper bound in standard upper bound or variable upper bound for continuous variable
+          * so that it will have a positive coefficient */
          SCIP_CALL( findBestUb(scip, vars[v], sol, 1, allowlocal, bestbds + i, &simplebound, boundtype + i) );
 
-          /* cannot create transformation for strongcg cut */
+          /* cannot transform into knapsack */
          if( SCIPisInfinity(scip, bestbds[i]) )
-         {
-            *freevariable = TRUE;
             goto TERMINATE;
-         }
 
          varsign[i] = -1;
       }
@@ -7804,10 +7803,11 @@ SCIP_RETCODE cutsTransformKnapsackCover(
          ++i;
    }
 
-   /* relax rhs to zero if it is close to */
+   /* relax rhs to zero if it is close to but slightly below zero */
    if( QUAD_TO_DBL(*cutrhs) < 0.0 && QUAD_TO_DBL(*cutrhs) >= -SCIPepsilon(scip) )
       QUAD_ASSIGN(*cutrhs, 0.0);
 
+   *success = TRUE;
   TERMINATE:
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &bestbds);
@@ -7920,21 +7920,10 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIPdebugMessage("Computing lifted knapsack cover for ");
    SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, *cutnnz, FALSE, FALSE));
 
-   /* Transform equation  a*x == b, lb <= x <= ub  into standard form
-      *   a'*x' == b, 0 <= x' <= ub'.
-      *
-      * Transform variables (lb or ub):
-      *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
-      *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
-      * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
-      *
-      * Transform variables (vlb or vub):
-      *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
-      *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
-      * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
-      *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
-      *   a_{zu_j} := a_{zu_j} + a_j * bu_j
-      */
+   /* Transform aggregated row into a (fractional) knapsack constraint.
+    * Uses simple or variable lower or upper bounds to relax out continuous and general integers
+    * so that only binary variables remain and complements those such that they have a positive coefficient.
+    */
    local = aggrrow->local;
    SCIP_CALL( cutsTransformKnapsackCover(scip, sol, allowlocal,
          tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &local, &freevariable) );
@@ -8032,6 +8021,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    SCIPdebugMessage("abar is %g\n", QUAD_TO_DBL(abar));
 
+   /* next compute the S^- running sum used in the lifting function and reuse the array C for that
+    * so that C[0] stores S^-(1). S^-(0) is 0 and does not need to be stored.
+    * Additionally assigns the variables in the cover to C^+ and C^- and computes the size of C^+.
+    * Variables that are above \bar{a} are in C^+ and the other ones in C^-.
+    */
    QUAD_ASSIGN(tmp, 0);
    cplussize = 0;
    for( k = 0; k < coversize; ++k )
@@ -8092,7 +8086,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
          SCIPquadprecProdQQ(hfrac, coef, abar);
 
-         /* if the coefficient is below \bar{a}, i.e. a / \bar{a} < 1 then it is zero, otherwise it is lifted abve zero */
+         /* if the coefficient is below \bar{a}, i.e. a / \bar{a} < 1 then it is zero, otherwise it is lifted above zero */
          if( QUAD_TO_DBL(hfrac) < 1 )
          {
             --(nnz);
@@ -8155,7 +8149,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    if( *success )
    {
-      /* remove all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
+      /* remove all nearly-zero coefficients from row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
        */
 

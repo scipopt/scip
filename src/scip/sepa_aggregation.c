@@ -879,6 +879,9 @@ SCIP_RETCODE aggregation(
          flowcoversuccess = FALSE;
       }
 
+      /* initialize the knapsack cover cut efficacy variable with the flowcover efficacy so that
+       * only knapsack cover cuts better than that efficacy are returned.
+       */
       knapsackcoverefficacy = flowcoverefficacy;
 
       if( sepadata->sepknapsackcover )
@@ -891,9 +894,9 @@ SCIP_RETCODE aggregation(
          knapsackcoversuccess = FALSE;
       }
 
-      /* initialize the cutefficacy variable with the flowcoverefficacy, so that only CMIR cuts
-       * that have a higher efficacy than that of a flowcover cut possibly found in the call above
-       * are returned since the flowcover cut is overwritten in that case.
+      /* initialize the cutefficacy variable with the knapsackcoverefficacy, so that only CMIR cuts
+       * that have a higher efficacy than that of a flowcover or knapsack cover cut possibly
+       * found in the call above are returned since the previous cut is overwritten in that case.
        */
       cutefficacy = knapsackcoverefficacy;
 
