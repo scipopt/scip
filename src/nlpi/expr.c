@@ -5144,8 +5144,9 @@ SCIP_RETCODE exprParse(
 
    /* find the end of this expression
     * a '+' right at the beginning indicates a coefficient, not treated here, or a summation
+    * a '+' or '-' that follows an 'e' or 'E' indicates that we are in the middle of a number, so it doesn't separate terms
     */
-   while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str) )
+   while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str && subexpptr[-1] != 'e' && subexpptr[-1] != 'E') )
    {
       if( subexpptr[0] == '(')
          ++nopenbrackets;

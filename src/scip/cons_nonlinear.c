@@ -5505,7 +5505,7 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, side,
       !(side == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) &&
-      !(side == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX ))) );
+      !(side == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX ))) ); /*lint --e{845}*/
    SCIPaddRowprepSide(rowprep, side == SCIP_SIDETYPE_LEFT  ? consdata->lhs : consdata->rhs);
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_%u", SCIPconsGetName(cons), ++(consdata->ncuts));
 

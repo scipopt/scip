@@ -3162,7 +3162,7 @@ SCIP_RETCODE lpSetTiming(
 
    assert(lp != NULL);
    assert(success != NULL);
-   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2);
+   assert((int) SCIP_CLOCKTYPE_CPU == 1 && (int) SCIP_CLOCKTYPE_WALL == 2); /*lint !e506*/
 
    SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_TIMING, lp->lpitiming) );
 
@@ -6785,9 +6785,9 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
    }
 
    if( SCIPsetIsSumZero(set, solcutoffdist) )
-      solcutoffdist = COPYSIGN(set->num_sumepsilon, solcutoffdist);
+      solcutoffdist = set->num_sumepsilon;
 
-   solcutoffdist = SCIProwGetLPFeasibility(row, set, stat, lp) / solcutoffdist; /*lint !e795*/
+   solcutoffdist = -SCIProwGetLPFeasibility(row, set, stat, lp) / ABS(solcutoffdist); /*lint !e795*/
 
    return solcutoffdist;
 }

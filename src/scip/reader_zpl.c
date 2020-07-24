@@ -1599,7 +1599,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
  * reader specific interface methods
  */
 
-/** includes the zpl file reader in SCIP */
+/** includes the zpl file reader in SCIP */ /*lint --e{715}*/
 SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
