@@ -128,6 +128,9 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyVar)
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
+   /* we cannot handle fixings to infinity at the moment (TODO we should) */
+   assert(!SCIPisInfinity(scip, REALABS(constant)));
+
    /* release no longer used sumexpr */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
 
