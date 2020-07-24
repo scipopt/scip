@@ -1772,10 +1772,9 @@ SCIP_RETCODE createInitialCuts(
    }
    else if( graph->stp_type != STP_BRMWCSP )
    {
-	  int todo; // try damaxdeviation 10 percent here...
       const SCIP_Bool doAscendPrune = (graph_pc_isRootedPcMw(graph) || graph_typeIsSpgLike(graph));
       DAPARAMS daparams = { .addcuts = TRUE, .ascendandprune = doAscendPrune, .root = graph->source,
-                   .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
+                   .is_pseudoroot = FALSE, .damaxdeviation = 0.1 };
 
 #if 0
       if( (graph_typeIsSpgLike(graph) || graph_pc_isRootedPcMw(graph)) )
