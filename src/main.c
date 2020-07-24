@@ -44,7 +44,9 @@ void handleSigterm(
    int                   signum              /**< signal code */
    )
 { /*lint --e{715}*/
-   SCIPtryTerminate();
+   /* Calling the following function is not directly async-signal-safe, since it counts how often the function is
+    * called. For achieving the goal of terminating this seems unproblematic. */
+   SCIPtryTerminate(); /*lint !e2761*/
 }
 
 /** main method starting SCIP */

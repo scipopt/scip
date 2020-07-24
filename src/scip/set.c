@@ -291,8 +291,10 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         3 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
-                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing) */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         5 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
+                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
+                                                 *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
+                                                 *   fixing, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -702,10 +704,8 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
-      if ( SCIPparamGetInt(param) > 0 )
-      {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving.\n");
-      }
+      SCIPerrorMessage("Cannot change symmetry handling method during (pre)solving.\n");
+      return SCIP_INVALIDCALL;
    }
 
    return SCIP_OKAY;
@@ -1499,7 +1499,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* display parameters */
-   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL));
+   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "display/verblevel",
          "verbosity level of output",
@@ -1981,8 +1981,10 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
          "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing), see type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 3,
+         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
+         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
+         "fixing, see type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
@@ -2562,7 +2564,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* timing parameters */
-   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE));
+   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "timing/clocktype",
          "default clock type (1: CPU user seconds, 2: wall clock time)",

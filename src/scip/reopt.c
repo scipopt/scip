@@ -1304,7 +1304,7 @@ SCIP_RETCODE checkMemGlbCons(
    assert(blkmem != NULL);
    assert(mem > 0);
 
-   if( mem > 0 )
+   if( mem > 0 ) /*lint !e774*/
    {
       if( reopt->glbconss == NULL )
       {
@@ -3100,7 +3100,7 @@ SCIP_RETCODE addNode(
          }
       }
 #endif
-   }
+   } /*lint !e438*/
 
    switch( reopttype )
    {
@@ -8043,12 +8043,12 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    assert(set != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
-   assert(REOPT_CONSTYPE_CUT || boundtypes != NULL);
+   assert(constype == REOPT_CONSTYPE_CUT || boundtypes != NULL);
    assert(nvars > 0);
    assert(blkmem != NULL);
 
    /* the constraint can be interpreted as a normal bound change */
-   if( nvars == 1 )
+   if( nvars == 1 && constype != REOPT_CONSTYPE_CUT )
    {
       assert(constype == REOPT_CONSTYPE_DUALREDS || constype == REOPT_CONSTYPE_INFSUBTREE);
 
@@ -8065,6 +8065,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
          SCIP_BOUNDTYPE newboundtype;
 
          assert(SCIPvarGetType(vars[0]) == SCIP_VARTYPE_INTEGER);
+         assert(boundtypes != NULL);
 
          if( boundtypes[0] == SCIP_BOUNDTYPE_UPPER )
          {
