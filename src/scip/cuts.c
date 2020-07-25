@@ -7859,7 +7859,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIP_Real QUAD(rhs);
    SCIP_Real QUAD(coverweight);
    SCIP_Real QUAD(abar);
-   SCIP_Real QUAD(roh);
+   SCIP_Real QUAD(sigma);
    SCIP_Bool freevariable;
    SCIP_Bool local;
    SCIP_Real efficacy;
@@ -8005,7 +8005,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    /* set \bar{a} = l_1 */
    QUAD_ARRAY_LOAD(abar, tmpcoefs, tmpinds[coverpos[0]]);
-   SCIPquadprecSumQQ(roh, coverweight, -rhs);
+   SCIPquadprecSumQQ(sigma, coverweight, -rhs);
 
    for( k = 1; k < coversize; ++k )
    {
@@ -8016,26 +8016,26 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       /* Let \delta = \bar{a} - l_{k+1} and compute k * \delta */
       SCIPquadprecSumQQ(kdelta, abar, -lkplus1);
       SCIPquadprecProdQD(kdelta, kdelta, k);
-      /* Set tmp = k * \delta - \roh to check condition k * \delta < \roh by tmp < 0 */
-      SCIPquadprecSumQQ(tmp, kdelta, -roh);
+      /* Set tmp = k * \delta - \sigma to check condition k * \delta < \sigma by tmp < 0 */
+      SCIPquadprecSumQQ(tmp, kdelta, -sigma);
       if( QUAD_TO_DBL(tmp) < 0 )
       {
-         /* Set \bar{a} = l_{k+1} and \roh = \roh - k*\delta */
+         /* Set \bar{a} = l_{k+1} and \sigma = \sigma - k*\delta */
          QUAD_ASSIGN_Q(abar, lkplus1);
-         SCIPquadprecSumQQ(roh, roh, -kdelta);
+         SCIPquadprecSumQQ(sigma, sigma, -kdelta);
       }
       else
       {
-         /* Set \bar{a} = \bar{a} - \roh / k and \roh = 0; break; */
+         /* Set \bar{a} = \bar{a} - \sigma / k and \sigma = 0; break; */
          SCIP_Real minusoneoverk = -1.0 / k;
-         SCIPquadprecProdQD(roh, roh, minusoneoverk);
-         SCIPquadprecSumQQ(abar, abar, roh);
-         QUAD_ASSIGN(roh, 0.0);
+         SCIPquadprecProdQD(sigma, sigma, minusoneoverk);
+         SCIPquadprecSumQQ(abar, abar, sigma);
+         QUAD_ASSIGN(sigma, 0.0);
          break;
       }
    }
 
-   if( QUAD_TO_DBL(roh) > 0 )
+   if( QUAD_TO_DBL(sigma) > 0 )
    {
       SCIP_Real oneoverc = 1.0 / coversize;
       SCIPquadprecProdQD(abar, rhs, oneoverc);
