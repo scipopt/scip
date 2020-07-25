@@ -7851,10 +7851,10 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    int* varsign;
    int* boundtype;
    int* coverstatus;
-   int* Cpos;
+   int* coverpos;
    int* tmpinds;
    SCIP_Real* tmpcoefs;
-   SCIP_Real* C;
+   SCIP_Real* covervals;
    SCIP_Real QUAD(tmp);
    SCIP_Real QUAD(rhs);
    SCIP_Real QUAD(coverweight);
@@ -7874,8 +7874,10 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    assert(cutcoefs != NULL);
    assert(cutrhs != NULL);
    assert(cutinds != NULL);
-   assert(success != NULL);
+   assert(cutnnz != NULL);
+   assert(cutefficacy != NULL);
    assert(cutislocal != NULL);
+   assert(success != NULL);
 
    *success = FALSE;
 
@@ -7894,8 +7896,8 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coverstatus, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &C, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &Cpos, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &covervals, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coverpos, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, QUAD_ARRAY_SIZE(nvars)) );
 
@@ -7938,6 +7940,9 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    vars = SCIPgetVars(scip);
 
+   /* setup covervals and coverpos with the activity contribution to the knapsack row
+    * and the position of the nonzero in the knapsack row.
+    */
    for( k = 0; k < nnz; ++k )
    {
       SCIP_Real solval;
@@ -7949,40 +7954,57 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       if( varsign[k] == -1 )
          solval = 1 - solval;
 
-      Cpos[k] = k;
-      C[k] = solval * QUAD_TO_DBL(coef);
+      coverpos[k] = k;
+      covervals[k] = solval * QUAD_TO_DBL(coef);
       coverstatus[k] = 0;
    }
 
-   SCIPsortDownRealInt(C, Cpos, nnz);
+   /* Use these two arrays can to sort the variables by decreasing contribution
+    * and pick them greedily in the while loop below until they are a cover.
+    * Since the cover does not need to be minimal we do not need to remove any of the
+    * variables with a high activity contribution even if they are not necessary after
+    * picking the last variable.
+    */
+   SCIPsortDownRealInt(covervals, coverpos, nnz);
 
    QUAD_ASSIGN(coverweight, 0);
    coversize = 0;
 
+   /* overwrite covervals with the coefficients of the variables in the cover
+    * as we need to sort decreasingly by those again for the lifting
+    */
    while( coversize < nnz && SCIPisFeasLE(scip, QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs)) )
    {
       int v;
       SCIP_Real QUAD(coef);
-      k = Cpos[coversize];
+      k = coverpos[coversize];
       v = tmpinds[k];
       coverstatus[k] = 1;
       QUAD_ARRAY_LOAD(coef, tmpcoefs, v);
-      C[coversize] = QUAD_TO_DBL(coef);
+      covervals[coversize] = QUAD_TO_DBL(coef);
       SCIPquadprecSumQQ(coverweight, coverweight, coef);
       ++coversize;
    }
 
-   /* cover is not violated or is a simple fixing that should be found elsewhere */
+   /* cover is not violated or is a simple fixing that should be found elsewhere
+    * (todo: we cannot apply the fixing during separation, should we return the fixing as a cut?) */
    if( coversize < 2 || SCIPisFeasLE(scip, QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs)) )
       goto TERMINATE;
 
    SCIPdebugMessage("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
    assert(coversize > 0);
 
-   /* compute \bar{a} */
-   SCIPsortDownRealInt(C, Cpos, coversize);
+   /* Now compute \bar{a}, the unique rational number such that for the cover C it holds that
+    * b = \sum_{a_i \in C} \min(\bar{a}, a_i).
+    * For that we need to sort by decreasing coefficients of the variables in the cover.
+    * After the sorting the covervals array is free to be reused.
+    */
+   SCIPsortDownRealInt(covervals, coverpos, coversize);
+
+   /* Now follows Algorithm 1 in the paper to compute \bar{a} */
+
    /* set \bar{a} = l_1 */
-   QUAD_ARRAY_LOAD(abar, tmpcoefs, tmpinds[Cpos[0]]);
+   QUAD_ARRAY_LOAD(abar, tmpcoefs, tmpinds[coverpos[0]]);
    SCIPquadprecSumQQ(roh, coverweight, -rhs);
 
    for( k = 1; k < coversize; ++k )
@@ -7990,7 +8012,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       SCIP_Real QUAD(lkplus1);
       SCIP_Real QUAD(kdelta);
       /* load next coefficient l_{k+1} in sorted order of cover */
-      QUAD_ARRAY_LOAD(lkplus1, tmpcoefs, tmpinds[Cpos[k]]);
+      QUAD_ARRAY_LOAD(lkplus1, tmpcoefs, tmpinds[coverpos[k]]);
       /* Let \delta = \bar{a} - l_{k+1} and compute k * \delta */
       SCIPquadprecSumQQ(kdelta, abar, -lkplus1);
       SCIPquadprecProdQD(kdelta, kdelta, k);
@@ -8021,10 +8043,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    SCIPdebugMessage("abar is %g\n", QUAD_TO_DBL(abar));
 
-   /* next compute the S^- running sum used in the lifting function and reuse the array C for that
-    * so that C[0] stores S^-(1). S^-(0) is 0 and does not need to be stored.
-    * Additionally assigns the variables in the cover to C^+ and C^- and computes the size of C^+.
-    * Variables that are above \bar{a} are in C^+ and the other ones in C^-.
+   /* next compute the S^- running sum of the values min(a_i, \bar{a}) for all a_i \in C.
+    * These values are used in the lifting function and we again reuse the array covervals
+    * to store them so that covervals[0] stores S^-(1). S^-(0) is 0 and does not need to be stored.
+    * Additionally determines whether a variable in the cover belongs to C^+ and C^- and computes the size of C^+.
+    * Variables that are above \bar{a} are defined to be in C^+ and the other ones in C^-.
     */
    QUAD_ASSIGN(tmp, 0);
    cplussize = 0;
@@ -8032,7 +8055,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    {
       SCIP_Real QUAD(coef);
       SCIP_Real QUAD(coefminusabar);
-      QUAD_ARRAY_LOAD(coef, tmpcoefs, tmpinds[Cpos[k]]);
+      QUAD_ARRAY_LOAD(coef, tmpcoefs, tmpinds[coverpos[k]]);
       SCIPquadprecSumQQ(coefminusabar, coef, -abar);
       if( QUAD_TO_DBL(coefminusabar) > 0 )
       {
@@ -8045,15 +8068,15 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          if( QUAD_TO_DBL(coefminusabar) > SCIPfeastol(scip) )
             ++cplussize;
          else
-            coverstatus[Cpos[k]] = -1;
+            coverstatus[coverpos[k]] = -1;
       }
       else
       {
          /* coefficient is in C^- because it is smaller or equal to \bar{a} */
-         coverstatus[Cpos[k]] = -1;
+         coverstatus[coverpos[k]] = -1;
          SCIPquadprecSumQQ(tmp, tmp, coef);
       }
-      C[k] = QUAD_TO_DBL(tmp);
+      covervals[k] = QUAD_TO_DBL(tmp);
       SCIPdebugMessage("S^-(%d) = %g\n", k + 1, C[k]);
    }
 
@@ -8067,11 +8090,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    {
       SCIP_Real cutcoef;
       if( coverstatus[k] == -1 )
-      {
+      { /* variables in C^- get the coefficients 1 */
          cutcoef = 1.0;
       }
       else
-      {
+      { /* variables is either in C^+ or not in the cover and its coefficient value is computed with the lifing function */
          int h;
          SCIP_Real QUAD(hfrac);
          SCIP_Real QUAD(coef);
@@ -8102,7 +8125,9 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
          if( h > 0 && h < cplussize && ABS(QUAD_TO_DBL(hfrac)) <= QUAD_EPSILON )
          {
-            /* cutcoef can be increased by 0.5 */
+            /* cutcoef can be increased by 0.5 because it is a multiple of \bar{a}
+             * (This is the first non-dominated lifting function presented in the paper)
+             */
             cutcoef = 0.5;
          }
          else
@@ -8114,19 +8139,30 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
           * did not push h too far */
          h = MIN(h, coversize) - 1;
 
-         /* now increase coefficient to its lifted value */
+
+         /* now increase coefficient to its lifted value based on its size relative to the S^- values.
+          * The coefficient a_i is lifted to the largest integer h such that S^-(h) < a_i <= S^-(h+1).
+          * (todo: variables that have a coefficient above the right hand side can get an arbitrarily large coefficient but can
+          *  also be trivially fixed using the base row. Currently they get the coefficient |C| which is 1 above the right hand
+          *  side in the cover cut so that they can still be trivially fixed by the propagating the cover cut.
+          *  We do not want to apply fixings here though because the LP should stay flushed during separation.
+          *  Possibly add a parameter to return additional fixings to the caller of the SCIPcalc*() functions in here
+          *  and the caller can add them as cuts to the sepastore or we add them to the sepastore here?)
+          */
          while( h < coversize )
          {
-            SCIPquadprecSumQD(tmp, coef, -C[h]);
+            SCIPquadprecSumQD(tmp, coef, -covervals[h]);
             if( QUAD_TO_DBL(tmp) <= QUAD_EPSILON )
                break;
             ++h;
          }
 
-         SCIPdebugMessage("lifted coef %g < %g <= %g to %d\n", h == 0 ? 0 : C[h-1], QUAD_TO_DBL(coef), C[h], h);
+         /* the lifted coefficient is h increased possibly by 0.5 for the case checked above */
+         SCIPdebugMessage("lifted coef %g < %g <= %g to %d\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(coef), covervals[h], h);
          cutcoef += h;
       }
 
+      /* directly undo the complementation before storing back the coefficient */
       if( varsign[k] == -1 )
       {
          /* variable was complemented so we have cutcoef * (1-x) = cutcoef - cutcoef * x. Thus
@@ -8141,6 +8177,9 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       ++k;
    }
 
+   /* calculate the efficacy of the computed cut and store the success flag if the efficacy exceeds the
+    * one stored in the cutefficacy variable by the caller
+    */
    efficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, nnz);
    *success = efficacy > *cutefficacy;
 
@@ -8149,6 +8188,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    if( *success )
    {
+      /* return the cut but first clean it up based on the parameters
+       * (todo: though we might not want to do all steps that for the cover cut? Can coefficient tightening do something
+       *        on any lifted cover cut? The numerical cleanup is also superfluous. And the scaling to integral coefficients
+       *        could be done easier in the loop above by setting a flag on whether a coefficient with fraction 0.5 was created.)
+
       /* remove all nearly-zero coefficients from row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
        */
@@ -8181,6 +8225,8 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       }
 
       assert( cutefficacy != NULL );
+      /* calculate efficacy again to make sure it matches the coefficients after they where rounded to double values
+       * and after the cleanup and postprocessing step was applied. */
       *cutefficacy = calcEfficacy(scip, sol, cutcoefs, *cutrhs, cutinds, nnz);
 
       if( cutrank != NULL )
@@ -8210,12 +8256,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    }
 #endif
 
-
    /* free temporary memory */
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
    SCIPfreeBufferArray(scip, &tmpinds);
-   SCIPfreeBufferArray(scip, &Cpos);
-   SCIPfreeBufferArray(scip, &C);
+   SCIPfreeBufferArray(scip, &coverpos);
+   SCIPfreeBufferArray(scip, &covervals);
    SCIPfreeBufferArray(scip, &coverstatus);
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
