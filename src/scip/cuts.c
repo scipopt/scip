@@ -8077,7 +8077,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          SCIPquadprecSumQQ(tmp, tmp, coef);
       }
       covervals[k] = QUAD_TO_DBL(tmp);
-      SCIPdebugMessage("S^-(%d) = %g\n", k + 1, C[k]);
+      SCIPdebugMessage("S^-(%d) = %g\n", k + 1, covervals[k]);
    }
 
    SCIPdebugMessage("rhs is %g\n", QUAD_TO_DBL(rhs));
@@ -8192,6 +8192,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
        * (todo: though we might not want to do all steps that for the cover cut? Can coefficient tightening do something
        *        on any lifted cover cut? The numerical cleanup is also superfluous. And the scaling to integral coefficients
        *        could be done easier in the loop above by setting a flag on whether a coefficient with fraction 0.5 was created.)
+       */
 
       /* remove all nearly-zero coefficients from row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
