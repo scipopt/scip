@@ -691,7 +691,8 @@ void handleDecl(
       for(; (end >= beg) && (c != key[end].name[k]); end--)
          ;
       k++;
-   } while(beg < end);
+   }
+   while(beg < end);
 
    if ( beg != end )
    {
@@ -704,6 +705,7 @@ void handleDecl(
    {
       assert(beg == end);
       assert(beg <  (int)(sizeof(key) / sizeof(*key)));
+      assert(beg >= 0);
 
       switch(key[beg].what)
       {
