@@ -7920,7 +7920,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
       QUAD_ARRAY_STORE(tmpcoefs, j, coef);
    }
    SCIPdebugMessage("Computing lifted knapsack cover for ");
-   SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, *cutnnz, FALSE, FALSE));
+   SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
    /* Transform aggregated row into a (fractional) knapsack constraint.
     * Uses simple or variable lower or upper bounds to relax out continuous and general integers
@@ -8112,11 +8112,13 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          /* if the coefficient is below \bar{a}, i.e. a / \bar{a} < 1 then it is zero, otherwise it is lifted above zero */
          if( QUAD_TO_DBL(hfrac) < 1 )
          {
-            --(nnz);
+            --nnz;
             QUAD_ASSIGN(tmp, 0);
             QUAD_ARRAY_STORE(tmpcoefs, tmpinds[k], tmp);
             tmpinds[k] = tmpinds[nnz];
             varsign[k] = varsign[nnz];
+            coverstatus[k] = coverstatus[nnz];
+            /* in this case k will not be increased */
             continue;
          }
 
@@ -8138,7 +8140,6 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          /* decrease by one to make sure rounding errors or coefficients that are larger than the right hand side by themselves
           * did not push h too far */
          h = MIN(h, coversize) - 1;
-
 
          /* now increase coefficient to its lifted value based on its size relative to the S^- values.
           * The coefficient a_i is lifted to the largest integer h such that S^-(h) < a_i <= S^-(h+1).
