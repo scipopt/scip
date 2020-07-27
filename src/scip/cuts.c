@@ -7860,7 +7860,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIP_Real QUAD(coverweight);
    SCIP_Real QUAD(abar);
    SCIP_Real QUAD(sigma);
-   SCIP_Bool freevariable;
+   SCIP_Bool transformed;
    SCIP_Bool local;
    SCIP_Real efficacy;
    int k;
@@ -7928,11 +7928,11 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
     */
    local = aggrrow->local;
    SCIP_CALL( cutsTransformKnapsackCover(scip, sol, allowlocal,
-         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &local, &freevariable) );
+         tmpcoefs, QUAD(&rhs), tmpinds, &nnz, varsign, boundtype, &local, &transformed) );
 
    assert(allowlocal || !local);
 
-   if( freevariable )
+   if( !transformed )
       goto TERMINATE;
 
    SCIPdebugMessage("Transformed knapsack relaxation ");
