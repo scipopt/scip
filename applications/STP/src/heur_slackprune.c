@@ -57,13 +57,15 @@
 #define DEFAULT_SLACKPRUNE_MAXFREQ   FALSE       /**< executions of the heuristic at maximum frequency?                             */
 #define SLACKPRUNE_MINREDELIMS       2           /**< minimum number of eliminations for reduction package when called by slack-and-prune heuristic */
 #define SLACKPRUNE_MAXREDROUNDS      10          /**< maximum number of reduction rounds in slack-prune heuristic */
-#define SLACKPRUNE_MINSTALLPROPORTION   0.1      /**< minimum proportion of arcs to be fixed before restarting slack-prune heuristic */
+#define SLACKPRUNE_MINSTALLPROPORTION   0.2      /**< minimum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define SLACKPRUNE_HARDREDRATIO  0.97
 
 #define BREAKONERROR FALSE
-#define MAXNTERMINALS 1000
-#define MAXNEDGES     20000
+#define MAXNTERMINALS   1000
+#define MAXNEDGES      20000
+#define MAXNEDGES_SPG  10000
+
 #define SLACK_MAXTOTNEDGES 5000
 
 /*
@@ -190,10 +192,14 @@ SCIP_Bool abortSlackPruneEarly(
 	if( !beAggressive && heurdata->nfailures >= 1 )
 	   return TRUE;
 
-	if( SCIPgetNSols(scip) <= 4 )
+	if( heurdata->nexecuted >= 1 && SCIPgetNSols(scip) <= 5 )
 	   return TRUE;
 
 	if( (graph->edges > MAXNEDGES) && (graph->terms > MAXNTERMINALS) )
+	   return TRUE;
+
+	if( graph_typeIsSpgLike(graph) && !beAggressive
+       && (graph->edges > MAXNEDGES_SPG) && (graph->terms > MAXNTERMINALS) )
 	   return TRUE;
 
 	if( heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )

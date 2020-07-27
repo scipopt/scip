@@ -1648,9 +1648,8 @@ SCIP_RETCODE redLoopMw(
 
          if( fullrerun )
          {
-#ifndef WITH_UG
-            printf("Restarting reduction loop after %d rounds! (%d DA eliminations) \n\n ", rounds, daelims);
-#endif
+            SCIPdebugMessage("Restarting reduction loop after %d rounds! (%d DA eliminations) \n\n ", rounds, daelims);
+
             if( extensive )
                advanced = TRUE;
          }
