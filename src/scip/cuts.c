@@ -7726,8 +7726,9 @@ SCIP_RETCODE cutsTransformKnapsackCover(
    }
    i = 0;
 
-   /* remove binary variables that now have a zero coefficient due to variable bound usage of continuous variables
-    * and perform the bound substitution for the binary variables that are left using simple bounds
+   /* after doing bound substitution of non-binary vars, some coefficients of binary vars might have changed, so here we
+    * remove the ones that became 0 if any; also, we need that all remaining binary vars have positive coefficients,
+    * thus we perform bound substitution with simple bounds (i.e. complementing) to achieve this.
     */
    while( i < *nnz )
    {
@@ -7743,7 +7744,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       assert(v < firstnonbinvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
-      /* due to variable bound usage for the continous variables cancellation may have occurred */
+      /* due to variable bound usage for bound substitution of continous variables cancellation may have occurred */
       if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
       {
          /* do not increase i, since last element is copied to the i-th position */
@@ -7752,7 +7753,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       else
       {
          /* perform bound substitution */
-         if( QUAD_TO_DBL(coef) < 0 )
+         if( QUAD_TO_DBL(coef) < 0.0 )
          {
             SCIP_CALL( findBestUb(scip, vars[v], sol, 0, allowlocal, &bestub, &simplebound, boundtype + i) );
 
@@ -7791,7 +7792,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
          assert(boundtype[i] == -1 || boundtype[i] == -2);
       }
 
-      /* increase i or shift last nonzero to current position */
+      /* increase i or remove zero coefficient (i.e. var with 0 coef) by shifting last nonzero to current position */
       if( setzero )
       {
          QUAD_ASSIGN(coef, 0.0);
@@ -7871,7 +7872,7 @@ SCIP_Bool computeInitialKnapsackCover(
       }
    }
 
-   /* Use these two arrays can to sort the variables by decreasing contribution
+   /* Use these two arrays to sort the variables by decreasing contribution
     * and pick them greedily in the while loop below until they are a cover.
     * Since the cover does not need to be minimal we do not need to remove any of the
     * variables with a high activity contribution even if they are not necessary after
@@ -7896,6 +7897,7 @@ SCIP_Bool computeInitialKnapsackCover(
       *coversize += 1;
    }
 
+   /* there is no cover */
    if( SCIPisFeasLE(scip, QUAD_TO_DBL(*coverweight), cutrhs) )
       return FALSE;
 
@@ -7946,14 +7948,17 @@ void prepareLiftingData(
    {
       SCIP_Real QUAD(lkplus1);
       SCIP_Real QUAD(kdelta);
+
       /* load next coefficient l_{k+1} in sorted order of cover */
       QUAD_ARRAY_LOAD(lkplus1, cutcoefs, cutinds[coverpos[k]]);
+
       /* Let \delta = \bar{a} - l_{k+1} and compute k * \delta */
       SCIPquadprecSumQQ(kdelta, *abar, -lkplus1);
       SCIPquadprecProdQD(kdelta, kdelta, k);
+
       /* Set tmp = k * \delta - \sigma to check condition k * \delta < \sigma by tmp < 0 */
       SCIPquadprecSumQQ(tmp, kdelta, -sigma);
-      if( QUAD_TO_DBL(tmp) < 0 )
+      if( QUAD_TO_DBL(tmp) < 0.0 )
       {
          /* Set \bar{a} = l_{k+1} and \sigma = \sigma - k*\delta */
          QUAD_ASSIGN_Q(*abar, lkplus1);
@@ -7970,27 +7975,29 @@ void prepareLiftingData(
       }
    }
 
-   if( QUAD_TO_DBL(sigma) > 0 )
+   if( QUAD_TO_DBL(sigma) > 0.0 )
    {
       SCIP_Real oneoverc = 1.0 / coversize;
       SCIPquadprecProdQD(*abar, cutrhs, oneoverc);
    }
 
-    /* next compute the S^- running sum of the values min(a_i, \bar{a}) for all a_i \in C.
-    * These values are used in the lifting function and we again reuse the array covervals
-    * to store them so that covervals[0] stores S^-(1). S^-(0) is 0 and does not need to be stored.
-    * Additionally determines whether a variable in the cover belongs to C^+ and C^- and computes the size of C^+.
-    * Variables that are above \bar{a} are defined to be in C^+ and the other ones in C^-.
+   /* now we partition C into C^+ and C^-, where C^+ are all the elements of C whose weight is strictly larger than
+    * \bar{a} and C^- the rest.  If a_i are the weights of the elements in C, let a_i^- = min(a_i, \bar{a}) We also
+    * compute S^-(h) = sum of the h largest a_i^- and store S^-(h+1) in in covervals[h], for k = 0, ..., coversize - 1
+    * (S^-(0) = 0 so it doesn't need to be stored; we use S to compute the lifted cut, see below)
+    * we remember which elements of C^- in coverstatus, so that element in C^+ have coverstatus 1 and
+    * elements in C^- have coverstatus -1 (elements not in C have coverstatus 0)
     */
-   QUAD_ASSIGN(tmp, 0);
+   QUAD_ASSIGN(tmp, 0.0);
    *cplussize = 0;
    for( k = 0; k < coversize; ++k )
    {
       SCIP_Real QUAD(coef);
       SCIP_Real QUAD(coefminusabar);
+
       QUAD_ARRAY_LOAD(coef, cutcoefs, cutinds[coverpos[k]]);
       SCIPquadprecSumQQ(coefminusabar, coef, -*abar);
-      if( QUAD_TO_DBL(coefminusabar) > 0 )
+      if( QUAD_TO_DBL(coefminusabar) > 0.0 )
       {
          /* coefficient is in C^+ because it is greater than \bar{a} and contributes only \bar{a} to the sum */
          SCIPquadprecSumQQ(tmp, tmp, *abar);
@@ -8033,16 +8040,16 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    SCIP_Real cutcoef;
    int h;
 
-   /* the lifted value is at least the coeficient divided by \bar{a} because the largest value
+   /* the lifted value is at least the coeficient (a_k) divided by \bar{a} because the largest value
     * contributed to the running sum stored in C is \bar{a}
-    * therefore we start the search at floor(a_k / \bar{a})
+    * therefore we start the search for the correct h at floor(a_k / \bar{a})
     */
 
    SCIPdebugMessage("coef is %g, coversize is %d\n", QUAD_TO_DBL(x), coversize );
 
    SCIPquadprecProdQQ(hfrac, x, abar);
 
-   /* if the coefficient is below \bar{a}, i.e. a / \bar{a} < 1 then it is zero, otherwise it is lifted above zero */
+   /* if the coefficient is below \bar{a}, i.e. a / \bar{a} < 1 then g(a_k) = 0, otherwise g(a_k) > 0 */
    if( QUAD_TO_DBL(hfrac) < 1 )
       return 0.0;
 
@@ -8066,17 +8073,17 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    h = MIN(h, coversize) - 1;
 
    /* now increase coefficient to its lifted value based on its size relative to the S^- values.
-    * The coefficient a_i is lifted to the largest integer h such that S^-(h) < a_i <= S^-(h+1).
+    * The coefficient a_i is lifted to the unique integer h such that S^-(h) < a_i <= S^-(h+1).
     * (todo: variables that have a coefficient above the right hand side can get an arbitrarily large coefficient but can
     *  also be trivially fixed using the base row. Currently they get the coefficient |C| which is 1 above the right hand
-    *  side in the cover cut so that they can still be trivially fixed by the propagating the cover cut.
+    *  side in the cover cut so that they can still be trivially fixed by propagating the cover cut.
     *  We do not want to apply fixings here though because the LP should stay flushed during separation.
     *  Possibly add a parameter to return additional fixings to the caller of the SCIPcalc*() functions in here
     *  and the caller can add them as cuts to the sepastore or we add them to the sepastore here?)
     */
    while( h < coversize )
    {
-      SCIPquadprecSumQD(tmp, x, -covervals[h]);
+      SCIPquadprecSumQD(tmp, x, -covervals[h]); /* recall: covervals[h] = S^-(h+1) */
       if( QUAD_TO_DBL(tmp) <= QUAD_EPSILON )
          break;
       ++h;
@@ -8085,7 +8092,8 @@ SCIP_Real evaluateLiftingFunctionKnapsack(
    cutcoef += h;
 
    /* the lifted coefficient is h increased possibly by 0.5 for the case checked above */
-   SCIPdebugMessage("lifted coef %g < %g <= %g to %g\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(x), covervals[h], cutcoef);
+   SCIPdebugMessage("lifted coef %g < %g <= %g to %g\n", h == 0 ? 0 : covervals[h-1], QUAD_TO_DBL(x),
+         covervals[h], cutcoef);
 
    return cutcoef;
 }
@@ -8194,7 +8202,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIPdebugMessage("Computing lifted knapsack cover for ");
    SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
-   /* Transform aggregated row into a (fractional) knapsack constraint.
+   /* Transform aggregated row into a (fractional, i.e. with possibly fractional weights) knapsack constraint.
     * Uses simple or variable lower or upper bounds to relax out continuous and general integers
     * so that only binary variables remain and complements those such that they have a positive coefficient.
     */
@@ -8211,7 +8219,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    SCIPdebug(printCutQuad(scip, NULL, tmpcoefs, QUAD(rhs), tmpinds, nnz, FALSE, FALSE));
 
    if( !computeInitialKnapsackCover(scip, sol, tmpcoefs, tmpinds, QUAD_TO_DBL(rhs), nnz, varsign, coverstatus,
-       coverpos, covervals, &coversize, QUAD(&coverweight)) )
+            coverpos, covervals, &coversize, QUAD(&coverweight)) )
       goto TERMINATE;
 
    SCIPdebugMessage("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(coverweight), QUAD_TO_DBL(rhs));
@@ -8256,9 +8264,19 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
    {
       SCIP_Real QUAD(tmp);
 
+      /* compute lifted cover inequality:
+       * sum_{i \in C^-) x_i + sum_{i \in N \ C^-) g(a_i) x_i <= c - 1
+       * where g(z) is equal to
+       *   - 0 if z is 0 (irrelevant as there shouldn't be element with weight 0 in the knapsack)
+       *   - h + 1/2 if z = k * \bar{a} for some integer k \in [1, |C^+| - 1] and S^-(h) < z <= S^-(h+1) for some h = 0, ..., coversize -1
+       *   - h if S^-(h) < z <= S^-(h+1) for some h = 0, ..., coversize -1
+       * the function S^- is defined above. Note that S^-(0) = 0
+       * we store the cut coefficients in tmpcoef
+       */
+
       /* prepare data required to evaluate lifting function */
       prepareLiftingData(scip, tmpcoefs, tmpinds, QUAD(rhs), nnz, coverpos, coversize,
-         QUAD(coverweight), covervals, coverstatus, QUAD(&abar), &cplussize);
+            QUAD(coverweight), covervals, coverstatus, QUAD(&abar), &cplussize);
 
       /* compute lifted cover inequality */
       QUAD_ASSIGN(rhs, (coversize - 1));
@@ -8292,8 +8310,8 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
          /* directly undo the complementation before storing back the coefficient */
          if( varsign[k] == -1 )
          {
-            /* variable was complemented so we have cutcoef * (1-x) = cutcoef - cutcoef * x. Thus
-            * we need to adjust the rhs to rhs - cutcoef and the cutcoef flips sign */
+            /* variable was complemented so we have cutcoef * (1-x) = cutcoef - cutcoef * x.Thus we need to adjust the rhs
+             * to rhs - cutcoef and flip the sign of cutcoef */
             cutcoef = -cutcoef;
             SCIPquadprecSumQD(rhs, rhs, cutcoef);
          }
@@ -8316,16 +8334,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
 
    if( *success )
    {
-      /* return the cut but first clean it up based on the parameters
-       * (todo: though we might not want to do all steps that for the cover cut? Can coefficient tightening do something
-       *        on any lifted cover cut? The numerical cleanup is also superfluous. And the scaling to integral coefficients
-       *        could be done easier in the loop above by setting a flag on whether a coefficient with fraction 0.5 was created.)
-       */
-
-      /* remove all nearly-zero coefficients from row and relax the right hand side correspondingly in order to
-       * prevent numerical rounding errors
-       */
-
+      /* return the cut into the given arrays/pointers */
       *cutislocal = local;
       *cutrhs = scale * QUAD_TO_DBL(rhs);
       *cutnnz = nnz;
