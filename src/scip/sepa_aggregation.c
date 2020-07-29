@@ -886,7 +886,7 @@ SCIP_RETCODE aggregation(
 
       if( sepadata->sepknapsackcover )
       {
-         SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, POSTPROCESS, allowlocal, aggrdata->aggrrow, /*lint !e644*/
+         SCIP_CALL( SCIPcalcKnapsackCover(scip, sol, allowlocal, aggrdata->aggrrow, /*lint !e644*/
             cutcoefs, &cutrhs, cutinds, &cutnnz, &knapsackcoverefficacy, &cutrank, &knapsackcovercutislocal, &knapsackcoversuccess) );
       }
       else
