@@ -919,7 +919,7 @@ SCIP_RETCODE aggregation(
        */
       cutefficacy = knapsackcoverefficacy;
 
-      if( sepadata->sepcmir ) //&& startrow >= 0 )
+      if( sepadata->sepcmir )
       {
          SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, maxtestdelta, NULL, NULL, MINFRAC, MAXFRAC,
             aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
