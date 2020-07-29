@@ -16596,6 +16596,12 @@ SCIP_RETCODE SCIPprocessConsExprRowprep(
          SCIP_CALL( SCIPaddRow(scip, row, conshdlrdata->forcestrongcut && !allowweakcuts && inenforcement,
                                &infeasible) );
 
+#ifdef SCIP_CONSEXPR_ROWNOTREMOVABLE
+         /* mark row as not removable from LP for current node, if in enforcement (this can prevent some cycling) */
+         if( inenforcement )
+            SCIPmarkRowNotRemovableLocal(scip, row);
+#endif
+
          if( infeasible )
          {
             *result = SCIP_CUTOFF;

@@ -2570,6 +2570,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
+#ifdef SCIP_CONSEXPR_ROWNOTREMOVABLE
+            /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
+            if( addbranchscores )
+               SCIPmarkRowNotRemovableLocal(scip, row);
+#endif
+
             if( infeasible )
                *result = SCIP_CUTOFF;
             else
@@ -2626,6 +2632,12 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          if( SCIPisCutApplicable(scip, row) && (allowweakcuts || cutefficacy >= nlhdlrdata->mincutefficacy) )
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+
+#ifdef SCIP_CONSEXPR_ROWNOTREMOVABLE
+            /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
+            if( addbranchscores )
+               SCIPmarkRowNotRemovableLocal(scip, row);
+#endif
 
             if( infeasible )
                *result = SCIP_CUTOFF;
