@@ -94,18 +94,6 @@ int getWorkLimits_stp(
 }
 
 
-/** returns limit parameter for MWCSP method */
-static
-int getWorkLimits_mw(
-   const GRAPH* g,
-   int roundnumber,
-   enum PC_REDTYPE redtype
-)
-{
-   // todo: fill for chain2 and npv2 perhaps
-   return 0;
-}
-
 /** returns limit parameters for PCSTP method */
 static
 int getWorkLimits_pc(
