@@ -580,6 +580,9 @@ BEGIN {
 /^Original Problem   : no problem exists./ {
    readerror = 1;
 }
+/^no problem exists/ {
+   readerror = 1;
+}
 /^SCIP Status        :/ {
    # replace / by \/ in filename
    fname = filename
@@ -1073,6 +1076,11 @@ BEGIN {
       else if( checksol && !bestsolfeas )
       {
          setStatusToFail("fail (solution infeasible)");
+      }
+      else if( !feasible && !isLimitReached() && solstatus[prob] != "inf" && solstatus[prob] != "unkn" )
+      {
+         # SCIP terminated properly but could not find a feasible solution -> assume that it proved infeasibility
+         setStatusToFail("fail (objective value)")
       }
       else if( solstatus[prob] == "opt" )
       {
