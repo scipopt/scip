@@ -7914,7 +7914,6 @@ void prepareLiftingData(
    SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
    int*                  cutinds,            /**< array of the problem indices of variables with a non-zero coefficient in the cut */
    QUAD(SCIP_Real        cutrhs),            /**< pointer to the right hand side of the cut */
-   int                   cutnnz,             /**< pointer to the number of non-zeros in the cut */
    int*                  coverpos,           /**< position of nonzero in the knapsack row for each variable in the cover */
    int                   coversize,          /**< number of variables in the cover */
    QUAD(SCIP_Real        coverweight),       /**< weight of cover */
@@ -8275,7 +8274,7 @@ SCIP_RETCODE SCIPcalcKnapsackCover(
        */
 
       /* prepare data required to evaluate lifting function */
-      prepareLiftingData(scip, tmpcoefs, tmpinds, QUAD(rhs), nnz, coverpos, coversize,
+      prepareLiftingData(scip, tmpcoefs, tmpinds, QUAD(rhs), coverpos, coversize,
             QUAD(coverweight), covervals, coverstatus, QUAD(&abar), &cplussize);
 
       /* compute lifted cover inequality */
