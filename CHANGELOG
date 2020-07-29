@@ -32,6 +32,10 @@ Interface changes
   changed from SCIP_Shortbool* to unsigned*.
 
 ### New API functions
+
+- added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
+  that is initialized to zeros
+
 ### Command line interface
 ### Interfaces to external software
 ### Changed parameters
