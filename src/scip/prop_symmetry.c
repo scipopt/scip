@@ -2932,7 +2932,13 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
+   {
+      if ( propdata->ngenconss == 0 )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
+      }
       return SCIP_OKAY;
+   }
 
    /* add symmetry breaking constraints if orbital fixing is not used outside orbitopes */
    if ( ! propdata->ofenabled )
