@@ -102,10 +102,10 @@ SCIP_RETCODE propCons(
    SCIP_CALL( SCIPqueueCreate(&reversepropqueue, 5, 2.0) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), reversepropqueue, infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, expr, TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), infeasible, &ntightenings) );
 
-   /* intersect activity with constraint sides, which might add root expr to reversepropqueue (if we have auxvar, then forwardPropExpr already does that) */
-   if( !*infeasible && expr->auxvar == NULL )
+   /* compare activity with constraint sides, which might add root expr to reversepropqueue */
+   if( !*infeasible )
    {
       SCIP_INTERVAL conssides;
 
@@ -119,14 +119,14 @@ SCIP_RETCODE propCons(
 
    if( !*infeasible )
    {
-      SCIP_CALL( reversePropQueue(scip, conshdlr, reversepropqueue, TRUE, FALSE, infeasible, &ntightenings) );
+      SCIP_CALL( reversePropQueue(scip, conshdlr, reversepropqueue, TRUE, infeasible, &ntightenings) );
    }
    else
    {
       while( !SCIPqueueIsEmpty(reversepropqueue) )
       {
          expr = (SCIP_CONSEXPR_EXPR*)SCIPqueueRemove(reversepropqueue);
-         expr->inqueue = FALSE;
+         SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->propbounds);
       }
    }
 
@@ -163,12 +163,12 @@ Test(propagate, sum)
    SCIP_CALL( propCons(cons, &infeasible) );
 
    cr_assert_not(infeasible);
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, 0.5), "Expecting 0.5, got %g\n",  expr->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 1.5));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, -1.5), "Expecting -1.5, got %g\n", expr->children[0]->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, 1.0));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[1]->activity.inf, -3.0), "Expecting -3.0, got %.20f\n", expr->children[1]->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expr->children[1]->activity.sup, 1.0));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, -4.5), "Expecting -4.5, got %g\n",  expr->activity.inf);
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup,  7.5));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -1.5), "Expecting -1.5, got %g\n", SCIPvarGetLbLocal(x));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), 1.0));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), -3.0), "Expecting -3.0, got %.20f\n", SCIPvarGetLbLocal(y));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 1.0));
 
    /* release stuff */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -202,21 +202,30 @@ Test(propagate, product)
 
    /* test stuff */
    cr_assert_not(infeasible);
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, 1.0 / 8.0), "Expecting %g and got %g\n", 1.0/8.0, expr->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 1.0));
+   /* activity of 0.5x^2/y */
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, 0.5*1.0 / 4.0), "Expecting %g and got %g\n", 1.0/8.0, expr->activity.inf);
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 0.5*3.0*3.0/2.0));
 
+   /* activity of x^2/y */
    expraux = expr->children[0];
-   cr_expect(SCIPisFeasEQ(scip, expraux->activity.inf, 1.0 / 4.0), "Expecting %g and got %g\n", 1.0, expraux->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expraux->activity.sup, 2.0));
+   cr_expect(SCIPisFeasEQ(scip, expraux->activity.inf, 1.0 / 4.0), "Expecting %g and got %g\n", 1.0/4.0, expraux->activity.inf);
+   cr_expect(SCIPisFeasEQ(scip, expraux->activity.sup, 3.0*3.0/2.0));
 
+   /* activity of x^2 */
    cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->activity.inf, 1.0), "Expecting %g and got %g\n", 1.0, expraux->children[0]->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->activity.sup, 8.0), "Expecting %g and got %g\n", 8.0, expraux->children[0]->activity.sup);
-   cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->children[0]->activity.inf, 1.0), "Expecting %g and got %g\n", 1.0, expraux->children[0]->activity.inf);
-   cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->children[0]->activity.sup, SQRT(8)));
+   cr_expect(SCIPisFeasEQ(scip, expraux->children[0]->activity.sup, 9.0), "Expecting %g and got %g\n", 9.0, expraux->children[0]->activity.sup);
+
+   /* activity of 1/y */
    cr_expect(SCIPisFeasEQ(scip, expraux->children[1]->activity.inf, 1/4.0));
    cr_expect(SCIPisFeasEQ(scip, expraux->children[1]->activity.sup, 1/2.0));
-   cr_expect(SCIPisFeasEQ(scip, expraux->children[1]->children[0]->activity.inf, 2.0));
-   cr_expect(SCIPisFeasEQ(scip, expraux->children[1]->children[0]->activity.sup, 4.0));
+
+   /* new bounds of x */
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), 1.0), "Expecting %g and got %g\n", 1.0, SCIPvarGetLbLocal(x));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), SQRT(8)));
+
+   /* new bounds of y */
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 2.0));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 4.0));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -251,11 +260,11 @@ Test(propagate, productwithzero)
    SCIP_CALL( propCons(cons, &infeasible) );
    cr_assert_not(infeasible);
 
-   /* expression image is [-3,6], intersected with constraint sides [1,8], this should give [1,6]
+   /* expression image is [-6,6]
     * since consexpr relaxes bounds, we allow a large tolerance here
     */
-   cr_assert_float_eq(expr->activity.inf, 1.0, SCIPfeastol(scip));
-   cr_assert_float_eq(expr->activity.sup, 6.0, SCIPfeastol(scip));
+   cr_assert_float_eq(expr->activity.inf, -6.0, SCIPfeastol(scip));
+   cr_assert_float_eq(expr->activity.sup,  6.0, SCIPfeastol(scip));
 
    /* x*y*z >= 1 with x <= 1, y <= 2, z <= 3 should imply
     * x >= 1/6, y >= 1/3, z >= 1/2
@@ -294,9 +303,9 @@ Test(propagate, abs)
    SCIP_CALL( propCons(cons, &infeasible) );
    cr_assert_not(infeasible);
 
-   /* get expression and test stuff */
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, -2.5));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, 2.5));
+   /* test that variable bounds have been tightened */
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -2.5));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x),  2.5));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -330,9 +339,9 @@ Test(propagate, exp)
 
    /* get expression and test stuff */
    cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, exp(-1)));
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 2.0));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, -1.0));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, log(2.0)));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, exp(3.0)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -1.0));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), log(2.0)));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -365,10 +374,9 @@ Test(propagate, log)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, -1.0));
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 1.0));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, exp(-1.0)));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, exp(1.0)));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, log(7.0)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), exp(-1.0)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), exp(1.0)));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -402,9 +410,9 @@ Test(propagate, sin)
 
    /* get expression and test stuff */
    cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, SIN(-1)));
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 0.5));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, -1.0));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, ASIN(0.5)));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, SIN(1.5)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -1.0));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), ASIN(0.5)));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -443,9 +451,9 @@ Test(propagate, entropy)
 
    /* get expression and test stuff */
    cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, -1.5 * log(1.5)));
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, -0.9 * log(0.9)));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, 0.9));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, 1.5));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, 1/M_E));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), 0.9));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), 1.5));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -474,10 +482,10 @@ Test(propagate, entropy)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, -0.1 * log(0.1)));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, 0.0));
    cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, -0.2 * log(0.2)));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.inf, 0.1));
-   cr_expect(SCIPisFeasEQ(scip, expr->children[0]->activity.sup, 0.2));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 0.1));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 0.2));
 
    /* release conss */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -549,7 +557,7 @@ Test(propagate, complicated_expression)
    /* apply forward propagation */
    SCIP_CALL( SCIPqueueCreate(&reversepropqueue, 5, 2.0) );
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), reversepropqueue, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
 
    cr_assert_not(infeasible);
    cr_expect(CHECK_EXPRINTERVAL(scip, xexpr, -1.0, 1.0), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(xexpr,-1.0,1.0));
@@ -560,15 +568,16 @@ Test(propagate, complicated_expression)
    cr_expect(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(sumexpr,log(2)-1.0,log(3)));
    cr_expect(CHECK_EXPRINTERVAL(scip, rootexpr, (log(2) - 1) / 1.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,log(2)-1.0,log(3)));
 
-   /* intersect activity with constraint sides */
+   /* initialize reverse-propagation by tightening via constraint sides */
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, rootexpr, conssides, TRUE, reversepropqueue, &infeasible, &ntightenings) );
 
    cr_assert_not(infeasible);
-   cr_expect(CHECK_EXPRINTERVAL(scip, rootexpr, 0.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,0.0,log(3)));
+   cr_expect(SCIPisFeasEQ(scip, rootexpr->propbounds.inf, 0.0));
+   cr_expect(SCIPisFeasEQ(scip, rootexpr->propbounds.sup, log(3)));
 
    /* apply reverse propagation */
-   SCIP_CALL( reversePropQueue(scip, conshdlr, reversepropqueue, TRUE, FALSE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropQueue(scip, conshdlr, reversepropqueue, TRUE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    cr_assert(SCIPqueueIsEmpty(reversepropqueue));
@@ -612,7 +621,7 @@ Test(propagate, unbounded_sub_expression)
 
    SCIP_CALL( propCons(cons, &infeasible) );
    cr_assert_not(infeasible);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr, -5.0, SCIP_INTERVAL_INFINITY));
+   cr_assert(CHECK_EXPRINTERVAL(scip, expr, -SCIP_INTERVAL_INFINITY, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -629,7 +638,7 @@ Test(propagate, unbounded_sub_expression)
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
    cr_assert(CHECK_EXPRINTERVAL(scip, expr, -SCIP_INTERVAL_INFINITY, SCIP_INTERVAL_INFINITY));
 
@@ -650,7 +659,7 @@ Test(propagate, unbounded_sub_expression)
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
    cr_assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, SCIP_INTERVAL_INFINITY));
 
@@ -677,9 +686,9 @@ Test(propagate, forwardprop_uses_expressions_bounds)
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_expect_not(infeasible);
-   cr_expect(CHECK_EXPRINTERVAL(scip, expr, 0.0, 2.0));  /* only did forward prop, so conssides were not taken into account */
+   cr_expect(CHECK_EXPRINTERVAL(scip, expr, 0.0, 2.0));  /* only did forward prop */
 
    /* change intervals of variable expressions
     * NOTE: this should not be done by a user as it interferes with the way how we recognize whether activities are uptodate
@@ -693,7 +702,7 @@ Test(propagate, forwardprop_uses_expressions_bounds)
    /* new interval should be [0,2] intersected with [-2, 0.4]; note that it is important to have the activitytag
     * set to curboundstag; otherwise the explicitly set intervals are going to be overwritten
     */
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_expect_not(infeasible);
    cr_expect(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.4));
 
@@ -721,13 +730,12 @@ Test(propagate, infeas_after_forwardprop)
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), conssides, TRUE, NULL, &infeasible, &ntightenings) );
    cr_assert(infeasible);
-   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -740,32 +748,30 @@ Test(propagate, infeas_after_forwardprop)
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), conssides, TRUE, NULL, &infeasible, &ntightenings) );
    cr_assert(infeasible);
-   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /*
-    * 0.0 <= 1 + expr(-5 * x + y^2) <= 0.9
+    * 0.0 <= 1 + exp(-5 * x + y^2) <= 0.9
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + exp(-5 * <t_x> + <t_y>^2)", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -10.0, -0.1) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), conssides, TRUE, NULL, &infeasible, &ntightenings) );
    cr_assert(infeasible);
-   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -807,11 +813,11 @@ Test(propagate, infeas_after_backwardprop)
    cr_assert(SCIPconsIsActive(cons2));
 
    /* apply forward propagation for both constraints */
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons1), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons1), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
    cr_assert(CHECK_EXPRINTERVAL(scip, expr1, 0.0, 4.0));
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons2), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons2), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
    cr_assert(CHECK_EXPRINTERVAL(scip, expr2, 0.0, 4.0));
 
@@ -819,32 +825,31 @@ Test(propagate, infeas_after_backwardprop)
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons2), SCIPgetRhsConsExpr(scip, cons2));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr2, conssides, TRUE, queue, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
-   cr_assert(expr2->inqueue);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr2, 3.5, 4.0));
+   cr_assert(SCIPisFeasEQ(scip, expr2->propbounds.inf, 3.5));
+   cr_assert(SCIPisFeasEQ(scip, expr2->propbounds.sup, 4.0));
 
    /* reverse propagation of cons2 should lead to new bounds on x and y */
-   SCIP_CALL( reversePropQueue(scip, conshdlr, queue, TRUE, FALSE, &infeasible, &ntightenings) );
+   SCIP_CALL( reversePropQueue(scip, conshdlr, queue, TRUE, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr2->children[0], 1.5, 2.0));
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr2->children[1], 1.5, 2.0));
+   cr_assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), 1.5));
+   cr_assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), 2.0));
+   cr_assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 1.5));
+   cr_assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 2.0));
 
    while( !SCIPqueueIsEmpty(queue) )
-      ((SCIP_CONSEXPR_EXPR*)SCIPqueueRemove(queue))->inqueue = FALSE;
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &((SCIP_CONSEXPR_EXPR*)SCIPqueueRemove(queue))->propbounds);
 
-   /* apply constraint sides to expr1 */
+   /* apply forward propagation for cons1 again to update activity */
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons1), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
+   cr_assert_not(infeasible);
+   cr_assert(CHECK_EXPRINTERVAL(scip, expr1, 1.5*1.5, 4.0));
+
+   /* apply constraint sides to expr1 should detect infeasibility */
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons1), SCIPgetRhsConsExpr(scip, cons1));
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr1, conssides, TRUE, queue, &infeasible, &ntightenings) );
-   cr_assert_not(infeasible);
-   cr_assert(expr1->inqueue);
-   cr_assert(CHECK_EXPRINTERVAL(scip, expr1, 0.0, 1.0));
-
-   /* reverse propagation of cons1 should lead to an empty interval for x */
-   SCIP_CALL( reversePropQueue(scip, conshdlr,queue, TRUE, FALSE, &infeasible, &ntightenings) );
    cr_assert(infeasible);
-   cr_assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr1->children[0]->activity));
+   cr_assert(SCIPqueueIsEmpty(queue));
 
-   while( !SCIPqueueIsEmpty(queue) )
-      ((SCIP_CONSEXPR_EXPR*)SCIPqueueRemove(queue))->inqueue = FALSE;
    SCIPqueueFree(&queue);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
@@ -896,12 +901,14 @@ Test(propagate, forwardprop_common_subexpressions)
    SCIP_CALL( propCons(cons1, &infeasible) );
 
    cr_expect_not(infeasible);
+   cr_expect_float_eq(SCIPvarGetLbLocal(x), sqrt(0.5), 1e-6, "expected: sqrt(0.5) got: %g\n", SCIPvarGetLbLocal(x));
+
+   /* apply forward propagation for root expression of 2nd constraint (x^2 * y) */
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons2), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
+
    interval = SCIPgetConsExprExprActivity(scip, sqrexpr);
    cr_expect_float_eq(SCIPintervalGetInf(interval), 0.5, 1e-6, "expected: 0.5 got: %g\n", SCIPintervalGetInf(interval));
    cr_expect_float_eq(SCIPintervalGetSup(interval), 1.0, 1e-6, "expected: 1.0 got: %g\n", SCIPintervalGetSup(interval));
-
-   /* apply forward propagation for root expression of 2nd constraint (x^2 * y) */
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons2), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), NULL, &infeasible, &ntightenings) );
 
    cr_expect_not(infeasible);
    interval = SCIPgetConsExprExprActivity(scip, prodexpr);
