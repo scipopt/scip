@@ -1187,7 +1187,8 @@ SCIP_RETCODE tightenAuxVarBounds(
    )
 {
    SCIP_VAR* var;
-   SCIP_Bool tightened;
+   SCIP_Bool tightenedlb;
+   SCIP_Bool tightenedub;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -1213,8 +1214,8 @@ SCIP_RETCODE tightenAuxVarBounds(
    force = force || SCIPisEQ(scip, bounds.inf, bounds.sup);
 
    /* try to tighten lower bound of (auxiliary) variable */
-   SCIP_CALL( SCIPtightenVarLb(scip, var, bounds.inf, force, cutoff, &tightened) );
-   if( tightened )
+   SCIP_CALL( SCIPtightenVarLb(scip, var, bounds.inf, force, cutoff, &tightenedlb) );
+   if( tightenedlb )
    {
       if( ntightenings != NULL )
          ++*ntightenings;
@@ -1227,8 +1228,8 @@ SCIP_RETCODE tightenAuxVarBounds(
    }
 
    /* try to tighten upper bound of (auxiliary) variable */
-   SCIP_CALL( SCIPtightenVarUb(scip, var, bounds.sup, force, cutoff, &tightened) );
-   if( tightened )
+   SCIP_CALL( SCIPtightenVarUb(scip, var, bounds.sup, force, cutoff, &tightenedub) );
+   if( tightenedub )
    {
       if( ntightenings != NULL )
          ++*ntightenings;
@@ -1238,6 +1239,21 @@ SCIP_RETCODE tightenAuxVarBounds(
    {
       SCIPdebugMsg(scip, "cutoff when tightening ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), bounds.sup);
       return SCIP_OKAY;
+   }
+
+   if( expr->auxvar == NULL && (tightenedlb || tightenedub) )
+   {
+      /* if expr is a varexpr and the var was tightened, then immediately update the activity of the varexpr
+       * it should be ok to circumvent the default nlhdlr (if present) and call the var-exprhdlr directly
+       */
+      assert(SCIPisConsExprExprVar(expr));
+      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &bounds, intEvalVarBoundTightening, FALSE, SCIPconshdlrGetData(conshdlr)) );
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, bounds.inf, bounds.sup);
+#endif
+
+      expr->activity = bounds;
+      expr->activitytag = SCIPconshdlrGetData(conshdlr)->curboundstag;
    }
 
    return SCIP_OKAY;
@@ -1470,7 +1486,7 @@ SCIP_RETCODE forwardPropExpr(
                if( infeasible != NULL )
                   *infeasible = TRUE;
             }
-            else if( tightenauxvars )
+            else if( tightenauxvars && expr->auxvar != NULL )
             {
                SCIP_Bool tighteninfeasible;
 
