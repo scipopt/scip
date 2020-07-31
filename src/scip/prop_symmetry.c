@@ -4403,7 +4403,13 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    /* possibly stop */
    if ( SCIPisStopped(scip) )
+   {
+      if ( propdata->ngenconss == 0 )
+      {
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
+      }
       return SCIP_OKAY;
+   }
 
    if ( propdata->sstenabled )
    {
