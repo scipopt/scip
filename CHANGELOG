@@ -151,6 +151,7 @@ Fixed bugs
 - Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
+- Fixed problem in upgrading full orbitopes to partitioning orbitopes
 
 Miscellaneous
 -------------
