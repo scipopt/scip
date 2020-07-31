@@ -224,7 +224,6 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -237,8 +236,7 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -267,7 +265,6 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* normexpr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -280,8 +277,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
    normexpr = SCIPgetConsExprExprChildren(expr)[0];
@@ -337,8 +333,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
    normexpr = SCIPgetConsExprExprChildren(expr)[1];
@@ -394,8 +389,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -449,8 +443,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -505,8 +498,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -550,8 +542,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -606,8 +597,7 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -651,8 +641,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -707,8 +696,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -764,8 +752,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -823,8 +810,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -882,8 +868,7 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -928,8 +913,7 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -975,8 +959,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    /* call the separation initialization -> this creates auxvars and creates disaggregation variables and row */
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
@@ -1056,8 +1039,7 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    /* call the separation initialization -> this creates auxvars and creates disaggregation variables and row */
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
@@ -1171,8 +1153,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    /* call the separation initialization -> this creates auxvars and creates disaggregation variables and row */
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
@@ -1233,7 +1214,6 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_ROW* cut;
    SCIP_VAR* cutvars[3];
    SCIP_Real cutvals[3];
-   SCIP_Bool infeasible;
    SCIP_Real rhs;
    int i;
 
@@ -1249,8 +1229,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    /* find the nlhdlr expr data */
    for( i = 0; i < expr->nenfos; ++i )

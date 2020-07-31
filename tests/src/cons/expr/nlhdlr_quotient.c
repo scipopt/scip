@@ -123,7 +123,6 @@ Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient exp
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -136,8 +135,7 @@ Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient exp
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -162,7 +160,6 @@ Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient exp
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -175,8 +172,7 @@ Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient exp
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -201,7 +197,6 @@ Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient exp
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -214,8 +209,7 @@ Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient exp
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons)->children[0];
 
@@ -240,7 +234,6 @@ Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient exp
    SCIP_CONS* cons;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -253,8 +246,7 @@ Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient exp
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -278,7 +270,6 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_VAR* auxvarabs;
    SCIP_VAR* auxvarlog;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
 
@@ -291,8 +282,7 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 
@@ -336,8 +326,7 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    expr = SCIPgetExprConsExpr(scip, cons);
 

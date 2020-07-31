@@ -283,8 +283,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
-   cr_assert_not(infeasible);
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
    /* get expr and work with it */
    expr = SCIPgetExprConsExpr(scip, cons);
