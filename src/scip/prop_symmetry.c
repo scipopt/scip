@@ -3667,7 +3667,11 @@ SCIP_RETCODE addStrongSBCsSubgroup(
    SCIP_PROPDATA*        propdata,           /**< pointer to data of symmetry propagator */
    int*                  graphcompbegins,    /**< array indicating where a new graphcomponent begins */
    int*                  graphcomponents,    /**< array of all variable indices sorted by color and comp */
-   int                   graphcompidx        /**< index of the graph component */
+   int                   graphcompidx,       /**< index of the graph component */
+   SCIP_Bool             storelexorder,      /**< whether the lexicographic order induced by the orbitope shall be stored */
+   int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
+   int*                  nvarsorder,         /**< number of variables in lexicographic order */
+   int*                  maxnvarsorder       /**< maximum number of variables in lexicographic order */
    )
 {
    int k;
@@ -3677,6 +3681,31 @@ SCIP_RETCODE addStrongSBCsSubgroup(
    assert( graphcompbegins != NULL );
    assert( graphcomponents != NULL );
    assert( graphcompidx >= 0 );
+   assert( ! storelexorder || lexorder != NULL );
+   assert( ! storelexorder || nvarsorder != NULL );
+   assert( ! storelexorder || maxnvarsorder != NULL );
+
+   /* possibly store lexicographic order defined by strong SBCs */
+   if ( storelexorder )
+   {
+      if ( *maxnvarsorder == 0 )
+      {
+         *maxnvarsorder = graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx + 1];
+         *nvarsorder = 0;
+
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
+      }
+      else
+      {
+         assert( *nvarsorder == *maxnvarsorder );
+
+         *maxnvarsorder += graphcompbegins[graphcompidx + 1] - graphcompbegins[graphcompidx + 1];
+
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
+      }
+
+      (*lexorder)[*nvarsorder++] = graphcomponents[graphcompbegins[graphcompidx]];
+   }
 
    /* add strong SBCs (lex-max order) for chosen graph component */
    for (k = graphcompbegins[graphcompidx]+1; k < graphcompbegins[graphcompidx+1]; ++k)
@@ -3688,6 +3717,9 @@ SCIP_RETCODE addStrongSBCsSubgroup(
 
       vars[0] = propdata->permvars[graphcomponents[k-1]];
       vars[1] = propdata->permvars[graphcomponents[k]];
+
+      if ( storelexorder )
+         (*lexorder)[*nvarsorder++] = graphcomponents[k];
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "strong_sbcs_%s_%s",
          SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
@@ -4037,6 +4069,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int maxnvarslexorder = 0;
       SCIP_Bool* permused;
       SCIP_Bool allpermsused = FALSE;
+      SCIP_Bool handlednonbinarysymmetry = FALSE;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4281,7 +4314,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
             ++norbitopes;
 #endif
          }
-#if 0
          /* if no (useable) orbitope was found, possibly add strong SBCs */
          else if ( ! propdata->onlybinsubgroups )
          {
@@ -4302,8 +4334,12 @@ SCIP_RETCODE detectAndHandleSubgroups(
                largestcolorcomp, graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp]);
 
             /* add the strong SBCs for the corresponding component */
-            SCIP_CALL( addStrongSBCsSubgroup(scip, propdata, graphcompbegins,
-                  graphcomponents, largestcolorcomp) );
+            SCIP_CALL( addStrongSBCsSubgroup(scip, propdata, graphcompbegins, graphcomponents, largestcolorcomp,
+                  propdata->addsymresacks, &lexorder, &nvarslexorder, &maxnvarslexorder) );
+
+            /* store whether symmetries on non-binary symmetries have been handled */
+            if ( ! SCIPvarIsBinary(propdata->permvars[graphcomponents[graphcompbegins[largestcolorcomp]]])
+               handlednonbinarysymmetry = TRUE;
 
             if ( ! propdata->componentblocked[i] )
             {
@@ -4315,6 +4351,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             nstrongsbcs += graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp] - 1;
 #endif
          }
+#if 0
          /* otherwise, just mark the color as not handled */
          else
          {
@@ -4332,9 +4369,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
       /* if suborbitopes or strong group actions have been found, potentially add symresacks adapted to
-       * variable order given by lexorder
+       * variable order given by lexorder if no symmetries on non-binary variables have been handled
        */
-      if ( nvarslexorder > 0 && propdata->addsymresacks )
+      if ( nvarslexorder > 0 && propdata->addsymresacks && ! handlednonbinarysymmetry )
       {
          int k;
 
@@ -4401,7 +4438,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
-      SCIPfreeBufferArray(scip, &permused);
+      SCIPfreeBufferArrayNull(scip, &permused);
       SCIPfreeBufferArrayNull(scip, &usedperms);
    }
 
