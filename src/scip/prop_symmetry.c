@@ -4133,6 +4133,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPdebugMsg(scip, "  -> skipping component, since less than %f%% of the permutations were used",
             propdata->subgrppermratio);
 
+         SCIPfreeBufferArray(scip, &permused);
          SCIPfreeBufferArray(scip, &usedperms);
 
          continue;
