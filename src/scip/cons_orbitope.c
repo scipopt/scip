@@ -257,7 +257,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nspcons) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->roworder, nspcons) );
 
-   if ( usedynamicprop )
+   /* if orbitope might interact with other symmetries, we cannot adapt the row order of orbitopes dynamically */
+   if ( usedynamicprop && ! mayinteract )
    {
       SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rowused, nspcons) );
@@ -271,7 +272,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
       (*consdata)->roworder[i] = i;
 
-      if ( usedynamicprop )
+      if ( usedynamicprop && ! mayinteract )
       {
          (*consdata)->rowused[i] = FALSE;
       }
@@ -287,7 +288,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->istrianglefixed = FALSE;
    (*consdata)->ismodelcons = ismodelcons;
    (*consdata)->mayinteract = mayinteract;
-   (*consdata)->usedynamicprop = usedynamicprop;
+   (*consdata)->usedynamicprop = usedynamicprop && ! mayinteract;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
@@ -304,7 +305,7 @@ SCIP_RETCODE consdataCreate(
          {
             SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
-            if ( usedynamicprop )
+            if ( usedynamicprop & ! mayinteract )
             {
                SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
             }
