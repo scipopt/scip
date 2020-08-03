@@ -2141,7 +2141,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
          orbitopetype = SCIP_ORBITOPETYPE_PACKING;
 
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, orbitopetype, nrows,
-            2, TRUE, TRUE, ismodelcons, initial, separate, enforce, check, propagate, local,
+            2, TRUE, TRUE, ismodelcons, TRUE, initial, separate, enforce, check, propagate, local,
             modifiable, dynamic, removable, stickingatnode) );
 
       for (i = 0; i < nrows; ++i)

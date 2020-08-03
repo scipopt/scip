@@ -3494,7 +3494,8 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int*                  compidxfirstrow,    /**< buffer to store the comp index for the first row (or NULL) */
    int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
    int*                  nvarslexorder,      /**< number of variables in lexicographic order */
-   int*                  maxnvarslexorder    /**< maximum number of variables in lexicographic order */
+   int*                  maxnvarslexorder,   /**< maximum number of variables in lexicographic order */
+   SCIP_Bool             mayinteract         /**< whether orbitope's symmetries might interact with other symmetries */
    )
 {  /*lint --e{571}*/
    SCIP_VAR*** orbitopevarmatrix;
@@ -3637,7 +3638,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", graphcoloridx, propdata->norbitopes);
 
    SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
-         SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, TRUE, FALSE, propdata->conssaddlp,
+         SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, TRUE, FALSE, mayinteract, propdata->conssaddlp,
          TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -4035,6 +4036,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
       SCIP_Bool* permused;
+      SCIP_Bool allpermsused = FALSE;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4114,6 +4116,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             &ncompcolors, &usedperms, &nusedperms, usedpermssize, permused) );
 
       SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
+
+      if ( nusedperms == npermsincomp )
+         allpermsused = TRUE;
 
       assert( graphcomponents != NULL );
       assert( graphcompbegins != NULL );
@@ -4259,7 +4264,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* add the orbitope constraint for this color */
             SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
                   graphcompbegins, graphcomponents, j, nbinarycomps, largestcompsize,
-                  firstvaridx, chosencomp, &lexorder, &nvarslexorder, &maxnvarslexorder) );
+                  firstvaridx, chosencomp, &lexorder, &nvarslexorder, &maxnvarslexorder, allpermsused) );
 
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] >= 0 );
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] < propdata->npermvars );
@@ -4587,7 +4592,7 @@ SCIP_RETCODE detectOrbitopes(
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_component%d", i);
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, vars, SCIP_ORBITOPETYPE_FULL,
-               nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop, TRUE, FALSE,
+               nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop, TRUE, FALSE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );

@@ -170,6 +170,8 @@ struct SCIP_ConsData
    SCIP_Bool*            rowused;            /**< whether a row has been considered in roworder */
    int                   nrowsused;          /**< number of rows that have already been considered in roworder */
    SCIP_Bool             ismodelcons;        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             mayinteract;        /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    SCIP_Bool             usedynamicprop;     /**< whether we use a dynamic version of the propagation routine */
 };
 
@@ -237,7 +239,9 @@ SCIP_RETCODE consdataCreate(
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint                             */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved?                         */
    SCIP_Bool             usedynamicprop,     /**< whether we use a dynamic version of the propagation routine */
-   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
+   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    )
 {
    int i;
@@ -282,6 +286,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->resolveprop = resolveprop;
    (*consdata)->istrianglefixed = FALSE;
    (*consdata)->ismodelcons = ismodelcons;
+   (*consdata)->mayinteract = mayinteract;
    (*consdata)->usedynamicprop = usedynamicprop;
 
    /* get transformed variables, if we are in the transformed problem */
@@ -318,7 +323,9 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
    int*                  nrows,              /**< pointer to number of rows of variable matrix */
    int                   ncols,              /**< number of columns of variable matrix */
-   SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
+   SCIP_ORBITOPETYPE*    type,               /**< pointer to store type of orbitope constraint after strengthening */
+   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    )
 {
    SCIP_CONSHDLR* setppcconshdlr;
@@ -489,8 +496,10 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
     * to exploit the packing/partitioning structure on these rows, because packing/partitioning orbitopes
     * or more restrictive than full orbitopes. If at least three rows have this property, we discard
     * all rows not contained in set packing/partitioning constraints and add the smaller sub packing orbitope.
+    * This is only possible if the orbitope's symmetries do not interact with other symmetry handling
+    * methods (otherwise, dropping rows might change the variable order).
     */
-   else if ( ncovered >= 3 )
+   else if ( ncovered >= 3 && ! mayinteract )
    {
       int r = *nrows - 1;
       while ( r >= 0 )
@@ -3053,7 +3062,8 @@ SCIP_DECL_CONSTRANS(consTransOrbitope)
 
    /* create linear constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nspcons, sourcedata->nblocks,
-         sourcedata->orbitopetype, sourcedata->resolveprop, sourcedata->usedynamicprop, sourcedata->ismodelcons) );
+         sourcedata->orbitopetype, sourcedata->resolveprop, sourcedata->usedynamicprop, sourcedata->ismodelcons,
+         sourcedata->mayinteract) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -3566,8 +3576,9 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
             vars, sourcedata->orbitopetype, nspcons, nblocks, sourcedata->usedynamicprop,
-            sourcedata->resolveprop, sourcedata->ismodelcons,initial, separate, enforce,
-            check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            sourcedata->resolveprop, sourcedata->ismodelcons, sourcedata->mayinteract,
+            initial, separate, enforce, check, propagate,
+            local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    /* free space; only up to row i if copying failed */
@@ -3697,7 +3708,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    while ( *s != ')' );
    ++nspcons;
 
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, FALSE, TRUE, TRUE,
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, FALSE, TRUE, TRUE, TRUE,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    for (k = nspcons - 1; k >= 0; --k)
@@ -3835,6 +3846,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -3924,12 +3937,12 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( conshdlrdata->checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype) );
+      SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nspcons, nblocks, &orbitopetype, mayinteract) );
    }
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype,
-         resolveprop, usedynamicprop, ismodelcons) );
+         resolveprop, usedynamicprop, ismodelcons, mayinteract) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -3953,11 +3966,13 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
-   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
+   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    )
 {
    SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, usedynamicprop,
-         resolveprop, ismodelcons, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         resolveprop, ismodelcons, mayinteract, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }

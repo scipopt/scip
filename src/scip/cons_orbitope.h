@@ -101,6 +101,8 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -145,7 +147,9 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
-   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
+   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
+                                              *   with symmetries handled by other routines */
    );
 
 /** @} */
