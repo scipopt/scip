@@ -4070,6 +4070,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIP_Bool* permused;
       SCIP_Bool allpermsused = FALSE;
       SCIP_Bool handlednonbinarysymmetry = FALSE;
+      SCIP_Bool addedsymresack = FALSE;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4338,7 +4339,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                   propdata->addsymresacks, &lexorder, &nvarslexorder, &maxnvarslexorder) );
 
             /* store whether symmetries on non-binary symmetries have been handled */
-            if ( ! SCIPvarIsBinary(propdata->permvars[graphcomponents[graphcompbegins[largestcolorcomp]]])
+            if ( ! SCIPvarIsBinary(propdata->permvars[graphcomponents[graphcompbegins[largestcolorcomp]]]) )
                handlednonbinarysymmetry = TRUE;
 
             if ( ! propdata->componentblocked[i] )
@@ -4351,7 +4352,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
             nstrongsbcs += graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp] - 1;
 #endif
          }
-#if 0
          /* otherwise, just mark the color as not handled */
          else
          {
@@ -4363,7 +4363,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
                chosencomppercolor[j] = -1; /*lint !e613*/
             }
          }
-#endif
       }
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
@@ -4397,6 +4396,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* do not release constraint here - will be done later */
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
+            addedsymresack = TRUE;
 
             if ( ! propdata->componentblocked[i] )
             {
@@ -4410,9 +4410,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPfreeBlockMemoryArrayNull(scip, &lexorder, maxnvarslexorder);
       }
 
-#if 0
       /* possibly add weak SBCs for enclosing orbit of first component */
-      if ( propdata->addweaksbcs && propdata->componentblocked[i] && nusedperms < npermsincomp )
+      if ( propdata->addweaksbcs && ! addedsymresack && propdata->componentblocked[i] && nusedperms < npermsincomp )
       {
          int naddedconss;
 
@@ -4431,7 +4430,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       }
       else
          SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used or the settings forbid it\n");
-#endif
 
       SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
