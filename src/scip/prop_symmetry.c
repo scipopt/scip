@@ -3215,7 +3215,9 @@ SCIP_RETCODE buildSubgroupGraph(
    int*                  ncompcolors,        /**< pointer to store the number of different colors */
    int**                 usedperms,          /**< buffer to store the indices of permutations that were used */
    int*                  nusedperms,         /**< pointer to store the number of used permutations in the graph */
-   int                   usedpermssize       /**< initial size of usedperms */
+   int                   usedpermssize,      /**< initial size of usedperms */
+   SCIP_Bool*            permused            /**< initialized buffer to store which permutations have beend used
+                                              *   (identified by index in component) */
    )
 {
    SCIP_DISJOINTSET* vartocomponent;
@@ -3243,6 +3245,7 @@ SCIP_RETCODE buildSubgroupGraph(
    assert( usedperms != NULL );
    assert( nusedperms != NULL );
    assert( usedpermssize > 0 );
+   assert( permused != NULL );
    assert( ntwocycleperms >= 0 );
    assert( compidx >= 0 );
    assert( compidx < propdata->ncomponents );
@@ -3360,6 +3363,7 @@ SCIP_RETCODE buildSubgroupGraph(
 
       (*usedperms)[*nusedperms] = components[componentbegins[compidx] + genorder[j]];
       ++(*nusedperms);
+      permused[genorder[j]] = TRUE;
 
       /* if the generator can be added, update the datastructures for graph components and colors */
       for (k = 0; k < npermvars; ++k)
@@ -4030,6 +4034,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
+      SCIP_Bool* permused;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4102,10 +4107,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       usedpermssize = ntwocycleperms / 2;
       SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, usedpermssize) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &permused, npermsincomp) );
 
       SCIP_CALL( buildSubgroupGraph(scip, propdata, genorder, ntwocycleperms, i,
             &graphcomponents, &graphcompbegins, &compcolorbegins, &ngraphcomponents,
-            &ncompcolors, &usedperms, &nusedperms, usedpermssize) );
+            &ncompcolors, &usedperms, &nusedperms, usedpermssize, permused) );
 
       SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
 
@@ -4334,6 +4340,10 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIP_CONS* cons;
             char name[SCIP_MAXSTRLEN];
 
+            /* skip permutations that have been used to build an orbitope */
+            if ( permused[k] )
+               continue;
+
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_comp%d_perm%d", i, k);
 
             SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, modifiedperms[propdata->components[propdata->componentbegins[i] + k]],
@@ -4385,6 +4395,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIPfreeBlockMemoryArrayNull(scip, &compcolorbegins, ncompcolors + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcompbegins, ngraphcomponents + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &graphcomponents, propdata->npermvars);
+      SCIPfreeBufferArray(scip, &permused);
       SCIPfreeBufferArrayNull(scip, &usedperms);
    }
 
