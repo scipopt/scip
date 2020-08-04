@@ -184,6 +184,7 @@
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
 #define DEFAULT_ONLYBINSUBGROUPS     TRUE    /**< Should only subgroups on binary variables be handled */
 #define DEFAULT_SUBGRPPERMRATIO     0.501    /**< minimum percentage of permutations a subgroup has to use to be valid */
+#define DEFAULT_PREFERLESSROWS       TRUE    /**< Shall orbitopes with less rows be preferred in detection? */
 
 /* default parameters for orbital fixing */
 #define DEFAULT_OFSYMCOMPTIMING         2    /**< timing of symmetry computation for orbital fixing (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -302,6 +303,7 @@ struct SCIP_PropData
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
    SCIP_Bool             onlybinsubgroups;   /**< whether only subgroups on binary variables should be handled */
    SCIP_Real             subgrppermratio;    /**< minimum percentage of permutations a subgroup has to use to be valid */
+   SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
 
    /* data necessary for orbital fixing */
    SCIP_Bool             ofenabled;          /**< Run orbital fixing? */
@@ -3107,9 +3109,14 @@ SCIP_RETCODE chooseOrderOfGenerators(
       if ( ntwocycles[i] == 0 )
       {
          /* we change the number of two cycles for this perm so that it will be sorted to the end */
-         ntwocycles[i] = npermvars;
+         if ( propdata->preferlessrows )
+            ntwocycles[i] = npermvars;
+         else
+            ntwocycles[i] = 0;
          --(*ntwocycleperms);
       }
+      else if ( ! propdata->preferlessrows )
+         ntwocycles[i] = - ntwocycles[i];
    }
 
    SCIPsortIntInt(ntwocycles, *genorder, npermsincomp);
@@ -7169,6 +7176,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/symfixnonbinaryvars",
          "Whether all non-binary variables shall be not affected by symmetries if OF is active?",
          &propdata->symfixnonbinaryvars, TRUE, DEFAULT_SYMFIXNONBINARYVARS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/preferlessrows",
+         "Shall orbitopes with less rows be preferred in detection?",
+         &propdata->preferlessrows, TRUE, DEFAULT_PREFERLESSROWS, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
