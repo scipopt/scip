@@ -5937,9 +5937,9 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    /* possibly stop */
    if ( SCIPisStopped(scip) )
    {
-      if ( propdata->ngenconss == 0 )
+      if ( propdata->ngenorbconss == 0 )
       {
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genconss, propdata->nperms);
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, 2 * propdata->nperms);
       }
       return SCIP_OKAY;
    }
