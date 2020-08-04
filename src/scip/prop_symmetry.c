@@ -849,7 +849,7 @@ SCIP_RETCODE freeSymmetryData(
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms);
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
       propdata->ngenorbconss = 0;
    }
 
@@ -974,7 +974,7 @@ SCIP_RETCODE delSymConss(
    if ( propdata->ngenorbconss == 0 )
    {
       if ( propdata->genorbconss != NULL )
-         SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms);
+         SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
    }
    else
    {
@@ -991,7 +991,7 @@ SCIP_RETCODE delSymConss(
       }
 
       /* free pointers to symmetry group and binary variables */
-      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms);
+      SCIPfreeBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms);
       propdata->ngenorbconss = 0;
    }
 
@@ -1037,7 +1037,7 @@ SCIP_RETCODE delSymConss(
    /* free pointers to symmetry group and binary variables */
    assert( propdata->nperms > 0 );
    assert( propdata->nperms >= propdata->ngenorbconss );
-   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, 2 * propdata->nperms);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
    propdata->ngenorbconss = 0;
    propdata->triedaddconss = FALSE;
 
@@ -4464,9 +4464,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d adapted to suborbitope lexorder\n", k, i);
          }
-
-         SCIPfreeBlockMemoryArrayNull(scip, &lexorder, maxnvarslexorder);
       }
+      SCIPfreeBlockMemoryArrayNull(scip, &lexorder, maxnvarslexorder);
 
       SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
