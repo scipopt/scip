@@ -3766,7 +3766,11 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    int*                  chosencomppercolor, /**< array indicating which comp was handled per color */
    int*                  firstvaridxpercolor,/**< array indicating the largest variable per color */
    int                   symgrpcompidx,      /**< index of the component of the symmetry group */
-   int*                  naddedconss         /**< buffer to store the number of added constraints */
+   int*                  naddedconss,        /**< buffer to store the number of added constraints */
+   SCIP_Bool             storelexorder,      /**< whether the lexicographic order induced by the orbitope shall be stored */
+   int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
+   int*                  nvarsorder,         /**< number of variables in lexicographic order */
+   int*                  maxnvarsorder       /**< maximum number of variables in lexicographic order */
    )
 {  /*lint --e{571}*/
    SCIP_HASHSET* usedvars;
@@ -3790,6 +3794,9 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    assert( naddedconss != NULL );
    assert( symgrpcompidx >= 0 );
    assert( symgrpcompidx < propdata->ncomponents );
+   assert( ! storelexorder || lexorder != NULL );
+   assert( ! storelexorder || nvarsorder != NULL );
+   assert( ! storelexorder || maxnvarsorder != NULL );
 
    npermsincomp = propdata->componentbegins[symgrpcompidx + 1] - propdata->componentbegins[symgrpcompidx];
 
@@ -3896,6 +3903,31 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
          propdata->genlinconss[propdata->ngenlinconss] = cons;
          ++propdata->ngenlinconss;
+      }
+
+      /* possibly store lexicographic order defined by weak SBCs */
+      if ( storelexorder )
+      {
+         if ( *maxnvarsorder == 0 )
+         {
+            *maxnvarsorder = 1;
+            *nvarsorder = 0;
+
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
+            (*lexorder)[*nvarsorder++] = orbit[activeorb][0];
+         }
+         else
+         {
+            assert( *nvarsorder == *maxnvarsorder );
+
+            *maxnvarsorder += 1;
+
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
+
+            /* the leader of the weak inequalities has to be the first element in the lexicographic order */
+            (*lexorder)[*nvarsorder++] = (*lexorder)[0];
+            (*lexorder)[0] = orbit[activeorb][0];
+         }
       }
    }
    else
@@ -4070,7 +4102,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIP_Bool* permused;
       SCIP_Bool allpermsused = FALSE;
       SCIP_Bool handlednonbinarysymmetry = FALSE;
-      SCIP_Bool addedsymresack = FALSE;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4367,6 +4398,27 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       SCIPdebugMsg(scip, "    skipped %d trivial colors\n", ntrivialcolors);
 
+      /* possibly add weak SBCs for enclosing orbit of first component */
+      if ( propdata->addweaksbcs && propdata->componentblocked[i] && nusedperms < npermsincomp )
+      {
+         int naddedconss;
+
+         assert( firstvaridxpercolor != NULL );
+         assert( chosencomppercolor != NULL );
+
+         SCIP_CALL( addWeakSBCsSubgroup(scip, propdata, compcolorbegins, graphcompbegins,
+               graphcomponents, ncompcolors, chosencomppercolor, firstvaridxpercolor,
+               i, &naddedconss, propdata->addsymresacks, &lexorder, &nvarslexorder, &maxnvarslexorder) );
+
+         assert( naddedconss < propdata->npermvars );
+
+#ifdef SCIP_DEBUG
+         nweaksbcs += naddedconss;
+#endif
+      }
+      else
+         SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used or the settings forbid it\n");
+
       /* if suborbitopes or strong group actions have been found, potentially add symresacks adapted to
        * variable order given by lexorder if no symmetries on non-binary variables have been handled
        */
@@ -4396,7 +4448,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
             /* do not release constraint here - will be done later */
             propdata->genorbconss[propdata->ngenorbconss++] = cons;
             ++propdata->nsymresacks;
-            addedsymresack = TRUE;
 
             if ( ! propdata->componentblocked[i] )
             {
@@ -4409,27 +4460,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          SCIPfreeBlockMemoryArrayNull(scip, &lexorder, maxnvarslexorder);
       }
-
-      /* possibly add weak SBCs for enclosing orbit of first component */
-      if ( propdata->addweaksbcs && ! addedsymresack && propdata->componentblocked[i] && nusedperms < npermsincomp )
-      {
-         int naddedconss;
-
-         assert( firstvaridxpercolor != NULL );
-         assert( chosencomppercolor != NULL );
-
-         SCIP_CALL( addWeakSBCsSubgroup(scip, propdata, compcolorbegins, graphcompbegins,
-               graphcomponents, ncompcolors, chosencomppercolor, firstvaridxpercolor,
-               i, &naddedconss) );
-
-         assert( naddedconss < propdata->npermvars );
-
-#ifdef SCIP_DEBUG
-         nweaksbcs += naddedconss;
-#endif
-      }
-      else
-         SCIPdebugMsg(scip, "  don't add weak sbcs because all generators were used or the settings forbid it\n");
 
       SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
       SCIPfreeBufferArrayNull(scip, &chosencomppercolor);
