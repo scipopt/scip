@@ -14,6 +14,7 @@ Features
 Performance improvements
 ------------------------
 
+- Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 
 Examples and applications
@@ -31,6 +32,10 @@ Interface changes
   changed from SCIP_Shortbool* to unsigned*.
 
 ### New API functions
+
+- added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
+  that is initialized to zeros
+
 ### Command line interface
 ### Interfaces to external software
 ### Changed parameters
@@ -143,7 +148,10 @@ Fixed bugs
 - Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
+- Fixed parsing of small number in CIP format of nonlinear constraint
+- Fixed problem in upgrading full orbitopes to partitioning orbitopes
 
 Miscellaneous
 -------------

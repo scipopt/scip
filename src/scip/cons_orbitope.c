@@ -460,7 +460,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
        * row is covered by a set packing/partitioning cons's support
        */
       if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING
-           && nrowintersect == 1 && rowcoveragesetppc[rowsinsetppc[0]] == ncols )
+           && nrowintersect == 1 && rowcoveragesetppc[rowsinsetppc[0]] == ncols && nsetppcvars == ncols )
       {
          if ( covered[rowsinsetppc[0]] == 1 )
             --ncovered;
