@@ -5922,7 +5922,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
    if ( propdata->symconsenabled )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, 2 * propdata->nperms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->genorbconss, propdata->nperms) );
 
       if ( propdata->detectorbitopes )
       {
@@ -5939,7 +5939,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    {
       if ( propdata->ngenorbconss == 0 )
       {
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, 2 * propdata->nperms);
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
       }
       return SCIP_OKAY;
    }
@@ -5976,7 +5976,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
 
       /* free symmetry conss if no orbitope/symresack constraints have been found (may happen if Schreier-Sims constraints are active) */
       if ( propdata->ngenorbconss == 0 )
-         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, 2 * propdata->nperms);
+         SCIPfreeBlockMemoryArrayNull(scip, &propdata->genorbconss, propdata->nperms);
    }
 
    return SCIP_OKAY;
