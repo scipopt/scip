@@ -3012,6 +3012,13 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    SCIPdebugMsg(scip, "  exec event %#x for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
 
+   /* we can ignore events for auxvars for now
+    * (relaxing their bounds does not invalidate activities anymore, as auxvar bounds aren't used there anymore)
+    * TODO cleanup the SCIPisConsExprExprVar() calls below, but I also might want to do something with auxvar bound events, too
+    */
+   if( !SCIPisConsExprExprVar(expr) )
+      return SCIP_OKAY;
+
    /* for real variables notify constraints to repropagate and possibly resimplify */
    if( SCIPisConsExprExprVar(expr) && ((SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) || ((eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0)) )
    {
