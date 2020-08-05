@@ -2472,6 +2472,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
+
       if( sscanf(valuestr, "%d", &intval) != 1 || !SCIPisIntParamValid(scip, param, intval) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid value <%s> for int parameter <%s>. Must be integral in range [%d,%d].\n\n",
@@ -2492,7 +2494,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          }
 
          SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
 
       break;
@@ -2508,6 +2509,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
       if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 || !SCIPisLongintParamValid(scip, param, longintval) )
       {
@@ -2528,7 +2531,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          }
 
          SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
@@ -2543,6 +2545,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
       if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &realval) != 1 || !SCIPisRealParamValid(scip, param, realval) )
       {
@@ -2563,7 +2567,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          }
 
          SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
@@ -2577,6 +2580,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
       /* coverity[secure_coding] */
       if( sscanf(valuestr, "%c", &charval) != 1 || !SCIPisCharParamValid(scip, param, charval) )
@@ -2598,7 +2603,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          }
 
          SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
@@ -2613,7 +2617,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       if( valuestr[0] == '\0' )
          return SCIP_OKAY;
 
-      if ( !SCIPisStringParamValid(scip, param, valuestr) )
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
+
+      if( !SCIPisStringParamValid(scip, param, valuestr) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid character in string parameter.\n\n");
       }
@@ -2630,7 +2636,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
             SCIP_CALL( retcode );
          }
          SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
       }
       break;
 
