@@ -2453,8 +2453,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
             SCIP_CALL( retcode );
          }
 
-         boolval = SCIPparamGetBool(param);
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), SCIPparamGetBool(param) ? "TRUE" : "FALSE");
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
 
@@ -2493,7 +2492,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
             SCIP_CALL( retcode );
          }
 
-         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
+         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), SCIPparamGetInt(param));
       }
 
       break;
@@ -2530,7 +2529,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
             SCIP_CALL( retcode );
          }
 
-         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
+         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param),
+            SCIPparamGetLongint(param));
       }
       break;
 
@@ -2566,7 +2566,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
             SCIP_CALL( retcode );
          }
 
-         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
+         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
       }
       break;
 
@@ -2602,7 +2602,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
             SCIP_CALL( retcode );
          }
 
-         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
+         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), SCIPparamGetChar(param));
       }
       break;
 
@@ -2635,7 +2635,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
          {
             SCIP_CALL( retcode );
          }
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
+
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), SCIPparamGetString(param));
       }
       break;
 
