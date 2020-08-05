@@ -1047,7 +1047,7 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
          if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
             continue;
 
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE, TRUE) );
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE) );
 
          if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
          {
@@ -1078,7 +1078,7 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
          if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
             continue;
 
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE, TRUE) );
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE) );
 
          if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
          {
@@ -1587,7 +1587,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID )  /*lint !e777*/
    {
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE) );
       lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
       rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
    }
@@ -1643,8 +1643,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 2);
 
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &yactivity, FALSE, TRUE) );
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], &zactivity, FALSE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &yactivity, FALSE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], &zactivity, FALSE) );
 
       if( SCIPisNegative(scip, yactivity.inf + zactivity.inf) )
       {
@@ -1669,7 +1669,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
       SCIP_INTERVAL rhsactivity;
 
       assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 1);
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &rhsactivity, FALSE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &rhsactivity, FALSE) );
 
       if( rhsactivity.inf < 0.0 )
       {
@@ -2049,7 +2049,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    {
       if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID ) /*lint !e777*/
       {
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE, TRUE) );
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE) );
          lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
          rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
       }

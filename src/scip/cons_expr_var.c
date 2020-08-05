@@ -292,22 +292,14 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
    assert(var != NULL);
 
    if( intevalvar != NULL )
-      *interval = intevalvar(scip, var, global, intevalvardata);
+      *interval = intevalvar(scip, var, intevalvardata);
    else
    {
       SCIP_Real lb;
       SCIP_Real ub;
 
-      if( global )
-      {
-         lb = SCIPvarGetLbGlobal(var);
-         ub = SCIPvarGetUbGlobal(var);
-      }
-      else
-      {
-         lb = SCIPvarGetLbLocal(var);
-         ub = SCIPvarGetUbLocal(var);
-      }
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
 
       SCIPintervalSetBounds(interval,  /*lint !e666*/
          -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb),    /*lint !e666*/

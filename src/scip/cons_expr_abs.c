@@ -507,7 +507,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE) );
    childinf = SCIPintervalGetInf(childbounds);
    childsup = SCIPintervalGetSup(childbounds);
 
@@ -539,7 +539,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE) );
 
    if( childbounds.sup <= 0.0 )
       *result = SCIP_MONOTONE_DEC;

@@ -1983,7 +1983,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
          continue;
 
       assert(SCIPgetConsExprExprChildren(expr)[i] != NULL);
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], &interval, FALSE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], &interval, FALSE) );
 
       if( SCIPintervalGetSup(interval) <= 0.0 )
          nneg++;
