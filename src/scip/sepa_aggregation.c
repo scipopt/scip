@@ -834,7 +834,8 @@ SCIP_RETCODE aggregation(
       /* if the objective is integral we round the right hand side of the cutoff constraint.
        * Therefore the constraint may not be valid for the problem but it is valid for the set
        * of all improving solutions. We refrain from adding an epsilon cutoff for the case
-       * of a non-integral objective function to avoid numerical troubles.
+       * of a non-integral objective function to avoid cutting of any improving solution even
+       * if the improvement is below some epsilon value.
        */
       if( SCIPisObjIntegral(scip) )
          rhs = floor(SCIPgetUpperbound(scip) - 0.5);
