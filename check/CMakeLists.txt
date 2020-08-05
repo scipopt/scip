@@ -150,6 +150,9 @@ set(settings_Symmetry
     "packingorbitopes-timing2"
     "symresacks-timing0"
     "symresacks-timing2"
+    "sst_leader-first_tiebreak-maxconflicts"
+    "sst_leader-first_tiebreak-orbitmin"
+    "sst_leader-maxconflicts_tiebreak-orbitmin"
     )
 
 set(settings_sparsify
