@@ -52,6 +52,7 @@ Fixed bugs
 
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
+- Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 
 Miscellaneous
 -------------
