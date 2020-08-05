@@ -1522,6 +1522,8 @@ SCIP_RETCODE forwardPropExpr(
  *
  *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
  *  forwardPropExpr() before calling this function
+ *
+ *  @note calling this function with *infeasible == TRUE will only empty the queue
  */
 static
 SCIP_RETCODE reversePropQueue(
@@ -1529,7 +1531,7 @@ SCIP_RETCODE reversePropQueue(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_QUEUE*             queue,            /**< queue of expression to propagate */
    SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
-   SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
+   SCIP_Bool*              infeasible,       /**< buffer to update whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
 {
@@ -1537,7 +1539,6 @@ SCIP_RETCODE reversePropQueue(
    assert(infeasible != NULL);
    assert(ntightenings != NULL);
 
-   *infeasible = FALSE;
    *ntightenings = 0;
 
    /* main loop that calls reverse propagation for expressions on the queue
@@ -1615,10 +1616,6 @@ SCIP_RETCODE reversePropQueue(
 
       /* restore original activity */
       expr->activity = activity;
-
-      /* stop propagation if the problem is infeasible */
-      if( *infeasible )
-         break;
    }
 
    /* reset propbounds for all remaining expr's in queue (can happen in case of early stop due to infeasibility) */
@@ -1792,11 +1789,11 @@ SCIP_RETCODE propConss(
             *result = SCIP_REDUCEDDOM;
       }
 
+      /* apply backward propagation (if cutoff is TRUE, then this call empties the queue) */
+      SCIP_CALL( reversePropQueue(scip, conshdlr, queue, force, &cutoff, &ntightenings) );
+
       if( !cutoff )
       {
-         /* apply backward propagation */
-         SCIP_CALL( reversePropQueue(scip, conshdlr, queue, force, &cutoff, &ntightenings) );
-
          /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
          success = ntightenings > 0;
 
@@ -1805,15 +1802,6 @@ SCIP_RETCODE propConss(
 
          if( success )
             *result = SCIP_REDUCEDDOM;
-      }
-      else
-      {
-         while( !SCIPqueueIsEmpty(queue) )
-         {
-            SCIP_CONSEXPR_EXPR* expr;
-            expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(queue);
-            SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->propbounds);
-         }
       }
 
       assert(SCIPqueueIsEmpty(queue));

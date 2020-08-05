@@ -117,20 +117,9 @@ SCIP_RETCODE propCons(
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, conssides, TRUE, reversepropqueue, infeasible, &ntightenings) );
    }
 
-   if( !*infeasible )
-   {
-      SCIP_CALL( reversePropQueue(scip, conshdlr, reversepropqueue, TRUE, infeasible, &ntightenings) );
-   }
-   else
-   {
-      while( !SCIPqueueIsEmpty(reversepropqueue) )
-      {
-         expr = (SCIP_CONSEXPR_EXPR*)SCIPqueueRemove(reversepropqueue);
-         SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->propbounds);
-      }
-   }
-
+   SCIP_CALL( reversePropQueue(scip, conshdlr, reversepropqueue, TRUE, infeasible, &ntightenings) );
    cr_assert(SCIPqueueIsEmpty(reversepropqueue));
+
    SCIPqueueFree(&reversepropqueue);
 
    return SCIP_OKAY;
@@ -835,9 +824,6 @@ Test(propagate, infeas_after_backwardprop)
    cr_assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), 2.0));
    cr_assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 1.5));
    cr_assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 2.0));
-
-   while( !SCIPqueueIsEmpty(queue) )
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &((SCIP_CONSEXPR_EXPR*)SCIPqueueRemove(queue))->propbounds);
 
    /* apply forward propagation for cons1 again to update activity */
    SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons1), TRUE, TRUE, FALSE, intEvalVarBoundTightening, (void*)SCIPconshdlrGetData(conshdlr), &infeasible, &ntightenings) );
