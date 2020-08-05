@@ -2060,6 +2060,7 @@ void endLine(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < PIP_MAX_PRINTLEN );
 
    if( (*linecnt) > 0 )
    {

@@ -3000,7 +3000,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      if( !idempotent )
+      if( !idempotent ) /*lint !e774*/
       {
          SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
       }
@@ -3740,7 +3740,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
     */
    if( !(*lperror) && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->set->misc_exactsolve )
    {
-      if( !idempotent )
+      if( !idempotent ) /*lint !e774*/
       {
          SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
       }

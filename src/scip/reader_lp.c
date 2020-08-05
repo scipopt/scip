@@ -1339,7 +1339,7 @@ SCIP_RETCODE readObjective(
    SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
    SCIPfreeBlockMemoryArrayNull(scip, &coefs, coefssize);
 
-   return SCIP_OKAY; /*line !e438*/
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** create indicator constraint */
@@ -1442,7 +1442,7 @@ SCIP_RETCODE createIndicatorConstraint(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
-   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ);
+   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ); /*lint !e530*/
 
    /* read the right hand side */
    linsidesign = +1;
@@ -1468,7 +1468,7 @@ SCIP_RETCODE createIndicatorConstraint(
 
    /* assign the left and right hand side, depending on the constraint sense */
    linConsEQ = FALSE;
-   switch( linsense )
+   switch( linsense ) /*lint !e530*/
    {
    case LP_SENSE_GE:
       linrhs = -linsidevalue;
@@ -1641,7 +1641,7 @@ SCIP_RETCODE readConstraints(
    sidevalue *= sidesign;
 
    /* assign the left and right hand side, depending on the constraint sense */
-   switch( sense )
+   switch( sense ) /*lint !e530*/
    {
    case LP_SENSE_GE:
       lhs = sidevalue;
@@ -2553,6 +2553,7 @@ void endLine(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < LP_MAX_PRINTLEN );
 
    if( (*linecnt) > 0 )
    {

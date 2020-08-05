@@ -2216,7 +2216,7 @@ SCIP_RETCODE SCIPpriceLoop(
    /* set information, whether the current lp is a valid relaxation of the current problem */
    SCIPlpSetIsRelax(lp, !(*aborted));
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** separates cuts of the cut pool */
@@ -2829,8 +2829,8 @@ SCIP_RETCODE priceAndCutLoop(
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
       (*cutoff || *unbounded) ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob));
 
-   return SCIP_OKAY;
-}  /*lint !e438*/
+   return SCIP_OKAY; /*lint !e438*/
+}
 
 /** updates the current lower bound with the pseudo objective value, cuts off node by bounding, and applies conflict
  *  analysis if the pseudo objective lead to the cutoff

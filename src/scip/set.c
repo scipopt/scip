@@ -1506,7 +1506,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* display parameters */
-   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL));
+   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "display/verblevel",
          "verbosity level of output",
@@ -2569,7 +2569,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* timing parameters */
-   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE));
+   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "timing/clocktype",
          "default clock type (1: CPU user seconds, 2: wall clock time)",

@@ -89,8 +89,6 @@ void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
    )
 {
-   SCIPerrorMessage("Ipopt not available!\n");
-   SCIPABORT();
 }  /*lint !e715*/
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 

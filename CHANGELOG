@@ -21,6 +21,8 @@ Interface changes
 
 ### New API functions
 
+- new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -50,8 +52,13 @@ Build system
 Fixed bugs
 ----------
 
+- Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
+- Fixed problem with incompatibility of symmetry handling in Benders decomposition
+- Fixed parsing of small number in CIP format of nonlinear constraint
+- Fixed problem in upgrading full orbitopes to partitioning orbitopes
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 
 Miscellaneous

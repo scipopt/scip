@@ -9498,8 +9498,8 @@ SCIP_RETCODE fixIntegerVariableUb(
     * handler is the only one locking that variable up
     */
    assert(uplock == TRUE || uplock == FALSE);
-   assert((int)TRUE == 1);
-   assert((int)FALSE == 0);
+   assert((int)TRUE == 1);  /*lint !e506*/
+   assert((int)FALSE == 0); /*lint !e506*/
 
    if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > (int)(uplock) )
       return SCIP_OKAY;
@@ -9550,8 +9550,8 @@ SCIP_RETCODE fixIntegerVariableLb(
     * handler is the only one locking that variable down
     */
    assert(downlock == TRUE || downlock == FALSE);
-   assert((int)TRUE == 1);
-   assert((int)FALSE == 0);
+   assert((int)TRUE == 1);  /*lint !e506*/
+   assert((int)FALSE == 0); /*lint !e506*/
 
    if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > (int)(downlock) )
       return SCIP_OKAY;

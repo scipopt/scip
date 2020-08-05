@@ -1520,8 +1520,7 @@ SCIP_RETCODE readBounds(
           */
          if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
          {
-            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER
-               && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY);
+            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY); /*lint !e506*/
             /* relaxing variable type */
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
          }

@@ -50,6 +50,9 @@
 // for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
 -e666
 
+// turn off all warnings for exprinterpret_cppad.cpp because the code is not ours
+-efile(*,src/nlpi/exprinterpret_cppad.cpp)
+
 // last value assigned to '_restat_' not used
 -emacro(438,SCIP_CALL)
 -emacro(438,SCIP_CALL_ABORT)
@@ -61,6 +64,21 @@
 -emacro(505,SCIPtpiReleaseLock)
 -emacro(505,SCIPtpiInitCondition)
 -emacro(505,SCIPtpiWaitCondition)
+
+// constant value used in Boolean context
+-emacro(506,SCIPdebugMsg)
+-emacro(506,SCIPdebugMsgPrint)
+-emacro(506,SCIPdebugMessage)
+-emacro(506,SCIPdebugPrintf)
+-emacro(506,SCIPstatisticPrintf)
+-emacro(506,SCIPstatisticMessage)
+-emacro(506,SCIPsetDebugMsg)
+-emacro(506,SCIPsetDebugMsgPrint)
+-emacro(506,SCIPstatDebugMsg)
+-emacro(506,debugMessage)
+-emacro(506,debugPrintf)
+-emacro(506,SCIPABORT)
+
 
 // is likely uninitialized
 -emacro(530,va_*)
@@ -115,6 +133,7 @@
 -emacro(737,SCIPfreeBlockMemoryArrayNull)
 -emacro(737,BMSfreeBlockMemoryArray)
 -emacro(737,BMSfreeBlockMemoryArrayNull)
+-emacro(737,BMSreallocBlockMemorySize)
 -emacro(737,BMSallocMemorySize)
 
 // cannot turn off warning otherwise: local macro not referenced

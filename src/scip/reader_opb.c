@@ -2114,6 +2114,7 @@ void writeBuffer(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < OPB_MAX_LINELEN );
 
    if( (*linecnt) > 0 )
    {

@@ -18705,13 +18705,13 @@ SCIP_RETCODE SCIPupgradeConsLinear(
     * TODO: this needs to be fixed on master by changing the API and passing a pointer to whether the constraint is
     *       proven to be infeasible.
     */
-   if( infeasible )
+   if( infeasible )   /*lint !e774*/
       return SCIP_OKAY;
 
    /* tighten sides */
    SCIP_CALL( tightenSides(scip, cons, &nchgsides, &infeasible) );
 
-   if( infeasible )
+   if( infeasible )   /*lint !e774*/
       return SCIP_OKAY;
 
    /*
