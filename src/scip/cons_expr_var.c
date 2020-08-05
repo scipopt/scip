@@ -589,6 +589,21 @@ SCIP_RETCODE SCIPdropConsExprExprVarEvent(
    return SCIP_OKAY;
 }
 
+/** returns whether the variable events on variable are catched */
+SCIP_Bool SCIPisConsExprExprVarEventCatched(
+   SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->filterpos >= 0;
+}
 
 /** gives number of constraints for which the expression catches bound change events on the variable */
 int SCIPgetConsExprExprVarNConss(

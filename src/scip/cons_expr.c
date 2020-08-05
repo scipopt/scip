@@ -232,12 +232,14 @@ struct SCIP_ConshdlrData
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
    unsigned int             curboundstag;    /**< tag indicating current variable bounds */
    unsigned int             lastboundrelax;  /**< tag when bounds where most recently relaxed */
+   unsigned int             lastvaractivitymethodchange; /**< tag when method used to evaluate activity of variables changed last */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
    unsigned int             enforound;       /**< total number of enforcement calls, including current one */
 
    int                      lastconsindex;   /**< last used consindex, plus one */
 
    /* activity intervals and domain propagation */
+   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)); /**< method currently used for activity calculation of variable expressions */
    SCIP_Bool                globalbounds;    /**< whether global variable bounds should be used for activity calculation */
    SCIP_QUEUE*              reversepropqueue;  /**< expression queue to be used in reverse propagation, filled by SCIPtightenConsExprExprInterval */
    SCIP_Bool                forceboundtightening; /**< whether bound change passed to SCIPtightenConsExprExprInterval should be forced */
@@ -1263,8 +1265,6 @@ SCIP_RETCODE forwardPropExpr(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression */
    SCIP_Bool               tightenauxvars,   /**< should the bounds of auxiliary variables be tightened? */
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), /**< function to call to evaluate interval of variable, or NULL */
-   void*                   intevalvardata,   /**< data to be passed to intevalvar call */
    SCIP_Bool*              infeasible,       /**< buffer to store whether the problem is infeasible (NULL if not needed) */
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
    )
@@ -1355,6 +1355,28 @@ SCIP_RETCODE forwardPropExpr(
             /* we should not have entered this expression if its activity was already uptodate */
             assert(expr->activitytag < conshdlrdata->curboundstag);
 
+            /* for var exprs where varevents are catched, activity is updated immediately when the varbound has been changed
+             * so for all these variables, we can assume that the activity is uptodate
+             * UNLESS we changed the method used to evaluate activity of variable expressions
+             *   or we currently use global bounds (varevents are catched for local bound changes only)
+             */
+            if( expr->exprhdlr == conshdlrdata->exprvarhdlr && SCIPisConsExprExprVarEventCatched(expr) && expr->activitytag >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds)
+            {
+#ifndef NDEBUG
+               SCIP_INTERVAL exprhdlrinterval;
+
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+               assert(SCIPisRelEQ(scip, exprhdlrinterval.inf, expr->activity.inf));
+               assert(SCIPisRelEQ(scip, exprhdlrinterval.sup, expr->activity.sup));
+#endif
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, "skip interval evaluation of var expr %p\n", (void*)expr);
+#endif
+               expr->activitytag = conshdlrdata->curboundstag;
+
+               break;
+            }
+
             if( expr->activitytag < conshdlrdata->lastboundrelax )
             {
                /* reset activity to entire if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
@@ -1418,7 +1440,7 @@ SCIP_RETCODE forwardPropExpr(
                   /* let nlhdlr evaluate current expression */
                   nlhdlrinterval = expr->activity;
                   SCIP_CALL( SCIPintevalConsExprNlhdlr(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-                     &nlhdlrinterval, intevalvar, intevalvardata) );
+                     &nlhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
                   SCIPdebugMsg(scip, " nlhdlr <%s>::inteval = [%.20g, %.20g]", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
 #endif
@@ -1434,7 +1456,7 @@ SCIP_RETCODE forwardPropExpr(
             {
                /* for node without enforcement (before or during detect), call the callback of the exprhdlr directly */
                SCIP_INTERVAL exprhdlrinterval = expr->activity;
-               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, intevalvar, intevalvardata) );
+               SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, exprhdlrinterval.inf, exprhdlrinterval.sup);
 #endif
@@ -1683,6 +1705,8 @@ SCIP_RETCODE propConss(
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+   assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+   assert(!conshdlrdata->globalbounds);
 
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
@@ -1719,8 +1743,7 @@ SCIP_RETCODE propConss(
          SCIPdebugPrintCons(scip, conss[i], NULL);
 
          ntightenings = 0;
-         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, intEvalVarBoundTightening,
-            (void*)SCIPconshdlrGetData(conshdlr), &cutoff, &ntightenings) );
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, &cutoff, &ntightenings) );
          assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
 #ifdef SCIP_DEBUG
@@ -1863,13 +1886,16 @@ SCIP_RETCODE checkRedundancyConss(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* increase curboundstag and pretend bounds were relaxed
-    * we do this here to trigger a reevaluation of all bounds, since we will relax variable bounds
+   /* increase curboundstag and set lastvaractivitymethodchange
+    * we do this here to trigger a reevaluation of all variable bounds, since we will relax variable bounds
     * for the redundancy check differently than for domain propagation
+    * we also update lastboundrelax to ensure activites of all expressions are indeed reevaluated
     */
    ++conshdlrdata->curboundstag;
    assert(conshdlrdata->curboundstag > 0);
+   conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
    conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
+   conshdlrdata->intevalvar = intEvalVarRedundancyCheck;
 
    SCIPdebugMsg(scip, "checking %d constraints for redundancy\n", nconss);
 
@@ -1893,7 +1919,7 @@ SCIP_RETCODE checkRedundancyConss(
             SCIPdebugMsg(scip, "constant constraint <%s> is infeasible: %g in [%g,%g] ", SCIPconsGetName(conss[i]), value, consdata->lhs, consdata->rhs);
             *cutoff = TRUE;
 
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
 
          SCIPdebugMsg(scip, "constant constraint <%s> is redundant: %g in [%g,%g] ", SCIPconsGetName(conss[i]), value, consdata->lhs, consdata->rhs);
@@ -1924,7 +1950,7 @@ SCIP_RETCODE checkRedundancyConss(
                ++*nchgbds;
 
             if( *cutoff )
-               return SCIP_OKAY;
+               goto TERMINATE;
          }
 
          if( !SCIPisInfinity(scip, consdata->rhs) )
@@ -1935,7 +1961,7 @@ SCIP_RETCODE checkRedundancyConss(
                ++*nchgbds;
 
             if( *cutoff )
-               return SCIP_OKAY;
+               goto TERMINATE;
          }
 
          /* delete the (now) redundant constraint locally */
@@ -1955,15 +1981,14 @@ SCIP_RETCODE checkRedundancyConss(
       SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s>: ", SCIPconsGetName(conss[i]));
       SCIPdebugPrintCons(scip, conss[i], NULL);
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, intEvalVarRedundancyCheck,
-         SCIPconshdlrGetData(conshdlr), cutoff, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, FALSE, cutoff, NULL) );
       assert(*cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
       /* it is unlikely that we detect infeasibility by doing forward propagation */
       if( *cutoff )
       {
          SCIPdebugMsg(scip, " -> cutoff\n");
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       assert(consdata->expr->activitytag == conshdlrdata->curboundstag);
@@ -1983,15 +2008,18 @@ SCIP_RETCODE checkRedundancyConss(
          SCIP_CALL( SCIPdelConsLocal(scip, conss[i]) );
          ++*ndelconss;
 
-         return SCIP_OKAY;
+         continue;
       }
 
       SCIPdebugMsg(scip, " -> not redundant: activity [%g,%g] not within sides [%g,%g]\n", activity.inf, activity.sup, consdata->lhs, consdata->rhs);
    }
 
-   /* make sure bounds are reevaluated again, since we relaxed bounds in a different way */
+TERMINATE:
+   /* make sure all activities are reevaluated again, since we relaxed bounds in a different way */
    ++conshdlrdata->curboundstag;
+   conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
    conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
+   conshdlrdata->intevalvar = intEvalVarBoundTightening;
 
    return SCIP_OKAY;
 }
@@ -2210,6 +2238,7 @@ SCIP_RETCODE detectNlhdlrs(
        */
       SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
       conshdlrdata->globalbounds = TRUE;
+      conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
    }
 
    for( i = 0; i < nconss; ++i )
@@ -2290,7 +2319,8 @@ SCIP_RETCODE detectNlhdlrs(
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
       SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-      conshdlrdata->globalbounds = TRUE;
+      conshdlrdata->globalbounds = FALSE;
+      conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
    }
 
    SCIPexpriteratorFree(&it);
@@ -2928,7 +2958,9 @@ SCIP_RETCODE catchVarEvents(
    SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* expr;
    int i;
 
    assert(eventhdlr != NULL);
@@ -2943,14 +2975,32 @@ SCIP_RETCODE catchVarEvents(
    if( consdata->catchedevents )
       return SCIP_OKAY;
 
+   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+
    SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
 
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
-      assert(consdata->varexprs[i] != NULL);
-      assert(SCIPisConsExprExprVar(consdata->varexprs[i]));
+      expr = consdata->varexprs[i];
 
-      SCIP_CALL( SCIPcatchConsExprExprVarEvent(scip, consdata->varexprs[i], eventhdlr, cons) );
+      assert(expr != NULL);
+      assert(SCIPisConsExprExprVar(expr));
+
+      SCIP_CALL( SCIPcatchConsExprExprVarEvent(scip, expr, eventhdlr, cons) );
+
+      /* from now on, activity of expr will usually be updated in processVarEvent if variable bound is changing
+       * since we just registered this eventhdlr, we should make sure that the activity is also uptodate now
+       */
+      if( expr->activitytag < conshdlrdata->curboundstag )
+      {
+         SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, intEvalVarBoundTightening, conshdlrdata) );
+         expr->activitytag = conshdlrdata->curboundstag;
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, "var-exprhdlr::inteval for var <%s> = [%.20g, %.20g]\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)), expr->activity.inf, expr->activity.sup);
+#endif
+      }
    }
 
    consdata->catchedevents = TRUE;
@@ -3010,7 +3060,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(eventdata != NULL);
    expr = (SCIP_CONSEXPR_EXPR*) eventdata;
 
-   SCIPdebugMsg(scip, "  exec event %#x for variable <%s>\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)));
+   SCIPdebugMsg(scip, "  exec event %#x for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)),
+      SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
+      SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
 
    /* we can ignore events for auxvars for now
     * (relaxing their bounds does not invalidate activities anymore, as auxvar bounds aren't used there anymore)
@@ -3088,9 +3140,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       /* we can update the activity of the var-expr here immediately */
       if( SCIPisConsExprExprVar(expr) )
       {
-         SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, intEvalVarBoundTightening, conshdlrdata) );
+         SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
-         SCIPdebugMsg(scip, "var-exprhdlr::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
+         SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
 #endif
          expr->activitytag = conshdlrdata->curboundstag;
       }
@@ -7574,7 +7626,7 @@ SCIP_RETCODE enforceConstraint(
       SCIP_Bool infeasible;
       int ntightenings;
 
-      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, inenforcement, intEvalVarBoundTightening, conshdlrdata, &infeasible, &ntightenings) );
+      SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, inenforcement, &infeasible, &ntightenings) );
       if( infeasible )
       {
          *result = SCIP_CUTOFF;
@@ -13937,8 +13989,7 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
       (!validsufficient && expr->activitytag < conshdlrdata->curboundstag) )
    {
       /* update activity of expression */
-      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, intEvalVarBoundTightening,
-         conshdlrdata, NULL, NULL) );
+      SCIP_CALL( forwardPropExpr(scip, consexprhdlr, expr, FALSE, NULL, NULL) );
 
       assert(expr->activitytag == conshdlrdata->curboundstag);
    }
@@ -15426,6 +15477,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
+   conshdlrdata->intevalvar = intEvalVarBoundTightening;
    conshdlrdata->lastsoltag = 1;
    conshdlrdata->curboundstag = 1;
    conshdlrdata->lastboundrelax = 1;
