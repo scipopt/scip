@@ -26,6 +26,7 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_var.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "bilinear"
@@ -932,40 +933,43 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
+   assert(participating != NULL);
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata);
 
-   *success = FALSE;
-
    /* only during solving will we have the extra inequalities that we rely on so much here */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
       return SCIP_OKAY;
 
    /* check for product expressions with two children */
    if( SCIPgetConsExprExprHdlrProduct(conshdlr) == SCIPgetConsExprExprHdlr(expr) && SCIPgetConsExprExprNChildren(expr) == 2
       && (nlhdlrdata->exprmap == NULL || !SCIPhashmapExists(nlhdlrdata->exprmap, (void*)expr)) )
    {
-      SCIP_CONSEXPR_EXPR* child1 = SCIPgetConsExprExprChildren(expr)[0];
-      SCIP_CONSEXPR_EXPR* child2 = SCIPgetConsExprExprChildren(expr)[1];
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
+      SCIP_CONSEXPR_EXPR** children;
+      SCIP_Bool valid;
+      int c;
 
-      assert(child1 != NULL);
-      assert(child2 != NULL);
+      children = SCIPgetConsExprExprChildren(expr);
+      assert(children != NULL);
 
-      var1 = SCIPgetConsExprExprAuxVar(child1);
-      var2 = SCIPgetConsExprExprAuxVar(child2);
-
-      /* detection is only successful if both children have an auxiliary variable */
-      if( var1 != NULL && var2 != NULL && !SCIPvarIsBinary(var1) && !SCIPvarIsBinary(var2) )
+      /* detection is only successful if both children will have auxiliary variable or are variables that are not binary variables */
+      valid = TRUE;
+      for( c = 0; c < 2; ++c )
       {
-         *success = TRUE;
+         assert(children[c] != NULL);
+         if( SCIPgetConsExprExprNAuxvarUses(children[c]) == 0 &&
+            (!SCIPisConsExprExprVar(children[c]) || SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[c]))) )
+         {
+            valid = FALSE;
+            break;
+         }
+      }
 
+      if( valid )
+      {
          /* create expression data for the nonlinear handler */
-         SCIP_CALL( SCIPallocBlockMemory(scip, nlhdlrexprdata) );
-         BMSclearMemory(*nlhdlrexprdata);
-
+         SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
          (*nlhdlrexprdata)->lastnodeid = -1;
 
          /* ensure that there is enough memory to store the detected expression */
@@ -998,15 +1002,27 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectBilinear)
          SCIPcaptureConsExprExpr(expr);
          SCIP_CALL( SCIPhashmapInsertInt(nlhdlrdata->exprmap, (void*)expr, nlhdlrdata->nexprs) );
          ++nlhdlrdata->nexprs;
+
+         /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[0], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[1], TRUE, nlhdlrdata->useinteval || nlhdlrdata->usereverseprop, TRUE, TRUE) );
       }
    }
 
+   if( *nlhdlrexprdata != NULL )
+   {
+      /* we want to join separation and domain propagation, if not disabled by parameter */
+      *participating = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      if( nlhdlrdata->useinteval || nlhdlrdata->usereverseprop )
+         *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   }
+
 #ifdef SCIP_DEBUG
-   if( *success )
+   if( *participating )
    {
       SCIPdebugMsg(scip, "detected expr ");
       SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, " participating: %d\n", *participating);
    }
 #endif
 

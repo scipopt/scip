@@ -818,9 +818,7 @@ SCIP_Real SCIPgetConsExprExprDerivative(
  * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
  * - interval evaluation (intervals for children only)
  * - reverse propagation
- * - monotonicity computation
- * - convexity detection
- * - structure detection
+ * - estimate and enforce (for exprs where activity usage was signaled during nlhdlr detect)
  */
 SCIP_EXPORT
 SCIP_INTERVAL SCIPgetConsExprExprActivity(
@@ -950,20 +948,6 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
    unsigned int*           hashval           /**< pointer to store the hash value */
    );
 
-/** creates and gives the auxiliary variable for a given expression
- *
- * @note if auxiliary variable already present for that expression, then only returns this variable
- * @note for a variable expression it returns the corresponding variable
- * @note this function can only be called in SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprAuxVar(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_VAR**            auxvar              /**< buffer to store pointer to auxiliary variable, or NULL */
-   );
-
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
@@ -1029,12 +1013,14 @@ SCIP_RETCODE SCIPcomputeConsExprExprCurvature(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** returns the monotonicity of an expression w.r.t. to a given child */
+/** computes the monotonicity of an expression w.r.t. to a given child */
 SCIP_EXPORT
-SCIP_MONOTONE SCIPgetConsExprExprMonotonicity(
+SCIP_RETCODE SCIPgetConsExprExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   childidx            /**< index of child */
+   int                   childidx,           /**< index of child */
+   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
    );
 
 /** returns the number of positive rounding locks of an expression */
@@ -1065,21 +1051,55 @@ SCIP_Bool SCIPisConsExprExprIntegral(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** number of nonlinear handlers whose convexification methods depend on the bounds of the expression
+/** number of nonlinear handlers whose activity computation and propagation methods depend on the activity of the expression
  *
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-int SCIPgetConsExprExprNDomainUses(
+unsigned int SCIPgetConsExprExprNPropUsesActivity(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** increases the number of nonlinear handlers returned by \ref SCIPgetConsExprExprNDomainUses */
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincrementConsExprExprNDomainUses(
+unsigned int SCIPgetConsExprExprNSepaUsesActivity(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) use auxiliary variable of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprNAuxvarUses(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+ *
+ * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNPropUsesActivity
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNSepaUsesActivity
+ *   and also increments this count for all variables in the expression.
+ *
+ * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
+ * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
+ * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPregisterConsExprExprUsage(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr              /**< expression */
+   SCIP_CONSEXPR_EXPR*   expr,             /**< expression */
+   SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
+   SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             useactivityforsepabelow, /**< whether activity of expr will be used by underestimation */
+   SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
    );
 
 /** returns the total number of variables in an expression
@@ -1276,32 +1296,24 @@ int SCIPgetConsExprExprNEnfos(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** returns the nonlinear handler for enforcement i of an expression */
+/** returns the data for one of the enforcements of an expression */
 SCIP_EXPORT
-SCIP_CONSEXPR_NLHDLR* SCIPgetConsExprExprEnfoNlhdlr(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
+void SCIPgetConsExprExprEnfoData(
+   SCIP_CONSEXPR_EXPR*   expr,                         /**< expression */
+   int                   idx,                          /**< position of enforcement in enfos array */
+   SCIP_CONSEXPR_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_Bool*            sepabelowusesactivity,        /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
+   SCIP_Bool*            sepaaboveusesactivity,        /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
+   SCIP_Real*            auxvalue                      /**< buffer to store current auxvalue, or NULL */
    );
 
-/** returns the auxiliary value of expression for enforcement i of an expression */
-SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprEnfoAuxValue(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
-   );
-
-/** returns the nonlinear expression data for enforcement i of an expression */
-SCIP_EXPORT
-SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprExprEnfoNlhdlrExprData(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i                   /**< position of enforcement in enfos array */
-   );
-
-/** sets the auxiliary value of expression for enforcement i of an expression */
+/** sets the auxiliary value of expression for one of the enforcements of an expression */
 SCIP_EXPORT
 void SCIPsetConsExprExprEnfoAuxValue(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   int                   i,                  /**< position of enforcement in enfos array */
+   int                   idx,                /**< position of enforcement in enfos array */
    SCIP_Real             auxvalue            /**< the new value of auxval */
 );
 
@@ -1873,7 +1885,8 @@ void SCIPgetConsExprQuadraticQuadTermData(
    SCIP_Real*                    lincoef,          /**< buffer to store linear coefficient of variable, or NULL */
    SCIP_Real*                    sqrcoef,          /**< buffer to store square coefficient of variable, or NULL */
    int*                          nadjbilin,        /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
-   int**                         adjbilin          /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   int**                         adjbilin,         /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   SCIP_CONSEXPR_EXPR**          sqrexpr           /**< buffer to store pointer to square expression (the 'x^2') of this term or NULL if no square expression, or NULL */
    );
 
 /** gives the data of a bilinear expression term
@@ -1888,7 +1901,8 @@ void SCIPgetConsExprQuadraticBilinTermData(
    SCIP_CONSEXPR_EXPR**          expr1,            /**< buffer to store first factor, or NULL */
    SCIP_CONSEXPR_EXPR**          expr2,            /**< buffer to store second factor, or NULL */
    SCIP_Real*                    coef,             /**< buffer to coefficient, or NULL */
-   int*                          pos2              /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   int*                          pos2,             /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   SCIP_CONSEXPR_EXPR**          prodexpr          /**< buffer to store pointer to expression that is product if first and second factor, or NULL */
    );
 
 /** returns whether all expressions that are used in a quadratic expression are variable expression

@@ -2622,7 +2622,7 @@ unsigned int getScore(
 static
 SCIP_RETCODE getNLPVarsNonConvexity(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  nccounts            /**< store the number each variable appears in a
+   unsigned int*         nccounts            /**< store the number each variable appears in a
                                               *   non-convex term */
    )
 {
@@ -2660,8 +2660,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
          assert(expr != NULL);
          assert(SCIPisConsExprExprVar(expr));
 
-         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNDomainUses(expr);
-         assert(nccounts[SCIPvarGetProbindex(var)] >= 0);
+         nccounts[SCIPvarGetProbindex(var)] = SCIPgetConsExprExprNSepaUsesActivity(expr);
       }
    }
 
@@ -2673,7 +2672,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       {
          SCIP_VAR* var = SCIPgetVars(scip)[i];
          assert(var != NULL);
-         SCIPdebugMsg(scip, "nccounts[%s] = %d\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
+         SCIPdebugMsg(scip, "nccounts[%s] = %u\n", SCIPvarGetName(var), nccounts[SCIPvarGetProbindex(var)]);
       }
    }
 #endif
@@ -2708,7 +2707,7 @@ SCIP_RETCODE initBounds(
    SCIP_CONSHDLR* exprconshdlr;
    SCIP_VAR** vars;                          /* array of the problems variables */
    int* nlcount;                             /* array that stores in how many nonlinearities each variable appears */
-   int* nccount;                             /* array that stores in how many nonconvexities each variable appears */
+   unsigned int* nccount;                    /* array that stores in how many nonconvexities each variable appears */
 
    int bdidx;                                /* bound index inside propdata->bounds */
    int maxnlcount;                           /* maximal number of nonlinear constraints a variable appears in */
@@ -2748,7 +2747,7 @@ SCIP_RETCODE initBounds(
    bdidx = 0;
    for( i = 0; i < nvars; i++ )
    {
-      if( varIsInteresting(scip, vars[i], (propdata->onlynonconvexvars ? nccount[i] : nlcount[i])) )
+      if( varIsInteresting(scip, vars[i], (propdata->onlynonconvexvars ? (int)nccount[i] : nlcount[i])) )
       {
          BOUND** bdaddress;
 

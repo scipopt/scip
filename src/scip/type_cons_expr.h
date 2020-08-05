@@ -266,12 +266,14 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
  *
  * input:
  *  - scip : SCIP main data structure
+ *  - conshdlr: cons_expr constraint handler
  *  - expr : expression to check the monotonicity for
  *  - childidx : index of the considered child expression
  *  - result : buffer to store the monotonicity
  */
 #define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
    SCIP* scip, \
+   SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    int childidx, \
    SCIP_MONOTONE* result)
@@ -560,9 +562,8 @@ typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA;  /**< prin
 #define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
 #define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
 #define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
-#define SCIP_CONSEXPR_EXPRENFO_INTEVAL        0x4u /**< interval evaluation */
-#define SCIP_CONSEXPR_EXPRENFO_REVERSEPROP    0x8u /**< reverse propagation */
-#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP) /**< all enforcement methods */
+#define SCIP_CONSEXPR_EXPRENFO_ACTIVITY       0x4u /**< activity computation (interval evaluation) and propagation (reverse propagation) */
+#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_ACTIVITY) /**< all enforcement methods */
 
 typedef unsigned int                  SCIP_CONSEXPR_EXPRENFO_METHOD; /**< exprenfo bitflags */
 typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expression enforcement data */
@@ -636,42 +637,55 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 /** callback to detect structure in expression tree
  *
  * The nonlinear handler shall analyze the current expression and decide whether it wants to contribute
- * in enforcing the relation between this expression (expr) and its auxiliary variable (auxvar).
- * We distinguish the relations expr <= auxvar (denoted as "below") and expr >= auxvar (denoted as "above").
- * Parameters enforcedbelow and enforcedabove indicate on input whether nonlinear handlers for these
- * relations already exist, or none is necessary.
- * Parameter enforcemethods indicates on input which enforcement methods are already provided by some
- * nonlinear handler.
+ * in enforcing the relation between this expression (expr) and its auxiliary variable (auxvar) via
+ * linear under- or overestimation, cut generation, and/or activity computation and propagation.
  *
- * If the detect callback decides to become active at an expression, it shall
- * - set enforcedbelow to TRUE if it will enforce expr <= auxvar
- * - set enforcedabove to TRUE if it will enforce expr >= auxvar
- * - signal the enforcement methods it aims to provide by setting the corresponding bit in enforcemethods
- * - set success to TRUE
+ * We distinguish the following enforcement methods:
+ * - SCIP_CONSEXPR_EXPRENFO_SEPABELOW: linear underestimation or cut generation for the relation expr <= auxvar (denoted as "below")
+ * - SCIP_CONSEXPR_EXPRENFO_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
+ * - SCIP_CONSEXPR_EXPRENFO_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
  *
- * A nonlinear handler can also return TRUE in success if it will not enforce any relation between expr and auxvar.
- * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g.,
- * a handler that only contributes cutting planes in some situations.
- * Note, that all (non-NULL) enforcement callbacks of the nonlinear handler are potentially called,
- * not only those that are signaled via enforcemethods.
+ * On input, parameter 'enforcing' indicates for any of these methods, whether
+ * - it is not necessary to have such a method, e.g., because no auxvar will exist for expr, or no one uses or set activities of this expression,
+ *   or due to analysis of the expression, expr >= auxvar is not necessary to be satisfied,
+ * - or there already exists a nonlinear handler that will provide this method in an "enforcement" sense, that is,
+ *   it believes that no one else could provide this method in a stronger sense. (This is mainly used by the default nlhdlr to check whether
+ *   it should still reach out to the exprhdlr or whether is dominated by some nonlinear handler.)
  *
- * A nonlinear handler can still enforce if both enforcedbelow and enforcedabove are TRUE on input.
- * For example, another nonlinear handler may implement propagation and branching, while this handler could
- * provide separation. In this case, the detect callback should update the enforcemethods argument and
- * set success to TRUE.
+ * The DETECT callback shall augment the 'enforcing' bitmask by setting the enforcement methods it wants to provide in an "enforcement" sense.
  *
- * If a nonlinear handler decides to become active in an expression (success == TRUE), then it shall
- * create auxiliary variables for those subexpressions where they will be required.
+ * Additionally, the 'participating' bitmask shall be set if the nonlinear handler wants to be called on this expression at all.
+ * Here, it shall set all methods that it wants to provide, which are those set in enforcing, but additionally those where it wants
+ * to participate but leave enforcement to another nlhdlr.
+ * This can be useful for nonlinear handlers that do not implement a complete enforcement, e.g., a handler that only contributes
+ * cutting planes in some situations only.
+ *
+ * A nonlinear handler will be called only for those callbacks that it mentioned in participating, which is
+ * - ENFO and/or ESTIMATE will be called with overestimate==FALSE if SCIP_CONSEXPR_EXPRENFO_SEPABELOW has been set
+ * - ENFO and/or ESTIMATE will be called with overestimate==TRUE if SCIP_CONSEXPR_EXPRENFO_SEPAABOVE has been set
+ * - INTEVAL and/or REVERSEPROP will be called if SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set
+ * If SCIP_CONSEXPR_EXPRENFO_SEPABELOW or SCIP_CONSEXPR_EXPRENFO_SEPAABOVE has been set, then at least one of the
+ * callbacks ENFO and ESTIMATE need to be implemented. Also EVALAUX will be called in this case.
+ * If SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP needs to be implemented.
+ * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata and can leave participating at its
+ * initial value (SCIP_CONSEXPR_EXPRENFO_NONE).
+ *
+ * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
+ * @ref SCIPregisterConsExprExprUsage() for every subexpression that it will use and indicate whether
+ * - it will use an auxiliary variables,
+ * - it will use activity for some subexpressions when computing estimators or cuts, and
+ * - it will use activity for some subexpressions when for INTEVAL or REVERSEPROP.
+ *
+ * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterConsExprExprUsage().
+ *   They will be available when the INITSEPA callback is called.
  *
  * - scip SCIP data structure
  * - conshdlr expr-constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
- * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when is not the root of an expression
- * - enforcemethods enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
- * - enforcedbelow indicates whether an enforcement method for expr <= auxvar exists (to be updated by detect callback) or is not necessary
- * - enforcedabove indicates whether an enforcement method for expr >= auxvar exists (to be updated by detect callback) or is not necessary
- * - success buffer to store whether the nonlinear handler should be called for this expression
+ * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when it is not the root of an expression of a constraint
+ * - enforcing enforcement methods that are provided by some nonlinear handler (to be updated by detect callback)
+ * - participating enforcement methods that this nonlinear handler should be called for (to be set by detect callback)
  * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
  */
 #define SCIP_DECL_CONSEXPR_NLHDLRDETECT(x) SCIP_RETCODE x (\
@@ -680,10 +694,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_CONS* cons, \
-   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcemethods, \
-   SCIP_Bool* enforcedbelow, \
-   SCIP_Bool* enforcedabove, \
-   SCIP_Bool* success, \
+   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcing, \
+   SCIP_CONSEXPR_EXPRENFO_METHOD* participating, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** nonlinear handler callback for reformulation

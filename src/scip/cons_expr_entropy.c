@@ -656,8 +656,6 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
 {  /*lint --e{715}*/
    SCIP_CONSEXPR_EXPR* child;
    SCIP_INTERVAL childbounds;
-   SCIP_Real childinf;
-   SCIP_Real childsup;
    SCIP_Real brpoint = exp(-1.0);
 
    assert(scip != NULL);
@@ -668,13 +666,11 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   childbounds = SCIPgetConsExprExprActivity(scip, child);
-   childinf = SCIPintervalGetInf(childbounds);
-   childsup = SCIPintervalGetSup(childbounds);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
 
-   if( childsup <= brpoint )
+   if( childbounds.sup <= brpoint )
       *result = SCIP_MONOTONE_INC;
-   else if( childinf >= brpoint )
+   else if( childbounds.inf >= brpoint )
       *result = SCIP_MONOTONE_DEC;
    else
       *result = SCIP_MONOTONE_UNKNOWN;

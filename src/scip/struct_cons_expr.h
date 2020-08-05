@@ -102,9 +102,11 @@ struct SCIP_ConsExpr_Expr
 
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
-   int                     nenfos;        /**< number of enforcements */
+   int                     nenfos;        /**< number of enforcements, or -1 if not initialized */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
-   int                     ndomainuses;   /**< number of nonlinear handlers whose convexification methods depend on the bounds of the expression */
+   unsigned int            nactivityusesprop; /**< number of nonlinear handler whose activity computation (or domain propagation) depends on the activity of the expression */
+   unsigned int            nactivityusessepa; /**< number of nonlinear handler whose separation (estimate or enfo) depends on the activity of the expression */
+   unsigned int            nauxvaruses;   /**< number of nonlinear handlers whose separation uses an auxvar in the expression */
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
@@ -125,7 +127,7 @@ struct SCIP_ConsExpr_Expr
                                             *  the tag allows us to decide whether the expression depends on the
                                             *  variable; the tag will be checked in SCIPgetConsExprExprPartialDiff() */
 
-   /* domain propagation */
+   /* activity */
    SCIP_INTERVAL           activity;      /**< activity of expression with respect to local variable bounds */
    unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
    SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
@@ -181,6 +183,8 @@ struct SCIP_ConsExpr_QuadExprTerm
    int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
    int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
    int*                  adjbilin;           /**< indices of associated bilinear terms */
+
+   SCIP_CONSEXPR_EXPR*   sqrexpr;            /**< expression that was found to be the square of expr, or NULL if no square term (sqrcoef==0) */
 };
 
 /** data structure to store a single bilinear term coef * expr1 * expr2  (similar to SCIP_CONSEXPR_QUADELEM)
@@ -192,6 +196,8 @@ struct SCIP_ConsExpr_BilinExprTerm
    SCIP_CONSEXPR_EXPR*   expr2;              /**< second factor of bilinear term */
    SCIP_Real             coef;               /**< coefficient of bilinear term */
    int                   pos2;               /**< position of expr2's quadexprterm in quadexprterms */
+
+   SCIP_CONSEXPR_EXPR*   prodexpr;           /**< expression that was found to be the product of expr1 and expr2 */
 };
 
 /** generic data and callback methods of an nonlinear handler */
@@ -242,8 +248,11 @@ struct SCIP_ConsExpr_ExprEnfo
 {
    SCIP_CONSEXPR_NLHDLR*         nlhdlr;          /**< nonlinear handler */
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
+   SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
    SCIP_Bool                     issepainit;      /**< was the initsepa callback of nlhdlr called */
    SCIP_Real                     auxvalue;        /**< auxiliary value of expression w.r.t. currently enforced solution */
+   SCIP_Bool                     sepabelowusesactivity;/**< whether sepabelow uses activity of some expression */
+   SCIP_Bool                     sepaaboveusesactivity;/**< whether sepaabove uses activity of some expression */
 };
 
 /** expression tree iterator */
