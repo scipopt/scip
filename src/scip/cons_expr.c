@@ -1250,21 +1250,6 @@ SCIP_RETCODE tightenAuxVarBounds(
       return SCIP_OKAY;
    }
 
-   if( expr->auxvar == NULL && (tightenedlb || tightenedub) )
-   {
-      /* if expr is a varexpr and the var was tightened, then immediately update the activity of the varexpr
-       * it should be ok to circumvent the default nlhdlr (if present) and call the var-exprhdlr directly
-       */
-      assert(SCIPisConsExprExprVar(expr));
-      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &bounds, intEvalVarBoundTightening, SCIPconshdlrGetData(conshdlr)) );
-#ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, bounds.inf, bounds.sup);
-#endif
-
-      expr->activity = bounds;
-      expr->activitytag = SCIPconshdlrGetData(conshdlr)->curboundstag;
-   }
-
    return SCIP_OKAY;
 }
 
@@ -3020,7 +3005,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIP_CONSEXPR_EXPR* expr;
 
    eventtype = SCIPeventGetType(event);
-   assert((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 || (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0);
+   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED));
 
    assert(eventdata != NULL);
    expr = (SCIP_CONSEXPR_EXPR*) eventdata;
@@ -3092,6 +3077,16 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       /* remember also if we relaxed bounds now */
       if( eventtype & SCIP_EVENTTYPE_BOUNDRELAXED )
          conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
+
+      /* we can update the activity of the var-expr here immediately */
+      if( SCIPisConsExprExprVar(expr) )
+      {
+         SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, intEvalVarBoundTightening, conshdlrdata) );
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, "var-exprhdlr::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
+#endif
+         expr->activitytag = conshdlrdata->curboundstag;
+      }
    }
 
    return SCIP_OKAY;

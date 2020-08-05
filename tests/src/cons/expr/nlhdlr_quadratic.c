@@ -643,6 +643,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
    SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_INTERVAL interval;
+   SCIP_CONS* cons;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -663,6 +664,13 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    expr = simplified;
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
+
+   /* the reverse propagation test requires that var-exprs get their activity updated immediately when the var bounds are updated
+    * this happens when the var boundchange event is processed, which only happens for variables that are used in a constraint
+    */
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* detect */
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
