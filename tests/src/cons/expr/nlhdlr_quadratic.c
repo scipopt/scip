@@ -539,21 +539,17 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
 
    /* test reverse propagation */
    {
-      SCIP_QUEUE* queue;
       SCIP_Bool infeasible = FALSE;
       int nreductions = 0;
-      SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
       exprinterval.inf = 35;
       exprinterval.sup = 35;
-      SCIPsetConsExprExprEvalInterval(expr, &exprinterval, 0);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
-      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, exprinterval, &infeasible, &nreductions) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
       cr_expect_float_eq(SCIPvarGetLbLocal(z), -0.0741996, 1e-7);
       cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.928007, 1e-6);
-      SCIPqueueFree(&queue);
    }
 #endif
 
@@ -707,13 +703,12 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
 
    /* test reverse propagation */
    {
-      SCIP_QUEUE* queue;
       int nreductions = 0;
+      SCIP_INTERVAL bounds;
       infeasible = FALSE;
-      SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
-      SCIPintervalSet(&expr->activity, 35);
+      SCIPintervalSet(&bounds, 35);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
-      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, bounds, &infeasible, &nreductions) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       cr_expect_eq(nreductions, 3); /* three because the z improved twice */
       cr_expect_not(infeasible);
@@ -721,7 +716,6 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       EXPECTFEQ(SCIPvarGetLbLocal(z), -0.0485777477946283);
       EXPECTFEQ(SCIPvarGetUbLocal(z), 0.0198745061962769);
       EXPECTFEQ(SCIPvarGetUbLocal(x), -0.559537393062365);
-      SCIPqueueFree(&queue);
    }
 
 
@@ -858,17 +852,14 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
 
    /* test reverse propagation */
    {
-      SCIP_QUEUE* queue;
       int nreductions = 0;
       infeasible = FALSE;
-      SCIP_CALL( SCIPqueueCreate(&queue, 4, 2.0) );
-      SCIPintervalSet(&expr->activity, 10);
+      SCIPintervalSet(&interval, 10);
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
-      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
+      SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, interval, &infeasible, &nreductions) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       cr_expect_eq(nreductions, 2);
       cr_expect_not(infeasible);
-      SCIPqueueFree(&queue);
    }
 
    /* check result */

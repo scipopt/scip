@@ -1958,8 +1958,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimatePow)
 static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
 {  /*lint --e{715}*/
-   SCIP_INTERVAL interval;
    SCIP_INTERVAL child;
+   SCIP_INTERVAL interval;
    SCIP_Real exponent;
 
    assert(scip != NULL);
@@ -1970,12 +1970,11 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    *nreductions = 0;
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
-   interval = SCIPgetConsExprExprActivity(scip, expr);
    child = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
 
-   SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g], x = [%.15g,%.15g]", exponent, interval.inf, interval.sup, child.inf, child.sup);
+   SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g], x = [%.15g,%.15g]", exponent, bounds.inf, bounds.sup, child.inf, child.sup);
 
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bounds) )
    {
       /* if exponent is not integral, then make sure that child is non-negative */
       if( !EPSISINT(exponent, 0.0) && child.inf < 0.0 )
@@ -1991,7 +1990,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    else
    {
       /* f = pow(c0, alpha) -> c0 = pow(f, 1/alpha) */
-      SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, interval);
+      SCIPintervalPowerScalarInverse(SCIP_INTERVAL_INFINITY, &interval, child, exponent, bounds);
    }
 
    if( exponent < 0.0 )
@@ -2041,8 +2040,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
    SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,
-         nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], interval, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -2897,11 +2895,10 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSignpower)
    *nreductions = 0;
 
    exponent = SCIPgetConsExprExprPowExponent(expr);
-   interval = SCIPgetConsExprExprActivity(scip, expr);
 
-   SCIPdebugMsg(scip, "reverseprop signpow(x,%g) in [%.15g,%.15g]", exponent, interval.inf, interval.sup);
+   SCIPdebugMsg(scip, "reverseprop signpow(x,%g) in [%.15g,%.15g]", exponent, bounds.inf, bounds.sup);
 
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bounds) )
    {
       SCIPdebugMsgPrint(scip, "-> no improvement\n");
       return SCIP_OKAY;
@@ -2912,21 +2909,20 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSignpower)
    SCIPintervalReciprocal(SCIP_INTERVAL_INFINITY, &exprecip, exprecip);
    if( exprecip.inf == exprecip.sup )  /*lint !e777*/
    {
-      SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval, interval, exprecip.inf);
+      SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval, bounds, exprecip.inf);
    }
    else
    {
       SCIP_INTERVAL interval1, interval2;
-      SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval1, interval, exprecip.inf);
-      SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval2, interval, exprecip.sup);
+      SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval1, bounds, exprecip.inf);
+      SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, &interval2, bounds, exprecip.sup);
       SCIPintervalUnify(&interval, interval1, interval2);
    }
 
    SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", interval.inf, interval.sup);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], interval, force, reversepropqueue, infeasible,
-         nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], interval, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

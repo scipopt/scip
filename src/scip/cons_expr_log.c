@@ -428,7 +428,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropLog)
    *nreductions = 0;
 
    /* f = log(c0) -> c0 = exp(f) */
-   SCIPintervalExp(SCIP_INTERVAL_INFINITY, &childbound, SCIPgetConsExprExprActivity(scip, expr));
+   SCIPintervalExp(SCIP_INTERVAL_INFINITY, &childbound, bounds);
 
    /* force child lower bound to be at least epsilon away from 0
     * this can help a lot in enforcement (try ex8_5_3)
@@ -455,8 +455,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropLog)
    }
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbound, force, reversepropqueue,
-         infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbound, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

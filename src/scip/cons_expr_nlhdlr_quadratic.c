@@ -138,10 +138,8 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    SCIP_Real             sqrcoef,            /**< square coefficient */
    SCIP_INTERVAL         b,                  /**< interval acting as linear coefficient */
    SCIP_INTERVAL         rhs,                /**< interval acting as rhs */
-   SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
    SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
-   int*                  nreductions,        /**< buffer to store the number of interval reductions */
-   SCIP_Bool             force               /**< to force tightening */
+   int*                  nreductions         /**< buffer to store the number of interval reductions */
    )
 {
    SCIP_INTERVAL a;
@@ -170,7 +168,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
 #endif
 
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, newrange, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, newrange, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -183,10 +181,8 @@ SCIP_RETCODE propagateBoundsLinExpr(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression for which to solve */
    SCIP_Real             b,                  /**< linear coefficient */
    SCIP_INTERVAL         rhs,                /**< interval acting as rhs */
-   SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
    SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
-   int*                  nreductions,        /**< buffer to store the number of interval reductions */
-   SCIP_Bool             force               /**< to force tightening */
+   int*                  nreductions         /**< buffer to store the number of interval reductions */
    )
 {
    SCIP_INTERVAL newrange;
@@ -209,7 +205,7 @@ SCIP_RETCODE propagateBoundsLinExpr(
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
 #endif
 
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, newrange, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, newrange, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -1152,10 +1148,8 @@ void computeRangeForBilinearProp(
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
- *  - reversepropqueue : expression queue in reverse propagation, to be passed on to SCIPtightenConsExprExprInterval
  *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
  *  - nreductions : buffer to store the number of interval reductions of all children
- *  - force : force tightening even if it is below the bound strengthening tolerance
  */
 static
 SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
@@ -1183,7 +1177,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    assert(nlhdlrexprdata->quadactivities != NULL);
 #ifndef NDEBUG
    /* check that quaddata hasn't changed (or at least the pointer to it) */
-   SCIP_CALL( SCIPgetConsExprQuadratic(scip, SCIPfindConshdlr(scip, "expr"), expr, &quaddata) );
+   SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
    assert(quaddata == nlhdlrexprdata->quaddata);
 #endif
    quaddata = nlhdlrexprdata->quaddata;
@@ -1191,7 +1185,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    *nreductions = 0;
 
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bounds) )
    {
       SCIPdebugMsg(scip, "expr's range is R -> cannot reverse propagate\n");
       return SCIP_OKAY;
@@ -1213,9 +1207,9 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          nlhdlrexprdata->nneginfinityquadact > 0 ? -SCIP_INTERVAL_INFINITY : nlhdlrexprdata->minquadfiniteact,
          nlhdlrexprdata->nposinfinityquadact > 0 ?  SCIP_INTERVAL_INFINITY : nlhdlrexprdata->maxquadfiniteact);
 
-   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprActivity(scip, expr), quadactivity);
+   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, bounds, quadactivity);
    SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nlinexprs,
-            linexprs, lincoefs, constant, rhs, reversepropqueue, infeasible, nreductions, force) );
+            linexprs, lincoefs, constant, rhs, infeasible, nreductions) );
 
    /* stop if we find infeasibility */
    if( *infeasible )
@@ -1265,7 +1259,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
     * TODO: handle simple cases
     * TODO: identify early when there is nothing to be gain
     */
-   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, SCIPgetConsExprExprActivity(scip, expr), nlhdlrexprdata->linactivity);
+   SCIPintervalSub(SCIP_INTERVAL_INFINITY, &rhs, bounds, nlhdlrexprdata->linactivity);
    SCIP_CALL( SCIPallocBufferArray(scip, &bilinexprs, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bilincoefs, nquadexprs) );
 
@@ -1363,7 +1357,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
             assert(nadjbilin == 0);
 
             /* solve sqrcoef sqrexpr in rhs_i */
-            SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, sqrexpr, sqrcoef, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+            SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, sqrexpr, sqrcoef, rhs_i, infeasible, nreductions) );
          }
          else
          {
@@ -1384,7 +1378,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
             if( expr1 == qexpr )
             {
                /* solve prodcoef prodexpr in rhs_i */
-               SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, prodexpr, prodcoef, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+               SCIP_CALL( propagateBoundsLinExpr(scip, conshdlr, prodexpr, prodcoef, rhs_i, infeasible, nreductions) );
             }
          }
       }
@@ -1422,7 +1416,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          }
 
          /* solve a_i expr_i^2 + b expr_i in rhs_i */
-         SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, reversepropqueue, infeasible, nreductions, force) );
+         SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, infeasible, nreductions) );
 
          if( nbilin > 0 && !*infeasible )
          {
@@ -1438,7 +1432,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
 
                /* propagate \sum_{j \in P_i} b_ij expr_j + c_i in bilinrhs */
                SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nbilin,
-                        bilinexprs, bilincoefs, lincoef, bilinrhs, reversepropqueue, infeasible, &nreds, force) );
+                        bilinexprs, bilincoefs, lincoef, bilinrhs, infeasible, &nreds) );
 
                /* TODO FIXME: we are overestimating of the number of reductions: an expr might be tightened many times! */
                *nreductions += nreds;

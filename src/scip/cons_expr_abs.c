@@ -449,12 +449,12 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= 0.0);
+   assert(bounds.inf >= 0.0);  /* bounds should have been intersected with activity, which is >= 0 */
 
    *nreductions = 0;
 
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
-   right = SCIPgetConsExprExprActivity(scip, expr);  /* I */
+   right = bounds;  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
 
    childbounds = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
@@ -466,8 +466,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    SCIPintervalUnify(&childbounds, left, right);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbounds, force, reversepropqueue, infeasible,
-         nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

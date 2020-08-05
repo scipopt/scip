@@ -1895,8 +1895,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
    if( SCIPgetConsExprExprNChildren(expr) > 10 )
       return SCIP_OKAY;
 
-   /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
+   /* not possible to learn bounds on children if expression bounds are unbounded in both directions */
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bounds) )
       return SCIP_OKAY;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1921,15 +1921,14 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
 
       /* solve x*otherfactor = f for x in c_i */
       SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
-         SCIPgetConsExprExprActivity(scip, expr), SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]));
+         bounds, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]));
       SCIPdebugMsg(scip, "child %d: solved [%g,%g]*x = [%g,%g] with x in [%g,%g] -> x = [%g,%g]\n", i, otherfactor.inf, otherfactor.sup,
-         SCIPgetConsExprExprActivity(scip, expr).inf, SCIPgetConsExprExprActivity(scip, expr).sup,
+         bounds.inf, bounds.sup,
          SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]).inf, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]).sup,
          childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
-         infeasible, nreductions) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], childbounds, infeasible, nreductions) );
    }
 
    return SCIP_OKAY;

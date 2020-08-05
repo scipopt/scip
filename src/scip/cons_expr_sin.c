@@ -1117,8 +1117,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= -1.0);
-   assert(SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)) <= 1.0);
+   assert(SCIPintervalGetInf(bounds) >= -1.0);
+   assert(SCIPintervalGetSup(bounds) <= 1.0);
 
    *nreductions = 0;
 
@@ -1128,10 +1128,10 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
    newbounds = SCIPgetConsExprExprActivity(scip, child);
 
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprActivity(scip, expr), newbounds, &newbounds) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

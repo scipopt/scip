@@ -87,8 +87,7 @@ void SCIPmultiplyConsExprExprSumByConstant(
 
 /** reverse propagate a weighted sum of expressions in the given interval */
 SCIP_EXPORT
-SCIP_RETCODE
-SCIPreverseConsExprExprPropagateWeightedSum(
+SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nexprs,             /**< number of expressions to propagate */
@@ -96,10 +95,8 @@ SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP_Real*            weights,            /**< weights of expressions in sum */
    SCIP_Real             constant,           /**< constant in sum */
    SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i \in interval */
-   SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
    SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
-   int*                  nreductions,        /**< buffer to store the number of interval reductions */
-   SCIP_Bool             force               /**< to force tightening */
+   int*                  nreductions         /**< buffer to store the number of interval reductions */
    );
 #ifdef __cplusplus
 }
