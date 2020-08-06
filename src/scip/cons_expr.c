@@ -3054,8 +3054,12 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    conshdlr = SCIPconsGetHdlr(SCIPgetConsExprExprVarConss(expr)[0]);  /*lint !e613*/
    assert(conshdlr != NULL);
 
-   /* notify constraints where variable is used to repropagate and possibly resimplify */
-   if( (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) || (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) )
+   /* notify constraints where variable is used to repropagate and possibly resimplify
+    * - propagation can only find something new if a bound was tightened
+    * - simplify can only find something new if a var is fixed (or maybe a bound is tightened)
+    *   and we look at global changes (that is, we are not looking at boundchanges in probing)
+    */
+   if( eventtype & (SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED) )
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS** conss;
@@ -3076,14 +3080,14 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
           *   that is, we don't need to repropagate x + ... <= rhs if only the upper bound of x has been tightened
           *   the locks could help if they were available on a per-constraint base, but they aren't (and it may not be worth it)
           */
-         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0 )
+         if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
          {
             consdata->ispropagated = FALSE;
             SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          }
 
-         /* if still in presolve, then mark constraints to be simplified again */
-         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING )
+         /* if still in presolve (but not probing), then mark constraints to be simplified again */
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !SCIPinProbing(scip) )
          {
             consdata->issimplified = FALSE;
             SCIPdebugMsg(scip, "  marked <%s> for simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
