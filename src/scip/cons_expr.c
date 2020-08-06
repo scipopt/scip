@@ -3043,20 +3043,19 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    assert(eventdata != NULL);
    expr = (SCIP_CONSEXPR_EXPR*) eventdata;
+   assert(SCIPisConsExprExprVar(expr));
 
    SCIPdebugMsg(scip, "  exec event %#x for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)),
       SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
       SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
 
-   /* we can ignore events for auxvars for now
-    * (relaxing their bounds does not invalidate activities anymore, as auxvar bounds aren't used there anymore)
-    * TODO cleanup the SCIPisConsExprExprVar() calls below, but I also might want to do something with auxvar bound events, too
-    */
-   if( !SCIPisConsExprExprVar(expr) )
-      return SCIP_OKAY;
+   /* we only catch varevents for variables in constraints, so there should be constraints */
+   assert(SCIPgetConsExprExprVarNConss(expr) > 0);
+   conshdlr = SCIPconsGetHdlr(SCIPgetConsExprExprVarConss(expr)[0]);  /*lint !e613*/
+   assert(conshdlr != NULL);
 
-   /* for real variables notify constraints to repropagate and possibly resimplify */
-   if( SCIPisConsExprExprVar(expr) && ((SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) || ((eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != (unsigned int) 0)) )
+   /* notify constraints where variable is used to repropagate and possibly resimplify */
+   if( (SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING) || (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) )
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS** conss;
@@ -3081,9 +3080,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          {
             consdata->ispropagated = FALSE;
             SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
-
-            /* store handler for below */
-            conshdlr = SCIPconsGetHdlr(conss[c]);  /*lint !e613*/
          }
 
          /* if still in presolve, then mark constraints to be simplified again */
@@ -3095,25 +3091,15 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       }
    }
 
-   /* update curboundstag and lastboundrelax */
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
+   /* update curboundstag, lastboundrelax, and expr activity */
+   if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
-
-      /* for auxvars, we only catched boundrelaxed events */
-      assert(SCIPisConsExprExprVar(expr) || (eventtype & SCIP_EVENTTYPE_BOUNDRELAXED));
-
-      if( conshdlr == NULL )
-         conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-      assert(conshdlr != NULL);
 
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata != NULL);
 
       /* increase tag on bounds */
-      /* TODO maybe do not increase if we did not use the new tag yet, e.g., when there is a sequence of bound changes,
-       * so we do not run out of numbers so soon
-       */
       ++conshdlrdata->curboundstag;
       assert(conshdlrdata->curboundstag > 0);
 
@@ -3121,15 +3107,15 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       if( eventtype & SCIP_EVENTTYPE_BOUNDRELAXED )
          conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 
-      /* we can update the activity of the var-expr here immediately */
-      if( SCIPisConsExprExprVar(expr) )
-      {
-         SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, conshdlrdata->intevalvar, conshdlrdata) );
+      /* update the activity of the var-expr here immediately
+       * TODO: we know which bounds has changed, so could update only that one (but intevalvar always does both bounds)
+       * TODO: we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated
+       */
+      SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
-         SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
+      SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
 #endif
-         expr->activitytag = conshdlrdata->curboundstag;
-      }
+      expr->activitytag = conshdlrdata->curboundstag;
    }
 
    return SCIP_OKAY;
