@@ -365,7 +365,6 @@ SCIP_RETCODE createExpr(
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
    (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
-   (*expr)->auxfilterpos = -1;
    (*expr)->nenfos = -1;
 
    /* initialize an empty interval for interval evaluation */
@@ -434,21 +433,6 @@ SCIP_RETCODE freeAuxVar(
     * as this is a relaxation-only variable, no other plugin should use it for deducing any type of reductions or cutting planes
     */
    SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
-
-   if( expr->auxfilterpos >= 0 )
-   {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
-      if( conshdlr == NULL )
-         conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-      assert(conshdlr != NULL);
-
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
-      SCIP_CALL( SCIPdropVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, expr->auxfilterpos) );
-      expr->auxfilterpos = -1;
-   }
 
    /* release auxiliary variable */
    SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
@@ -5987,13 +5971,6 @@ SCIP_RETCODE createAuxVar(
       SCIP_CALL( SCIPdebugAddSolVal(scip, expr->auxvar, SCIPgetConsExprExprValue(expr)) );
    }
 #endif
-
-   /* catch bound relaxation event on this variable, since bounds on this variable can be used to tighten activity of expr
-    * TODO we could skip this if the activity of the expr not computed (because it is not used)
-    * currently we do not repropagate constraints when only an auxiliary variable gets tightened
-    */
-   assert(expr->auxfilterpos == -1);
-   SCIP_CALL( SCIPcatchVarEvent(scip, expr->auxvar, SCIP_EVENTTYPE_BOUNDRELAXED, conshdlrdata->eventhdlr, (SCIP_EVENTDATA*)expr, &expr->auxfilterpos) );
 
    return SCIP_OKAY;
 }

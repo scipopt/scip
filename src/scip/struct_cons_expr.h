@@ -110,7 +110,6 @@ struct SCIP_ConsExpr_Expr
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
-   int                     auxfilterpos;  /**< filter position of variable event data for auxiliary variable */
 
    /* branching */
    SCIP_Real               violscoresum;  /**< sum of violation scores for branching stored for this expression */
