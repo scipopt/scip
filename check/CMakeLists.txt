@@ -139,13 +139,16 @@ set(settings_Bilinrelax
     "bilinrelax"
   )
 
-set(settings_Symmetry
+set(settings_Symmetry_A
     "orbitalfixing-timing0"
     "orbitalfixing-timing1"
     "orbitalfixing-timing2"
     "orbitopes-timing0"
     "orbitopes-timing2"
     "orbitopes-timing2-static"
+    )
+
+set(settings_Symmetry_B
     "packingorbitopes-timing0"
     "packingorbitopes-timing2"
     "symresacks-timing0"
@@ -374,10 +377,13 @@ set(instances_Orbitope
 #
 # Symmetry instances
 #
-set(instances_Symmetry
+set(instances_Symmetry_A
     "instances/MIP/MANN_a9.clq.lp\;16"
     "instances/MIP/rgn.mps\;82.1999974"
     "instances/MIP/stein27.fzn\;18"
+    )
+
+set(instances_Symmetry_B
     "instances/MIP/stein27_inf.lp\;+infinity"
     "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
     )
@@ -537,7 +543,8 @@ add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
-add_instancetests(instances_Symmetry settings_Symmetry "Symmetry")
+add_instancetests(instances_Symmetry_A settings_Symmetry_A "Symmetry_A")
+add_instancetests(instances_Symmetry_B settings_Symmetry_B "Symmetry_B")
 add_instancetests(instances_Cardinality settings_Cardinality "Cardinality")
 add_instancetests(instances_Stochastic settings_default "Stochastic")
 add_instancetests(instances_Benders settings_Benders "Benders")
