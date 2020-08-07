@@ -1665,8 +1665,8 @@ SCIP_RETCODE propConss(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_Bool cutoff;
-   SCIP_Bool success = FALSE;
+   SCIP_Bool cutoff = FALSE;
+   SCIP_INTERVAL conssides;
    int ntightenings;
    int roundnr;
    int i;
@@ -1694,7 +1694,6 @@ SCIP_RETCODE propConss(
 
    *result = SCIP_DIDNOTFIND;
    roundnr = 0;
-   cutoff = FALSE;
 
    /* tightenAuxVarBounds needs to know whether boundtightenings are to be forced */
    conshdlrdata->forceboundtightening = force;
@@ -1730,73 +1729,50 @@ SCIP_RETCODE propConss(
          SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, &cutoff, &ntightenings) );
          assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, consdata->expr->activity));
 
-#ifdef SCIP_DEBUG
          if( cutoff )
          {
-            SCIPdebugMsg(scip, " -> found empty bound for an expression during forward propagation of constraint %s\n",
-               SCIPconsGetName(conss[i]));
+            SCIPdebugMsg(scip, " -> cutoff in forwardPropExpr (due to domain error or auxvar tightening) of constraint <%s>\n", SCIPconsGetName(conss[i]));
+            *result = SCIP_CUTOFF;
+            break;
          }
-#endif
 
-         if( !cutoff )
+         /* check whether constraint sides (relaxed by epsilon) or auxvar bounds provide a tightening
+          *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides, so taking auxvar bounds is enough)
+          */
+         if( consdata->expr->auxvar == NULL )
          {
-            /* check whether constraint sides (relaxed by epsilon) or auxvar bounds provide a tightening
-             *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides, so taking auxvar bounds is enough)
-             */
-            SCIP_INTERVAL conssides;
-
-            if( consdata->expr->auxvar == NULL )
-            {
-               /* relax sides by SCIPepsilon() and handle infinite sides */
-               SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
-               SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
-               SCIPintervalSetBounds(&conssides, lhs, rhs);
-            }
-            else
-            {
-               conssides = intEvalVarBoundTightening(scip, consdata->expr->auxvar, (void*)SCIPconshdlrGetData(conshdlr));
-            }
-
-            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, consdata->expr, conssides, &cutoff, &ntightenings) );
-
-            if( cutoff )
-            {
-               SCIPdebugMsg(scip, " -> cutoff after intersect with conssides\n");
-               break;
-            }
+            /* relax sides by SCIPepsilon() and handle infinite sides */
+            SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
+            SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
+            SCIPintervalSetBounds(&conssides, lhs, rhs);
          }
-
-         /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
-         consdata->ispropagated = TRUE;
-
+         else
+         {
+            conssides = intEvalVarBoundTightening(scip, consdata->expr->auxvar, (void*)SCIPconshdlrGetData(conshdlr));
+         }
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, consdata->expr, conssides, &cutoff, &ntightenings) );
          assert(ntightenings >= 0);
-         *nchgbds += ntightenings;
 
          if( cutoff )
          {
-            SCIPdebugMsg(scip, " -> cutoff\n");
+            SCIPdebugMsg(scip, " -> cutoff after intersect with conssides of constraint <%s>\n", SCIPconsGetName(conss[i]));
+            *result = SCIP_CUTOFF;
             break;
          }
 
          if( ntightenings > 0 )
+         {
+            *nchgbds += ntightenings;
             *result = SCIP_REDUCEDDOM;
+         }
+
+         /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
+         consdata->ispropagated = TRUE;
       }
 
       /* apply backward propagation (if cutoff is TRUE, then this call empties the queue) */
       SCIP_CALL( reversePropQueue(scip, conshdlr, &cutoff, &ntightenings) );
-
-      if( !cutoff )
-      {
-         /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
-         success = ntightenings > 0;
-
-         if( nchgbds != NULL )
-            *nchgbds += ntightenings;
-
-         if( success )
-            *result = SCIP_REDUCEDDOM;
-      }
-
+      assert(ntightenings >= 0);
       assert(SCIPqueueIsEmpty(conshdlrdata->reversepropqueue));
 
       if( cutoff )
@@ -1806,17 +1782,13 @@ SCIP_RETCODE propConss(
          break;
       }
 
-#if 0
-      for( i = 0; i < nconss; ++i )
+      if( ntightenings > 0 )
       {
-         SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
-         SCIPprintConsExprExprDotInit(scip, conshdlr, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_ACTIVITY | SCIP_CONSEXPR_PRINTDOT_EXPRSTRING);
-         SCIPprintConsExprExprDot(scip, dotdata, SCIPconsGetData(conss[i])->expr);
-         SCIPprintConsExprExprDotFinal(scip, &dotdata);
+         *nchgbds += ntightenings;
+         *result = SCIP_REDUCEDDOM;
       }
-#endif
    }
-   while( success && ++roundnr < conshdlrdata->maxproprounds );
+   while( ntightenings > 0 && ++roundnr < conshdlrdata->maxproprounds );
 
    conshdlrdata->forceboundtightening = FALSE;
 
