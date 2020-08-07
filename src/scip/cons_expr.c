@@ -246,6 +246,7 @@ struct SCIP_ConshdlrData
 
    /* parameters */
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
+   SCIP_Bool                propauxvars;     /**< whether to check bounds of all auxiliary variable to seed reverse propagation */
    char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
    SCIP_Real                varboundrelaxamount; /**< by how much to relax variable bounds during bound tightening */
    SCIP_Real                conssiderelaxamount; /**< by how much to relax constraint sides during bound tightening */
@@ -1639,8 +1640,8 @@ SCIP_RETCODE reversePropQueue(
  *
  *   1.) apply forward propagation (update activities) for all constraints not marked as propagated
  *
- *   2.) collect expressions for which the constraint sides provide tighter bounds
- *       (TODO in an older version, we used also bounds of all auxiliary variable; bring back?)
+ *   2.) if presolve or propauxvars is disabled: collect expressions for which the constraint sides provide tighter bounds
+ *       if solve and propauxvars is enabled: collect expressions for which auxvars (including those in root exprs) provide tighter bounds
  *
  *   3.) apply reverse propagation to all collected expressions; don't explore
  *       sub-expressions which have not changed since the beginning of the propagation loop
@@ -1650,6 +1651,9 @@ SCIP_RETCODE reversePropQueue(
  *  @note after calling forward propagation for a constraint we mark this constraint as propagated; this flag might be
  *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
  *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
+ *
+ *  @TODO should we distinguish between expressions where activity information is used for separation and those where not,
+ *    e.g., try less to propagate on convex constraints?
  */
 static
 SCIP_RETCODE propConss(
@@ -1669,6 +1673,7 @@ SCIP_RETCODE propConss(
    SCIP_INTERVAL conssides;
    int ntightenings;
    int roundnr;
+   SCIP_CONSEXPR_ITERATOR* revpropcollectit;
    int i;
 
    assert(scip != NULL);
@@ -1697,6 +1702,12 @@ SCIP_RETCODE propConss(
 
    /* tightenAuxVarBounds needs to know whether boundtightenings are to be forced */
    conshdlrdata->forceboundtightening = force;
+
+   /* create iterator that we will use if we need to look at all auxvars */
+   if( conshdlrdata->propauxvars )
+   {
+      SCIP_CALL( SCIPexpriteratorCreate(&revpropcollectit, conshdlr, SCIPblkmem(scip)) );
+   }
 
    /* main propagation loop */
    do
@@ -1736,22 +1747,42 @@ SCIP_RETCODE propConss(
             break;
          }
 
-         /* check whether constraint sides (relaxed by epsilon) or auxvar bounds provide a tightening
-          *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides, so taking auxvar bounds is enough)
-          */
-         if( consdata->expr->auxvar == NULL )
+         /* TODO for a constraint that only has an auxvar for consdata->expr (e.g., convex quadratic), we could also just do the if(TRUE)-branch */
+         if( !conshdlrdata->propauxvars || consdata->expr->auxvar == NULL )
          {
-            /* relax sides by SCIPepsilon() and handle infinite sides */
-            SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
-            SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
-            SCIPintervalSetBounds(&conssides, lhs, rhs);
+            /* check whether constraint sides (relaxed by epsilon) or auxvar bounds provide a tightening
+             *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides, so taking auxvar bounds is enough)
+             */
+            if( consdata->expr->auxvar == NULL )
+            {
+               /* relax sides by SCIPepsilon() and handle infinite sides */
+               SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
+               SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
+               SCIPintervalSetBounds(&conssides, lhs, rhs);
+            }
+            else
+            {
+               conssides = intEvalVarBoundTightening(scip, consdata->expr->auxvar, (void*)SCIPconshdlrGetData(conshdlr));
+            }
+            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, consdata->expr, conssides, &cutoff, &ntightenings) );
          }
          else
          {
-            conssides = intEvalVarBoundTightening(scip, consdata->expr->auxvar, (void*)SCIPconshdlrGetData(conshdlr));
+            /* check whether bounds of any auxvar used in constraint provides a tightening
+             *   (for the root expression, bounds of auxvar are initially set to constraint sides)
+             */
+            SCIP_CONSEXPR_EXPR* expr;
+
+            SCIP_CALL( SCIPexpriteratorInit(revpropcollectit, consdata->expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
+            for( expr = SCIPexpriteratorGetCurrent(revpropcollectit); !SCIPexpriteratorIsEnd(revpropcollectit) && !cutoff; expr = SCIPexpriteratorGetNext(revpropcollectit) )
+            {
+               if( expr->auxvar == NULL )
+                  continue;
+
+               conssides = intEvalVarBoundTightening(scip, expr->auxvar, (void*)SCIPconshdlrGetData(conshdlr));
+               SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, conssides, &cutoff, &ntightenings) );
+            }
          }
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, consdata->expr, conssides, &cutoff, &ntightenings) );
-         assert(ntightenings >= 0);
 
          if( cutoff )
          {
@@ -1760,6 +1791,7 @@ SCIP_RETCODE propConss(
             break;
          }
 
+         assert(ntightenings >= 0);
          if( ntightenings > 0 )
          {
             *nchgbds += ntightenings;
@@ -1789,6 +1821,11 @@ SCIP_RETCODE propConss(
       }
    }
    while( ntightenings > 0 && ++roundnr < conshdlrdata->maxproprounds );
+
+   if( conshdlrdata->propauxvars )
+   {
+      SCIPexpriteratorFree(&revpropcollectit);
+   }
 
    conshdlrdata->forceboundtightening = FALSE;
 
@@ -15444,6 +15481,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a set of constraints within one round of SCIP propagation",
          &conshdlrdata->maxproprounds, FALSE, 10, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/propauxvars",
+         "whether to check bounds of all auxiliary variable to seed reverse propagation",
+         &conshdlrdata->propauxvars, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/varboundrelax",
          "strategy on how to relax variable bounds during bound tightening: relax (n)ot, relax by (a)bsolute value, relax always by a(b)solute value, relax by (r)relative value",
