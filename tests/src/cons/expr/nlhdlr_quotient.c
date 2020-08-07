@@ -322,7 +322,7 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */

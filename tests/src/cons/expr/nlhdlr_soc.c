@@ -329,7 +329,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -385,7 +385,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -439,7 +439,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -494,7 +494,7 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -538,7 +538,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -593,7 +593,7 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -637,7 +637,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -692,7 +692,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -748,7 +748,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -806,7 +806,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -864,7 +864,7 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -909,7 +909,7 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
@@ -955,7 +955,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
 
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
    cr_expect_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */

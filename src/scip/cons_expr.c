@@ -418,7 +418,6 @@ SCIP_RETCODE freeExpr(
 static
 SCIP_RETCODE freeAuxVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler, can be NULL */
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which auxvar to free, if any */
    )
 {
@@ -450,7 +449,6 @@ SCIP_RETCODE freeAuxVar(
 static
 SCIP_RETCODE freeEnfoData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler, can be NULL */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression whose enforcement data will be released */
    SCIP_Bool             freeauxvar          /**< whether aux var should be released and activity usage counts be reset */
    )
@@ -460,7 +458,7 @@ SCIP_RETCODE freeEnfoData(
    if( freeauxvar )
    {
       /* free auxiliary variable */
-      SCIP_CALL( freeAuxVar(scip, conshdlr, expr) );
+      SCIP_CALL( freeAuxVar(scip, expr) );
       assert(expr->auxvar == NULL);
 
       /* reset count on activity and auxvar usage */
@@ -1673,7 +1671,7 @@ SCIP_RETCODE propConss(
    SCIP_INTERVAL conssides;
    int ntightenings;
    int roundnr;
-   SCIP_CONSEXPR_ITERATOR* revpropcollectit;
+   SCIP_CONSEXPR_ITERATOR* revpropcollectit = NULL;
    int i;
 
    assert(scip != NULL);
@@ -1773,8 +1771,9 @@ SCIP_RETCODE propConss(
              */
             SCIP_CONSEXPR_EXPR* expr;
 
+            assert(revpropcollectit != NULL);
             SCIP_CALL( SCIPexpriteratorInit(revpropcollectit, consdata->expr, SCIP_CONSEXPRITERATOR_BFS, FALSE) );
-            for( expr = SCIPexpriteratorGetCurrent(revpropcollectit); !SCIPexpriteratorIsEnd(revpropcollectit) && !cutoff; expr = SCIPexpriteratorGetNext(revpropcollectit) )
+            for( expr = SCIPexpriteratorGetCurrent(revpropcollectit); !SCIPexpriteratorIsEnd(revpropcollectit) && !cutoff; expr = SCIPexpriteratorGetNext(revpropcollectit) )  /*lint !e441*/
             {
                if( expr->auxvar == NULL )
                   continue;
@@ -2255,7 +2254,7 @@ SCIP_RETCODE detectNlhdlrs(
        */
       if( consdata->expr->nenfos > 0 )
       {
-         SCIP_CALL( freeEnfoData(scip, conshdlr, consdata->expr, FALSE) );
+         SCIP_CALL( freeEnfoData(scip, consdata->expr, FALSE) );
          assert(consdata->expr->nenfos < 0);
       }
 
@@ -2542,7 +2541,7 @@ SCIP_RETCODE deinitSolve(
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
          /* remove nonlinear handlers in expression and their data and auxiliary variables; reset activityusage count */
-         SCIP_CALL( freeEnfoData(scip, conshdlr, expr, TRUE) );
+         SCIP_CALL( freeEnfoData(scip, expr, TRUE) );
 
          /* remove quadratic info */
          quadFree(scip, expr);
@@ -3044,7 +3043,7 @@ static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {  /*lint --e{715}*/
    SCIP_EVENTTYPE eventtype;
-   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_EXPR* expr;
 
    eventtype = SCIPeventGetType(event);
@@ -4691,8 +4690,7 @@ SCIP_RETCODE canonicalizeConstraints(
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
    int*                  ndelconss,          /**< counter to add number of deleted constraints, or NULL */
    int*                  naddconss,          /**< counter to add number of added constraints, or NULL */
-   int*                  nchgcoefs,          /**< counter to add number of changed coefficients, or NULL */
-   int*                  nchgbds             /**< counter to add number of bound tightenings found during reverseprop calls in initSolve, set to NULL to disable these calls! */
+   int*                  nchgcoefs           /**< counter to add number of changed coefficients, or NULL */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -10270,7 +10268,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
       return SCIP_OKAY;
 
    /* simplify constraints and replace common subexpressions */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
 
    /* currently SCIP does not offer to communicate this,
     * but at the moment this can only become true if canonicalizeConstraints called detectNlhdlrs (which it doesn't do in EXITPRESOLVE stage)
@@ -10663,11 +10661,8 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* simplify constraints and replace common subexpressions, reinit nlhdlrs
-    * if not fast timing, then also do some light boundtightening during detect nlhdlrs
-    */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss, nchgcoefs,
-      (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0 ? nchgbds : NULL) );
+   /* simplify constraints and replace common subexpressions, reinit nlhdlrs */
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, nconss, presoltiming, &infeasible, ndelconss, naddconss, nchgcoefs) );
    if( infeasible )
    {
       *result = SCIP_CUTOFF;
@@ -12971,7 +12966,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    }
 
    /* handle the root expr separately: free enfodata and expression data here */
-   SCIP_CALL( freeEnfoData(scip, NULL, *rootexpr, TRUE) );
+   SCIP_CALL( freeEnfoData(scip, *rootexpr, TRUE) );
 
    /* free quadratic info */
    quadFree(scip, *rootexpr);
@@ -13014,7 +13009,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
             assert(child->nuses == 1);
 
             /* free child's enfodata and expression data when entering child */
-            SCIP_CALL( freeEnfoData(scip, NULL, child, TRUE) );
+            SCIP_CALL( freeEnfoData(scip, child, TRUE) );
 
             /* free quadratic info */
             quadFree(scip, child);
@@ -14944,7 +14939,7 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
        * - activity of expr was not used before but will be used now, or
        * - auxiliary variable of expr was not required before but will be used now
        */
-      SCIP_CALL( freeEnfoData(scip, conshdlr, expr, FALSE) );
+      SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
    }
 
    if( useauxvar )
