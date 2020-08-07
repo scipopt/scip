@@ -2154,6 +2154,7 @@ SCIP_RETCODE addScenarioConsToProb(
       SCIP_VAR** consvars = NULL;
       int nconsvars;
       SCIP_Bool success;
+      SCIP_Bool success_1;
 
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
@@ -2164,19 +2165,27 @@ SCIP_RETCODE addScenarioConsToProb(
       if( success )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
-         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success) );
+         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success_1) );
+
+         /* if the get variable callback is not implemented for the constraint, then the success flag will be returned as
+         * FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned
+         */
+         if ( !success_1 )
+         {
+            SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
+               SCIPconsGetName(conss[i]));
+
+            /* freeing buffer memory */
+            SCIPfreeBufferArrayNull(scip, consvars);
+
+            return SCIP_READERROR;
+         }
       }
 
-      /* if the get variable callback is not implemented for the constraint, then the success flag will be returned as
-       * FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned
-       */
       if( !success )
       {
          SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
             SCIPconsGetName(conss[i]));
-
-         /* freeing buffer memory */
-         SCIPfreeBufferArrayNull(scip, consvars);
 
          return SCIP_READERROR;
       }
