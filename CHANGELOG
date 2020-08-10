@@ -113,6 +113,8 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
+
 ### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
