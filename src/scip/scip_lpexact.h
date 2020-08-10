@@ -200,6 +200,19 @@ SCIP_Bool SCIPlpExactIsSolved(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets solution status of current exact LP
+  *
+  *  @return the solution status of current exact LP.
+  *
+  *  @pre This method can be called if @p scip is in one of the following stages:
+  *       - \ref SCIP_STAGE_SOLVING
+  *
+  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+  */
+SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets objective value of current exact LP (which is the sum of column and loose objective value)
  *
  *  @return the objective value of current LP (which is the sum of column and loose objective value).
@@ -208,8 +221,8 @@ SCIP_Bool SCIPlpExactIsSolved(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible
- *        if a limit was hit during solving. It must not be used as a dual bound if the LP solution status returned by
- *        SCIPgetLPSolstat() is SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ *        if a limit was hit during solving. It must not be used as a dual bound if the exact LP solution status
+ *        returned by SCIPgetLPExactSolstat() is SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */

@@ -385,7 +385,7 @@ SCIP_RETCODE SCIPprintRowex(
 
 /** gets objective value of current exact LP (which is the sum of column and loose objective value)
  *
- *  @return the objective value of current LP (which is the sum of column and loose objective value).
+ *  @return the objective value of current exact LP (which is the sum of column and loose objective value).
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -406,10 +406,8 @@ SCIP_Rational* SCIPgetLPExactObjval(
 
    SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, res);
 
-
    return res;
 }
-
 
 /** returns whether the exact lp was solved */
 SCIP_Bool SCIPlpExactIsSolved(
@@ -422,8 +420,32 @@ SCIP_Bool SCIPlpExactIsSolved(
    return scip->lpexact->solved && scip->lpexact->flushed;
 }
 
+/** gets solution status of current exact LP
+  *
+  *  @return the solution status of current exact LP.
+  *
+  *  @pre This method can be called if @p scip is in one of the following stages:
+  *       - \ref SCIP_STAGE_SOLVING
+  *
+  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+  */
+SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactSolstat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-/** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available
+   /* We can check the floating point flag here since the exact and floating point LP is constructed at the same
+    * time.
+    */
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+       return SCIPlpExactGetSolstat(scip->lpexact);
+   else
+       return SCIP_LPSOLSTAT_NOTSOLVED;
+}
+
+
+/** initiates exact LP diving, making methods SCIPchgVarObjExactDive(), SCIPchgVarLbExactDive(), and SCIPchgVarUbExactDive() available
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -444,7 +466,7 @@ SCIP_RETCODE SCIPstartExactDive(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPstartDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPstartExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
 
    if( SCIPlpExactDiving(scip->lpexact) )
@@ -459,22 +481,15 @@ SCIP_RETCODE SCIPstartExactDive(
       return SCIP_INVALIDCALL;
    }
 
-   // TODO: maybe replace with an exact version?
-   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
-   {
-      SCIPerrorMessage("cannot start diving if LP has not been constructed\n");
-      return SCIP_INVALIDCALL;
-   }
-   assert(SCIPtreeHasCurrentNodeLP(scip->tree));
+   /* We start the exact LP dive parallel to the floating point LP dive. Since we need to check different flags (e.g.
+    * the LP is actually constructed (exact LP is constructed at the same time as the floating point LP, so it is
+    * enough to just check the floating point flag)), update counters and sometimes also make implicit changes in the
+    * floating point LP, this is necessary
+    */
+   SCIP_CALL( SCIPstartDive(scip) );
+   assert(SCIPinDive(scip));
 
    SCIP_CALL( SCIPlpExactStartDive(scip->lpexact, scip->mem->probmem, scip->set, scip->stat) );
-
-   /* TODO: I don't think we need that in exact diving mode, but we have to check! */
-   /* remember the relaxation solution to reset it later */
-   //if( SCIPisRelaxSolValid(scip) )
-   //{
-   //   SCIP_CALL( SCIPtreeStoreRelaxSol(scip->tree, scip->set, scip->relaxation, scip->transprob) );
-   //}
 
    return SCIP_OKAY;
 }
@@ -495,7 +510,7 @@ SCIP_RETCODE SCIPendExactDive(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPendDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPendExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpExactDiving(scip->lpexact) )
    {
@@ -503,20 +518,17 @@ SCIP_RETCODE SCIPendExactDive(
       return SCIP_INVALIDCALL;
    }
 
-   /* unmark the diving flag in the LP and reset all variables' objective and bound values */
+   /* unmark the diving flag in the exact LP and reset all variables' objective and bound values */
    SCIP_CALL( SCIPlpExactEndDive(scip->lpexact, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue, scip->eventfilter,
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
 
-   /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
-   if( !scip->lpexact->resolvelperror && scip->tree->focusnode != NULL && SCIPlpIsRelax(scip->lp) && SCIPlpExactIsSolved(scip) )
-   {
-      assert(SCIPtreeIsFocusNodeLPConstructed(scip->tree));
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->tree, scip->transprob,
-            scip->origprob, scip->lp) );
-   }
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
    assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/
+
+   /* End floating point LP dive. See comment in SCIPstartExactDive() */
+   SCIP_CALL( SCIPendDive(scip) );
+   assert( !SCIPinDive(scip) );
 
    /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
     * the cutoff has to be done now.
@@ -526,13 +538,6 @@ SCIP_RETCODE SCIPendExactDive(
       SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
             scip->eventqueue, scip->lp, scip->primal->cutoffbound) );
    }
-
-   /* TODO: see comment in SCIPstartExactDive */
-   /* if a relaxation was stored before diving, restore it now */
-   //if( scip->tree->probdiverelaxstored )
-   //{
-   //   SCIP_CALL( SCIPtreeRestoreRelaxSol(scip->tree, scip->set, scip->relaxation, scip->transprob) );
-   //}
 
    return SCIP_OKAY;
 }
@@ -560,9 +565,9 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveExactDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( !SCIPlpDiving(scip->lpexact) )
+   if( !SCIPlpExactDiving(scip->lpexact) )
    {
       SCIPerrorMessage("not in exact diving mode\n");
       return SCIP_INVALIDCALL;
@@ -580,15 +585,6 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
       || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
          RatIsGE(SCIPgetLPExactObjval(scip), SCIPgetCutoffboundExact(scip))) )
    {
-      /* analyze the infeasible LP (only if the objective was not changed, all columns are in the LP, and no external
-       * pricers exist) */
-      //if( !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
-      //   && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
-      //{
-      //   SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-      //         scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
-      //}
-
       if( cutoff != NULL )
          *cutoff = TRUE;
    }

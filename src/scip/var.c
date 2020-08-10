@@ -8539,7 +8539,7 @@ SCIP_RETCODE SCIPvarChgLbExactDive(
    /* adjust bound for integral variables */
    //SCIPvarAdjustLb(var, set, &newbound);
 
-   //SCIPsetDebugMsg(set, "changing lower bound of <%s> to %g in current exact dive\n", var->name, newbound);
+   RatDebugMessage("changing lower bound of <%s> to %q in current exact dive\n", var->name, newbound);
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )

@@ -9,21 +9,21 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_xyz.c
+/**@file   cons_exactsol.c
  * @ingroup DEFPLUGINS_CONS
- * @brief  constraint handler for xyz constraints
- * @author Tobias Achterberg
+ * @brief  constraint handler for ensuring that primal solution is exact
+ * @author Antonia Chmiela
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
 
-#include "scip/cons_exactheur.h"
+#include "scip/cons_exactsol.h"
 #include "scip/scip_lpexact.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
@@ -32,7 +32,7 @@
 
 
 /* fundamental constraint handler properties */
-#define CONSHDLR_NAME          "exactheur"
+#define CONSHDLR_NAME          "exactsol"
 #define CONSHDLR_DESC          "constraint to ensure that primal solutions report back exact solutions"
 #define CONSHDLR_ENFOPRIORITY  -9999999 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
@@ -291,7 +291,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolXyz)
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpExactHeur)
+SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
 {  /*lint --e{715}*/
 
    /* returning feasible since we can't enforce anything */
@@ -303,7 +303,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactHeur)
 
 /** constraint enforcing method of constraint handler for relaxation solutions */
 static
-SCIP_DECL_CONSENFORELAX(consEnforelaxExactHeur)
+SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
 {  /*lint --e{715}*/
 
    /* returning feasible since we can't enforce anything */
@@ -315,7 +315,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxExactHeur)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-SCIP_DECL_CONSENFOPS(consEnfopsExactHeur)
+SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
 {  /*lint --e{715}*/
 
    /* returning feasible since we can't enforce anything */
@@ -327,7 +327,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactHeur)
 /** TODO */
 /** feasibility check method of constraint handler for integral solutions */
 static
-SCIP_DECL_CONSCHECK(consCheckExactHeur)
+SCIP_DECL_CONSCHECK(consCheckExactSol)
 {  /*lint --e{715}*/
 
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -356,9 +356,6 @@ SCIP_DECL_CONSCHECK(consCheckExactHeur)
 #ifdef NDEBUG
    SCIP_RETCODE retstat;
 #endif
-
-   /* start diving */
-   SCIP_CALL( SCIPstartDive(scip) );
 
    /* start exact diving */
    SCIP_CALL( SCIPstartExactDive(scip) );
@@ -441,9 +438,6 @@ SCIP_DECL_CONSCHECK(consCheckExactHeur)
 
    /* terminate exact diving */
    SCIP_CALL( SCIPendExactDive(scip) );
-
-   /* terminate diving */
-   SCIP_CALL( SCIPendDive(scip) );
 
    return SCIP_OKAY;
 }

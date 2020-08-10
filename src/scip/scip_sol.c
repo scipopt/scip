@@ -1201,7 +1201,7 @@ SCIP_RETCODE SCIPlinkLPSolExact(
    SCIP_SOL*             sol                 /**< primal solution */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkLPSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPlinkLPSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpExactIsSolved(scip) )
    {

@@ -158,7 +158,7 @@ SCIP_RETCODE SCIPcolExactChgUb(
    );
 
 /*
- * row methods
+ * Row methods
  */
 
 /** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
@@ -210,6 +210,26 @@ SCIP_Bool SCIProwHasExRow(
 SCIP_ROWEXACT* SCIProwGetExRow(
    SCIP_LPEXACT*         lpexact,            /**< exact lp data structure */
    SCIP_ROW*             row                 /**< SCIP row */
+   );
+
+/** changes left hand side of exact LP row */
+SCIP_RETCODE SCIProwExactChgLhs(
+   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        lhs                 /**< new left hand side */
+   );
+
+/** changes right hand side of exact LP row */
+SCIP_RETCODE SCIProwExactChgRhs(
+   SCIP_ROWEXACT*        row,                /**< exact LP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        rhs                 /**< new right hand side */
    );
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
@@ -308,6 +328,16 @@ SCIP_RETCODE SCIPlpExactAddRow(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
    int                   depth               /**< depth in the tree where the row addition is performed */
+   );
+
+/** removes and releases all rows after the given number of rows from the LP */
+SCIP_RETCODE SCIPlpExactShrinkRows(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   int                   newnrows            /**< new number of rows in the LP */
    );
 
 /** returns the feasibility of a row for the given solution */
@@ -663,11 +693,10 @@ void SCIPlpExactForceExactSolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns whether the exact LP is in exact diving mode */
+/** returns whether the exact LP is in diving mode */
 SCIP_Bool SCIPlpExactDiving(
    SCIP_LPEXACT*         lpexact             /**< current exact LP data */
    );
-
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
@@ -688,27 +717,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             usefarkas           /**< are we aiming to prove infeasibility? */
-   );
-
-/** quits exact LP diving and resets bounds and objective values of columns to the current node's values */
-SCIP_RETCODE SCIPlpExactEndDive(
-   SCIP_LPEXACT*         lpexact,            /**< current LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_VAR**            vars,               /**< array with all active variables */
-   int                   nvars               /**< number of active variables */
-   );
-
-SCIP_RETCODE SCIPlpExactStartDive(
-   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** stores exact LP state (like basis information) into LP state object */
@@ -738,37 +746,32 @@ SCIP_RETCODE SCIPlpExactFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
-/** removes and releases all rows after the given number of rows from the LP */
-SCIP_RETCODE SCIPlpExactShrinkRows(
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   int                   newnrows            /**< new number of rows in the LP */
-   );
+/** gets solution status of current exact LP */
+SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
+   SCIP_LPEXACT*         lpexact             /**< current LP exact data */
+    );
 
-/** changes left hand side of exact LP row */
-SCIP_RETCODE SCIProwExactChgLhs(
-   SCIP_ROWEXACT*        row,                /**< exact LP row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-   SCIP_Rational*        lhs                 /**< new left hand side */
-   );
+/** starts exact LP diving and saves bounds and objective values of columns to the current nodes's values */
+SCIP_RETCODE SCIPlpExactStartDive(
+    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+    BMS_BLKMEM*           blkmem,             /**< block memory */
+    SCIP_SET*             set,                /**< global SCIP settings */
+    SCIP_STAT*            stat                /**< problem statistics */
+    );
 
-/** changes right hand side of exact LP row */
-SCIP_RETCODE SCIProwExactChgRhs(
-   SCIP_ROWEXACT*        row,                /**< exact LP row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-   SCIP_Rational*        rhs                 /**< new right hand side */
-   );
-
-
+/** quits exact LP diving and resets bounds and objective values of columns to the current node's values */
+SCIP_RETCODE SCIPlpExactEndDive(
+    SCIP_LPEXACT*         lpexact,            /**< current LP data */
+    BMS_BLKMEM*           blkmem,             /**< block memory */
+    SCIP_SET*             set,                /**< global SCIP settings */
+    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+    SCIP_STAT*            stat,               /**< problem statistics */
+    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+    SCIP_PROB*            prob,               /**< problem data */
+    SCIP_VAR**            vars,               /**< array with all active variables */
+    int                   nvars               /**< number of active variables */
+    );
 
 #ifdef __cplusplus
 }

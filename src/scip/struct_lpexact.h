@@ -82,7 +82,7 @@
 extern "C" {
 #endif
 
-/** collected values of a exact column which depend on the LP solution
+/** collected values of an exact column which depend on the LP solution
  *  We store these values in each column to recover the LP solution at start of diving or probing mode, say, without
  *  having to resolve the LP.  Note that we do not store the farkascoef value since we do expect a node with infeasible
  *  LP to be pruned anyway.
@@ -94,7 +94,7 @@ struct SCIP_ColExactSolVals
    unsigned int          basisstatus:2;      /**< basis status of column in last LP solution, invalid for non-LP columns */
 };
 
-/** collected values of a exact row which depend on the LP solution
+/** collected values of an exact row which depend on the LP solution
  *  We store these values in each row to recover the LP solution at start of diving or probing mode, say, without having
  *  to resolve the LP.  We do not store the dualfarkas value since we expect a node with infeasible LP to be pruned
  *  anyway. In this unlikely case, we have to resolve the LP.
