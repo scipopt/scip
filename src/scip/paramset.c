@@ -1927,68 +1927,6 @@ SCIP_RETCODE SCIPparamsetFix(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPparamsetSet(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   )
-{
-   SCIP_PARAM* param;
-
-   assert(paramset != NULL);
-   assert(set != NULL);
-
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
-   if( param == NULL )
-   {
-      SCIPerrorMessage("parameter <%s> unknown\n", name);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-
-   switch( param->paramtype )
-   {
-   case SCIP_PARAMTYPE_BOOL:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetBool(param, set, messagehdlr, (SCIP_Bool) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case  SCIP_PARAMTYPE_INT:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetInt(param, set, messagehdlr, (int) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_LONGINT:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetLongint(param, set, messagehdlr, (SCIP_Longint) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_REAL:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetReal(param, set, messagehdlr, (SCIP_Real) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_CHAR:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetChar(param, set, messagehdlr, (char) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_STRING:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetString(param, set, messagehdlr,  (char*) value, TRUE) );
-      break;
-
-   default:
-      SCIPerrorMessage("unknown parameter type\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** changes the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */

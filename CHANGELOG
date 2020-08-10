@@ -30,6 +30,7 @@ Interface changes
   SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
 - SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
   changed from SCIP_Shortbool* to unsigned*.
+- removed SCIPsetParam()
 
 ### New API functions
 
