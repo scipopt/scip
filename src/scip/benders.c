@@ -793,18 +793,24 @@ SCIP_RETCODE assignAuxiliaryVariables(
          targetvar = SCIPfindVar(scip, varname);
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
-         strcpy(prefix, tmpprefix);
          len += 2;
+         strncpy(prefix, tmpprefix, len);
 
          j++;
       }
-      assert(targetvar != NULL);
 
-      SCIPvarSetData(targetvar, vardata);
+      if( targetvar != NULL )
+      {
+         SCIPvarSetData(targetvar, vardata);
 
-      benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
+         benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
 
-      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+         SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+      }
+      else
+      {
+         SCIPABORT();
+      }
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -4226,10 +4232,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       /* if the result is DIDNOTRUN, then the subproblem was not solved */
       (*solved) = (result != SCIP_DIDNOTRUN);
    }
-   else
+   else if(subproblem != NULL)
    {
-      assert(subproblem != NULL);
-
       /* setting up the subproblem */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
       {
@@ -4283,6 +4287,10 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          else
             objective = SCIPsetInfinity(set);
       }
+   }
+   else
+   {
+      SCIPABORT();
    }
 
    if( !enhancement )

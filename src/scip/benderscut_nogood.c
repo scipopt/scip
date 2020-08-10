@@ -198,7 +198,7 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    consbenders = SCIPfindConshdlr(masterprob, "benders");
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "nogoodcut_%d", SCIPbenderscutGetNFound(benderscut) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "nogoodcut_%"SCIP_LONGINT_FORMAT, SCIPbenderscutGetNFound(benderscut) );
 
    /* creating an empty row or constraint for the Benders' cut */
    if( addcut )

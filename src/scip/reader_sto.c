@@ -2176,7 +2176,10 @@ SCIP_RETCODE addScenarioConsToProb(
             SCIPconsGetName(conss[i]));
 
          /* freeing buffer memory */
-         SCIPfreeBufferArrayNull(scip, consvars);
+         if( consvars != NULL )
+         {
+            SCIPfreeBufferArray(scip, consvars);
+         }
 
          return SCIP_READERROR;
       }
