@@ -553,7 +553,7 @@ SCIP_RETCODE SCIPendExactDive(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  *
  *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
- *  compare the explanation of SCIPstartDive()
+ *  compare the explanation of SCIPstartExactDive()
  */
 SCIP_RETCODE SCIPsolveExactDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
