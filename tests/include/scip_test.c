@@ -47,7 +47,7 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
 {
    /* no output nor warnings */
    /* @todo reset output to previous level! */
-   SCIP_CALL( SCIPsetParam(scip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 0) );
 
    /* make sure that at least DFS is included; we need one node selector to call SCIPtransformProb, which is also called
     * by SCIP(pre)solve */
