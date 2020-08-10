@@ -39,6 +39,11 @@ Interface changes
 
 ### Command line interface
 ### Interfaces to external software
+
+- removed GAMS interface (originally in interfaces/gams) and reading capability of gms reader;
+  the removed interface was a poorly maintained copy of the GAMS/SCIP interface that is available at
+  https://github.com/coin-or/GAMSlinks
+
 ### Changed parameters
 
 - Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
