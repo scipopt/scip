@@ -866,11 +866,12 @@ int SCIPStpunionfindFind(
    return root;
 }
 
-/** merges the components containing p and q respectively */
+/** Merges the components containing p and q respectively.
+ *  Identifier of 'p' will always be used if 'compress' is FALSE. */
 void SCIPStpunionfindUnion(
    UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
-   int                   q,                  /**< second component*/
+   int                   q,                  /**< second component */
    SCIP_Bool             compress            /**< compress union find structure? */
    )
 {

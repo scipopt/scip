@@ -447,7 +447,8 @@ SCIP_RETCODE updateSolution(
 
       SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, redcost, soledge, -1, &success, FALSE) );
       {
-         int todo; // do reducctions based on redcost
+         // todo
+      //   int todo; // do reducctions based on redcost
       }
       SCIPfreeBufferArray(scip, &redcost);
    }

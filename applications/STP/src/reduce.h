@@ -351,17 +351,6 @@ extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
 extern SCIP_RETCODE    reduce_sdprofitUpdateFromBLC(SCIP*, const GRAPH*, const BLCTREE*, SCIP_Bool, SDPROFIT*);
 extern SCIP_RETCODE    reduce_sdprofitBuildFromBLC(SCIP*, const GRAPH*, const BLCTREE*, SCIP_Bool, SDPROFIT*);
 extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
-extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
-extern SCIP_RETCODE     reduce_sdgraphInitBiased(SCIP*, const GRAPH*, const SDPROFIT*, SDGRAPH**);
-extern SCIP_RETCODE     reduce_sdgraphInitBiasedFromTpaths(SCIP*, GRAPH*, const SDPROFIT*, const TPATHS*, SDGRAPH**);
-extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
-extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
-extern void             reduce_sdgraphInitOrderedMstCosts(SDGRAPH*);
-extern const STP_Bool*  reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
-extern SCIP_Bool        reduce_sdgraphHasMstHalfMark(const SDGRAPH*);
-extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
-extern SCIP_Real        reduce_sdgraphGetSd(int, int, SDGRAPH*);
-extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiasedBottleneck(SCIP*, GRAPH*, SD**);
@@ -369,5 +358,23 @@ extern SCIP_RETCODE     reduce_sdAddNeighborSd(SCIP*, const GRAPH*, SD*);
 extern void             reduce_sdFree(SCIP*, SD**);
 extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, int, const int*, DIJK*, SD*, GRAPH*);
 
+
+/* reduce_sdgraph.c
+ */
+extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
+extern SCIP_RETCODE     reduce_sdgraphInitBiased(SCIP*, const GRAPH*, const SDPROFIT*, SDGRAPH**);
+extern SCIP_RETCODE     reduce_sdgraphInitBiasedFromTpaths(SCIP*, GRAPH*, const SDPROFIT*, const TPATHS*, SDGRAPH**);
+extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
+extern const SCIP_Real* reduce_sdgraphGetOrderedMstCosts(const SDGRAPH*);
+extern const int*       reduce_sdgraphGetOrgnodesToSdMap(const SDGRAPH*);
+extern void             reduce_sdgraphInitOrderedMstCosts(SDGRAPH*);
+extern const STP_Bool*  reduce_sdgraphGetMstHalfMark(const SDGRAPH*);
+extern SCIP_Bool        reduce_sdgraphHasMstHalfMark(const SDGRAPH*);
+extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
+extern SCIP_Real        reduce_sdgraphGetSd(int, int, SDGRAPH*);
+extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
+extern void             reduce_sdgraphInsertEdge(SCIP*, int, int, SCIP_Real, int, int* RESTRICT, SDGRAPH*, SCIP_Bool*);
+extern SCIP_RETCODE     reduce_sdgraphMstBuild(SCIP*, const GRAPH*, SDGRAPH*);
+extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);
 
 #endif /* APPLICATIONS_STP_SRC_REDUCE_H_ */
