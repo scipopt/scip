@@ -556,10 +556,10 @@ TCLIQUE_Bool tcliqueLoadFile(
    int i;
    int result;
    char* charresult;
-   char* tmp;
 
    assert(tcliquegraph != NULL);
    assert(scaleval > 0.0);
+   assert(sizeofprobname >= 2);
 
    /* open file */
    if( (file = fopen(filename, "r")) == NULL )
@@ -577,33 +577,11 @@ TCLIQUE_Bool tcliqueLoadFile(
       return FALSE;
    }
 
-   /* set name of problem, copies 'sizeofprobname' characters into probname */
-   charresult = fgets(probname, sizeofprobname, file);
-   if( charresult == NULL )
+   /* read name of problem (if line is longer than sizeofprobname continue reading until end of line) */
+   do
    {
-      infoMessage("Error while reading probname in file %s", filename);
-      fclose(file);
-      return FALSE;
-   }
-
-   /* allocate temporary memory for skipping rest of problem name */
-   BMSallocMemoryArray(&tmp, sizeofprobname +1 );
-   if( tmp == NULL )
-   {
-      infoMessage("[%s:%d] No memory in function call", __FILE__, __LINE__);
-      fclose(file);
-      return FALSE;
-   }
-
-   BMScopyMemoryArray(tmp, probname, sizeofprobname);
-   probname[sizeofprobname-1] = '\0';
-   tmp[sizeofprobname] = '\0';
-
-   /* continue reading until we reach the end of the problem name */
-   while( (int) strlen(tmp) == sizeofprobname && tmp[strlen(tmp)-1] != '\n' )
-   {
-      charresult = fgets(tmp, sizeofprobname, file);
-
+      probname[sizeofprobname-2] = '\0';
+      charresult = fgets(probname, sizeofprobname, file);
       if( charresult == NULL )
       {
          infoMessage("Error while reading probname in file %s", filename);
@@ -611,9 +589,7 @@ TCLIQUE_Bool tcliqueLoadFile(
          return FALSE;
       }
    }
-
-   /* free temporary memory */
-   BMSfreeMemoryArray(&tmp);
+   while( probname[sizeofprobname-2] != '\0' );
 
    /* set number of nodes and number of edges in graph */
    /* coverity[tainted_data] */
