@@ -573,7 +573,7 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    if( !tcliqueCreate(tcliquegraph) )
    {
-      fclose(file);
+      (void) fclose(file);
       return FALSE;
    }
 
@@ -585,7 +585,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       if( charresult == NULL )
       {
          infoMessage("Error while reading probname in file %s", filename);
-         fclose(file);
+         (void) fclose(file);
          return FALSE;
       }
    }
@@ -597,7 +597,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    if( result <= 0 )
    {
       infoMessage("Error while reading number of nodes in file %s", filename); 
-      fclose(file);
+      (void) fclose(file);
       return FALSE;
    }
 
@@ -606,7 +606,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    if( result <= 0 )
    {
       infoMessage("Error while reading number of edges in file %s", filename); 
-      fclose(file);
+      (void) fclose(file);
       return FALSE;
    }
 
@@ -614,7 +614,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    {
       infoMessage("\nInvalid number of %s (%d) in file: %s", (*tcliquegraph)->nnodes < 0 ? "nodes" : "edges", 
          (*tcliquegraph)->nnodes < 0 ? (*tcliquegraph)->nnodes : (*tcliquegraph)->nedges, filename);
-      fclose(file);
+      (void) fclose(file);
       return FALSE;
    }
 
@@ -655,7 +655,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       if( result <= 0 )
       {
          infoMessage("Error while reading weights of nodes in file %s", filename); 
-         fclose(file);
+         (void) fclose(file);
          return FALSE;
       }
 
@@ -673,14 +673,14 @@ TCLIQUE_Bool tcliqueLoadFile(
       if( result <= 1 )
       {
          infoMessage("Error while reading edges in file %s", filename); 
-         fclose(file);
+         (void) fclose(file);
          return FALSE;
       }
 
       if( node1 < 0 || node2 < 0 || node1 >= (*tcliquegraph)->nnodes || node2 >= (*tcliquegraph)->nnodes )
       {
          infoMessage("\nInvalid node index (%d) in file: %s", node1 < 0 ? node1 : node2, filename);
-         fclose(file);
+         (void) fclose(file);
          return FALSE;
       } 
 
@@ -699,7 +699,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    /* close file */
-   fclose(file);
+   (void) fclose(file);
 
    return TRUE;
 }
