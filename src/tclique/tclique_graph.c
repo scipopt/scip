@@ -655,6 +655,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
 
    /* set weights of all nodes (scaled!) */
+   /* coverity[tainted_data] */
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
    {
       result = fscanf(file, "%lf", &weight);
@@ -671,6 +672,7 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    /* set adjacent edges and degree of all nodes */
    currentnode = -1;
+   /* coverity[tainted_data] */
    for( i = 0; i < (*tcliquegraph)->nedges; i++ )
    {
       /* read edge (node1, node2) */
