@@ -566,7 +566,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    {
       if( (file = fopen("default.dat", "r")) == NULL )
       {
-         infoMessage("\nCan't open file: %s", filename);
+         infoMessage("Cannot open file: %s\n", filename);
          return FALSE;
       }
    }
@@ -584,7 +584,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       charresult = fgets(probname, sizeofprobname, file);
       if( charresult == NULL )
       {
-         infoMessage("Error while reading probname in file %s", filename);
+         infoMessage("Error while reading probname in file %s\n", filename);
          (void) fclose(file);
          return FALSE;
       }
@@ -596,7 +596,14 @@ TCLIQUE_Bool tcliqueLoadFile(
    result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
    if( result <= 0 )
    {
-      infoMessage("Error while reading number of nodes in file %s", filename); 
+      infoMessage("Error while reading number of nodes in file %s\n", filename);
+      (void) fclose(file);
+      return FALSE;
+   }
+
+   if( (*tcliquegraph)->nnodes < 0 )
+   {
+      infoMessage("Invalid number of nodes (%d) in file: %s\n", (*tcliquegraph)->nnodes, filename);
       (void) fclose(file);
       return FALSE;
    }
@@ -605,15 +612,14 @@ TCLIQUE_Bool tcliqueLoadFile(
    result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
    if( result <= 0 )
    {
-      infoMessage("Error while reading number of edges in file %s", filename); 
+      infoMessage("Error while reading number of edges in file %s", filename);
       (void) fclose(file);
       return FALSE;
    }
 
-   if( (*tcliquegraph)->nnodes < 0 || (*tcliquegraph)->nedges < 0 )
+   if( (*tcliquegraph)->nedges < 0 )
    {
-      infoMessage("\nInvalid number of %s (%d) in file: %s", (*tcliquegraph)->nnodes < 0 ? "nodes" : "edges", 
-         (*tcliquegraph)->nnodes < 0 ? (*tcliquegraph)->nnodes : (*tcliquegraph)->nedges, filename);
+      infoMessage("Invalid number of edges (%d) in file: %s\n", (*tcliquegraph)->nedges, filename);
       (void) fclose(file);
       return FALSE;
    }
@@ -622,28 +628,28 @@ TCLIQUE_Bool tcliqueLoadFile(
     * if an error occured, close the file before returning */
    if( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) == NULL )
    {
-      infoMessage("Run out of memory while reading file %s", filename); 
+      infoMessage("Run out of memory while reading file %s\n", filename);
       (void) fclose(file);
       return FALSE;
    }
 
    if( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) == NULL )   
    {
-      infoMessage("Run out of memory while reading file %s", filename); 
+      infoMessage("Run out of memory while reading file %\n", filename);
       (void) fclose(file);
       return FALSE;
    }
 
    if( BMSallocMemoryArray(&(*tcliquegraph)->adjnodes, (*tcliquegraph)->nedges) == NULL )
    {
-      infoMessage("Run out of memory while reading file %s", filename); 
+      infoMessage("Run out of memory while reading file %s\n", filename);
       (void) fclose(file);
       return FALSE;
    }
 
    if( BMSallocMemoryArray(&(*tcliquegraph)->adjedges, (*tcliquegraph)->nnodes) == NULL )
    {
-      infoMessage("Run out of memory while reading file %s", filename); 
+      infoMessage("Run out of memory while reading file %s\n", filename);
       (void) fclose(file);
       return FALSE;
    }
@@ -654,7 +660,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       result = fscanf(file, "%lf", &weight);
       if( result <= 0 )
       {
-         infoMessage("Error while reading weights of nodes in file %s", filename); 
+         infoMessage("Error while reading weights of nodes in file %s\n", filename);
          (void) fclose(file);
          return FALSE;
       }
@@ -672,14 +678,14 @@ TCLIQUE_Bool tcliqueLoadFile(
       result = fscanf(file, "%d%d", &node1, &node2);
       if( result <= 1 )
       {
-         infoMessage("Error while reading edges in file %s", filename); 
+         infoMessage("Error while reading edges in file %s\n", filename);
          (void) fclose(file);
          return FALSE;
       }
 
       if( node1 < 0 || node2 < 0 || node1 >= (*tcliquegraph)->nnodes || node2 >= (*tcliquegraph)->nnodes )
       {
-         infoMessage("\nInvalid node index (%d) in file: %s", node1 < 0 ? node1 : node2, filename);
+         infoMessage("\nInvalid node index (%d) in file: %s\n", node1 < 0 ? node1 : node2, filename);
          (void) fclose(file);
          return FALSE;
       } 
@@ -722,7 +728,7 @@ TCLIQUE_Bool tcliqueSaveFile(
    /* create file */
    if( (file = fopen(filename, "w")) == NULL )
    {
-      infoMessage("\nCan't create file: %s", filename);
+      infoMessage("Can't create file: %s\n", filename);
       return FALSE;
    }
 
