@@ -31,9 +31,6 @@
 
 #include <string.h>
 
-#define SCIP_PRIVATE_ROWPREP
-#include "scip/cons_quadratic.h"
-
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_expr.h"
@@ -41,6 +38,7 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_rowprep.h"
 
 /*
  * NONLINEAR HANDLER (i.e. SCIP code)

@@ -44,6 +44,7 @@
 #include <math.h>
 #include "scip/cons_expr_sin.h"
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_rowprep.h"
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846

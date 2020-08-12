@@ -25,6 +25,7 @@
 
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_abs.h"
+#include "scip/cons_expr_rowprep.h"
 
 #define EXPRHDLR_NAME         "abs"
 #define EXPRHDLR_DESC         "absolute expression"
