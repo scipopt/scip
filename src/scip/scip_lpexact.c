@@ -455,10 +455,7 @@ SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  *
- *  @note diving is allowed even if the current LP is not flushed, not solved, or not solved to optimality; be aware
- *  that solving the (first) diving LP may take longer than expect and that the latter two cases could stem from
- *  numerical troubles during the last LP solve; because of this, most users will want to call this method only if
- *  SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL
+ *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
  */
 SCIP_RETCODE SCIPstartExactDive(
    SCIP*                 scip                /**< SCIP data structure */
@@ -481,13 +478,10 @@ SCIP_RETCODE SCIPstartExactDive(
       return SCIP_INVALIDCALL;
    }
 
-   /* We start the exact LP dive parallel to the floating point LP dive. Since we need to check different flags (e.g.
-    * the LP is actually constructed (exact LP is constructed at the same time as the floating point LP, so it is
-    * enough to just check the floating point flag)), update counters and sometimes also make implicit changes in the
-    * floating point LP, this is necessary
+   /* We start the exact LP dive parallel to the floating-point LP dive. This is necessary because we need to work with
+    * several flags and counters of the floating-point LP.
     */
    SCIP_CALL( SCIPstartDive(scip) );
-   assert(SCIPinDive(scip));
 
    SCIP_CALL( SCIPlpExactStartDive(scip->lpexact, scip->mem->probmem, scip->set, scip->stat) );
 
@@ -526,9 +520,8 @@ SCIP_RETCODE SCIPendExactDive(
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
    assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/
 
-   /* End floating point LP dive. See comment in SCIPstartExactDive() */
+   /* end floating-point LP dive, see comment in SCIPstartExactDive() */
    SCIP_CALL( SCIPendDive(scip) );
-   assert( !SCIPinDive(scip) );
 
    /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
     * the cutoff has to be done now.

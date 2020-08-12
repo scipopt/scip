@@ -7319,18 +7319,17 @@ SCIP_RETCODE SCIPlpExactStartDive(
 
    assert(lpexact != NULL);
    assert(lpexact->flushed || !lpexact->solved);
+   assert(lpexact->fplp->diving);
    assert(!lpexact->diving);
    assert(lpexact->divelpistate == NULL);
    assert(lpexact->divelpwasprimfeas);
    assert(lpexact->divelpwasdualfeas);
-   //assert(lp->validsollp <= stat->lpcount);
    assert(blkmem != NULL);
    assert(set != NULL);
    assert(lpexact->ndivechgsides == 0);
 
    SCIPsetDebugMsg(set, "exact diving started (LP flushed: %u, LP solved: %u, solstat: %d)\n",
       lpexact->flushed, lpexact->solved, SCIPlpExactGetSolstat(lpexact));
-
 
 #ifdef SCIP_MORE_DEBUG
    for( c = 0; c < lpexact->ncols; ++c )
@@ -7506,15 +7505,10 @@ SCIP_RETCODE SCIPlpExactEndDive(
       SCIP_Bool lperror;
 
       SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lpexact->fplp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1LL, &lperror, FALSE) );
-      if( lperror )
-      {
-         //lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved when resolving exact LP after diving");
-         lpexact->resolvelperror = TRUE;
-      }
-      else if( SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OPTIMAL
-         && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_INFEASIBLE
-         && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
-         && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OBJLIMIT )
+      if( lperror || (SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OPTIMAL
+            && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_INFEASIBLE
+            && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
+            && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OBJLIMIT) )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "exact LP was not resolved to a sufficient status after diving\n");
