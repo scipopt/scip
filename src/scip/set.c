@@ -710,7 +710,7 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    {
       if ( SCIPparamGetInt(param) > 0 )
       {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving.\n");
+         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving or change method.\n");
          return SCIP_PARAMETERWRONGVAL;
       }
    }
