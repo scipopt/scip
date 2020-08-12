@@ -229,6 +229,54 @@ SCIP_RETCODE testSdGraphDistsAreValid2(
 }
 
 
+/** tests SD queries */
+static
+SCIP_RETCODE testSdGraphQueriesAreValid(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   SD* sddata;
+   SDGRAPH* sdgraph;
+   int nnodes = 9;
+   int nedges = 16;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM);
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 7.0); // 0
+   graph_edge_addBi(scip, graph, 0, 3, 8.0); // 2
+   graph_edge_addBi(scip, graph, 0, 4, 9.0);
+   graph_edge_addBi(scip, graph, 0, 5, 66.0);
+   graph_edge_addBi(scip, graph, 1, 2, 7.5);
+   graph_edge_addBi(scip, graph, 5, 6, 3.0);
+   graph_edge_addBi(scip, graph, 5, 7, 12.0);
+   graph_edge_addBi(scip, graph, 7, 8, 11.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInit(scip, graph, &sddata) );
+
+   sdgraph = sddata->sdgraph;
+   reduce_sdgraphInitOrderedMstCosts(sdgraph);
+
+   STPTEST_ASSERT(EQ(reduce_sdgraphGetSd(0, 1, sdgraph), 7.0));
+   STPTEST_ASSERT(EQ(reduce_sdgraphGetSd(0, 2, sdgraph), 7.5));
+   STPTEST_ASSERT(EQ(reduce_sdgraphGetSd(0, 3, sdgraph), 8.0));
+   STPTEST_ASSERT(EQ(reduce_sdgraphGetSd(8, 4, sdgraph), 66.0));
+   STPTEST_ASSERT(EQ(reduce_sdgraphGetSd(8, 6, sdgraph), 12.0));
+   STPTEST_ASSERT(EQ(reduce_sdgraphGetSd(3, 2, sdgraph), 8.0));
+
+   reduce_sdFree(scip, &sddata);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests SD getter */
 static
 SCIP_RETCODE testSdGraphStrongBiasedDistsAreValid(
@@ -674,7 +722,7 @@ SCIP_RETCODE testSdBiasedDeletesEdge(
 }
 
 
-
+#if 0
 /** tests that SD biased neighbor test finds edge for deletion */
 static
 SCIP_RETCODE testSdBiasedNeighborDeletesEdge(
@@ -767,7 +815,7 @@ SCIP_RETCODE testSdBiasedNeighborDeletesEdge2(
 
    return SCIP_OKAY;
 }
-
+#endif
 
 /** tests clique star correctly identifies adjacency distances for degree 3 node  */
 static
@@ -1454,8 +1502,8 @@ SCIP_RETCODE stptest_reduceSdBiased(
 {
 
 
-   SCIP_CALL( testSdBiasedNeighborDeletesEdge(scip) );
-   SCIP_CALL( testSdBiasedNeighborDeletesEdge2(scip) );
+ //  SCIP_CALL( testSdBiasedNeighborDeletesEdge(scip) );
+ //  SCIP_CALL( testSdBiasedNeighborDeletesEdge2(scip) );
 
    SCIP_CALL( testSdBiasedDeletesEdge(scip) );
    SCIP_CALL( testSdCliqueStarDeletesEdge(scip) );
@@ -1487,6 +1535,9 @@ SCIP_RETCODE stptest_reduceSdGetter(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+
+   SCIP_CALL( testSdGraphQueriesAreValid(scip) );
+
 
    SCIP_CALL( testSdGraphStrongBiasedDistsAreValid(scip) );
 

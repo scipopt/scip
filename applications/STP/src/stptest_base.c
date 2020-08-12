@@ -37,19 +37,14 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
-
-
-   SCIP_CALL( stptest_dapaths(scip) );
-
-
+   SCIP_CALL( stptest_reduceSdGetter(scip) );
    SCIP_CALL( stptest_reduceSdBiased(scip) );
-
    SCIP_CALL( stptest_reduceNsvImplied(scip) );
    SCIP_CALL( stptest_reduceBLCtree(scip) );
    SCIP_CALL( stptest_reduceSdBiasedBottleneck(scip) );
    SCIP_CALL( stptest_tpaths(scip) );
+   SCIP_CALL( stptest_dapaths(scip) );
    SCIP_CALL( stptest_reduceSdCliqueStar(scip) );
-   SCIP_CALL( stptest_reduceSdGetter(scip) );
    SCIP_CALL( stptest_reduceBdk(scip) );
    SCIP_CALL( stptest_reduceSdStarBias(scip) );
    SCIP_CALL( stptest_reduceStar(scip) );

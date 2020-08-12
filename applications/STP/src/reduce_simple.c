@@ -37,6 +37,24 @@
 #include "scip/scip.h"
 
 
+/** deletes entire graph */
+static
+void deleteAllEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int nedges = graph_get_nEdges(g);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      if( g->oeat[e] != EAT_FREE )
+         graph_edge_del(scip, g, e, TRUE);
+   }
+}
+
+
+/** telling name... todo refactor */
 static
 void getArticulationPoints(
    const GRAPH*          g,                  /**< graph data structure */
@@ -369,6 +387,11 @@ SCIP_RETCODE reduce_simple(
    if( replaceConflict )
    {
       SCIP_CALL( reduceLevel0(scip, g) );
+   }
+
+   if( g->terms == 1 )
+   {
+      deleteAllEdges(scip, g);
    }
 
    SCIPdebugMessage(" %d Knots deleted\n", elimscount);

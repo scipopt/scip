@@ -677,6 +677,10 @@ SCIP_RETCODE reduce_bdk(
 {
    SD* sdistance;
 
+   /* NOTE: in the case of g->terms < 3 the method does not work properly, and the case is easy enough to ignore it */
+   if( g->terms < 3  )
+      return SCIP_OKAY;
+
    SCIP_CALL( reduce_sdInit(scip, g, &sdistance) );
    SCIP_CALL( reduce_bdkWithSd(scip, edgevisitlimit, sdistance, g, nelims) );
    reduce_sdFree(scip, &sdistance);
@@ -694,6 +698,10 @@ SCIP_RETCODE reduce_bdkBiased(
    )
 {
    SD* sdistance;
+
+   /* NOTE: in the case of g->terms < 3 the method does not work properly, and the case is easy enough to ignore it */
+   if( g->terms < 3  )
+      return SCIP_OKAY;
 
    SCIP_CALL( reduce_sdInitBiased(scip, g, &sdistance) );
    SCIP_CALL( reduce_bdkWithSd(scip, edgevisitlimit, sdistance, g, nelims) );

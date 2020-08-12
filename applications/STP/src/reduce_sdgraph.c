@@ -29,9 +29,13 @@
 
 //#define SCIP_DEBUG
 #include "reduce.h"
+#include "misc_stp.h"
 #include "portab.h"
 
 
+/*
+ * STRUCTS
+ */
 
 
 /** see reduce.h */
@@ -49,48 +53,626 @@ struct special_distance_graph
    int                   nedgesorg;          /**< number of edges of original graph */
    SCIP_Bool             mstcostsReady;      /**< are the mstcosts already available? */
    SCIP_Bool             edgemarkReady;      /**< edge mark available? */
+   /* RMQ query data: */
+   int*                  rmq_nodeToRmqEntry; /**< of size |V| */
+   SCIP_Real*            rmq_sparseTable;    /**< of size rmq_log * 2 |T| */
+   SCIP_Real*            rmq_edgecosts;      /**< of size 2|T| - 3 */
+   int                   rmq_loglength;      /**< log2(2|T| - 3) */
 };
+
+
+/** Simple binary tree node.
+ *  Value of UNKNOWN signifies that child does not exist. */
+typedef struct binary_tree_node
+{
+   int                   child1;             /**< first child */
+   int                   child2;             /**< second child */
+} BINARYNODE;
+
+
+/** data needed for building the RMQ based SD query structures */
+typedef struct range_minimum_query_builder
+{
+   BINARYNODE*           lcatree;            /**< binary tree used for LCA computation; of size |T| - 1 */
+   SCIP_Real*            lcatree_costs;      /**< cost per node of binary tree used for LCA computation; of size 2|T| - 3 */
+   int*                  termToLcatreeNode;  /**< node mapping from terminals (SD graph nodes) to binary LCA tree nodes */
+   int*                  lcatreeNodeToRmq;   /**< mapping from binary LCA tree nodes to RMQ indices */
+} RMQBUILDER;
+
 
 /*
  * local methods
  */
 
 
-/** allocates memory */
+#ifdef SCIP_DEBUG
+/* prints the tree */
 static
-SCIP_RETCODE sdgraphAlloc(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph to initialize from */
-   SDGRAPH**             sdgraph             /**< the SD graph */
+void rmqbuilderPrintLcaTree(
+   const SDGRAPH*        sdgraph,            /**< the SD graph */
+   const RMQBUILDER*     rmqbuilder          /**< the builder */
 )
 {
-   SCIP_Real* mstsdist;
-   const int nnodes = graph_get_nNodes(g);
-   const int nedges = graph_get_nEdges(g);
-   const int nterms = g->terms;
-   SDGRAPH* g_sd;
+   const BINARYNODE* const lcatree = rmqbuilder->lcatree;
+   const SCIP_Real* const lcatree_costs = rmqbuilder->lcatree_costs;
+   const int* const termToLcatreeNode = rmqbuilder->termToLcatreeNode;
+   const int nterms = graph_get_nNodes(sdgraph->distgraph);
 
-   SCIP_CALL( SCIPallocMemory(scip, sdgraph) );
-   g_sd = *sdgraph;
+   assert(termToLcatreeNode && lcatree && lcatree_costs && rmqbuilder->lcatree && rmqbuilder->termToLcatreeNode);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->sdmst), nterms) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstcosts), nterms) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstsdist), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->nodemapOrgToDist), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->halfedge_isInMst), nedges / 2) );
+   printf("\n SD QUERY LCA TREE: \n");
 
-   mstsdist = g_sd->mstsdist;
-   for( int i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nterms - 1; i++ )
    {
-      mstsdist[i] = -1.0;
+      const SCIP_Real cost = lcatree_costs[i];
+      printf("node %d: \n", i);
+
+      printf("...cost=%f \n", cost);
+      printf("...child1=%d, child2=%d \n", lcatree[i].child1, lcatree[i].child2);
    }
 
-   g_sd->nnodesorg = nnodes;
-   g_sd->nedgesorg = nedges;
-   g_sd->mstcostsReady = FALSE;
-   g_sd->edgemarkReady = TRUE;
+   printf("\n");
+
+   for( int i = 0; i < nterms; i++ )
+   {
+      printf("term %d attached to tree node %d \n", i, termToLcatreeNode[i]);
+   }
+}
+#endif
+
+
+
+/** Gets special distance (i.e. bottleneck distance) from graph.
+ *  Corresponds to bottleneck length of path between term1 and term2 on distance graph */
+static inline
+SCIP_Real sdgraphGetSd(
+   int                    term1,             /**< terminal 1 */
+   int                    term2,             /**< terminal 2 */
+   SDGRAPH*               sdgraph            /**< the SD graph */
+)
+{
+   SCIP_Real* RESTRICT mstsdist = sdgraph->mstsdist;
+   const GRAPH* distgraph = sdgraph->distgraph;
+   const PATH* sdmst = sdgraph->sdmst;
+   const int* nodesid = sdgraph->nodemapOrgToDist;
+   const int sdnode1 = nodesid[term1];
+   const int sdnode2 = nodesid[term2];
+   SCIP_Real sdist = 0.0;
+   int tempnode = sdnode1;
+
+   assert(sdnode1 != sdnode2);
+   assert(distgraph->source == 0);
+
+   mstsdist[tempnode] = 0.0;
+
+   /* not at root? */
+   while( tempnode != 0 )
+   {
+      const int ne = sdmst[tempnode].edge;
+
+      assert(distgraph->head[ne] == tempnode);
+      tempnode = distgraph->tail[ne];
+
+      if( distgraph->cost[ne] > sdist )
+         sdist = distgraph->cost[ne];
+
+      mstsdist[tempnode] = sdist;
+      if( tempnode == sdnode2 )
+         break;
+   }
+
+   /* already finished? */
+   if( tempnode == sdnode2 )
+   {
+      tempnode = 0;
+   }
+   else
+   {
+      tempnode = sdnode2;
+      sdist = 0.0;
+   }
+
+   while( tempnode != 0 )
+   {
+      const int ne = sdmst[tempnode].edge;
+      tempnode = distgraph->tail[ne];
+
+      if( distgraph->cost[ne] > sdist )
+         sdist = distgraph->cost[ne];
+
+      /* already visited? */
+      if( GE(mstsdist[tempnode], 0.0) )
+      {
+         if( mstsdist[tempnode] > sdist )
+            sdist = mstsdist[tempnode];
+         break;
+      }
+
+#ifndef NDEBUG
+      assert(EQ(mstsdist[tempnode], -1.0));
+
+      if( tempnode == 0 )
+      {
+         assert(sdnode1 == 0);
+      }
+#endif
+   }
+
+   /* restore mstsdist */
+   tempnode = sdnode1;
+   mstsdist[tempnode] = -1.0;
+   while( tempnode != 0 )
+   {
+      const int ne = sdmst[tempnode].edge;
+      tempnode = distgraph->tail[ne];
+      mstsdist[tempnode] = -1.0;
+      if( tempnode == sdnode2 )
+         break;
+   }
+
+   assert(GT(sdist, 0.0));
+
+   return sdist;
+}
+
+/** gets length of RMQ array */
+static inline
+int sdqueryGetRmqLength(
+   const SDGRAPH*        sdgraph              /**< the SD graph */
+   )
+{
+   const int nterms = graph_get_nNodes(sdgraph->distgraph);
+   assert(nterms >= 2);
+   assert((2 * nterms - 3) >= 1);
+
+   return (2 * nterms - 3);
+}
+
+/** initializes RMQ builder */
+static
+SCIP_RETCODE sdqueryRmqBuilderInit(
+   SCIP*                 scip,               /**< SCIP */
+   const SDGRAPH*        sdgraph,            /**< the SD graph */
+   RMQBUILDER**          rmqbuilder          /**< the builder */
+)
+{
+   RMQBUILDER* rmqb;
+   const int nterms = graph_get_nNodes(sdgraph->distgraph);
+
+   assert(nterms >= 2);
+
+   SCIP_CALL( SCIPallocMemory(scip, rmqbuilder) );
+   rmqb = *rmqbuilder;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rmqb->lcatree), nterms - 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rmqb->lcatree_costs), nterms - 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rmqb->lcatreeNodeToRmq), nterms - 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rmqb->termToLcatreeNode), nterms) );
+
+   for( int i = 0; i < nterms - 1; i++ )
+   {
+      rmqb->lcatree[i].child1 = UNKNOWN;
+      rmqb->lcatree[i].child2 = UNKNOWN;
+   }
+
+#ifndef NDEBUG
+   for( int i = 0; i < nterms - 1; i++ )
+   {
+      rmqb->lcatreeNodeToRmq[i] = -1;
+   }
+
+   for( int i = 0; i < nterms; i++ )
+   {
+      rmqb->termToLcatreeNode[i] = -1;
+   }
+#endif
 
    return SCIP_OKAY;
+}
+
+
+/** frees RMQ builder */
+static
+void sdqueryRmqBuilderFree(
+   SCIP*                 scip,               /**< SCIP */
+   RMQBUILDER**          rmqbuilder          /**< the builder */
+)
+{
+   RMQBUILDER* rmqb = *rmqbuilder;
+
+   SCIPfreeMemoryArray(scip, &(rmqb->termToLcatreeNode));
+   SCIPfreeMemoryArray(scip, &(rmqb->lcatreeNodeToRmq));
+   SCIPfreeMemoryArray(scip, &(rmqb->lcatree_costs));
+   SCIPfreeMemoryArray(scip, &(rmqb->lcatree));
+
+   SCIPfreeMemory(scip, rmqbuilder);
+}
+
+
+/* attaches node */
+static inline
+void sdqueryAttachBinaryTreeNode(
+   const GRAPH*          distgraph,          /**< SD distance graph */
+   int                   parentposition,     /**< position of parent (edge) in binary tree array */
+   int                   graphnode,          /**< graph node to attach */
+   RMQBUILDER*           rmqbuilder,         /**< the builder */
+   UF*                   uf
+)
+{
+   BINARYNODE* RESTRICT lcatree = rmqbuilder->lcatree;
+   int* RESTRICT termToLcatreeNode = rmqbuilder->termToLcatreeNode;
+   const int childidentifier = SCIPStpunionfindFind(uf, graphnode);
+   const int nterms = graph_get_nNodes(distgraph);
+
+   graph_knot_isInRange(distgraph, graphnode);
+   assert(0 <= parentposition && parentposition < nterms - 1);
+
+   if( childidentifier == graphnode )
+   {
+      assert(graphnode < nterms);
+
+      /* just need to set a pointer in this case */
+      termToLcatreeNode[graphnode] = parentposition;
+   }
+   else
+   {
+      /* child identifier marks an edge position */
+      const int childosition = childidentifier - nterms;
+      assert(0 <= childosition && childosition < nterms - 1);
+
+      if( lcatree[parentposition].child1 == UNKNOWN )
+      {
+         lcatree[parentposition].child1 = childosition;
+      }
+      else
+      {
+         assert(lcatree[parentposition].child2 == UNKNOWN);
+         lcatree[parentposition].child2 = childosition;
+      }
+   }
+
+   SCIPStpunionfindUnion(uf, nterms + parentposition, childidentifier, FALSE);
+}
+
+
+/** builds binary tree for LCA computation */
+static
+SCIP_RETCODE sdqueryBuildBinaryTree(
+   SCIP*                 scip,               /**< SCIP */
+   SDGRAPH*              sdgraph,            /**< the SD graph */
+   RMQBUILDER*           rmqbuilder          /**< the builder */
+)
+{
+   const GRAPH* const distgraph = sdgraph->distgraph;
+   const PATH* const sdmst = sdgraph->sdmst;
+   int* RESTRICT mstedges_id;
+   SCIP_Real* RESTRICT lcatree_costs = rmqbuilder->lcatree_costs;
+   const int nterms = graph_get_nNodes(sdgraph->distgraph);
+   int edgecount = 0;
+
+   /* Union-find: entries 0,...,|T|-1 are used for terminals,
+    *             entries |T|,...,2 |T| - 2 are used for the ordered MST edges */
+   UF uf;
+
+   SCIP_CALL( SCIPStpunionfindInit(scip, &uf, 2 * nterms - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mstedges_id, nterms - 1) );
+
+   /* fill the MST edge arrays */
+   for( int i = 0; i < nterms; i++ )
+   {
+      const int edge = sdmst[i].edge;
+
+      if( edge >= 0 )
+      {
+         assert(graph_edge_isInRange(sdgraph->distgraph, edge));
+         assert(EQ(sdmst[i].dist, sdgraph->distgraph->cost[edge]));
+
+         mstedges_id[edgecount] = edge;
+         lcatree_costs[edgecount++] = sdmst[i].dist;
+      }
+   }
+   assert(edgecount == nterms - 1);
+   assert(edgecount >= 1);
+
+   /* build the actual tree */
+
+   SCIPsortDownRealInt(lcatree_costs, mstedges_id, edgecount);
+
+   for( int i = edgecount - 1; i >= 0; i-- )
+   {
+      const int edge = mstedges_id[i];
+      const int tail = distgraph->tail[edge];
+      const int head = distgraph->head[edge];
+
+      sdqueryAttachBinaryTreeNode(distgraph, i, tail, rmqbuilder, &uf);
+      sdqueryAttachBinaryTreeNode(distgraph, i, head, rmqbuilder, &uf);
+   }
+
+   SCIPfreeBufferArray(scip, &mstedges_id);
+   SCIPStpunionfindFreeMembers(scip, &uf);
+
+#ifdef SCIP_DEBUG
+   rmqbuilderPrintLcaTree(sdgraph, rmqbuilder);
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** Builds RMQ by DFS.
+ *  NOTE: recursive method. */
+static
+void sdqueryRmqDfs(
+   int                   root,               /**< root node (LCA tree position) */
+   const BINARYNODE*     lcatree,            /**< tree */
+   const SCIP_Real*      lcatree_costs,      /**< LCA tree costs */
+   SCIP_Real*            rmq_edgecosts,      /**< edge costs for RMQ */
+   int*                  lcatreeNodeToRmq,   /**< mapping from binary LCA tree nodes to RMQ indices */
+   int*                  rmq_count           /**< current position */
+)
+{
+   const BINARYNODE bnode = lcatree[root];
+
+   assert(lcatreeNodeToRmq[root] == -1);
+   lcatreeNodeToRmq[root] = *rmq_count;
+   rmq_edgecosts[(*rmq_count)++] = lcatree_costs[root];
+
+   SCIPdebugMessage("checking node %d \n", root);
+
+   if( bnode.child1 == UNKNOWN )
+   {
+      assert(bnode.child2 == UNKNOWN );
+      return;
+   }
+
+   sdqueryRmqDfs(bnode.child1, lcatree, lcatree_costs, rmq_edgecosts, lcatreeNodeToRmq, rmq_count);
+   rmq_edgecosts[(*rmq_count)++] = lcatree_costs[root];
+
+   if( bnode.child2 == UNKNOWN )
+   {
+      return;
+   }
+
+   sdqueryRmqDfs(bnode.child2, lcatree, lcatree_costs, rmq_edgecosts, lcatreeNodeToRmq, rmq_count);
+   rmq_edgecosts[(*rmq_count)++] = lcatree_costs[root];
+}
+
+
+/** builds RMQ sparse table */
+static
+void sdqueryBuildRmqSparseTable(
+   SDGRAPH*              sdgraph              /**< the SD graph */
+   )
+{
+   const SCIP_Real* const rmq_edgecosts = sdgraph->rmq_edgecosts;
+   SCIP_Real* const rmq_sparsetable = sdgraph->rmq_sparseTable;
+   const int rmq_length = sdqueryGetRmqLength(sdgraph);
+   const int logt = sdgraph->rmq_loglength;
+   const int rowlength = logt + 1;
+
+   SCIPdebugMessage("\n building sparse table with floor(log2(|T|))=%d \n", logt);
+
+   /* base computation */
+   for( int i = 0; i < rmq_length; i++ )
+   {
+      const int start_i = i * rowlength;
+      rmq_sparsetable[start_i] = rmq_edgecosts[i];
+      SCIPdebugMessage("max[%d, %d)=%f \n", i, i + 1, rmq_sparsetable[start_i]);
+   }
+
+   /* main (dynamic programming) computation */
+   for( int j = 1; j <= logt; j++ )
+   {
+      const int shift = 1 << (unsigned int) (j - 1);
+
+      SCIPdebugMessage("round %d (2^%d), shift=%d \n", j, j, shift);
+
+      for( int i = 0; i < rmq_length; i++ )
+      {
+         const int start_i = i * rowlength;
+
+         if( i + shift < rmq_length )
+         {
+            /* position for interval [i, i + 2^(j-1)) */
+            const int pos_iprev = start_i + j - 1;
+            const int start_shift = (i + shift) * rowlength;
+            /* position for interval [(i+2^(j-1)), (i 2^(j-1)) + 2^(j-1)) */
+            const int pos_shift = start_shift + j - 1 ;
+
+            assert(pos_shift < rmq_length * rowlength);
+
+            rmq_sparsetable[start_i + j] = MAX(rmq_sparsetable[pos_iprev], rmq_sparsetable[pos_shift]);
+         }
+         else
+         {
+            /* NOTE: basically debug marker */
+            rmq_sparsetable[start_i + j] = FARAWAY;
+         }
+
+         SCIPdebugMessage("max[%d, 2^%d)=%f \n", i, j, rmq_sparsetable[start_i + j]);
+      }
+   }
+}
+
+
+/** builds RMQ, including sparse table representation */
+static
+void sdqueryBuildRmq(
+   SDGRAPH*              sdgraph,            /**< the SD graph */
+   RMQBUILDER*           rmqbuilder          /**< the builder */
+)
+{
+   const BINARYNODE* const lcatree = rmqbuilder->lcatree;
+   const SCIP_Real* const lcatree_costs = rmqbuilder->lcatree_costs;
+   SCIP_Real* const rmq_edgecosts = sdgraph->rmq_edgecosts;
+   int* lcatreeNodeToRmq = rmqbuilder->lcatreeNodeToRmq;
+   int rmq_length = 0;
+
+   /* NOTE: because we have sorted in ascending edge cost order, the root is 0 */
+
+   sdqueryRmqDfs(0, lcatree, lcatree_costs, rmq_edgecosts, lcatreeNodeToRmq, &rmq_length);
+   assert(rmq_length == sdqueryGetRmqLength(sdgraph));
+
+#ifdef SCIP_DEBUG
+   for( int i = 0; i < rmq_length; i++ )
+   {
+      printf("i=%d ocst=%f \n", i, rmq_edgecosts[i]);
+   }
+#endif
+
+   sdqueryBuildRmqSparseTable(sdgraph);
+}
+
+
+/** builds RMQ map */
+static
+void sdqueryBuildNodesToRmqMap(
+   const GRAPH*          g,                  /**< graph */
+   const RMQBUILDER*     rmqbuilder,         /**< the builder */
+   SDGRAPH*              sdgraph             /**< the SD graph */
+)
+{
+   const int* const termToLcatreeNode = rmqbuilder->termToLcatreeNode;
+   const int* const nodemapOrgToDist = sdgraph->nodemapOrgToDist;
+   const int* const lcatreeNodeToRmq = rmqbuilder->lcatreeNodeToRmq;
+   int* const rmq_nodeToRmqEntry = sdgraph->rmq_nodeToRmqEntry;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(termToLcatreeNode && nodemapOrgToDist && lcatreeNodeToRmq && rmq_nodeToRmqEntry);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      assert(rmq_nodeToRmqEntry[i] == UNKNOWN);
+
+      if( Is_term(g->term[i]) )
+      {
+         const int node_distgraph = nodemapOrgToDist[i];
+         const int node_lcatree = termToLcatreeNode[node_distgraph];
+         const int node_rmq = lcatreeNodeToRmq[node_lcatree];
+
+         assert(graph_knot_isInRange(sdgraph->distgraph, node_distgraph));
+         rmq_nodeToRmqEntry[i] = node_rmq;
+
+         SCIPdebugMessage("node %d to %d \n", i, node_rmq);
+      }
+   }
+}
+
+
+/** Gets special distance (i.e. bottleneck distance) from graph.
+ *  Corresponds to bottleneck length of path between term1 and term2 on distance graph */
+static inline
+SCIP_Real sdqueryGetSd(
+   int                    term1,             /**< terminal 1 */
+   int                    term2,             /**< terminal 2 */
+   const SDGRAPH*         sdgraph            /**< the SD graph */
+)
+{
+   const int* const rmq_nodeToRmqEntry = sdgraph->rmq_nodeToRmqEntry;
+   SCIP_Real sd;
+   int rmqindex_min;
+   int rmqindex_max;
+
+   assert(term1 != term2);
+
+   SCIPdebugMessage("query %d--%d \n", term1, term2);
+
+   if( rmq_nodeToRmqEntry[term1] <= rmq_nodeToRmqEntry[term2] )
+   {
+      rmqindex_min = rmq_nodeToRmqEntry[term1];
+      rmqindex_max = rmq_nodeToRmqEntry[term2];
+   }
+   else
+   {
+      rmqindex_min = rmq_nodeToRmqEntry[term2];
+      rmqindex_max = rmq_nodeToRmqEntry[term1];
+   }
+
+   assert(rmqindex_min <= rmqindex_max);
+   assert(0 <= rmqindex_min);
+   assert(rmqindex_max < sdqueryGetRmqLength(sdgraph));
+
+   if( rmqindex_min == rmqindex_max )
+   {
+      sd = sdgraph->rmq_edgecosts[rmqindex_min];
+      SCIPdebugMessage("...mapped to same RMQ index \n");
+   }
+   else
+   {
+      const SCIP_Real* const rmq_sparsetable = sdgraph->rmq_sparseTable;
+      const int rowlength = sdgraph->rmq_loglength + 1;
+      const unsigned int msbit = (unsigned int) log2(rmqindex_max - rmqindex_min);
+      const int pos_lower = rmqindex_min * rowlength + msbit;
+      const int pos_upper = (rmqindex_max - (int) (1 << msbit)) * rowlength + msbit;
+
+      SCIPdebugMessage("MSB=%u \n", msbit);
+      SCIPdebugMessage("RMQ indices: %d, %d \n", rmqindex_min, rmqindex_max);
+      SCIPdebugMessage("start indices: %d, %d  \n", rmqindex_min, (rmqindex_max - (int) (1 << msbit)));
+      SCIPdebugMessage("max{%f, %f} \n", rmq_sparsetable[pos_lower], rmq_sparsetable[pos_upper]);
+
+      sd = MAX(rmq_sparsetable[pos_lower], rmq_sparsetable[pos_upper]);
+   }
+
+   assert(LT(sd, FARAWAY));
+  // printf("%f vs %f \n", sd, sdgraphGetSd(term1, term2, (SDGRAPH*) sdgraph));
+
+   assert(EQ(sd, sdgraphGetSd(term1, term2, (SDGRAPH*) sdgraph)));
+
+   return sd;
+}
+
+/** initializes SD constant time query data */
+static
+SCIP_RETCODE sdqueryInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDGRAPH*              sdgraph             /**< the SD graph */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nterms = graph_get_nNodes(sdgraph->distgraph);
+   const int rmqlength = sdqueryGetRmqLength(sdgraph);
+   const int logrmqlength = (int) log2(rmqlength);
+   RMQBUILDER* rmqbuilder;
+
+   assert(nterms >= 2);
+   assert(nterms == g->terms);
+   assert(logrmqlength >= 0);
+   assert(!sdgraph->rmq_edgecosts);
+   assert(!sdgraph->rmq_sparseTable);
+
+   sdgraph->rmq_loglength = logrmqlength;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdgraph->rmq_nodeToRmqEntry), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdgraph->rmq_sparseTable), (logrmqlength + 1) * rmqlength) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdgraph->rmq_edgecosts), rmqlength) );
+
+   for( int i = 0; i < nnodes; i++ )
+      sdgraph->rmq_nodeToRmqEntry[i] = UNKNOWN;
+
+   SCIP_CALL( sdqueryRmqBuilderInit(scip, sdgraph, &rmqbuilder) );
+   SCIP_CALL( sdqueryBuildBinaryTree(scip, sdgraph, rmqbuilder) );
+   sdqueryBuildRmq(sdgraph, rmqbuilder);
+   sdqueryBuildNodesToRmqMap(g, rmqbuilder, sdgraph);
+
+   sdqueryRmqBuilderFree(scip, &rmqbuilder);
+
+   return SCIP_OKAY;
+}
+
+
+/** frees SD constant time query data */
+static
+void sdqueryFree(
+   SCIP*                 scip,               /**< SCIP */
+   SDGRAPH*              sdgraph             /**< the SD graph */
+)
+{
+   assert(sdgraph->rmq_edgecosts && sdgraph->rmq_sparseTable && sdgraph->rmq_nodeToRmqEntry);
+
+   SCIPfreeMemoryArray(scip, &(sdgraph->rmq_edgecosts));
+   SCIPfreeMemoryArray(scip, &(sdgraph->rmq_sparseTable));
+   SCIPfreeMemoryArray(scip, &(sdgraph->rmq_nodeToRmqEntry));
 }
 
 
@@ -383,6 +965,47 @@ void distgraphAddEdges(
 }
 
 
+/** allocates memory */
+static
+SCIP_RETCODE sdgraphAlloc(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   SCIP_Real* mstsdist;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const int nterms = g->terms;
+   SDGRAPH* g_sd;
+
+   SCIP_CALL( SCIPallocMemory(scip, sdgraph) );
+   g_sd = *sdgraph;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->sdmst), nterms) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstcosts), nterms) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstsdist), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->nodemapOrgToDist), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->halfedge_isInMst), nedges / 2) );
+
+   mstsdist = g_sd->mstsdist;
+   for( int i = 0; i < nnodes; i++ )
+   {
+      mstsdist[i] = -1.0;
+   }
+
+   g_sd->nnodesorg = nnodes;
+   g_sd->nedgesorg = nedges;
+   g_sd->mstcostsReady = FALSE;
+   g_sd->edgemarkReady = TRUE;
+
+   g_sd->rmq_edgecosts = NULL;
+   g_sd->rmq_sparseTable = NULL;
+   g_sd->rmq_loglength = -1;
+
+   return SCIP_OKAY;
+}
+
 /** adds edges to distance graph, given terminal paths */
 static
 void distgraphAddEdgesFromTpaths(
@@ -429,100 +1052,6 @@ void distgraphAddEdgesFromTpaths(
    }
 }
 
-
-
-/** Gets special distance (e.g. bottleneck distance) from graph.
- *  Corresponds to bottleneck length of path between term1 and term2 on distance graph */
-static
-SCIP_Real sdgraphGetSd(
-   int                    term1,             /**< terminal 1 */
-   int                    term2,             /**< terminal 2 */
-   SDGRAPH*               sdgraph            /**< the SD graph */
-)
-{
-   SCIP_Real* RESTRICT mstsdist = sdgraph->mstsdist;
-   const GRAPH* distgraph = sdgraph->distgraph;
-   const PATH* sdmst = sdgraph->sdmst;
-   const int* nodesid = sdgraph->nodemapOrgToDist;
-   const int sdnode1 = nodesid[term1];
-   const int sdnode2 = nodesid[term2];
-   SCIP_Real sdist = 0.0;
-   int tempnode = sdnode1;
-
-   assert(sdnode1 != sdnode2);
-   assert(distgraph->source == 0);
-
-   mstsdist[tempnode] = 0.0;
-
-   /* not at root? */
-   while( tempnode != 0 )
-   {
-      const int ne = sdmst[tempnode].edge;
-
-      assert(distgraph->head[ne] == tempnode);
-      tempnode = distgraph->tail[ne];
-
-      if( distgraph->cost[ne] > sdist )
-         sdist = distgraph->cost[ne];
-
-      mstsdist[tempnode] = sdist;
-      if( tempnode == sdnode2 )
-         break;
-   }
-
-   /* already finished? */
-   if( tempnode == sdnode2 )
-   {
-      tempnode = 0;
-   }
-   else
-   {
-      tempnode = sdnode2;
-      sdist = 0.0;
-   }
-
-   while( tempnode != 0 )
-   {
-      const int ne = sdmst[tempnode].edge;
-      tempnode = distgraph->tail[ne];
-
-      if( distgraph->cost[ne] > sdist )
-         sdist = distgraph->cost[ne];
-
-      /* already visited? */
-      if( GE(mstsdist[tempnode], 0.0) )
-      {
-         if( mstsdist[tempnode] > sdist )
-            sdist = mstsdist[tempnode];
-         break;
-      }
-
-#ifndef NDEBUG
-      assert(EQ(mstsdist[tempnode], -1.0));
-
-      if( tempnode == 0 )
-      {
-         assert(sdnode1 == 0);
-      }
-#endif
-   }
-
-   /* restore mstsdist */
-   tempnode = sdnode1;
-   mstsdist[tempnode] = -1.0;
-   while( tempnode != 0 )
-   {
-      const int ne = sdmst[tempnode].edge;
-      tempnode = distgraph->tail[ne];
-      mstsdist[tempnode] = -1.0;
-      if( tempnode == sdnode2 )
-         break;
-   }
-
-   assert(GT(sdist, 0.0));
-
-   return sdist;
-}
 
 /** builds distance graph */
 static
@@ -806,6 +1335,8 @@ SCIP_RETCODE reduce_sdgraphInit(
 
    sdgraphFinalize(scip, &vnoi, &edgeorg);
 
+   SCIP_CALL( sdqueryInit(scip, g, *sdgraph) );
+
    return SCIP_OKAY;
 }
 
@@ -828,6 +1359,8 @@ SCIP_RETCODE reduce_sdgraphInitBiased(
    sdgraphMstMarkOrgEdges(g, vnoi, edgeorg, *sdgraph);
 
    sdgraphFinalize(scip, &vnoi, &edgeorg);
+
+   SCIP_CALL( sdqueryInit(scip, g, *sdgraph) );
 
    return SCIP_OKAY;
 }
@@ -857,6 +1390,8 @@ SCIP_RETCODE reduce_sdgraphInitBiasedFromTpaths(
    /* NOTE probably we never need that...for extending reductions we anyway should only take biased paths */
    (*sdgraph)->edgemarkReady = FALSE;
    SCIPfreeMemoryArray(scip, &(*sdgraph)->halfedge_isInMst);
+
+   SCIP_CALL( sdqueryInit(scip, g, *sdgraph) );
 
    return SCIP_OKAY;
 }
@@ -937,7 +1472,8 @@ SCIP_Real reduce_sdgraphGetSd(
       assert(EQ(sdgraph->mstsdist[i], -1.0));
 #endif
 
-   return sdgraphGetSd(term1, term2, sdgraph);
+   return sdqueryGetSd(term1, term2, sdgraph);
+  // return sdgraphGetSd(term1, term2, sdgraph);
 }
 
 
@@ -1045,6 +1581,7 @@ void reduce_sdgraphFree(
    SCIPfreeMemoryArray(scip, &(g_sd->sdmst));
 
    graph_free(scip, &(g_sd->distgraph), TRUE);
+   sdqueryFree(scip, g_sd);
 
    SCIPfreeMemory(scip, sdgraph);
 }
