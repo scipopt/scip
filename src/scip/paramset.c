@@ -4434,8 +4434,6 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
-
    assert(param != NULL);
 
    /* check if value is possible for the parameter */
@@ -4460,6 +4458,8 @@ SCIP_RETCODE SCIPparamSetBool(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
+         SCIP_RETCODE retcode;
+
          retcode = param->paramchgd(set->scip, param);
 
          if( retcode == SCIP_PARAMETERWRONGVAL )
@@ -4481,7 +4481,7 @@ SCIP_RETCODE SCIPparamSetBool(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /** sets value of int parameter */
@@ -4494,8 +4494,6 @@ SCIP_RETCODE SCIPparamSetInt(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
-
    assert(param != NULL);
 
    /* check if value is possible for the parameter */
@@ -4520,6 +4518,8 @@ SCIP_RETCODE SCIPparamSetInt(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
+         SCIP_RETCODE retcode;
+
          retcode = param->paramchgd(set->scip, param);
 
          if( retcode == SCIP_PARAMETERWRONGVAL )
@@ -4541,7 +4541,7 @@ SCIP_RETCODE SCIPparamSetInt(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /** sets value of SCIP_Longint parameter */
@@ -4554,8 +4554,6 @@ SCIP_RETCODE SCIPparamSetLongint(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
-
    assert(param != NULL);
 
    /* check if value is possible for the parameter */
@@ -4580,6 +4578,8 @@ SCIP_RETCODE SCIPparamSetLongint(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
+         SCIP_RETCODE retcode;
+
          retcode = param->paramchgd(set->scip, param);
 
          if( retcode == SCIP_PARAMETERWRONGVAL )
@@ -4601,7 +4601,7 @@ SCIP_RETCODE SCIPparamSetLongint(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /** sets value of SCIP_Real parameter */
@@ -4614,8 +4614,6 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
-
    assert(param != NULL);
 
    /* check if value is possible for the parameter */
@@ -4642,6 +4640,8 @@ SCIP_RETCODE SCIPparamSetReal(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
+         SCIP_RETCODE retcode;
+
          retcode = param->paramchgd(set->scip, param);
 
          if( retcode == SCIP_PARAMETERWRONGVAL )
@@ -4663,7 +4663,7 @@ SCIP_RETCODE SCIPparamSetReal(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /** sets value of char parameter */
@@ -4676,8 +4676,6 @@ SCIP_RETCODE SCIPparamSetChar(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
-
    assert(param != NULL);
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
@@ -4701,6 +4699,8 @@ SCIP_RETCODE SCIPparamSetChar(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
+         SCIP_RETCODE retcode;
+
          retcode = param->paramchgd(set->scip, param);
 
          if( retcode == SCIP_PARAMETERWRONGVAL )
@@ -4722,7 +4722,7 @@ SCIP_RETCODE SCIPparamSetChar(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /** sets value of string parameter */
@@ -4734,7 +4734,6 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
-   SCIP_RETCODE retcode = SCIP_OKAY;
    char* oldvalue = NULL;
 
    assert(param != NULL);
@@ -4758,6 +4757,8 @@ SCIP_RETCODE SCIPparamSetString(
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && set != NULL )
    {
+      SCIP_RETCODE retcode;
+
       retcode = param->paramchgd(set->scip, param);
 
       if( retcode == SCIP_PARAMETERWRONGVAL )
@@ -4789,7 +4790,7 @@ SCIP_RETCODE SCIPparamSetString(
       SCIP_CALL( paramWrite(param, messagehdlr, NULL, FALSE, TRUE) );
    }
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 
