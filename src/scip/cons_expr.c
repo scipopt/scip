@@ -1353,7 +1353,7 @@ SCIP_RETCODE forwardPropExpr(
                assert(SCIPisRelEQ(scip, exprhdlrinterval.sup, expr->activity.sup));
 #endif
 #ifdef DEBUG_PROP
-               SCIPdebugMsg(scip, "skip interval evaluation of var expr %p\n", (void*)expr);
+               SCIPdebugMsg(scip, "skip interval evaluation of expr for var <%s> [%g,%g]\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)), expr->activity.inf, expr->activity.sup);
 #endif
                expr->activitytag = conshdlrdata->curboundstag;
 
@@ -1579,7 +1579,7 @@ SCIP_RETCODE reversePropQueue(
 #ifdef SCIP_DEBUG
             SCIPdebugMsg(scip, "call reverse propagation for ");
             SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), expr, NULL) );
-            SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", expr->activity.inf, expr->activity.sup, nlhdlr->name);
+            SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", propbounds.inf, propbounds.sup, nlhdlr->name);
 #endif
 
             nreds = 0;
@@ -3091,7 +3091,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
          {
             consdata->ispropagated = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for propagate and simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+            SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          }
 
          /* if still in presolve (but not probing), then mark constraints to be simplified again */
@@ -6079,6 +6079,7 @@ SCIP_RETCODE initSepa(
 
       if( !*infeasible && consdata->expr->auxvar != NULL )
       {
+         SCIPdebugMsg(scip, "tighten auxvar <%s> bounds using constraint sides [%g,%g]\n", SCIPvarGetName(consdata->expr->auxvar), consdata->lhs, consdata->rhs);
          /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
          SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, TRUE, infeasible, NULL) );
          if( *infeasible )
