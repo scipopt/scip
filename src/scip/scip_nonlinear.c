@@ -1234,6 +1234,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       /* if the row to index hash map is provided, we need to store the row index */
       if( nlrow2idx != NULL )
       {
+         /* coverity[copy_paste_error] */
          SCIP_CALL( SCIPhashmapInsertInt(nlrow2idx, nlrows[i], nconss) );
       }
 
