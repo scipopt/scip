@@ -2303,16 +2303,25 @@ SCIP_RETCODE detectNlhdlrs(
             expr->nenfos = 0;
          }
       }
+
+      /* include this constraint into the next propagation round because the added nlhdlr may do find tighter bounds now */
+      if( SCIPconsIsPropagated(conss[i]) )
+         consdata->ispropagated = FALSE;
    }
 
-   /* ensure that the local bounds are used when reevaluating the expressions later; this is only needed if CONSACTIVE
-    * is called in a local node
-    */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
+      /* ensure that the local bounds are used again when reevaluating the expressions later;
+       * this is only needed if CONSACTIVE is called in a local node (see begin of this function)
+       */
       SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
       conshdlrdata->globalbounds = FALSE;
       conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
+   }
+   else
+   {
+      /* ensure that all activities (except for var-exprs) are reevaluated since better methods may be available now */
+      SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
    }
 
    SCIPexpriteratorFree(&it);
@@ -4711,7 +4720,7 @@ SCIP_RETCODE canonicalizeConstraints(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* update number of canonizalize calls */
+   /* update number of canonicalize calls */
    ++(conshdlrdata->ncanonicalizecalls);
 
    SCIP_CALL( SCIPstartClock(scip, conshdlrdata->canonicalizetime) );
