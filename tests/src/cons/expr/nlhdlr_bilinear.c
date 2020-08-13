@@ -662,7 +662,7 @@ Test(nlhdlrbilinear, reverseprop_single)
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
-   reversePropBilinear(scip, expr, expr->activity, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
+   reversePropBilinear(scip, conshdlr, expr, expr->activity, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
    cr_expect(SCIPisEQ(scip, intervalx.inf, -1.0));
    cr_expect(SCIPisEQ(scip, intervalx.sup, 0.0));
    cr_expect(SCIPisEQ(scip, intervaly.inf, 0.0));
@@ -721,7 +721,7 @@ Test(nlhdlrbilinear, reverseprop_levelset)
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
-   reversePropBilinear(scip, expr, expr->propbounds, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
+   reversePropBilinear(scip, conshdlr, expr, expr->propbounds, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
    cr_expect(SCIPisEQ(scip, intervalx.inf, -1.0));
    cr_expect_float_eq(intervalx.sup, 0.64371709509590, 1e-8);
    cr_expect(intervalx.sup >= 0.64371709509590); /* intervalarith.c gives us safe bounds */
@@ -772,7 +772,7 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    /* compute intervals; inequality does not intersect the level set in the interior of the domain -> no tightening */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
    SCIPintervalSetBounds(&interval, -1.0, 0.5);
-   reversePropBilinear(scip, expr, interval, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
+   reversePropBilinear(scip, conshdlr, expr, interval, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
    cr_expect(SCIPisEQ(scip, intervalx.inf, -1.0));
    cr_expect(SCIPisEQ(scip, intervalx.sup, 1.0));
    cr_expect(SCIPisEQ(scip, intervaly.inf, -1.0));

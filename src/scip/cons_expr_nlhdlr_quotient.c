@@ -1218,8 +1218,8 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
       nlhdlrexprdata->denomcoef, nlhdlrexprdata->denomconst, nlhdlrexprdata->constant);
 
    SCIPdebugMsg(scip, "try to tighten bounds of %p: [%g,%g] -> [%g,%g]\n",
-      (void*)nlhdlrexprdata->numexpr, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->numexpr).inf,
-      SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->numexpr).sup, result.inf, result.sup);
+      (void*)nlhdlrexprdata->numexpr, SCIPgetConsExprExprBounds(scip, conshdlr, nlhdlrexprdata->numexpr).inf,
+      SCIPgetConsExprExprBounds(scip, conshdlr, nlhdlrexprdata->numexpr).sup, result.inf, result.sup);
 
    /* tighten bounds of the expression */
    SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->numexpr, result, infeasible, nreductions) );

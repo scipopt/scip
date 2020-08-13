@@ -599,7 +599,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
    *nreductions = 0;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
-   childinterval = SCIPgetConsExprExprActivity(scip, child);
+   childinterval = SCIPgetConsExprExprBounds(scip, conshdlr, child);
 
    /* compute resulting intervals */
    SCIP_CALL( reverseProp(scip, bounds, childinterval, &newinterval) );

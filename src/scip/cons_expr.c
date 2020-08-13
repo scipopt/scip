@@ -1235,6 +1235,11 @@ SCIP_RETCODE tightenAuxVarBounds(
       return SCIP_OKAY;
    }
 
+   /* TODO expr->activity should have been reevaluated now due to boundchange-events, but it used to relax bounds
+    * that seems unnecessary and we could easily undo this here, e.g.,
+    * if( tightenedlb ) expr->activity.inf = bounds.inf
+    */
+
    return SCIP_OKAY;
 }
 
@@ -13978,6 +13983,50 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    *activity = expr->activity;
 
    return SCIP_OKAY;
+}
+
+/** returns bounds on the expression
+ *
+ * This gives an intersection of bounds from
+ * - activity calculation (\ref SCIPgetConsExprExprActivity), if valid,
+ * - auxiliary variable, if present,
+ * - stored by \ref SCIPtightenConsExprExprInterval during domain propagation
+ */
+SCIP_INTERVAL SCIPgetConsExprExprBounds(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_INTERVAL bounds;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* propbounds should always be valid (but they are [-inf,inf] if not in propagation queue) */
+   bounds = expr->propbounds;
+
+   if( expr->activitytag >= conshdlrdata->lastboundrelax )
+   {
+      /* apply propbounds to expr activity, but ensure it's not-empty if very close disjoint intervals */
+      SCIPintervalIntersectEps(&bounds, SCIPepsilon(scip), expr->activity, bounds);
+   }
+
+   if( expr->auxvar != NULL )
+   {
+      /* apply auxiliary variable bounds to bounds */
+      SCIP_INTERVAL auxvarbounds;
+
+      auxvarbounds = conshdlrdata->intevalvar(scip, expr->auxvar, conshdlrdata);
+      SCIPintervalIntersectEps(&bounds, SCIPepsilon(scip), bounds, auxvarbounds);
+   }
+
+   return bounds;
 }
 
 /** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of corresponding (auxiliary) variable (if any) */

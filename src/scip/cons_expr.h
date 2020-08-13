@@ -851,6 +851,20 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
+/** returns bounds on the expression
+ *
+ * This gives an intersection of bounds from
+ * - activity calculation (\ref SCIPgetConsExprExprActivity), if valid,
+ * - auxiliary variable, if present,
+ * - stored by \ref SCIPtightenConsExprExprInterval during domain propagation
+ */
+SCIP_EXPORT
+SCIP_INTERVAL SCIPgetConsExprExprBounds(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
 /** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of corresponding (auxiliary) variable (if any) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtightenConsExprExprInterval(

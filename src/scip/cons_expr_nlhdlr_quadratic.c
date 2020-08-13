@@ -155,14 +155,14 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIPinfoMessage(scip, NULL, "expr in [%g, %g], a = %g, b = [%g, %g] and rhs = [%g, %g]\n",
-         SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)),
-         SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)), sqrcoef, b.inf, b.sup,
+         SCIPintervalGetInf(SCIPgetConsExprExprBounds(scip, conshdlr, expr)),
+         SCIPintervalGetSup(SCIPgetConsExprExprBounds(scip, conshdlr, expr)), sqrcoef, b.inf, b.sup,
          rhs.inf, rhs.sup);
 #endif
 
    /* compute solution of a*x^2 + b*x in rhs */
    SCIPintervalSet(&a, sqrcoef);
-   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, SCIPgetConsExprExprActivity(scip, expr));
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, SCIPgetConsExprExprBounds(scip, conshdlr, expr));
 
 #ifdef DEBUG_PROP
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
@@ -1406,7 +1406,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
                continue;
 
             /* b += [b_lj * expr_j] for j \in P_l */
-            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprActivity(scip, expr2), bilincoef);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprBounds(scip, conshdlr, expr2), bilincoef);
             SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
 
             /* remember b_lj and expr_j to propagate them too */
@@ -1424,7 +1424,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
             SCIP_INTERVAL bilinrhs;
 
             /* compute bilinrhs := [rhs_i/expr_i - a_i expr_i] */
-            computeRangeForBilinearProp(SCIPgetConsExprExprActivity(scip, qexpr), sqrcoef, rhs_i, &bilinrhs);
+            computeRangeForBilinearProp(SCIPgetConsExprExprBounds(scip, conshdlr, qexpr), sqrcoef, rhs_i, &bilinrhs);
 
             if( !SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bilinrhs) )
             {

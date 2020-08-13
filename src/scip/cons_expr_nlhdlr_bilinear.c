@@ -307,7 +307,7 @@ SCIP_Bool isPointFeasible(
 }
 
 /** helper function for computing all vertices of the polytope described by the linear inequalities and the local
- *  extremums of the bilinear term along each inequality
+ *  extrema of the bilinear term along each inequality
  *
  * @note there are at most 22 points where the min/max can be achieved (given that there are at most 4 inequalities)
  *          - corners of [lbx,ubx]x[lby,uby] (4)
@@ -318,6 +318,7 @@ SCIP_Bool isPointFeasible(
 static
 void getFeasiblePointsBilinear(
    SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,          /**< constraint handler, if levelset == TRUE, otherwise can be NULL */
    SCIP_CONSEXPR_EXPR*   expr,              /**< product expression */
    SCIP_INTERVAL         exprbounds,        /**< bounds on product expression, only used if levelset == TRUE */
    SCIP_Real*            underineqs,        /**< inequalities for underestimation */
@@ -343,6 +344,7 @@ void getFeasiblePointsBilinear(
    int i;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL || !levelset);
    assert(expr != NULL);
    assert(xs != NULL);
    assert(ys != NULL);
@@ -376,8 +378,18 @@ void getFeasiblePointsBilinear(
    assert(child1 != child2);
 
    /* collect bounds of children */
-   boundsx = SCIPgetConsExprExprActivity(scip, child1);
-   boundsy = SCIPgetConsExprExprActivity(scip, child2);
+   if( !levelset )
+   {
+      /* if called from inteval, then use activity */
+      boundsx = SCIPgetConsExprExprActivity(scip, child1);
+      boundsy = SCIPgetConsExprExprActivity(scip, child2);
+   }
+   else
+   {
+      /* if called from reverseprop, then use bounds */
+      boundsx = SCIPgetConsExprExprBounds(scip, conshdlr, child1);
+      boundsy = SCIPgetConsExprExprBounds(scip, conshdlr, child2);
+   }
    lbx = boundsx.inf;
    ubx = boundsx.sup;
    lby = boundsy.inf;
@@ -614,7 +626,7 @@ SCIP_INTERVAL intevalBilinear(
    }
 
    /* compute all feasible points (since we use levelset == FALSE, the value of interval doesn't matter) */
-   getFeasiblePointsBilinear(scip, expr, interval, underineqs, nunderineqs, overineqs, noverineqs, FALSE, xs, ys, &npoints);
+   getFeasiblePointsBilinear(scip, NULL, expr, interval, underineqs, nunderineqs, overineqs, noverineqs, FALSE, xs, ys, &npoints);
 
    /* no feasible point left -> return an empty interval */
    if( npoints == 0 )
@@ -649,6 +661,7 @@ SCIP_INTERVAL intevalBilinear(
 static
 void reversePropBilinear(
    SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,          /**< constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,              /**< product expression */
    SCIP_INTERVAL         exprbounds,        /**< bounds on product expression */
    SCIP_Real*            underineqs,        /**< inequalities for underestimation */
@@ -668,6 +681,7 @@ void reversePropBilinear(
    int i;
 
    assert(scip != NULL);
+   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(intervalx != NULL);
    assert(intervaly != NULL);
@@ -680,7 +694,7 @@ void reversePropBilinear(
    SCIPintervalSetEmpty(intervaly);
 
    /* compute feasible points */
-   getFeasiblePointsBilinear(scip, expr, exprbounds, underineqs, nunderineqs, overineqs, noverineqs, TRUE, xs, ys, &npoints);
+   getFeasiblePointsBilinear(scip, conshdlr, expr, exprbounds, underineqs, nunderineqs, overineqs, noverineqs, TRUE, xs, ys, &npoints);
 
    /* no feasible points left -> problem is infeasible */
    if( npoints == 0 )
@@ -1273,39 +1287,30 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropBilinear)
       childy = SCIPgetConsExprExprChildren(expr)[1];
       assert(childx != NULL && childy != NULL);
 
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY,&intervalx);
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY,&intervaly);
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &intervalx);
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &intervaly);
 
       /* compute bounds on x and y */
-      reversePropBilinear(scip, expr, bounds, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs,
+      reversePropBilinear(scip, conshdlr, expr, bounds, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs,
          nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
 
-      if( SCIPisLT(scip, SCIPgetConsExprExprActivity(scip, childx).inf, intervalx.inf)
-         || SCIPisGT(scip, SCIPgetConsExprExprActivity(scip, childx).sup, intervalx.sup)
-         || SCIPisLT(scip, SCIPgetConsExprExprActivity(scip, childy).inf, intervaly.inf)
-         || SCIPisGT(scip, SCIPgetConsExprExprActivity(scip, childy).sup, intervaly.sup)
-         )
+      /* tighten bounds of x */
+      SCIPdebugMsg(scip, "try to tighten bounds of x: [%g,%g] -> [%g,%g]\n",
+         SCIPgetConsExprExprBounds(scip, conshdlr, childx).inf, SCIPgetConsExprExprBounds(scip, conshdlr, childx).sup,
+         intervalx.inf, intervalx.sup);
+
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], intervalx, infeasible, nreductions) );
+
+      if( !(*infeasible) )
       {
-         SCIPintervalIntersect(&intervalx, intervalx, SCIPgetConsExprExprActivity(scip, childx));
-         SCIPintervalIntersect(&intervaly, intervaly, SCIPgetConsExprExprActivity(scip, childy));
-
-         /* tighten bounds of x */
-         SCIPdebugMsg(scip, "try to tighten bounds of x: [%g,%g] -> [%g,%g]\n",
-            SCIPgetConsExprExprActivity(scip, childx).inf, SCIPgetConsExprExprActivity(scip, childx).sup,
-            intervalx.inf, intervalx.sup);
-
-         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], intervalx, infeasible, nreductions) );
-
-         if( !(*infeasible) )
-         {
-            /* tighten bounds of y */
-            SCIPdebugMsg(scip, "try to tighten bounds of y: [%g,%g] -> [%g,%g]\n",
-               SCIPgetConsExprExprActivity(scip, childx).inf, SCIPgetConsExprExprActivity(scip, childx).sup,
-               intervalx.inf, intervalx.sup);
-            SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[1], intervaly, infeasible, nreductions) );
-         }
+         /* tighten bounds of y */
+         SCIPdebugMsg(scip, "try to tighten bounds of y: [%g,%g] -> [%g,%g]\n",
+            SCIPgetConsExprExprBounds(scip, conshdlr, childy).inf, SCIPgetConsExprExprBounds(scip, conshdlr, childy).sup,
+            intervaly.inf, intervaly.sup);
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[1], intervaly, infeasible, nreductions) );
       }
    }
+
    return SCIP_OKAY;
 }
 

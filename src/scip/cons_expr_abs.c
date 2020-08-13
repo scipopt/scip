@@ -457,7 +457,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    right = bounds;  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
 
-   childbounds = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+   childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0]);
    SCIPintervalIntersect(&left, left, childbounds);    /* -I \cap bounds(x), could become empty */
    SCIPintervalIntersect(&right, right, childbounds);  /*  I \cap bounds(x), could become empty */
    /* compute smallest interval containing (-I \cap bounds(x)) \cup (I \cap bounds(x)) = (-I \cup I) \cap bounds(x)

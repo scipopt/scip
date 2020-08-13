@@ -309,7 +309,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropCos)
    assert(child != NULL);
 
    /* get the child interval and shift it to match sine */
-   newbounds = SCIPgetConsExprExprActivity(scip, child);
+   newbounds = SCIPgetConsExprExprBounds(scip, conshdlr, child);
    SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &newbounds, newbounds, M_PI_2);  /* TODO use bounds on Pi/2 instead of approximation of Pi/2 */
 
    /* compute the new child interval */
