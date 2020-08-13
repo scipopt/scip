@@ -84,6 +84,29 @@ typedef struct range_minimum_query_builder
  * local methods
  */
 
+static const int deBruijnBits[32] =
+{
+   0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
+   8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
+};
+
+/** returns the floor of log2(number) */
+static inline
+int log2floor(
+   uint32_t              number              /**< number */
+   )
+{
+   uint32_t v = number;
+   v |= v >> 1;
+   v |= v >> 2;
+   v |= v >> 4;
+   v |= v >> 8;
+   v |= v >> 16;
+
+   assert(deBruijnBits[(uint32_t)(v * 0x07C4ACDDU) >> 27] == (int) log2(number));
+
+   return deBruijnBits[(uint32_t)(v * 0x07C4ACDDU) >> 27];
+}
 
 #ifdef SCIP_DEBUG
 /* prints the tree */
@@ -601,7 +624,7 @@ SCIP_Real sdqueryGetSd(
    {
       const SCIP_Real* const rmq_sparsetable = sdgraph->rmq_sparseTable;
       const int rowlength = sdgraph->rmq_loglength + 1;
-      const unsigned int msbit = (unsigned int) log2(rmqindex_max - rmqindex_min);
+      const unsigned int msbit = (unsigned int) log2floor(rmqindex_max - rmqindex_min);
       const int pos_lower = rmqindex_min * rowlength + msbit;
       const int pos_upper = (rmqindex_max - (int) (1 << msbit)) * rowlength + msbit;
 
@@ -614,7 +637,7 @@ SCIP_Real sdqueryGetSd(
    }
 
    assert(LT(sd, FARAWAY));
-  // printf("%f vs %f \n", sd, sdgraphGetSd(term1, term2, (SDGRAPH*) sdgraph));
+   //printf("%f vs %f \n", sd, sdgraphGetSd(term1, term2, (SDGRAPH*) sdgraph));
 
    assert(EQ(sd, sdgraphGetSd(term1, term2, (SDGRAPH*) sdgraph)));
 
@@ -630,16 +653,18 @@ SCIP_RETCODE sdqueryInit(
 )
 {
    const int nnodes = graph_get_nNodes(g);
-   const int nterms = graph_get_nNodes(sdgraph->distgraph);
    const int rmqlength = sdqueryGetRmqLength(sdgraph);
    const int logrmqlength = (int) log2(rmqlength);
    RMQBUILDER* rmqbuilder;
+#ifndef NDEBUG
+   const int nterms = graph_get_nNodes(sdgraph->distgraph);
 
    assert(nterms >= 2);
    assert(nterms == g->terms);
    assert(logrmqlength >= 0);
    assert(!sdgraph->rmq_edgecosts);
    assert(!sdgraph->rmq_sparseTable);
+#endif
 
    sdgraph->rmq_loglength = logrmqlength;
 
@@ -1147,6 +1172,8 @@ void sdgraphUpdateDistgraphFromTpaths(
          const SCIP_Real distance =
             distgraphGetBoundaryEdgeDistBest(g, tpaths, tail, head, g->cost[e], sdprofit, &vbase_tail, &vbase_head);
 
+         /* NOTE: we should not take the fast query method here, because sdgraphGetSd at least partly reflects
+          * the change of the distance graph */
          if( LT(distance, FARAWAY) && LT(distance, sdgraphGetSd(vbase_tail, vbase_head, g_sd)) )
          {
             SCIP_Bool success;
@@ -1288,6 +1315,8 @@ SCIP_RETCODE sdgraphMstBuild(
    {
       const int e = mst[k].edge;
       const SCIP_Real cost = distgraph->cost[e];
+
+      assert(graph_edge_isInRange(distgraph, e));
 
       if( cost > maxcost )
          maxcost = cost;
