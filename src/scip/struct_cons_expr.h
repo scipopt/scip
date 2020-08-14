@@ -131,7 +131,9 @@ struct SCIP_ConsExpr_Expr
    unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
 
    /* propagation */
-   SCIP_INTERVAL           propbounds;    /**< bounds to propagate in reverse propagation; set to entire if not queued for propagation */
+   SCIP_INTERVAL           propbounds;    /**< bounds to propagate in reverse propagation */
+   unsigned int            propboundstag; /**< tag to indicate whether propbounds are valid for the current propagation rounds */
+   SCIP_Bool               inpropqueue;   /**< whether expression is queued for propagation */
 
    /* expression iterators data */
    SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPRITERATOR_MAXNACTIVE];  /**< data for expression iterators */
