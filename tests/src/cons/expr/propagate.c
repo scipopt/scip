@@ -920,7 +920,6 @@ ParameterizedTest(const struct expr_results* data, propagate, propConss)
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONS* cons1, *cons2;
    int nchgbds = 0;
-   int ndelconss = 0;
    SCIP_RESULT result;
 
    /* set variable bounds */
@@ -945,7 +944,7 @@ ParameterizedTest(const struct expr_results* data, propagate, propConss)
    /* call propConss() for all transformed constraints */
    cr_assert_not_null(SCIPconshdlrGetConss(conshdlr));
    cr_assert_eq(SCIPconshdlrGetNConss(conshdlr), 2);
-   SCIP_CALL( propConss(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), TRUE, &result, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, SCIPconshdlrGetConss(conshdlr), SCIPconshdlrGetNConss(conshdlr), TRUE, &result, &nchgbds) );
    cr_assert_eq(result, SCIP_REDUCEDDOM, "expecting %d, but got %d\n", SCIP_REDUCEDDOM, result);
    cr_assert_gt(nchgbds, 0);
 

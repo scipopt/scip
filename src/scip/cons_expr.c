@@ -1666,8 +1666,7 @@ SCIP_RETCODE propConss(
    int                   nconss,             /**< total number of constraints */
    SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_RESULT*          result,             /**< pointer to store the result */
-   int*                  nchgbds,            /**< buffer to add the number of changed bounds */
-   int*                  ndelconss           /**< buffer to add the number of deleted constraints */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1686,7 +1685,6 @@ SCIP_RETCODE propConss(
    assert(result != NULL);
    assert(nchgbds != NULL);
    assert(*nchgbds >= 0);
-   assert(ndelconss != NULL);
 
    /* no constraints to propagate */
    if( nconss == 0 )
@@ -1832,6 +1830,115 @@ SCIP_RETCODE propConss(
    }
 
    conshdlrdata->forceboundtightening = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/* calls the reverseprop callbacks of all nlhdlrs in all expressions in all constraints using activity as bounds
+ *
+ * This is meant to propagate any domain restricitions on functions onto variable bounds, if possible.
+ * So this is similar to first loop in initSepa, but meant to be called in presolve.
+ *
+ * Assumes that activities and propbounds are still valid and curpropboundstag does not need to be increased
+ * that is, it's best to call this function immediately after propConss.
+ */
+static
+SCIP_RETCODE propExprDomains(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to propagate */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool cutoff = FALSE;
+   int ntightenings;
+   int c;
+   int e;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+   assert(result != NULL);
+   assert(nchgbds != NULL);
+   assert(*nchgbds >= 0);
+
+   assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+   assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
+   assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
+
+   *result = SCIP_DIDNOTFIND;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   for( c = 0; c < nconss && !cutoff; ++c )
+   {
+      /* skip deleted, non-active, or propagation-disabled constraints */
+      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsActive(conss[c]) || !SCIPconsIsPropagationEnabled(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !cutoff; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      {
+         /* call reverseprop for those nlhdlr that participate in (this) activity
+          * this will propagate the current activity
+          */
+         for( e = 0; e < expr->nenfos; ++e )
+         {
+            SCIP_CONSEXPR_NLHDLR* nlhdlr;
+            assert(expr->enfos[e] != NULL);
+
+            nlhdlr = expr->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
+               continue;
+
+            SCIPdebugMsg(scip, "propExprDomains calling reverseprop for expression %p [%g,%g]\n", (void*)expr, expr->activity.inf, expr->activity.sup);
+            ntightenings = 0;
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, expr->activity, &cutoff, &ntightenings) );
+
+            if( cutoff )
+            {
+               /* stop everything if we detected infeasibility */
+               SCIPdebugMsg(scip, "detect infeasibility for constraint <%s> during reverseprop()\n", SCIPconsGetName(conss[c]));
+               *result = SCIP_CUTOFF;
+               break;
+            }
+
+            assert(ntightenings >= 0);
+            if( ntightenings > 0 )
+            {
+               *nchgbds += ntightenings;
+               *result = SCIP_REDUCEDDOM;
+            }
+         }
+      }
+   }
+
+   /* apply backward propagation (if cutoff is TRUE, then this call empties the queue) */
+   SCIP_CALL( reversePropQueue(scip, conshdlr, &cutoff, &ntightenings) );
+   assert(ntightenings >= 0);
+
+   if( cutoff )
+   {
+      SCIPdebugMsg(scip, " -> cutoff\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if( ntightenings > 0 )
+   {
+      *nchgbds += ntightenings;
+      *result = SCIP_REDUCEDDOM;
+   }
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
@@ -8042,9 +8149,8 @@ SCIP_RETCODE consEnfo(
    {
       SCIP_RESULT propresult;
       int nchgbds = 0;
-      int ndelconss = 0;
 
-      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds, &ndelconss) );
+      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds) );
 
       if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
       {
@@ -8118,9 +8224,8 @@ SCIP_RETCODE consEnfo(
    {
       SCIP_RESULT propresult;
       int nchgbds = 0;
-      int ndelconss = 0;
 
-      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds, &ndelconss) );
+      SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds) );
 
       if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
       {
@@ -10484,7 +10589,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    SCIP_RESULT propresult;
    unsigned int soltag;
    int nchgbds;
-   int ndelconss;
    int nnotify;
    int c;
 
@@ -10506,8 +10610,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
     * TODO obey propinenfo parameter, but we need something to recognize cutoff
     */
    nchgbds = 0;
-   ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, TRUE, &propresult, &nchgbds) );
 
    if( (propresult == SCIP_CUTOFF) || (propresult == SCIP_REDUCEDDOM) )
    {
@@ -10646,9 +10749,8 @@ static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
    int nchgbds = 0;
-   int ndelconss = 0;
 
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, SCIPgetDepth(scip) == 0, result, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, SCIPgetDepth(scip) == 0, result, &nchgbds) );
    assert(nchgbds >= 0);
 
    /* TODO would it make sense to check for redundant constraints? */
@@ -10695,9 +10797,23 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    }
 
    /* propagate constraints */
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0, result, nchgbds, ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0, result, nchgbds) );
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
+
+   /* propagate function domains (TODO integrate with simplify?) */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) || nrounds == 0 )
+   {
+      SCIP_RESULT localresult;
+      SCIP_CALL( propExprDomains(scip, conshdlr, conss, nconss, &localresult, nchgbds) );
+      if( localresult == SCIP_CUTOFF )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( localresult == SCIP_REDUCEDDOM )
+         *result = SCIP_REDUCEDDOM;
+   }
 
    /* check for redundant constraints, remove constraints that are a value expression */
    SCIP_CALL( checkRedundancyConss(scip, conshdlr, conss, nconss, &infeasible, ndelconss, nchgbds) );
