@@ -3047,7 +3047,7 @@ SCIP_RETCODE SCIPenableReoptimization(
     */
    if( scip->set->stage > SCIP_STAGE_PROBLEM && !(!enable && scip->set->stage == SCIP_STAGE_PRESOLVED) )
    {
-      SCIPerrorMessage("reoptimization cannot be %s after starting the (pre)solving process\n", enable ? "enabled" : "disabled");
+      SCIPerrorMessage("Reoptimization cannot be %s after starting the (pre)solving process.\n", enable ? "enabled" : "disabled");
       return SCIP_INVALIDCALL;
    }
 
