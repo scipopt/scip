@@ -62,6 +62,7 @@ Fixed bugs
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
 - Fixed potential indexing error in prop_vbounds.c
+- Fixed bug in writing fzn format
 
 Miscellaneous
 -------------
