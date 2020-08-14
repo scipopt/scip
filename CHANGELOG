@@ -19,6 +19,8 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
+
 ### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
@@ -59,6 +61,7 @@ Fixed bugs
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
+- Fixed potential indexing error in prop_vbounds.c
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 
 Miscellaneous
