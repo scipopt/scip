@@ -37,6 +37,7 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_sol.h"
 #include <string.h>
+#include <regex.h>
 
 #define READER_NAME             "solreader"
 #define READER_DESC             "file reader for primal solutions"
@@ -146,6 +147,8 @@ SCIP_DECL_READERREAD(readerReadSol)
 {  /*lint --e{715}*/
    SCIP_FILE* file;
    char buffer[SCIP_MAXSTRLEN];
+   regex_t reg;
+   int regretcode;
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -186,18 +189,40 @@ SCIP_DECL_READERREAD(readerReadSol)
    /* close file */
    SCIPfclose(file);
 
-   /* decide whether it is xml */
-   if (strstr(buffer, "<?xml"))
+   /* compile regex for determining whether a file is of xml type
+   * ^ only mathes at the beginning of the string
+   * [ ]* matches any number of space characters
+   * <?xml matches the characters exactly
+   */
+   regretcode = regcomp(&reg, "^[ ]*<?xml", 0);
+
+   if ( regretcode != 0 )
+   {
+      SCIPerrorMessage("Failed to compile regex.\n");
+      return SCIP_READERROR;
+   }
+
+   /* execute regex reg on the string in buffer */
+   regretcode = regexec(&reg, buffer,0, NULL, 0);
+
+   /* match found */
+   if ( regretcode == 0 )
    {
       /* read XML solution and add it to the solution pool */
       SCIP_CALL( readSol(scip, filename, TRUE) );
    }
-   else
+   else if (regretcode == REG_NOMATCH)
    {
       /* read the solution and add it to the solution pool */
       SCIP_CALL( readSol(scip, filename, FALSE) );
    }
+   else
+   {
+      SCIPerrorMessage("Failed to execute regex.\n");
+      return SCIP_READERROR;
+   }
 
+   regfree(&reg);
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
