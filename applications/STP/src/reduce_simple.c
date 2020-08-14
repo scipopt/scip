@@ -37,6 +37,7 @@
 #include "scip/scip.h"
 
 
+#if 0
 /** deletes entire graph */
 static
 void deleteAllEdges(
@@ -52,6 +53,7 @@ void deleteAllEdges(
          graph_edge_del(scip, g, e, TRUE);
    }
 }
+#endif
 
 
 /** telling name... todo refactor */
@@ -389,10 +391,13 @@ SCIP_RETCODE reduce_simple(
       SCIP_CALL( reduceLevel0(scip, g) );
    }
 
+   /* NOTE: seems to hurt performance in ascend-prune, not sure why.... */
+#if 0
    if( g->terms == 1 )
    {
       deleteAllEdges(scip, g);
    }
+#endif
 
    SCIPdebugMessage(" %d Knots deleted\n", elimscount);
    assert(graph_valid(scip, g));

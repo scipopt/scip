@@ -1819,7 +1819,6 @@ SCIP_RETCODE setParams(
 #ifndef WITH_UG
    if( (graph->edges > CUT_MAXTOTNEDGES) || ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)) )
    {
-	   int todo; // try to always call me...or deactivate if small?
 	   const SCIP_Real redratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
 	   assert(LE(redratio, 1.0));
 
