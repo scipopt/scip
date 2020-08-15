@@ -165,7 +165,7 @@ SCIP_DECL_READERREAD(readerReadMst)
    SCIPfclose(file);
 
    /* compile regex for determining whether a file is of xml type
-   * ^ only mathes at the beginning of the string
+   * ^ only matches at the beginning of the string
    * [ ]* matches any number of space characters
    * <?xml matches the characters exactly
    */
@@ -178,7 +178,7 @@ SCIP_DECL_READERREAD(readerReadMst)
    }
 
    /* execute regex reg on the string in buffer */
-   regretcode = regexec(&reg, buffer,0, NULL, 0);
+   regretcode = regexec(&reg, buffer, 0, NULL, 0);
 
    /* match found */
    if ( regretcode == 0 )
