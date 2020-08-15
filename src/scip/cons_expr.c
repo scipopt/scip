@@ -14235,39 +14235,46 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       return SCIP_OKAY;
    }
 
-   if( !SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->propbounds) )
+   /* if expr is not constant or variable, then store propbounds
+    * - for constant, the intersection with activity should have been sufficient to determine infeasibilty
+    * - for variable, the tightenAuxVarBounds call below should be suffient to have to new bounds acknowledged
+    */
+   if( expr->nchildren > 0 )
    {
-      /* if already having expr->propbounds, then expr should also be in the reversepropqueue
-       * we then only tighten expr->propbounds by newbounds
-       */
-      SCIPintervalIntersectEps(&expr->propbounds, SCIPepsilon(scip), expr->propbounds, newbounds);
+      if( !SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->propbounds) )
+      {
+         /* if already having expr->propbounds, then expr should also be in the reversepropqueue
+          * we then only tighten expr->propbounds by newbounds
+          */
+         SCIPintervalIntersectEps(&expr->propbounds, SCIPepsilon(scip), expr->propbounds, newbounds);
 
 #ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, "updated expr->propbounds to [%g,%g] for expr %p\n", expr->propbounds.inf, expr->propbounds.sup, (void*)expr);
+         SCIPdebugMsg(scip, "updated expr->propbounds to [%g,%g] for expr %p\n", expr->propbounds.inf, expr->propbounds.sup, (void*)expr);
 #endif
 
-      /* check if the new bounds lead to an empty interval */
-      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->propbounds) )
-      {
-         SCIPdebugMsg(scip, "cut off due to empty intersection with previous propbounds\n");
+         /* check if the new bounds lead to an empty interval */
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->propbounds) )
+         {
+            SCIPdebugMsg(scip, "cut off due to empty intersection with previous propbounds\n");
 
-         *cutoff = TRUE;
-         return SCIP_OKAY;
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+      }
+      else if( expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || expr->nenfos < 0 )
+      {
+         /* add expression to that queue if it should have a nlhdlr with a
+          * reverseprop callback or nlhdlrs are not initialized yet (nenfos < 0)
+          */
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+#endif
+         SCIP_CALL( SCIPqueueInsert(conshdlrdata->reversepropqueue, expr) );
+         expr->propbounds = newbounds;
       }
    }
-   else if( expr->nactivityusesprop > 0 || expr->nactivityusessepa > 0 || expr->nenfos < 0 )
-   {
-      /* add expression to that queue if it should have a nlhdlr with a
-       * reverseprop callback or nlhdlrs are not initialized yet (nenfos < 0)
-       */
-#ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-#endif
-      SCIP_CALL( SCIPqueueInsert(conshdlrdata->reversepropqueue, expr) );
-      expr->propbounds = newbounds;
-   }
 
-   /* update bounds on auxiliary variable */
+   /* update bounds on variable or auxiliary variable */
    SCIP_CALL( tightenAuxVarBounds(scip, conshdlr, expr, newbounds, cutoff, ntightenings) );
 
    return SCIP_OKAY;
