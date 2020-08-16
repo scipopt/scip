@@ -895,7 +895,7 @@ SCIP_Real getSd(
 
 
 /** gets special distance to a pair of nodes */
-static
+static inline
 SCIP_Real sdGetSd(
    const GRAPH*          g,                  /**< graph structure */
    int                   i,                  /**< first vertex */
@@ -2335,8 +2335,8 @@ SCIP_RETCODE reduce_sdPc(
 }
 
 
-/** get SD to a single edge*/
-SCIP_RETCODE reduce_getSd(
+/** get SD to a single edge by using path computations */
+SCIP_RETCODE reduce_getSdByPaths(
    SCIP* scip,
    GRAPH* g,
    PATH*  pathtail,
@@ -2461,6 +2461,22 @@ SCIP_RETCODE reduce_getSd(
 
    *sdist = sd;
    return SCIP_OKAY;
+}
+
+
+/** gets special distance to a pair of nodes */
+SCIP_Real reduce_sdGetSd(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   i,                  /**< first vertex */
+   int                   i2,                 /**< second vertex */
+   SCIP_Real             sd_upper,           /**< upper bound on special distance that is accepted (can be FARAWAY) */
+   SCIP_Real             sd_sufficient,      /**< bound below which to terminate (can be 0.0) */
+   SD*                   sddata              /**< SD */
+   )
+{
+   assert(g && sddata);
+
+   return sdGetSd(g, i, i2, sd_upper, sd_sufficient, sddata);
 }
 
 
@@ -3048,7 +3064,7 @@ SCIP_RETCODE reduce_nts(
                         SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
                                     pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit) );
                      else
-                        SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                        SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
                               adjvert[k], adjvert[k2], limit, pc, FALSE) );
 
                      assert(s1 >= 0);
@@ -5117,11 +5133,11 @@ SCIP_RETCODE reduce_bd34(
             else
             {
                SCIP_CALL(
-                     reduce_getSd(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
+                     reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
                SCIP_CALL(
-                     reduce_getSd(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
+                     reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
                SCIP_CALL(
-                     reduce_getSd(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
+                     reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
             }
 
             if( isPseudoDeletableDeg3(scip, g, sd, edges, csum, !Is_term(g->term[i])) )
@@ -5175,7 +5191,7 @@ SCIP_RETCODE reduce_bd34(
                         SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
                                     pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit));
                      else
-                        SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                        SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
                               adjvert[k], adjvert[k2], limit, pc, FALSE));
                      assert(s1 >= 0);
                      auxg->cost[e] = s1;

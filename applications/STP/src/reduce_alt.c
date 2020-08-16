@@ -2057,9 +2057,9 @@ SCIP_RETCODE reduce_npv(
       g->mark[i] = FALSE;
 
       prize = g->prize[i];
-      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist0, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[0], adjverts[1], limit, FALSE, TRUE) );
-      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist1, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[1], adjverts[2], limit, FALSE, TRUE) );
-      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist2, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[2], adjverts[0], limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &sdist0, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[0], adjverts[1], limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &sdist1, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[1], adjverts[2], limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &sdist2, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[2], adjverts[0], limit, FALSE, TRUE) );
 
       /* can vertex be deleted? */
       if( (SCIPisGE(scip, -sdist0 - sdist1, prize) && SCIPisGE(scip, -sdist2, prize))
@@ -2142,7 +2142,7 @@ SCIP_RETCODE reduce_npv(
             if( k2 > k )
             {
                SCIP_Real sdist0;
-               SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
+               SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
                auxg->cost[e] = sdist0;
                if( SCIPisGT(scip, prize, -auxg->cost[e]) )
                   break;
@@ -2245,7 +2245,7 @@ SCIP_RETCODE reduce_npv(
             if( k2 > k )
             {
                SCIP_Real sdist0;
-               SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
+               SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sdist0), -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[k], adjverts[k2], limit, FALSE, TRUE) );
                auxg->cost[e] = sdist0;
                if( SCIPisGT(scip, prize, -auxg->cost[e]) )
                   break;
@@ -2417,7 +2417,7 @@ SCIP_RETCODE reduce_chain2(
 
       g->mark[i] = FALSE;
 
-      SCIP_CALL( reduce_getSd(scip, g, pathtail, pathhead, &sdist, -(g->prize[i]), heap, statetail, statehead, memlbltail, memlblhead, i1, i2, limit, FALSE, TRUE) );
+      SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &sdist, -(g->prize[i]), heap, statetail, statehead, memlbltail, memlblhead, i1, i2, limit, FALSE, TRUE) );
 
       if( SCIPisGE(scip, -sdist, g->prize[i]) )
       {

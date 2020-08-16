@@ -83,6 +83,7 @@ typedef struct pathroot_state
 typedef struct distance_data
 {
    //    SCIP_Bool*  pathrootsd_isdirty;
+   SD* sdistdata;                    /* can be NULL */
    DHEAP* dheap;
    RANGE* closenodes_range;          /* of size nnodes */
    int* closenodes_indices;          /* of size closenodes_totalsize */
@@ -409,7 +410,7 @@ extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, 
 extern void               extreduce_extCompRevert(const GRAPH*, const EXTPERMA*, EXTCOMP*);
 extern SCIP_Bool          extreduce_extCompIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
 extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
-extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, const GRAPH*, int, SCIP_Bool, DISTDATA*);
+extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);

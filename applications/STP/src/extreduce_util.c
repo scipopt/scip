@@ -844,7 +844,7 @@ void distDataPathRootsFree(
 
 
 /** limited Dijkstra to constant number of neighbors, taking SD distances into account */
-static
+static inline
 SCIP_RETCODE distDataComputeCloseNodesSD(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
@@ -996,6 +996,30 @@ SCIP_Real distDataGetNormalDist(
    return dist;
 }
 
+
+
+/** returns v1->v2 special distance */
+static inline
+SCIP_Real distDataGetSpecialDist(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   assert(distdata);
+   assert(vertex1 >= 0 && vertex2 >= 0);
+   assert(distdata->sdistdata);
+
+   // todo check whether dirty? probably not...
+
+   dist = reduce_sdGetSd(g, vertex1, vertex2, FARAWAY, 0.0, distdata->sdistdata);
+
+   return dist;
+}
+
 /*
  * Interface methods
  */
@@ -1094,7 +1118,7 @@ SCIP_Bool extreduce_extCompFullIsPromising(
 /** initializes distance data */
 SCIP_RETCODE extreduce_distDataInit(
    SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
    int                   maxnclosenodes,     /**< maximum number of close nodes to each node */
    SCIP_Bool             computeSD,          /**< also compute special distances? */
    DISTDATA*             distdata            /**< to be initialized */
@@ -1118,6 +1142,15 @@ SCIP_RETCODE extreduce_distDataInit(
    if( graph_pc_isPc(g) )
    {
       SCIP_CALL( graph_dijkLimited_initPcShifts(scip, g, dijkdata) );
+   }
+
+   if( computeSD )
+   {
+      SCIP_CALL( reduce_sdInit(scip, g, &(distdata->sdistdata)) );
+   }
+   else
+   {
+      distdata->sdistdata = NULL;
    }
 
    range_closenodes = distdata->closenodes_range;
@@ -1146,10 +1179,12 @@ SCIP_RETCODE extreduce_distDataInit(
 
       assert(g->grad[k] > 0);
 
+#if 0
       if( computeSD )
          SCIP_CALL( distDataComputeCloseNodesSD(scip, g, k, TRUE, dijkdata, distdata) );
       else
-         SCIP_CALL( distDataComputeCloseNodes(scip, g, k, TRUE, dijkdata, distdata) );
+#endif
+      SCIP_CALL( distDataComputeCloseNodes(scip, g, k, TRUE, dijkdata, distdata) );
 
       graph_dijkLimited_reset(g, dijkdata);
    }
@@ -1243,13 +1278,23 @@ SCIP_Real extreduce_distDataGetSd(
 
    assert(distdata);
 
-   /* try to find SD via Duin's approximation todo */
-   // if( distdata->nodeSDpaths_dirty[vertex1] && !pcmw
-   // if( distdata->nodeSDpaths_dirty[vertex2] )
-
    dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
 
    assert(EQ(dist, -1.0) || dist >= 0.0);
+
+   if( distdata->sdistdata )
+   {
+      const SCIP_Real dist_sd = distDataGetSpecialDist(g, vertex1, vertex2, distdata);
+
+      if( EQ(dist, -1.0) || dist_sd < dist )
+      {
+     //    printf("%f->%f \n", dist, dist_sd);
+
+         dist = dist_sd;
+      }
+
+      assert(GE(dist, 0.0));
+   }
 
    return dist;
 }
@@ -1270,10 +1315,6 @@ SCIP_Real extreduce_distDataGetSdDouble(
 
    assert(distdata);
 
-   /* try to find SD via Duin's approximation todo */
-   // if( distdata->nodeSDpaths_dirty[vertex1] && !pcmw
-   // if( distdata->nodeSDpaths_dirty[vertex2] )
-
    dist = distDataGetNormalDist(scip, g, vertex1, vertex2, distdata);
 
    if( dist < -0.5 )
@@ -1284,6 +1325,20 @@ SCIP_Real extreduce_distDataGetSdDouble(
    else
    {
       assert(dist >= 0.0);
+   }
+
+   if( distdata->sdistdata )
+   {
+      const SCIP_Real dist_sd = distDataGetSpecialDist(g, vertex1, vertex2, distdata);
+
+      if( EQ(dist, -1.0) || dist_sd < dist )
+      {
+       //  printf("%f->%f \n", dist, dist_sd);
+
+         dist = dist_sd;
+      }
+
+      assert(GE(dist, 0.0));
    }
 
    assert(EQ(dist, -1.0) || dist >= 0.0);
@@ -1304,6 +1359,9 @@ void extreduce_distDataFreeMembers(
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_indices));
    SCIPfreeMemoryArray(scip, &(distdata->closenodes_distances));
    SCIPfreeMemoryArrayNull(scip, &(distdata->closenodes_prededges));
+
+   if( distdata->sdistdata )
+      reduce_sdFree(scip, &(distdata->sdistdata));
 
    distDataPathRootsFree(scip, graph, distdata);
    graph_dijkLimited_free(scip, &(distdata->dijkdata));

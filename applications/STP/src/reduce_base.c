@@ -461,7 +461,7 @@ SCIP_RETCODE redLoopStp_inner(
       {
         const RPDA paramsda = { .useSlackPrune = FALSE, .prevrounds = inner_rounds, .useRec = redparameters->userec, .useExtRed = TRUE, .nodereplacing = nodereplacing};
         int extendedelims = 0;
-        SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, &fix, &extendedelims, randnumgen) );
+        SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &extendedelims, randnumgen) );
         printf("debug extendedelims=%d \n", extendedelims);
       }
 #endif

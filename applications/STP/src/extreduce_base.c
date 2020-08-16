@@ -65,6 +65,7 @@ SCIP_Bool graphmarkIsClean(
 static inline
 SCIP_RETCODE extInit(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             useSd,              /**< use special distance? */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed */
    DISTDATA*             distdata,           /**< distance data (out) */
@@ -76,7 +77,7 @@ SCIP_RETCODE extInit(
    graph_mark(graph);
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, FALSE, distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeletable, extpermanent) );
 
    return SCIP_OKAY;
@@ -248,7 +249,8 @@ SCIP_RETCODE pseudodeleteExecute(
    if( graph_pc_isPc(graph) )
       graph_pc_2orgcheck(scip, graph);
 
-   SCIP_CALL( extInit(scip, graph, edgedeletable, &distdata, &extpermanent) );
+   //!graph_pc_isPc(graph)
+   SCIP_CALL( extInit(scip, FALSE, graph, edgedeletable, &distdata, &extpermanent) );
    if( !markPseudoDeletion )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDeletable, nnodes) );
@@ -382,7 +384,7 @@ SCIP_RETCODE extreduce_deleteArcs(
    if( SCIPisZero(scip, redcostdata->cutoff) )
       return SCIP_OKAY;
 
-   SCIP_CALL( extInit(scip, graph, edgedeletable, &distdata, &extpermanent) );
+   SCIP_CALL( extInit(scip, FALSE, graph, edgedeletable, &distdata, &extpermanent) );
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -462,7 +464,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    if( SCIPisZero(scip, redcostdata->cutoff) )
       return SCIP_OKAY;
 
-   SCIP_CALL( extInit(scip, graph, edgedeletable, &distdata, &extpermanent) );
+   SCIP_CALL( extInit(scip, FALSE, graph, edgedeletable, &distdata, &extpermanent) );
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
