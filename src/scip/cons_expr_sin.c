@@ -1126,6 +1126,11 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
    assert(child != NULL);
 
    newbounds = SCIPgetConsExprExprBounds(scip, conshdlr, child);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* compute the new child interval */
    SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );

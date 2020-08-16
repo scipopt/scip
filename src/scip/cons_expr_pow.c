@@ -1974,6 +1974,12 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropPow)
 
    SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g], x = [%.15g,%.15g]", exponent, bounds.inf, bounds.sup, child.inf, child.sup);
 
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
    if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bounds) )
    {
       /* if exponent is not integral, then make sure that child is non-negative */

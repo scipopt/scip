@@ -1277,10 +1277,16 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    /* shift coefficients into the intervals of the children; compute the min and max activities */
    for( c = 0; c < nexprs; ++c )
    {
-      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprBounds(scip, conshdlr, exprs[c]),
-         weights[c]);  /*lint !e613 */
+      childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, exprs[c]);
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], childbounds.inf, childbounds.sup); /*lint !e613 */
 
-      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], SCIPgetConsExprExprBounds(scip, conshdlr, exprs[c]).inf, SCIPgetConsExprExprBounds(scip, conshdlr, exprs[c]).sup); /*lint !e613 */
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], childbounds, weights[c]);  /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;

@@ -389,6 +389,10 @@ void getFeasiblePointsBilinear(
       /* if called from reverseprop, then use bounds */
       boundsx = SCIPgetConsExprExprBounds(scip, conshdlr, child1);
       boundsy = SCIPgetConsExprExprBounds(scip, conshdlr, child2);
+
+      /* if children bounds are empty, then returning with *npoints==0 is the way to go */
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsx) || SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, boundsy) )
+         return;
    }
    lbx = boundsx.inf;
    ubx = boundsx.sup;

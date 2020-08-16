@@ -143,6 +143,7 @@ SCIP_RETCODE propagateBoundsQuadExpr(
    )
 {
    SCIP_INTERVAL a;
+   SCIP_INTERVAL exprbounds;
    SCIP_INTERVAL newrange;
 
    assert(scip != NULL);
@@ -160,9 +161,16 @@ SCIP_RETCODE propagateBoundsQuadExpr(
          rhs.inf, rhs.sup);
 #endif
 
+   exprbounds = SCIPgetConsExprExprBounds(scip, conshdlr, expr);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, exprbounds) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
    /* compute solution of a*x^2 + b*x in rhs */
    SCIPintervalSet(&a, sqrcoef);
-   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, SCIPgetConsExprExprBounds(scip, conshdlr, expr));
+   SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &newrange, a, b, rhs, exprbounds);
 
 #ifdef DEBUG_PROP
    SCIPinfoMessage(scip, NULL, "Solution [%g, %g]\n", newrange.inf, newrange.sup);
@@ -1399,14 +1407,22 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
          for( j = 0; j < nadjbilin; ++j )
          {
             SCIP_INTERVAL bterm;
+            SCIP_INTERVAL expr2bounds;
 
             SCIPgetConsExprQuadraticBilinTermData(quaddata, adjbilin[j], &expr1, &expr2, &bilincoef, &pos2, NULL);
 
             if( expr1 != qexpr )
                continue;
 
+            expr2bounds = SCIPgetConsExprExprBounds(scip, conshdlr, expr2);
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr2bounds) )
+            {
+               *infeasible = TRUE;
+               break;
+            }
+
             /* b += [b_lj * expr_j] for j \in P_l */
-            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, SCIPgetConsExprExprBounds(scip, conshdlr, expr2), bilincoef);
+            SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bterm, expr2bounds, bilincoef);
             SCIPintervalAdd(SCIP_INTERVAL_INFINITY, &b, b, bterm);
 
             /* remember b_lj and expr_j to propagate them too */
@@ -1415,27 +1431,39 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
             nbilin++;
          }
 
-         /* solve a_i expr_i^2 + b expr_i in rhs_i */
-         SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, infeasible, nreductions) );
+         if( !*infeasible )
+         {
+            /* solve a_i expr_i^2 + b expr_i in rhs_i */
+            SCIP_CALL( propagateBoundsQuadExpr(scip, conshdlr, qexpr, sqrcoef, b, rhs_i, infeasible, nreductions) );
+         }
 
          if( nbilin > 0 && !*infeasible )
          {
             /* if 0 is not in [expr_i], then propagate bilincoefs^T bilinexpr in rhs_i/expr_i - a_i expr_i - c_i */
             SCIP_INTERVAL bilinrhs;
+            SCIP_INTERVAL qexprbounds;
 
-            /* compute bilinrhs := [rhs_i/expr_i - a_i expr_i] */
-            computeRangeForBilinearProp(SCIPgetConsExprExprBounds(scip, conshdlr, qexpr), sqrcoef, rhs_i, &bilinrhs);
-
-            if( !SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bilinrhs) )
+            qexprbounds = SCIPgetConsExprExprBounds(scip, conshdlr, qexpr);
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, qexprbounds) )
             {
-               int nreds;
+               *infeasible = TRUE;
+            }
+            else
+            {
+               /* compute bilinrhs := [rhs_i/expr_i - a_i expr_i] */
+               computeRangeForBilinearProp(qexprbounds, sqrcoef, rhs_i, &bilinrhs);
 
-               /* propagate \sum_{j \in P_i} b_ij expr_j + c_i in bilinrhs */
-               SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nbilin,
-                        bilinexprs, bilincoefs, lincoef, bilinrhs, infeasible, &nreds) );
+               if( !SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bilinrhs) )
+               {
+                  int nreds;
 
-               /* TODO FIXME: we are overestimating of the number of reductions: an expr might be tightened many times! */
-               *nreductions += nreds;
+                  /* propagate \sum_{j \in P_i} b_ij expr_j + c_i in bilinrhs */
+                  SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, nbilin,
+                     bilinexprs, bilincoefs, lincoef, bilinrhs, infeasible, &nreds) );
+
+                  /* TODO FIXME: we are overestimating of the number of reductions: an expr might be tightened many times! */
+                  *nreductions += nreds;
+               }
             }
          }
       }

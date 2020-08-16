@@ -1915,13 +1915,27 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor,
-            SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[j]));
+         /* TODO we should compute these only one time instead of repeating this for almost every i */
+         childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[j]);
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
+         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor, childbounds);
+      }
+
+      childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]);
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
       }
 
       /* solve x*otherfactor = f for x in c_i */
-      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
-         bounds, SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]));
+      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor, bounds, childbounds);
+
       SCIPdebugMsg(scip, "child %d: solved [%g,%g]*x = [%g,%g] with x in [%g,%g] -> x = [%g,%g]\n", i, otherfactor.inf, otherfactor.sup,
          bounds.inf, bounds.sup,
          SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]).inf, SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]).sup,

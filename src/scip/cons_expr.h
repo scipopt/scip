@@ -857,6 +857,8 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
  * - activity calculation (\ref SCIPgetConsExprExprActivity), if valid,
  * - auxiliary variable, if present,
  * - stored by \ref SCIPtightenConsExprExprInterval during domain propagation
+ *
+ * @note The returned interval can be empty!
  */
 SCIP_EXPORT
 SCIP_INTERVAL SCIPgetConsExprExprBounds(

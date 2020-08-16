@@ -601,7 +601,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
    child = SCIPgetConsExprExprChildren(expr)[0];
    childinterval = SCIPgetConsExprExprBounds(scip, conshdlr, child);
 
-   /* compute resulting intervals */
+   /* compute resulting intervals (reverseProp handles childinterval being empty) */
    SCIP_CALL( reverseProp(scip, bounds, childinterval, &newinterval) );
    assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newinterval) || newinterval.inf >= 0.0);
 
