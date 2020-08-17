@@ -152,7 +152,7 @@ Test(exprquad, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
    cr_assert(!infeasible);
 
    /* get expr and work with it */

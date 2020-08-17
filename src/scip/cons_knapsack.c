@@ -1378,7 +1378,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    intcap = (int)capacity;
    assert(intcap >= 0);
    assert(nmyitems > 0);
-   assert(sizeof(size_t) >= sizeof(int)); /* no following conversion should be messed up */
+   assert(sizeof(size_t) >= sizeof(int)); /*lint !e506*/ /* no following conversion should be messed up */
 
    /* this condition checks whether we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation

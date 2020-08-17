@@ -45,6 +45,8 @@ static SCIP_VAR* z;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
 
+#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
+
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
 void setup(void)
@@ -115,11 +117,9 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participatingexpected;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
    SCIP_VAR* var;
@@ -137,16 +137,14 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
-   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
-   cr_assert(enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
+   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(participating, participatingexpected, "expecting %d got %d\n", participatingexpected, participating);
+   cr_assert(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   cr_assert(!(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE));
+   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->quaddata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", nlhdlrexprdata->quaddata->nlinexprs);
@@ -178,14 +176,13 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
  */
 Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_CONSEXPR_EXPRENFO_METHOD providedexpected;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participatingexpected;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* cosexpr;
    SCIP_CONS* cons;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool infeasible;
 
@@ -200,7 +197,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert(success);
 
    success = FALSE;
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
    cr_assert(!infeasible);
 
    /* get expr and work with it */
@@ -213,16 +210,13 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)), "cos", "expecting cos got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)));
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
-   providedexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP;
-   cr_expect_eq(provided, providedexpected, "expecting %d got %d\n", providedexpected, provided);
-   cr_assert(enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
+   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(participating, participatingexpected, "expecting %d got %d\n", participatingexpected, participating);
+   cr_assert(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   cr_assert(!(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE));
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->quaddata->nlinexprs, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->quaddata->nlinexprs);
@@ -244,7 +238,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cr_expect_eq(cosexpr, quad.expr);
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 0.0, quad.sqrcoef);
-   cr_expect_not_null(SCIPgetConsExprExprAuxVar(quad.expr), "cos expr should have auxiliary variable!\n");
+   cr_expect(SCIPgetConsExprExprNAuxvarUses(quad.expr) > 0, "cos expr should have auxiliary variable!\n");
 
 
    SCIP_CONSEXPR_BILINEXPRTERM bilin;
@@ -264,9 +258,6 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    expr->nenfos = 1;
    expr->enfos[0]->issepainit = FALSE;
 
-   /* if there is an nlhdlr, then there must also be an auxvar */
-   SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, expr, NULL) );
-
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -285,12 +276,14 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
-   SCIP_CALL( SCIPaddCons(scip, cons) ); /* this adds locks which are needed for detectNlhdlrs */
-   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   /* adds locks which are needed for detectNlhdlrs */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL, NULL) );
    cr_assert_not(infeasible);
 
    /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible) );
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1, &infeasible, NULL) );
    cr_assert_not(infeasible);
 
    /* get expr and work with it */
@@ -300,28 +293,28 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "exp", "expecting exp got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->auxvar);
+   cr_assert(expr->nauxvaruses > 0);
 
    /* expr is abs expr */
    expr = SCIPgetConsExprExprChildren(expr)[0];
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "abs", "expecting abs got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->auxvar);
+   cr_assert(expr->nauxvaruses > 0);
 
    /* expr is log expr */
    expr = SCIPgetConsExprExprChildren(expr)[0];
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 1);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "log", "expecting log got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->auxvar);
+   cr_assert(expr->nauxvaruses > 0);
 
    /* expr is sum expr */
    expr = SCIPgetConsExprExprChildren(expr)[0];
    cr_assert_eq(SCIPgetConsExprExprNChildren(expr), 4);
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum", "expecting sum got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
-   cr_assert_not_null(expr->auxvar);
+   cr_assert(expr->nauxvaruses > 0);
 
 #if 0
    /* it should be identified that child should not have aux vars because of locks */
@@ -362,6 +355,12 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr1), y);
    cr_expect_eq(SCIPgetConsExprExprAuxVar(bilin.expr2), x);
 
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -371,10 +370,8 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -387,17 +384,13 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(!success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_expect_null(nlhdlrexprdata);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -409,10 +402,8 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -425,17 +416,13 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_NONE);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(!success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_expect_null(nlhdlrexprdata);
 
    /* no auxiliary variables */
@@ -459,10 +446,8 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -479,16 +464,12 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -513,10 +494,8 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
@@ -533,16 +512,12 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -611,50 +586,70 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
  * BACKWARDS see mathematica code below. Now that we use the intervals of qx, qy, qz, qw
  * as computed by the forward propagation and not just doing the interval evaluation!
  *
- * Mathematicas code to generate answer
+ * Mathematicas code to generate answer: not very smart
  *
-Ix = Interval[{-1.01,1.01}]; Iy = Interval[{0.07, 0.09}]; Iz = Interval[{-0.9, 0.7}]; Iw = Interval[{1.49, 1.51}];
-q[x_,y_,z_,w_] = x^2 - 3.1*x*y + 12.2*z*w + w^2 + 1.3*z*x - 4.8754*z^2 - 0.5*y^2 - 17.1*x + 22.02*y + 5*z - w;
-qx[x_,y_,z_] = x^2 + x*(-3.1*y - 17.1 + 1.3*z);
-qz[z_, w_] = -4.8754*z^2 + z*(5 + 12.2*w);
-qy[y_] = -0.5*y^2 + 22.02*y;
-qw[w_] = w^2 - 1 * w;
+ *
+Ix=Interval[{-101/100,101/100}];Iy=Interval[{7/100,9/100}];Iz=Interval[{-9/10,7/10}];Iw=Interval[{149/100,151/100}];
+q[x_,y_,z_,w_]=x^2-3.1*x*y+12.2*z*w+w^2+16.3*z*x-4.8754*z^2-0.5*y^2-17.1*x+22.02*y+5*z-w;
+qx[x_,y_,z_]=x^2+x*(-3.1*y-17.1+16.3*z);
+qz[z_,w_]=-4.8754*z^2+z*(5+12.2*w);
+qy[y_]=-0.5*y^2+22.02*y;
+qw[w_]=w^2-1*w;
 SetPrecision[q[Ix,Iy,Iz,Iw],15]
-(* returns Interval[{-40.474214, 36.508894}] *)
-QXU = MaxValue[{qx[x,y,z], Element[{x}, Ix] && Element[{y}, Iy] && Element[{z}, Iz]}, {x,y,z}];
-QYU = MaxValue[{qy[y], Element[{y}, Iy]}, {y}];
-QWU = MaxValue[{qw[w], Element[{w}, Iw]}, {w}];
-QZU = MaxValue[{qz[z,w], Element[{z}, Iz] && Element[{w}, Iw]}, {z,w}];
-QXL = MinValue[{qx[x,y,z], Element[{x}, Ix] && Element[{y}, Iy] && Element[{z}, Iz]}, {x,y,z}];
-QYL = MinValue[{qy[y], Element[{y}, Iy]}, {y}];
-QWL = MinValue[{qw[w], Element[{w}, Iw]}, {w}];
-QZL = MinValue[{qz[z,w], Element[{z}, Iz] && Element[{w}, Iw]}, {z,w}];
-SetPrecision[QXU+QYU+QWU+QZU,15] (* computes upper bound *)
-SetPrecision[QXL+QYL+QWL+QZL,15] (* computes lower bound *)
-QX = Interval[{QXL, QXU}]; QY = Interval[{QYL, QYU}]; QW = Interval[{QWL, QWU}]; QZ = Interval[{QZL, QZU}];
-(* reverse propagation *)
-Iq = Interval[{35,35}];
-Reduce[Exists[{y,z,r}, qx[x,y,z] == r && Element[{y}, Iy] && Element[{z}, Iz] && Element[{r}, Iq - (QY + QW + QZ)]],Reals]
-Reduce[Exists[{r}, qy[y] == r && Element[{r}, Iq - (QX + QW + QZ)]],Reals]
-Reduce[Exists[{w,r}, qz[z,w] == r && Element[{w}, Iw] && Element[{r}, Iq - (QX + QY + QW)]],Reals]
-Reduce[Exists[{r}, qw[w] == r && Element[{r}, Iq - (QX + QZ + QY)]],Reals]
- *
- * Note that the best values are [-40.3716, 34.4081] for interval evaluation
+QXU=MaxValue[{qx[x,y,z],Element[{x},Ix]&&Element[{y},Iy]&&Element[{z},Iz]},{x,y,z}];
+QYU=MaxValue[{qy[y],Element[{y},Iy]},{y}];
+QWU=MaxValue[{qw[w],Element[{w},Iw]},{w}];
+QZU=MaxValue[{qz[z,w],Element[{z},Iz]&&Element[{w},Iw]},{z,w}];
+QXL=MinValue[{qx[x,y,z],Element[{x},Ix]&&Element[{y},Iy]&&Element[{z},Iz]},{x,y,z}];
+QYL=MinValue[{qy[y],Element[{y},Iy]},{y}];
+QWL=MinValue[{qw[w],Element[{w},Iw]},{w}];
+QZL=MinValue[{qz[z,w],Element[{z},Iz]&&Element[{w},Iw]},{z,w}];
+SetPrecision[QXL+QYL+QWL+QZL,20] (*computes lower bound*)
+SetPrecision[QXU+QYU+QWU+QZU,20] (*computes upper bound*)
+QX=Interval[{QXL,QXU}];QY=Interval[{QYL,QYU}];QW=Interval[{QWL,QWU}];QZ=Interval[{QZL,QZU}];
+(*reverse propagation*)
+Iq=Interval[{35,35}];
+(* Propagating qx: first standard then bilinear terms *)
+rhsx=Iq-(QY+QW+QZ); rx=Reduce[Exists[{y,z},Element[{y},Iy]&&Element[{z},Iz]&&Element[{qx[x,y,z]},rhsx]],Reals];
+newIx=Interval[{MinValue[x,(rx)&&Element[{x},Ix],x],MaxValue[x,(rx)&&Element[{x},Ix],x]}]; (*improves x*)
+Print["new Ix : ",newIx]
+
+bilinxrhs = Interval[{MinValue[y/x-x,Element[{x},newIx]&&Element[{y},rhsx],{x,y}],MaxValue[y/x-x,Element[{x},newIx]&&Element[{y},rhsx],{x,y}]}];
+Print["bilinxrhs ", bilinxrhs, " compare to ", rhsx/newIx - newIx]
+consxforyz=Element[{-3.1*y-17.1+16.3*z},bilinxrhs];
+newIy=Interval[{MinValue[y,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}],MaxValue[y,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}]}]; (* doesn't improve y*)
+Print["new Iy : ",newIy]
+newIz=Interval[{MinValue[z,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}],MaxValue[z,consxforyz&&Element[{y},Iy]&&Element[{z},Iz],{y,z}]}]; (*improves z*)
+Print["new Iz : ",newIz]
+(* Propagating qz *)
+rhsz=Iq-(QX+QY+QW); rz=Reduce[Exists[{w},Element[{w},Iw]&&Element[{qz[z,w]},rhsz]],Reals];
+newIz=Interval[{MinValue[z,(rz)&&Element[{z},newIz],z],MaxValue[z,(rz)&&Element[{z},newIz],z]}];
+Print["new Iz : ",newIz]
+
+(* 0 is in newIz so we don't do the following *)
+(*conszforw=Element[{5+12.2*w},rhsz/newIz - newIz];
+newIw=Interval[{MinValue[w,conszforw&&Element[{w},Iw],{w}],MaxValue[w,conszforw&&Element[{w},Iw],{w}]}]; (* doesn't improve y*)
+Print["new Iw : ",newIw]*)
+newIw=Iw;
+(* Propagating qy *)
+rhsy=Iq-(QX+QW+QZ); ry=Reduce[Element[{qy[y]},rhsy],Reals];
+newIy=Interval[{MinValue[y,(ry)&&Element[{y},newIy],y],MaxValue[y,(ry)&&Element[{y},newIy],y]}];
+Print["new Iy : ",newIy]
+(* Propagating qw *)
+rhsw=Iq-(QX+QZ+QY); rw=Reduce[Element[{qw[w]},rhsw],Reals];
+newIw=Interval[{MinValue[w,(rw)&&Element[{w},newIw],w],MaxValue[w,(rw)&&Element[{w},newIw],w]}];
+Print["new Iw : ",newIw]
  */
 Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_INTERVAL interval;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
-   SCIP_Real matinf = -40.474214;
-   SCIP_Real matsup = 36.508894;
 
    /* set bounds: is important to do it here so that interval evaluations work */
    SCIPchgVarLb(scip, x, -1.01); SCIPchgVarUb(scip, x, 1.01);
@@ -663,7 +658,7 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIPchgVarLb(scip, w,  1.49); SCIPchgVarUb(scip, w, 1.51);
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 - 3.1*<x>*<y> + 12.2*<z>*<w> + <w>^2 + 1.3*<z>*<x> - 4.8754*<z>^2 - 0.5*<y>^2 - 17.1*<x> + 22.02*<y> + 5*<z> - <w>", NULL, &expr) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>^2 - 3.1*<x>*<y> + 12.2*<z>*<w> + <w>^2 + 16.3*<z>*<x> - 4.8754*<z>^2 - 0.5*<y>^2 - 17.1*<x> + 22.02*<y> + 5*<z> - <w>", NULL, &expr) );
    SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
@@ -675,16 +670,12 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -712,8 +703,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &interval);
    SCIP_CALL( nlhdlrIntevalQuadratic(scip, nlhdlr, expr, nlhdlrexprdata, &interval, NULL, FALSE, NULL) );
 
-   cr_expect_float_eq(interval.inf, matinf, 1e-7, "got %f, expected %f\n", interval.inf, matinf); cr_expect_leq(interval.inf, matinf);
-   cr_expect_float_eq(interval.sup, matsup, 1e-7, "got %f, expected %f\n", interval.sup, matsup); cr_expect_geq(interval.sup, matsup);
+   EXPECTFEQ(interval.inf, -54.1092139000245);
+   EXPECTFEQ(interval.sup, 50.1438939955093);
 
    /* test reverse propagation */
    {
@@ -725,10 +716,12 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
       SCIP_CALL( nlhdlrReversepropQuadratic(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, queue, &infeasible, &nreductions, FALSE) );
       SCIP_CALL( SCIPdismantleConsExprExpr(scip, NULL, expr) );
-      cr_expect_eq(nreductions, 2);
+      cr_expect_eq(nreductions, 3); /* three because the z improved twice */
       cr_expect_not(infeasible);
-      cr_expect_float_eq(SCIPvarGetLbLocal(z), 0.611389821, 1e-7, "expecting %g, got %g\n", 0.61139, SCIPvarGetLbLocal(z));
-      cr_expect_float_eq(SCIPvarGetUbLocal(x), -0.936379, 1e-6, "expecting %g, got %g\n", -0.936379, SCIPvarGetUbLocal(x));
+
+      EXPECTFEQ(SCIPvarGetLbLocal(z), -0.0485777477946283);
+      EXPECTFEQ(SCIPvarGetUbLocal(z), 0.0198745061962769);
+      EXPECTFEQ(SCIPvarGetUbLocal(x), -0.559537393062365);
       SCIPqueueFree(&queue);
    }
 
@@ -742,6 +735,59 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    expr->enfos[0]->issepainit = FALSE;
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+}
+
+/* code to generate an answer:
+ * MinValue[y/x + 1/2*x, Element[{x}, Ix] && Element[{y}, Ir], {x, y}]
+ * MaxValue[y/x + 1/2*x, Element[{x}, Ix] && Element[{y}, Ir], {x, y}]
+ * for some intervals Ix and Ir (one can also change the coef 1/2 above)
+ */
+Test(nlhdlrquadratic, bilin_rhs_range, .init = setup, .fini = teardown)
+{
+   SCIP_INTERVAL rhs;
+   SCIP_INTERVAL exprdom;
+   SCIP_INTERVAL range;
+
+   rhs.inf = -8.0;
+   rhs.sup = -4.0;
+
+   exprdom.inf = 1.0;
+   exprdom.sup = 10.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   EXPECTFEQ(range.inf, -8.25);
+   EXPECTFEQ(range.sup, -2.0);
+
+   exprdom.inf = -10.0;
+   exprdom.sup = -1.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   EXPECTFEQ(range.inf, 2.0);
+   EXPECTFEQ(range.sup, 8.25);
+
+   rhs.inf = -8.0;
+   rhs.sup = 4.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   EXPECTFEQ(range.inf, -3.75);
+   EXPECTFEQ(range.sup, 8.25);
+
+   computeRangeForBilinearProp(exprdom, 0.0, rhs, &range);
+   EXPECTFEQ(range.inf, -4.0);
+   EXPECTFEQ(range.sup, 8.0);
+
+   rhs.inf = 0.0;
+   rhs.sup = 4.0;
+
+   computeRangeForBilinearProp(exprdom, -0.5, rhs, &range);
+   EXPECTFEQ(range.inf, -5.4);
+   EXPECTFEQ(range.sup, -0.5);
+
+   exprdom.inf = -1.0;
+   exprdom.sup = 10.0;
+
+   computeRangeForBilinearProp(exprdom, 0.25, rhs, &range);
+   cr_expect(SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, range));
 }
 
 /* test propagation of x*y + z + z^2; this is interesting to see how reverse propagation handles the term x*y.
@@ -760,15 +806,15 @@ zmax = MaxValue[{z, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x,
 zmin = MinValue[{z, Element[{x}, Ix] && y >= 1 && Element[{z}, Iz] && cons}, {x, y, z}]
  *
  */
+/* FIXME: nlhdlr_quadratic now treats x*y as an argument, so detect and propagation calls for the x*y expression need to be added here */
+#if SCIP_DISABLED_CODE
 Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
-   SCIP_Bool enforcebelow;
-   SCIP_Bool enforceabove;
-   SCIP_Bool success;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
    SCIP_INTERVAL interval;
@@ -792,16 +838,12 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
 
 
    /* detect */
-   provided = SCIP_CONSEXPR_EXPRENFO_NONE;
-   enforcebelow = FALSE;
-   enforceabove = FALSE;
-   success = FALSE;
-   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &provided, &enforcebelow, &enforceabove, &success, &nlhdlrexprdata) );
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(provided, SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP, "got %d\n", provided);
-   cr_assert(!enforcebelow);
-   cr_assert(!enforceabove);
-   cr_assert(success);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
    /* no auxiliary variables should have been created */
@@ -856,3 +898,4 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
+#endif

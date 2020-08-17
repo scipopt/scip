@@ -25,24 +25,26 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 #include "nlpi/pub_expr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_bivariate.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_quadratic.h"
+#include "scip/cons_soc.h"
+#include "scip/pub_nlp.h"
+#endif
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
-#include "scip/cons_soc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/cons_varbound.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_nlp.h"
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_gms.h"
@@ -56,22 +58,9 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-#ifdef WITH_GAMS
-#include <sys/stat.h>
-
-#include "gmomcc.h"
-#include "gevmcc.h"
-
-#include "reader_gmo.h"
-#endif
-
 
 #define READER_NAME             "gmsreader"
-#ifdef WITH_GAMS
 #define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
-#else
-#define READER_DESC             "file reader and writer for MI(NL)(SOC)Ps in GAMS file format"
-#endif
 #define READER_EXTENSION        "gms"
 
 
@@ -158,6 +147,7 @@ void endLine(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < GMS_MAX_LINELEN );
 
    if( (*linecnt) > 0 )
    {
@@ -200,6 +190,7 @@ void appendLine(
       endLine(scip, file, linebuffer, linecnt);
 }
 
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 /** appends extension to line and prints it to the give file stream if the
  *  line exceeded the length given in the define GMS_PRINTLEN
  *  indents the line by some spaces if it is a new line */
@@ -218,6 +209,7 @@ void appendLineWithIndent(
 
    appendLine(scip, file, linebuffer, linecnt, extension);
 }
+#endif
 
 /** checks string for occurences of bad symbols and replace those by '_' */
 static
@@ -596,7 +588,7 @@ SCIP_RETCODE printLinearCons(
    return SCIP_OKAY;
 }
 
-
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 /* print quadratic row in GAMS format to file stream (performing retransformation to active variables) */
 static
 SCIP_RETCODE printQuadraticRow(
@@ -920,6 +912,7 @@ SCIP_RETCODE printSOCCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /* print indicator constraint in some GAMS format to file stream (performing retransformation to active variables)
  * The constraints are of the following form:
@@ -1111,6 +1104,7 @@ SCIP_RETCODE printSOSCons(
    return SCIP_OKAY;
 }
 
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
 /* print signpower row in GAMS format to file stream (performing retransformation to active variables) */
 static
 SCIP_RETCODE printSignpowerRow(
@@ -1487,7 +1481,7 @@ SCIP_RETCODE printExpr(
           * but if reading/gmsreader/signpower is TRUE, then we print as signpower(x,y), unless y is odd integer
           */
          exponent = SCIPexprGetSignPowerExponent(expr);
-         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1);
+         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1); /*lint !e777*/
 
          if( !nisoddint )
          {
@@ -1736,7 +1730,7 @@ SCIP_RETCODE printExpr(
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
                   appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
                }
-               else if( ((SCIP_Real)((int)exponent)) == exponent )
+               else if( ((SCIP_Real)((int)exponent)) == exponent ) /*lint !e777*/
                {
                   appendLineWithIndent(scip, file, linebuffer, linecnt, "power(");
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
@@ -1892,6 +1886,7 @@ SCIP_RETCODE printNonlinearCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** method check if the variable names are not longer than GMS_MAX_NAMELEN */
 static
@@ -2012,11 +2007,17 @@ SCIP_RETCODE checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsQuadratic(scip, cons);
          SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsQuadratic(scip, cons);
-
+#else
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+#endif
          if( SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
          {
             SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
@@ -2059,107 +2060,6 @@ SCIP_DECL_READERCOPY(readerCopyGms)
    return SCIP_OKAY;
 }
 
-#ifdef WITH_GAMS
-/** problem reading method of reader */
-static
-SCIP_DECL_READERREAD(readerReadGms)
-{
-   SCIP_RETCODE ret;
-   FILE* convertdopt;
-   char gamscall[SCIP_MAXSTRLEN];
-   char buffer[GMS_SSSIZE];
-   int rc;
-   gmoHandle_t gmo = NULL;
-   gevHandle_t gev = NULL;
-
-   assert(scip != NULL);
-   assert(reader != NULL);
-   assert(filename != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-   ret = SCIP_ERROR;
-
-   /* create temporary directory */
-   mkdir("loadgms.tmp", S_IRWXU);
-
-   /* create empty convertd options file */
-   convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
-   if( convertdopt == NULL )
-   {
-      SCIPerrorMessage("Could not create convertd options file. Do you have write permissions in execution directory?\n");
-      goto TERMINATE;
-   }
-   fputs(" ", convertdopt);
-   fclose(convertdopt);
-
-   /* call GAMS with convertd solver to get compiled model instance in temporary directory */
-   SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d",
-      filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? 3 : 0);
-   SCIPdebugMsg(scip, gamscall);
-   rc = system(gamscall);
-   if( rc != 0 )
-   {
-      SCIPerrorMessage("GAMS call returned with code %d, check loadgms.tmp/listing for details.\n", rc);
-      /* likely the GAMS model could not be compiled, which we could report as a readerror */
-      ret = SCIP_READERROR;
-      goto TERMINATE;
-   }
-
-   /* initialize GEV library and create GEV */
-   if( !gevCreateDD(&gev, WITH_GAMS, buffer, sizeof(buffer)) )
-   {
-      SCIPerrorMessage(buffer);
-      goto TERMINATE;
-   }
-
-   /* initialize GMO library and create GMO */
-   if( !gmoCreateDD(&gmo, WITH_GAMS, buffer, sizeof(buffer)) )
-   {
-      SCIPerrorMessage(buffer);
-      goto TERMINATE;
-   }
-
-   /* load control file */
-   if( gevInitEnvironmentLegacy(gev, "loadgms.tmp/gamscntr.dat") )
-   {
-      SCIPerrorMessage("Could not load control file loadgms.tmp/gamscntr.dat\n");
-      goto TERMINATE;
-   }
-
-   /* tell GMO about GEV */
-   if( gmoRegisterEnvironment(gmo, gev, buffer) )
-   {
-      SCIPerrorMessage("Error registering GAMS Environment: %s\n", buffer);
-      goto TERMINATE;
-   }
-
-   /* load GAMS model instance into GMO */
-   if( gmoLoadDataLegacy(gmo, buffer) )
-   {
-      SCIPerrorMessage("Could not load model data.\n");
-      goto TERMINATE;
-   }
-
-   /* create SCIP problem out of GMO, using the magic from reader_gmo in interfaces/gams */
-   SCIP_CALL( SCIPcreateProblemReaderGmo(scip, gmo, NULL, FALSE) );
-   *result = SCIP_SUCCESS;
-
-   ret = SCIP_OKAY;
-
-TERMINATE:
-   if( gmo != NULL )
-      gmoFree(&gmo);
-   if( gev != NULL )
-      gevFree(&gev);
-
-   /* remove temporary directory content (should have only files and directory itself) */
-   if( ret != SCIP_READERROR )
-      system("rm loadgms.tmp/* && rmdir loadgms.tmp");
-
-   return ret;
-}
-#endif
 
 /** problem writing method of reader */
 static
@@ -2170,20 +2070,6 @@ SCIP_DECL_READERWRITE(readerWriteGms)
 
    return SCIP_OKAY;
 }
-
-#ifdef WITH_GAMS
-/** destructor of reader to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_READERFREE(readerFreeGms)
-{
-   if( gmoLibraryLoaded() )
-      gmoLibraryUnload();
-   if( gevLibraryLoaded() )
-      gevLibraryUnload();
-
-   return SCIP_OKAY;
-}
-#endif
 
 /*
  * reader specific interface methods
@@ -2201,10 +2087,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );
-#ifdef WITH_GAMS
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadGms) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeGms) );
-#endif
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteGms) );
 
    /* add gms reader parameters for writing routines*/
@@ -2539,6 +2421,7 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = strcmp(conshdlrname, "linear") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons));
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       rangedrow = rangedrow || (strcmp(conshdlrname, "quadratic") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons)));
@@ -2551,15 +2434,20 @@ SCIP_RETCODE SCIPwriteGms(
       rangedrow = rangedrow || (strcmp(conshdlrname, "bivariate") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsBivariate(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsBivariate(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsBivariate(scip, cons), SCIPgetRhsBivariate(scip, cons)));
+#endif
       rangedrow = rangedrow || (strcmp(conshdlrname, "varbound") == 0
          && !SCIPisInfinity(scip, -SCIPgetLhsVarbound(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons))
          && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)));
 
       /* we declare only those constraints which we can print in GAMS format */
       if( strcmp(conshdlrname, "knapsack") != 0 && strcmp(conshdlrname, "logicor") != 0 && strcmp(conshdlrname, "setppc") != 0
-          && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "quadratic") != 0 && strcmp(conshdlrname, "varbound") != 0
+          && strcmp(conshdlrname, "linear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
+          && strcmp(conshdlrname, "quadratic") != 0
           && strcmp(conshdlrname, "soc") != 0 && strcmp(conshdlrname, "abspower") != 0 && strcmp(conshdlrname, "bivariate") != 0
-          && strcmp(conshdlrname, "nonlinear") != 0 && strcmp(conshdlrname, "SOS1") != 0 && strcmp(conshdlrname, "SOS2") != 0
+          && strcmp(conshdlrname, "nonlinear") != 0
+#endif
+          && strcmp(conshdlrname, "varbound") != 0
           && strcmp(conshdlrname, "indicator") != 0 )
       {
          SCIPwarningMessage(scip, "Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, SCIPconsGetName(cons));
@@ -2673,6 +2561,7 @@ SCIP_RETCODE SCIPwriteGms(
                SCIPgetNVarsLogicor(scip, cons), SCIPgetVarsLogicor(scip, cons), NULL,
                1.0, SCIPinfinity(scip), transformed) );
       }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
@@ -2736,6 +2625,7 @@ SCIP_RETCODE SCIPwriteGms(
          if( exprdegree > 2)
             nqcons = TRUE;
       }
+#endif
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          consvars = SCIPgetVarsSetppc(scip, cons);
@@ -2775,6 +2665,7 @@ SCIP_RETCODE SCIPwriteGms(
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
       }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       else if( strcmp(conshdlrname, "soc") == 0 )
       {
          SCIP_CALL( printSOCCons(scip, file, consname,
@@ -2784,12 +2675,14 @@ SCIP_RETCODE SCIPwriteGms(
          nlcons = nlcons || !isGAMSprintableSOC(SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
             SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
       }
+#endif
       else if( strcmp(conshdlrname, "indicator") == 0 )
       {
          SCIP_CALL( printIndicatorCons(scip, file, consname,
             SCIPgetBinaryVarIndicator(cons), SCIPgetSlackVarIndicator(cons), &indicatorsosdef,
             transformed) );
       }
+#ifdef CLASSIC_NONLINEAR_CONSHDLR
       else if( strcmp(conshdlrname, "abspower") == 0 )
       {
          SCIP_CALL( printSignpowerCons(scip, file, consname,
@@ -2800,6 +2693,7 @@ SCIP_RETCODE SCIPwriteGms(
          nlcons = TRUE;
          nqcons = TRUE;
       }
+#endif
       else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
          SCIP_CALL( printSOSCons(scip, file, consname,

@@ -679,8 +679,14 @@ Test(glbconss, cpp1)
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
+   /* set a node limit so it has a chance to fail instead of running forever
+    * currently (2020-06-19) solves in 1620 nodes
+    */
+   SCIP_CALL( SCIPsetLongintParam(scip, "limits/totalnodes", 10000L) );
+
    /* solve problem */
    SCIP_CALL( SCIPsolve(scip) );
+   cr_expect(SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL);
    cr_expect_float_eq(SCIPgetPrimalbound(scip), -3.60000003185305e+01, 1e-4);
    sol = SCIPgetBestSol(scip);
    cr_assert(sol != NULL);

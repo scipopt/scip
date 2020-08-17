@@ -2169,7 +2169,8 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvaturePow)
    exponent = SCIPgetConsExprExprPowExponent(expr);
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childinterval = SCIPgetConsExprExprActivity(scip, child);
+
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE, TRUE) );
 
    *childcurv = SCIPexprcurvPowerInv(childinterval, exponent, exprcurvature);
    /* SCIPexprcurvPowerInv return unknown actually means that curv cannot be obtained */
@@ -2195,7 +2196,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityPow)
    assert(childidx == 0);
 
    assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   interval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], &interval, FALSE, TRUE) );
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);
@@ -2926,7 +2927,8 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSignpower)
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   childinterval = SCIPgetConsExprExprActivity(scip, child);
+
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE, TRUE) );
 
    if( exprcurvature == SCIP_EXPRCURV_CONVEX )
    {

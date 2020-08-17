@@ -96,13 +96,12 @@ Test(addcons, nonchecked, .init = setup, .fini = teardown)
    /* expression should have been simplified in SCIP_DECL_CONSACTIVE */
    cr_expect(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) );
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
-   cr_expect(SCIPgetConsExprExprAuxVar(expr) == NULL);
 
    /* call SCIPconstructLP to trigger an INITLP call */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
    cr_expect(!cutoff);
 
-   /* check whether expression has been detected by at least one nonlinear handler */
+   /* check whether expression has been detected by at least one nonlinear handler (happens now already in addCons during solve */
    cr_expect(SCIPgetConsExprExprAuxVar(expr) != NULL);
 
    /* release the constraint */

@@ -202,15 +202,6 @@ SCIP_RETCODE SCIPparamsetFix(
    SCIP_Bool             fixed               /**< new fixing status of the parameter */
    );
 
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPparamsetSet(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   );
-
 /** changes the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */

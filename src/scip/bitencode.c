@@ -133,7 +133,7 @@ void SCIPdecodeSingleBit(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_SINGLEPACKETSIZE == 32);
+   assert(SCIP_SINGLEPACKETSIZE == 32); /*lint !e506*/
 
    rest = count % (int)SCIP_SINGLEPACKETSIZE;
    nfull = count - rest;
@@ -310,7 +310,7 @@ void SCIPdecodeDualBit(
    assert(inp != NULL || count == 0);
    assert(out != NULL || count == 0);
    assert(count >= 0);
-   assert(SCIP_DUALPACKETSIZE == 16);
+   assert(SCIP_DUALPACKETSIZE == 16); /*lint !e506*/
 
    rest = count % (int)SCIP_DUALPACKETSIZE;
    nfull = count - rest;

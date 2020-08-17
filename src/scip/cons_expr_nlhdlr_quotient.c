@@ -288,9 +288,9 @@ SCIP_RETCODE detectExpr(
          c, (void*)yexpr, d);
 
       /* detection is only be successful if the expression of the numerator an denominator are the same
-       * (so boundtightening can be stronger than default) or we are in SOLVING stage
+       * (so boundtightening can be stronger than default) or we are going to provide estimators (there will be an auxvar)
        */
-      *success = (xexpr == yexpr) || SCIPgetStage(scip) == SCIP_STAGE_SOLVING;
+      *success = (xexpr == yexpr) || (SCIPgetConsExprExprNAuxvarUses(expr) > 0);
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "Expression for numerator: ");
@@ -300,7 +300,9 @@ SCIP_RETCODE detectExpr(
 #endif
    }
 
-   /* create nonlinear handler expression data */
+   /* register usage of xexpr and yexpr
+    * create nonlinear handler expression data
+    */
    if( *success )
    {
       assert(xexpr != NULL);
@@ -308,14 +310,22 @@ SCIP_RETCODE detectExpr(
       assert(a != 0.0);
       assert(c != 0.0);
 
-      assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING || xexpr == yexpr);
+      assert(SCIPgetConsExprExprNAuxvarUses(expr) > 0 || xexpr == yexpr);
 
-      /* create auxiliary variables for xexpr and yexpr in SOLVING stage */
-      if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+      /* request auxiliary variables for xexpr and yexpr if we will estimate
+       * mark that the bounds of the expression are important to construct the estimators
+       *   (TODO check the curvature of the univariate quotient, as bounds may actually not be used)
+       * if univariate, then we also do inteval and reverseprop, so mark that the activities will be used for inteval
+       */
+      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, xexpr,
+         SCIPgetConsExprExprNAuxvarUses(expr) > 0,
+         xexpr == yexpr,
+         SCIPgetConsExprExprNAuxvarUses(expr) > 0,
+         SCIPgetConsExprExprNAuxvarUses(expr) > 0) );
+
+      if( xexpr != yexpr && SCIPgetConsExprExprNAuxvarUses(expr) > 0 )
       {
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, xexpr, NULL) );
-         SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, yexpr, NULL) );
-         SCIPdebugMsg(scip, "added auxiliary variable for %p and %p\n", (void*)xexpr, (void*)yexpr);
+         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, yexpr, TRUE, FALSE, TRUE, TRUE) );
       }
 
       a = nomfac * a;
@@ -1011,24 +1021,26 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataQuotient)
 static
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuotient)
 { /*lint --e{715}*/
+   SCIP_Bool success;
+
    assert(nlhdlrexprdata != NULL);
 
    /* call detection routine */
-   SCIP_CALL( detectExpr(scip, conshdlr, expr, nlhdlrexprdata, success) );
+   SCIP_CALL( detectExpr(scip, conshdlr, expr, nlhdlrexprdata, &success) );
 
-   /* update enforcement flags for the univariate case */
-   if( *success && (*nlhdlrexprdata)->numexpr == (*nlhdlrexprdata)->denomexpr )
+   if( success )
    {
-      *enforcedbelow = TRUE;
-      *enforcedabove = TRUE;
-      *enforcemethods |= SCIP_CONSEXPR_EXPRENFO_INTEVAL | SCIP_CONSEXPR_EXPRENFO_REVERSEPROP
-         | SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      if( SCIPgetConsExprExprNAuxvarUses(expr) > 0 )
+         *participating = SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
 
-      /* mark that the bounds of the expression is important to construct the estimators
-       *
-       * TODO check the curvature of the univariate quotient
-       */
-      SCIP_CALL( SCIPincrementConsExprExprNDomainUses(scip, conshdlr, (*nlhdlrexprdata)->numexpr) );
+      if( (*nlhdlrexprdata)->numexpr == (*nlhdlrexprdata)->denomexpr )
+      {
+         /* if univariate, then we also do inteval and reverseprop */
+         *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+
+         /* if univariate, then all our methods are enforcing */
+         *enforcing |= *participating;
+      }
    }
 
    return SCIP_OKAY;
@@ -1164,9 +1176,10 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalQuotient)
    assert(nlhdlrexprdata->numexpr != NULL);
    assert(nlhdlrexprdata->denomexpr != NULL);
 
-   /* it is not possible to compute tighter intervals if both expressions are different */
-   if( nlhdlrexprdata->numexpr != nlhdlrexprdata->denomexpr )
-      return SCIP_OKAY;
+   /* it is not possible to compute tighter intervals if both expressions are different
+    * we should not be called in this case, as we haven't said we would participate in this activity in detect
+    */
+   assert(nlhdlrexprdata->numexpr == nlhdlrexprdata->denomexpr);
 
    /* get activity of the numerator (= denominator) expression */
    bnds = SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->numexpr);
@@ -1190,9 +1203,10 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuotient)
    assert(nlhdlrexprdata->numexpr != NULL);
    assert(nlhdlrexprdata->denomexpr != NULL);
 
-   /* it is not possible to compute tighter intervals if both expressions are different */
-   if( nlhdlrexprdata->numexpr != nlhdlrexprdata->denomexpr )
-      return SCIP_OKAY;
+   /* it is not possible to compute tighter intervals if both expressions are different
+    * we should not be called in this case, as we haven't said we would participate in this activity in detect
+    */
+   assert(nlhdlrexprdata->numexpr == nlhdlrexprdata->denomexpr);
 
    /* get activity of the expression and the numerator (= denominator) expression */
    exprbounds = SCIPgetConsExprExprActivity(scip, expr);
