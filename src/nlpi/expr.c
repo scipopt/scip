@@ -11968,7 +11968,8 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
       else
          userdata = exprdata->userdata;
 
-      /* coverity[var_deref_op] */ /* coverity[var_deref_model] */
+      /* coverity[var_deref_op] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
          userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
