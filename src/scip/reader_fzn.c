@@ -4161,7 +4161,10 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   if( nactivevars > 0 )
+   {
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
    if( mayhavefloats )
