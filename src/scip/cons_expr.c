@@ -14704,7 +14704,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *    POW5: if exponent is integer, its child is not a product
  *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
  *    POW7: if exponent is 2, its child is not a sum (expand sums)
- *    POW8: if exponent is integer, its child is not a power
+ *    POW8: its child is not a power unless (x^n)^m with n*m being integer and n or m fractional and n not being even integer
  *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
  *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
  *    POW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
