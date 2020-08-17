@@ -617,7 +617,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 
 /** information method for a parameter change of infinity value */
 static
-SCIP_DECL_PARAMCHGD(paramChgInfinity)
+SCIP_DECL_PARAMCHGD(paramChgdInfinity)
 {  /*lint --e{715}*/
    SCIP_Real infinity;
 
@@ -686,11 +686,17 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
 static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert( scip != NULL );
    assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
-   SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+   retcode = SCIPenableReoptimization(scip, SCIPparamGetBool(param));
+
+   /* an appropriate error message is already printed in the above method */
+   if( retcode == SCIP_INVALIDCALL )
+      return SCIP_PARAMETERWRONGVAL;
 
    return SCIP_OKAY;
 }
@@ -704,8 +710,11 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
 
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
    {
-      SCIPerrorMessage("Cannot change symmetry handling method during (pre)solving.\n");
-      return SCIP_INVALIDCALL;
+      if ( SCIPparamGetInt(param) > 0 )
+      {
+         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving or change method.\n");
+         return SCIP_PARAMETERWRONGVAL;
+      }
    }
 
    return SCIP_OKAY;
@@ -2030,7 +2039,7 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/infinity",
          "values larger than this are considered infinity",
          &(*set)->num_infinity, FALSE, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-         paramChgInfinity, NULL) );
+         paramChgdInfinity, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
