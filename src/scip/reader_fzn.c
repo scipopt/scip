@@ -4121,10 +4121,6 @@ SCIP_RETCODE printLinearCons(
    SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */
    )
 {
-   // if nvars == 0, nothing to print
-   if ( nvars == 0 )
-      return SCIP_OKAY;
-
    SCIP_VAR** activevars;                    /* active problem variables of a constraint */
    SCIP_Real* activevals;                    /* coefficients in the active representation */
 
@@ -4136,7 +4132,7 @@ SCIP_RETCODE printLinearCons(
    SCIP_Bool hasfloats;
 
    assert( scip != NULL );
-   assert( vars != NULL );
+   assert( vars != NULL || nvars == 0 );
    assert( fznoutput != NULL );
    assert( lhs <= rhs );
 
