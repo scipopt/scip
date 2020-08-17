@@ -203,9 +203,10 @@ void updateNeighbor(
          apciv->next = pciv->next;
 
          /* free data structure for created colorinterval */
-         tmp = pciv->next; 
-         BMSfreeChunkMemory(mem, &pciv); 
-         pciv = tmp; 
+         tmp = pciv->next;
+         /* coverity[double_free] */
+         BMSfreeChunkMemory(mem, &pciv);
+         pciv = tmp;
       }
    }
    pgsd->satdeg += apciv->itv.sup - apciv->itv.inf + 1;
@@ -525,18 +526,20 @@ TCLIQUE_WEIGHT tcliqueColoring(
       item = nwcitv.next;
       while( item != NULL )
       {
-         tmpitem = item->next;                  
-         BMSfreeChunkMemory(mem, &item);       
-         item = tmpitem;                        
+         tmpitem = item->next;
+         /* coverity[double_free] */
+         BMSfreeChunkMemory(mem, &item);
+         item = tmpitem;
       }
 
       /* free data structure of neighbor colorinterval of node just colored */
       item = gsd[nodeVindex].lcitv;
       while( item != NULL )
       {
-         tmpitem = item->next;                  
-         BMSfreeChunkMemory(mem, &item);       
-         item = tmpitem;                        
+         tmpitem = item->next;
+         /* coverity[double_free] */
+         BMSfreeChunkMemory(mem, &item);
+         item = tmpitem;
       }
    }
    assert((workclique == clique) != (currentclique == clique));
