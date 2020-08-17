@@ -1556,18 +1556,31 @@ SCIP_RETCODE reversePropQueue(
 
       expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(conshdlrdata->reversepropqueue);
       assert(expr != NULL);
-
-      /* if the expr is in the propagation queue, then the propbounds should belong to current propagation and should not be empty
-       * (propbounds being entire doesn't make much sense, so assert this for now, too, but that could be removed)
-       */
       assert(expr->inpropqueue);
-      assert(expr->propboundstag == conshdlrdata->curpropboundstag);
-      propbounds = expr->propbounds;
-      assert(!SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, propbounds));
-      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, propbounds));
-
       /* mark that the expression is not in the queue anymore */
       expr->inpropqueue = FALSE;
+
+      /* since the expr was in the propagation queue, the propbounds should belong to current propagation and should not be empty
+       * (propbounds being entire doesn't make much sense, so assert this for now, too, but that could be removed)
+       */
+      assert(expr->propboundstag == conshdlrdata->curpropboundstag);
+      assert(!SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, expr->propbounds));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->propbounds));
+
+      /* this intersects propbounds with activity and auxvar bounds
+       * I doubt this would be much helpful, since propbounds are already subset of activity and we also propagate auxvar bounds separately,
+       * so disabling this for now
+       */
+#ifdef SCIP_DISABLED_CODE
+      propbounds = SCIPgetConsExprExprBounds(scip, conshdlr, expr);
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, propbounds) )
+      {
+         *infeasible = TRUE;
+         break;
+      }
+#else
+      propbounds = expr->propbounds;
+#endif
 
       if( expr->nenfos > 0 )
       {
