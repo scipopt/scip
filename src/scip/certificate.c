@@ -736,7 +736,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    return SCIP_OKAY;
 }
 
-/** prints the last part of the certification file (RTP range/sol, ...) */
+/** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SET*             set,                /**< general SCIP settings */
@@ -1686,7 +1686,7 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
       return SCIP_OKAY;
 
    /* check whether output should be created */
-   if ( certificate->file == NULL )
+   if( certificate->file == NULL )
       return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocBlockMemory(certificate->blkmem, &nodedata) );

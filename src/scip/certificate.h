@@ -262,7 +262,7 @@ void SCIPcertificatePrintRtpRange(
    SCIP_Rational*        upperbound          /**< pointer to upper bound on the objective */
    );
 
-/** prints the last part of the certification file (RTP range/sol, ...) */
+/** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SET*             set,                /**< general SCIP settings */
