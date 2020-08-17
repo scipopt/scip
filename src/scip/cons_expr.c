@@ -14239,13 +14239,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
          newbounds.sup = SCIPfloor(scip, newbounds.sup);
 #ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, "applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup);
+      SCIPdebugMsg(scip, " applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup);
 #endif
    }
 
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
    {
-      SCIPdebugMsg(scip, "cut off due to new bounds being empty\n");
+      SCIPdebugMsg(scip, " cut off due to new bounds being empty\n");
 
       *cutoff = TRUE;
       return SCIP_OKAY;
@@ -14254,7 +14254,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* treat the new bounds as empty if either the lower/upper bound is above/below +/- SCIPinfinity() */
    if( SCIPisInfinity(scip, newbounds.inf) || SCIPisInfinity(scip, -newbounds.sup) )
    {
-      SCIPdebugMsg(scip, "cut off due to new bounds being beyond infinity\n");
+      SCIPdebugMsg(scip, " cut off due to new bounds being beyond infinity\n");
 
       *cutoff = TRUE;
       return SCIP_OKAY;
@@ -14277,13 +14277,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       SCIPintervalIntersectEps(&newbounds, SCIPepsilon(scip), expr->activity, newbounds);
    }
 #ifdef DEBUG_PROP
-   SCIPdebugMsg(scip, "updated newbounds to [%.20g,%.20g]\n", newbounds.inf, newbounds.sup, (void*)expr);
+   SCIPdebugMsg(scip, " applied %s: [%.20g,%.20g]\n", expr->propboundstag == conshdlrdata->curpropboundstag ? "previous propbounds" : "activity", newbounds.inf, newbounds.sup, (void*)expr);
 #endif
 
    /* check if the new bounds lead to an empty interval */
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
    {
-      SCIPdebugMsg(scip, "cut off due to empty intersection with previous propbounds or activity\n");
+      SCIPdebugMsg(scip, " cut off due to empty intersection with previous propbounds or activity\n");
 
       *cutoff = TRUE;
       return SCIP_OKAY;
@@ -14308,7 +14308,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    if( !isIntervalBetter(scip, conshdlrdata->forceboundtightening, newbounds, expr->activity) )
    {
 #ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, "new bounds [%g,%g] for expr %p not sufficiently tighter than activity -- not adding to propqueue or tightening auxvar\n", newbounds.inf, newbounds.sup, (void*)expr);
+      SCIPdebugMsg(scip, " new bounds [%g,%g] for expr %p not sufficiently tighter than activity -- not adding to propqueue or tightening auxvar\n", newbounds.inf, newbounds.sup, (void*)expr);
 #endif
       return SCIP_OKAY;
    }
