@@ -1346,7 +1346,7 @@ SCIP_RETCODE forwardPropExpr(
              * UNLESS we changed the method used to evaluate activity of variable expressions
              *   or we currently use global bounds (varevents are catched for local bound changes only)
              */
-            if( expr->exprhdlr == conshdlrdata->exprvarhdlr && SCIPisConsExprExprVarEventCatched(expr) && expr->activitytag >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds)
+            if( expr->exprhdlr == conshdlrdata->exprvarhdlr && SCIPisConsExprExprVarEventCatched(expr) && expr->activitytag >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds )
             {
 #ifndef NDEBUG
                SCIP_INTERVAL exprhdlrinterval;
@@ -1457,8 +1457,10 @@ SCIP_RETCODE forwardPropExpr(
             /* if expression is integral, then we try to tighten the interval bounds a bit
              * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
              * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
+             * do this only if using boundtightening-inteval and not in redundancy check (there we really want to relax all variables)
+             * boundtightening-inteval does not relax integer variables, so can omit expressions without children (constants should be ok, too)
              */
-            if( expr->isintegral )
+            if( expr->isintegral && conshdlrdata->intevalvar == intEvalVarBoundTightening && expr->nchildren > 0 )
             {
                if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
                   expr->activity.inf = SCIPceil(scip, expr->activity.inf);
