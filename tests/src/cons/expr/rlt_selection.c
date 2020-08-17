@@ -20,10 +20,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define SCIP_DEBUG
-
-#include <scip/sepastore.h>
-#include <scip/lp.h>
+#include "scip/cons_expr.c"
+#include "scip/sepastore.h"
+#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/var.h"
 #include "scip/struct_lp.h"
@@ -159,6 +158,7 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
+   SCIP_Bool infeasible;
    SCIP_SEPADATA* sepadata;
    SCIP_CONSEXPR_EXPR* expr;
    int c;
@@ -175,12 +175,8 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
 
    SCIP_CALL( SCIPaddCons(scip, cons) ); /* adds locks */
 
-   /* create aux vars for all summands */
-   expr = SCIPgetExprConsExpr(scip, cons);
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-   {
-      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
-   }
+   /* creates auxvars and creates disaggregation variables and row */
+   SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    SCIP_CALL( SCIPcollectConsExprBilinTerms(scip, conshdlr, &cons, 1) );
 
@@ -216,9 +212,12 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
          "\nBilinear var 0 for x3 should be x1, got %s", SCIPvarGetName(blvardatas[3]->varbilinvars[0]));
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
+   SCIPfreeBuffer(scip, &sepadata);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIPfreeBuffer(scip, &sepadata);
+
+   /* frees the disaggregation row */
+   SCIP_CALL( SCIPclearCuts(scip) );
 }
 
 Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = "test projection of problem")
