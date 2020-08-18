@@ -107,6 +107,8 @@ Known bugs
 Features
 --------
 
+- Extended check for valid variable and constraint names in PIP writer.
+
 Performance improvements
 ------------------------
 
