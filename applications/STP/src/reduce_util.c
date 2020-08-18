@@ -938,7 +938,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
 #endif
 
          /* now try to eliminate */
-         SCIP_CALL( graph_knot_delPseudo(scip, graph, redcost, cutoffs, cutoffsrev, k, &success) );
+         SCIP_CALL( graph_knot_delPseudo(scip, graph, redcost, cutoffs, cutoffsrev, k, NULL, &success) );
 
          if( success )
          {

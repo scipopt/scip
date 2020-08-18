@@ -595,7 +595,7 @@ SCIP_RETCODE bdkTryDeg3(
       SCIP_Bool success;
       bdkGetCutoffs(g, bdk, node, cutoffs);
 
-      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, &success));
+      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, NULL, &success));
 
       assert(success);
       assert(g->grad[node] == 0);
@@ -648,7 +648,7 @@ SCIP_RETCODE bdkTryDegGe4(
       SCIP_Real cutoffs[STP_BDKIMP_MAXNEDGES];
       bdkGetCutoffs(g, bdk, node, cutoffs);
 
-      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, &isPseudoDeletable));
+      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, NULL, &isPseudoDeletable));
 
       if( isPseudoDeletable )
       {

@@ -110,7 +110,7 @@ SCIP_RETCODE pseudoDelSingle(
    for( int e = 0; e < nedges; e += 2 )
       assert(graph_edge_nPseudoAncestors(graph, e) == 0);
 
-   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, &success) );
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, NULL, &success) );
 
    assert(success);
 
@@ -159,7 +159,7 @@ SCIP_RETCODE pseudoDelDouble(
    for( int e = 0; e < nedges; e += 2 )
       assert(graph_edge_nPseudoAncestors(graph, e) == 0);
 
-   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, &success) );
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 0, NULL, &success) );
    assert(success);
 
    for( int e = graph->outbeg[1]; e != EAT_LAST; e = graph->oeat[e] )
@@ -172,7 +172,7 @@ SCIP_RETCODE pseudoDelDouble(
       }
    }
 
-   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 3, &success) );
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, cutoff, NULL, NULL, 3, NULL, &success) );
    assert(success);
 
    assert(graph->grad[1] == 1);

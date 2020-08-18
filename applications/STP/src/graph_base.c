@@ -52,6 +52,8 @@ typedef struct pseudo_deletion
    SCIP_Real*            ecost;              /**< edge cost */
    SCIP_Real*            ecostrev;           /**< reverse edge cost */
    SCIP_Real*            ecostreal;          /**< reverse edge cost */
+   SCIP_Real*            ecost_adapt;        /**< edge costs to adapt or NULL */
+   SCIP_Real*            ecost_adaptrev;     /**< edge costs to adapt or NULL */
    int*                  incedge;            /**< incident edges */
    int*                  adjvert;            /**< adjacent vertices */
    int*                  neigbedge;          /**< neighboring edges array */
@@ -685,6 +687,7 @@ static
 SCIP_RETCODE delPseudoInit(
    SCIP*                 scip,               /**< SCIP data */
    const SCIP_Real*      edgecosts,          /**< edge costs for cutoff */
+   const SCIP_Real*      edgecosts_adapt,    /**< edge costs that should be adapted */
    int                   vertex,             /**< the vertex */
    GRAPH*                g,                  /**< graph */
    DELPSEUDO*            delpseudo           /**< data */
@@ -693,6 +696,8 @@ SCIP_RETCODE delPseudoInit(
    SCIP_Real* RESTRICT ecost;
    SCIP_Real* RESTRICT ecostrev;
    SCIP_Real* RESTRICT ecostreal;
+   SCIP_Real* RESTRICT ecostadapt = NULL;
+   SCIP_Real* RESTRICT ecostadaptrev = NULL;
    int* RESTRICT incedge;
    int* RESTRICT adjvert;
    int* RESTRICT neigbedge;
@@ -739,23 +744,35 @@ SCIP_RETCODE delPseudoInit(
       }
    }
 
+   if( edgecosts_adapt )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecostadapt), STP_DELPSEUDO_MAXGRAD) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecostadaptrev), STP_DELPSEUDO_MAXGRAD) );
+   }
+
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecost), STP_DELPSEUDO_MAXGRAD) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecostrev), STP_DELPSEUDO_MAXGRAD) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecostreal), STP_DELPSEUDO_MAXGRAD) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(incedge), STP_DELPSEUDO_MAXGRAD) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(adjvert), STP_DELPSEUDO_MAXGRAD) );
-
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(neigbedge), STP_DELPSEUDO_MAXNEDGES) );
 
    /* save the state of all incident edges */
    for( int e = g->outbeg[vertex]; e != EAT_LAST; e = g->oeat[e] )
    {
+      const int e_rev = flipedge(e);
       assert(e >= 0);
+
+      if( edgecosts_adapt )
+      {
+         ecostadapt[edgecount] = edgecosts_adapt[e];
+         ecostadaptrev[edgecount] = edgecosts_adapt[e_rev];
+      }
 
       incedge[edgecount] = e;
       ecostreal[edgecount] = g->cost[e];
       ecost[edgecount] = edgecosts[e];
-      ecostrev[edgecount] = edgecosts[flipedge(e)];
+      ecostrev[edgecount] = edgecosts[e_rev];
       adjvert[edgecount++] = g->head[e];
 
       assert(edgecount <= STP_DELPSEUDO_MAXGRAD);
@@ -765,6 +782,8 @@ SCIP_RETCODE delPseudoInit(
    delpseudo->ecost = ecost;
    delpseudo->ecostrev = ecostrev;
    delpseudo->ecostreal = ecostreal;
+   delpseudo->ecost_adapt = ecostadapt;
+   delpseudo->ecost_adaptrev = ecostadaptrev;
    delpseudo->incedge = incedge;
    delpseudo->adjvert = adjvert;
    delpseudo->neigbedge = neigbedge;
@@ -779,11 +798,14 @@ SCIP_RETCODE delPseudoDeleteVertex(
    SCIP*                 scip,               /**< SCIP data */
    int                   vertex,             /**< the vertex */
    GRAPH*                g,                  /**< graph */
+   SCIP_Real*            edgecosts_adapt,    /**< edge costs that should be adapted */
    DELPSEUDO*            delpseudo           /**< data */
 )
 {
    SINGLETONANS ancestors[STP_DELPSEUDO_MAXGRAD];
    const SCIP_Real* ecostreal = delpseudo->ecostreal;
+   const SCIP_Real* ecost_adapt = delpseudo->ecost_adapt;
+   const SCIP_Real* ecost_adaptrev = delpseudo->ecost_adaptrev;
    const int* incedge = delpseudo->incedge;
    const int* neigbedge = delpseudo->neigbedge;
    const int* adjvert = delpseudo->adjvert;
@@ -828,7 +850,18 @@ SCIP_RETCODE delPseudoDeleteVertex(
 
             /* has a new edge been inserted (or the existing one been updated)? */
             if( newijedge >= 0 )
+            {
+               assert(g->tail[newijedge] == adjvert[i]);
+               assert(g->head[newijedge] == adjvert[j]);
+
+               if( edgecosts_adapt)
+               {
+                  assert(ecost_adapt && ecost_adaptrev);
+                  edgecosts_adapt[newijedge] = ecost_adaptrev[i] + ecost_adapt[j];
+               }
+
                SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, vertex, g) );
+            }
 
             /* does no original edge exist? */
             if( oldijedge == STP_DELPSEUDO_NOEDGE )
@@ -873,6 +906,13 @@ void delPseudoFreeData(
    SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecostreal), STP_DELPSEUDO_MAXGRAD);
    SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecostrev), STP_DELPSEUDO_MAXGRAD);
    SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecost), STP_DELPSEUDO_MAXGRAD);
+
+   if( delpseudo->ecost_adapt )
+   {
+      assert(delpseudo->ecost_adaptrev);
+      SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecost_adaptrev), STP_DELPSEUDO_MAXGRAD);
+      SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecost_adapt), STP_DELPSEUDO_MAXGRAD);
+   }
 }
 
 
@@ -1474,14 +1514,15 @@ SCIP_RETCODE graph_knot_replaceDeg2(
 SCIP_RETCODE graph_knot_delPseudo(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   const SCIP_Real*      edgecosts,          /**< edge costs for cutoff */
+   const SCIP_Real*      cutoffcosts,        /**< edge costs for cutoff */
    const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
    const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
    int                   vertex,             /**< the vertex */
+   SCIP_Real*            edgecosts_adapt,    /**< costs to adapt or NULL */
    SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
    )
 {
-   DELPSEUDO delpseudo = { NULL, NULL, NULL, NULL, NULL, NULL, -1.0, -1, -1 };
+   DELPSEUDO delpseudo = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1.0, -1, -1 };
 
    assert(scip && success && g);
    assert(vertex >= 0 && vertex < g->knots);
@@ -1492,13 +1533,13 @@ SCIP_RETCODE graph_knot_delPseudo(
    if( g->grad[vertex] <= 1 )
       return SCIP_OKAY;
 
-   SCIP_CALL( delPseudoInit(scip, edgecosts, vertex, g, &delpseudo) );
+   SCIP_CALL( delPseudoInit(scip, cutoffcosts, edgecosts_adapt, vertex, g, &delpseudo) );
    SCIP_CALL( delPseudoGetReplaceEdges(scip, g, cutoffs, cutoffsrev, &delpseudo, success) );
 
    /* enough spare edges? */
    if( (*success) )
    {
-      SCIP_CALL( delPseudoDeleteVertex(scip, vertex, g, &delpseudo) );
+      SCIP_CALL( delPseudoDeleteVertex(scip, vertex, g, edgecosts_adapt, &delpseudo) );
    }
 
    delPseudoFreeData(scip, &delpseudo);

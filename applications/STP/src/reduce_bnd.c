@@ -460,7 +460,7 @@ SCIP_RETCODE boundPruneHeur(
                {
                   SCIP_Bool success;
 
-                  SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, k, &success) );
+                  SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, k, NULL, &success) );
 
                   assert(graph->grad[k] == 0 || (graph->grad[k] == 4 && !success));
 
@@ -963,7 +963,7 @@ SCIP_RETCODE reduce_bound(
             graph_printInfo(graph);
 #endif
 
-            SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, k, &success) );
+            SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, NULL, NULL, k, NULL, &success) );
 
             assert(graph->grad[k] == 0 || (graph->grad[k] == 4 && !success));
          }
