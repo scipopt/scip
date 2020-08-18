@@ -2927,7 +2927,7 @@ SCIP_Bool isNameValid(
 }
 
 
-/** method check if the variable names are not longer than PIP_MAX_NAMELEN */
+/** method check if the variable names are valid according to PIP specification */
 static
 void checkVarnames(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2940,7 +2940,7 @@ void checkVarnames(
    assert(scip != NULL);
    assert(vars != NULL || nvars == 0);
 
-   /* check if the variable names are not to long */
+   /* check if the variable names are not too long and have only characters allowed by PIP */
    for( v = 0; v < nvars; ++v )
    {
       if( !isNameValid(SCIPvarGetName(vars[v])) )
@@ -2951,7 +2951,7 @@ void checkVarnames(
    }
 }
 
-/** method check if the constraint names are not longer than PIP_MAX_NAMELEN */
+/** method check if the constraint names are valid according to PIP specification */
 static
 void checkConsnames(
    SCIP*                 scip,               /**< SCIP data structure */
