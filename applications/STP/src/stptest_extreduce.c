@@ -1529,7 +1529,6 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
    const int nedges = 14;
    const int root = 0;
    SCIP_Real cutoff = 100.0;
-   STP_Bool* edgedeleted = NULL;
    int nelims = 0;
    SCIP_Real offset = 0.0;
 
@@ -1568,7 +1567,7 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 
    extInitRedCostArraysPcWithBase(graph, nnodes - 2, &redcostdata);
 
-   SCIP_CALL( extreduce_pseudoDeleteNodes(scip, &redcostdata, NULL, graph, edgedeleted, &offset, &nelims) );
+   SCIP_CALL( extreduce_pseudoDeleteNodes(scip, NULL, &redcostdata, graph, &offset, &nelims) );
 
    STPTEST_ASSERT_MSG(nelims == 1, "not enough eliminations \n");
    STPTEST_ASSERT_MSG(graph->grad[0] == 0, "node was not marked as deleteable! \n");

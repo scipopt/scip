@@ -858,6 +858,10 @@ SCIP_RETCODE delPseudoDeleteVertex(
                {
                   assert(ecost_adapt && ecost_adaptrev);
                   edgecosts_adapt[newijedge] = ecost_adaptrev[i] + ecost_adapt[j];
+                  edgecosts_adapt[flipedge(newijedge)] =  ecost_adaptrev[j] + ecost_adapt[i];
+
+               //    graph_edge_printInfo(g, newijedge);
+               //   printf("...with costs %f, %f \n", edgecosts_adapt[newijedge],  edgecosts_adapt[flipedge(newijedge)] );
                }
 
                SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, vertex, g) );

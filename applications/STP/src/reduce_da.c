@@ -2577,14 +2577,12 @@ SCIP_RETCODE reduce_da(
 
          if( extended )
          {
-            havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
-            assert(!havenewsol || solstp_isValid(scip, graph, result));
-
-            SCIP_CALL( extreduce_updatePseudoDeletableNodes(scip, &redcostdata, (havenewsol ? result : NULL), pseudoDelNodes,
-                  graph, arcsdeleted) );
+            SCIP_CALL( extreduce_pseudoDeleteNodes(scip, pseudoDelNodes, &redcostdata, graph, offsetp, &nreplacings) );
          }
-
-         SCIP_CALL( reduce_applyPseudoDeletions(scip, &redcostdata, pseudoDelNodes, graph, offsetp, &nreplacings) );
+         else
+         {
+            SCIP_CALL( reduce_applyPseudoDeletions(scip, &redcostdata, pseudoDelNodes, graph, offsetp, &nreplacings) );
+         }
         // printf("nreplacings=%d \n", nreplacings);
          ndeletions += nreplacings;
 
