@@ -2982,24 +2982,26 @@ void checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
-      if( strcmp(conshdlrname, "linear") == 0 )
-      {
-         SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
-         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
-
-         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN)
-            || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN -  4) )
-         {
-            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
-               PIP_MAX_NAMELEN  - 1);
-            return;
-         }
-      }
       if( !isNameValid(SCIPconsGetName(conss[c])) )
       {
          SCIPwarningMessage(scip, "constraint name <%s> is not valid (too long or unallowed characters); PIP might be corrupted\n", SCIPconsGetName(conss[c]));
          return;
       }
+
+      if( strcmp(conshdlrname, "linear") == 0 )
+      {
+         SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+
+         /* for ranged constraints, we need to be able to append _lhs and _rhs to the constraint name, so need additional 4 characters */
+         if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN -  4 )
+         {
+            SCIPwarningMessage(scip, "name of ranged constraint <%s> has to be cut down to %d characters;\n", SCIPconsGetName(conss[c]),
+               PIP_MAX_NAMELEN  - 1);
+            return;
+         }
+      }
+
    }
 }
 
