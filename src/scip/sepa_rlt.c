@@ -146,17 +146,17 @@ struct SCIP_SepaData
    SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
 };
 
-/** projected LP data structure */
-struct ProjLP
+/* a simplified representation of an LP row */
+struct RLT_SimpleRow
 {
-   SCIP_Real**           coefs;              /* arrays of coefficients for each row */
-   SCIP_VAR***           vars;               /* arrays of variables for each row */
-   SCIP_Real*            lhss;               /* row left hand sides */
-   SCIP_Real*            rhss;               /* row right hand sides */
-   SCIP_Real*            consts;             /* row constants */
-   int*                  nNonz;              /* number of nonzeros in each row */
+   SCIP_Real*            coefs;              /**< coefficients */
+   SCIP_VAR**            vars;               /**< variables */
+   SCIP_Real             rhs;                /**< right hand side */
+   SCIP_Real             lhs;                /**< left hand side */
+   SCIP_Real             cst;                /**< constant */
+   int                   nNonz;              /**< number of nonzeroes */
 };
-typedef struct ProjLP PROJLP;
+typedef struct RLT_SimpleRow RLT_SIMPLEROW;
 
 /*
  * Local methods
@@ -2119,7 +2119,7 @@ SCIP_RETCODE computeProjRltCut(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_ROW**            cut,                /**< buffer to store the cut */
-   PROJLP*               projlp,             /**< projected lp */
+   RLT_SIMPLEROW*        projrows,           /**< projected rows */
    int                   idx,                /**< index of the row that is used for the rlt cut */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
    int*                  bestunderest,       /**< positions of most violated underestimators for each product term */
@@ -2144,17 +2144,17 @@ SCIP_RETCODE computeProjRltCut(
 
    assert(sepadata != NULL);
    assert(cut != NULL);
-   assert(projlp != NULL);
+   assert(projrows != NULL);
    assert(var != NULL);
    assert(success != NULL);
-   assert(!computeEqCut || SCIPisEQ(scip, projlp->lhss[idx], projlp->rhss[idx]));
+   assert(!computeEqCut || SCIPisEQ(scip, projrows[idx].lhs, projrows[idx].rhs));
 
    *cut = NULL;
 
    /* get data for given variable */
    lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
    ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
-   constside = uselhs ? projlp->lhss[idx] : projlp->rhss[idx];
+   constside = uselhs ? projrows[idx].lhs : projrows[idx].rhs;
 
    /* if the bounds are too large or the respective side is infinity, skip this cut */
    if( REALABS(lbvar) > MAXVARBOUND || REALABS(ubvar) > MAXVARBOUND || SCIPisInfinity(scip, REALABS(constside)) )
@@ -2182,10 +2182,10 @@ SCIP_RETCODE computeProjRltCut(
          TRUE, FALSE, FALSE) );
 
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
-   for( i = 0; i < projlp->nNonz[idx]; ++i )
+   for( i = 0; i < projrows[idx].nNonz; ++i )
    {
-      SCIP_CALL( addRltTerm(scip, sepadata, sol, bestunderest, bestoverest, *cut, var, projlp->vars[idx][i],
-            projlp->coefs[idx][i], uselb, uselhs, local, computeEqCut, &coefvar, &finalside, success) );
+      SCIP_CALL( addRltTerm(scip, sepadata, sol, bestunderest, bestoverest, *cut, var, projrows[idx].vars[i],
+            projrows[idx].coefs[i], uselb, uselhs, local, computeEqCut, &coefvar, &finalside, success) );
    }
 
    if( REALABS(finalside) > MAXVARBOUND )
@@ -2195,8 +2195,8 @@ SCIP_RETCODE computeProjRltCut(
    }
 
    /* multiply (x-lb) or (ub -x) with the lhs and rhs of the row */
-   coefvar += signfactor * (projlp->consts[idx] - constside);
-   finalside = boundfactor * (constside - projlp->consts[idx]) - finalside;
+   coefvar += signfactor * (projrows[idx].cst - constside);
+   finalside = boundfactor * (constside - projrows[idx].cst) - finalside;
 
    /* set the coefficient of var and the constant side */
    assert(!SCIPisInfinity(scip, REALABS(coefvar)));
@@ -2226,13 +2226,14 @@ SCIP_RETCODE computeProjRltCut(
  *  to left and/or right hand sides as constant values.
  */
 static
-SCIP_RETCODE createProjLP(
+SCIP_RETCODE createProjRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            rows,               /**< problem rows */
    int                   nrows,              /**< number of rows */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
-   PROJLP**              projlp,             /**< the projected problem data structure */
-   SCIP_Bool             local               /**< are local cuts allowed? */
+   RLT_SIMPLEROW**       projrows,           /**< the projected rows to be filled */
+   SCIP_Bool             local,              /**< are local cuts allowed? */
+   SCIP_Bool*            allcst              /**< buffer to store whether all projected rows have only constants */
    )
 {
    SCIP_COL** cols;
@@ -2245,25 +2246,19 @@ SCIP_RETCODE createProjLP(
 
    assert(scip != NULL);
    assert(rows != NULL);
-   assert(projlp != NULL);
+   assert(projrows != NULL);
 
-   SCIP_CALL( SCIPallocBuffer(scip, projlp) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->coefs, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->vars, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->nNonz, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->lhss, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->rhss, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->consts, nrows) );
+   *allcst = TRUE;
+   SCIP_CALL( SCIPallocBufferArray(scip, projrows, nrows) );
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->coefs[i], SCIProwGetNNonz(rows[i])) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &(*projlp)->vars[i], SCIProwGetNNonz(rows[i])) );
-      (*projlp)->nNonz[i] = 0;
-      (*projlp)->lhss[i] = SCIProwGetLhs(rows[i]);
-      (*projlp)->rhss[i] = SCIProwGetRhs(rows[i]);
-      (*projlp)->consts[i] = SCIProwGetConstant(rows[i]);
+      SCIP_CALL( SCIPallocBufferArray(scip, &((*projrows)[i].coefs), SCIProwGetNNonz(rows[i])) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &((*projrows)[i].vars), SCIProwGetNNonz(rows[i])) );
+      (*projrows)[i].nNonz = 0;
+      (*projrows)[i].lhs = SCIProwGetLhs(rows[i]);
+      (*projrows)[i].rhs = SCIProwGetRhs(rows[i]);
+      (*projrows)[i].cst = SCIProwGetConstant(rows[i]);
 
       cols = SCIProwGetCols(rows[i]);
       for( v = 0; v < SCIProwGetNNonz(rows[i]); ++v )
@@ -2274,18 +2269,19 @@ SCIP_RETCODE createProjLP(
          vub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
          if( SCIPisEQ(scip, vlb, val) || SCIPisEQ(scip, vub, val) )
          {
-            /* add var as a constant to row of projlp */
-            if( !SCIPisInfinity(scip, -(*projlp)->lhss[i]) )
-               (*projlp)->lhss[i] -= SCIProwGetVals(rows[i])[v]*val;
-            if( !SCIPisInfinity(scip, (*projlp)->rhss[i]) )
-               (*projlp)->rhss[i] -= SCIProwGetVals(rows[i])[v]*val;
+            /* add var as a constant to row of projrows[i] */
+            if( !SCIPisInfinity(scip, -(*projrows)[i].lhs) )
+               (*projrows)[i].lhs -= SCIProwGetVals(rows[i])[v]*val;
+            if( !SCIPisInfinity(scip, (*projrows)[i].rhs) )
+               (*projrows)[i].rhs -= SCIProwGetVals(rows[i])[v]*val;
          }
          else
          {
-            /* add the entry to row of projlp */
-            (*projlp)->coefs[i][(*projlp)->nNonz[i]] = SCIProwGetVals(rows[i])[v];
-            (*projlp)->vars[i][(*projlp)->nNonz[i]] = var;
-            ++(*projlp)->nNonz[i];
+            /* add the entry to projrows[i] */
+            (*projrows)[i].coefs[(*projrows)[i].nNonz] = SCIProwGetVals(rows[i])[v];
+            (*projrows)[i].vars[(*projrows)[i].nNonz] = var;
+            ++(*projrows)[i].nNonz;
+            *allcst = FALSE;
          }
       }
    }
@@ -2295,77 +2291,70 @@ SCIP_RETCODE createProjLP(
 
 /* prints the projected LP */
 static
-void printProjLP(
+void printProjRows(
    SCIP*                 scip,               /**< SCIP data structure */
-   PROJLP*               projlp,             /**< the projected LP */
-   int                   nrows,              /**< number of rows in projlp */
+   RLT_SIMPLEROW*        projrows,           /**< the projected rows */
+   int                   nrows,              /**< number of projected rows */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    int i;
    int j;
 
-   assert(projlp != NULL);
+   assert(projrows != NULL);
 
    for( i = 0; i < nrows; ++i )
    {
       SCIPinfoMessage(scip, file, "\nproj_row[%d]: ", i);
-      if( !SCIPisInfinity(scip, -projlp->lhss[i]) )
-         SCIPinfoMessage(scip, file, "%.15g <= ", projlp->lhss[i]);
-      for( j = 0; j < projlp->nNonz[i]; ++j )
+      if( !SCIPisInfinity(scip, -projrows[i].lhs) )
+         SCIPinfoMessage(scip, file, "%.15g <= ", projrows[i].lhs);
+      for( j = 0; j < projrows[i].nNonz; ++j )
       {
          if( j == 0 )
          {
-            if( projlp->coefs[i][j] < 0 )
+            if( projrows[i].coefs[j] < 0 )
                SCIPinfoMessage(scip, file, "-");
          }
          else
          {
-            if( projlp->coefs[i][j] < 0 )
+            if( projrows[i].coefs[j] < 0 )
                SCIPinfoMessage(scip, file, " - ");
             else
                SCIPinfoMessage(scip, file, " + ");
          }
 
-         if( projlp->coefs[i][j] != 1.0 )
-            SCIPinfoMessage(scip, file, "%.15g*", REALABS(projlp->coefs[i][j]));
-         SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(projlp->vars[i][j]));
+         if( projrows[i].coefs[j] != 1.0 )
+            SCIPinfoMessage(scip, file, "%.15g*", REALABS(projrows[i].coefs[j]));
+         SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(projrows[i].vars[j]));
       }
-      if( projlp->consts[i] > 0 )
-         SCIPinfoMessage(scip, file, " + %.15g", projlp->consts[i]);
-      else if( projlp->consts[i] < 0 )
-         SCIPinfoMessage(scip, file, " - %.15g", REALABS(projlp->consts[i]));
+      if( projrows[i].cst > 0 )
+         SCIPinfoMessage(scip, file, " + %.15g", projrows[i].cst);
+      else if( projrows[i].cst < 0 )
+         SCIPinfoMessage(scip, file, " - %.15g", REALABS(projrows[i].cst));
 
-      if( !SCIPisInfinity(scip, projlp->rhss[i]) )
-         SCIPinfoMessage(scip, file, " <= %.15g", projlp->rhss[i]);
+      if( !SCIPisInfinity(scip, projrows[i].rhs) )
+         SCIPinfoMessage(scip, file, " <= %.15g", projrows[i].rhs);
    }
    SCIPinfoMessage(scip, file, "\n");
 }
 
-/** frees the projected LP
- */
+/** frees the projected rows */
 static
-void freeProjLP(
+void freeProjRows(
    SCIP*                 scip,               /**< SCIP data structure */
-   PROJLP**              projlp,             /**< the projected LP */
-   int                   nrows               /**< number of rows in projlp */
+   RLT_SIMPLEROW**       projrows,           /**< the projected LP */
+   int                   nrows               /**< number of rows in projrows */
    )
 {
    int i;
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIPfreeBufferArray(scip, &(*projlp)->vars[i]);
-      SCIPfreeBufferArray(scip, &(*projlp)->coefs[i]);
+      SCIPfreeBufferArray(scip, &(*projrows)[i].vars);
+      SCIPfreeBufferArray(scip, &(*projrows)[i].coefs);
    }
 
-   SCIPfreeBufferArray(scip, &(*projlp)->consts);
-   SCIPfreeBufferArray(scip, &(*projlp)->rhss);
-   SCIPfreeBufferArray(scip, &(*projlp)->lhss);
-   SCIPfreeBufferArray(scip, &(*projlp)->nNonz);
-   SCIPfreeBufferArray(scip, &(*projlp)->vars);
-   SCIPfreeBufferArray(scip, &(*projlp)->coefs);
-   SCIPfreeBuffer(scip, projlp);
+   SCIPfreeBufferArray(scip, projrows);
 }
 
 /* mark a row for rlt cut selection
@@ -2589,7 +2578,7 @@ SCIP_RETCODE separateRltCuts(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
    SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in array */
-   PROJLP*               projlp,             /**< the projected LP */
+   RLT_SIMPLEROW*        projrows,           /**< projected rows */
    SCIP_ROW**            rows,               /**< problem rows */
    int                   nrows,              /**< number of problem rows */
    SCIP_Bool             allowlocal,         /**< are local cuts allowed? */
@@ -2617,7 +2606,7 @@ SCIP_RETCODE separateRltCuts(
    SCIP_Bool buildeqcut;
    SCIP_Bool iseqrow;
 
-   assert(!sepadata->useprojection || projlp != NULL);
+   assert(!sepadata->useprojection || projrows != NULL);
    assert(!sepadata->detecthidden || (bestunderestimators != NULL && bestoverestimators != NULL));
 
    ncuts = 0;
@@ -2698,11 +2687,11 @@ SCIP_RETCODE separateRltCuts(
             /* if no variables are left in the projected row, the RLT cut will not be violated */
             if( sepadata->useprojection )
             {
-               if( projlp->nNonz[pos] == 0 )
+               if( projrows[pos].nNonz == 0 )
                   continue;
 
                /* compute the rlt cut for a projected row first */
-               SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, pos, sol, bestunderestimators,
+               SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projrows, pos, sol, bestunderestimators,
                      bestoverestimators, xj, &success, uselb[k], uselhs[k], allowlocal, buildeqcut) );
 
                /* if the projected cut is not violated, set success to FALSE */
@@ -2811,7 +2800,6 @@ SCIP_RETCODE separateRltCuts(
 
    SCIPdebugMsg(scip, "exit separator because cut calculation is finished\n");
 
-   TERMINATE:
    SCIPfreeBufferArrayNull(scip, &cuts);
    SCIPfreeBufferArray(scip, &row_idcs);
    SCIPfreeCleanBufferArray(scip, &row_marks);
@@ -3102,15 +3090,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    int depth;
    int nrows;
    SCIP_HASHMAP* row_to_pos;
-   PROJLP* projlp;
+   RLT_SIMPLEROW* projrows;
    int* bestunderestimators;
    int* bestoverestimators;
 
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
    sepadata = SCIPsepaGetData(sepa);
-   projlp = NULL;
-
    *result = SCIP_DIDNOTRUN;
 
    if( sepadata->maxncuts == 0 )
@@ -3209,10 +3195,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    /* create the projected problem */
    if( sepadata->useprojection )
    {
-      SCIP_CALL( createProjLP(scip, rows, nrows, NULL, &projlp, allowlocal) );
+      SCIP_Bool allcst;
+
+      SCIP_CALL( createProjRows(scip, rows, nrows, NULL, &projrows, allowlocal, &allcst) );
+
+      /* if all projected rows have only constants left, quit */
+      if( allcst )
+         goto TERMINATE;
+
 #ifdef SCIP_DEBUG
-      printProjLP(scip, projlp, nrows, NULL);
+      printProjRows(scip, projrows, nrows, NULL);
 #endif
+   }
+   else
+   {
+      projrows = NULL;
    }
 
    /* separate the cuts */
@@ -3231,13 +3228,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 
       if( *result != SCIP_CUTOFF )
       {
-         SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
+         SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projrows, rows, nrows,
                allowlocal, bestunderestimators, bestoverestimators, result) );
       }
    }
    else
    {
-      SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
+      SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projrows, rows, nrows,
             allowlocal, NULL, NULL, result) );
    }
 
@@ -3247,10 +3244,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       SCIPfreeBufferArray(scip, &bestunderestimators);
    }
 
+ TERMINATE:
    /* free the projected problem */
    if( sepadata->useprojection )
    {
-      freeProjLP(scip, &projlp, nrows);
+      freeProjRows(scip, &projrows, nrows);
    }
 
    SCIPhashmapFree(&row_to_pos);
