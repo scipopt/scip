@@ -2775,8 +2775,6 @@ SCIP_RETCODE separateRltCuts(
             sepadata->maxparall, sepadata->dircutoffdistweight, sepadata->efficacyweight, sepadata->objparalweight,
             0.0, ncuts, 0, sepadata->maxncuts == -1 ? ncuts : sepadata->maxncuts, &nselectedcuts) );
 
-      nselectedcuts = ncuts;
-
       for( i = 0; i < ncuts; ++i )
       {
          assert(cuts[i] != NULL);
