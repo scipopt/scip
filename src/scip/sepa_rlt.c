@@ -56,10 +56,22 @@
 #define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
-#define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
+#define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
 #define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
 #define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
 #define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
+
+#define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
+                                         *   so that less strict filtering is applied */
+#define DEFAULT_BADSCORE            0.5 /**< threshold for score of cut relative to best score to be discarded */
+#define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
+#define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
+#define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
+#define DEFAULT_OBJPARALWEIGHT      0.0 /**< weight of objective parallelism in cut score calculation */
+#define DEFAULT_EFFICACYWEIGHT      1.0 /**< weight of efficacy in cut score calculation */
+#define DEFAULT_DIRCUTOFFDISTWEIGHT 0.0 /**< weight of directed cutoff distance in cut score calculation */
+#define DEFAULT_GOODMAXPARALL       0.1 /**< maximum parallelism for good cuts */
+#define DEFAULT_MAXPARALL           0.1 /**< maximum parallelism for non-good cuts */
 
 #define MAXVARBOUND                1e+5 /**< maximum allowed variable bound for computing an RLT-cut */
 
@@ -119,6 +131,16 @@ struct SCIP_SepaData
    SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
    SCIP_Bool             hiddenrlt;          /**< whether RLT cuts should be added for hidden products */
    SCIP_Bool             addtopool;          /**< whether globally valid RLT cuts are added to the global cut pool */
+
+   /* cut selection parameters */
+   SCIP_Real             goodscore;          /**< threshold for score of cut relative to best score to be considered good,
+                                              *   so that less strict filtering is applied */
+   SCIP_Real             badscore;           /**< threshold for score of cut relative to best score to be discarded */
+   SCIP_Real             objparalweight;     /**< weight of objective parallelism in cut score calculation */
+   SCIP_Real             efficacyweight;     /**< weight of efficacy in cut score calculation */
+   SCIP_Real             dircutoffdistweight;/**< weight of directed cutoff distance in cut score calculation */
+   SCIP_Real             goodmaxparall;      /**< maximum parallelism for good cuts */
+   SCIP_Real             maxparall;          /**< maximum parallelism for non-good cuts */
 
    /* TODO remove this when done with cliques */
    SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
@@ -1798,6 +1820,7 @@ SCIP_RETCODE addRltTerm(
    idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, colvar);
    linpos = -1;
 
+   /* for an implicit term, get the position of the best estimator */
    if( idx >= 0 && terms[idx].nauxexprs > 0 )
    {
       if( computeEqCut )
@@ -2580,10 +2603,12 @@ SCIP_RETCODE separateRltCuts(
    int r;
    int k;
    int nmarked;
+   int cutssize;
    SCIP_VAR* xj;
    int* row_marks;
    int* row_idcs;
    SCIP_ROW* cut;
+   SCIP_ROW** cuts;
    SCIP_Bool uselb[4] = {TRUE, TRUE, FALSE, FALSE};
    SCIP_Bool uselhs[4] = {TRUE, FALSE, TRUE, FALSE};
    SCIP_Bool success;
@@ -2596,6 +2621,8 @@ SCIP_RETCODE separateRltCuts(
    assert(!sepadata->detecthidden || (bestunderestimators != NULL && bestoverestimators != NULL));
 
    *ncuts = 0;
+   cutssize = 0;
+   cuts = NULL;
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &row_marks, nrows) );
@@ -2700,69 +2727,94 @@ SCIP_RETCODE separateRltCuts(
                      bestoverestimators, xj, &success, uselb[k], uselhs[k], allowlocal, buildeqcut) );
             }
 
-            /* if the cut was created successfully and is violated, it is added to SCIP */
             if( success )
             {
-               if( sepadata->addtopool && !SCIProwIsLocal(cut) )
+               success = SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) || (sepadata->addtopool &&
+                       !SCIProwIsLocal(cut));
+            }
+
+            /* if the cut was created successfully and is violated or (if addtopool == TRUE) globally valid,
+             * it is added to the cuts array */
+            if( success )
+            {
+               if( *ncuts + 1 > cutssize )
                {
-                  /* the cut is globally valid and adding cuts to the global cut pool is enabled */
-                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  int newsize;
+
+                  newsize = SCIPcalcMemGrowSize(scip, *ncuts + 1);
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &cuts, newsize) );
+                  cutssize = newsize;
+               }
+               cuts[*ncuts] = cut;
+               (*ncuts)++;
+            }
+            else
+            {
+               SCIPdebugMsg(scip, "the generation of the cut failed or cut not violated and not added to cutpool\n");
+               /* release the cut */
+               if( cut != NULL )
+               {
+                  SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               }
+            }
+         }
+         /* clear row_marks[r] since it will be used for the next multiplier */
+         row_marks[r] = 0;
+      }
+   }
+
+   /* if cuts were found, we apply an additional filtering procedure, which is similar to sepastore */
+   if( *ncuts > 0  )
+   {
+      int nselectedcuts;
+      int i;
+
+      assert(cuts != NULL);
+
+      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, sepadata->goodscore, sepadata->badscore, sepadata->goodmaxparall,
+            sepadata->maxparall, sepadata->dircutoffdistweight, sepadata->efficacyweight, sepadata->objparalweight,
+            0.0, *ncuts, 0, sepadata->maxncuts == -1 ? *ncuts : sepadata->maxncuts, &nselectedcuts) );
+
+      nselectedcuts = *ncuts;
+
+      for( i = 0; i < *ncuts; ++i )
+      {
+         assert(cuts[i] != NULL);
+
+         if( i < nselectedcuts )
+         {
+            /* if selected, add global cuts to the pool and local cuts to the sepastore */
+            if( SCIProwIsLocal(cuts[i]) || !sepadata->addtopool )
+            {
+               SCIP_CALL( SCIPaddRow(scip, cuts[i], FALSE, &infeasible) );
+
+               if( infeasible )
+               {
+                  SCIPinfoMessage(scip, NULL, "CUTOFF! The cut obtained %s revealed infeasibility\n",
+                        SCIProwGetName(cuts[i]));
+                  *result = SCIP_CUTOFF;
                }
                else
                {
-                  if( SCIPisFeasLT(scip, SCIPgetRowFeasibility(scip, cut), 0.0) )
-                  {
-                     /* add the row to SCIP; equality cuts are forced to be added to the LP */
-                     SCIP_CALL( SCIPaddRow(scip, cut, buildeqcut, &infeasible) );
-
-                     ++*ncuts;
-
-                     if( infeasible )
-                     {
-                        SCIPinfoMessage(scip, NULL, "CUTOFF! The cut obtained from row %d and multiplied with id %d (%s, %s, eq = %s) revealed infeasibility\n",
-                                        SCIProwGetIndex(row), SCIPvarGetIndex(xj), uselb[k] ? "lb" : "ub", uselhs[k] ? "lhs" : "rhs", buildeqcut ? "true" : "false");
-                        *result = SCIP_CUTOFF;
-                     }
-                     else
-                     {
-                        SCIPdebugMsg(scip, "SEPARATED: added cut to scip\n");
-                        *result = SCIP_SEPARATED;
-                     }
-                  }
-                  else
-                     SCIPdebugMsg(scip,"\nthe cut from row %d and mult %d was created successfully, but is not violated", SCIProwGetIndex(row), SCIPvarGetIndex(xj));
+                  SCIPdebugMsg(scip, "SEPARATED: added cut to scip\n");
+                  *result = SCIP_SEPARATED;
                }
-
-            } else
-               SCIPdebugMsg(scip, "the generation of the cut failed\n");
-
-            /* release the cut */
-            if( cut != NULL )
-            {
-               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
-
-            if( (sepadata->maxncuts >= 0 && *ncuts >= sepadata->maxncuts) || *result == SCIP_CUTOFF )
+            else
             {
-               SCIPdebugMsg(scip, "exit separator because we found enough cuts or a cutoff -> skip\n");
-               SCIPdebugMsg(scip, "or reached maxncuts: maxncuts = %d, ncuts = %d\n", sepadata->maxncuts, *ncuts);
-               SCIPdebugMsg(scip, "result = %d\n", *result);
-               /* entries of row_marks must be set to 0 before the array is freed */
-               for( int r1 = r; r1 < nmarked; ++r1 )
-               {
-                  row_marks[r1] = 0;
-               }
-               goto TERMINATE;
+               SCIP_CALL( SCIPaddPoolCut(scip, cuts[i]) );
             }
          }
-         /* clear row_mark since it will be used for the next multiplier */
-         row_marks[r] = 0;
+
+         /* release current cut */
+         SCIP_CALL( SCIPreleaseRow(scip, &cuts[i]) );
       }
    }
 
    SCIPdebugMsg(scip, "exit separator because cut calculation is finished\n");
 
    TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &cuts);
    SCIPfreeBufferArray(scip, &row_idcs);
    SCIPfreeCleanBufferArray(scip, &row_marks);
 
@@ -3291,13 +3343,44 @@ SCIP_RETCODE SCIPincludeSepaRlt(
       "if set to true, hidden products are detected and separated by McCormick cuts",
       &sepadata->detecthidden, FALSE, DEFAULT_DETECTHIDDEN, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/hiddenrlt",
-           "if set to true, RLT cuts are added for hidden products",
-           &sepadata->hiddenrlt, FALSE, DEFAULT_HIDDENRLT, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "separating/" SEPA_NAME "/hiddenrlt",
+      "if set to true, RLT cuts are added for hidden products",
+      &sepadata->hiddenrlt, FALSE, DEFAULT_HIDDENRLT, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/addtopool",
-        "if set to true, globally valid RLT cuts are added to the global cut pool",
-        &sepadata->addtopool, FALSE, DEFAULT_ADDTOPOOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "separating/" SEPA_NAME "/addtopool",
+      "if set to true, globally valid RLT cuts are added to the global cut pool",
+      &sepadata->addtopool, FALSE, DEFAULT_ADDTOPOOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/goodscore",
+      "threshold for score of cut relative to best score to be considered good, so that less strict filtering is applied",
+      &sepadata->goodscore, TRUE, DEFAULT_GOODSCORE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/badscore",
+      "threshold for score of cut relative to best score to be discarded",
+      &sepadata->badscore, TRUE, DEFAULT_BADSCORE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/objparalweight",
+      "weight of objective parallelism in cut score calculation",
+      &sepadata->objparalweight, TRUE, DEFAULT_OBJPARALWEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/efficacyweight",
+      "weight of efficacy in cut score calculation",
+      &sepadata->efficacyweight, TRUE, DEFAULT_EFFICACYWEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/dircutoffdistweight",
+      "weight of directed cutoff distance in cut score calculation",
+      &sepadata->dircutoffdistweight, TRUE, DEFAULT_DIRCUTOFFDISTWEIGHT, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/goodmaxparall",
+      "maximum parallelism for good cuts",
+      &sepadata->goodmaxparall, TRUE, DEFAULT_GOODMAXPARALL, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/" SEPA_NAME "/maxparall",
+      "maximum parallelism for non-good cuts",
+      &sepadata->maxparall, TRUE, DEFAULT_MAXPARALL, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
