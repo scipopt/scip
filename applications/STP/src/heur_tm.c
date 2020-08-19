@@ -1602,7 +1602,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
       }
 
       assert(j == nterms);
-      graph_voronoi(scip, g, cost, costrev, termsmark, vbase, vnoi);
+      graph_voronoi(g, cost, costrev, termsmark, vbase, vnoi);
       state = g->path_state;
 
       for( i = 0; i < nnodes; i++ )

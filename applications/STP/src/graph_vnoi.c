@@ -331,22 +331,21 @@ SCIP_RETCODE graph_voronoiExtend(
 
 /** build a Voronoi region, w.r.t. shortest paths, for a given set of bases */
 void graph_voronoi(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge costs */
-   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   const SCIP_Real*      costrev,            /**< reversed edge costs (or NULL if symmetric) */
    const STP_Bool*       basemark,           /**< array to indicate whether a vertex is a Voronoi base */
    int*                  vbase,              /**< voronoi base to each vertex */
    PATH*                 path                /**< path data struture (leading to respective Voronoi base) */
    )
 {
-   int* heap;
-   int* state;
+   int* RESTRICT heap;
+   int* RESTRICT state;
    int root;
    int count = 0;
    int nbases = 0;
 
-   assert(g && scip && cost && costrev && basemark && vbase && path);
+   assert(g && cost && basemark && vbase && path);
    assert(g->path_heap != NULL);
    assert(g->path_state != NULL);
 
@@ -383,26 +382,48 @@ void graph_voronoi(
 
    if( g->knots > 1 )
    {
-      /* until the heap is empty */
-      while( count > 0 )
+      /* with reversed costs? */
+      if( costrev )
       {
-         /* get the next (i.e. a nearest) vertex of the heap */
-         const int k = nearest(heap, state, &count, path);
-
-         /* mark vertex k as scanned */
-         state[k] = CONNECT;
-
-         /* iterate over all outgoing edges of vertex k */
-         for( int i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         /* until the heap is empty */
+         while( count > 0 )
          {
-            const int m = g->head[i];
+            /* get the next (i.e. a nearest) vertex of the heap */
+            const int k = nearest(heap, state, &count, path);
 
-            /* check whether the path (to m) including k is shorter than the so far best known */
-            if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+            /* mark vertex k as scanned */
+            state[k] = CONNECT;
+
+            for( int i = g->outbeg[k]; i >= 0; i = g->oeat[i] )
             {
-               assert(!basemark[m]);
-               correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]));
-               vbase[m] = vbase[k];
+               const int m = g->head[i];
+
+               /* check whether the path (to m) including k is shorter than the so far best known */
+               if( (state[m]) && GT(path[m].dist, path[k].dist + ((vbase[k] == root)? cost[i] : costrev[i])) )
+               {
+                  assert(!basemark[m]);
+                  correct(heap, state, &count, path, m, k, i, ((vbase[k] == root)? cost[i] : costrev[i]));
+                  vbase[m] = vbase[k];
+               }
+            }
+         }
+      }
+      else
+      {
+         while( count > 0 )
+         {
+            const int k = nearest(heap, state, &count, path);
+            state[k] = CONNECT;
+
+            for( int i = g->outbeg[k]; i >= 0; i = g->oeat[i] )
+            {
+               const int m = g->head[i];
+               if( (state[m]) && GT(path[m].dist, path[k].dist + cost[i]) )
+               {
+                  assert(!basemark[m]);
+                  correct(heap, state, &count, path, m, k, i, cost[i]);
+                  vbase[m] = vbase[k];
+               }
             }
          }
       }

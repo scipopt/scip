@@ -585,7 +585,7 @@ extern SCIP_RETCODE graph_vnoiInit(SCIP*, const GRAPH*, SCIP_Bool, VNOI**);
 extern void graph_vnoiFree(SCIP*, VNOI**);
 extern SCIP_RETCODE graph_vnoiCompute(SCIP*, const GRAPH*, VNOI*);
 extern SCIP_RETCODE graph_vnoiComputeImplied(SCIP*, const GRAPH*, const SDPROFIT*, VNOI*);
-extern void   graph_voronoi(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const STP_Bool*, int*, PATH*);
+extern void   graph_voronoi(const GRAPH*, const SCIP_Real*, const SCIP_Real*, const STP_Bool*, int*, PATH*);
 extern void   graph_voronoiRepair(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   graph_voronoiRepairMult(SCIP*, const GRAPH*, const SCIP_Real*, const STP_Bool*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int* RESTRICT, UF* RESTRICT, PATH* RESTRICT);
 extern void   graph_voronoiWithRadiusMw(SCIP*, const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real*, int*, int*, int*);

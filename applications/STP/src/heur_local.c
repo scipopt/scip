@@ -3249,11 +3249,11 @@ SCIP_RETCODE localKeyVertexHeuristics(
          SCIP_CALL( pcmwUpdate(scip, graph, &soltreeData, &pcmwData) );
 
          /* compute a Voronoi diagram with the Steiner tree nodes as bases */
-         graph_voronoi(scip, graph, pcmwData.edgecost_biased, pcmwData.edgecost_biased, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
+         graph_voronoi(graph, pcmwData.edgecost_biased, NULL, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
       }
       else
       {
-         graph_voronoi(scip, graph, graph->cost, graph->cost, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
+         graph_voronoi(graph, graph->cost, NULL, soltreeData.solNodes, vnoiData.vnoi_base, vnoiData.vnoi_path);
       }
 
       SCIP_CALL( connectivityDataInit(scip, graph, &vnoiData, &soltreeData, &pcmwData, &connectivityData) );
