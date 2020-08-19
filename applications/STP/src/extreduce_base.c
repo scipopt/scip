@@ -276,8 +276,6 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       }
    }
 
- //  graph_knot_printInfo(graph, node);
-
    assert(edgecount > 0);
 
    /* now try to eliminate... */
@@ -299,11 +297,6 @@ SCIP_RETCODE pseudodeleteDeleteNode(
          *offsetp += prize;
       }
    }
-
-  // if( !graph_valid(scip, graph) )
-    //  return SCIP_ERROR;
-
-   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
@@ -386,8 +379,7 @@ SCIP_RETCODE pseudodeleteExecute(
       if( !nodeisDeletable )
          continue;
 
-    //  if( nodeisDeletable )
-    //  printf("mark %d deg=%d \n", i, graph->grad[i]);
+
       // todo: if single edges are ledge, try to eliminate via extended reduction!
 
        SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, offsetp, nelims) );
@@ -395,6 +387,9 @@ SCIP_RETCODE pseudodeleteExecute(
 
    reduce_starFree(scip, &stardata);
    extFree(scip, graph, &distdata, &extpermanent);
+
+   /* todo in I015 we get isolated vertices...not sure whether this is a bug or normal behaviour */
+   SCIP_CALL( reduceLevel0(scip, graph));
 
    assert(graphmarkIsClean(redcostdata, graph));
 
