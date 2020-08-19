@@ -33,7 +33,7 @@
 #define STPTEST_ASSERT_MSG_ARGS(cond, msg, ...)  \
    do                                            \
    {                                             \
-      if (!(cond))                               \
+      if( !(cond) )                              \
       {                                          \
          printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
          printf((msg), __VA_ARGS__);             \
@@ -45,7 +45,7 @@
 #define STPTEST_ASSERT_MSG(cond, msg)  \
    do                                  \
    {                                   \
-      if (!(cond))                     \
+      if( !(cond) )                    \
       {                                \
          printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
          printf((msg));                \
@@ -57,7 +57,7 @@
 #define STPTEST_ASSERT(cond)           \
    do                                  \
    {                                   \
-      if (!(cond))                     \
+      if( !(cond) )                    \
       {                                \
          printf("[%s:%d] unit test failed: ", __FILE__, __LINE__); \
          printf("\n");                 \
