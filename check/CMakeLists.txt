@@ -208,23 +208,6 @@ set(settings_Or
 )
 
 
-set(instances_Readertest
-    "instances/MIP/bell5.mps\;8966406.49"
-    "instances/MIP/egout.mps\;568.1007"
-    "instances/MIP/enigma.mps\;0"
-    "instances/MIP/flugpl.mps\;1201500"
-    "instances/MIP/gt2.mps\;21166"
-    "instances/MIP/lseu.mps\;1120"
-    "instances/MIP/MANN_a9.clq.lp\;16"
-    "instances/MIP/misc03.mps\;3360"
-    "instances/MIP/p0033.osil\;3089"
-    "instances/MIP/p0548.mps\;8691"
-    "instances/MIP/stein27.fzn\;18"
-    "instances/MIP/stein27_inf.lp\;+infinity"
-    "instances/MIP/vpm2.fzn\;13.75"
-)
-
-
 #
 # MIP instances
 #
@@ -412,17 +395,46 @@ set(instances_Or
 # available reader file extensions for SCIP readers
 #
 set(scip_reader_extensions
-    "cip"
-    "gms"
-    "ppm"
-    "pbm"
-    "ccg"
-    "opb"
-    "pip"
-    "rlp"
-    "mps"
-    "lp"
-    )
+  "mps"
+  "lp"
+  "sol"
+  "osil"
+  "opb"
+  "wbo"
+  "pip"
+  "fzn"
+  "cnf"
+  "cip"
+  "smps"
+  "sto"
+  "tim"
+  "cor"
+  "rlp"
+  "bnd"
+  "diff"
+  "dec"
+  "fix"
+  "mst"
+  )
+
+#
+# Writer output formats
+#
+set(scip_writer_extensions
+  "cip"
+  "gms"
+  "ppm"
+  "pbm"
+  "ccg"
+  "opb"
+  "pip"
+  "rlp"
+  "mps"
+  "lp"
+  "wbo"
+  "fzn"
+  "bnd"
+  )
 
 #
 # add a test to build the SCIP binary that all further tests depend on
@@ -596,6 +608,35 @@ set(basenames_opb_wrongformat
 set(message_format_opb "WARNING: only binary problems can be written in OPB format.")
 
 
+#
+# test writing and reading from and to different file extensions for MIP
+#
+foreach(instance ${instances_MIP})
+  foreach(wextension ${scip_writer_extensions})
+    split_instance(instance)
+    foreach(rextension ${scip_reader_extensions})
+        # does this instance match the requirements of this format?
+        list(FIND basenames_${rextension}_wrongformat ${basename} wrongformat)
+        list(FIND scip_reader_extensions ${rextension} in_readers)
+        list(FIND scip_writer_extensions ${wextension} in_writers)
+
+        # use different template batch files depending on the format requirements
+        if( wrongformat EQUAL -1 AND in_readers GREATER -1 AND in_writers GREATER -1)
+          configure_file(interactiveshell/readerwritertest.bat.in interactiveshell/readerwritertest-${rextension}-${wextension}-${basename}.bat)
+          set(regex "Validation         : Success")
+
+          add_test(NAME MIP-readerwritertest-${rextension}-${wextension}-${basename}
+                  COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readerwritertest-${rextension}-${wextension}-${basename}.bat
+                  )
+          set_tests_properties(MIP-readerwritertest-${rextension}-${wextension}-${basename}
+                              PROPERTIES
+                                  PASS_REGULAR_EXPRESSION ${regex}
+                                  DEPENDS scip-build
+                              )
+        endif()
+    endforeach(rextension)
+  endforeach(wextension)
+endforeach(instance)
 
 #
 # test writing and reading from and to different file extensions for MIP
@@ -615,7 +656,7 @@ foreach(instance ${instances_MIP})
         #
         if( wrongformat EQUAL -1 )
             configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
-            set(regex "Validation         : Success")
+            set(regex "Validation         : Success.*Validation         : Success")
         else()
             configure_file(interactiveshell/readertest-wrongformat.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
             set(regex "${message_format_${extension}}")
