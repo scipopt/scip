@@ -2595,7 +2595,6 @@ SCIP_RETCODE separateRltCuts(
    SCIP_Bool             allowlocal,         /**< are local cuts allowed? */
    int*                  bestunderestimators,/**< indices of linear underestimators with largest violation in sol */
    int*                  bestoverestimators, /**< indices of linear overestimators with largest violation in sol */
-   int*                  ncuts,              /**< buffer to store the number of generated cuts */
    SCIP_RESULT*          result              /**< buffer to store whether separation was successful */
 )
 {
@@ -2604,6 +2603,7 @@ SCIP_RETCODE separateRltCuts(
    int k;
    int nmarked;
    int cutssize;
+   int ncuts;
    SCIP_VAR* xj;
    int* row_marks;
    int* row_idcs;
@@ -2620,7 +2620,7 @@ SCIP_RETCODE separateRltCuts(
    assert(!sepadata->useprojection || projlp != NULL);
    assert(!sepadata->detecthidden || (bestunderestimators != NULL && bestoverestimators != NULL));
 
-   *ncuts = 0;
+   ncuts = 0;
    cutssize = 0;
    cuts = NULL;
    *result = SCIP_DIDNOTFIND;
@@ -2737,16 +2737,16 @@ SCIP_RETCODE separateRltCuts(
              * it is added to the cuts array */
             if( success )
             {
-               if( *ncuts + 1 > cutssize )
+               if( ncuts + 1 > cutssize )
                {
                   int newsize;
 
-                  newsize = SCIPcalcMemGrowSize(scip, *ncuts + 1);
+                  newsize = SCIPcalcMemGrowSize(scip, ncuts + 1);
                   SCIP_CALL( SCIPreallocBufferArray(scip, &cuts, newsize) );
                   cutssize = newsize;
                }
-               cuts[*ncuts] = cut;
-               (*ncuts)++;
+               cuts[ncuts] = cut;
+               (ncuts)++;
             }
             else
             {
@@ -2764,7 +2764,7 @@ SCIP_RETCODE separateRltCuts(
    }
 
    /* if cuts were found, we apply an additional filtering procedure, which is similar to sepastore */
-   if( *ncuts > 0  )
+   if( ncuts > 0  )
    {
       int nselectedcuts;
       int i;
@@ -2773,11 +2773,11 @@ SCIP_RETCODE separateRltCuts(
 
       SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, sepadata->goodscore, sepadata->badscore, sepadata->goodmaxparall,
             sepadata->maxparall, sepadata->dircutoffdistweight, sepadata->efficacyweight, sepadata->objparalweight,
-            0.0, *ncuts, 0, sepadata->maxncuts == -1 ? *ncuts : sepadata->maxncuts, &nselectedcuts) );
+            0.0, ncuts, 0, sepadata->maxncuts == -1 ? ncuts : sepadata->maxncuts, &nselectedcuts) );
 
-      nselectedcuts = *ncuts;
+      nselectedcuts = ncuts;
 
-      for( i = 0; i < *ncuts; ++i )
+      for( i = 0; i < ncuts; ++i )
       {
          assert(cuts[i] != NULL);
 
@@ -3102,7 +3102,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    SCIP_SEPADATA* sepadata;
    int ncalls;
    int depth;
-   int ncuts;
    int nrows;
    SCIP_HASHMAP* row_to_pos;
    PROJLP* projlp;
@@ -3235,13 +3234,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       if( *result != SCIP_CUTOFF )
       {
          SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
-               allowlocal, bestunderestimators, bestoverestimators, &ncuts, result) );
+               allowlocal, bestunderestimators, bestoverestimators, result) );
       }
    }
    else
    {
       SCIP_CALL( separateRltCuts(scip, sepa, sepadata, sepadata->conshdlr, NULL, row_to_pos, projlp, rows, nrows,
-            allowlocal, NULL, NULL, &ncuts, result) );
+            allowlocal, NULL, NULL, result) );
    }
 
    if( sepadata->detecthidden )
