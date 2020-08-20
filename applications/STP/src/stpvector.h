@@ -45,22 +45,22 @@ extern "C" {
 
 
 /** internal method */
-#define vecinternalSetCapacity(vec, size)    \
+#define vecinternalSetCapacity(vec, _size_)    \
    do                                        \
    {                                         \
-      assert(size >= 0);                     \
+      assert(_size_ >= 0);                     \
       assert(vec);                           \
-      ((int*) (vec))[-2] = (size);           \
+      ((int*) (vec))[-2] = (_size_);           \
    } while( 0 )
 
 
 /** internal method */
-#define vecinternalSetSize(vec, size)        \
+#define vecinternalSetSize(vec, _size_)        \
    do                                        \
    {                                         \
-      assert(size >= 0);                     \
+      assert(_size_ >= 0);                     \
       assert(vec);                           \
-      ((int*) (vec))[-1] = (size);           \
+      ((int*) (vec))[-1] = (_size_);           \
    } while( 0 )
 
 
@@ -94,33 +94,33 @@ extern "C" {
 
 
 /** internal method */
-#define vecinternalIncreaseCapacity(scip, vec, cap)                                 \
+#define vecinternalIncreaseCapacity(scip, vec, _cap_)                                 \
    do                                                                               \
    {                                                                                \
-      const int nbytes_new = (cap) * sizeof(*(vec)) + (sizeof(int) * 2);            \
-      assert(nbytes_new >= ((int) sizeof(int) * 2));                                \
+      const int _nbytes_new_ = (_cap_) * sizeof(*(vec)) + (sizeof(int) * 2);            \
+      assert(_nbytes_new_ >= ((int) sizeof(int) * 2));                                \
       if( !(vec) )                                                                  \
       {                                                                             \
-         char* p;                                                                   \
-         SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &p, nbytes_new) );             \
-         (vec) = (void*) (&p[sizeof(int) * 2]);                                     \
-         vecinternalSetCapacity((vec), (cap));                                      \
+         char* _p_;                                                                   \
+         SCIP_CALL_ABORT( SCIPallocMemoryArray((scip), &_p_, _nbytes_new_) );             \
+         (vec) = (void*) (&_p_[sizeof(int) * 2]);                                     \
+         vecinternalSetCapacity((vec), (_cap_));                                      \
          vecinternalSetSize((vec), 0);                                              \
       }                                                                             \
       else                                                                          \
       {                                                                             \
-         const int nbytes_old = (vecinternalGetCapacity((vec))) * sizeof(*(vec)) + (sizeof(int) * 2); \
-         char* p = &((char*) (vec))[(int) sizeof(int) * (-2)];                                        \
-         assert(nbytes_old < nbytes_new);                                                             \
-         SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &p, nbytes_old, nbytes_new) );            \
-         (vec) = (void*)(&p[sizeof(int) * 2]);                                                        \
-         vecinternalSetCapacity((vec), (cap));                                                        \
+         const int _nbytes_old_ = (vecinternalGetCapacity((vec))) * sizeof(*(vec)) + (sizeof(int) * 2); \
+         char* _p_ = &((char*) (vec))[(int) sizeof(int) * (-2)];                                        \
+         assert(_nbytes_old_ < _nbytes_new_);                                                             \
+         SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray((scip), &_p_, _nbytes_old_, _nbytes_new_) );            \
+         (vec) = (void*)(&_p_[sizeof(int) * 2]);                                                        \
+         vecinternalSetCapacity((vec), (_cap_));                                                        \
       }                                                                                               \
    } while( 0 )
 
 
-/** gets capacity of the vector */
-#define StpVecGetCapacity(vec)      \
+/** gets _cap_acity of the vector */
+#define StpVecGetcapacity(vec)      \
     (vecinternalGetCapacity(vec))
 
 
@@ -129,7 +129,7 @@ extern "C" {
    vecinternalSetSize(vec, (int)0)
 
 
-/** gets size of the vector (number of elements) */
+/** gets _size_ of the vector (number of elements) */
 #define StpVecGetSize(vec)      \
    vecinternalGetSize(vec)
 
@@ -145,9 +145,9 @@ extern "C" {
    {                                                                                                   \
       if( vec )                                                                                        \
       {                                                                                                \
-         char* p = &((char*) (vec))[(int) sizeof(int) * (-2)];                                         \
-         const int nbytes = (vecinternalGetCapacity((vec))) * sizeof(*(vec)) + (sizeof(int) * 2);      \
-         SCIPfreeBlockMemoryArray(scip, &p, nbytes);                                                   \
+         char* _p_ = &((char*) (vec))[(int) sizeof(int) * (-2)];                                         \
+         const int _nbytes_ = (vecinternalGetCapacity((vec))) * sizeof(*(vec)) + (sizeof(int) * 2);      \
+         SCIPfreeBlockMemoryArray((scip), &_p_, _nbytes_);                                                   \
       }                                                                                                \
    } while( 0 )
 
@@ -156,13 +156,13 @@ extern "C" {
 #define StpVecPushBack(scip, vec, value)                                 \
    do                                                                    \
    {                                                                     \
-      const int cap = vecinternalGetCapacity(vec);                       \
-      const int size = vecinternalGetSize(vec);                          \
-      if( cap <= size )                                                  \
+      const int _cap_ = vecinternalGetCapacity(vec);                       \
+      const int _size_ = vecinternalGetSize(vec);                          \
+      if( _cap_ <= _size_ )                                                  \
       {                                                                  \
-         vecinternalIncreaseCapacity(scip, (vec), (cap == 0) ? 2 : cap * 2); \
+         vecinternalIncreaseCapacity((scip), (vec), (_cap_ == 0) ? 2 : _cap_ * 2); \
       }                                                                  \
-      vec[size] = (value);                                               \
+      vec[_size_] = (value);                                               \
       vecinternalIncrementSize((vec));                                   \
    } while( 0 )
 
@@ -172,13 +172,13 @@ extern "C" {
    vecinternalDecrementSize((vec))
 
 /** reserves space */
-#define StpVecReserve(scip, vec, size)                                   \
+#define StpVecReserve(scip, vec, _size_)                                   \
    do                                                                    \
    {                                                                     \
-      const int cap = vecinternalGetCapacity(vec);                       \
-      if( cap < size )                                                   \
+      const int _cap_ = vecinternalGetCapacity(vec);                       \
+      if( _cap_ < _size_ )                                                   \
       {                                                                  \
-         vecinternalIncreaseCapacity(scip, (vec), size);                 \
+         vecinternalIncreaseCapacity(scip, (vec), _size_);                 \
       }                                                                  \
    } while( 0 )
 
