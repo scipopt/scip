@@ -33,10 +33,18 @@
 #include "graphheaps.h"
 #include "reduce.h"
 #include "shortestpath.h"
+#include "misc_stp.h"
 
 #define STP_TPATHS_NTERMBASES 4
+#define STP_TPATHS_RESERVESIZE 16
 
-
+/** reset single path struct */
+#define pathResetSingle(entry) \
+   do                          \
+   {                           \
+      entry.dist = FARAWAY;    \
+      entry.edge = UNKNOWN;    \
+   } while( 0 )
 
 /** Steiner nodes to terminal paths
  * NOTE: all arrays are of size STP_TPATHS_NTERMBASES * nnodes */
@@ -47,6 +55,17 @@ struct nodes_to_terminal_paths
    int*                  state;             /**< array to mark the state of each node during calculation */
    int                   nnodes;            /**< number of nodes of underlying graph */
 };
+
+
+/** data needed to repair node to terminal paths for edge-deletion */
+typedef struct tpaths_repair
+{
+   STP_Vectype(int)*     resetnodes;         /**< nodes to be reseted; for different levels (1st to 4th) */
+   TPATHS*               tpaths;             /**< the terminal paths */
+   SCIP_Bool*            nodes_isvisited;    /**< visited nodes during repair process */
+   int                   edge;               /**< edge about to be eliminated */
+   int                   nHeapElems;         /**< number of heap elements */
+} TREPAIR;
 
 
 
@@ -196,7 +215,7 @@ void pathheapCorrectDist(
 
 /** resets node */
 inline static
-void heapReset(
+void pathheapReset(
    PATH* RESTRICT path,
    int* RESTRICT heap,
    int* RESTRICT state,
@@ -543,8 +562,7 @@ void tpathsResetMembers(
 
       vbase[k] = UNKNOWN;
       state[k] = UNKNOWN;
-      path[k].edge = UNKNOWN;
-      path[k].dist = FARAWAY;
+      pathResetSingle(path[k]);
    }
 
    for( int i = 0; i < offset; i++ )
@@ -708,6 +726,268 @@ void tpathsBuildBiased(
    assert(STP_TPATHS_NTERMBASES == 4);
 
    graph_tpathsSetAll4(g, g->cost, g->cost, sdprofit, tpaths);
+}
+
+
+/** sub-method to find closest terminal to each non terminal (Voronoi diagram) */
+static
+void graph_tpathsScan1st(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   const SDPROFIT*       sdprofit,           /**< SD bias for nodes or NULL */
+   int                   heapsize,           /**< size of heap */
+   TPATHS*               tpaths              /**< storage for terminal paths */
+)
+{
+   int nHeapElems = heapsize;
+   int* RESTRICT heap = g->path_heap;
+   PATH* RESTRICT path = tpaths->termpaths;
+   int* RESTRICT vbase = tpaths->termbases;
+   int* RESTRICT state = tpaths->state;
+   const SCIP_Bool withProfit = (sdprofit != NULL);
+
+   assert(nHeapElems >= 0);
+
+   while( nHeapElems > 0 )
+   {
+      const int k = pathheapGetNearest(heap, state, &nHeapElems, path);
+      const SCIP_Real k_dist = path[k].dist;
+
+      /* mark vertex k as scanned */
+      state[k] = CONNECT;
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+
+         if( state[m] != CONNECT && g->mark[m]  )
+         {
+            SCIP_Real distnew;
+
+            if( withProfit && vbase[k] != k )
+            {
+               int k_pred;
+               assert(path[k].edge >= 0);
+               k_pred = g->tail[path[k].edge];
+               distnew = reduce_sdprofitGetBiasedDist(sdprofit, k, cost[e], k_dist, m, k_pred);
+            }
+            else
+            {
+               assert(!withProfit || Is_term(g->term[k]));
+               distnew = k_dist + cost[e];
+            }
+
+            assert(GE(distnew, 0.0) && LE(distnew, k_dist + cost[e]));
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( GT(path[m].dist, distnew) )
+            {
+               pathheapCorrectDist(heap, state, &nHeapElems, path, m, k, e, distnew);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+}
+
+/** initializes */
+static
+SCIP_RETCODE tpathsRepairVisitedInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(repair->nodes_isvisited), nnodes) );
+
+   return SCIP_OKAY;
+}
+
+
+/** cleans and frees */
+static
+void tpathsRepairVisitedExit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+   )
+{
+   const STP_Vectype(int) resetnodes1st = repair->resetnodes[0];
+   SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
+   const int size = StpVecGetSize(resetnodes1st);
+
+   /* clear visited list */
+   for( int i = 0; i < size; i++ )
+   {
+      const int node = resetnodes1st[i];
+      assert(graph_knot_isInRange(g, node));
+      nodes_isvisited[node] = FALSE;
+   }
+
+#ifndef NDBEUG
+   for( int i = 0; i < g->knots; ++i )
+      assert(!nodes_isvisited[i]);
+#endif
+
+   SCIPfreeCleanBufferArray(scip, &(repair->nodes_isvisited));
+}
+
+
+/** traverses graph to find nodes that need to be reseted */
+static
+SCIP_RETCODE tpathsRepairTraverse1st(
+   SCIP*                 scip,               /**< SCIP */
+   int                   start,              /**< node to start from */
+   int                   pred,               /**< predecessor node */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+)
+{
+   TPATHS* tpaths = repair->tpaths;
+   PATH* termpaths = tpaths->termpaths;
+   SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
+
+   if( termpaths[start].edge >= 0 && g->tail[termpaths[start].edge] == pred )
+   {
+      STP_Vectype(int) resetnodes1st;
+      STP_Vectype(int) RESTRICT stack = NULL;
+
+      assert(!Is_term(g->term[start]));
+
+      StpVecReserve(scip, repair->resetnodes[0], STP_TPATHS_RESERVESIZE);
+      resetnodes1st = repair->resetnodes[0];
+      StpVecReserve(scip, stack, STP_TPATHS_RESERVESIZE);
+
+      StpVecPushBack(scip, resetnodes1st, start);
+      StpVecPushBack(scip, stack, start);
+      nodes_isvisited[start] = TRUE;
+
+      printf("starting DFS from %d ... \n", start);
+
+      /* DFS loop */
+      while( !StpVecIsEmpty(stack) )
+      {
+         const int node = stack[StpVecGetSize(stack) - 1];
+         StpVecPopBack(stack);
+
+         assert(graph_knot_isInRange(g, node));
+
+         for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+         {
+            const int head = g->head[a];
+
+            if( nodes_isvisited[head] || head == pred )
+               continue;
+
+            if( termpaths[head].edge >= 0 && g->tail[termpaths[head].edge] == node )
+            {
+               assert(tpaths->termbases[node] == tpaths->termbases[head]);
+
+               printf("add %d to reset-nodes \n", head);
+
+               StpVecPushBack(scip, resetnodes1st, head);
+               StpVecPushBack(scip, stack, head);
+               nodes_isvisited[head] = TRUE;
+            }
+         }
+      }
+
+      StpVecFree(scip, stack);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** updates reset nodes from non-reset nodes */
+static
+void tpathsRepairUpdate1st(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+)
+{
+   const STP_Vectype(int) resetnodes1st = repair->resetnodes[0];
+   const SCIP_Bool* nodes_isvisited = repair->nodes_isvisited;
+   TPATHS* tpaths = repair->tpaths;
+   PATH* RESTRICT termpaths = tpaths->termpaths;
+   int* RESTRICT termbases = tpaths->termbases;
+   int* RESTRICT heap = g->path_heap;
+   int* RESTRICT state = tpaths->state;
+   int nHeapElems = 0;
+   const int edge = repair->edge;
+   const int edge_rev = flipedge(edge);
+   const int size = StpVecGetSize(resetnodes1st);
+
+   for( int i = 0; i < size; i++ )
+   {
+      const int node = resetnodes1st[i];
+      assert(graph_knot_isInRange(g, node));
+      assert(!Is_term(g->term[node]));
+
+      pathResetSingle(termpaths[node]);
+      termbases[node] = UNKNOWN;
+
+      for( int e = g->inpbeg[node]; e != EAT_LAST; e = g->ieat[e] )
+      {
+         SCIP_Real dist;
+         const int tail = g->tail[e];
+
+         if( nodes_isvisited[tail] || e == edge || e == edge_rev )
+            continue;
+
+         dist = g->cost[e] + termpaths[tail].dist;
+
+         if( dist < termpaths[node].dist )
+         {
+            termpaths[node].dist = dist;
+            termpaths[node].edge = e;
+            termbases[node] = termbases[tail];
+
+            assert(graph_knot_isInRange(g, termbases[node]));
+         }
+      }
+
+      if( termbases[node] != UNKNOWN )
+      {
+         printf("update node %d: base=%d, pred=%d dist=%f \n", node,
+               termbases[node], g->tail[termpaths[node].edge], termpaths[node].dist);
+
+         graph_pathHeapAdd(termpaths, node, heap, state, &nHeapElems);
+      }
+   }
+}
+
+
+/** repairs TPATHS structure for imminent edge deletion */
+static
+SCIP_RETCODE tpathsRepair1st(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+)
+{
+   const int edge = repair->edge;
+   const int tail = g->tail[edge];
+   const int head = g->head[edge];
+
+   SCIP_CALL( tpathsRepairVisitedInit(scip, g, repair) );
+
+   /* find nodes that need to be reseted */
+   SCIP_CALL( tpathsRepairTraverse1st(scip, head, tail, g, repair) );
+   SCIP_CALL( tpathsRepairTraverse1st(scip, tail, head, g, repair) );
+
+   /* update newly found nodes from remaining nodes */
+   tpathsRepairUpdate1st(scip, g, repair);
+
+   /* complete the repair process for this level */
+   graph_tpathsScan1st(g, g->cost, NULL, repair->nHeapElems, repair->tpaths);
+
+   tpathsRepairVisitedExit(scip, g, repair);
+
+   return SCIP_OKAY;
 }
 
 
@@ -1932,7 +2212,7 @@ void graph_path_st_pcmw_extend(
             {
                assert(path[node].edge != UNKNOWN);
                connected[node] = TRUE;
-               heapReset(path, heap, state, &count, node);
+               pathheapReset(path, heap, state, &count, node);
                assert(state[node]);
 
                if( Is_pseudoTerm(g->term[node]) )
@@ -2070,7 +2350,7 @@ void graph_path_st_pcmw_extendBiased(
                assert(g->mark[node]);
                assert(path[node].edge >= 0);
                connected[node] = TRUE;
-               heapReset(path, heap, state, &count, node);
+               pathheapReset(path, heap, state, &count, node);
                assert(state[node]);
 
                if( Is_pseudoTerm(g->term[node]) )
@@ -2923,6 +3203,35 @@ SCIP_RETCODE graph_tpathsInitBiased(
 }
 
 
+/** repairs TPATHS structure for imminent edge deletion */
+SCIP_RETCODE graph_tpathsRepair(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge about to be eliminated */
+   const GRAPH*          g,                  /**< graph */
+   TPATHS*               tpaths              /**< the terminal paths */
+)
+{
+   STP_Vectype(int) resetnodes[STP_TPATHS_NTERMBASES] = { NULL, NULL, NULL, NULL };
+   TREPAIR repair = { .resetnodes = resetnodes, .tpaths = tpaths, .nodes_isvisited = NULL, .edge = edge, .nHeapElems = 0 };
+
+   assert(scip && g && tpaths);
+   assert(STP_TPATHS_NTERMBASES == 4);
+   assert(graph_edge_isInRange(g, edge));
+   assert(graph_isMarked(g));
+
+   SCIP_CALL( tpathsRepair1st(scip, g, &repair) );
+
+   // repair the rest...
+
+   for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
+   {
+      StpVecFree(scip, resetnodes[i]);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** recomputes biased TPATHS structure */
 SCIP_RETCODE graph_tpathsRecomputeBiased(
    const SDPROFIT*       sdprofit,           /**< SD profit */
@@ -3004,7 +3313,6 @@ void graph_tpathsAdd1st(
    PATH* RESTRICT path = tpaths->termpaths;
    int* RESTRICT vbase = tpaths->termbases;
    int* RESTRICT state = tpaths->state;
-   const SCIP_Bool withProfit = (sdprofit != NULL);
 
    assert(path != NULL);
    assert(cost != NULL);
@@ -3041,46 +3349,7 @@ void graph_tpathsAdd1st(
    if( nbases == 0 || nnodes <= 1 )
       return;
 
-   while( nHeapElems > 0 )
-   {
-      const int k = pathheapGetNearest(heap, state, &nHeapElems, path);
-      const SCIP_Real k_dist = path[k].dist;
-
-      /* mark vertex k as scanned */
-      state[k] = CONNECT;
-
-      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         const int m = g->head[e];
-
-         if( state[m] != CONNECT && g->mark[m]  )
-         {
-            SCIP_Real distnew;
-
-            if( withProfit && vbase[k] != k )
-            {
-               int k_pred;
-               assert(path[k].edge >= 0);
-               k_pred = g->tail[path[k].edge];
-               distnew = reduce_sdprofitGetBiasedDist(sdprofit, k, cost[e], k_dist, m, k_pred);
-            }
-            else
-            {
-               assert(!withProfit || Is_term(g->term[k]));
-               distnew = k_dist + cost[e];
-            }
-
-            assert(GE(distnew, 0.0) && LE(distnew, k_dist + cost[e]));
-
-            /* check whether the path (to m) including k is shorter than the so far best known */
-            if( GT(path[m].dist, distnew) )
-            {
-               pathheapCorrectDist(heap, state, &nHeapElems, path, m, k, e, distnew);
-               vbase[m] = vbase[k];
-            }
-         }
-      }
-   }
+   graph_tpathsScan1st(g, cost, sdprofit, nHeapElems, tpaths);
 }
 
 

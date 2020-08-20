@@ -93,6 +93,70 @@ SCIP_RETCODE testTerminalPathsTo3NextFound(
 
 
 
+/** tests that (unbiased) terminal paths are repaired properly  */
+static
+SCIP_RETCODE testTerminalPathsRepair(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_Real dists[4];
+   int closeterms[4];
+   TPATHS* tpaths;
+   GRAPH* graph;
+   int nnodes = 5;
+   int nedges = 10;
+   int ncloseterms = -1;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 4, STP_TERM);
+
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.1); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 2.1); // 2
+   graph_edge_addBi(scip, graph, 1, 3, 1.0); //
+   graph_edge_addBi(scip, graph, 3, 4, 2.2); //
+   graph_edge_addBi(scip, graph, 0, 3, 2.15); //
+
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( graph_tpathsInit(scip, graph, &tpaths) );
+   graph_tpathsSetAll4(graph, graph->cost, graph->cost, NULL, tpaths);
+
+   graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, NULL, dists, &ncloseterms);
+   STPTEST_ASSERT(ncloseterms == 3);
+   STPTEST_ASSERT(closeterms[0] == 0);
+   STPTEST_ASSERT(EQ(dists[0], 1.1));
+
+   graph_tpathsGet4CloseTerms(graph, tpaths, 3, FARAWAY, closeterms, NULL, dists, &ncloseterms);
+   STPTEST_ASSERT(closeterms[0] == 0);
+   STPTEST_ASSERT(EQ(dists[0], 2.1));
+
+   SCIP_CALL( graph_tpathsRepair(scip, 0, graph, tpaths) );
+
+   graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, NULL, dists, &ncloseterms);
+//   STPTEST_ASSERT(ncloseterms == 1);
+   STPTEST_ASSERT(closeterms[0] == 2);
+   STPTEST_ASSERT(EQ(dists[0], 2.1));
+
+   graph_tpathsGet4CloseTerms(graph, tpaths, 3, FARAWAY, closeterms, NULL, dists, &ncloseterms);
+   STPTEST_ASSERT(closeterms[0] == 0);
+   STPTEST_ASSERT(EQ(dists[0], 2.15));
+
+   stptest_graphTearDown(scip, graph);
+   graph_tpathsFree(scip, &tpaths);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that (unbiased) terminal paths are found */
 static
 SCIP_RETCODE testBiasedTerminalPathsTo4NextFound(
@@ -168,6 +232,7 @@ SCIP_RETCODE stptest_tpaths(
 {
    assert(scip);
 
+   SCIP_CALL( testTerminalPathsRepair(scip) );
    SCIP_CALL( testTerminalPathsTo3NextFound(scip) );
    SCIP_CALL( testBiasedTerminalPathsTo4NextFound(scip) );
 

@@ -1479,7 +1479,8 @@ SCIP_RETCODE reduce_sdImpLongEdge(
 }
 
 
-/** Special distance test */
+/** Special distance test
+ *  DEPRECATED */
 SCIP_RETCODE reduce_sd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */

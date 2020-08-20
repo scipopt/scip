@@ -104,7 +104,7 @@ typedef struct PHeap_Node
    {                                         \
       assert(size >= 0);                     \
       assert(vec);                           \
-      ((int*) (vec))[-1] = (size);           \
+      ((int*) (vec))[-2] = (size);           \
    } while( 0 )
 
 
@@ -114,32 +114,51 @@ typedef struct PHeap_Node
    {                                         \
       assert(size >= 0);                     \
       assert(vec);                           \
-      ((int*) (vec))[-2] = (size);           \
+      ((int*) (vec))[-1] = (size);           \
+   } while( 0 )
+
+
+/** internal method */
+#define vecinternalIncrementSize(vec)        \
+   do                                        \
+   {                                         \
+      assert(vec);                           \
+      ((int*) (vec))[-1]++;                  \
+   } while( 0 )
+
+
+/** internal method */
+#define vecinternalDecrementSize(vec)        \
+   do                                        \
+   {                                         \
+      assert(vec);                           \
+      assert(((int*) (vec))[-1] >= 1);       \
+      ((int*) (vec))[-1]--;                  \
    } while( 0 )
 
 
 /** internal method */
 #define vecinternalGetCapacity(vec)    \
-   ((vec) ? ((int*) (vec))[-1] : (int) 0)
-
-
-/** internal method */
-#define vecinternalGetSize(vec)      \
    ((vec) ? ((int*) (vec))[-2] : (int) 0)
 
 
 /** internal method */
-#define vecinternalIncreaseCapacity(scip, vec, count)                               \
+#define vecinternalGetSize(vec)      \
+   ((vec) ? ((int*) (vec))[-1] : (int) 0)
+
+
+/** internal method */
+#define vecinternalIncreaseCapacity(scip, vec, cap)                                 \
    do                                                                               \
    {                                                                                \
-      const int nbytes_new = (count) * sizeof(*(vec)) + (sizeof(int) * 2);          \
+      const int nbytes_new = (cap) * sizeof(*(vec)) + (sizeof(int) * 2);            \
       assert(nbytes_new >= ((int) sizeof(int) * 2));                                \
       if( !(vec) )                                                                  \
       {                                                                             \
          char* p;                                                                   \
          SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &p, nbytes_new) );             \
          (vec) = (void*) (&p[sizeof(int) * 2]);                                     \
-         vecinternalSetCapacity((vec), (count));                                    \
+         vecinternalSetCapacity((vec), (cap));                                      \
          vecinternalSetSize((vec), 0);                                              \
       }                                                                             \
       else                                                                          \
@@ -149,7 +168,7 @@ typedef struct PHeap_Node
          assert(nbytes_old < nbytes_new);                                                             \
          SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray(scip, &p, nbytes_old, nbytes_new) );            \
          (vec) = (void*)(&p[sizeof(int) * 2]);                                                        \
-         vecinternalSetCapacity((vec), (count));                                                      \
+         vecinternalSetCapacity((vec), (cap));                                                        \
       }                                                                                               \
    } while( 0 )
 
@@ -171,7 +190,6 @@ typedef struct PHeap_Node
 
 /** is the vector empty? */
 #define StpVecIsEmpty(vec)    \
-   assert(vec);               \
    (vecinternalGetSize(vec) == 0)
 
 
@@ -188,7 +206,7 @@ typedef struct PHeap_Node
    } while( 0 )
 
 
-/** adds element */
+/** adds (appends) element */
 #define StpVecPushBack(scip, vec, value)                                 \
    do                                                                    \
    {                                                                     \
@@ -199,9 +217,24 @@ typedef struct PHeap_Node
          vecinternalIncreaseCapacity(scip, (vec), (cap == 0) ? 2 : cap * 2); \
       }                                                                  \
       vec[size] = (value);                                               \
-      vecinternalSetSize((vec), size + 1);                               \
+      vecinternalIncrementSize((vec));                                   \
    } while( 0 )
 
+
+/** remove last element */
+#define StpVecPopBack(vec)                           \
+   vecinternalDecrementSize((vec))
+
+/** reserves space */
+#define StpVecReserve(scip, vec, size)                                   \
+   do                                                                    \
+   {                                                                     \
+      const int cap = vecinternalGetCapacity(vec);                       \
+      if( cap < size )                                                   \
+      {                                                                  \
+         vecinternalIncreaseCapacity(scip, (vec), size);                 \
+      }                                                                  \
+   } while( 0 )
 
 
 /** returns maximum of given SCIP_Real values */

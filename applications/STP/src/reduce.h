@@ -355,6 +355,7 @@ extern void            reduce_sdprofitPrintStats(const GRAPH*, const SDPROFIT*);
 extern SCIP_RETCODE     reduce_sdInit(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiased(SCIP*, GRAPH*, SD**);
 extern SCIP_RETCODE     reduce_sdInitBiasedBottleneck(SCIP*, GRAPH*, SD**);
+extern SCIP_RETCODE     reduce_sdRepair(SCIP*, int, GRAPH*, SD*);
 extern SCIP_RETCODE     reduce_sdAddNeighborSd(SCIP*, const GRAPH*, SD*);
 extern void             reduce_sdFree(SCIP*, SD**);
 extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, int, const int*, DIJK*, SD*, GRAPH*);

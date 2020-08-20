@@ -614,7 +614,6 @@ SCIP_RETCODE sdneighborUpdate(
  */
 
 
-
 /** initializes SD structure */
 SCIP_RETCODE reduce_sdInit(
    SCIP*                 scip,               /**< SCIP */
@@ -697,6 +696,31 @@ SCIP_RETCODE reduce_sdInitBiasedBottleneck(
 //   SCIP_CALL( reduce_sdgraphInitBiased(scip, g, s->sdprofit, &(s->sdgraph)) );
 
    reduce_sdgraphInitOrderedMstCosts(s->sdgraph);
+
+   return SCIP_OKAY;
+}
+
+
+/** repairs SD structure for imminent edge elimination */
+SCIP_RETCODE reduce_sdRepair(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to be deleted soon */
+   GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
+                                                  terrible design */
+   SD*                   sd                  /**< to be repaired */
+)
+{
+   assert(scip && g && sd);
+   assert(graph_edge_isInRange(g, edge));
+   assert(sd->terminalpaths);
+   assert(!sd->hasNeigborUpdate);
+   assert(!sd->isBiased);
+   assert(!sd->sdprofit);
+   assert(!sd->sdneighbors);
+
+   SCIP_CALL( graph_tpathsRepair(scip, edge, g, (sd->terminalpaths)) );
+
+   // todo rebuild sd tree
 
    return SCIP_OKAY;
 }
