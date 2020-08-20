@@ -33,7 +33,7 @@
 #include "graphheaps.h"
 #include "reduce.h"
 #include "shortestpath.h"
-#include "misc_stp.h"
+#include "stpvector.h"
 
 #define STP_TPATHS_NTERMBASES 4
 #define STP_TPATHS_RESERVESIZE 16
@@ -791,7 +791,7 @@ void graph_tpathsScan1st(
 }
 
 /** initializes */
-static
+static inline
 SCIP_RETCODE tpathsRepairVisitedInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
@@ -807,7 +807,7 @@ SCIP_RETCODE tpathsRepairVisitedInit(
 
 
 /** cleans and frees */
-static
+static inline
 void tpathsRepairVisitedExit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
@@ -961,9 +961,39 @@ void tpathsRepairUpdate1st(
 }
 
 
-/** repairs TPATHS structure for imminent edge deletion */
+/** repairs TPATHS structure for imminent edge deletion (1st level) */
 static
 SCIP_RETCODE tpathsRepair1st(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+)
+{
+   const int edge = repair->edge;
+   const int tail = g->tail[edge];
+   const int head = g->head[edge];
+
+   SCIP_CALL( tpathsRepairVisitedInit(scip, g, repair) );
+
+   /* find nodes that need to be reseted */
+   SCIP_CALL( tpathsRepairTraverse1st(scip, head, tail, g, repair) );
+   SCIP_CALL( tpathsRepairTraverse1st(scip, tail, head, g, repair) );
+
+   /* update newly found nodes from remaining nodes */
+   tpathsRepairUpdate1st(scip, g, repair);
+
+   /* complete the repair process for this level */
+   graph_tpathsScan1st(g, g->cost, NULL, repair->nHeapElems, repair->tpaths);
+
+   tpathsRepairVisitedExit(scip, g, repair);
+
+   return SCIP_OKAY;
+}
+
+
+/** repairs TPATHS structure for imminent edge deletion (2nd level) */
+static
+SCIP_RETCODE tpathsRepair2nd(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
    TREPAIR*              repair              /**< data for repairing */
