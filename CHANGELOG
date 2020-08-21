@@ -37,6 +37,11 @@ Interface changes
 
 - added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
   that is initialized to zeros
+- New internal functions for changing the default values of parameters:
+    SCIPparamsetSetDefaultLongint(), SCIPparamsetSetDefaultReal(), SCIPparamsetSetDefaultChar(),
+    SCIPparamsetSetDefaultString() and
+    SCIPparamSetDefaultLongint(), SCIPparamSetDefaultReal(), SCIPparamSetDefaultChar(),
+    SCIPparamSetDefaultString()
 
 ### Command line interface
 ### Interfaces to external software
