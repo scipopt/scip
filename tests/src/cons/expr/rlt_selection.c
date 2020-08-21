@@ -226,7 +226,8 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIP_SOL* sol;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   PROJLP* projlp;
+   RLT_SIMPLEROW* projrows;
+   SCIP_Bool allcst;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rows, 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
@@ -246,21 +247,21 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
    cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
-   SCIP_CALL( createProjLP(scip, rows, 1, sol, &projlp, TRUE) );
-   printProjLP(scip, projlp, 1, NULL);
+   SCIP_CALL( createProjRows(scip, rows, 1, sol, &projrows, TRUE, &allcst) );
+   printProjRows(scip, projrows, 1, NULL);
 
    /* check results */
 
    /* the projected cut should be: -72 <= x3 <= -57 */
-   cr_assert_eq(projlp->nNonz[0], 1, "\nExpected 1 non-zero in the projected row, got %d", projlp->nNonz[0]);
-   cr_assert_eq(projlp->coefs[0][0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projlp->coefs[0][0]);
-   cr_assert_eq(projlp->vars[0][0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projlp->vars[0][0]));
-   cr_assert_eq(projlp->consts[0], 0.0, "\nExpected the const in projected row to be 0.0, got %f", projlp->consts[0]);
-   cr_assert_eq(projlp->lhss[0], -72.0, "\nExpected the lhs in projected row to be -72.0, got %f", projlp->lhss[0]);
-   cr_assert_eq(projlp->rhss[0], -57.0, "\nExpected the rhs in projected row to be -57.0, got %f", projlp->rhss[0]);
+   cr_assert_eq(projrows[0].nNonz, 1, "\nExpected 1 non-zero in the projected row, got %d", projrows[0].nNonz);
+   cr_assert_eq(projrows[0].coefs[0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projrows[0].coefs[0]);
+   cr_assert_eq(projrows[0].vars[0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projrows[0].vars[0]));
+   cr_assert_eq(projrows[0].cst, 0.0, "\nExpected the const in projected row to be 0.0, got %f", projrows[0].cst);
+   cr_assert_eq(projrows[0].lhs, -72.0, "\nExpected the lhs in projected row to be -72.0, got %f", projrows[0].lhs);
+   cr_assert_eq(projrows[0].rhs, -57.0, "\nExpected the rhs in projected row to be -57.0, got %f", projrows[0].rhs);
 
    /* free memory */
-   freeProjLP(scip, &projlp, 1);
+   freeProjRows(scip, &projrows, 1);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseRow(scip, &rows[0]) );
    SCIPfreeBufferArray(scip, &vals);
@@ -273,7 +274,7 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_SOL* sol;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   PROJLP* projlp;
+   RLT_SIMPLEROW* projrows;
    SCIP_SEPADATA* sepadata;
    SCIP_ROW* cut;
    SCIP_Bool success;
@@ -296,31 +297,24 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    sepadata->maxusedvars = 4;
 
    /* create projected LP with row -10 <= x1 + 2x2 - x3 <= 20 */
-   SCIP_CALL( SCIPallocBuffer(scip, &projlp) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &projrows, 1) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->coefs, 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->vars, 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->nNonz, 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->lhss, 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->rhss, 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &projlp->consts, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(projrows[0].coefs), 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(projrows[0].vars), 3) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &(projlp)->coefs[0], 3) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(projlp)->vars[0], 3) );
-
-   projlp->nNonz[0] = 3;
-   projlp->coefs[0][0] = 1.0;
-   projlp->coefs[0][1] = 2.0;
-   projlp->coefs[0][2] = -1.0;
-   projlp->vars[0][0] = x1;
-   projlp->vars[0][1] = x2;
-   projlp->vars[0][2] = x3;
-   projlp->consts[0] = 0.0;
-   projlp->lhss[0] = -10.0;
-   projlp->rhss[0] = 20.0;
+   projrows[0].nNonz = 3;
+   projrows[0].coefs[0] = 1.0;
+   projrows[0].coefs[1] = 2.0;
+   projrows[0].coefs[2] = -1.0;
+   projrows[0].vars[0] = x1;
+   projrows[0].vars[1] = x2;
+   projrows[0].vars[2] = x3;
+   projrows[0].cst = 0.0;
+   projrows[0].lhs = -10.0;
+   projrows[0].rhs = 20.0;
 
    /* compute a cut with x1, lb and lhs */
-   SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projlp, 0, sol, NULL, NULL, x1, &success, TRUE, TRUE,
+   SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projrows, 0, sol, NULL, NULL, x1, &success, TRUE, TRUE,
          FALSE, FALSE) );
 
    /* the cut should be -8 <= 8x1 */
@@ -329,7 +323,7 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
 
    /* free memory */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   freeProjLP(scip, &projlp, 1);
+   freeProjRows(scip, &projrows, 1);
    SCIPfreeBuffer(scip, &sepadata);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIPfreeBufferArray(scip, &vals);

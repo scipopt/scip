@@ -56,7 +56,7 @@
 #define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
-#define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
+#define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
 #define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
 #define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
 #define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
@@ -155,6 +155,7 @@ struct RLT_SimpleRow
    SCIP_Real             lhs;                /**< left hand side */
    SCIP_Real             cst;                /**< constant */
    int                   nNonz;              /**< number of nonzeroes */
+   int                   size;               /**< size of the coefs and vars arrays */
 };
 typedef struct RLT_SimpleRow RLT_SIMPLEROW;
 
@@ -2220,6 +2221,87 @@ SCIP_RETCODE computeProjRltCut(
    return SCIP_OKAY;
 }
 
+/** store a row projected by fixing all variables that are at bound at sol; the result is a simplified row */
+static
+SCIP_RETCODE createProjRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   RLT_SIMPLEROW*        simplerow,          /**< pointer to the simplified row */
+   SCIP_ROW*             row,                /**< row to be projected */
+   SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
+   SCIP_Bool             local               /**< whether local bounds should be checked */
+  )
+{
+   int i;
+   SCIP_VAR* var;
+   SCIP_Real val;
+   SCIP_Real vlb;
+   SCIP_Real vub;
+
+   assert(simplerow != NULL);
+
+   simplerow->nNonz = 0;
+   simplerow->size = 0;
+   simplerow->vars = NULL;
+   simplerow->coefs = NULL;
+   simplerow->lhs = SCIProwGetLhs(row);
+   simplerow->rhs = SCIProwGetRhs(row);
+   simplerow->cst = SCIProwGetConstant(row);
+
+   for( i = 0; i < SCIProwGetNNonz(row); ++i )
+   {
+      var = SCIPcolGetVar(SCIProwGetCols(row)[i]);
+      val = SCIPgetSolVal(scip, sol, var);
+      vlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+      vub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+      if( SCIPisEQ(scip, vlb, val) || SCIPisEQ(scip, vub, val) )
+      {
+         /* if we are projecting and the var is at bound, add var as a constant to simplerow */
+         if( !SCIPisInfinity(scip, -simplerow->lhs) )
+            simplerow->lhs -= SCIProwGetVals(row)[i]*val;
+         if( !SCIPisInfinity(scip, simplerow->rhs) )
+            simplerow->rhs -= SCIProwGetVals(row)[i]*val;
+      }
+      else
+      {
+         if( simplerow->nNonz + 1 > simplerow->size )
+         {
+            int newsize;
+
+            newsize = SCIPcalcMemGrowSize(scip, simplerow->nNonz + 1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &simplerow->coefs, newsize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &simplerow->vars, newsize) );
+            simplerow->size = newsize;
+         }
+
+         /* add the term to simplerow */
+         simplerow->vars[simplerow->nNonz] = var;
+         simplerow->coefs[simplerow->nNonz] = SCIProwGetVals(row)[i];
+         ++(simplerow->nNonz);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** free the projected row */
+static
+void freeProjRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   RLT_SIMPLEROW*        simplerow           /**< simplified row to be freed */
+   )
+{
+   assert(simplerow != NULL);
+
+   if( simplerow->size > 0 )
+   {
+      assert(simplerow->vars != NULL);
+      assert(simplerow->coefs != NULL);
+
+      SCIPfreeBufferArray(scip, &simplerow->vars);
+      SCIPfreeBufferArray(scip, &simplerow->coefs);
+   }
+}
+
 /** creates the projected problem
  *
  *  All variables that are at their bounds at the current solution are added
@@ -2236,53 +2318,23 @@ SCIP_RETCODE createProjRows(
    SCIP_Bool*            allcst              /**< buffer to store whether all projected rows have only constants */
    )
 {
-   SCIP_COL** cols;
    int i;
-   int v;
-   SCIP_VAR* var;
-   SCIP_Real val;
-   SCIP_Real vlb;
-   SCIP_Real vub;
 
    assert(scip != NULL);
    assert(rows != NULL);
    assert(projrows != NULL);
+   assert(allcst != NULL);
 
    *allcst = TRUE;
    SCIP_CALL( SCIPallocBufferArray(scip, projrows, nrows) );
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &((*projrows)[i].coefs), SCIProwGetNNonz(rows[i])) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &((*projrows)[i].vars), SCIProwGetNNonz(rows[i])) );
-      (*projrows)[i].nNonz = 0;
-      (*projrows)[i].lhs = SCIProwGetLhs(rows[i]);
-      (*projrows)[i].rhs = SCIProwGetRhs(rows[i]);
-      (*projrows)[i].cst = SCIProwGetConstant(rows[i]);
-
-      cols = SCIProwGetCols(rows[i]);
-      for( v = 0; v < SCIProwGetNNonz(rows[i]); ++v )
+      /* get a simplified and projected row */
+      SCIP_CALL( createProjRow(scip, &(*projrows)[i], rows[i], sol, local) );
+      if( (*projrows)[i].nNonz > 0 )
       {
-         var = SCIPcolGetVar(cols[v]);
-         val = SCIPgetSolVal(scip, sol, var);
-         vlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
-         vub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
-         if( SCIPisEQ(scip, vlb, val) || SCIPisEQ(scip, vub, val) )
-         {
-            /* add var as a constant to row of projrows[i] */
-            if( !SCIPisInfinity(scip, -(*projrows)[i].lhs) )
-               (*projrows)[i].lhs -= SCIProwGetVals(rows[i])[v]*val;
-            if( !SCIPisInfinity(scip, (*projrows)[i].rhs) )
-               (*projrows)[i].rhs -= SCIProwGetVals(rows[i])[v]*val;
-         }
-         else
-         {
-            /* add the entry to projrows[i] */
-            (*projrows)[i].coefs[(*projrows)[i].nNonz] = SCIProwGetVals(rows[i])[v];
-            (*projrows)[i].vars[(*projrows)[i].nNonz] = var;
-            ++(*projrows)[i].nNonz;
-            *allcst = FALSE;
-         }
+         *allcst = FALSE;
       }
    }
 
@@ -2305,7 +2357,7 @@ void printProjRows(
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIPinfoMessage(scip, file, "\nproj_row[%d]: ", i);
+      SCIPinfoMessage(scip, file, "\n%s: ", "proj_row[%d]", i);
       if( !SCIPisInfinity(scip, -projrows[i].lhs) )
          SCIPinfoMessage(scip, file, "%.15g <= ", projrows[i].lhs);
       for( j = 0; j < projrows[i].nNonz; ++j )
@@ -2350,8 +2402,7 @@ void freeProjRows(
 
    for( i = 0; i < nrows; ++i )
    {
-      SCIPfreeBufferArray(scip, &(*projrows)[i].vars);
-      SCIPfreeBufferArray(scip, &(*projrows)[i].coefs);
+      freeProjRow(scip, &(*projrows)[i]);
    }
 
    SCIPfreeBufferArray(scip, projrows);
