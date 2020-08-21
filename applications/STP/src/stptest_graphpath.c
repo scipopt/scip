@@ -249,7 +249,7 @@ SCIP_RETCODE testTerminalPathsRepair3(
    TPATHS* tpaths;
    GRAPH* graph;
    int nnodes = 6;
-   int nedges = 14;
+   int nedges = 16;
    int ncloseterms = -1;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
@@ -269,6 +269,8 @@ SCIP_RETCODE testTerminalPathsRepair3(
    graph_edge_addBi(scip, graph, 3, 4, 1.0); // 8
    graph_edge_addBi(scip, graph, 3, 5, 1.0); // 10
    graph_edge_addBi(scip, graph, 4, 5, 1.2); // 12
+   graph_edge_addBi(scip, graph, 2, 5, 2.1); // 12
+
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
    SCIP_CALL( graph_tpathsInit(scip, graph, &tpaths) );
@@ -300,14 +302,18 @@ SCIP_RETCODE testTerminalPathsRepair3(
    graph_tpathsGet4CloseTerms(graph, tpaths, 5, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(closeterms[0] == 1);
    STPTEST_ASSERT(EQ(dists[0], 1.1));
-   STPTEST_ASSERT(closeterms[1] == 0);
-   STPTEST_ASSERT(EQ(dists[1], 2.2));
+   STPTEST_ASSERT(closeterms[1] == 2);
+   STPTEST_ASSERT(EQ(dists[1], 2.1));
+   STPTEST_ASSERT(closeterms[2] == 0);
+   STPTEST_ASSERT(EQ(dists[2], 2.2));
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 4, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(closeterms[0] == 0);
    STPTEST_ASSERT(EQ(dists[0], 1.0));
    STPTEST_ASSERT(closeterms[1] == 2);
    STPTEST_ASSERT(EQ(dists[1], 1.2));
+   STPTEST_ASSERT(closeterms[2] == 1);
+   STPTEST_ASSERT(EQ(dists[2], 2.3));
 
    graph_edge_del(scip, graph, 0, TRUE);
 
@@ -315,6 +321,7 @@ SCIP_RETCODE testTerminalPathsRepair3(
    SCIP_CALL( graph_tpathsRepair(scip, 2, graph, tpaths) );
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 4, FARAWAY, closeterms, NULL, dists, &ncloseterms);
+   assert(ncloseterms == 2);
    STPTEST_ASSERT(closeterms[0] == 2);
    STPTEST_ASSERT(EQ(dists[0], 1.2));
    STPTEST_ASSERT(closeterms[1] == 1);
