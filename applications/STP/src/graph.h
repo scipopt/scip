@@ -533,16 +533,19 @@ extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, S
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Bool, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendBiased(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_pcmw_extendOut(SCIP*, const GRAPH*, int, STP_Bool*, SCIP_Real*, int*, STP_Bool*, DHEAP*, SCIP_Bool*);
+extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
+extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
+extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
+extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
+
+/* graph_tpath.c
+ */
 extern void   graph_add2ndTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_add3rdTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_add4thTermPaths(const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_get2nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_get3nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
 extern void   graph_get4nextTermPaths(GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*);
-extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
-extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
-extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
-extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_get4nextTTerms(SCIP*, GRAPH*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern SCIP_RETCODE     graph_tpathsInit(SCIP*, GRAPH*, TPATHS**);
 extern SCIP_RETCODE     graph_tpathsInitBiased(SCIP*, const SDPROFIT*, GRAPH*, TPATHS**);

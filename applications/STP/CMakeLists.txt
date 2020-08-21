@@ -31,6 +31,7 @@ add_executable(scipstp
     src/graph_pcbase.c
     src/graph_save.c
     src/graph_sol.c
+    src/graph_tpath.c
     src/graph_trans.c
     src/graph_util.c
     src/graph_vnoi.c

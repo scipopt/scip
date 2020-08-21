@@ -80,6 +80,7 @@ CMAINOBJ	=	cmain.o \
 			graph_sdpath.o \
 			graph_pcbase.o \
 			graph_save.o \
+			graph_tpath.o \
 			graph_trans.o \
 			graph_util.o \
 			graph_vnoi.o \
