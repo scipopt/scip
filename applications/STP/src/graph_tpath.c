@@ -50,6 +50,7 @@ struct nodes_to_terminal_paths
 {
    PATH*                 termpaths;         /**< path data (leading to first, second, ... terminal) */
    int*                  termbases;         /**< terminals to each non terminal */
+   int*                  termbases_org;     /**< original terminals to each non terminal; only needed for repair */
    int*                  state;             /**< array to mark the state of each node during calculation */
    int                   nnodes;            /**< number of nodes of underlying graph */
 };
@@ -345,6 +346,7 @@ SCIP_RETCODE tpathsAlloc(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->termpaths), nnodes * STP_TPATHS_NTERMBASES) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->termbases), nnodes * STP_TPATHS_NTERMBASES) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(tp->state), nnodes * STP_TPATHS_NTERMBASES) );
+   tp->termbases_org = NULL;
 
    return SCIP_OKAY;
 }
@@ -692,10 +694,10 @@ void tpathsRepairExitLevel(
    TREPAIR*              repair              /**< data for repairing */
    )
 {
-   const STP_Vectype(int) resetnodes1st = repair->resetnodes[0];
+   const STP_Vectype(int) resetnodes_level = repair->resetnodes[level];
    int* RESTRICT state = repair->tpaths->state;
    SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
-   const int size = StpVecGetSize(resetnodes1st);
+   const int size = StpVecGetSize(resetnodes_level);
    const int shift = g->knots * level;
 
    assert(0 <= level && level <= 3);
@@ -703,7 +705,7 @@ void tpathsRepairExitLevel(
    /* clear visited list */
    for( int i = 0; i < size; i++ )
    {
-      const int node = resetnodes1st[i];
+      const int node = resetnodes_level[i];
       assert(graph_knot_isInRange(g, node));
 
       nodes_isvisited[node] = FALSE;
@@ -755,8 +757,8 @@ SCIP_RETCODE tpathsRepairTraverse1st(
    TREPAIR*              repair              /**< data for repairing */
 )
 {
-   TPATHS* tpaths = repair->tpaths;
-   PATH* termpaths = tpaths->termpaths;
+   const TPATHS* tpaths = repair->tpaths;
+   const PATH* termpaths = tpaths->termpaths;
    SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
 
    if( termpaths[start].edge >= 0 && g->tail[termpaths[start].edge] == pred )
@@ -819,7 +821,7 @@ void tpathsRepairTraverseLevelWithStack(
 {
    TPATHS* tpaths = repair->tpaths;
    const PATH* termpaths = tpaths->termpaths;
-   const int* vbase = tpaths->termbases;
+   const int* vbase_org = tpaths->termbases_org;
    SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
    const int nnodes = graph_get_nNodes(g);
    const int shift = level * nnodes;
@@ -834,7 +836,7 @@ void tpathsRepairTraverseLevelWithStack(
    while( !StpVecIsEmpty(stack) )
    {
       const int node = stack[StpVecGetSize(stack) - 1];
-      const int nodebase_top = vbase[node + shift];
+      const int nodebaseorg_top = vbase_org[node + shift];
       StpVecPopBack(stack);
 
       assert(graph_knot_isInRange(g, node));
@@ -849,7 +851,7 @@ void tpathsRepairTraverseLevelWithStack(
 
             if( termpaths[head_shifted].edge >= 0 && g->tail[termpaths[head_shifted].edge] == node )
             {
-               if( nodebase_top != vbase[head_shifted] )
+               if( nodebaseorg_top != vbase_org[head_shifted] )
                   continue;
 
                printf("level%d: add %d to reset-nodes \n", level, head);
@@ -907,6 +909,7 @@ void tpathsRepairTraverseStackAddBelow(
    const TPATHS* tpaths = repair->tpaths;
    const PATH* termpaths = tpaths->termpaths;
    const int* vbase = tpaths->termbases;
+   const int* vbase_org = tpaths->termbases_org;
    SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
    const int nnodes = graph_get_nNodes(g);
    const int shift = level * nnodes;
@@ -925,6 +928,7 @@ void tpathsRepairTraverseStackAddBelow(
       {
          const int node = resetnodes_d[i];
          const int nodebase_d = vbase[node + d * nnodes];
+         const int nodebaseorg_d = vbase_org[node + d * nnodes];
          assert(graph_knot_isInRange(g, node));
 
          /* duplicate? */
@@ -943,7 +947,7 @@ void tpathsRepairTraverseStackAddBelow(
 
                if( termpaths[head_shifted].edge >= 0 && g->tail[termpaths[head_shifted].edge] == node )
                {
-                  if( nodebase_d != vbase[head_shifted] )
+                  if( nodebaseorg_d != vbase[head_shifted] )
                      continue;
 
                   assert(!Is_term(g->term[head]));
@@ -962,7 +966,7 @@ void tpathsRepairTraverseStackAddBelow(
 /** Traverses graph to find nodes on given level that need to be reseted,
  *  by updating from previous levels. Also considers duplicates. */
 static
-SCIP_RETCODE tpathsRepairTraverseLevel(
+void tpathsRepairTraverseLevel(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
    int                   level,              /**< level (1-3, level 0 is handled separately) */
@@ -980,8 +984,6 @@ SCIP_RETCODE tpathsRepairTraverseLevel(
    tpathsRepairTraverseLevelWithStack(scip, g, level, stack, repair);
 
    StpVecFree(scip, stack);
-
-   return SCIP_OKAY;
 }
 
 
@@ -1089,16 +1091,19 @@ void tpathsRepairUpdateLevel(
       {
          const int tail = g->tail[e];
 
-         if( nodes_isvisited[tail] || e == edge || e == edge_rev )
+         if( e == edge || e == edge_rev )
             continue;
 
          /* loop over all levels of tail */
-         for( int d = 0; d < level; d++ )
+         for( int d = 0; d <= level; d++ )
          {
             SCIP_Real dist;
             const int tail_d = tail + d * nnodes;
             const int tailbase_d = vbase[tail_d];
             int h;
+
+            if( d == level && nodes_isvisited[tail] )
+               break;
 
             for( h = 0; h < level; h++ )
                if( vbase[node + h * nnodes] == tailbase_d )
@@ -1108,7 +1113,7 @@ void tpathsRepairUpdateLevel(
             if( h != level )
                continue;
 
-            dist = g->cost[e] + termpaths[tail].dist;
+            dist = g->cost[e] + termpaths[tail_d].dist;
 
             if( dist < termpaths[node_shift].dist )
             {
@@ -1176,13 +1181,82 @@ SCIP_RETCODE tpathsRepair2nd(
 
    SCIP_CALL( tpathsRepairInitLevel(scip, level, g, repair) );
 
-   SCIP_CALL( tpathsRepairTraverseLevel(scip, g, level, repair) );
+   tpathsRepairTraverseLevel(scip, g, level, repair);
    tpathsRepairUpdateLevel(scip, g, level, repair);
    tpathsScan2nd(g, g->cost,  g->cost, NULL, repair->nHeapElems, repair->tpaths);
 
    tpathsRepairExitLevel(scip, level, g, repair);
 
    return SCIP_OKAY;
+}
+
+
+/** initializes */
+static
+void tpathsRepairInit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+)
+{
+
+#ifndef NDEBUG
+   TPATHS* tpaths = repair->tpaths;
+   for( int i = 0; i < STP_TPATHS_NTERMBASES * g->knots; i++ )
+   {
+      assert(tpaths->termbases_org[i] == tpaths->termbases[i]);
+   }
+#endif
+
+
+   for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
+   {
+      assert(!repair->resetnodes[i]);
+      StpVecReserve(scip, repair->resetnodes[i], STP_TPATHS_RESERVESIZE);
+      assert(repair->resetnodes[i]);
+   }
+}
+
+
+/** frees and resets */
+static
+void tpathsRepairExit(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   TREPAIR*              repair              /**< data for repairing */
+)
+{
+   TPATHS* tpaths = repair->tpaths;
+   int* RESTRICT vbase_org = tpaths->termbases_org;
+   const int* const vbase = tpaths->termbases;
+   const int nnodes = graph_get_nNodes(g);
+
+   for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
+   {
+      STP_Vectype(int) resetnodes_i = repair->resetnodes[i];
+      const int size = StpVecGetSize(resetnodes_i);
+      const int shift = nnodes * i;
+
+      assert(resetnodes_i);
+
+      for( int j = 0; j < size; j++ )
+      {
+         const int node = resetnodes_i[j];
+         const int node_shift = node + shift;
+         assert(graph_knot_isInRange(g, node));
+
+         vbase_org[node_shift] = vbase[node_shift];
+      }
+
+      StpVecFree(scip, repair->resetnodes[i]);
+   }
+#ifndef NDEBUG
+   for( int i = 0; i < STP_TPATHS_NTERMBASES * nnodes; i++ )
+   {
+      assert(vbase_org[i] == vbase[i]);
+
+   }
+#endif
 }
 
 
@@ -1448,18 +1522,27 @@ SCIP_RETCODE graph_tpathsInitBiased(
 
 
 /** sets up TPATHS for subsequent edge deletions */
-void graph_tpathsRepairSetUp(
+SCIP_RETCODE graph_tpathsRepairSetUp(
    const GRAPH*          g,                  /**< graph */
    TPATHS*               tpaths              /**< the terminal paths */
 )
 {
    const int nnodes = graph_get_nNodes(g);
-   int* const state = tpaths->state;
+   int* RESTRICT state = tpaths->state;
+
+   if( !tpaths->termbases_org )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(tpaths->termbases_org), nnodes * STP_TPATHS_NTERMBASES) );
+   }
+
+   BMScopyMemoryArray(tpaths->termbases_org, tpaths->termbases, nnodes * STP_TPATHS_NTERMBASES);
 
    for( int i = 0; i < nnodes * STP_TPATHS_NTERMBASES; i++ )
    {
       state[i] = UNKNOWN;
    }
+
+   return SCIP_OKAY;
 }
 
 
@@ -1478,24 +1561,16 @@ SCIP_RETCODE graph_tpathsRepair(
    assert(STP_TPATHS_NTERMBASES == 4);
    assert(graph_edge_isInRange(g, edge));
    assert(graph_isMarked(g));
+   assert(tpaths->termbases_org);
 
-   for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
-   {
-      assert(!repair.resetnodes[i]);
-      StpVecReserve(scip, resetnodes[i], STP_TPATHS_RESERVESIZE);
-      assert(repair.resetnodes[i]);
-   }
+   tpathsRepairInit(scip, g, &repair);
 
    SCIP_CALL( tpathsRepair1st(scip, g, &repair) );
    SCIP_CALL( tpathsRepair2nd(scip, g, &repair) );
 
    // todo repair the rest...
 
-   for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
-   {
-      assert(resetnodes[i]);
-      StpVecFree(scip, resetnodes[i]);
-   }
+   tpathsRepairExit(scip, g, &repair);
 
    return SCIP_OKAY;
 }
@@ -2010,6 +2085,7 @@ void graph_tpathsFree(
    tp = *tpaths;
    assert(tp);
 
+   SCIPfreeMemoryArrayNull(scip, &(tp->termbases_org));
    SCIPfreeMemoryArray(scip, &(tp->state));
    SCIPfreeMemoryArray(scip, &(tp->termbases));
    SCIPfreeMemoryArray(scip, &(tp->termpaths));
