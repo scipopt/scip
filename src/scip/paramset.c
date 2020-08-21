@@ -1961,37 +1961,6 @@ SCIP_RETCODE SCIPparamsetSetBool(
    return SCIP_OKAY;
 }
 
-/** changes the default value of an existing SCIP_Bool parameter */
-SCIP_RETCODE SCIPparamsetSetDefaultBool(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   const char*           name,               /**< name of the parameter */
-   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
-   )
-{
-   SCIP_PARAM* param;
-
-   assert(paramset != NULL);
-
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
-   if( param == NULL )
-   {
-      SCIPerrorMessage("parameter <%s> unknown\n", name);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   if( param->paramtype != SCIP_PARAMTYPE_BOOL )
-   {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
-         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   /* set the parameter's default value */
-   SCIPparamSetDefaultBool(param, defaultvalue);
-
-   return SCIP_OKAY;
-}
-
 /** changes the value of an existing int parameter */
 SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2022,37 +1991,6 @@ SCIP_RETCODE SCIPparamsetSetInt(
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetInt(param, set, messagehdlr, value, FALSE, TRUE) );
-
-   return SCIP_OKAY;
-}
-
-/** changes the default value of an existing int parameter */
-SCIP_RETCODE SCIPparamsetSetDefaultInt(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   const char*           name,               /**< name of the parameter */
-   int                   defaultvalue        /**< new default value of the parameter */
-   )
-{
-   SCIP_PARAM* param;
-
-   assert(paramset != NULL);
-
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
-   if( param == NULL )
-   {
-      SCIPerrorMessage("parameter <%s> unknown\n", name);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   if( param->paramtype != SCIP_PARAMTYPE_INT )
-   {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
-         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   /* set the parameter's default value */
-   SCIPparamSetDefaultInt(param, defaultvalue);
 
    return SCIP_OKAY;
 }
@@ -2189,6 +2127,192 @@ SCIP_RETCODE SCIPparamsetSetString(
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetString(param, set, messagehdlr, value, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_BOOL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultBool(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing int parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_INT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultInt(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_LONGINT));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultLongint(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_REAL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_REAL));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultReal(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing char parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char                  defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_CHAR )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_CHAR));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultChar(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing string parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   const char*           defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_STRING )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_STRING));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultString(param, defaultvalue);
 
    return SCIP_OKAY;
 }
@@ -4731,7 +4855,6 @@ SCIP_RETCODE SCIPparamSetString(
    return SCIP_OKAY;
 }
 
-
 /** changes default value of SCIP_Bool parameter */
 void SCIPparamSetDefaultBool(
    SCIP_PARAM*           param,              /**< parameter */
@@ -4756,6 +4879,59 @@ void SCIPparamSetDefaultInt(
    assert(param->data.intparam.minvalue <= defaultvalue && param->data.intparam.maxvalue >= defaultvalue);
 
    param->data.intparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of SCIP_Longint parameter */
+void SCIPparamSetDefaultLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+
+   assert(param->data.longintparam.minvalue <= defaultvalue && param->data.longintparam.maxvalue >= defaultvalue);
+
+   param->data.longintparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of SCIP_Real parameter */
+void SCIPparamSetDefaultReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+
+   assert(param->data.realparam.minvalue <= defaultvalue && param->data.realparam.maxvalue >= defaultvalue);
+
+   param->data.realparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of char parameter */
+void SCIPparamSetDefaultChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   char                  defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+
+   param->data.charparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of string parameter */
+void SCIPparamSetDefaultString(
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+
+   BMSfreeMemoryArray(&param->data.stringparam.defaultvalue);
+   SCIP_ALLOC_ABORT( BMSduplicateMemoryArray(&param->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
 }
 
 /** sets the parameter to its default setting */
