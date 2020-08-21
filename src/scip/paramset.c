@@ -2131,7 +2131,6 @@ SCIP_RETCODE SCIPparamsetSetString(
    return SCIP_OKAY;
 }
 
-
 /** changes the default value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetDefaultBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -4855,7 +4854,6 @@ SCIP_RETCODE SCIPparamSetString(
 
    return SCIP_OKAY;
 }
-
 
 /** changes default value of SCIP_Bool parameter */
 void SCIPparamSetDefaultBool(

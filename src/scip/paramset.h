@@ -256,7 +256,6 @@ SCIP_RETCODE SCIPparamsetSetString(
    const char*           value               /**< new value of the parameter */
    );
 
-
 /** changes the default value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetDefaultBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
