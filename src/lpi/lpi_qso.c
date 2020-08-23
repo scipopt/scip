@@ -1539,7 +1539,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    if ( nnonz != NULL )
       rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, &lcnt, &lbeg, &lind, &lval, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
    else
-      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
 
    QS_TESTG(rval, CLEANUP, " ");
 
