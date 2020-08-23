@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##############################################################################
-# Copyright Gimpel Software LLC 2019. All rights reserved.
+# Copyright Gimpel Software LLC 2017-2019. All rights reserved.
 # Confidential and proprietary. No part of this file may be redistributed
 # without express written permission of Gimpel Software LLC.
 #

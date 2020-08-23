@@ -1,5 +1,5 @@
 ##############################################################################
-# Copyright Gimpel Software LLC 2019. All rights reserved.
+# Copyright Gimpel Software LLC 2017-2020. All rights reserved.
 # Confidential and proprietary. No part of this file may be redistributed
 # without express written permission of Gimpel Software LLC.
 #
@@ -11,7 +11,7 @@
 ##############################################################################
 meta:
     # The version of this compiler database
-    version: "1.3.1"
+    version: "1.3.5"
 
 compilers:
     keil_armcc:
@@ -77,6 +77,7 @@ compilers:
                 - ['++fbe', 'ensure backslash escapes in options are enabled']
                 - ['-format(\""*** LINT: %(%f(%l) %)%t %n: %m\"")', 'format for uVision']
                 - ['--fbe', 'restore previous state of backslash escape flag']
+                - ['-width(0)', 'disable line breaking for uVision']
                 - ['+flm', 'lock message format']
                 - ['+fdi', 'start #include search in the directory of the including file']
                 - ['+rw(__int64)', '']
@@ -264,6 +265,9 @@ compilers:
 
             channel:    stdout
             match_expr: 'message\("(?P<size_options>.+?)"'
+        c_decls:
+            definitions:
+                - 'typedef __float128 _Float128;'
         base_config:
             extensions: &gcc_base_config_extensions
                 - ['+fdi', 'Starts its #include search in the directory of the including file']
@@ -304,11 +308,13 @@ compilers:
                 - ['-rw_asgn(asm,_up_to_brackets)', '']
                 - ['-rw_asgn(__asm,_up_to_brackets)', '']
                 - ['-rw_asgn(__asm__,_up_to_brackets)', '']
-                - ['-rw_asgn(_Float128,__float128)', '']
+                - ['--u_GLIBCXX_BUILTIN_IS_SAME_AS', 'Prevent use of __is_same_as']
+                - ['--u_GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED', 'Prevent use of __is_constant_evaluated']
             suppressions: &gcc_base_config_suppressions
                 - ['-emacro(530, va_start)', '']
                 - ['-emacro(530, va_end)', '']
                 - ['-emacro(413, offsetof)', '']
+                - ['-emacro(160 523 505 866,assert)', '']
         options:
             # The list of options used by the compiler.
             #
@@ -1019,6 +1025,8 @@ compilers:
             vs_base_base_config_suppressions: *vs_base_base_config_suppressions
             vs2019_extensions: &vs2019_extensions
                 - ['-std=c++17', 'Enable C++17 support']
+                - ['++d_HAS_CONDITIONAL_EXPLICIT=0', '']
+                - ['-emacro(4392,__MACHINE)', '']
             _vs_shared_2013_and_later: *_vs_shared_2013_and_later
 
     vs2019_64:
@@ -1327,47 +1335,36 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
-                - ['+rw(__task)', '']
-                - ['+rw(__no_init)', '']
+                - ['+rw(__absolute)', '']
+                - ['+rw(__arm)', '']
+                - ['+rw(__big_endian)', '']
+                - ['+rw(__cmse_nonsecure_call)', '']
+                - ['+rw(__cmse_nonsecure_entry)', '']
+                - ['+rw(__fiq)', '']
+                - ['+rw(__interwork)', '']
                 - ['+rw(__intrinsic)', '']
-                - ['+rw(__interrupt)', '']
-                - ['+rw(__monitor)', '']
-                - ['+rw(__banked_func)', '']
-                - ['+rw(__banked_func_ext2)', '']
-                - ['+rw(__bdata)', '']
-                - ['+rw(__bit)', '']
-                - ['+rw(__code)', '']
-                - ['+rw(__data)', '']
-                - ['+rw(__data_overlay)', '']
-                - ['+rw(__ext_stack_reentrant)', '']
-                - ['+rw(__far)', '']
-                - ['+rw(__far_code)', '']
-                - ['+rw(__far_func)', '']
-                - ['+rw(__far_rom)', '']
-                - ['+rw(__far22)', '']
-                - ['+rw(__far22_code)', '']
-                - ['+rw(__far22_rom)', '']
-                - ['+rw(__generic)', '']
-                - ['+rw(__huge)', '']
-                - ['+rw(__huge_code)', '']
-                - ['+rw(__huge_rom)', '']
-                - ['+rw(__idata)', '']
-                - ['+rw(__idata_overlay)', '']
-                - ['+rw(__idata_reentrant)', '']
-                - ['+rw(__ixdata)', '']
-                - ['+rw(__near_func)', '']
+                - ['+rw(__irq)', '']
+                - ['+rw(__little_endian)', '']
+                - ['+rw(__nested)', '']
+                - ['+rw(__no_alloc)', '']
+                - ['+rw(__no_alloc16)', '']
+                - ['+rw(__no_alloc_str)', '']
+                - ['+rw(__no_alloc_str16)', '']
+                - ['+rw(__no_init)', '']
                 - ['+rw(__noreturn)', '']
                 - ['+rw(__nounwind)', '']
-                - ['+rw(__overlay_near_func)', '']
-                - ['+rw(__pdata)', '']
-                - ['+rw(__pdata_reentrant)', '']
+                - ['+rw(__packed)', '']
+                - ['+rw(__pcrel)', '']
+                - ['+rw(__ramfunc)', '']
                 - ['+rw(__root)', '']
-                - ['+rw(__sfr)', '']
-                - ['+rw(__spec_string)', '']
+                - ['+rw(__ro_placement)', '']
+                - ['+rw(__sbrel)', '']
+                - ['+rw(__stackless)', '']
+                - ['+rw(__swi)', '']
                 - ['+rw(__sys_reg)', '']
-                - ['+rw(__xdata)', '']
-                - ['+rw(__xdata_reentrant)', '']
-                - ['+rw(__xdata_rom)', '']
+                - ['+rw(__task)', '']
+                - ['+rw(__thumb)', '']
+                - ['+rw(__weak)', '']
                 - ['+rw(__iar_atomic_is_lock_free)', '']
                 - ['+rw(__is_destructible)', '']
                 - ['+rw(_to_semi)', '']
@@ -1875,6 +1872,7 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__absolute)','']
                 - ['+rw(__data16)','']
                 - ['+rw(__data24)','']
                 - ['+rw(__data32)','']
@@ -1883,9 +1881,9 @@ compilers:
                 - ['+rw(__intrinsic)','']
                 - ['+rw(__monitor)','']
                 - ['+rw(__nested)','']
-                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc)','']
                 - ['+rw(__no_alloc16)','']
-                - ['+rw(__no_alloc_str,)','']
+                - ['+rw(__no_alloc_str)','']
                 - ['+rw(__no_alloc_str16)','']
                 - ['+rw(__no_init)','']
                 - ['+rw(__no_scratch)','']
@@ -2022,9 +2020,9 @@ compilers:
                 - ['+rw(__monitor)','']
                 - ['+rw(__near)','']
                 - ['+rw(__no_bit_access)','']
-                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc)','']
                 - ['+rw(__no_alloc16)','']
-                - ['+rw(__no_alloc_str,)','']
+                - ['+rw(__no_alloc_str)','']
                 - ['+rw(__no_alloc_str16)','']
                 - ['+rw(__no_init)','']
                 - ['+rw(__noreturn)','']
@@ -2264,11 +2262,13 @@ compilers:
                 - ['+fdi', 'Search directory of including file']
                 - ['+rw(__far)','']
                 - ['+rw(__huge)','']
+                - ['+rw(__near)','']
                 - ['+rw(__no_init)','']
                 - ['+rw(__sbdata)','']
                 - ['+rw(__sbdata16)','']
                 - ['+rw(__bitvar)','']
                 - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
                 - ['+rw(__fast_interrupt)','']
                 - ['+rw(__regbank_interrupt)','']
                 - ['+rw(__tiny_func)','']
@@ -2504,6 +2504,7 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__bitvar)','']
                 - ['+rw(__cc_version1)','']
                 - ['+rw(__cc_version2)','']
                 - ['+rw(__cc_version3)','']
@@ -2628,6 +2629,7 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__banked)','']
                 - ['+rw(__callf)','']
                 - ['+rw(__callt)','']
                 - ['+rw(__far)','']
@@ -2753,6 +2755,8 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__callt)','']
+                - ['+rw(__far)','']
                 - ['+rw(__far_func)','']
                 - ['+rw(__huge)','']
                 - ['+rw(__interrupt)','']
@@ -2760,7 +2764,7 @@ compilers:
                 - ['+rw(__monitor)','']
                 - ['+rw(__near)','']
                 - ['+rw(__near_func)','']
-                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc)','']
                 - ['+rw(__no_alloc16)','']
                 - ['+rw(__no_alloc_str)','']
                 - ['+rw(__no_alloc_str16)','']
@@ -3006,6 +3010,7 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__data8)','']
                 - ['+rw(__data16)','']
                 - ['+rw(__far_func)','']
                 - ['+rw(__fastcall)','']
@@ -3123,6 +3128,7 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__banked)','']
                 - ['+rw(__data8)','']
                 - ['+rw(__data16)','']
                 - ['+rw(__interrupt)','']
@@ -3358,6 +3364,7 @@ compilers:
                 - ['+fan', 'Anonymous unions']
                 - ['+fas', 'Anonymous structs']
                 - ['+fdi', 'Search directory of including file']
+                - ['+rw(__far)','']
                 - ['+rw(__far_func)','']
                 - ['+rw(__interrupt)','']
                 - ['+rw(__intrinsic)','']
@@ -3488,9 +3495,9 @@ compilers:
                 - ['+rw(__intrinsic)','']
                 - ['+rw(__monitor)','']
                 - ['+rw(__nested)','']
-                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc)','']
                 - ['+rw(__no_alloc16)','']
-                - ['+rw(__no_alloc_str,)','']
+                - ['+rw(__no_alloc_str)','']
                 - ['+rw(__no_alloc_str16)','']
                 - ['+rw(__no_init)','']
                 - ['+rw(__noreturn)','']
@@ -3621,7 +3628,7 @@ compilers:
                 - ['+rw(__near)','']
                 - ['+rw(__nearfunc)','']
                 - ['+rw(__nested)','']
-                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc)','']
                 - ['+rw(__no_alloc16)','']
                 - ['+rw(__no_alloc_str)','']
                 - ['+rw(__no_alloc_str16)','']
@@ -3933,3 +3940,151 @@ compilers:
             xc_extensions: *microchip_xc_base_config_xc_extensions
             xc32_extensions:
                 - ['-fcu','']
+
+    metaware_ccac:
+        description: "MetaWare (ccac) - ARC V2 EM, V2 HS, V3 HS"
+        version:
+            command:
+                - "-v"
+            channel:    stdout
+            match_expr:
+                'Driver Version:\s+(?P<version>\d+\.\d+)'
+        c_include_paths:
+            command:
+                - "-v"
+                - "-xc"
+                - "-E"
+                - "placeholder"
+            channel:    stderr
+            tempfile: ""
+            input: ""
+            match_expr: 'search starts here:[\r\n]+(?:\s*(?:(?P<include_dir>[^#\r\n]*?)(?:\(framework directory\))?[\r\n]+)*)End of search list'
+        cpp_include_paths:
+            command:
+                - "-v"
+                - "-xc++"
+                - "-E"
+                - "placeholder"
+            channel:    stderr
+            input: ""
+            tempfile: ""
+            match_expr: 'search starts here:[\r\n]+(?:\s*(?:(?P<include_dir>[^#\r\n]*?)(?:\(framework directory\))?[\r\n]+)*)End of search list'
+        c_macros:
+            command:
+                - "-dM"
+                - "-E"
+                - "-xc"
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+            input: ""
+            tempfile: ""
+        cpp_macros:
+            command:
+                - "-dM"
+                - "-E"
+                - "-xc++"
+            channel:    stdout
+            input: ""
+            tempfile: ""
+            match_expr: '(?P<macros>.*)'
+        size_options:
+            command:
+                - "-E"
+                - "-xc"
+            tempfile: |
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #if __SIZEOF_SIZE_T__ == __SIZEOF_LONG_LONG__
+                #  define FZL_OPT +fzl ++fzl
+                #elif __SIZEOF_SIZE_T__ == __SIZEOF_LONG__
+                #  define FZL_OPT +fzl
+                #else
+                #  define FZL_OPT
+                #endif
+
+                #pragma message(STR( \
+                                      JOIN(-si, __SIZEOF_INT__) \
+                                      JOIN(-sl, __SIZEOF_LONG__) \
+                                      JOIN(-sll,__SIZEOF_LONG_LONG__) \
+                                      JOIN(-ss, __SIZEOF_SHORT__) \
+                                      JOIN(-sw, __SIZEOF_WCHAR_T__) \
+                                      JOIN(-sp, __SIZEOF_POINTER__) \
+                                      JOIN(-sf, __SIZEOF_FLOAT__) \
+                                      JOIN(-sd, __SIZEOF_DOUBLE__) \
+                                      JOIN(-sld,__SIZEOF_LONG_DOUBLE__) \
+                                      FZL_OPT \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+        base_config:
+            extensions: *gcc_base_config_extensions
+            suppressions: *gcc_base_config_suppressions
+            metaware_extensions:
+                - [ '-e2715', '__VA_ARGS__ concatenation' ]
+                - [ '-e160', 'GNU statement expression' ]
+                - [ '-rw_asgn(__unsigned__,unsigned)', '' ]
+                - [ '-rw_asgn(__signed__,signed)', '' ]
+                - [ '-append(4928, [underscores and arbitrary bases for numeric constants are not supported])', '' ]
+                - [ '+rw(_Alias)', '' ]
+                - [ '+rw(_Noalias)', '' ]
+                - [ '+rw(_Reversed_Endian)', '' ]
+                - [ '++d_Aligned=__attribute__((aligned(4)))', '' ]
+                - [ '+ppw(message)', '' ]
+                - [ '-ppw_asgn(print,message)', '' ]
+                - [ '+ppw(warning)', '' ]
+                - [ '-ppw_asgn(warn,warning)', '' ]
+                - [ '+rw(_up_to_brackets)', '' ]
+                - [ '-rw_asgn(pragma,_up_to_brackets)', '' ]
+        decls:
+            definitions:
+                - 'unsigned int _core_read(unsigned int);'
+                - 'void _core_write(unsigned int, unsigned int);'
+        options:
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-U':
+                transforms: [ ['-U\s*(?P<macro_name>.+)', '-u\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '-imacros':
+                transforms: [ ['-imacros (?P<file>.+)', '-header(\g<file>)'] ]
+            '-B':
+                transforms: [ ['-B(?P<prefix>.+)', '-i"\g<prefix>/include"'] ]
+            '-Hansi':
+                transform: '-std=c99'
+            '-Hansi99':
+                transform: '-std=c99'
+            '-Hansi89':
+                transform: '-std=c89'
+            '-Hincdir':
+                transforms: [ ['-Hincdir=(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '-Hinclude':
+                transforms: [ ['-Hinclude=(?P<name>.+)', '-header(\g<name>)'] ]
+            '-include':
+                transforms: [ ['-include (?P<file>.+)', '-header(\g<file>)'] ]
+            '-isystem':
+                transforms: [ ['-isystem\s*(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '-std=c89':
+                transform: '-std=c89'
+            '-std=c90':
+                transform: '-std=c90'
+            '-std=c99':
+                transform: '-std=c99'
+            '-std=c++03':
+                transform: '-std=c++03'
+            '-std=c++11':
+                transform: '-std=c++11'
+            '-std=gnu89':
+                transform: '-std=c89'
+            '-std=gnu90':
+                transform: '-std=c90'
+            '-std=gnu99':
+                transform: '-std=c99'
+            '-std=gnu++03':
+                transform: '-std=c++03'
+            '-std=gnu++11':
+                transform: '-std=c++11'
