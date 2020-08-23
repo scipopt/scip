@@ -626,9 +626,8 @@ void SCIPdispInt(
 }
 
 
-static
-const char timepowerchar[] = {'s', 'm', 'h', 'd', 'y'};
-const SCIP_Real timepowerval[] = {1.0, 60.0, 60.0, 24.0, 365.0};
+static const char timepowerchar[] = {'s', 'm', 'h', 'd', 'y'};
+static const SCIP_Real timepowerval[] = {1.0, 60.0, 60.0, 24.0, 365.0};
 #define MAXTIMEPOWER 4
 
 /** displays a time value fitting in a given width */

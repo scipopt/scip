@@ -44,13 +44,13 @@ extern "C" {
 
 #define FOPEN(file, mode)    gzopen(file, mode)
 #define FCLOSE(fp)           gzclose(fp)
-#define FGETS(buf, len, fp)  gzgets(fp, buf, len)
+#define FGETS(buf, len, fp)  gzgets(fp, buf, len) /*lint !e755 */
 #define FREAD(buf, len, fp)  gzread(fp, buf, len)
 #define FPTYPE               gzFile
 #else
 #define FOPEN(file, mode)    fopen(file, mode)
 #define FCLOSE(fp)           fclose(fp)
-#define FGETS(buf, len, fp)  fgets(buf, len, fp)
+#define FGETS(buf, len, fp)  fgets(buf, len, fp) /*lint !e755 */
 #define FREAD(buf, len, fp)  fread(buf, 1, len, fp)
 #define FPTYPE               FILE*
 #endif /* SCIP_WITH_ZLIB */
