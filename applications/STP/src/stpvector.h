@@ -94,27 +94,33 @@ extern "C" {
 
 
 /** internal method */
-#define vecinternalIncreaseCapacity(scip, vec, _cap_)                                 \
+#define vecinternalComputeNBytes(size, vec)      \
+   (size * sizeof(*(vec)) + (sizeof(int) * 2))
+
+
+/** internal method */
+#define vecinternalIncreaseCapacity(scip, vec, cap)                                 \
    do                                                                               \
    {                                                                                \
-      const int _nbytes_new_ = (_cap_) * sizeof(*(vec)) + (sizeof(int) * 2);            \
+      const int _nbytes_new_ = vecinternalComputeNBytes(cap, (vec));                \
       assert(_nbytes_new_ >= ((int) sizeof(int) * 2));                                \
       if( !(vec) )                                                                  \
       {                                                                             \
          char* _p_;                                                                   \
-         SCIP_CALL_ABORT( SCIPallocMemoryArray((scip), &_p_, _nbytes_new_) );             \
+         SCIP_CALL_ABORT( SCIPallocBlockMemoryArray((scip), &_p_, _nbytes_new_) );             \
          (vec) = (void*) (&_p_[sizeof(int) * 2]);                                     \
-         vecinternalSetCapacity((vec), (_cap_));                                      \
+         vecinternalSetCapacity((vec), (cap));                                      \
          vecinternalSetSize((vec), 0);                                              \
       }                                                                             \
       else                                                                          \
       {                                                                             \
-         const int _nbytes_old_ = (vecinternalGetCapacity((vec))) * sizeof(*(vec)) + (sizeof(int) * 2); \
+         const int _cap_old_ = vecinternalGetCapacity((vec));                      \
+         const int _nbytes_old_ = vecinternalComputeNBytes(_cap_old_, (vec));      \
          char* _p_ = &((char*) (vec))[(int) sizeof(int) * (-2)];                                        \
          assert(_nbytes_old_ < _nbytes_new_);                                                             \
          SCIP_CALL_ABORT( SCIPreallocBlockMemoryArray((scip), &_p_, _nbytes_old_, _nbytes_new_) );            \
          (vec) = (void*)(&_p_[sizeof(int) * 2]);                                                        \
-         vecinternalSetCapacity((vec), (_cap_));                                                        \
+         vecinternalSetCapacity((vec), (cap));                                                        \
       }                                                                                               \
    } while( 0 )
 
@@ -146,7 +152,7 @@ extern "C" {
       if( vec )                                                                                        \
       {                                                                                                \
          char* _p_ = &((char*) (vec))[(int) sizeof(int) * (-2)];                                         \
-         const int _nbytes_ = (vecinternalGetCapacity((vec))) * sizeof(*(vec)) + (sizeof(int) * 2);      \
+         const int _nbytes_ = vecinternalComputeNBytes(vecinternalGetCapacity((vec)), (vec));         \
          SCIPfreeBlockMemoryArray((scip), &_p_, _nbytes_);                                                   \
       }                                                                                                \
    } while( 0 )
