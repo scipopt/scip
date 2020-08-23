@@ -244,7 +244,7 @@ void MSKAPI printstr(
 {  /*lint --e{715}*/
 #if SUPRESS_NAME_ERROR
    char errstr[32];
-   snprintf(errstr, 32, "MOSEK Error %d", MSK_RES_ERR_DUP_NAME);
+   (void) snprintf(errstr, 32, "MOSEK Error %d", MSK_RES_ERR_DUP_NAME);
    if (0 == strncmp(errstr, str, strlen(errstr)))
       return;
 #endif
@@ -730,9 +730,9 @@ const char* SCIPlpiGetSolverName(
    )
 {
 #if MSK_VERSION_MAJOR < 9
-   sprintf(mskname, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
+   (void) snprintf(mskname, 100, "MOSEK %d.%d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_BUILD, MSK_VERSION_REVISION);
 #else
-   sprintf(mskname, "MOSEK %d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_REVISION);
+   (void) snprintf(mskname, 100, "MOSEK %d.%d.%d", MSK_VERSION_MAJOR, MSK_VERSION_MINOR, MSK_VERSION_REVISION);
 #endif
    return mskname;
 }

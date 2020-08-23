@@ -508,7 +508,7 @@ void SCIPencodeDualBitNeg(
       assert(out != NULL);
 
       for( i = 0; i < rest; i++ )
-         m |= mask[i][-inp[i]];
+         m |= mask[i][-inp[i]];  /*lint !e661*/
       *out = m;
    }
 }
@@ -1229,7 +1229,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&majorversion, &minorversion, &technical);
-   sprintf(grbname, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
+   (void) snprintf(grbname, 100, "Gurobi %d.%d.%d", majorversion, minorversion, technical);
    return grbname;
 }
 
@@ -2593,8 +2593,8 @@ SCIP_RETCODE SCIPlpiGetRows(
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
 
-               memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
-               memmove(&val[newnz], &val[thebeg], (theend - thebeg) * sizeof(*val)); /*lint !e776*/
+               memmove(&ind[newnz], &ind[thebeg], (size_t) (theend - thebeg) * sizeof(*ind)); /*lint !e776*/
+               memmove(&val[newnz], &val[thebeg], (size_t) (theend - thebeg) * sizeof(*val)); /*lint !e776*/
                beg[i - firstrow] = newnz; /*lint !e661*/
                newnz += theend - thebeg;
             }
@@ -2624,6 +2624,7 @@ SCIP_RETCODE SCIPlpiGetColNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstcol && firstcol <= lastcol);
    SCIPerrorMessage("SCIPlpiGetColNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -2645,6 +2646,7 @@ SCIP_RETCODE SCIPlpiGetRowNames(
    assert(namestorage != NULL || namestoragesize == 0);
    assert(namestoragesize >= 0);
    assert(storageleft != NULL);
+   assert(0 <= firstrow && firstrow <= lastrow);
    SCIPerrorMessage("SCIPlpiGetRowNames() has not been implemented yet.\n");
    return SCIP_LPERROR;
 }
@@ -5142,7 +5144,7 @@ SCIP_RETCODE SCIPlpiSetState(
    if ( lpistate->nrngrows > 0 && lpistate->ncols < ncols )
    {
       /* New columns have been added: need to move range variable information */
-      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], lpistate->nrngrows * sizeof(*lpi->cstat));
+      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], (size_t) lpistate->nrngrows * sizeof(*lpi->cstat));
    }
 
    /* extend the basis to the current LP beyond the previously existing columns */
@@ -5272,7 +5274,7 @@ SCIP_RETCODE SCIPlpiWriteState(
          SCIPerrorMessage("Basis file name too long.\n");
          return SCIP_LPERROR;
       }
-      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+      (void) snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
       CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
    }
 

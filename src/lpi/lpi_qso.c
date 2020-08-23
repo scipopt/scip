@@ -93,7 +93,7 @@ static char __qsstr[SCIP_MAXSTRLEN];
 #define EPSILON 1e-9
 
 /** print location of the calling line */
-#define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
+#define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__)
 
 /** This macro is to print error messages and jump to the given point in the code, it also prints the
  *  file name and line where this happened. */
@@ -311,7 +311,7 @@ SCIP_RETCODE convertSides(
 
    for( i = 0 ; i < nrows ; ++i )
    {
-      state = ((lhs[i] <= -QS_MAXDOUBLE ? 1U:0U) | (rhs[i] >= QS_MAXDOUBLE ? 2U:0U));
+      state = ((lhs[i] <= -QS_MAXDOUBLE ? 1 : 0) | (rhs[i] >= QS_MAXDOUBLE ? 2 : 0));
       lpi->ircnt[i] = 0;
       lpi->irbeg[i] = 0;
       switch( state )
@@ -834,11 +834,9 @@ SCIP_RETCODE SCIPlpiAddRows(
          lpi->ircnt[i] = beg[i+1] - beg[i];
          assert(lpi->ircnt[i] >= 0);
       }
-      if( nrows > 0 )
-      {
-         lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
-         assert(lpi->ircnt[nrows-1] >= 0);
-      }
+      assert( nrows > 0 );
+      lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
+      assert(lpi->ircnt[nrows-1] >= 0);
 
       /* now we add the rows */
       QS_CONDRET( QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, (int*) beg, (int*) ind, (SCIP_Real*) val, lpi->irhs,
@@ -1538,8 +1536,10 @@ SCIP_RETCODE SCIPlpiGetCols(
       lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
-   rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, nnonz ? (&lcnt) : 0, nnonz ? (&lbeg) : 0, nnonz ? (&lind) : 0,
-      nnonz ? (&lval) : 0, 0, lb ? (&llb) : 0, lb ? (&lub) : 0, 0);
+   if ( nnonz != NULL )
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, &lcnt, &lbeg, &lind, &lval, 0, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
+   else
+      rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, NULL, NULL, NULL, NULL, lb ? (&llb) : NULL, ub ? (&lub) : NULL, 0);
 
    QS_TESTG(rval, CLEANUP, " ");
 
@@ -1548,7 +1548,7 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(beg != NULL && ind != NULL && val != NULL); /* for lint */
 
-      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      if( lcnt == NULL || lbeg == NULL || lind == NULL || lval == NULL )
       {
          SCIPerrorMessage("QSget_columns_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1563,6 +1563,7 @@ SCIP_RETCODE SCIPlpiGetCols(
          val[i] = lval[i];
       }
    }
+
    if( lb != NULL )
    {
       assert( ub != NULL ); /* for lint */
@@ -1638,8 +1639,11 @@ SCIP_RETCODE SCIPlpiGetRows(
       lpi->ircnt[i] = i + firstrow;
 
    /* get data from qsopt */
-   rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, nnonz ? (&lcnt) : 0, nnonz ? (&lbeg) : 0, nnonz ? (&lind) : 0,
-      nnonz ? (&lval) : 0, rhs ? (&lrhs) : 0, rhs ? (&lsense) : 0, rhs ? (&lrng) : 0, 0);
+   if ( nnonz != NULL )
+      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, &lcnt, &lbeg, &lind, &lval, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, 0);
+   else
+      rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, NULL, NULL, NULL, NULL, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, 0);
+
    QS_TESTG(rval, CLEANUP, " ");
 
    /* store in the user-provided data */
@@ -1647,7 +1651,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       assert( beg != NULL && ind != NULL && val != NULL ); /* for lint */
 
-      if( lbeg == NULL || lind == NULL || lval == NULL || lcnt == NULL )
+      if( lcnt == NULL || lbeg == NULL || lind == NULL || lval == NULL )
       {
          SCIPerrorMessage("QSget_ranged_rows_list() failed to allocate memory.\n");
          return SCIP_LPERROR;
@@ -1662,6 +1666,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          val[i] = lval[i];
       }
    }
+
    if( rhs != NULL )
    {
       if( lrhs == NULL || lrng == NULL || lsense == NULL )
