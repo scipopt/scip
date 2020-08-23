@@ -720,7 +720,13 @@ SCIP_RETCODE reduce_sdRepair(
 
    SCIP_CALL( graph_tpathsRepair(scip, edge, g, (sd->terminalpaths)) );
 
-   // todo rebuild sd tree
+   if( reduce_sdgraphEdgeIsInMst(sd->sdgraph, edge) )
+   {
+      reduce_sdgraphFree(scip, &(sd->sdgraph));
+
+      SCIP_CALL( reduce_sdgraphInit(scip, g, &(sd->sdgraph)) );
+      reduce_sdgraphInitOrderedMstCosts(sd->sdgraph);
+   }
 
    return SCIP_OKAY;
 }

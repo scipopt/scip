@@ -1467,6 +1467,22 @@ SCIP_Bool reduce_sdgraphHasMstHalfMark(
    return FALSE;
 }
 
+
+/** is edge in current SD MST? */
+SCIP_Bool reduce_sdgraphEdgeIsInMst(
+   const SDGRAPH*        sdgraph,            /**< the SD graph */
+   int                   edge                /**< edge */
+)
+{
+   assert(sdgraph);
+   assert(reduce_sdgraphHasMstHalfMark(sdgraph));
+   assert(sdgraph->halfedge_isInMst);
+   assert(edge >= 0);
+
+   return sdgraph->halfedge_isInMst[edge / 2];
+}
+
+
 /** MST costs in descending order available? */
 SCIP_Bool reduce_sdgraphHasOrderedMstCosts(
    const SDGRAPH*         sdgraph             /**< the SD graph */
