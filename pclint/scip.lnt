@@ -22,6 +22,9 @@
 // underlying type for enum is always int
 +fei
 
+// do not attribute responsibility for last write in callee to caller (this avoids frequent warnings if returned values are not used)
+-fcw
+
 // turn off the following warning, because this often arises from old lint versions
 -e72
 
