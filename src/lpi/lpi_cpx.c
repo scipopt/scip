@@ -360,10 +360,10 @@ SCIP_RETCODE setBase(
    CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, lpi->cstat, lpi->rstat) );
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !506*/
-   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !506*/
-   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !506*/
-   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !506*/
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !e506*/
 
    return SCIP_OKAY;
 }
@@ -1092,8 +1092,8 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    int restat;
 
-   assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */ /*lint !506*/
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */ /*lint !506*/
+   assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */ /*lint !e506*/
+   assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */ /*lint !e506*/
    assert(lpi != NULL);
    assert(name != NULL);
 
@@ -3550,10 +3550,10 @@ SCIP_RETCODE SCIPlpiGetBase(
    }
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !506*/
-   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !506*/
-   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !506*/
-   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !506*/
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !e506*/
 
    return SCIP_OKAY;
 }
@@ -3585,10 +3585,10 @@ SCIP_RETCODE SCIPlpiSetBase(
    invalidateSolution(lpi);
 
    /* because the basis status values are equally defined in SCIP and CPLEX, they don't need to be transformed */
-   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !506*/
-   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !506*/
-   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !506*/
-   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !506*/
+   assert((int)SCIP_BASESTAT_LOWER == CPX_AT_LOWER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_BASIC == CPX_BASIC); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER); /*lint !e506*/
+   assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER); /*lint !e506*/
 
    /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
     * the slack is 0, i.e., the upper bound is tight. */
