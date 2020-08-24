@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,9 +36,6 @@ extern "C" {
 /** constraint data structure */
 struct SCIP_Cons
 {
-#ifndef NDEBUG
-   SCIP*                 scip;               /**< SCIP data structure */
-#endif
    SCIP_Real             age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    char*                 name;               /**< name of the constraint */
    SCIP_CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */
@@ -100,6 +97,9 @@ struct SCIP_Cons
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
    unsigned int          nupgradelocks:28;   /**< number of times, a constraint is locked against an upgrade
                                               *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
+#ifndef NDEBUG
+   SCIP*                 scip;               /**< SCIP data structure */
+#endif
 };
 
 /** tracks additions and removals of the set of active constraints */

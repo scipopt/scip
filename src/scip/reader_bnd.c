@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -134,8 +134,8 @@ SCIP_RETCODE readBounds(
 
       SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
 
-      /* cppcheck-suppress invalidscanf */
-      nread = sscanf(endptr, "%s %s\n", lbstring, ubstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(endptr, format, lbstring, ubstring);
       if( nread < 1 )
       {
          SCIPerrorMessage("invalid input line %d in bounds file <%s>: <%s>\n", lineno, fname, buffer);

@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3444,7 +3444,7 @@ static CREATE_CONSTRAINT((*constypes[])) =  {
 };
 
 /** size of the function pointer array */
-static int nconstypes = 7;
+static const int nconstypes = 7;
 
 
 /** parse constraint expression */
@@ -3967,6 +3967,7 @@ SCIP_RETCODE appendBuffer(
    )
 {
    int newpos;
+   int extlen;
 
    assert( scip != NULL );
    assert( buffer != NULL );
@@ -3975,16 +3976,17 @@ SCIP_RETCODE appendBuffer(
    assert( extension != NULL );
 
    /* avoid overflow by reallocation */
-   newpos = (*bufferpos) + (int)strlen(extension);
+   extlen = (int)strlen(extension);
+   newpos = (*bufferpos) + extlen;
    if( newpos >= (*bufferlen) )
    {
-      *bufferlen = MAX( newpos, 2*(*bufferlen) );
+      *bufferlen = MAX( newpos, 2 * (*bufferlen) );
 
       SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)));
    }
 
-   /* append extension to linebuffer - safe to use strcpy */
-   (void)SCIPstrncpy((*buffer) + (*bufferpos), extension, (int)strlen(extension));
+   /* append extension to linebuffer (+1 because of '\0') */
+   (void)SCIPstrncpy((*buffer) + (*bufferpos), extension, extlen + 1);
    *bufferpos = newpos;
 
    return SCIP_OKAY;

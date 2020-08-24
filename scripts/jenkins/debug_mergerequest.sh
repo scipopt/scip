@@ -106,7 +106,8 @@ fi
 
 export CRITERION_DIR=""
 export BLISS_DIR=/nfs/OPTI/bzfgleix/software/bliss-0.73p-Ubuntu18.04
-export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+#export IPOPT_DIR=/nfs/optimi/usr/sw/ipopt-static
+export IPOPT_DIR=/nfs/optimi/usr/sw/Ipopt-3.12.13-static-build
 export ZIMPL_DIR=/nfs/OPTI/jenkins/workspace/ZIMPL_monthly/build-gnu-Release/
 
 ###################
@@ -120,7 +121,7 @@ BUILD_DIR=scipoptcpx_${GITBRANCH}_${RANDOMSEED}
 mkdir -p ${BUILD_DIR}
 cd ${BUILD_DIR}
 
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DLPS=cpx -LA
 make -j4
 cd ..
 

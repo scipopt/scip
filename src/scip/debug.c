@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -935,6 +935,16 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       return SCIP_OKAY;
 
+   /* skip unused relaxation-only variables
+    * Relaxation-only variables are not part of any constraints or the original problem and thus there is no need to check their solution value.
+    * However, for relaxation-only variables that are still in use for the current solve round and for which a debug solution value has been set,
+    * checking against the debug solution value is helpful. If they not in use anymore, they will be captured only by the transformed problem
+    * and they may get fixed to some arbitrary value, e.g., in dual fixing.
+    * Thus, we skip checking bound changes on unused relaxation-only variables.
+    */
+   if( SCIPvarIsRelaxationOnly(var) && SCIPvarGetNUses(var) == 1 )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
@@ -974,6 +984,10 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
       return SCIP_OKAY;
 
    if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
+   /* skip unused relaxation-only variables, see also comment in SCIPdebugCheckLbGlobal() */
+   if( SCIPvarIsRelaxationOnly(var) && SCIPvarGetNUses(var) == 1 )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */

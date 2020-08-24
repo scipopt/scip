@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -198,7 +198,7 @@ int setppcCompare(
    assert(SCIPconsIsActive(cons2));
 
    /* the partitioning type should be the smallest value and the packing the second smallest */
-   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING);
+   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING); /*lint !e506*/
 
    consdata1 = SCIPconsGetData(cons1);
    assert(consdata1 != NULL);
@@ -267,7 +267,7 @@ int setppcCompare2(
    assert(consdata2 != NULL);
 
    /* the partitioning type should be the smallest value and the packing the second smallest */
-   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING && SCIP_SETPPCTYPE_PACKING < SCIP_SETPPCTYPE_COVERING);
+   assert(SCIP_SETPPCTYPE_PARTITIONING < SCIP_SETPPCTYPE_PACKING && SCIP_SETPPCTYPE_PACKING < SCIP_SETPPCTYPE_COVERING); /*lint !e506*/
 
    if( consdata1->setppctype < consdata2->setppctype ||
       ((SCIP_SETPPCTYPE)consdata1->setppctype != SCIP_SETPPCTYPE_COVERING &&
@@ -3455,7 +3455,7 @@ SCIP_RETCODE presolvePropagateCons(
       /* we should never be here, because the last to unfixed variables should have been either aggregated or a cutoff
        * should be applied
        */
-      assert(FALSE);
+      assert(FALSE); /*lint !e506*/
    }
 
    return SCIP_OKAY;

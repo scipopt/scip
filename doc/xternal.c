@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,7 +41,7 @@
  * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
  * - is a framework for branch-and-cut-and-price.
  *
- * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
+ * See the web site of <a href="http://scipopt.org">\SCIP</a> for more information about licensing and to download \SCIP.
  *
  *
  * @section TABLEOFCONTENTS Structure of this manual
@@ -58,6 +58,7 @@
  *  - @subpage FAQ                 Frequently asked questions (FAQ)
  *  - @subpage CHG                 Release notes and changelog
  *  - @subpage AUTHORS             SCIP Authors
+ *  - @subpage EXTERNALDOC         Links to external documentation
  *
  *
  * @section QUICKSTART Quickstart
@@ -76,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.0.2
+ * @version  7.0.1.3
  *
  * \image html scippy.png
  */
@@ -230,7 +231,13 @@
  *
  * A list of all current and former developers as well as contributors can
  * be found on the
- * <a class="el" href="http://scip.zib.de/#developers">Main Web Page</a>.
+ * <a class="el" href="http://scipopt.org/#developers">Main Web Page</a>.
+ *
+ */
+
+/**@page EXTERNALDOC  Links to external documentation
+ *
+ * <a class="el" href="https://www.cgudapati.com/integer-programming/2019/12/15/Getting-Started-With-SCIP-Optimization-Suite.html">Getting Started with SCIP optimization in C++: A toy example</a> by Chaitanya Gudapati.
  *
  */
 
@@ -239,6 +246,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
  * - \subpage RN50         "SCIP 5.0"
  * - \subpage RN40         "SCIP 4.0"
@@ -349,7 +357,6 @@
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
  *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
- *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
  *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated in the file formats
@@ -462,7 +469,7 @@
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
  *    </td>
- *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
+ *    <td colspan="3"> see the <a href="http://polyscipopt.org/">PolySCIP web page</a></td>
  * </tr>
  * <tr>
  *    <td>Mixed-integer semidefinite program (MISDP)</td>
@@ -804,8 +811,6 @@
  * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
  *
  * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
- *
- * - <code>GAMS=\<true|false\></code> Enable or disable (default) reading functionality in GAMS reader (needs GAMS).
  *
  * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal \SCIP block and buffer memory off or on (default).
  *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
@@ -1265,12 +1270,12 @@
  * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
+ * href="http://scipopt.org/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
- * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
+ * If you want to download a precompiled binary, go to the <a href="http://scipopt.org/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
  * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib2010.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
@@ -7645,8 +7650,8 @@
   * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
   * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
   * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
-  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
+  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface is available <a
+  * href="https://github.com/coin-or/GAMSlinks">here</a>.
   *
   * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
   * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
@@ -7878,7 +7883,6 @@
  * @ingroup PublicSolveMethods
  * @brief methods for reoptimization related tasks
  */
-
 
 /** @defgroup DataStructures Data Structures
  *  @ingroup PUBLICCOREAPI
@@ -8228,7 +8232,6 @@
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
  * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
- * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>
@@ -8261,6 +8264,11 @@
  * @ingroup INTERNALAPI
  * @brief headers and methods for the parallel interface of \SCIP
  *
+ */
+
+/**@defgroup PublicSymmetryMethods Symmetry
+ * @ingroup INTERNALAPI
+ * @brief methods for symmetry handling
  */
 
 /**@defgroup EXPRINTS Expression Interpreter

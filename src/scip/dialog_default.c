@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2410,6 +2410,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    char charval;
    SCIP_Bool endoffile;
    SCIP_Bool error;
+   SCIP_RETCODE retcode;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2443,8 +2444,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          assert(SCIPisBoolParamValid(scip, param, boolval));
 
-         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         retcode = SCIPchgBoolParam(scip, param, boolval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for bool parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), SCIPparamGetBool(param) ? "TRUE" : "FALSE");
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
 
@@ -2471,8 +2482,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgIntParam(scip, param, intval) );
-         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
+         retcode = SCIPchgIntParam(scip, param, intval);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for int parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), SCIPparamGetInt(param));
       }
 
       break;
@@ -2498,8 +2520,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgLongintParam(scip, param, longintval) );
-         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
+         retcode = SCIPchgLongintParam(scip, param, longintval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for longint parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param),
+            SCIPparamGetLongint(param));
       }
       break;
 
@@ -2524,8 +2557,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgRealParam(scip, param, realval) );
-         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
+         retcode = SCIPchgRealParam(scip, param, realval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for real parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
       }
       break;
 
@@ -2550,8 +2593,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgCharParam(scip, param, charval) );
-         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
+         retcode = SCIPchgCharParam(scip, param, charval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for char parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), SCIPparamGetChar(param));
       }
       break;
 
@@ -2568,14 +2621,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if ( !SCIPisStringParamValid(scip, param, valuestr) )
+      if( !SCIPisStringParamValid(scip, param, valuestr) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid character in string parameter.\n\n");
       }
       else
       {
-         SCIP_CALL( SCIPchgStringParam(scip, param, valuestr) );
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
+         retcode = SCIPchgStringParam(scip, param, valuestr);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for string parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), SCIPparamGetString(param));
       }
       break;
 

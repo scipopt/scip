@@ -109,6 +109,7 @@ extern "C" {
  * large size_t values. This is then checked within the functions. */
 
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocClearMemory(ptr)              ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
 #define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 #define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
@@ -304,7 +305,7 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSduplicateChunkMemory(mem, ptr, source) ASSIGN((ptr), BMSduplicateChunkMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSfreeChunkMemory(mem,ptr)           BMSfreeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
-#define BMSfreeChunkMemoryNull(mem,ptr)       BMSfreeChunkMemoryNull_call( (mem), (void**)(ptr) )
+#define BMSfreeChunkMemoryNull(mem,ptr)       BMSfreeChunkMemoryNull_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSgarbagecollectChunkMemory(mem)     BMSgarbagecollectChunkMemory_call(mem)
 #define BMSgetChunkMemoryUsed(mem)            BMSgetChunkMemoryUsed_call(mem)
 
@@ -441,6 +442,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdestroyBlockMemory(mem)            BMSdestroyBlockMemory_call( (mem), __FILE__, __LINE__ )
 
 #define BMSallocBlockMemory(mem,ptr)          ASSIGN((ptr), BMSallocBlockMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocClearBlockMemory(mem,ptr)     ASSIGN((ptr), BMSallocClearBlockMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
 #define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemoryArray_call((mem), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSallocClearBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBlockMemoryArray_call((mem), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
@@ -481,6 +483,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdestroyBlockMemory(mem)                           SCIP_UNUSED(mem)
 #define BMSdestroyBlockMemoryNull(mem)                       SCIP_UNUSED(mem)
 #define BMSallocBlockMemory(mem,ptr)                         (SCIP_UNUSED(mem), BMSallocMemory(ptr))
+#define BMSallocClearBlockMemory(mem,ptr)                    (SCIP_UNUSED(mem), BMSallocClearMemory(ptr))
 #define BMSallocBlockMemoryArray(mem,ptr,num)                (SCIP_UNUSED(mem), BMSallocMemoryArray(ptr,num))
 #define BMSallocClearBlockMemoryArray(mem,ptr,num)           (SCIP_UNUSED(mem), BMSallocClearMemoryArray(ptr,num))
 #define BMSallocBlockMemorySize(mem,ptr,size)                (SCIP_UNUSED(mem), BMSallocMemorySize(ptr,size))
@@ -537,6 +540,15 @@ void BMSdestroyBlockMemory_call(
 /** allocates memory in the block memory pool */
 SCIP_EXPORT
 void* BMSallocBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** allocates memory in the block memory pool and clears it */
+SCIP_EXPORT
+void* BMSallocClearBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    size_t                size,               /**< size of memory element to allocate */
    const char*           filename,           /**< source file of the function call */

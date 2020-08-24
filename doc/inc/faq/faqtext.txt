@@ -8,7 +8,7 @@ SECTION: General Questions about SCIP
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
-      <li>You can use the <a href="http://scip.zib.de/#download">precompiled binaries</a>
+      <li>You can use the <a href="http://scipopt.org/#download">precompiled binaries</a>
           to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
           and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
@@ -36,7 +36,7 @@ SECTION: General Questions about SCIP
     <p>
       As long as you use it for academic, non-commercial purposes: No.
       This will not change. For the other cases, check the explanation of the
-      <a href="http://scip.zib.de/#license">ZIB academic license</a> and always feel free to ask us.
+      <a href="http://scipopt.org/#license">ZIB academic license</a> and always feel free to ask us.
       If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
     </p>
 
@@ -46,7 +46,7 @@ SECTION: General Questions about SCIP
     <p>
       An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
       For that, you just have to use one of the installers from the
-      <a href="http://scip.zib.de/#download">download section</a>, or the zipped source code and compile it
+      <a href="http://scipopt.org/#download">download section</a>, or the zipped source code and compile it
       with your favorite settings.
       Note that the coding examples are only contained in the source code bundle, but not in the precompiled packages.
       The compilation from source is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
@@ -89,7 +89,7 @@ SECTION: General Questions about SCIP
       Besides that, you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
       Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
-      and the source code bundle of all versions <a href="http://scip.zib.de/#download">here</a>.
+      and the source code bundle of all versions <a href="http://scipopt.org/#download">here</a>.
     </p>
 
     QUESTION: How can I build/compile SCIP?
@@ -136,7 +136,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       Read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
-      the precompiled binaries by choosing one of the available installers from the <a href="http://scip.zib.de#download">SCIP page</a> for your operating system.<br>
+      the precompiled binaries by choosing one of the available installers from the <a href="http://scipopt.org#download">SCIP page</a> for your operating system.<br>
     </p>
     <p>
       If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
@@ -166,7 +166,7 @@ SECTION: General Questions about SCIP
     <p>
        <a href="#howtodebug">See above.</a> Often, the asserts that show up in debug mode already help to clarify misunderstandings
        and suggest fixes, if you were calling SCIP functions in an unexpected manner. For sending bug reports,
-       please see our <a href="scip.zib.de/#contact">Contact information</a> from which you can directly access an online form for reporting bugs.
+       please see our <a href="scipopt.org/#contact">Contact information</a> from which you can directly access an online form for reporting bugs.
     </p>
 
     QUESTION: I would like to check whether some functionality is implemented in SCIP.

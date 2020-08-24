@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -748,16 +748,12 @@ SCIP_RETCODE addScenariosToReaderdata(
    int                   numscenariostages   /**< the number of stages for which scenarios were collected */
    )
 {
-   int numstages;                  /* the number of stages */
    int i;
 
    assert(scip != NULL);
    assert(readerdata != NULL);
    assert(scenarios != NULL);
-
-   numstages = SCIPtimGetNStages(scip);
-   if( numstages != numscenariostages + 1 )
-      assert(FALSE);
+   assert(numscenariostages == SCIPtimGetNStages(scip) - 1);
 
    SCIP_CALL( buildScenarioTree(scip, &readerdata->scenariotree, scenarios, numscenarios, numscenariostages, 0) );
 
