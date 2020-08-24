@@ -1740,34 +1740,33 @@ SCIP_RETCODE isAcceptableRow(
    return SCIP_OKAY;
 }
 
-/** adds an auxiliary expression (coef*linexpr) for a product term to the cut */
+/** computes coefficients of an auxiliary expression (coef*auxexpr) for a product term */
 static
-SCIP_RETCODE addAuxexprToRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             cut,                /**< cut to add the linearisation to */
-   SCIP_VAR*             x,                  /**< first product variable */
-   SCIP_VAR*             y,                  /**< second product variable */
+void addAuxexprToRow(
+   SCIP_VAR*             var1,               /**< first product variable */
+   SCIP_VAR*             var2,               /**< second product variable */
    SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to be added */
    SCIP_Real             coef,               /**< coefficient of the linearisation */
+   SCIP_Real*            coefaux,            /**< coefficient of the auxiliary variable */
+   SCIP_Real*            coef1,              /**< coefficient of the first variable */
+   SCIP_Real*            coef2,              /**< coefficient of the second variable */
    SCIP_Real*            finalside           /**< buffer that stores the side of the cut */
 )
 {
    assert(auxexpr->auxvar != NULL);
 
-   /* make sure we have x and y in the correct order */
-   if( SCIPvarCompare(x, y) == 1 )
+   *coefaux += auxexpr->coefs[0] * coef;
+   if( SCIPvarCompare(var1, var2) < 1 )
    {
-      SCIPswapPointers((void**)&x, (void**)&y);
+      *coef1 += auxexpr->coefs[1] * coef;
+      *coef2 += auxexpr->coefs[2] * coef;
    }
-   assert(SCIPvarCompare(x, y) < 1);
-
-   SCIP_CALL( SCIPaddVarToRow(scip, cut, auxexpr->auxvar, auxexpr->coefs[0] * coef) );
-   SCIP_CALL( SCIPaddVarToRow(scip, cut, x, auxexpr->coefs[1] * coef) );
-   SCIP_CALL( SCIPaddVarToRow(scip, cut, y, auxexpr->coefs[2] * coef) );
-
+   else
+   {
+      *coef1 += auxexpr->coefs[2] * coef;
+      *coef2 += auxexpr->coefs[1] * coef;
+   }
    *finalside += coef * auxexpr->cst;
-
-   return SCIP_OKAY;
 }
 
 /* add a linearisation of term coef*colvar*var to cut
@@ -1801,9 +1800,11 @@ SCIP_RETCODE addRltTerm(
    SCIP_Real boundfactor;
    SCIP_Real coefauxvar;
    SCIP_Real coefcolvar;
+   SCIP_Real coefterm;
    int linpos;
    int idx;
    SCIP_CONSEXPR_BILINTERM* terms;
+   SCIP_VAR* auxvar;
 
    terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
@@ -1815,8 +1816,12 @@ SCIP_RETCODE addRltTerm(
    signfactor = (uselb ? 1.0 : -1.0);
    boundfactor = (uselb ? -lbvar : ubvar);
 
-   coefauxvar = coef * signfactor;
+   coefterm = coef * signfactor;
    coefcolvar = coef * boundfactor;
+   coefauxvar = 0.0;
+   auxvar = NULL;
+
+   assert(!SCIPisInfinity(scip, REALABS(coefterm)));
 
    idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, colvar);
    linpos = -1;
@@ -1829,7 +1834,7 @@ SCIP_RETCODE addRltTerm(
          assert(sepadata->eqlinexpr[idx] >= 0);
          linpos = sepadata->eqlinexpr[idx];
       }
-      else if( (uselhs && coefauxvar > 0) || (!uselhs && coefauxvar < 0) )
+      else if( (uselhs && coefterm > 0) || (!uselhs && coefterm < 0) )
       { /* use an overestimator */
          linpos = bestoverest[idx];
       }
@@ -1846,18 +1851,18 @@ SCIP_RETCODE addRltTerm(
    {
       SCIPdebugMsg(scip, "linearisation for %s and %s found, will be added to cut:\n",
                           SCIPvarGetName(colvar), SCIPvarGetName(var));
-      assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
-      SCIP_CALL( addAuxexprToRow(scip, cut, var, colvar, terms[idx].auxexprs[linpos], coefauxvar, finalside) );
+      addAuxexprToRow(var, colvar, terms[idx].auxexprs[linpos], coefterm, &coefauxvar, coefvar, &coefcolvar, finalside);
+      auxvar = terms[idx].auxexprs[linpos]->auxvar;
    }
    /* for an existing term, use the auxvar if there is one */
    else if( idx >= 0 && terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
    {
       SCIPdebugMsg(scip, "auxvar for %s and %s found, will be added to cut:\n",
                    SCIPvarGetName(colvar), SCIPvarGetName(var));
-      assert(!SCIPisInfinity(scip, REALABS(coefauxvar)));
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, terms[idx].auxvar, coefauxvar) );
+      coefauxvar += coefterm;
+      auxvar = terms[idx].auxvar;
    }
-   /* otherwise, use the McCormick estimator in place of the bilinear term */
+   /* otherwise, use clique information or the McCormick estimator in place of the bilinear term */
    else if( colvar != var )
    {
       SCIP_Bool found_clique = FALSE;
@@ -1875,7 +1880,7 @@ SCIP_RETCODE addRltTerm(
 
       SCIPdebugMsg(scip, "auxvar for %s and %s not found, will linearise the product\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
 
-      /* if both variables are binary. check if they are contained together in some clique */
+      /* if both variables are binary, check if they are contained together in some clique */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&  SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
       {
          int c;
@@ -1895,7 +1900,7 @@ SCIP_RETCODE addRltTerm(
 
             if( SCIPcliqueHasVar(varcliques[c], colvar, FALSE) ) /* var + (1-colvar) <= 1 => var*colvar = var */
             {
-               *coefvar += coefauxvar;
+               *coefvar += coefterm;
                found_clique = TRUE;
                break;
             }
@@ -1910,16 +1915,16 @@ SCIP_RETCODE addRltTerm(
             {
                if( SCIPcliqueHasVar(varcliques[c], colvar, TRUE) ) /* (1-var) + colvar <= 1 => var*colvar = colvar */
                {
-                  coefcolvar += coefauxvar;
+                  coefcolvar += coefterm;
                   found_clique = TRUE;
                   break;
                }
 
                if( SCIPcliqueHasVar(varcliques[c], colvar, FALSE) ) /* (1-var) + (1-colvar) <= 1 => var*colvar = var + colvar - 1 */
                {
-                  *coefvar += coefauxvar;
-                  coefcolvar += coefauxvar;
-                  *finalside -= coefauxvar;
+                  *coefvar += coefterm;
+                  coefcolvar += coefterm;
+                  *finalside -= coefterm;
                   found_clique = TRUE;
                   break;
                }
@@ -1930,7 +1935,7 @@ SCIP_RETCODE addRltTerm(
       if( !found_clique )
       {
          SCIPdebugMsg(scip, "clique for %s and %s not found or at least one of them is not binary, will use McCormick\n", SCIPvarGetName(colvar), SCIPvarGetName(var));
-         SCIPaddBilinMcCormick(scip, coefauxvar, lbvar, ubvar, refpointvar, lbcolvar,
+         SCIPaddBilinMcCormick(scip, coefterm, lbvar, ubvar, refpointvar, lbcolvar,
             ubcolvar, refpointcolvar, uselhs, coefvar, &coefcolvar, finalside, success);
          if( !*success )
             return SCIP_OKAY;
@@ -1947,19 +1952,26 @@ SCIP_RETCODE addRltTerm(
       /* for a binary var, var^2 = var */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
-         *coefvar += coefauxvar;
+         *coefvar += coefterm;
       }
       else
       {
          /* depending on over-/underestimation and the sign of the column variable, compute secant or tangent */
-         if( (uselhs && coefauxvar > 0.0) || (!uselhs && coefauxvar < 0.0) )
-            SCIPaddSquareSecant(scip, coefauxvar, lbvar, ubvar, coefvar, finalside, success);
+         if( (uselhs && coefterm > 0.0) || (!uselhs && coefterm < 0.0) )
+            SCIPaddSquareSecant(scip, coefterm, lbvar, ubvar, coefvar, finalside, success);
          else
-            SCIPaddSquareLinearization(scip, coefauxvar, refpointvar, SCIPvarIsIntegral(var), coefvar, finalside, success);
+            SCIPaddSquareLinearization(scip, coefterm, refpointvar, SCIPvarIsIntegral(var), coefvar, finalside, success);
 
          if( !*success )
             return SCIP_OKAY;
       }
+   }
+
+   /* add the auxiliary variable if its coefficient is nonzero */
+   if( !SCIPisZero(scip, coefauxvar) )
+   {
+      assert(auxvar != NULL);
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, coefauxvar) );
    }
 
    /* add the linear term for this column */
@@ -3008,6 +3020,7 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_Real auxval;
    SCIP_Real xcoef;
    SCIP_Real ycoef;
+   SCIP_Real auxcoef;
    SCIP_Real constant;
    SCIP_Bool success;
    SCIP_CONSEXPR_AUXEXPR* auxexpr;
@@ -3071,11 +3084,12 @@ SCIP_RETCODE separateMcCormickImplicit(
 
          xcoef = 0.0;
          ycoef = 0.0;
+         auxcoef = 0.0;
          constant = 0.0;
          success = TRUE;
 
          /* subtract auxexpr from the cut */
-         SCIP_CALL( addAuxexprToRow(scip, cut, terms[i].x, terms[i].y, auxexpr, -1.0, &constant) );
+         addAuxexprToRow(terms[i].x, terms[i].y, auxexpr, -1.0, &auxcoef, &xcoef, &ycoef, &constant);
 
          /* add McCormick terms: ask for an overestimator if relation is auxexpr <= x*y, and vice versa */
          SCIPaddBilinMcCormick(scip, 1.0, bndx.inf, bndx.sup, refpointx, bndy.inf, bndy.sup, refpointy, underestimate,
@@ -3092,6 +3106,7 @@ SCIP_RETCODE separateMcCormickImplicit(
 
             SCIP_CALL( SCIPaddVarToRow(scip, cut, terms[i].x, xcoef) );
             SCIP_CALL( SCIPaddVarToRow(scip, cut, terms[i].y, ycoef) );
+            SCIP_CALL( SCIPaddVarToRow(scip, cut, auxexpr->auxvar, auxcoef) );
 
             /* set side */
             if( underestimate )
