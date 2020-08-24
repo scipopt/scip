@@ -211,13 +211,6 @@ SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
-/** changes the default value of an existing SCIP_Bool parameter */
-SCIP_RETCODE SCIPparamsetSetDefaultBool(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   const char*           name,               /**< name of the parameter */
-   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
-   );
-
 /** changes the value of an existing int parameter */
 SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -225,13 +218,6 @@ SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    int                   value               /**< new value of the parameter */
-   );
-
-/** changes the default value of an existing int parameter */
-SCIP_RETCODE SCIPparamsetSetDefaultInt(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   const char*           name,               /**< name of the parameter */
-   int                   defaultvalue        /**< new default value of the parameter */
    );
 
 /** changes the value of an existing SCIP_Longint parameter */
@@ -268,6 +254,48 @@ SCIP_RETCODE SCIPparamsetSetString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           name,               /**< name of the parameter */
    const char*           value               /**< new value of the parameter */
+   );
+
+/** changes the default value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   );
+
+/** changes the default value of an existing int parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
+   );
+
+/** changes the default value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          defaultvalue        /**< new default value of the parameter */
+   );
+
+/** changes the default value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             defaultvalue        /**< new default value of the parameter */
+   );
+
+/** changes the default value of an existing char parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char                  defaultvalue        /**< new default value of the parameter */
+   );
+
+/** changes the default value of an existing string parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   const char*           defaultvalue        /**< new default value of the parameter */
    );
 
 /** reads parameters from a file */
@@ -499,6 +527,30 @@ void SCIPparamSetDefaultBool(
 void SCIPparamSetDefaultInt(
    SCIP_PARAM*           param,              /**< parameter */
    int                   defaultvalue        /**< new default value */
+   );
+
+/** sets default value of SCIP_Longint parameter */
+void SCIPparamSetDefaultLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          defaultvalue        /**< new default value */
+   );
+
+/** sets default value of SCIP_Real parameter */
+void SCIPparamSetDefaultReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             defaultvalue        /**< new default value */
+   );
+
+/** sets default value of char parameter */
+void SCIPparamSetDefaultChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   char                  defaultvalue        /**< new default value */
+   );
+
+/** sets default value of string parameter */
+void SCIPparamSetDefaultString(
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           defaultvalue        /**< new default value */
    );
 
 /** sets the parameter to its default setting */

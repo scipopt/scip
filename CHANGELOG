@@ -14,6 +14,7 @@ Features
 Performance improvements
 ------------------------
 
+- Use the objective cutoff row as base row for separation in sepa_aggregation.c
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 
@@ -36,6 +37,11 @@ Interface changes
 
 - added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
   that is initialized to zeros
+- New internal functions for changing the default values of parameters:
+    SCIPparamsetSetDefaultLongint(), SCIPparamsetSetDefaultReal(), SCIPparamsetSetDefaultChar(),
+    SCIPparamsetSetDefaultString() and
+    SCIPparamSetDefaultLongint(), SCIPparamSetDefaultReal(), SCIPparamSetDefaultChar(),
+    SCIPparamSetDefaultString()
 
 ### Command line interface
 ### Interfaces to external software
@@ -106,6 +112,8 @@ Known bugs
 Features
 --------
 
+- Extended check for valid variable and constraint names in PIP writer.
+
 Performance improvements
 ------------------------
 
@@ -161,6 +169,9 @@ Fixed bugs
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
+- Fixed potential indexing error in prop_vbounds.c
+- Fixed bug in writing fzn format
+- Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 
 Miscellaneous
 -------------
