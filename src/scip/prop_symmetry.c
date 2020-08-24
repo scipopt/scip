@@ -712,10 +712,13 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
 
-   /* release variables if the leader type is not binary */
-   if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
+   /* release variables */
+   if ( propdata->nonbinpermvarcaptured != NULL )
    {
       int cnt;
+
+      /* memory should have been allocated only if the leader type is not binary */
+      assert( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY );
 
       for (i = propdata->nbinpermvars, cnt = 0; i < propdata->npermvars; ++i, ++cnt)
       {
