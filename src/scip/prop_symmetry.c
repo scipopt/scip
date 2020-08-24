@@ -3545,6 +3545,21 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL) );
    }
 
+   /* guarantee that symmetries are computed even if presolving is diabled */
+   if ( propdata->ofenabled && propdata->ofsymcomptiming <= 1 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   {
+      /* otherwise compute symmetry if timing requests it */
+      if ( propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
+   }
+
    return SCIP_OKAY;
 }
 
