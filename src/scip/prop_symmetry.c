@@ -3197,6 +3197,7 @@ SCIP_RETCODE isAcyclicGraph(
 
    SCIPfreeBufferArray(scip, &pred);
    SCIPfreeBufferArray(scip, &visited);
+   SCIPqueueFree(&queue);
 
    *result =  TRUE;
    return SCIP_OKAY;
