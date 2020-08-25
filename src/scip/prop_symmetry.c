@@ -4460,7 +4460,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             if ( ! propdata->componentblocked[i] )
             {
                propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
-               ++propdata->componentblocked;
+               ++propdata->ncompblocked;
             }
 
             SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d adapted to suborbitope lexorder\n", k, i);
