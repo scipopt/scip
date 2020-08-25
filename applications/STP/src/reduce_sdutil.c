@@ -732,6 +732,21 @@ SCIP_RETCODE reduce_sdRepair(
 }
 
 
+/** sets up SD repairing mechanism */
+SCIP_RETCODE reduce_sdRepairSetUp(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph */
+   SD*                   sd                  /**< to be repaired */
+)
+{
+   assert(scip && g && sd);
+
+   SCIP_CALL(  graph_tpathsRepairSetUp(g, sd->terminalpaths) );
+
+   return SCIP_OKAY;
+}
+
+
 /** adds biased neighbor SD structure */
 SCIP_RETCODE reduce_sdAddNeighborSd(
    SCIP*                 scip,               /**< SCIP */

@@ -340,6 +340,73 @@ SCIP_RETCODE testTerminalPathsRepair3(
    return SCIP_OKAY;
 }
 
+
+/** tests that SD is repaired properly */
+static
+SCIP_RETCODE testSdRepair(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SD* sd;
+   GRAPH* graph;
+   int nnodes = 7;
+   int nedges = 22;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 4;
+   graph_knot_chg(graph, 4, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 6, STP_TERM);
+
+   graph_edge_addBi(scip, graph, 0, 4, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 5, 3.0); // 2
+   graph_edge_addBi(scip, graph, 1, 4, 1.1); // 4
+   graph_edge_addBi(scip, graph, 2, 5, 2.2); // 6
+   graph_edge_addBi(scip, graph, 3, 5, 2.3); // 8
+   graph_edge_addBi(scip, graph, 4, 5, 1.0); // 10
+   graph_edge_addBi(scip, graph, 1, 5, 1.3); // 12
+   graph_edge_addBi(scip, graph, 2, 6, 2.2); // 14
+   graph_edge_addBi(scip, graph, 0, 6, 2.4); // 16
+   graph_edge_addBi(scip, graph, 5, 6, 2.0); // 18
+   graph_edge_addBi(scip, graph, 1, 0, 2.0); // 20
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( reduce_sdInit(scip, graph, &sd) );
+   SCIP_CALL( reduce_sdRepairSetUp(scip, graph, sd) );
+
+
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 0, 3, FARAWAY, 0.0, sd), 2.3));
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 1, 2, FARAWAY, 0.0, sd), 2.2));
+
+   SCIP_CALL( reduce_sdRepair(scip, 0, graph, sd) );
+   graph_edge_del(scip, graph, 0, TRUE);
+
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 0, 3, FARAWAY, 0.0, sd), 2.4));
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 1, 2, FARAWAY, 0.0, sd), 2.2));
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 0, 3, FARAWAY, 0.0, sd), 2.4));
+
+   SCIP_CALL( reduce_sdRepair(scip, 4, graph, sd) );
+   graph_edge_del(scip, graph, 4, TRUE);
+   SCIP_CALL( reduce_sdRepair(scip, 12, graph, sd) );
+   graph_edge_del(scip, graph, 12, TRUE);
+
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 1, 2, FARAWAY, 0.0, sd), 4.4));
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 3, 4, FARAWAY, 0.0, sd), 2.3));
+
+   SCIP_CALL( reduce_sdRepair(scip, 8, graph, sd) );
+   graph_edge_del(scip, graph, 8, TRUE);
+   STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 3, 4, FARAWAY, 0.0, sd), FARAWAY));
+
+   reduce_sdFree(scip, &sd);
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
 /** tests that (unbiased) terminal paths are found */
 static
 SCIP_RETCODE testBiasedTerminalPathsTo4NextFound(
@@ -414,6 +481,8 @@ SCIP_RETCODE stptest_tpaths(
 )
 {
    assert(scip);
+
+   SCIP_CALL( testSdRepair(scip) );
 
    SCIP_CALL( testTerminalPathsRepair(scip) );
    SCIP_CALL( testTerminalPathsRepair2(scip) );
