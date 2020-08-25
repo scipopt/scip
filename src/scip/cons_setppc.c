@@ -26,7 +26,6 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"

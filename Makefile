@@ -524,14 +524,12 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/branch_vanillafullstrong.o \
-			scip/cons_abspower.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
 			scip/cons_and.o \
 			scip/cons_benders.o \
 			scip/cons_benderslp.o \
-			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_cardinality.o \
 			scip/cons_conjunction.o \
@@ -546,6 +544,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_expr_log.o \
 			scip/cons_expr_pow.o \
 			scip/cons_expr_product.o \
+			scip/cons_expr_rowprep.o \
 			scip/cons_expr_sin.o \
 			scip/cons_expr_sum.o \
 			scip/cons_expr_value.o \
@@ -564,14 +563,11 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_linear.o \
 			scip/cons_linking.o \
 			scip/cons_logicor.o \
-			scip/cons_nonlinear.o \
 			scip/cons_or.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \
 			scip/cons_pseudoboolean.o \
-			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
-			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
 			scip/cons_superindicator.o \

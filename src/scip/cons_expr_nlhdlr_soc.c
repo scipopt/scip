@@ -42,6 +42,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/debug.h"
 #include "nlpi/nlpi_ipopt.h"
+#include "scip/cons_expr_rowprep.h"
 
 
 /* fundamental nonlinear handler properties */

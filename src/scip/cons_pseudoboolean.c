@@ -38,7 +38,6 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_xor.h"
@@ -7561,6 +7560,7 @@ SCIP_RETCODE findAggregation(
  */
 
 #ifdef NONLINCONSUPGD_PRIORITY
+#include "scip/cons_nonlinear.h"
 /** tries to upgrade a nonlinear constraint into a pseudoboolean constraint */
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)

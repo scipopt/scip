@@ -20,13 +20,17 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_quadratic.c"
 #include "include/scip_test.h"
+
+/* #3026 will decide whether to remove or adapt this code */
+#ifdef SCIP_DISABLED_CODE
+
+#include "scip/cons_quadratic.c"
 
 #define TOL 1e-6
 
 /*
- * Gloval Variables
+ * Global Variables
  */
 
 static SCIP* scip;
@@ -562,3 +566,5 @@ Test(separation, projection_complex_with_linear_part_and_terms)
     * for this reason we give n-1 as the number of variables (there are n-1 nonlinear vars) */
    checkEDandProjection(n-1, point, expectedprojection);
 }
+
+#endif  /* ifdef SCIP_DISABLED_CODE */

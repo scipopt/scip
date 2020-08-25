@@ -33,6 +33,8 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_exp.h"
+#include "scip/cons_expr_abs.h"
+#include "scip/cons_expr_rowprep.h"
 
 #define POWEXPRHDLR_NAME         "pow"
 #define POWEXPRHDLR_DESC         "power expression"
@@ -1554,23 +1556,6 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
 
          return SCIP_OKAY;
       }
-
-      /* enforces POW8
-       * given (pow n (pow expo expr)) we distribute the exponent:
-       * -> (pow n*expo expr)
-       * notes: n is an integer (excluding 1 and 0; see POW1-2 above)
-       */
-      if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrPower(conshdlr) )
-      {
-         SCIP_Real newexponent;
-
-         newexponent = SCIPgetConsExprExprPowExponent(base) * exponent;
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], newexponent) );
-         SCIP_CALL( simplifyPow(scip, conshdlr, aux, simplifiedexpr) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
-
-         return SCIP_OKAY;
-      }
    }
    else
    {
@@ -1604,6 +1589,58 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyPow)
          SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, aux, simplifiedexpr) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
+
+         return SCIP_OKAY;
+      }
+   }
+
+   /* enforces POW8
+    * given (pow n (pow expo expr)) we distribute the exponent:
+    * -> (pow n*expo expr)
+    * notes: n is not 1 or 0, see POW1-2 above
+    */
+   if( SCIPgetConsExprExprHdlr(base) == SCIPgetConsExprExprHdlrPower(conshdlr) )
+   {
+      SCIP_Real newexponent;
+      SCIP_Real baseexponent;
+
+      baseexponent = SCIPgetConsExprExprPowExponent(base);
+      newexponent = baseexponent * exponent;
+
+      /* some checks (see POW8 definition in cons_expr.c) to make sure we don't loose an
+       * implicit SCIPgetConsExprExprChildren(base)[0] >= 0 constraint
+       *
+       * if newexponent is fractional, then we will still need expr >= 0
+       * if both exponents were integer, then we never required and will not require expr >= 0
+       * if base exponent was an even integer, then we did not require expr >= 0  (but may need to use |expr|^newexponent)
+       */
+      if( !EPSISINT(newexponent, 0.0) ||
+          (EPSISINT(baseexponent, 0.0) && EPSISINT(exponent, 0.0)) ||
+          (EPSISINT(baseexponent, 0.0) && ((int)baseexponent) % 2 == 0) )
+      {
+         SCIP_CONSEXPR_EXPR* aux;
+
+         if( EPSISINT(baseexponent, 0.0) && ((int)baseexponent) % 2 == 0 &&
+             (!EPSISINT(newexponent, 0.0) || ((int)newexponent) % 2 == 1) )
+         {
+            /* if base exponent was even integer and new exponent will be fractional, then simplify to |expr|^newexponent to allow eval for expr < 0
+             * if base exponent was even integer and new exponent will be odd integer, then simplify to |expr|^newexponent to preserve value for expr < 0
+             */
+            SCIP_CONSEXPR_EXPR* simplifiedaux;
+
+            SCIP_CALL( SCIPcreateConsExprExprAbs(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0]) );
+            SCIP_CALL( SCIPsimplifyConsExprExprHdlr(scip, conshdlr, aux, &simplifiedaux) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, simplifiedaux, newexponent) );
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedaux) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &aux, SCIPgetConsExprExprChildren(base)[0], newexponent) );
+         }
+
+         SCIP_CALL( simplifyPow(scip, conshdlr, aux, simplifiedexpr) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
 
          return SCIP_OKAY;
       }

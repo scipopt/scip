@@ -4589,6 +4589,17 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    assert( propdata != NULL );
    assert( propdata->symconsenabled || propdata->sstenabled );
 
+   /* if constraints have already been added */
+   if ( propdata->triedaddconss )
+   {
+      assert( propdata->nperms > 0 );
+
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
+
+      return SCIP_OKAY;
+   }
+
    /* possibly compute symmetry */
    if ( propdata->ofenabled )
    {
@@ -4607,17 +4618,6 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
    assert( propdata->binvaraffected || ! propdata->ofenabled || ! propdata->symconsenabled );
-
-   /* if constraints have already been added */
-   if ( propdata->triedaddconss )
-   {
-      assert( propdata->nperms > 0 );
-
-      if ( earlyterm != NULL )
-         *earlyterm = TRUE;
-
-      return SCIP_OKAY;
-   }
 
    if ( propdata->nperms <= 0 || (! propdata->symconsenabled && ! propdata->sstenabled) )
       return SCIP_OKAY;

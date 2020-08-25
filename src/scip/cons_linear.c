@@ -51,8 +51,6 @@
 #include "scip/cons_expr.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/debug.h"
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
@@ -169,8 +167,6 @@
 #define MINVALRECOMP                1e-05 /**< minimal abolsute value we trust without recomputing the activity */
 
 
-#define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
-#define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 #define EXPRCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of expressions constraints */
 
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
@@ -17372,108 +17368,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 
 
 /*
- * Quadratic constraint upgrading
+ * Expression constraint upgrading
  */
-
-
-/** upgrades quadratic constraints with only and at least one linear variables into a linear constraint
- */
-static
-SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{  /*lint --e{715}*/
-   SCIP_CONSDATA* upgdconsdata;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(nupgdconss != NULL);
-   assert(upgdconss  != NULL);
-
-   *nupgdconss = 0;
-
-   SCIPdebugMsg(scip, "upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
-
-   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) > 0 )
-      return SCIP_OKAY;
-   if( SCIPgetNLinearVarsQuadratic(scip, cons) == 0 )
-      return SCIP_OKAY;
-
-   if( upgdconsssize < 1 )
-   {
-      /* signal that we need more memory */
-      *nupgdconss = -1;
-      return SCIP_OKAY;
-   }
-
-   *nupgdconss = 1;
-   SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
-         SCIPgetNLinearVarsQuadratic(scip, cons),
-         SCIPgetLinearVarsQuadratic(scip, cons),
-         SCIPgetCoefsLinearVarsQuadratic(scip, cons),
-         SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-   upgdconsdata = SCIPconsGetData(upgdconss[0]);
-   assert(upgdconsdata != NULL);
-
-   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original quadratic constraint */
-   upgdconsdata->checkabsolute = TRUE;
-
-   SCIPdebugMsg(scip, "created linear constraint:\n");
-   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-
-   return SCIP_OKAY;
-}
-
-/** tries to upgrade a nonlinear constraint into a linear constraint */
-static
-SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
-{
-   SCIP_CONSDATA* upgdconsdata;
-
-   assert(nupgdconss != NULL);
-   assert(upgdconss != NULL);
-
-   *nupgdconss = 0;
-
-   /* no interest in nonlinear constraints */
-   if( SCIPgetExprgraphNodeNonlinear(scip, cons) != NULL )
-      return SCIP_OKAY;
-
-   /* no interest in constant constraints */
-   if( SCIPgetNLinearVarsNonlinear(scip, cons) == 0 )
-      return SCIP_OKAY;
-
-   if( upgdconsssize < 1 )
-   {
-      /* request larger upgdconss array */
-      *nupgdconss = -1;
-      return SCIP_OKAY;
-   }
-
-   *nupgdconss = 1;
-   SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
-         SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
-         SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-   upgdconsdata = SCIPconsGetData(upgdconss[0]);
-   assert(upgdconsdata != NULL);
-
-   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original nonlinear constraint */
-   upgdconsdata->checkabsolute = TRUE;
-
-   SCIPdebugMsg(scip, "created linear constraint:\n");
-   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
-
-   return SCIP_OKAY;
-}
 
 /** tries to upgrade an expression constraint into a linear constraint */
 static
@@ -17564,18 +17460,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
-
-   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
-   {
-      /* include function that upgrades quadratic constraint to linear constraints */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
-
-   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
-   {
-      /* include the linear constraint upgrade in the nonlinear constraint handler */
-      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, upgradeConsNonlinear, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
 
    if( SCIPfindConshdlr(scip, "expr") != NULL )
    {

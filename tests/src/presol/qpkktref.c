@@ -654,9 +654,6 @@ SCIP_RETCODE includeKKTSettings(
    /* allow binary variables */
    SCIP_CALL( SCIPsetBoolParam(scip, "presolving/qpkktref/addkktbinary", TRUE) );
 
-   /* turn presolving of quadratic constraints off */
-   SCIP_CALL( SCIPsetIntParam(scip, "constraints/quadratic/maxprerounds", 0) );
-
    return SCIP_OKAY;
 }
 

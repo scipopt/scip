@@ -27,6 +27,7 @@
 
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_log.h"
+#include "scip/cons_expr_rowprep.h"
 
 #define EXPRHDLR_NAME         "log"
 #define EXPRHDLR_DESC         "logarithmic expression"

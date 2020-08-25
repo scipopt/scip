@@ -294,9 +294,14 @@ int varGetLbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
+   int i;
 
-   return getLbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
+   i = SCIPhashmapGetImageInt(propdata->varhashmap, var);
+
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (i != INT_MAX));
+   assert(i >= 0);
+
+   return getLbIndex(i == INT_MAX ? -1 : i);
 }
 
 /* returns the upper bound index of a variable */
@@ -306,9 +311,14 @@ int varGetUbIndex(
    SCIP_VAR*             var                 /**< variable to get the index for */
    )
 {
-   assert(SCIPhashmapExists(propdata->varhashmap, var) == (SCIPhashmapGetImageInt(propdata->varhashmap, var) > 0));
+   int i;
 
-   return getUbIndex(SCIPhashmapGetImageInt(propdata->varhashmap, var) - 1);
+   i = SCIPhashmapGetImageInt(propdata->varhashmap, var);
+
+   assert(SCIPhashmapExists(propdata->varhashmap, var) == (i != INT_MAX));
+   assert(i >= 0);
+
+   return getUbIndex(i == INT_MAX ? -1 : i);
 }
 
 /** reset propagation data */
@@ -1206,7 +1216,7 @@ SCIP_RETCODE initData(
 
    for( v = 0; v < nvars; ++v )
    {
-      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v + 1) );
+      SCIP_CALL( SCIPhashmapInsertInt(propdata->varhashmap, propdata->vars[v], v) );
    }
 
    /* allocate memory for the arrays of the propdata */

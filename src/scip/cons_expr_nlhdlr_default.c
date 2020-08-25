@@ -24,6 +24,7 @@
 #include "scip/cons_expr_nlhdlr_default.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_rowprep.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "default"

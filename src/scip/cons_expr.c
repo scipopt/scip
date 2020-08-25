@@ -65,6 +65,7 @@
 #include "scip/cons_expr_nlhdlr_quotient.h"
 #include "scip/cons_expr_nlhdlr_soc.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_rowprep.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trysol.h"
 #include "scip/debug.h"
@@ -105,14 +106,6 @@
 #define TABLE_DESC_EXPR                          "expression constraint handler statistics"
 #define TABLE_POSITION_EXPR                      12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_EXPR                SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
-
-/* enable nonlinear constraint upgrading */
-#include "scip/cons_nonlinear.h"
-#define NONLINCONSUPGD_PRIORITY   600000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
-
-/* enable quadratic constraint upgrading */
-#include "scip/cons_quadratic.h"
-#define QUADCONSUPGD_PRIORITY     600000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 /** ensures that a block memory array has at least a given size
  *
@@ -10116,211 +10109,6 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
  * Callback methods of constraint handler
  */
 
-/** upgrades quadratic constraint to expr constraint */
-static
-SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLR* consexprhdlr;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* varexpr;
-   SCIP_CONSEXPR_EXPR** varexprs;
-   SCIP_CONSEXPR_EXPR* prodexpr;
-   SCIP_CONSEXPR_EXPR* powexpr;
-   SCIP_CONSEXPR_EXPR* twoexprs[2];
-   SCIP_QUADVARTERM* quadvarterm;
-   SCIP_BILINTERM* bilinterm;
-   int pos;
-   int i;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(nupgdconss != NULL);
-   assert(upgdconss  != NULL);
-
-   *nupgdconss = 0;
-
-   SCIPdebugMsg(scip, "quadconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
-
-   /* no interest in linear constraints */
-   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) == 0 )
-      return SCIP_OKAY;
-
-   if( upgdconsssize < 1 )
-   {
-      /* signal that we need more memory */
-      *nupgdconss = -1;
-      return SCIP_OKAY;
-   }
-
-   if( SCIPgetNBilinTermsQuadratic(scip, cons) > 0 )
-   {
-      /* we will need SCIPfindQuadVarTermQuadratic later, so ensure now that quad var terms are sorted */
-      SCIP_CALL( SCIPsortQuadVarTermsQuadratic(scip, cons) );
-   }
-
-   consexprhdlr = SCIPfindConshdlr(scip, "expr");
-   assert(consexprhdlr != NULL);
-
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 0, NULL, NULL, 0.0) );
-
-   /* append linear terms */
-   for( i = 0; i < SCIPgetNLinearVarsQuadratic(scip, cons); ++i )
-   {
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, SCIPgetLinearVarsQuadratic(scip, cons)[i]) );
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexpr, SCIPgetCoefsLinearVarsQuadratic(scip, cons)[i]) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
-   }
-
-   /* array to store variable expression for each quadratic variable */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
-
-   /* create var exprs for quadratic vars; append linear and square part of quadratic terms */
-   for( i = 0; i < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++i )
-   {
-      quadvarterm = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
-
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexprs[i], quadvarterm->var) );
-
-      if( quadvarterm->lincoef != 0.0 )
-      {
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexprs[i], quadvarterm->lincoef) );
-      }
-
-      if( quadvarterm->sqrcoef != 0.0 )
-      {
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, consexprhdlr, &powexpr, varexprs[i], 2.0) );
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, powexpr, quadvarterm->sqrcoef) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
-      }
-   }
-
-   /* append bilinear terms */
-   for( i = 0; i < SCIPgetNBilinTermsQuadratic(scip, cons); ++i)
-   {
-      bilinterm = &SCIPgetBilinTermsQuadratic(scip, cons)[i];
-
-      SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, cons, bilinterm->var1, &pos) );
-      assert(pos >= 0);
-      assert(pos < SCIPgetNQuadVarTermsQuadratic(scip, cons));
-      assert(SCIPgetQuadVarTermsQuadratic(scip, cons)[pos].var == bilinterm->var1);
-      twoexprs[0] = varexprs[pos];
-
-      SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, cons, bilinterm->var2, &pos) );
-      assert(pos >= 0);
-      assert(pos < SCIPgetNQuadVarTermsQuadratic(scip, cons));
-      assert(SCIPgetQuadVarTermsQuadratic(scip, cons)[pos].var == bilinterm->var2);
-      twoexprs[1] = varexprs[pos];
-
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, twoexprs, 1.0) );
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, prodexpr, bilinterm->coef) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-   }
-
-   /* release variable expressions */
-   for( i = 0; i < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++i )
-   {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
-   }
-
-   SCIPfreeBufferArray(scip, &varexprs);
-
-   *nupgdconss = 1;
-   SCIP_CALL( SCIPcreateConsExpr(scip, upgdconss, SCIPconsGetName(cons),
-      expr, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
-      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-
-   SCIPdebugMsg(scip, "created expr constraint:\n");
-   SCIPdebugPrintCons(scip, *upgdconss, NULL);
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-
-   return SCIP_OKAY;
-}
-
-/** upgrades nonlinear constraint to expr constraint */
-static
-SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
-{
-   SCIP_CONSHDLR* consexprhdlr;
-   SCIP_EXPRGRAPH* exprgraph;
-   SCIP_EXPRGRAPHNODE* node;
-   SCIP_CONSEXPR_EXPR* expr;
-
-   assert(nupgdconss != NULL);
-   assert(upgdconss != NULL);
-
-   *nupgdconss = 0;
-
-   exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
-   node = SCIPgetExprgraphNodeNonlinear(scip, cons);
-
-   SCIPdebugMsg(scip, "nonlinconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebugPrintCons(scip, cons, NULL);
-
-   /* no interest in linear constraints */
-   if( node == NULL )
-      return SCIP_OKAY;
-
-   consexprhdlr = SCIPfindConshdlr(scip, "expr");
-   assert(consexprhdlr != NULL);
-
-   /* try to create a cons_expr expression from an expression graph node */
-   SCIP_CALL( SCIPcreateConsExprExpr3(scip, consexprhdlr, &expr, exprgraph, node) );
-
-   /* if that didn't work, then because we do not support a certain expression type yet -> no upgrade */
-   if( expr == NULL )
-      return SCIP_OKAY;
-
-   if( upgdconsssize < 1 )
-   {
-      /* request larger upgdconss array */
-      *nupgdconss = -1;
-      return SCIP_OKAY;
-   }
-
-   if( SCIPgetNLinearVarsNonlinear(scip, cons) > 0 )
-   {
-      /* add linear terms */
-      SCIP_CONSEXPR_EXPR* varexpr;
-      int i;
-
-      /* ensure expr is a sum expression */
-      if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(consexprhdlr) )
-      {
-         SCIP_CONSEXPR_EXPR* sumexpr;
-
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 1, &expr, NULL, 0.0) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-
-         expr = sumexpr;
-      }
-
-      for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
-      {
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, SCIPgetLinearVarsNonlinear(scip, cons)[i]) );
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexpr, SCIPgetLinearCoefsNonlinear(scip, cons)[i]) );
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
-      }
-   }
-
-   *nupgdconss = 1;
-   SCIP_CALL( SCIPcreateConsExpr(scip, upgdconss, SCIPconsGetName(cons),
-      expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
-      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-
-   SCIPdebugMsg(scip, "created expr constraint:\n");
-   SCIPdebugPrintCons(scip, *upgdconss, NULL);
-
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-
-   return SCIP_OKAY;
-}
-
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExpr)
@@ -14762,7 +14550,7 @@ SCIP_RETCODE SCIPgetConsExprExprHash(
  *    POW5: if exponent is integer, its child is not a product
  *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
  *    POW7: if exponent is 2, its child is not a sum (expand sums)
- *    POW8: if exponent is integer, its child is not a power
+ *    POW8: its child is not a power unless (x^n)^m with n*m being integer and n or m fractional and n not being even integer
  *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
  *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
  *    POW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
@@ -16132,18 +15920,6 @@ SCIP_RETCODE includeConshdlrExprBasic(
          consEnableExpr, consDisableExpr, consDelvarsExpr,
          consPrintExpr, consCopyExpr, consParseExpr,
          consGetVarsExpr, consGetNVarsExpr, consGetDiveBdChgsExpr, conshdlrdata) );
-
-   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
-   {
-      /* include function that upgrades quadratic constraint to expr constraints */
-      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdExpr, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
-
-   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
-   {
-      /* include the linear constraint upgrade in the linear constraint handler */
-      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdExpr, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
 
    /* add expr constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
@@ -18759,6 +18535,121 @@ CLEANUP:
    SCIPfreeBufferArray(scip, &funvals);
    SCIPfreeBufferArray(scip, &corner);
    SCIPfreeBufferArray(scip, &nonfixedpos);
+
+   return SCIP_OKAY;
+}
+
+/** given three points, constructs coefficient of equation for hyperplane generated by these three points
+ * Three points a, b, and c are given.
+ * Computes coefficients alpha, beta, gamma, and delta, such that a, b, and c, satisfy
+ * alpha * x1 + beta * x2 + gamma * x3 = delta and gamma >= 0.0.
+ */
+SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             a1,                 /**< first coordinate of a */
+   SCIP_Real             a2,                 /**< second coordinate of a */
+   SCIP_Real             a3,                 /**< third coordinate of a */
+   SCIP_Real             b1,                 /**< first coordinate of b */
+   SCIP_Real             b2,                 /**< second coordinate of b */
+   SCIP_Real             b3,                 /**< third coordinate of b */
+   SCIP_Real             c1,                 /**< first coordinate of c */
+   SCIP_Real             c2,                 /**< second coordinate of c */
+   SCIP_Real             c3,                 /**< third coordinate of c */
+   SCIP_Real*            alpha,              /**< coefficient of first coordinate */
+   SCIP_Real*            beta,               /**< coefficient of second coordinate */
+   SCIP_Real*            gamma_,             /**< coefficient of third coordinate */
+   SCIP_Real*            delta               /**< constant right-hand side */
+   )
+{
+   assert(scip != NULL);
+   assert(alpha != NULL);
+   assert(beta  != NULL);
+   assert(gamma_ != NULL);
+   assert(delta != NULL);
+
+   *alpha  = -b3*c2 + a3*(-b2+c2) + a2*(b3-c3) + b2*c3;
+   *beta   = -(-b3*c1 + a3*(-b1+c1) + a1*(b3-c3) + b1*c3);
+   *gamma_ = -a2*b1 + a1*b2 + a2*c1 - b2*c1 - a1*c2 + b1*c2;
+   *delta  = -a3*b2*c1 + a2*b3*c1 + a3*b1*c2 - a1*b3*c2 - a2*b1*c3 + a1*b2*c3;
+
+   /* SCIPdebugMsg(scip, "alpha: %g beta: %g gamma: %g delta: %g\n", *alpha, *beta, *gamma_, *delta); */
+
+   if( SCIPisInfinity(scip, REALABS(*gamma_ * a3)) ||
+      SCIPisInfinity(scip, REALABS(*gamma_ * b3)) ||
+      SCIPisInfinity(scip, REALABS(*gamma_ * c3)) )
+   {
+      SCIPdebugMsg(scip, "activity above SCIP infinity\n");
+      *delta  = 0.0;
+      *alpha  = 0.0;
+      *beta   = 0.0;
+      *gamma_ = 0.0;
+      return SCIP_OKAY;
+   }
+
+   /* check if hyperplane contains all three points (necessary because of numerical troubles) */
+   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
+      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
+      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3) )
+   {
+      SCIP_Real m[9];
+      SCIP_Real rhs[3];
+      SCIP_Real x[3];
+      SCIP_Bool success;
+
+      /*
+      SCIPdebugMsg(scip, "a = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", a1, a2, a3, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3, SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3));
+      SCIPdebugMsg(scip, "b = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", b1, b2, b3, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3, SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3));
+      SCIPdebugMsg(scip, "c = (%g,%g,%g) hyperplane: %g rhs %g EQdelta: %d\n", c1, c2, c3, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3, SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3));
+      */
+
+      /* initialize matrix column-wise */
+      m[0] = a1;
+      m[1] = b1;
+      m[2] = c1;
+      m[3] = a2;
+      m[4] = b2;
+      m[5] = c2;
+      m[6] = a3;
+      m[7] = b3;
+      m[8] = c3;
+
+      rhs[0] = 1.0;
+      rhs[1] = 1.0;
+      rhs[2] = 1.0;
+
+      SCIPdebugMsg(scip, "numerical troubles - try to solve the linear system via an LU factorization\n");
+
+      /* solve the linear problem */
+      SCIP_CALL( SCIPsolveLinearProb(3, m, rhs, x, &success) );
+      /* assert(success); */
+
+      *delta  = rhs[0];
+      *alpha  = x[0];
+      *beta   = x[1];
+      *gamma_ = x[2];
+
+      /* set all coefficients to zero if one of the points is not contained in the hyperplane; this ensures that we do
+       * not add a cut to SCIP and that all assertions are trivially fulfilled
+       */
+      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 - *delta, -*gamma_ * a3) ||
+         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 - *delta, -*gamma_ * b3) ||
+         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 - *delta, -*gamma_ * c3) ) /*lint !e774*/
+      {
+         SCIPdebugMsg(scip, "could not resolve numerical difficulties\n");
+         *delta  = 0.0;
+         *alpha  = 0.0;
+         *beta   = 0.0;
+         *gamma_ = 0.0;
+      }
+   }
+
+   if( *gamma_ < 0.0 )
+   {
+      *alpha  = -*alpha;
+      *beta   = -*beta;
+      *gamma_ = -*gamma_;
+      *delta  = -*delta;
+   }
 
    return SCIP_OKAY;
 }
