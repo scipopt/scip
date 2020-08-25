@@ -102,7 +102,7 @@ extern "C" {
 #define vecinternalIncreaseCapacity(scip, vec, cap)                                 \
    do                                                                               \
    {                                                                                \
-      const int _nbytes_new_ = vecinternalComputeNBytes(cap, (vec));                \
+      const int _nbytes_new_ = vecinternalComputeNBytes((cap), (vec));                \
       assert(_nbytes_new_ >= ((int) sizeof(int) * 2));                                \
       if( !(vec) )                                                                  \
       {                                                                             \
@@ -162,11 +162,11 @@ extern "C" {
 #define StpVecPushBack(scip, vec, value)                                 \
    do                                                                    \
    {                                                                     \
-      const int _cap_ = vecinternalGetCapacity(vec);                       \
-      const int _size_ = vecinternalGetSize(vec);                          \
+      const int _cap_ = vecinternalGetCapacity((vec));                       \
+      const int _size_ = vecinternalGetSize((vec));                          \
       if( _cap_ <= _size_ )                                                  \
       {                                                                  \
-         vecinternalIncreaseCapacity((scip), (vec), (_cap_ == 0) ? 2 : _cap_ * 2); \
+         vecinternalIncreaseCapacity((scip), (vec), ((_cap_ == 0) ? 2 : _cap_ * 2)); \
       }                                                                  \
       vec[_size_] = (value);                                               \
       vecinternalIncrementSize((vec));                                   \
