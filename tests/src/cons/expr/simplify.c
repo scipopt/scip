@@ -53,7 +53,11 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"<x>*<x>", "pow"},
       {"(2*<x>)*(2*<x>)", "sum"},
       {"<x>*<x>^2", "pow"},
-      {"(<x>^0.5)^2", "pow"},
+      {"(<x>^0.5)^2", "pow"},  /* not simplified because of implicit x >= 0 constraint */
+      {"(<x>^2)^0.5", "abs"},
+      {"(<x>^3)^0.5", "pow"},  /* should be |x|^1.5 */
+      {"(<x>^4)^0.5", "pow"},
+      {"(<x>^2)^1.5", "pow"},  /* should be |x|^3 */
       {"(<y>^2)^2", "pow"},
       {"1*2*(<x>+<y>)*<x>*4*0*5", "val"},
       {"(<x>^0.25)^2*(<x>^0.25)^2", "var"},
@@ -164,7 +168,7 @@ void parseSimplifyCheck(SCIP* scip, const char* input, const char* type, SCIP_CO
    fprintf(stderr, " simplifying!\n");
 #else
    SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
-   SCIPinfoMessage(scip, NULL, "simplifying!\n");
+   SCIPinfoMessage(scip, NULL, " simplifying!\n");
 #endif
    /* simplify */
    SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
