@@ -48,7 +48,7 @@
 #define tpathsRepairResetNode(scip, node, resetnodes, stack, nodes_isvisited)        \
    do                                                                                 \
    {                                                                 \
-      assert(scip && node && resetnodes && stack && nodes_isvisited); \
+      assert(scip && resetnodes && stack && nodes_isvisited); \
       assert(!nodes_isvisited[node]);                              \
       StpVecPushBack(scip, resetnodes, node);                        \
       StpVecPushBack(scip, stack, node);                             \
@@ -929,7 +929,7 @@ void tpathsRepairTraverseLevelWithStack(
    STP_Vectype(int) stack = repair->stack;
    STP_Vectype(int) resetnodes_level = repair->resetnodes[level];
 
-   assert(nodes_isvisited);
+   assert(scip && nodes_isvisited && resetnodes_level);
    assert(1 <= level && level <= 3);
 
    SCIPdebugMessage("starting DFS for level %d ... \n", level);
