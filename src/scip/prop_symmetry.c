@@ -4991,6 +4991,21 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
 
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
    }
+   else if ( propdata->ofenabled && propdata->ofsymcomptiming == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
+
+      /* otherwise compute symmetry if timing requests it */
+      if ( propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
+   }
 
    return SCIP_OKAY;
 }
@@ -5017,6 +5032,20 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    if ( (propdata->symconsenabled || propdata->sstenabled) && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
+   }
+
+   /* if timing requests it, guarantee that symmetries are computed even if presolving is disabled */
+   if ( propdata->ofenabled && propdata->ofsymcomptiming <= 1 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   {
+      if ( propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
    }
 
    return SCIP_OKAY;
@@ -5125,7 +5154,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_Bool infeasible;
       int nprop;
 
-      /* if we did not tried to add symmetry handling constraints */
+      /* if we have not tried to add symmetry handling constraints */
       if ( *result == SCIP_DIDNOTRUN )
          *result = SCIP_DIDNOTFIND;
 
@@ -5147,7 +5176,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    }
    else if ( propdata->ofenabled && propdata->ofsymcomptiming == SYM_COMPUTETIMING_DURINGPRESOL )
    {
-      /* otherwise compute symmetry if timing requests it */
+      /* otherwise compute symmetry early if timing requests it */
       if ( propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );

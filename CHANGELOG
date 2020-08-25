@@ -172,6 +172,7 @@ Fixed bugs
 - Fixed potential indexing error in prop_vbounds.c
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
+- Fixed bug with ofsymcomptiming == 0: now symmetry is actually computed
 
 Miscellaneous
 -------------
