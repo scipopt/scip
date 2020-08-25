@@ -44,6 +44,18 @@
    } while( 0 )
 
 
+/**  resets node */
+#define tpathsRepairResetNode(scip, node, resetnodes, stack, nodes_isvisited)        \
+   do                                                                                 \
+   {                                                                 \
+      assert(scip && node && resetnodes && stack && nodes_isvisited); \
+      assert(!nodes_isvisited[node]);                              \
+      StpVecPushBack(scip, resetnodes, node);                        \
+      StpVecPushBack(scip, stack, node);                             \
+      nodes_isvisited[node] = TRUE;                                  \
+   } while( 0 )
+
+
 /** Steiner nodes to terminal paths
  * NOTE: all arrays are of size STP_TPATHS_NTERMBASES * nnodes */
 struct nodes_to_terminal_paths
@@ -60,6 +72,7 @@ struct nodes_to_terminal_paths
 typedef struct tpaths_repair
 {
    STP_Vectype(int)*     resetnodes;         /**< nodes to be reseted; for different levels (1st to 4th) */
+   STP_Vectype(int)      stack;              /**< temporary vector */
    TPATHS*               tpaths;             /**< the terminal paths */
    SCIP_Bool*            nodes_isvisited;    /**< visited nodes during repair process */
    int                   edge;               /**< edge about to be eliminated */
@@ -837,25 +850,6 @@ void tpathsRepairExitLevel(
 }
 
 
-/** helper */
-static inline
-void tpathsRepairResetNode(
-   SCIP*                 scip,               /**< SCIP */
-   int                   node,               /**< node to visit */
-   STP_Vectype(int)      resetnodes,         /**< reset nodes */
-   STP_Vectype(int)      stack,              /**< stack */
-   SCIP_Bool*            nodes_isvisited     /**< visited nodes mark */
-   )
-{
-   assert(scip && resetnodes && stack && nodes_isvisited);
-   assert(!nodes_isvisited[node]);
-
-   StpVecPushBack(scip, resetnodes, node);
-   StpVecPushBack(scip, stack, node);
-   nodes_isvisited[node] = TRUE;
-}
-
-
 /** traverses graph to find nodes that need to be reseted */
 static
 SCIP_RETCODE tpathsRepairTraverse1st(
@@ -873,12 +867,10 @@ SCIP_RETCODE tpathsRepairTraverse1st(
    if( termpaths[start].edge >= 0 && g->tail[termpaths[start].edge] == pred )
    {
       STP_Vectype(int) resetnodes1st = repair->resetnodes[0];
-      STP_Vectype(int) RESTRICT stack = NULL;
+      STP_Vectype(int) stack = repair->stack;
 
       assert(!Is_term(g->term[start]));
       assert(resetnodes1st);
-
-      StpVecReserve(scip, stack, STP_TPATHS_RESERVESIZE);
 
       tpathsRepairResetNode(scip, start, resetnodes1st, stack, nodes_isvisited);
 
@@ -911,7 +903,8 @@ SCIP_RETCODE tpathsRepairTraverse1st(
          }
       }
 
-      StpVecFree(scip, stack);
+      repair->stack = stack;
+      repair->resetnodes[0] = resetnodes1st;
    }
 
    return SCIP_OKAY;
@@ -924,7 +917,6 @@ void tpathsRepairTraverseLevelWithStack(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
    int                   level,              /**< level from 1-3 */
-   STP_Vectype(int) RESTRICT stack,          /**< stack */
    TREPAIR*              repair              /**< data for repairing */
 )
 {
@@ -934,6 +926,7 @@ void tpathsRepairTraverseLevelWithStack(
    SCIP_Bool* RESTRICT nodes_isvisited = repair->nodes_isvisited;
    const int nnodes = graph_get_nNodes(g);
    const int shift = level * nnodes;
+   STP_Vectype(int) stack = repair->stack;
    STP_Vectype(int) resetnodes_level = repair->resetnodes[level];
 
    assert(nodes_isvisited);
@@ -970,6 +963,9 @@ void tpathsRepairTraverseLevelWithStack(
          }
       }
    }
+
+   repair->stack = stack;
+   repair->resetnodes[level] = resetnodes_level;
 }
 
 
@@ -979,11 +975,9 @@ void tpathsRepairTraverseStackAddEdge(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
    int                   level,              /**< level (1-3, level 0 is handled separately) */
-   STP_Vectype(int) RESTRICT stack,          /**< stack to be updated */
    TREPAIR*              repair              /**< data for repairing */
 )
 {
-   STP_Vectype(int) RESTRICT resetnodes_top = repair->resetnodes[level];
    const TPATHS* tpaths = repair->tpaths;
    const PATH* termpaths = tpaths->termpaths;
    const int nnodes = graph_get_nNodes(g);
@@ -994,12 +988,12 @@ void tpathsRepairTraverseStackAddEdge(
 
    if( termpaths[tail + shift].edge >= 0 && g->tail[termpaths[tail + shift].edge] == head )
    {
-      tpathsRepairResetNode(scip, tail, resetnodes_top, stack, repair->nodes_isvisited);
+      tpathsRepairResetNode(scip, tail, repair->resetnodes[level], repair->stack, repair->nodes_isvisited);
    }
 
    if( termpaths[head + shift].edge >= 0 && g->tail[termpaths[head + shift].edge] == tail )
    {
-      tpathsRepairResetNode(scip, head, resetnodes_top, stack, repair->nodes_isvisited);
+      tpathsRepairResetNode(scip, head, repair->resetnodes[level], repair->stack, repair->nodes_isvisited);
    }
 }
 
@@ -1010,11 +1004,9 @@ void tpathsRepairTraverseStackAddBelow(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph */
    int                   level,              /**< level (1-3, level 0 is handled separately) */
-   STP_Vectype(int) RESTRICT stack,          /**< stack to be updated */
    TREPAIR*              repair              /**< data for repairing */
 )
 {
-   STP_Vectype(int) RESTRICT resetnodes_top = repair->resetnodes[level];
    const TPATHS* tpaths = repair->tpaths;
    const PATH* termpaths = tpaths->termpaths;
    const int* vbase = tpaths->termbases;
@@ -1023,7 +1015,7 @@ void tpathsRepairTraverseStackAddBelow(
    const int nnodes = graph_get_nNodes(g);
    const int shift = level * nnodes;
 
-   assert(resetnodes_top && vbase && nodes_isvisited);
+   assert(repair->resetnodes[level] && vbase && nodes_isvisited);
    assert(1 <= level && level <= 3);
 
    for( int d = 0; d < level; d++ )
@@ -1043,7 +1035,7 @@ void tpathsRepairTraverseStackAddBelow(
          /* duplicate? */
          if( !nodes_isvisited[node] && nodebase_d == vbase[node + shift] )
          {
-            tpathsRepairResetNode(scip, node, resetnodes_top, stack, nodes_isvisited);
+            tpathsRepairResetNode(scip, node, repair->resetnodes[level], repair->stack, nodes_isvisited);
          }
 
          for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
@@ -1063,7 +1055,7 @@ void tpathsRepairTraverseStackAddBelow(
 
                   SCIPdebugMessage("level%d: add %d to reset-nodes \n", level, head);
 
-                  tpathsRepairResetNode(scip, head, resetnodes_top, stack, nodes_isvisited);
+                  tpathsRepairResetNode(scip, head, repair->resetnodes[level], repair->stack, nodes_isvisited);
                }
             }
          }
@@ -1082,17 +1074,12 @@ void tpathsRepairTraverseLevel(
    TREPAIR*              repair              /**< data for repairing */
 )
 {
-   STP_Vectype(int) RESTRICT stack = NULL;
-   StpVecReserve(scip, stack, STP_TPATHS_RESERVESIZE);
-
    assert(1 <= level && level <= 3);
 
-   tpathsRepairTraverseStackAddEdge(scip, g, level, stack, repair);
-   tpathsRepairTraverseStackAddBelow(scip, g, level, stack, repair);
+   tpathsRepairTraverseStackAddEdge(scip, g, level, repair);
+   tpathsRepairTraverseStackAddBelow(scip, g, level, repair);
 
-   tpathsRepairTraverseLevelWithStack(scip, g, level, stack, repair);
-
-   StpVecFree(scip, stack);
+   tpathsRepairTraverseLevelWithStack(scip, g, level, repair);
 }
 
 
@@ -1360,6 +1347,7 @@ void tpathsRepairInit(
    }
 #endif
 
+   StpVecReserve(scip, repair->stack, STP_TPATHS_RESERVESIZE);
 
    for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
    {
@@ -1383,7 +1371,7 @@ void tpathsRepairExit(
    const int* const vbase = tpaths->termbases;
    const int nnodes = graph_get_nNodes(g);
 
-   for( int i = 0; i < STP_TPATHS_NTERMBASES; i++ )
+   for( int i = STP_TPATHS_NTERMBASES - 1; i >= 0; i-- )
    {
       STP_Vectype(int) resetnodes_i = repair->resetnodes[i];
       const int size = StpVecGetSize(resetnodes_i);
@@ -1402,6 +1390,9 @@ void tpathsRepairExit(
 
       StpVecFree(scip, repair->resetnodes[i]);
    }
+
+   StpVecFree(scip, repair->stack);
+
 #ifndef NDEBUG
    for( int i = 0; i < STP_TPATHS_NTERMBASES * nnodes; i++ )
    {
@@ -1707,7 +1698,8 @@ SCIP_RETCODE graph_tpathsRepair(
 )
 {
    STP_Vectype(int) resetnodes[STP_TPATHS_NTERMBASES] = { NULL, NULL, NULL, NULL };
-   TREPAIR repair = { .resetnodes = resetnodes, .tpaths = tpaths, .nodes_isvisited = NULL, .edge = edge, .nHeapElems = 0 };
+   TREPAIR repair = { .resetnodes = resetnodes, .stack = NULL, .tpaths = tpaths, .nodes_isvisited = NULL,
+         .edge = edge, .nHeapElems = 0 };
 
    assert(scip && g && tpaths);
    assert(STP_TPATHS_NTERMBASES == 4);
