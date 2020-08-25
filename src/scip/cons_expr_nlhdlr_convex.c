@@ -31,6 +31,7 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_sum.h"
+#include "scip/cons_expr_rowprep.h"
 #include "scip/dbldblarith.h"
 
 /* fundamental nonlinear handler properties */

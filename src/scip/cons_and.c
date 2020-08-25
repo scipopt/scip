@@ -34,11 +34,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/pub_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
-#include "scip/cons_nonlinear.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
 #include "scip/debug.h"
@@ -100,7 +98,6 @@
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
-#define EXPRGRAPHREFORM_PRIORITY 100000 /**< priority of expression graph node reformulation method */
 
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
@@ -3740,127 +3737,6 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
-/** tries to reformulate an expression graph node that is a product of binary variables via introducing an AND-constraint */
-static
-SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAnd)
-{
-   SCIP_EXPRGRAPHNODE* child;
-   char name[SCIP_MAXSTRLEN];
-   int nchildren;
-   SCIP_CONS* cons;
-   SCIP_VAR** vars;
-   SCIP_VAR* var;
-   int c;
-
-   assert(scip != NULL);
-   assert(exprgraph != NULL);
-   assert(node != NULL);
-   assert(naddcons != NULL);
-   assert(reformnode != NULL);
-
-   *reformnode = NULL;
-
-   /* allow only products given as EXPR_PRODUCT or EXPR_POLYNOMIAL with only 1 monomial */
-   if( SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_PRODUCT &&
-       (SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_POLYNOMIAL || SCIPexprgraphGetNodePolynomialNMonomials(node) > 1)
-     )
-      return SCIP_OKAY;
-
-   nchildren = SCIPexprgraphGetNodeNChildren(node);
-
-   /* for a polynomial with only one monomial, all children should appear as factors in the monomial
-    * since we assume that the factors have been merged, this means that the number of factors in the monomial should equal the number of children of the node
-    */
-   assert(SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_POLYNOMIAL || SCIPexprGetMonomialNFactors(SCIPexprgraphGetNodePolynomialMonomials(node)[0]) == nchildren);
-
-   /* check only products with at least 3 variables (2 variables are taken of by cons_quadratic) */
-   if( nchildren <= 2 )
-      return SCIP_OKAY;
-
-   /* check if all factors correspond to binary variables, and if so, setup vars array */
-   for( c = 0; c < nchildren; ++c )
-   {
-      child = SCIPexprgraphGetNodeChildren(node)[c];
-
-      if( SCIPexprgraphGetNodeOperator(child) != SCIP_EXPR_VARIDX )
-         return SCIP_OKAY;
-
-      var = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
-      if( !SCIPvarIsBinary(var) )
-         return SCIP_OKAY;
-   }
-
-   /* node corresponds to product of binary variables (maybe with coefficient and constant, if polynomial) */
-   SCIPdebugMsg(scip, "reformulate node %p via AND-constraint\n", (void*)node);
-
-   /* collect variables in product */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nchildren) );
-   for( c = 0; c < nchildren; ++c )
-   {
-      child = SCIPexprgraphGetNodeChildren(node)[c];
-      vars[c] = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
-   }
-
-   /* create variable for resultant
-    * cons_and wants to add implications for resultant, which is only possible for binary variables currently
-    * so choose binary as vartype, even though implicit integer had been sufficient
-    */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nlreform%dand", *naddcons);
-   SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
-      TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPaddVar(scip, var) );
-
-#ifdef WITH_DEBUG_SOLUTION
-   if( SCIPdebugIsMainscip(scip) )
-   {
-      SCIP_Bool debugval;
-      SCIP_Real varval;
-
-      debugval = TRUE;
-      for( c = 0; c < nchildren; ++c )
-      {
-         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[c], &varval) );
-         debugval = debugval && (varval > 0.5);
-      }
-      SCIP_CALL( SCIPdebugAddSolVal(scip, var, debugval ? 1.0 : 0.0) );
-   }
-#endif
-
-   /* create AND-constraint */
-   SCIP_CALL( SCIPcreateConsAnd(scip, &cons, name, var, nchildren, vars,
-      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebugPrintCons(scip, cons, NULL);
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   ++*naddcons;
-
-   SCIPfreeBufferArray(scip, &vars);
-
-   /* add var to exprgraph */
-   SCIP_CALL( SCIPexprgraphAddVars(exprgraph, 1, (void**)&var, reformnode) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-   /* if we have coefficient and constant, then replace reformnode by linear expression in reformnode */
-   if( SCIPexprgraphGetNodeOperator(node) == SCIP_EXPR_POLYNOMIAL )
-   {
-      SCIP_Real coef;
-      SCIP_Real constant;
-
-      coef = SCIPexprGetMonomialCoef(SCIPexprgraphGetNodePolynomialMonomials(node)[0]);
-      constant = SCIPexprgraphGetNodePolynomialConstant(node);
-
-      if( coef != 1.0 || constant != 0.0 )
-      {
-         SCIP_EXPRGRAPHNODE* linnode;
-         SCIP_CALL( SCIPexprgraphCreateNodeLinear(SCIPblkmem(scip), &linnode, 1, &coef, constant) );
-         SCIP_CALL( SCIPexprgraphAddNode(exprgraph, linnode, -1, 1, reformnode) );
-         *reformnode = linnode;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /*
  * Callback methods of constraint handler
  */
@@ -4989,12 +4865,6 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
-
-   if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
-   {
-      /* include the AND-constraint upgrade in the nonlinear constraint handler */
-      SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, NULL, exprgraphnodeReformAnd, EXPRGRAPHREFORM_PRIORITY, TRUE, CONSHDLR_NAME) );
-   }
 
    return SCIP_OKAY;
 }

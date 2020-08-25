@@ -32,6 +32,7 @@
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_rowprep.h"
 #include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME              "minor"

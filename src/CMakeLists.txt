@@ -39,12 +39,10 @@ set(scipsources
     scip/branch_random.c
     scip/branch_relpscost.c
     scip/branch_vanillafullstrong.c
-    scip/cons_abspower.c
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
     scip/concsolver_scip.c
     scip/cons_and.c
-    scip/cons_bivariate.c
     scip/cons_benders.c
     scip/cons_benderslp.c
     scip/cons_bounddisjunction.c
@@ -60,6 +58,7 @@ set(scipsources
     scip/cons_expr_entropy.c
     scip/cons_expr_exp.c
     scip/cons_expr_iterator.c
+    scip/cons_expr_rowprep.c
     scip/cons_expr_log.c
     scip/cons_expr_pow.c
     scip/cons_expr_product.c
@@ -80,14 +79,11 @@ set(scipsources
     scip/cons_linear.c
     scip/cons_linking.c
     scip/cons_logicor.c
-    scip/cons_nonlinear.c
     scip/cons_or.c
     scip/cons_orbisack.c
     scip/cons_orbitope.c
     scip/cons_pseudoboolean.c
-    scip/cons_quadratic.c
     scip/cons_setppc.c
-    scip/cons_soc.c
     scip/cons_sos1.c
     scip/cons_sos2.c
     scip/cons_superindicator.c

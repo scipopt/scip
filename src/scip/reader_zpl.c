@@ -33,8 +33,6 @@
 #include "nlpi/pub_expr.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_nonlinear.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #include "scip/pub_misc.h"

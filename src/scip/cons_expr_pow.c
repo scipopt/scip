@@ -34,6 +34,7 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_abs.h"
+#include "scip/cons_expr_rowprep.h"
 
 #define POWEXPRHDLR_NAME         "pow"
 #define POWEXPRHDLR_DESC         "power expression"

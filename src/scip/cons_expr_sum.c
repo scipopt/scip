@@ -32,6 +32,7 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_rowprep.h"
 
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"

@@ -35,6 +35,7 @@
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_abs.h"
+#include "scip/cons_expr_rowprep.h"
 
 #include "scip/pub_misc.h"
 

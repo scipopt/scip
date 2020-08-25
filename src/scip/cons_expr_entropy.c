@@ -25,6 +25,7 @@
 #include "scip/cons_expr_entropy.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_rowprep.h"
 
 #include <string.h>
 

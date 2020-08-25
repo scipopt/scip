@@ -26,6 +26,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/scip_sol.h"
 #include "scip/cons_expr_iterator.h"
+#include "scip/cons_expr_rowprep.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "perspective"

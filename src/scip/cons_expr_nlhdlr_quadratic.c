@@ -33,6 +33,7 @@
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_product.h"
+#include "scip/cons_expr_rowprep.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "quadratic"

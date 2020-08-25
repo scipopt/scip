@@ -27,6 +27,7 @@
 
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_exp.h"
+#include "scip/cons_expr_rowprep.h"
 
 #define EXPRHDLR_NAME         "exp"
 #define EXPRHDLR_DESC         "exponential expression"
