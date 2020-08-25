@@ -416,6 +416,11 @@ void removeEdge(
 
    assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
 
+   if( distdata->sdistdata )
+   {
+      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
+   }
+
    graph_edge_delFull(scip, graph, edge, TRUE);
    extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
 
@@ -537,6 +542,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    int*                  nelims              /**< number of eliminations (out) */
 )
 {
+   const SCIP_Bool useSd = !graph_pc_isPc(graph);
    const int nedges = graph_get_nEdges(graph);
    const SCIP_Real* const redcost = redcostdata->redEdgeCost;
    DISTDATA distdata;
@@ -550,7 +556,13 @@ SCIP_RETCODE extreduce_deleteEdges(
    if( SCIPisZero(scip, redcostdata->cutoff) )
       return SCIP_OKAY;
 
-   SCIP_CALL( extInit(scip, FALSE, graph, edgedeletable, &distdata, &extpermanent) );
+   SCIP_CALL( extInit(scip, useSd, graph, edgedeletable, &distdata, &extpermanent) );
+
+   if( useSd )
+   {
+      assert(distdata.sdistdata);
+      SCIP_CALL( reduce_sdRepairSetUp(scip, graph, distdata.sdistdata) );
+   }
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -580,6 +592,9 @@ SCIP_RETCODE extreduce_deleteEdges(
          }
       }
    }
+
+  // printf("extelimsedges=%d \n", *nelims);
+
 
    extFree(scip, graph, &distdata, &extpermanent);
 
