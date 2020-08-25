@@ -4030,6 +4030,84 @@ SCIP_RETCODE adaptSymmetryDataSST(
 }
 
 
+/* returns the number of found orbitopes with at least three columns per graph component or 0
+ * if the found orbitopes do not satisfy criteria for being used
+ */
+static
+int getNOrbitopesInComp(
+   int*                  graphcompbegins,    /**< array indicating starting position of graph components */
+   int*                  compcolorbegins,    /**< array indicating starting positions of potential orbitopes */
+   int                   ncompcolors,        /**< number of components encoded in compcolorbegins */
+   int                   symcompsize         /**< size of symmetry component for that we detect suborbitopes */
+   )
+{
+   int norbitopes = 0;
+   int j;
+   SCIP_Bool oneorbitopecriterion = FALSE;
+   SCIP_Bool multorbitopecriterion = FALSE;
+
+   assert( graphcompbegins != NULL );
+   assert( compcolorbegins != NULL );
+   assert( ncompcolors >= 0 );
+   assert( symcompsize > 0 );
+
+   for (j = 0; j < ncompcolors; ++j)
+   {
+      int k;
+      int largestcompsize = 0;
+
+      /* skip trivial components */
+      if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
+         continue;
+
+      /* check whether components of this color build an orbitope (with > 2 columns) */
+      for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
+      {
+         int compsize;
+
+         compsize = graphcompbegins[k+1] - graphcompbegins[k];
+
+         /* the first component that we are looking at for this color */
+         if ( largestcompsize < 1 )
+         {
+            if ( compsize < 3 )
+               break;
+
+            largestcompsize = compsize;
+         }
+         else if ( compsize != largestcompsize )
+            break;
+      }
+
+      /* we have found an orbitope */
+      if ( k == compcolorbegins[j+1] )
+      {
+         int nrows;
+         int ncols;
+         SCIP_Real threshold;
+
+         ++norbitopes;
+         nrows = compcolorbegins[j+1] - compcolorbegins[j];
+         ncols = graphcompbegins[compcolorbegins[j] + 1] - graphcompbegins[compcolorbegins[j]];
+
+         threshold = (SCIP_Real) symcompsize;
+         threshold = 0.7 * threshold;
+
+         /* check whether criteria for adding orbitopes are satisfied */
+         if ( nrows <= 2 * ncols || (nrows <= 8 * ncols && nrows < 100) )
+            multorbitopecriterion = TRUE;
+         else if ( nrows <= 3 * ncols || (SCIP_Real) nrows * ncols >= threshold )
+            oneorbitopecriterion = TRUE;
+      }
+   }
+
+   if ( (norbitopes == 1 && oneorbitopecriterion) || ( norbitopes >= 2 && multorbitopecriterion) )
+      return norbitopes;
+
+   return 0;
+}
+
+
 /** checks whether subgroups of the components are symmetric groups and adds SBCs for them */
 static
 SCIP_RETCODE detectAndHandleSubgroups(
@@ -4048,6 +4126,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIP_Real orbitopepctbinrows;
    int** modifiedperms;
    SCIP_VAR** modifiedpermvars;
+   int* nvarsincomponent;
 
    assert( scip != NULL );
    assert( propdata != NULL );
@@ -4084,6 +4163,13 @@ SCIP_RETCODE detectAndHandleSubgroups(
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &modifiedpermvars, propdata->npermvars) );
 
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarsincomponent, propdata->npermvars) );
+   for (i = 0; i < propdata->npermvars; ++i)
+   {
+      if ( propdata->vartocomponent[i] >= 0 )
+         ++nvarsincomponent[propdata->vartocomponent[i]];
+   }
+
    SCIPdebugMsg(scip, "starting subgroup detection routine for %d components\n", propdata->ncomponents);
 
    /* iterate over components */
@@ -4110,6 +4196,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIP_Bool* permused;
       SCIP_Bool allpermsused = FALSE;
       SCIP_Bool handlednonbinarysymmetry = FALSE;
+      int norbitopesincomp = 0;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4218,6 +4305,44 @@ SCIP_RETCODE detectAndHandleSubgroups(
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &chosencomppercolor, ncompcolors) );
          SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercolor, ncompcolors) );
+      }
+
+      norbitopesincomp = getNOrbitopesInComp(graphcompbegins, compcolorbegins, ncompcolors, nvarsincomponent[i]);
+
+      /* if no usable orbitope could be found, do not handle suborbitopes */
+      if ( norbitopesincomp == 0 )
+         goto FREELOOPMEMORY;
+      /* if there is just one orbitope satisfying the requirements, handle the full component by symresacks */
+      else if ( norbitopesincomp == 1 )
+      {
+         int k;
+
+         for (k = 0; k < npermsincomp; ++k)
+         {
+            SCIP_CONS* cons;
+            char name[SCIP_MAXSTRLEN];
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "symresack_comp%d_perm%d", i, k);
+
+            SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, propdata->perms[propdata->components[propdata->componentbegins[i] + k]],
+                  propdata->permvars, propdata->npermvars, FALSE,
+                  propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            SCIP_CALL( SCIPaddCons(scip, cons));
+
+            /* do not release constraint here - will be done later */
+            propdata->genorbconss[propdata->ngenorbconss++] = cons;
+            ++propdata->nsymresacks;
+
+            if ( ! propdata->componentblocked[i] )
+            {
+               propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
+               ++propdata->ncompblocked;
+            }
+
+            SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d\n", k, i);
+         }
+
+         goto FREELOOPMEMORY;
       }
 
       for (j = 0; j < ncompcolors; ++j)
@@ -4466,6 +4591,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
             SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d adapted to suborbitope lexorder\n", k, i);
          }
       }
+
+   FREELOOPMEMORY:
       SCIPfreeBlockMemoryArrayNull(scip, &lexorder, maxnvarslexorder);
 
       SCIPfreeBufferArrayNull(scip, &firstvaridxpercolor);
@@ -4482,6 +4609,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
    SCIPdebugMsg(scip, "total number of added strong sbcs: %d\n", nstrongsbcs);
    SCIPdebugMsg(scip, "total number of added weak sbcs: %d\n", nweaksbcs);
 #endif
+
+   SCIPfreeBufferArray(scip, &nvarsincomponent);
 
    SCIPfreeBufferArray(scip, &modifiedpermvars);
    for (i = propdata->nperms - 1; i >= 0; --i)
