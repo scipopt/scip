@@ -7492,34 +7492,12 @@ SCIP_RETCODE SCIPlpExactEndDive(
    lpexact->diving = FALSE;
    lpexact->divingobjchg = FALSE;
 
-   /* if the LP was solved before starting the dive, but not to optimality (or unboundedness), then we need to solve the
-    * LP again to reset the solution (e.g. we do not save the Farkas proof for infeasible LPs, because we assume that we
-    * are not called in this case, anyway); restoring by solving the LP again in either case can be forced by setting
-    * the parameter resolverestore to TRUE
-    * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
-    */
    assert(lpexact->storedsolvals != NULL);
-   if( lpexact->storedsolvals->lpissolved
-      && (set->lp_resolverestore || lpexact->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lpexact->divenolddomchgs < stat->domchgcount) )
-   {
-      SCIP_Bool lperror;
 
-      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lpexact->fplp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1LL, &lperror, FALSE) );
-      if( lperror || (SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OPTIMAL
-            && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_INFEASIBLE
-            && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_UNBOUNDEDRAY
-            && SCIPlpExactGetSolstat(lpexact) != SCIP_LPSOLSTAT_OBJLIMIT) )
-      {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "exact LP was not resolved to a sufficient status after diving\n");
-         lpexact->resolvelperror = TRUE;
-      }
-   }
-   /* otherwise, we can just reload the buffered LP solution values at start of diving; this has the advantage that we
-    * are guaranteed to continue with the same LP status as before diving, while in numerically difficult cases, a
+   /* we can just always reload the buffered LP solution values at start of diving; this has the advantage that we
     * re-solve as above can lead to a different LP status
     */
-   else
+   if( lpexact->storedsolvals->lpissolved )
    {
       int c;
       int r;
@@ -7551,6 +7529,8 @@ SCIP_RETCODE SCIPlpExactEndDive(
          SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem, -1LL) );
       }
    }
+   else
+      lpexact->solved = FALSE;
 
 #ifdef SCIP_MORE_DEBUG
    {
