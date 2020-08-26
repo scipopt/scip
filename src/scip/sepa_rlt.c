@@ -2198,6 +2198,8 @@ SCIP_RETCODE computeProjRltCut(
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, cut, sepa, "rlt_cut", -SCIPinfinity(scip), SCIPinfinity(scip),
          TRUE, FALSE, FALSE) );
 
+   SCIP_CALL( SCIPcacheRowExtensions(scip, *cut) );
+
    /* iterate over all variables in the row and add the corresponding terms to the cuts */
    for( i = 0; i < projrows[idx].nNonz; ++i )
    {
@@ -2218,6 +2220,8 @@ SCIP_RETCODE computeProjRltCut(
    /* set the coefficient of var and the constant side */
    assert(!SCIPisInfinity(scip, REALABS(coefvar)));
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, var, coefvar) );
+
+   SCIP_CALL( SCIPflushRowExtensions(scip, *cut) );
 
    assert(!SCIPisInfinity(scip, REALABS(finalside)));
    if( uselhs || computeEqCut )
