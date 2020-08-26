@@ -53,6 +53,7 @@
 #include "scip/scip_var.h"
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
@@ -72,7 +73,7 @@
 #define PIP_INIT_MONOMIALSSIZE 128
 #define PIP_INIT_FACTORSSIZE   16
 #define PIP_MAX_PRINTLEN       561       /**< the maximum length of any line is 560 + '\\0' = 561*/
-#define PIP_MAX_NAMELEN        256       /**< the maximum length for any name is 255 + '\\0' = 256 */
+#define PIP_MAX_NAMELEN        256u      /**< the maximum length for any name is 255 + '\\0' = 256 */
 #define PIP_PRINTLEN           100
 
 /** Section in PIP File */
@@ -131,6 +132,7 @@ typedef struct PipInput PIPINPUT;
 static const char delimchars[] = " \f\n\r\t\v";
 static const char tokenchars[] = "-+:<>=*^";
 static const char commentchars[] = "\\";
+static const char namechars[] = "!#$%&;?@_";  /* and characters and numbers */
 
 
 /*
@@ -2882,7 +2884,50 @@ SCIP_RETCODE printAggregatedCons(
    return SCIP_OKAY;
 }
 
-/** method check if the variable names are not longer than PIP_MAX_NAMELEN */
+/** returns whether name is valid according to PIP specification
+ *
+ * Checks these two conditions from http://polip.zib.de/pipformat.php:
+ * - Names/labels can contain at most 255 characters.
+ * - Name/labels have to consist of the following characters: a-z, A-Z, 0-9, "!", "#", "$", "%", "&", ";", "?", "@", "_". They cannot start with a number.
+ *
+ * In addition checks that the length is not zero.
+ */
+static
+SCIP_Bool isNameValid(
+   const char*           name                /**< name to check */
+   )
+{
+   size_t len;
+   size_t i;
+
+   assert(name != NULL);
+
+   len = strlen(name);  /*lint !e613*/
+   if( len > PIP_MAX_NAMELEN || len == 0 )
+      return FALSE;
+
+   /* names cannot start with a number */
+   if( isdigit(name[0]) )
+      return FALSE;
+
+   for( i = 0; i < len; ++i )
+   {
+      /* a-z, A-Z, 0-9 are ok */
+      if( isalnum(name[i]) )
+         continue;
+
+      /* characters in namechars are ok, too */
+      if( strchr(namechars, name[i]) != NULL )
+         continue;
+
+      return FALSE;
+   }
+
+   return TRUE;
+}
+
+
+/** method check if the variable names are valid according to PIP specification */
 static
 void checkVarnames(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2895,19 +2940,18 @@ void checkVarnames(
    assert(scip != NULL);
    assert(vars != NULL || nvars == 0);
 
-   /* check if the variable names are not to long */
+   /* check if the variable names are not too long and have only characters allowed by PIP */
    for( v = 0; v < nvars; ++v )
    {
-      if( strlen(SCIPvarGetName(vars[v])) > PIP_MAX_NAMELEN )  /*lint !e613*/
+      if( !isNameValid(SCIPvarGetName(vars[v])) )
       {
-         SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
-            PIP_MAX_NAMELEN - 1);
+         SCIPwarningMessage(scip, "variable name <%s> is not valid (too long or disallowed characters); PIP might be corrupted\n", SCIPvarGetName(vars[v]));
          return;
       }
    }
 }
 
-/** method check if the constraint names are not longer than PIP_MAX_NAMELEN */
+/** method check if the constraint names are valid according to PIP specification */
 static
 void checkConsnames(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2938,25 +2982,26 @@ void checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
+      if( !isNameValid(SCIPconsGetName(conss[c])) )
+      {
+         SCIPwarningMessage(scip, "constraint name <%s> is not valid (too long or unallowed characters); PIP might be corrupted\n", SCIPconsGetName(conss[c]));
+         return;
+      }
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
          SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
 
-         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN)
-            || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN -  4) )
+         /* for ranged constraints, we need to be able to append _lhs and _rhs to the constraint name, so need additional 4 characters */
+         if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN -  4 )
          {
-            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
+            SCIPwarningMessage(scip, "name of ranged constraint <%s> has to be cut down to %d characters;\n", SCIPconsGetName(conss[c]),
                PIP_MAX_NAMELEN  - 1);
             return;
          }
       }
-      else if( strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN )
-      {
-         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
-            PIP_MAX_NAMELEN  - 1);
-         return;
-      }
+
    }
 }
 
