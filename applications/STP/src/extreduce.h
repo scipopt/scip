@@ -67,6 +67,7 @@ typedef struct extension_data_permanent
    SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
    SCIP_Real*            pcSdToNode;         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
    int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
+   STP_Vectype(int)*     nodes_implications; /**< implied nodes for each node */
    int                   nnodes;             /**< number of nodes */
    SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
 } EXTPERMA;
@@ -116,6 +117,7 @@ typedef struct reduction_data
    const int* const nodeTo3TermsBases;
    const STP_Bool* const edgedeleted;
    int* const pseudoancestor_mark;
+   STP_Vectype(int)* nodes_implications;
    const SCIP_Real cutoff;
    const SCIP_Bool equality;
    const int redCostRoot;
@@ -391,7 +393,7 @@ extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
 extern int             extreduce_getMaxStackNedges(const GRAPH*);
-extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*);
+extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*, EXTPERMA*);
 extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
 extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 

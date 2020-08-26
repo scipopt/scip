@@ -270,7 +270,14 @@ SCIP_RETCODE pseudodeleteDeleteNode(
          assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
          cutoffs[edgecount] = extreduce_distDataGetSdDouble(scip, graph, vert, vert2, distdata);
-         assert(GE(cutoffs[edgecount], 0.0));
+
+         if( LT(cutoffs[edgecount], 0.0) )
+         {
+            assert(graph_pc_isPc(graph));
+            assert(EQ(cutoffs[edgecount], -1.0));
+
+            cutoffs[edgecount] = FARAWAY;
+         }
 
          edgecount++;
       }
@@ -379,9 +386,6 @@ SCIP_RETCODE pseudodeleteExecute(
       if( !nodeisDeletable )
          continue;
 
-
-      // todo: if single edges are ledge, try to eliminate via extended reduction!
-
        SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, offsetp, nelims) );
    }
 
@@ -403,7 +407,8 @@ void removeEdge(
    SCIP*                 scip,               /**< SCIP */
    int                   edge,               /**< edge to delete */
    GRAPH*                graph,              /**< graph data structure (in/out) */
-   DISTDATA*             distdata            /**< distance data (in/out) */
+   DISTDATA*             distdata,           /**< distance data (in/out) */
+   EXTPERMA*             extpermanent        /**< (in/out) */
 )
 {
    const int tail = graph->tail[edge];
@@ -423,6 +428,12 @@ void removeEdge(
 
    graph_edge_delFull(scip, graph, edge, TRUE);
    extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
+
+   if( extpermanent )
+   {
+      reduce_impliedNodesRepair(scip, graph, tail, head, extpermanent->nodes_implications);
+      assert(reduce_impliedNodesIsValid(graph, (const STP_Vectype(int)*) extpermanent->nodes_implications));
+   }
 
    if( graph->grad[tail] == 0 )
    {
@@ -517,7 +528,7 @@ SCIP_RETCODE extreduce_deleteArcs(
          {
             assert(edgedeletable[e] && edgedeletable[erev]);
 
-            removeEdge(scip, e, graph, &distdata);
+            removeEdge(scip, e, graph, &distdata, &extpermanent);
 
             (*nelims)++;
          }
@@ -586,7 +597,7 @@ SCIP_RETCODE extreduce_deleteEdges(
 
          if( deletable )
          {
-            removeEdge(scip, e, graph, &distdata);
+            removeEdge(scip, e, graph, &distdata, &extpermanent);
 
             (*nelims)++;
          }
@@ -792,10 +803,11 @@ void extreduce_edgeRemove(
    SCIP*                 scip,               /**< SCIP */
    int                   edge,               /**< edge to delete */
    GRAPH*                graph,              /**< graph data structure (in/out) */
-   DISTDATA*             distdata            /**< distance data (in/out) */
+   DISTDATA*             distdata,           /**< distance data (in/out) */
+   EXTPERMA*             extpermanent        /**< (in/out) can be NULL */
 )
 {
-   removeEdge(scip, edge, graph, distdata);
+   removeEdge(scip, edge, graph, distdata, extpermanent);
 }
 
 

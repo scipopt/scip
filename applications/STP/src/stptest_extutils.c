@@ -461,9 +461,9 @@ SCIP_RETCODE testDistCloseNodesPcAreValidAfterDeletion(
 
       STPTEST_ASSERT(node_idx[node_range[0].start + 3] == 4);
 
-      extreduce_edgeRemove(scip, 2, graph, &distdata);
-      extreduce_edgeRemove(scip, 4, graph, &distdata);
-      extreduce_edgeRemove(scip, 8, graph, &distdata);
+      extreduce_edgeRemove(scip, 2, graph, &distdata, NULL);
+      extreduce_edgeRemove(scip, 4, graph, &distdata, NULL);
+      extreduce_edgeRemove(scip, 8, graph, &distdata, NULL);
 
       STPTEST_ASSERT(extreduce_distCloseNodesAreValid(scip, graph, &distdata));
    }

@@ -128,6 +128,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    EXTPERMA*             extperm             /**< (uninitialized) extension data */
 )
 {
+   STP_Vectype(int)* nodes_implied = NULL;
    SCIP_Bool* isterm = NULL;
    SCIP_Real* bottleneckDistNode = NULL;
    SCIP_Real* pcSdToNode = NULL;
@@ -145,6 +146,7 @@ SCIP_RETCODE extreduce_extPermaInit(
 
    assert(scip && extperm);
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nodes_implied, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &tree_deg, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bottleneckDistNode, nnodes) );
@@ -154,6 +156,7 @@ SCIP_RETCODE extreduce_extPermaInit(
       SCIP_CALL( SCIPallocMemoryArray(scip, &pcSdToNode, nnodes) );
    }
 
+   reduce_impliedNodesGet(scip, graph, nodes_implied);
    SCIP_CALL( reduce_dcmstInit(scip, STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->dcmst)) );
    SCIP_CALL( graph_csrdepo_init(scip, msts_maxn, msts_datasize, &(extperm->msts_comp)) );
    SCIP_CALL( graph_csrdepo_init(scip, msts_maxn, msts_datasize, &(extperm->msts_levelbase)) );
@@ -164,6 +167,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
          STP_EXT_MAXGRAD, 1, TRUE, &(extperm->sds_horizontal)) );
 
+   extperm->nodes_implications = nodes_implied;
    extperm->edgedeleted = edgedeleted;
    extperm->isterm = isterm;
    extperm->bottleneckDistNode = bottleneckDistNode;
@@ -279,6 +283,12 @@ void extreduce_extPermaFreeMembers(
    SCIPfreeMemoryArray(scip, &(extperm->bottleneckDistNode));
    SCIPfreeMemoryArray(scip, &(extperm->tree_deg));
    SCIPfreeMemoryArray(scip, &(extperm->isterm));
+
+   for( int i = extperm->nnodes - 1; i >= 0; i-- )
+   {
+      StpVecFree(scip, extperm->nodes_implications[i]);
+   }
+   SCIPfreeMemoryArray(scip, &(extperm->nodes_implications));
 
    extperm->nnodes = -1;
 }

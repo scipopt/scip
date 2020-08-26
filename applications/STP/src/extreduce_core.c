@@ -38,6 +38,49 @@
 
 #define EXT_COSTS_RECOMPBOUND 10
 
+
+/** are the given extension vertices in conflict with the extension conditions? */
+static inline
+SCIP_Bool extensionHasImplicationConflict(
+   const GRAPH*          graph,              /**< graph data structure */
+   const STP_Vectype(int)  implications,    /**< implications for extroot */
+   const int*            tree_deg,           /**> degree */
+   const int*            extedges,           /**< extension edges */
+   int                   nextedges           /**< number of extension edges */
+)
+{
+   const int nimplications = StpVecGetSize(implications);
+
+   assert(nextedges > 0);
+
+   for( int i = 0; i < nimplications; i++ )
+   {
+      int j;
+      const int impnode = implications[i];
+      assert(graph_knot_isInRange(graph, impnode));
+
+      if( tree_deg[impnode] > 0 )
+         continue;
+
+      for( j = 0; j < nextedges; j++ )
+      {
+         const int extnode = graph->head[extedges[j]];
+         assert(graph_knot_isInRange(graph, extnode));
+
+         if( impnode == extnode )
+            break;
+      }
+
+      /* implication node not contained in extension nodes? */
+      if( j == nextedges )
+      {
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** returns position of last marked component before the current one */
 static inline
 int extStackGetPrevMarked(
@@ -876,18 +919,23 @@ void extStackAddCompsExpanded(
    int                   nextedges,          /**< number of edges for extension */
    const int*            extedges,           /**< array of edges for extension */
    EXTDATA*              extdata,            /**< extension data */
-   SCIP_Bool*            success             /**< success pointer */
+   SCIP_Bool*            success,            /**< success pointer */
+   SCIP_Bool*            ruledOut            /**< all ruled out? */
 )
 {
    int* const extstack_data = extdata->extstack_data;
    int* const extstack_start = extdata->extstack_start;
    int* const extstack_state = extdata->extstack_state;
+   const int extroot = graph->tail[extedges[0]];
+   const STP_Vectype(int) implications = extdata->reddata->nodes_implications[extroot];
    int stackpos = extStackGetPosition(extdata);
    int datasize = extstack_start[stackpos];
    const uint32_t powsize = (uint32_t) pow(2.0, nextedges);
 
    assert(nextedges > 0 && nextedges < 32);
    assert(powsize >= 2);
+
+   *ruledOut = FALSE;
 
    /* stack too full? */
    if( !extStackIsExtendable(nextedges, (int) powsize, datasize, extdata) )
@@ -899,13 +947,10 @@ void extStackAddCompsExpanded(
    }
 
    /* todo try to rule out pairs of edges with simple, 2-edge bottleneck */
-   // int* antipairs_starts;
-   // int* antipairs_edges;
-   // int* anitpairs_hasharr; size nedges, clean
+   // int* antipairs_starts;   // int* antipairs_edges; // int* anitpairs_hasharr; size nedges, clean
 
    extreduce_mstLevelHorizontalAdd(scip, graph, nextedges, extedges, extdata);
-
-   extreduce_mstLevelClose(scip, graph, graph->tail[extedges[0]], extdata);
+   extreduce_mstLevelClose(scip, graph, extroot, extdata);
 
    /* compute and add components (overwrite previous, non-expanded component) */
    // todo we probably want to order so that the smallest components are put last!
@@ -915,13 +960,14 @@ void extStackAddCompsExpanded(
    // -also good if we have the method that excludes everything except for the singletons!
    for( uint32_t counter = powsize - 1; counter >= 1; counter-- )
    {
+      const int datasize_prev = datasize;
       for( uint32_t j = 0; j < (uint32_t) nextedges; j++ )
       {
          /* Check if jth bit in counter is set */
          if( counter & ((uint32_t) 1 << j) )
          {
             assert(datasize < extdata->extstack_maxsize);
-            assert(extedges[j] >= 0);
+            assert(graph->tail[extedges[j]] == extroot);
 
             extstack_data[datasize++] = extedges[j];
             SCIPdebugMessage(" head %d \n", graph->head[extedges[j]]);
@@ -931,19 +977,34 @@ void extStackAddCompsExpanded(
       SCIPdebugMessage("... added \n");
       assert(stackpos < extdata->extstack_maxsize - 1);
 
-      // todo check with hashing whether antipairs extis. If so, remove again
-
-      extstack_state[stackpos] = EXT_STATE_EXPANDED;
-      extstack_start[++stackpos] = datasize;
+      if( extensionHasImplicationConflict(graph, implications, extdata->tree_deg,
+         &(extstack_data[datasize_prev]), datasize - datasize_prev) )
+      {
+         SCIPdebugMessage("implication conflict found for root %d \n", extroot);
+         datasize = datasize_prev;
+      }
+      else
+      {
+         extstack_state[stackpos] = EXT_STATE_EXPANDED;
+         extstack_start[++stackpos] = datasize;
+      }
 
       assert(extstack_start[stackpos] - extstack_start[stackpos - 1] > 0);
    }
 
-   assert(stackpos > extStackGetPosition(extdata));
-   assert(stackpos >= extdata->extstack_ncomponents);
-   assert(stackpos <= extdata->extstack_maxncomponents);
+   /* nothing added? */
+   if( stackpos == extStackGetPosition(extdata) )
+   {
+      *ruledOut = TRUE;
+   }
+   else
+   {
+      assert(stackpos > extStackGetPosition(extdata));
+      assert(stackpos >= extdata->extstack_ncomponents);
+      assert(stackpos <= extdata->extstack_maxncomponents);
 
-   extdata->extstack_ncomponents = stackpos;
+      extdata->extstack_ncomponents = stackpos;
+   }
 }
 
 
@@ -1074,6 +1135,49 @@ void extStackTopProcessInitialEdges(
      }
 #endif
    }
+
+   if( !compIsEdge )
+   {
+      const STP_Vectype(int) implications = extdata->reddata->nodes_implications[extdata->tree_starcenter];
+
+      assert(extdata->tree_deg[graph->tail[extstack_data[0]]] == 1);
+      assert(graph_knot_isInRange(graph, extdata->tree_starcenter));
+
+      if( extensionHasImplicationConflict(graph, implications, extdata->tree_deg,
+          &(extstack_data[data_start]), data_end - data_start) )
+       {
+          SCIPdebugMessage("implication conflict found for initial star component \n");
+
+#if 0
+          {
+            const int nimplications = StpVecGetSize(implications);
+
+            for( int e = graph->outbeg[extdata->tree_starcenter]; e != EAT_LAST;
+                  e = graph->oeat[e] )
+            {
+               graph_edge_printInfo(graph, e);
+
+            }
+
+            for( int i = 0; i < nimplications; i++ )
+            {
+               const int impnode = implications[i];
+               printf("impnode=%d \n", impnode);
+
+            }
+
+            graph_edge_printInfo(graph, extstack_data[0]);
+            for( int i = data_start; i < data_end; i++ )
+            {
+               const int edge = extstack_data[i];
+               graph_edge_printInfo(graph, edge);
+            }
+         }
+#endif
+
+          *initialRuleOut = TRUE;
+       }
+   }
 }
 
 
@@ -1094,6 +1198,7 @@ void extStackTopExpand(
    int extedges[STP_EXT_MAXGRAD];
    REDDATA* const reddata = extdata->reddata;
    int nextedges = 0;
+   SCIP_Bool ruledOut = FALSE;
 
 #ifndef NDEBUG
    const int stackpos = extStackGetPosition(extdata);
@@ -1116,23 +1221,29 @@ void extStackTopExpand(
    /* everything ruled out already? */
    if( nextedges == 0 )
    {
-      *success = TRUE;
-      assert(extstack_state[stackpos] == EXT_STATE_NONE);
-      assert(stackpos != 0);  /* not the initial component! */
-
-      extBacktrack(scip, graph, *success, FALSE, extdata);
+      ruledOut = TRUE;
    }
    else
    {
       /* use the just collected edges 'extedges' to build components and add them to the stack */
-      extStackAddCompsExpanded(scip, graph, nextedges, extedges, extdata, success);
+      extStackAddCompsExpanded(scip, graph, nextedges, extedges, extdata, success, &ruledOut);
 
 #ifndef NDEBUG
+      if( !ruledOut )
       {
          const int stackpos_new = extStackGetPosition(extdata);
          assert(extstack_state[stackpos_new] == EXT_STATE_EXPANDED || (stackpos_new < stackpos) );
       }
 #endif
+   }
+
+   if( ruledOut )
+   {
+      *success = TRUE;
+      assert(extstack_state[stackpos] == EXT_STATE_NONE);
+      assert(stackpos != 0);  /* not the initial component! */
+
+      extBacktrack(scip, graph, *success, FALSE, extdata);
    }
 }
 
@@ -1596,7 +1707,8 @@ SCIP_RETCODE extreduce_checkComponent(
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
          .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
          .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = extpermanent->edgedeleted,
-         .pseudoancestor_mark = pseudoancestor_mark, .cutoff = cutoff, .equality = extpermanent->redcostEqualAllow,
+         .pseudoancestor_mark = pseudoancestor_mark, .nodes_implications = extpermanent->nodes_implications,
+         .cutoff = cutoff, .equality = extpermanent->redcostEqualAllow,
          .redCostRoot = root };
       EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
          .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,

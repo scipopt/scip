@@ -832,9 +832,198 @@ SCIP_Bool starIsDeg2(
 }
 
 
+/** adds implication for terminal */
+static inline
+void impliedNodesAddTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   term,               /**< term */
+   STP_Vectype(int)*     nodes_implications  /**< array of size |V|; returned with implications per node or NULL */
+)
+{
+   SCIP_Real min1 = FARAWAY;
+   SCIP_Real min2 = FARAWAY;
+   const SCIP_Bool isPc = (graph->stp_type == STP_RPCSPG);
+   int min_edge = -1;
+
+   assert(isPc == graph_pc_isPcMw(graph));
+   assert(Is_term(graph->term[term]));
+
+   if( isPc )
+   {
+      min1 = graph->prize[term];
+      min2 = graph->prize[term];
+   }
+
+   for( int e = graph->inpbeg[term]; e != EAT_LAST; e = graph->ieat[e] )
+   {
+      if( graph->cost[e] < min1 )
+      {
+         min_edge = e;
+         min2 = min1;
+         min1 = graph->cost[e];
+      }
+      else if( graph->cost[e] < min2 )
+      {
+         min2 = graph->cost[e];
+      }
+   }
+
+   assert(min_edge >= 0 || isPc);
+   assert(LE(min1, min2));
+   assert(min_edge == -1 || EQ(graph->cost[min_edge], min1));
+
+   if( LT(min1, min2) )
+   {
+      const int min_neighbor = graph->tail[min_edge];
+      assert(!isPc || !graph_pc_knotIsDummyTerm(graph, min_neighbor));
+
+      StpVecPushBack(scip, nodes_implications[min_neighbor], term);
+      SCIPdebugMessage("add implied terminal %d to node %d \n", term, min_neighbor);
+   }
+}
+
+
+/** removes implication for terminal from neighbor (if implication exists) */
+static inline
+void impliedNodesRemoveTerm(
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   neighbor,           /**< neighbor of term */
+   int                   term,               /**< term */
+   STP_Vectype(int)*     nodes_implications, /**< array of size |V|; returned with implications per node or NULL */
+   SCIP_Bool*            removed             /**< was removed? */
+)
+{
+   STP_Vectype(int) neighbor_implications = nodes_implications[neighbor];
+   const int nimps = StpVecGetSize(neighbor_implications);
+   assert(Is_term(graph->term[term]));
+
+   *removed = FALSE;
+
+   for( int i = 0; i < nimps; i++ )
+   {
+      const int node = neighbor_implications[i];
+      assert(graph_knot_isInRange(graph, node));
+
+      if( node == term )
+      {
+         neighbor_implications[i] = neighbor_implications[nimps - 1];
+         StpVecPopBack(neighbor_implications);
+         *removed = TRUE;
+         break;
+      }
+   }
+}
+
+
 /*
  * Interface methods
  */
+
+/** gets implied nodes for each node */
+void reduce_impliedNodesGet(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   STP_Vectype(int)*     nodes_implications  /**< array of size |V|; returned with implications per node or NULL */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+   assert(!graph_pc_isPcMw(graph) || !graph->extended);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      nodes_implications[i] = NULL;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(graph->term[i]) )
+      {
+         impliedNodesAddTerm(scip, graph, i, nodes_implications);
+      }
+   }
+}
+
+
+/** repairs implied nodes list AFTER edge elimination */
+void reduce_impliedNodesRepair(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   tail,               /**< tail of eliminated edge */
+   int                   head,               /**< head of eliminated edge */
+   STP_Vectype(int)*     nodes_implications  /**< initialized array of size |V| */
+)
+{
+   assert(scip && graph && nodes_implications);
+   assert(graph_knot_isInRange(graph, tail));
+   assert(graph_knot_isInRange(graph, head));
+   assert(!graph_pc_isPcMw(graph) || !graph->extended);
+
+   if( Is_term(graph->term[tail])  )
+   {
+      SCIP_Bool removed;
+      impliedNodesRemoveTerm(graph, head, tail, nodes_implications, &removed);
+
+      if( removed )
+         impliedNodesAddTerm(scip, graph, tail, nodes_implications);
+   }
+
+   if( Is_term(graph->term[head])  )
+   {
+      SCIP_Bool removed;
+      impliedNodesRemoveTerm(graph, tail, head, nodes_implications, &removed);
+
+      if( removed )
+         impliedNodesAddTerm(scip, graph, head, nodes_implications);
+   }
+}
+
+
+/** implied nodes list is valid */
+SCIP_Bool reduce_impliedNodesIsValid(
+   const GRAPH*          graph,              /**< graph data structure */
+   const STP_Vectype(int)* nodes_implications  /**< initialized array of size |V| */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(nodes_implications);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( graph->grad[i] > 0 )
+      {
+         const STP_Vectype(int) implications = nodes_implications[i];
+         const int nimps = StpVecGetSize(implications);
+
+         for( int j = 0; j < nimps; j++ )
+         {
+            SCIP_Bool found = FALSE;
+            const int impnode = implications[j];
+            assert(graph_knot_isInRange(graph, impnode));
+
+            for( int e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               if( graph->head[e] == impnode )
+               {
+                  found = TRUE;
+                  break;
+               }
+            }
+
+            if( !found )
+            {
+               printf("implied node %d from base %d not connected \n", impnode, i);
+               return FALSE;
+            }
+         }
+
+      }
+   }
+
+   return TRUE;
+}
+
 
 /** apply pseudo eliminations provided */
 SCIP_RETCODE reduce_applyPseudoDeletions(

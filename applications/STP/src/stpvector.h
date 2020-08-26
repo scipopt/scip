@@ -149,7 +149,7 @@ extern "C" {
 #define StpVecFree(scip, vec)                                                                          \
    do                                                                                                  \
    {                                                                                                   \
-      if( vec )                                                                                        \
+      if( (vec) )                                                                                        \
       {                                                                                                \
          char* _p_ = &((char*) (vec))[(int) sizeof(int) * (-2)];                                         \
          const int _nbytes_ = vecinternalComputeNBytes(vecinternalGetCapacity((vec)), (vec));         \
