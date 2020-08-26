@@ -6110,7 +6110,7 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       return SCIP_OKAY;
    }
 
-   if ( propdata->ncompblocked < propdata->ncomponents && propdata->detectsubgroups )
+   if ( propdata->ncompblocked < propdata->ncomponents && propdata->detectsubgroups && propdata->symconsenabled )
    {
       /* @TODO: create array only when needed */
       propdata->genlinconsssize = propdata->nperms;
