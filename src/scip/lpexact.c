@@ -179,8 +179,6 @@ SCIP_Bool colExactInSync(
    assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj));
    assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
    assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
-   assert(RatIsApproxEqualReal(set, colexact->flushedlb, fpcol->flushedlb) || (RatIsNegInfinity(colexact->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
-   assert(RatIsApproxEqualReal(set, colexact->flushedub, fpcol->flushedub) || (RatIsInfinity(colexact->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
 
    return TRUE;
 }
@@ -208,8 +206,6 @@ SCIP_Bool rowExactInSync(
 
    synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = RatIsApproxEqualReal(set, rowexact->flushedlhs, fprow->flushedlhs) || (RatIsNegInfinity(rowexact->flushedlhs) && SCIPsetIsInfinity(set, -fprow->flushedlhs));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->flushedrhs, fprow->flushedrhs) || (RatIsInfinity(rowexact->flushedrhs) && SCIPsetIsInfinity(set, fprow->flushedrhs)));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant) );
 
    if( !synced )
