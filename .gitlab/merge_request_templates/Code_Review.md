@@ -4,27 +4,25 @@
 
 ### Code review
 
-* [ ] Is the code change correct?
-* [ ] Is the code sufficiently documented? Is the coding style OK (http://scip.zib.de/doc/html/CODE.php)?
-* [ ] Is the naming and place of new methods and parameters clear and consistent?
-* [ ] Do emphasis settings need to be adjusted?
+* [ ] The code change is correct.
+* [ ] The code is sufficiently documented (e.g., CHANGELOG entries were added and the coding style is OK).
+* [ ] The naming and place of new methods is clear and consistent *or* no new methods have been added.
+* [ ] Emphasis settings are up to date.
 
 ### Documentation and building
 
-* [ ] Are CHANGELOG entries added?
-* [ ] Is necessary user documentation added (doc/xternal.c, doc/inc/faq/, installation instructions, ...)?
-* [ ] Are new files added to makedist.sh and both build systems?  Updated dependencies via makedepend.sh?
+* [ ] The CHANGELOG is up to date.
+* [ ] The user documentation is up to date (doc/xternal.c, doc/inc/faq/, installation instructions, ...).
+* [ ] makedist.sh and the dependencies are up to date (for make only).
 
 ### Testing
 
-* [ ] Has ctest been checked: `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress}`?
-* [ ] Has performance impact been checked on mi(nl)pdev-solvable (if affecting default)?
-* [ ] Are coverage settings added to test new code?
-* [ ] Have unit tests been added (if necessary)?
+* [ ] ctest passes without errors: `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress}`.
+* [ ] The performance impact has been checked on mi(nl)pdev-solvable *or* the changed code will not be executed by default.
+* [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
 
 ### Does this merge introduce an API change? :warning:
 
-* [ ] Look for a satisfactory solution that ensures backwards compatibility.
-* [ ] Document interface changes in the CHANGELOG.
-* [ ] Increase SCIP_APIVERSION after the merge (use `scripts/updateversion.py -a`!).
-* [ ] Tag this MR with the label 'default parameter' and inform one of the developers responsible for SAP (default: Jakob) if a parameter was added/deleted/changed.
+* [ ] As far as possible, the code ensures backwards compatibility.
+* [ ] After merging, the `SCIP_APIVERSION` is updated if necessary (use label `public SCIP API`; in particular if new `SCIP_EXPORT` methods have been added).
+* [ ] No parameter was added/deleted/changed *or* the MR is tagged with the label 'default parameter' and at least one developer responsible for SAP is mentioned in a comment.
