@@ -1832,6 +1832,8 @@ SCIP_RETCODE setParams(
    }
 #endif
 
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
+
    SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
 
    if( pc )
