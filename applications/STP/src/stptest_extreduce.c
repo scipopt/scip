@@ -1308,11 +1308,11 @@ SCIP_RETCODE testPcEdgeDeletedByMst1(
    SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 100.0;
+      graph->prize[i] = FARAWAY;
 
    graph->prize[1] = 0.09;
 
-   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+   SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPc(graph, &redcostdata);
 
@@ -1373,11 +1373,11 @@ SCIP_RETCODE testPcEdgeNotDeleted(
    SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 100.0;
+      graph->prize[i] = FARAWAY;
 
    graph->prize[1] = 0.11;
 
-   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+   SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPc(graph, &redcostdata);
 
@@ -1433,12 +1433,12 @@ SCIP_RETCODE testPcNode3PseudoDeletedBySd1(
    SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 100.0;
+      graph->prize[i] = FARAWAY;
 
    graph->prize[0] = 1.0;
    graph->prize[2] = 0.9;
 
-   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+   SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPc(graph, &redcostdata);
 
@@ -1482,7 +1482,6 @@ SCIP_RETCODE testPcNode4PseudoDeletedBySd1(
    graph_knot_add(graph, STP_TERM);       /* node 5 */
    graph_knot_add(graph, STP_TERM);       /* node 6 */
 
-
    graph->source = 1;
 
    graph_edge_addBi(scip, graph, 0, 1, 1.0);
@@ -1498,13 +1497,13 @@ SCIP_RETCODE testPcNode4PseudoDeletedBySd1(
    SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 100.0;
+      graph->prize[i] = FARAWAY;
 
    graph->prize[0] = 0.0;
    graph->prize[2] = 1.0;
    graph->prize[3] = 0.6;
 
-   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+   SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPc(graph, &redcostdata);
 
@@ -1558,12 +1557,12 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
    SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
 
    for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 100.0;
+      graph->prize[i] = FARAWAY;
 
    graph->prize[0] = 1.0;
    graph->prize[2] = 0.9;
 
-   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
+   SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
    extInitRedCostArraysPcWithBase(graph, nnodes - 2, &redcostdata);
 
@@ -1664,22 +1663,24 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
-   SCIP_CALL( testPcNode4PseudoDeletedBySd1(scip) );
 
    SCIP_CALL( testNode4PseudoDeletedBySd1(scip) );
    SCIP_CALL( testNode4PseudoNotDeletedBySd1(scip) );
 
    SCIP_CALL( testNode3PseudoDeletedByRedCosts1(scip) );
 
+   SCIP_CALL( testPcNode4PseudoDeletedBySd1(scip) );
    SCIP_CALL( testPcNodesPseudoDeletedBySd1(scip) );
    SCIP_CALL( testPcNode3PseudoDeletedBySd1(scip) );
+   SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
+   SCIP_CALL( testPcEdgeNotDeleted(scip) );
+
    //SCIP_CALL( testPcNode3NotPseudoDeletedBySd1(scip) );
    SCIP_CALL( testNode3PseudoDeletedBySd1(scip) );
    SCIP_CALL( testNode3PseudoDeletedBySd2(scip) );
    SCIP_CALL( testNode3PseudoDeletedBySd3(scip) );
 
-   SCIP_CALL( testPcEdgeDeletedByMst1(scip) );
-   SCIP_CALL( testPcEdgeNotDeleted(scip) );
+
    SCIP_CALL( testEdgeDeletedByCommonRedCostsTargets(scip) );
    SCIP_CALL( testEdgeDeletedByMst2(scip) );
    SCIP_CALL( testEdgeDeletedByMst1(scip) );
