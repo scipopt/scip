@@ -2664,7 +2664,12 @@ SCIP_RETCODE projectShift(
 
    if( !usefarkas )
    {
-      if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && *safebound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
+      {
+         stat->nfailboundshift++;
+         assert(!lp->hasprovedbound);
+      }
+      else if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
       {
          RatSet(lpexact->lpobjval, dualbound);
          lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
@@ -2774,12 +2779,6 @@ char chooseInitialBoundingMethod(
     * solution
     */
    else if( (SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lpexact->fplp, set)) )
-      dualboundmethod = 'e';
-   /** @todo exip: rework this, offset cutoffbound and improve handling in other db-methods */
-   /* if the LP reached the objective limit we also force an exact LP solve; the reason is that other bounding methods
-    * are likely to violate the cutoffbound since they don't provide bounds that are as tight as exactlp
-    */
-   else if( SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OBJLIMIT )
       dualboundmethod = 'e';
    /* if we are not in automatic mode, try an iteration with the static method */
    else if( set->exact_safedbmethod != 'a' )
@@ -3181,7 +3180,12 @@ SCIP_RETCODE boundShift(
    {
       SCIPclockStop(stat->provedfeasbstime, set);
       stat->nboundshift++;
-      if( !SCIPsetIsInfinity(set, -1.0 * (*safebound)) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && *safebound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
+      {
+         stat->nfailboundshift++;
+         assert(!lp->hasprovedbound);
+      }
+      else if( !SCIPsetIsInfinity(set, -1.0 * (*safebound)) )
       {
          lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;

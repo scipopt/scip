@@ -2818,6 +2818,60 @@ SCIP_RETCODE lpSetObjlim(
    return SCIP_OKAY;
 }
 
+/** adjust the objective limit of the lp solver to make safe dual bounding possible
+ *
+ *  Note that we are always minimizing.
+ */
+static
+SCIP_RETCODE lpAdjustObjlimForExactSolve(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was actually changed */
+   )
+{
+   SCIP_Real adjustedobjlim;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* We disabled the objective limit in the LP solver or we are not in exact solving mode */
+   if( lpCutoffDisabled(set) || !set->exact_enabled )
+      return SCIP_OKAY;
+
+   /* no need to adjust in infinity case */
+   if( SCIPsetIsInfinity(set, lp->lpiobjlim) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
+
+   adjustedobjlim = lp->lpiobjlim + MAX(REALABS(lp->lpiobjlim)/1e6, 1e-6);
+
+   SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, adjustedobjlim, success) );
+   if( *success )
+   {
+      SCIP_Real actualobjlim;
+
+      /* check whether the parameter was actually changed or already was at the boundary of the LP solver's parameter range */
+      SCIP_CALL( SCIPlpiGetRealpar(lp->lpi, SCIP_LPPAR_OBJLIM, &actualobjlim) );
+      if( actualobjlim != lp->lpiobjlim ) /*lint !e777*/
+      {
+         /* mark the current solution invalid */
+         lp->solved = FALSE;
+         lp->primalfeasible = FALSE;
+         lp->primalchecked = FALSE;
+         lp->lpobjval = SCIP_INVALID;
+         lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      }
+      lp->lpiobjlim = actualobjlim;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** sets the feasibility tolerance of the LP solver */
 static
 SCIP_RETCODE lpSetFeastol(
@@ -11751,6 +11805,7 @@ SCIP_RETCODE lpSolveStable(
    else
    {
       SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
+      SCIP_CALL( lpAdjustObjlimForExactSolve(lp, set, &success) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
    SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * lp->feastol : lp->feastol, &success) );
@@ -12618,8 +12673,30 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          else
             SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible);
 
+         /* in objlimit case, the lp objval is set to infinity, get the real objval to correct */
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+         {
+            SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+         }
+
          SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                prob, itlim, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
+
+         /* handle error case in objlimit */
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !lp->hasprovedbound )
+         {
+            /* if safe bounding did fail, we have not managed to get a dual bound exceeding the cutoffbound, therefore just disable cutoffbound
+             * and resolve the lp with another bounding step */
+            lp->lpexact->oldcutoffbound = lp->cutoffbound;
+            lp->cutoffbound = SCIPlpiInfinity(lp->lpi);
+            goto SOLVEAGAIN;
+         }
+         /* restore the old cutoffbound if it was disabled prior and reset the saved value to inf */
+         if( lp->lpexact->oldcutoffbound < SCIPsetInfinity(set) )
+         {
+            lp->cutoffbound = lp->lpexact->oldcutoffbound;
+            lp->lpexact->oldcutoffbound = SCIPsetInfinity(set);
+         }
 
          /* check for error */
          if( *lperror )
@@ -12890,7 +12967,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
           * FASTMIP and solve again. */
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->exact_enabled )
+         if( !SCIPprobAllColsInLP(prob, set, lp) && !set->exact_enabled )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -12936,10 +13013,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* get objective value */
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
-               /* the objval has to be safe (if in exact solving mode) */
-               SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
-                     eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval, &primalfeasible, &dualfeasible) );
-
                /* get solution status for the lp */
                solstat = SCIPlpGetSolstat(lp);
                assert(solstat != SCIP_LPSOLSTAT_OBJLIMIT);
@@ -12965,10 +13038,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                   /* get objective value */
                   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-
-                  /* the objval has to be safe (if in exact solving mode) */
-                  SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue,
-                        eventfilter, prob, lp->lpiitlim, lperror, FALSE, &objval, &primalfeasible, &dualfeasible) );
 
                   /* get solution status for the lp */
                   solstat = SCIPlpGetSolstat(lp);
@@ -13032,18 +13101,10 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                    * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
                    * this was already done in the lpSolve() method
                    */
-                  if( (!set->exact_enabled && SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) ||
-                        objval >=  lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
+                  if( SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                   {
                      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
                      lp->lpobjval = SCIPsetInfinity(set);
-                  }
-                  /* not cutoff without tolerances -> just disable cutoff and solve again */
-                  if( set->exact_enabled && objval < lp->cutoffbound - getFiniteLooseObjval(lp, set, prob) )
-                  {
-                     /** @todo exip: recover the old cutoffbound somehow after this? */
-                     lp->cutoffbound = SCIPlpiInfinity(lpi);
-                     goto SOLVEAGAIN;
                   }
 
                   /* LP solution is not feasible or objective limit was reached without the LP value really exceeding
@@ -13073,9 +13134,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
                         SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
-
-                        SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-                              prob, itlim, lperror, TRUE, &(lp->lpobjval), &primalfeasible, &dualfeasible) );
                      }
                      /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
                       * with the primal simplex due to numerical problems) - treat this case like an LP error

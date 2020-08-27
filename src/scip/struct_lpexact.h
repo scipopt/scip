@@ -208,6 +208,7 @@ struct SCIP_LpExact
                                               *   ignoring variables, with infinite best bound */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
    SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
+   SCIP_Real             oldcutoffbound;     /**< place to store cutoffbound if it gets relaxed/removed for safe bounding */
    SCIP_LPIEXACT*        lpiexact;           /**< exact LP solver interface */
    SCIP_COLEXACT**       lpicols;            /**< array with columns currently stored in the LP solver */
    SCIP_ROWEXACT**       lpirows;            /**< array with rows currently stored in the LP solver */
