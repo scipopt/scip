@@ -11,7 +11,7 @@
 
 ### Documentation and building
 
-* [ ] The CHANGELOG is up to date.
+* [ ] The CHANGELOG is up to date (including API changes if present in this merge request.)
 * [ ] The user documentation is up to date (doc/xternal.c, doc/inc/faq/, installation instructions, ...).
 * [ ] makedist.sh and the dependencies are up to date (for make only).
 
@@ -21,7 +21,7 @@
 * [ ] The performance impact has been checked on mi(nl)pdev-solvable *or* the changed code will not be executed by default.
 * [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
 
-### Does this merge introduce an API change? :warning:
+### Does this merge request introduce an API change? :warning:
 
 * [ ] As far as possible, the code ensures backwards compatibility.
 * [ ] After merging, the `SCIP_APIVERSION` is updated if necessary (use label `public SCIP API`; in particular if new `SCIP_EXPORT` methods have been added).
