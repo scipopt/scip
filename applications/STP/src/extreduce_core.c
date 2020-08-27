@@ -43,8 +43,9 @@
 static inline
 SCIP_Bool extensionHasImplicationConflict(
    const GRAPH*          graph,              /**< graph data structure */
-   const STP_Vectype(int)  implications,    /**< implications for extroot */
-   const int*            tree_deg,           /**> degree */
+   const STP_Vectype(int)  implications,     /**< implications for extroot */
+   const int*            tree_deg,           /**< tree degree or NULL */
+   int                   tree_root,          /**< tree root */
    const int*            extedges,           /**< extension edges */
    int                   nextedges           /**< number of extension edges */
 )
@@ -52,14 +53,19 @@ SCIP_Bool extensionHasImplicationConflict(
    const int nimplications = StpVecGetSize(implications);
 
    assert(nextedges > 0);
+   assert(graph_knot_isInRange(graph, tree_root));
 
    for( int i = 0; i < nimplications; i++ )
    {
       int j;
       const int impnode = implications[i];
       assert(graph_knot_isInRange(graph, impnode));
+      assert(Is_term(graph->term[impnode]));
 
-      if( tree_deg[impnode] > 0 )
+      if( tree_root == impnode )
+         continue;
+
+      if( tree_deg && tree_deg[impnode] > 0 )
          continue;
 
       for( j = 0; j < nextedges; j++ )
@@ -931,6 +937,7 @@ void extStackAddCompsExpanded(
    int stackpos = extStackGetPosition(extdata);
    int datasize = extstack_start[stackpos];
    const uint32_t powsize = (uint32_t) pow(2.0, nextedges);
+   const int* tree_deg = graph_pc_isPc(graph) ? extdata->tree_deg : NULL;
 
    assert(nextedges > 0 && nextedges < 32);
    assert(powsize >= 2);
@@ -977,7 +984,7 @@ void extStackAddCompsExpanded(
       SCIPdebugMessage("... added \n");
       assert(stackpos < extdata->extstack_maxsize - 1);
 
-      if( extensionHasImplicationConflict(graph, implications, extdata->tree_deg,
+      if( extensionHasImplicationConflict(graph, implications, tree_deg, extdata->tree_root,
          &(extstack_data[datasize_prev]), datasize - datasize_prev) )
       {
          SCIPdebugMessage("implication conflict found for root %d \n", extroot);
@@ -1143,7 +1150,8 @@ void extStackTopProcessInitialEdges(
       assert(extdata->tree_deg[graph->tail[extstack_data[0]]] == 1);
       assert(graph_knot_isInRange(graph, extdata->tree_starcenter));
 
-      if( extensionHasImplicationConflict(graph, implications, extdata->tree_deg,
+      /* NOTE: need to be careful here, because the fist edge is an in-edge!  */
+      if( extensionHasImplicationConflict(graph, implications, extdata->tree_deg, extdata->tree_root,
           &(extstack_data[data_start]), data_end - data_start) )
        {
           SCIPdebugMessage("implication conflict found for initial star component \n");
