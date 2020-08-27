@@ -5,9 +5,10 @@
 ### Code review
 
 * [ ] The code change is correct.
-* [ ] The code is sufficiently documented (e.g., CHANGELOG entries were added and the coding style is OK).
 * [ ] The naming and place of new methods is clear and consistent *or* no new methods have been added.
 * [ ] Emphasis settings are up to date.
+* [ ] The code is sufficiently documented.
+* [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
 
 ### Documentation and building
 
