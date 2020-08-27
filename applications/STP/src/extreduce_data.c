@@ -175,6 +175,9 @@ SCIP_RETCODE extreduce_extPermaInit(
    extperm->tree_deg = tree_deg;
    extperm->nnodes = nnodes;
    extperm->redcostEqualAllow = FALSE;
+   extperm->tree_maxdepth = extreduce_getMaxTreeDepth(graph);
+   extperm->tree_maxnedges = STP_EXTTREE_MAXNEDGES;
+   extperm->tree_maxnleaves = STP_EXTTREE_MAXNLEAVES;
 
    if( pcmw )
    {

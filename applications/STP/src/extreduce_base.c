@@ -935,7 +935,24 @@ int extreduce_getMaxTreeDepth(
    const GRAPH*          graph               /**< graph data structure */
 )
 {
-   const int maxdepth = (graph->edges > STP_EXT_EDGELIMIT) ? STP_EXT_MINDFSDEPTH : STP_EXT_MAXDFSDEPTH;
+   int nedges;
+   int maxdepth;
+
+   graph_get_nVET(graph, NULL, &nedges, NULL);
+
+   if( nedges > STP_EXT_DEPTH_MAXNEDGES )
+   {
+      maxdepth = STP_EXT_MINDFSDEPTH;
+   }
+   else if( nedges > STP_EXT_DEPTH_MIDNEDGES )
+   {
+      maxdepth = STP_EXT_MIDDFSDEPTH;
+   }
+   else
+   {
+      assert(nedges <= STP_EXT_DEPTH_MIDNEDGES);
+      maxdepth = STP_EXT_MAXDFSDEPTH;
+   }
 
    assert(maxdepth > 0);
 

@@ -1728,9 +1728,9 @@ SCIP_RETCODE extreduce_checkComponent(
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata,
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
-         .tree_maxdepth = extreduce_getMaxTreeDepth(graph),
-         .tree_maxnleaves = STP_EXTTREE_MAXNLEAVES,
-         .tree_maxnedges = STP_EXTTREE_MAXNEDGES, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
+         .tree_maxdepth = extpermanent->tree_maxdepth,
+         .tree_maxnleaves = extpermanent->tree_maxnleaves,
+         .tree_maxnedges = extpermanent->tree_maxnedges, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
 
 #ifdef STP_DEBUG_EXT
       extreduce_extdataCleanArraysDbg(graph, &extdata);

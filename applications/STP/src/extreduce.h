@@ -30,10 +30,12 @@
 #define STP_EXT_MAXSTACKSIZE  5000
 #define STP_EXT_MAXNCOMPS     1000
 #define STP_EXT_MAXDFSDEPTH 6
+#define STP_EXT_MIDDFSDEPTH 5
 #define STP_EXT_MINDFSDEPTH 4
 #define STP_EXT_MAXGRAD 8
 #define STP_EXT_MAXEDGES 500
-#define STP_EXT_EDGELIMIT 50000
+#define STP_EXT_DEPTH_MIDNEDGES 50000
+#define STP_EXT_DEPTH_MAXNEDGES 100000
 #define STP_EXTTREE_MAXNEDGES 25
 #define STP_EXTTREE_MAXNLEAVES 20
 #define STP_EXTTREE_MAXNLEAVES_GUARD (STP_EXTTREE_MAXNLEAVES + STP_EXT_MAXGRAD)
@@ -69,6 +71,9 @@ typedef struct extension_data_permanent
    int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
    STP_Vectype(int)*     nodes_implications; /**< implied nodes for each node */
    int                   nnodes;             /**< number of nodes */
+   int                   tree_maxnleaves;
+   int                   tree_maxdepth;
+   int                   tree_maxnedges;
    SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
 } EXTPERMA;
 
