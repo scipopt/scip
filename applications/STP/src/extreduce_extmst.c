@@ -49,6 +49,7 @@
 #include "extreduce.h"
 
 #define EXT_PC_SDMAXVISITS 10  /**< maximum visits for PC specific SD computation */
+#define EXT_DOUBLESD_ALWAYS
 
 typedef struct mst_extension_tree_component
 {
@@ -86,10 +87,11 @@ void extGetSdPcUpdate(
 }
 
 
+
 /** Returns special distance.
- *  Only checks normal distance from vertex1 to vertex2. */
+ *  Checks normal distance from vertex2 to vertex1 if no opposite distance is known. */
 static inline
-SCIP_Real extGetSd(
+SCIP_Real extGetSdDouble(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    int                   vertex1,            /**< first vertex */
@@ -97,7 +99,7 @@ SCIP_Real extGetSd(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   SCIP_Real sd = extreduce_distDataGetSd(scip, g, vertex1, vertex2, extdata->distdata);
+   SCIP_Real sd = extreduce_distDataGetSdDouble(scip, g, vertex1, vertex2, extdata->distdata);
    const PCDATA* const pcdata = extdata->pcdata;
 
    assert((pcdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
@@ -114,9 +116,9 @@ SCIP_Real extGetSd(
 
 
 /** Returns special distance.
- *  Checks normal distance from vertex2 to vertex1 if no opposite distance is known. */
+ *  Only checks normal distance from vertex1 to vertex2. */
 static inline
-SCIP_Real extGetSdDouble(
+SCIP_Real extGetSd(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    int                   vertex1,            /**< first vertex */
@@ -124,9 +126,10 @@ SCIP_Real extGetSdDouble(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   // todo always use me??? test only after SD distances and pseudo-elimination are implemented!
-
-   SCIP_Real sd = extreduce_distDataGetSdDouble(scip, g, vertex1, vertex2, extdata->distdata);
+#ifdef EXT_DOUBLESD_ALWAYS
+   return extGetSdDouble(scip, g, vertex1, vertex2, extdata);
+#else
+   SCIP_Real sd = extreduce_distDataGetSd(scip, g, vertex1, vertex2, extdata->distdata);
    const PCDATA* const pcdata = extdata->pcdata;
 
    assert((pcdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
@@ -139,6 +142,7 @@ SCIP_Real extGetSdDouble(
    assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
 
    return sd;
+#endif
 }
 
 

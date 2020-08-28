@@ -434,7 +434,7 @@ void distCloseNodesPrintLostNodeInfo(
 
       while( vertex != vertex_base )
       {
-         const int prededge = 2 * prededges[index];
+         const int prededge = prededges[index];
 
          assert(prededge >= 0);
 
@@ -515,7 +515,7 @@ SCIP_Bool distCloseNodesIncluded(
       const int org_node = org_indices[i];
       const int new_index = newnodeindex[org_node] - 1;
 #ifndef NDEBUG
-      const int prededge = 2 * distdata->closenodes_prededges[i];
+      const int prededge = distdata->closenodes_prededges[i];
 
       assert(new_index >= -1);
       assert(distdata->closenodes_prededges);
