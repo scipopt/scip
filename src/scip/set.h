@@ -657,6 +657,18 @@ void SCIPsetSortSepasName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   );
+
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */

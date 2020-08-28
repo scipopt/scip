@@ -39,6 +39,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/cutsel.h"
 #include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
@@ -898,19 +899,10 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
    SCIP_UNUSED(efficiacychoice);
 
-   *cutoff = FALSE;
-
-   SCIPsetDebugMsg(set, "applying %d cuts\n", sepastore->ncuts);
-
-   node = SCIPtreeGetCurrentNode(tree);
-   assert(node != NULL);
+   SCIPsetDebugMsg(set, "selecting from %d cuts\n", sepastore->ncuts);
 
    /* get maximal number of cuts to add to the LP */
    maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
-   ncutsapplied = 0;
-
-   /* get depth of current node */
-   depth = SCIPnodeGetDepth(node);
 
    if( root )
    {
@@ -923,12 +915,28 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       goodmaxparall = MAX(0.5, 1.0 - set->sepa_minortho);
    }
 
+   // choose cut selector
+   // and select
+   SCIP_CALL( SCIPcutselsSelect(set, sepastore->cuts, &nselectedcuts) );
+
+
    /* call cut selection algorithm */
    SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, 0.9, 0.0, goodmaxparall, maxparall,
          set->sepa_dircutoffdistfac, set->sepa_efficacyfac, set->sepa_objparalfac, set->sepa_intsupportfac,
          sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
 
-   /* apply all selected cuts */
+   /*
+    * apply all selected cuts
+    */
+   ncutsapplied = 0;
+   *cutoff = FALSE;
+
+   node = SCIPtreeGetCurrentNode(tree);
+   assert(node != NULL);
+
+   /* get depth of current node */
+   depth = SCIPnodeGetDepth(node);
+
    for( i = 0; i < nselectedcuts && !(*cutoff); i++ )
    {
       SCIP_ROW* cut;

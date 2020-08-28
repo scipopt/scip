@@ -52,6 +52,7 @@
 #include "scip/reader.h"
 #include "scip/relax.h"
 #include "scip/sepa.h"
+#include "scip/cutsel.h"
 #include "scip/table.h"
 #include "scip/prop.h"
 #include "scip/benders.h"
@@ -4179,6 +4180,51 @@ void SCIPsetSortSepasName(
       set->sepasnamesorted = TRUE;
    }
 }
+
+/** inserts cut selector in cut selector list */
+SCIP_RETCODE SCIPsetIncludeCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(set != NULL);
+   assert(cutsel != NULL);
+   //assert(!SCIPsepaIsInitialized(sepa));
+
+   if( set->ncutsels >= set->cutselssize )
+   {
+      set->cutselssize = SCIPsetCalcMemGrowSize(set, set->ncutsels + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->cutsels, set->cutselssize) );
+   }
+   assert(set->ncutsels < set->cutselssize);
+
+   set->cutsels[set->ncutsels] = cutsel;
+   set->ncutsels++;
+   //set->cutselssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the cut selector of the given name, or NULL if not existing */
+SCIP_CUTSEL* SCIPsetFindCutsel(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      if( strcmp(SCIPcutselGetName(set->cutsels[i]), name) == 0 )
+         return set->cutsels[i];
+   }
+
+   return NULL;
+}
+
 
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(

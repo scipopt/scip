@@ -46,6 +46,7 @@
 #include "scip/type_reader.h"
 #include "scip/type_relax.h"
 #include "scip/type_sepa.h"
+#include "scip/type_cutsel.h"
 #include "scip/type_table.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
@@ -57,6 +58,7 @@
 extern "C" {
 #endif
 
+// TODO: maybe add bools to find out if cut sels are sorted and whatnot, i.e. make it more similar to other plugins as long as it makes sense
 /** global SCIP settings */
 struct SCIP_Set
 {
@@ -75,6 +77,7 @@ struct SCIP_Set
    SCIP_PRESOL**         presols;            /**< presolvers */
    SCIP_RELAX**          relaxs;             /**< relaxators */
    SCIP_SEPA**           sepas;              /**< separators */
+   SCIP_CUTSEL**         cutsels;            /**< cut selectors */
    SCIP_PROP**           props;              /**< propagators */
    SCIP_PROP**           props_presol;       /**< propagators (sorted by presol priority) */
    SCIP_HEUR**           heurs;              /**< primal heuristics */
@@ -109,6 +112,8 @@ struct SCIP_Set
    int                   relaxssize;         /**< size of relaxs array */
    int                   nsepas;             /**< number of separators */
    int                   sepassize;          /**< size of sepas array */
+   int                   ncutsels;           /**< number of cut selectors */
+   int                   cutselssize;        /**< size of cutsels array */
    int                   nprops;             /**< number of propagators */
    int                   propssize;          /**< size of props array */
    int                   nheurs;             /**< number of primal heuristics */

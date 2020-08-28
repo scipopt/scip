@@ -219,6 +219,7 @@
 #include "scip/table_default.h"
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
+#include "scip/cutsel_hello.h"
 
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_filtersqp.h"
