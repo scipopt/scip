@@ -2826,10 +2826,12 @@ static
 SCIP_RETCODE lpAdjustObjlimForExactSolve(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was actually changed */
    )
 {
    SCIP_Real adjustedobjlim;
+   SCIP_Real avgboundingerror;
 
    assert(lp != NULL);
    assert(set != NULL);
@@ -2847,7 +2849,8 @@ SCIP_RETCODE lpAdjustObjlimForExactSolve(
 
    SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
 
-   adjustedobjlim = lp->lpiobjlim + MAX(REALABS(lp->lpiobjlim)/1e6, 1e-6);
+   avgboundingerror = (stat->boundingerrorbs + stat->boundingerrorps + stat->boundingerrorexlp) / (stat->nboundshift + stat->nprojshift + stat->nexlp);
+   adjustedobjlim = lp->lpiobjlim + MAX(avgboundingerror, 1e-6);
 
    SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, adjustedobjlim, success) );
    if( *success )
@@ -11805,7 +11808,7 @@ SCIP_RETCODE lpSolveStable(
    else
    {
       SCIP_CALL( lpSetObjlim(lp, set, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob), &success) );
-      SCIP_CALL( lpAdjustObjlimForExactSolve(lp, set, &success) );
+      SCIP_CALL( lpAdjustObjlimForExactSolve(lp, set, stat, &success) );
    }
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
    SCIP_CALL( lpSetFeastol(lp, tightprimfeastol ? FEASTOLTIGHTFAC * lp->feastol : lp->feastol, &success) );

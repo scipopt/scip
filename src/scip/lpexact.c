@@ -3870,6 +3870,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
 
       if( primalfeasible && dualfeasible )
       {
+         stat->boundingerrorexlp += REALABS(lp->lpobjval - RatApproxReal(lpexact->lpobjval));
          lp->lpobjval = RatRoundReal(lpexact->lpobjval, SCIP_ROUND_DOWNWARDS);
          lp->hasprovedbound = TRUE;
       }

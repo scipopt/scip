@@ -2662,17 +2662,21 @@ SCIP_RETCODE projectShift(
       RatAdd(dualbound, dualbound, tmp);
    }
 
+   *safebound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+
    if( !usefarkas )
    {
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && *safebound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
+         stat->boundingerrorps += REALABS(lp->lpobjval - *safebound);
          stat->nfailboundshift++;
          assert(!lp->hasprovedbound);
       }
       else if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
       {
+         stat->boundingerrorps += REALABS(lp->lpobjval - *safebound);
          RatSet(lpexact->lpobjval, dualbound);
-         lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+         lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;
       }
       else
@@ -3182,11 +3186,13 @@ SCIP_RETCODE boundShift(
       stat->nboundshift++;
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && *safebound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
+         stat->boundingerrorbs += REALABS(lp->lpobjval - *safebound);
          stat->nfailboundshift++;
          assert(!lp->hasprovedbound);
       }
       else if( !SCIPsetIsInfinity(set, -1.0 * (*safebound)) )
       {
+         stat->boundingerrorbs += REALABS(lp->lpobjval - *safebound);
          lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;
       }
