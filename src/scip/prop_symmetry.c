@@ -6061,8 +6061,12 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
    }
 
    /* possibly compute symmetry */
-   if ( propdata->ofenabled )
+   if ( propdata->ofenabled && SCIPgetNBinVars(scip) > 1 )
    {
+      SCIP_Bool oldsymconsenabled;
+
+      oldsymconsenabled = propdata->symconsenabled;
+
       if ( propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
@@ -6070,6 +6074,17 @@ SCIP_RETCODE tryAddSymmetryHandlingConss(
       else
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+
+      /* if there is no symmetry compatible with OF, check whether there are more general symmetries */
+      if ( propdata->nperms == 0 && SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip) > 1 )
+      {
+         SCIP_CALL( freeSymmetryData(scip, propdata) );
+         propdata->symconsenabled = oldsymconsenabled;
+         propdata->ofenabled = FALSE;
+         propdata->sstenabled = FALSE;
+
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
       }
    }
    else
