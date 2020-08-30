@@ -2582,7 +2582,7 @@ SCIP_RETCODE SCIPprobdataSetDefaultParams(
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 1) );
    SCIP_CALL( SCIPsetIntParam(scip, "limits/maxsol", 400) );
-   SCIP_CALL( SCIPsetIntParam(scip, "lp/rowagelimit", 30) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/rowagelimit", 10) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxroundsroot", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxrounds", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallroundsroot", -1) );
