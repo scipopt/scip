@@ -17,12 +17,12 @@
 /* #define SCIP_DEBUG */
 
 /**@file   cons_lop.c
- * @brief  example constraint handler for linear ordering constraints
+ * @brief  constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
  * We handle the following system of linear constraints:
- * - \f$ x_{ij} + x_{ji} = 1 \f$            (symmetry equations - added initially)
- * \f$ x_{ij} + x_{jk} + x_{ki} \leq 2 \f$  (triangle inequalities)
+ * - \f$ x_{ij} + x_{ji} = 1 \f$ for \f$i < j\$                                (symmetry equations - added initially)
+ * - \f$ x_{ij} + x_{jk} + x_{ki} \leq 2 \f$ for \f$i < j, i < k, j \neq k\f$  (triangle inequalities - separated)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
