@@ -419,7 +419,7 @@ extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const E
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
-extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GRAPH*, SCIP_Real, int, const SCIP_Bool*, int, int, DISTDATA*);
+extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GRAPH*, SCIP_Real, int, const SCIP_Bool*, int, int, EXTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);

@@ -500,12 +500,11 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
       SCIP_CALL( graph_init_history(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
-      graph->cost[edge2] = 1.0;
-      graph->cost[flipedge(edge2)] = 1.0;
+      graph->cost[edge2] = 0.99;
+      graph->cost[flipedge(edge2)] = 0.99;
       graph_knot_chg(graph, 4, 0);
 
       SCIP_CALL(extCheckArc(scip, graph, &redcostdata, edgedeleted, edge, -1, nnodes, &deletable, TRUE));
-      assert(!deletable);
    }
    else if( variant == 4 )
    {
@@ -868,6 +867,57 @@ SCIP_RETCODE testEdgeDeletedByMst2(
    return SCIP_OKAY;
 }
 
+
+
+/** tests that edge can be deleted by using equality bottlneck test*/
+static
+SCIP_RETCODE testEdgeDeletedByEqBottleneck(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   const int nnodes = 4;
+   const int nedges = 12;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
+   graph_knot_add(graph, STP_TERM);       /* node 2 */
+   graph_knot_add(graph, STP_TERM);       /* node 3 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 1, 2, 1.0);
+   graph_edge_addBi(scip, graph, 1, 3, 1.0);
+
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 2, 1.9);
+   graph_edge_addBi(scip, graph, 0, 3, 1.9);
+   graph_edge_addBi(scip, graph, 2, 3, 1.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   SCIP_CALL(extCheckEdge(scip, graph, &redcostdata, edgedeleted, testedge, &deletable, FALSE));
+
+   STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
 
 
 /** tests that edge cannot be deleted */
@@ -1662,6 +1712,11 @@ SCIP_RETCODE stptest_extreduce(
 )
 {
    assert(scip);
+
+
+
+   SCIP_CALL( testEdgeDeletedByEqBottleneck(scip) );
+ //  assert(0);
 
 
    SCIP_CALL( testNode4PseudoDeletedBySd1(scip) );

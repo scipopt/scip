@@ -386,7 +386,7 @@ SCIP_RETCODE pseudodeleteExecute(
       if( !nodeisDeletable )
          continue;
 
-       SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, offsetp, nelims) );
+      SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, offsetp, nelims) );
    }
 
    reduce_starFree(scip, &stardata);

@@ -920,10 +920,102 @@ SCIP_Real bottleneckGetDist(
 }
 
 
-/** does a special distance approximation dominate the tree bottleneck distance between
- *  vertex_pathmarked and vertex_unmarked in the current tree? */
+/** helper to check the case of quality */
+static inline
+SCIP_Bool bottleneckIsEqualityDominated(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Real             dist_eq,            /**< critical distance */
+   int                   edge_forbidden,     /**< forbidden edge */
+   const SCIP_Bool*      edges_isForbidden,  /**< blocked edges marked, or NULL */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const SCIP_Real sd_eq = extreduce_distDataGetSdDoubleForbidden(scip, g, dist_eq,
+         edge_forbidden, edges_isForbidden, vertex1, vertex2, extdata);
+
+   if( sd_eq < -0.5 )
+      return FALSE;
+
+   assert(GE(sd_eq, dist_eq));
+
+   if( LE(sd_eq, dist_eq) )
+   {
+      assert(EQ(sd_eq, dist_eq));
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
+/** Does a special distance approximation dominate the tree bottleneck distance between
+ *  vertex_pathmarked and vertex_unmarked in the current tree.
+ *  NOTE: makes additional checks in case of equality */
 static inline
 SCIP_Bool bottleneckIsDominated(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
+   int                   vertex_unmarked,    /**< second vertex */
+   SCIP_Real             specialDist,        /**< best computed special distance approximation (-1.0 if unknown) */
+   int                   edge_forbidden,     /**< forbidden edge */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   SCIP_Real bottleneckDist;
+   const SCIP_Bool hasSpecialDist = sdIsNonTrivial(specialDist);
+
+   assert(graph_knot_isInRange(graph, vertex_pathmarked));
+   assert(graph_knot_isInRange(graph, vertex_unmarked));
+
+   if( !hasSpecialDist || vertex_pathmarked == vertex_unmarked )
+   {
+      return FALSE;
+   }
+
+#ifndef NDEBUG
+   bottleneckDist = bottleneckGetDist(graph, extdata, vertex_pathmarked, vertex_unmarked);
+#else
+   bottleneckDist = bottleneckGetDist(graph, extdata, vertex_unmarked);
+#endif
+
+   SCIPdebugMessage("domination test %d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDist, bottleneckDist);
+
+   if( LT(specialDist, bottleneckDist) )
+   {
+      return TRUE;
+   }
+   else if( LE(specialDist, bottleneckDist) )
+   {
+#ifdef EXT_DOUBLESD_ALWAYS
+      assert(EQ(extGetSdDouble(scip, graph, vertex_pathmarked, vertex_unmarked, extdata), specialDist));
+#else
+      assert(LE(extGetSdDouble(scip, graph, vertex_pathmarked, vertex_unmarked, extdata), specialDist));
+#endif
+
+      if( bottleneckIsEqualityDominated(scip, graph, specialDist, edge_forbidden,
+         NULL, vertex_pathmarked, vertex_unmarked, extdata) )
+      {
+       //  printf("...ruled out with equality! \n");
+
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/** Does a special distance approximation dominate the tree bottleneck distance of
+ *  extension edge (i.e. its edge cost) or bottleneck distance between vertex_pathmarked
+ *  and vertex_unmarked in the current tree.
+ *  NOTE: makes additional checks in case of equality */
+static inline
+SCIP_Bool bottleneckWithExtedgeIsDominated(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   extedge,            /**< edge along which we want to extend the tree, or -1 */
    int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
@@ -935,27 +1027,16 @@ SCIP_Bool bottleneckIsDominated(
    SCIP_Real bottleneckDist;
    const SCIP_Bool hasSpecialDist = sdIsNonTrivial(specialDist);
 
-   assert(vertex_pathmarked >= 0 && vertex_pathmarked < graph->knots);
-   assert(vertex_unmarked >= 0 && vertex_unmarked < graph->knots);
-   assert(extedge == -1 || vertex_pathmarked == graph->tail[extedge]);
+   assert(vertex_pathmarked == graph->tail[extedge]);
 
    if( !hasSpecialDist )
-   {
       return FALSE;
-   }
 
-   assert(GE(specialDist, 0.0));
-
-   if( extedge >= 0 )
-   {
-      if( LT(specialDist, graph->cost[extedge]) )
-         return TRUE;
-   }
+   if( LT(specialDist, graph->cost[extedge]) )
+      return TRUE;
 
    if( vertex_pathmarked == vertex_unmarked )
-   {
       return FALSE;
-   }
 
 #ifndef NDEBUG
    bottleneckDist = bottleneckGetDist(graph, extdata, vertex_pathmarked, vertex_unmarked);
@@ -963,26 +1044,51 @@ SCIP_Bool bottleneckIsDominated(
    bottleneckDist = bottleneckGetDist(graph, extdata, vertex_unmarked);
 #endif
 
-   SCIPdebugMessage("%d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDist, bottleneckDist);
+   if( graph->cost[extedge] > bottleneckDist )
+      bottleneckDist = graph->cost[extedge];
+
+   SCIPdebugMessage("extedge domination test %d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDist, bottleneckDist);
 
    if( LT(specialDist, bottleneckDist) )
+   {
       return TRUE;
-   else if( LE(specialDist, bottleneckDist) && 0 ) /* todo cover equality */
-      return TRUE;
+   }
+   else if( LE(specialDist, bottleneckDist) )
+   {
+      const int vertex1 = graph->head[extedge];
+
+      assert(vertex1 != vertex_unmarked);
+      assert(vertex1 != vertex_pathmarked);
+#ifdef EXT_DOUBLESD_ALWAYS
+      assert(EQ(extGetSdDouble(scip, graph, vertex1, vertex_unmarked, extdata), specialDist));
+#else
+      assert(LE(extGetSdDouble(scip, graph, vertex1, vertex_unmarked, extdata), specialDist));
+#endif
+
+      if( bottleneckIsEqualityDominated(scip, graph, specialDist, extedge,
+         NULL, vertex1, vertex_unmarked, extdata) )
+      {
+    //     printf("...ruled out with equality! \n");
+         return TRUE;
+      }
+   }
 
    return FALSE;
 }
 
 
-/** does a special distance approximation dominate the tree bottleneck distance between
- *  vertex_pathmarked and vertex_unmarked in the current tree? */
+/** Does a special distance approximation dominate the tree bottleneck distance between
+ *  vertex_pathmarked and vertex_unmarked in the current tree?
+ *  NOTE: makes additional checks in case of equality */
 static inline
 SCIP_Bool bottleneckToSiblingIsDominated(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   extedge,            /**< edge for extension */
    int                   edge2sibling,       /**< edge to sibling of extedge head */
-   SCIP_Real             specialDist         /**< best computed special distance approximation (-1.0 if unknown) */
-   )
+   SCIP_Real             specialDist,        /**< best computed special distance approximation (FARAWAY if unknown) */
+   EXTDATA*              extdata             /**< extension data */
+)
 {
    const SCIP_Bool hasSpecialDist = LT(specialDist, FARAWAY);
 
@@ -1007,11 +1113,29 @@ SCIP_Bool bottleneckToSiblingIsDominated(
       if( LT(specialDist, edgecost[extedge]) )
          return TRUE;
 
-      if( 0 && LE(specialDist, edgecost[edge2sibling]) ) // todo cover equality!
-         return TRUE;
+      if( LE(specialDist, edgecost[edge2sibling]) )
+      {
+         const int vertex1 = graph->head[edge2sibling];
+         const int vertex2 = graph->head[extedge];
 
-      if( 0 && LE(specialDist, edgecost[extedge]) ) // todo cover equality!
-         return TRUE;
+         if( bottleneckIsEqualityDominated(scip, graph, specialDist, edge2sibling,
+               NULL, vertex1, vertex2, extdata) )
+         {
+            return TRUE;
+         }
+      }
+
+      if( LE(specialDist, edgecost[extedge]) )
+      {
+         const int vertex1 = graph->head[edge2sibling];
+         const int vertex2 = graph->head[extedge];
+
+         if( bottleneckIsEqualityDominated(scip, graph, specialDist, extedge,
+               NULL, vertex1, vertex2, extdata) )
+         {
+            return TRUE;
+         }
+      }
    }
 
    return FALSE;
@@ -1057,7 +1181,7 @@ void bottleneckCheckNonLeaves(
 
       specialDist = extGetSd(scip, graph, neighbor, cand, extdata);
 
-      if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, cand, specialDist, extdata) )
+      if( bottleneckWithExtedgeIsDominated(scip, graph, edge2neighbor, neighbor_base, cand, specialDist, extdata) )
       {
          SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
          *ruledOut = TRUE;
@@ -1076,6 +1200,7 @@ SCIP_Bool dbgBottleneckFromLeafIsDominated(
    const GRAPH*          graph,              /**< graph data structure */
    int                   topleaf,            /**< component leaf to check for */
    SCIP_Bool             with_sd_double,     /**< use SD double method? */
+   int                   edge_forbidden,     /**< forbidden edge */
    EXTDATA*              extdata             /**< extension data */
    )
 {
@@ -1099,7 +1224,7 @@ SCIP_Bool dbgBottleneckFromLeafIsDominated(
                extGetSdDouble(scip, graph, topleaf, leaf, extdata)
              : extGetSd(scip, graph, topleaf, leaf, extdata);
 
-         if( bottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata) )
+         if( bottleneckIsDominated(scip, graph, topleaf, leaf, specialDist, edge_forbidden, extdata) )
          {
             ruleOut = TRUE;
             break;
@@ -1243,9 +1368,9 @@ void mstCompLeafGetSDsToSiblings(
       /* only make bottleneck test for 'right' siblings to avoid double checks */
       if( !hitTopLeaf )
       {
-         assert(!bottleneckToSiblingIsDominated(graph, edge2top, edge2sibling, sds[j]));
+         assert(!bottleneckToSiblingIsDominated(scip, graph, edge2top, edge2sibling, sds[j], extdata));
       }
-      else if( bottleneckToSiblingIsDominated(graph, edge2top, edge2sibling, sds[j]) )
+      else if( bottleneckToSiblingIsDominated(scip, graph, edge2top, edge2sibling, sds[j], extdata) )
       {
          SCIPdebugMessage("---bottleneck rule-out component (siblings test)---\n");
          *leafRuledOut = TRUE;
@@ -1314,7 +1439,7 @@ void mstCompLeafGetSDsToAncestors(
 
          assert(EQ(specialDist, extGetSd(scip, graph, topleaf, leaf, extdata)));
 
-         if( bottleneckIsDominated(graph, -1, topleaf, leaf, specialDist, extdata) )
+         if( bottleneckIsDominated(scip, graph, topleaf, leaf, specialDist, edge2leaf, extdata) )
          {
             SCIPdebugMessage("---bottleneck rule-out component (standard test)---\n");
             *leafRuledOut = TRUE;
@@ -1359,7 +1484,7 @@ void mstCompLeafGetSDs(
 
    if( *leafRuledOut )
    {
-      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, TRUE, extdata));
+      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, TRUE, edge2leaf, extdata));
       return;
    }
 
@@ -1368,11 +1493,11 @@ void mstCompLeafGetSDs(
 
    if( *leafRuledOut )
    {
-      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, extdata));
+      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata));
       return;
    }
 
-   assert(!dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, extdata) || graph_pc_isPc(graph));
+   assert(!dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata) || graph_pc_isPc(graph));
    assert(extreduce_sdsTopInSync(scip, graph, sds, compleaf, extdata));
 }
 
@@ -1546,7 +1671,7 @@ void mstLevelLeafSetVerticalSDs(
       adjids[j] = leaf;
 #endif
 
-      if( bottleneckIsDominated(graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
+      if( bottleneckWithExtedgeIsDominated(scip, graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
       {
          SCIPdebugMessage("---bottleneck rule-out---\n");
          assert(*ruledOut == FALSE);
