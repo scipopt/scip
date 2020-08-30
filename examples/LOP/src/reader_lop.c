@@ -18,7 +18,7 @@
  * @author Marc Pfetsch
  *
  * This file implements the reader/parser used to read linear ordering problems. For more details see \ref READER. The
- * data should be given in LOLIB format, see <a href="http://www.optsicom.es/lolib/">LOLIB</a>.
+ * data should be given in LOLIB format, see <a href="http://grafo.etsii.urjc.es/optsicom/lolib/">LOLIB</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
