@@ -53,6 +53,8 @@ SCIP_RETCODE getNextNumber(
    assert( s != NULL );
    assert( value != NULL );
 
+   *value = SCIP_INVALID; /* for debugging */
+
    /* skip whitespace */
    while ( isspace(**s) )
       ++(*s);
