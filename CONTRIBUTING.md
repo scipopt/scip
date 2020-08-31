@@ -36,6 +36,47 @@ will auto-link to the commit. Commit hashes from other repositories, however,
 won't autolink, so be sure to include an explicit link. Also, please apply the
 ~bug label when using the above template.
 
-## Linting
+## Code Analysis
 
-Currently, `flexelint` and `cppcheck` are the preferred light-weight static analysis tooling that we use. `flexelint` supressions are done inline. `cppcheck` supresssions can also be performed inline, but it's typically preferably to disable a category of checks in `supressions.txt`
+Currently, we use three tools to perform a static analysis of the code.
+These tools have helped to detect many errors that would not have been discovered otherwise.
+The code analysis tools `pclint` (older versions: `flexelint`) and `cppcheck` investigate the source code and possibly output warnings.
+Moreover, from time to time, `coverity` is used to analyze different pathways of the code.
+In addition, one can use `valgrind` to detect memory leaks and access problems.
+These tools (except `coverity`) are also automatically run in the gitlab CI for merge requests.
+
+# Linting
+
+In the following, we will give some hints on how to deal with warnings from `pclint`/`flexelint` (`lint` in the following).
+First, it should be noted that most warnings have a good reason, but the static analysis of code has its limits
+and `lint` does not always understand the code we write.
+Many of the `lint` warnings are globally disabled in the file `lint/lint.lnt` and `pclint/pclint.lnt`.
+One should take care when adding suppression to these files, since the warnings might be of value.
+
+One example is warning ``715 - named parameter symbol of function symbol not subsequently referenced``.
+In a framework like SCIP, in which callback functions play an important role, this warning is triggered quite often,
+since some function parameters might not be needed. However, we do not want to disable this warning globally, since it
+often helps to identify function parameters that are useless, e.g., by a copy-paste error.
+
+`Lint` warnings can be disabled by adding a comment in the particular line indicated by the warning, like ``/*lint !e527*/``.
+Note that `lint` parses asserts, so adding ``assert( v != NULL );``, for example,  can convince `lint`` that ``v`` is not a NULL-pointer.
+Currently, `lint` does not always understand more complicated asserts, so it might be useful to add redundant asserts
+at particular places.
+
+Some other warnings that often occur are the following:
+
+- Warnings connected to type conversions: for example, ``unsigned int`` is converted to ``int``
+  or ``size_t`` to ``int``. In principle, this comes with a reduction of precision, but this might be o.k. in many
+  contexts, especially, since ``int`` is the default type for counting variables. In general, adding an explicit type
+  cast will silence `lint`, but should be carefully done.
+
+- One further warning that often occurs is ``777 - testing floating point values for equality``. This often
+  indicates that one should have used something like ``SCIPisEq()`` instead.
+
+- The warning ``534 - ignoring return value of function symbol`` often indicates that one has forgotten ``SCIP_CALL()`` around
+  a function. If this is not the case often something like ``(void) SCIPsnprintf(...)`` helps.
+
+
+# cppcheck
+
+`cppcheck` supresssions can be performed inline, but it's typically preferably to disable a category of checks in `supressions.txt`.
