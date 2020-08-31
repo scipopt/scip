@@ -82,6 +82,11 @@ SCIP_RETCODE getNextNumber(
       while ( isdigit(**s) )
          ++(*s);
    }
+   else
+   {
+      SCIPerrorMessage("Error reading from file.\n");
+      return SCIP_READERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -107,7 +112,6 @@ SCIP_RETCODE LOPreadFile(
    SCIP_FILE* file;
    char* s;
    char* nstr;
-   SCIP_Bool error;
    int i;
    int j;
 
@@ -170,11 +174,6 @@ SCIP_RETCODE LOPreadFile(
 	 SCIP_Real val;
 
          SCIP_CALL( getNextNumber(file, buffer, &s, &val) );
-	 if ( error )
-	 {
-	    SCIPerrorMessage("Reading failed.\n");
-	    return SCIP_READERROR;
-	 }
          assert( val != SCIP_INVALID );
 	 (*W)[i][j] = val;
       }
