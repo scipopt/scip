@@ -81,7 +81,7 @@ SCIP_RETCODE getNextNumber(
       *value = atof(*s);
 
       /* skip number */
-      while ( isdigit(**s) )
+      while ( isdigit(**s) || **s == '-' || **s == '+' )
          ++(*s);
    }
    else
