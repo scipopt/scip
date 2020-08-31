@@ -902,6 +902,7 @@ SCIP_Real sdGetSd(
    int                   i2,                 /**< second vertex */
    SCIP_Real             sd_upper,           /**< upper bound on special distance that is accepted (can be FARAWAY) */
    SCIP_Real             sd_sufficient,      /**< bound below which to terminate (can be 0.0) */
+   SCIP_Bool             onlyIntermedTerms,  /**< allow only paths with intermediate terms */
    SD*                   sddata              /**< SD */
    )
 {
@@ -920,6 +921,11 @@ SCIP_Real sdGetSd(
 
    sdgraph = sddata->sdgraph;
    assert(sdgraph);
+
+#ifndef NDEBUG
+   if( onlyIntermedTerms )
+      assert(!(Is_term(g->term[i]) && Is_term(g->term[i2])));
+#endif
 
    /* get closest terminals of distance strictly smaller than 'sd' */
    graph_tpathsGet4CloseTerms(g, sddata->terminalpaths, i, sd, neighbterms1, NULL, termdist1, &nnterms1);
@@ -943,6 +949,18 @@ SCIP_Real sdGetSd(
          assert(Is_term(g->term[tk]));
          assert(Is_term(g->term[tj]));
          assert(tk >= 0);
+
+         if( onlyIntermedTerms )
+         {
+            if( tj == i2 || tk == i )
+            {
+               assert(tj == tk);
+               assert(EQ(termdist1[j], 0.0) || EQ(termdist2[k], 0.0));
+               assert(Is_term(g->term[i]) || Is_term(g->term[i2]));
+
+               continue;
+            }
+         }
 
          if( tj != tk)
          {
@@ -1332,7 +1350,7 @@ void sdGetSdsCliqueTermWalks(
             assert(0 <= v2 && v2 < g->knots);
             assert(v1 != v2);
 
-            sds_buffer[nsds] = sdGetSd(g, v1, v2, maxtreecost, 0.0, sddata);
+            sds_buffer[nsds] = sdGetSd(g, v1, v2, maxtreecost, 0.0, FALSE, sddata);
             cliquegraph->cost[e] = sds_buffer[nsds];
             cliquegraph->cost[flipedge(e)] = sds_buffer[nsds];
 
@@ -1920,7 +1938,7 @@ SCIP_RETCODE reduce_sdBiased(
          if( i2 < i || !g->mark[i2] )
             continue;
 
-         sd = sdGetSd(g, i, i2, maxmstcost, ecost, sdistance);
+         sd = sdGetSd(g, i, i2, maxmstcost, ecost, FALSE, sdistance);
 
          deleteEdge = SCIPisLT(scip, sd, ecost);
 
@@ -2022,7 +2040,7 @@ SCIP_RETCODE reduce_sdBiasedNeighbor(
          if( i2 < i || !g->mark[i2] || nodes_isBlocked[i2] )
             continue;
 
-         sd = sdGetSd(g, i, i2, maxmstcost, ecost, sdistance);
+         sd = sdGetSd(g, i, i2, maxmstcost, ecost, FALSE, sdistance);
 
          deleteEdge = SCIPisLT(scip, sd, ecost);
 
@@ -2477,7 +2495,23 @@ SCIP_Real reduce_sdGetSd(
 {
    assert(g && sddata);
 
-   return sdGetSd(g, i, i2, sd_upper, sd_sufficient, sddata);
+   return sdGetSd(g, i, i2, sd_upper, sd_sufficient, FALSE, sddata);
+}
+
+/** gets special distance to a pair of nodes,
+ *  but only allows SDs with intermediate terminals */
+SCIP_Real reduce_sdGetSdIntermedTerms(
+   const GRAPH*          g,                  /**< graph structure */
+   int                   i,                  /**< first vertex */
+   int                   i2,                 /**< second vertex */
+   SCIP_Real             sd_upper,           /**< upper bound on special distance that is accepted (can be FARAWAY) */
+   SCIP_Real             sd_sufficient,      /**< bound below which to terminate (can be 0.0) */
+   SD*                   sddata              /**< SD */
+   )
+{
+   assert(g && sddata);
+
+   return sdGetSd(g, i, i2, sd_upper, sd_sufficient, TRUE, sddata);
 }
 
 

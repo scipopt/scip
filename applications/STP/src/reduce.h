@@ -243,6 +243,7 @@ extern SCIP_RETCODE    reduce_sdBiased(SCIP*, SD*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdBiasedNeighbor(SCIP*, SD*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdPc(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*, int*);
 extern SCIP_Real       reduce_sdGetSd(const GRAPH*, int, int, SCIP_Real, SCIP_Real, SD*);
+extern SCIP_Real       reduce_sdGetSdIntermedTerms(const GRAPH*, int, int, SCIP_Real, SCIP_Real, SD*);
 extern SCIP_RETCODE    reduce_getSdByPaths(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int, int, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE    reduce_getSdPcMw(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE    reduce_nts(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);

@@ -1167,12 +1167,33 @@ SCIP_Real distDataGetSpecialDist(
    assert(vertex1 >= 0 && vertex2 >= 0);
    assert(distdata->sdistdata);
 
-   // todo check whether dirty? probably not...
-
    dist = reduce_sdGetSd(g, vertex1, vertex2, FARAWAY, 0.0, distdata->sdistdata);
 
    return dist;
 }
+
+
+/** returns v1->v2 special distance, but only for SDs with intermediate terms */
+static inline
+SCIP_Real distDataGetSpecialDistIntermedTerms(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   assert(distdata);
+   assert(vertex1 >= 0 && vertex2 >= 0);
+   assert(distdata->sdistdata);
+
+   dist = reduce_sdGetSdIntermedTerms(g, vertex1, vertex2, FARAWAY, 0.0, distdata->sdistdata);
+
+   return dist;
+}
+
+
 
 /*
  * Interface methods
@@ -1555,9 +1576,9 @@ SCIP_Real extreduce_distDataGetSdDoubleForbidden(
 
    if( distdata->sdistdata )
    {
-      if( !Is_term(g->term[vertex1]) && !Is_term(g->term[vertex2]) )
+      if( !Is_term(g->term[vertex1]) || !Is_term(g->term[vertex2]) )
       {
-         dist = distDataGetSpecialDist(g, vertex1, vertex2, distdata);
+         dist = distDataGetSpecialDistIntermedTerms(g, vertex1, vertex2, distdata);
       }
    }
 
