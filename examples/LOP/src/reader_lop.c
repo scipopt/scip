@@ -76,7 +76,7 @@ SCIP_RETCODE getNextNumber(
    }
 
    /* check whether we found a number */
-   if ( isdigit(**s) )
+   if ( isdigit(**s) || **s == '-' || **s == '+' )
    {
       *value = atof(*s);
 
