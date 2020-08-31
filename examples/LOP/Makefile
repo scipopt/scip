@@ -119,6 +119,7 @@ test:           $(MAINFILE)
 		@$(LN_sf) $(SCIPREALPATH)/check/getlastprob.awk check/;
 		@$(LN_sf) $(SCIPREALPATH)/check/configuration_set.sh check/;
 		@$(LN_sf) $(SCIPREALPATH)/check/configuration_logfiles.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/configuration_solufile.sh check/;
 		@$(LN_sf) $(SCIPREALPATH)/check/configuration_tmpfile_setup_scip.sh check/;
 		@$(LN_sf) $(SCIPREALPATH)/check/run.sh check/;
 		cd check; \
