@@ -2101,7 +2101,7 @@ SCIP_RETCODE projectShift(
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             usefarkas,          /**< do we aim to prove infeasibility? */
@@ -2122,6 +2122,7 @@ SCIP_RETCODE projectShift(
    SCIP_PROJSHIFTDATA* projshiftdata;
    mpq_t* violationgmp = NULL;
    mpq_t* correctiongmp = NULL;
+   SCIP_Real computedbound;
    SCIP_Bool* isupper;
    int i;
    int j;
@@ -2662,20 +2663,22 @@ SCIP_RETCODE projectShift(
       RatAdd(dualbound, dualbound, tmp);
    }
 
-   *safebound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+   computedbound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
 
    if( !usefarkas )
    {
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && *safebound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
-         stat->boundingerrorps += REALABS(lp->lpobjval - *safebound);
+         stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
+         *safebound = computedbound;
          stat->nfailboundshift++;
          assert(!lp->hasprovedbound);
       }
       else if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
       {
-         stat->boundingerrorps += REALABS(lp->lpobjval - *safebound);
+         stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
          RatSet(lpexact->lpobjval, dualbound);
+         *safebound = computedbound;
          lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;
       }
@@ -2904,8 +2907,8 @@ SCIP_RETCODE boundShift(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Bool             usefarkas,
-   SCIP_Real*            safebound
+   SCIP_Bool             usefarkas,          /**< should an infeasibility proof be computed? */
+   SCIP_Real*            safebound           /**< pointer to store the computed safe bound (usually lpobj) */
    )
 {
    SCIP_ROUNDMODE roundmode;
@@ -2922,6 +2925,7 @@ SCIP_RETCODE boundShift(
    SCIP_Real* fpdual;
    SCIP_Real* fpdualcolwise;
    SCIP_Real c;
+   SCIP_Real computedbound;
    int i;
    int j;
 
@@ -2959,6 +2963,7 @@ SCIP_RETCODE boundShift(
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
+   computedbound = 0;
 
    /* calculate y^Tb */
    SCIPintervalSet(&productsidedualval, 0.0);
@@ -3164,36 +3169,42 @@ SCIP_RETCODE boundShift(
    /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */
    SCIPintervalAdd(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, productsidedualval);
 
-   *safebound = SCIPintervalGetInf(safeboundinterval);
-   SCIPdebugMessage("safebound computed: %e, previous fp-bound: %e.17, difference %e.17 \n", *safebound, lp->lpobjval, *safebound - lp->lpobjval);
+   computedbound = SCIPintervalGetInf(safeboundinterval);
+   SCIPdebugMessage("safebound computed: %e, previous fp-bound: %e.17, difference %e.17 \n", computedbound, lp->lpobjval, computedbound - lp->lpobjval);
 
    /* stop timing and update number of calls and fails, and proved bound status */
    if ( usefarkas )
    {
       SCIPclockStop(stat->provedinfeasbstime, set);
       stat->nboundshiftinf++;
-      if( *safebound <= 0.0 )
+      *safebound = computedbound;
+      if( computedbound <= 0.0 )
       {
          stat->nfailboundshiftinf++;
          assert(!lp->hasprovedbound);
       }
       else
+      {
+         lp->lpobjval = SCIPsetInfinity(set);
          lp->hasprovedbound = TRUE;
+      }
    }
    else
    {
       SCIPclockStop(stat->provedfeasbstime, set);
       stat->nboundshift++;
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && *safebound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
-         stat->boundingerrorbs += REALABS(lp->lpobjval - *safebound);
+         stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
+         *safebound = computedbound;
          stat->nfailboundshift++;
          assert(!lp->hasprovedbound);
       }
-      else if( !SCIPsetIsInfinity(set, -1.0 * (*safebound)) )
+      else if( !SCIPsetIsInfinity(set, -1.0 * (computedbound)) )
       {
-         stat->boundingerrorbs += REALABS(lp->lpobjval - *safebound);
-         lp->lpobjval = *safebound;
+         stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
+         *safebound = computedbound;
+         lp->lpobjval = computedbound;
          lp->hasprovedbound = TRUE;
       }
       else
