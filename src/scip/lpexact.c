@@ -3255,8 +3255,6 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata->projshiftobjweight = FALSE;
    projshiftdata->scaleobj = FALSE;
    projshiftdata->projshiftuseintpoint = TRUE;
-   projshiftdata->psdualcolselection = PS_DUALCOSTSEL_ACTIVE_FPLP;
-   projshiftdata->psintpointselection = PS_INTPOINTSEL_OPT;
 
    return SCIP_OKAY;
 }
@@ -3590,6 +3588,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_Bool solveagain;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
+   SCIP_Real lptimelimit;
    char algo;
    SCIP_LP* lp;
 
@@ -3599,7 +3598,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    assert(lperror != NULL);
    assert(set->exact_enabled);
 
-   SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->disp_lpinfo);
+   SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
    algo = set->lp_initalgorithm;
    lp = lpexact->fplp;
    solveagain = FALSE;
@@ -3609,6 +3608,26 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
 
    assert(SCIPlpExactIsSynced(lpexact, set, messagehdlr));
+
+   /* check if a time limit is set, and set time limit for LP solver accordingly */
+   lptimelimit = SCIPlpiExactInfinity(lpexact->lpiexact);
+   if( set->istimelimitfinite )
+      lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+
+   success = FALSE;
+   if( lptimelimit > 0.0 )
+      SCIP_CALL( lpExactSetRealpar(lpexact, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+
+   if( lptimelimit <= 0.0 || !success )
+   {
+      SCIPsetDebugMsg(set, "time limit of %f seconds could not be set\n", lptimelimit);
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
+      SCIPsetDebugMsg(set, "time limit exceeded before solving LP\n");
+      lp->solved = TRUE;
+      lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->lpobjval = -SCIPsetInfinity(set);
+      return SCIP_OKAY;
+   }
 
    /* set the correct basis information for warmstart */
    if( !fromscratch )
@@ -3764,6 +3783,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_Bool fromscratch;
    SCIP_Bool wasfromscratch;
    SCIP_Longint oldnlps;
+   int iterations;
 
    assert(lp != NULL);
    assert(lpexact != NULL);
@@ -3800,6 +3820,12 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    SCIP_CALL( lpExactFlushAndSolve(lpexact, blkmem, set, messagehdlr, stat,
          prob, eventqueue, harditlim, fromscratch, lperror) );
    assert(!(*lperror) || !lp->solved);
+
+   SCIPlpExactGetIterations(lpexact, &iterations);
+   if( usefarkas )
+      SCIPstatAdd(stat, set, niterationsexlpinf, iterations);
+   else
+      SCIPstatAdd(stat, set, niterationsexlp, iterations);
 
    /* check for error */
    if( *lperror )
@@ -6544,6 +6570,19 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
    RatFreeBuffer(set->buffer, &tmp);
    RatFreeBuffer(set->buffer, &farkaslhs);
    RatFreeBuffer(set->buffer, &maxactivity);
+
+   return SCIP_OKAY;
+}
+
+/** get number of iterations used in last LP solve */
+SCIP_RETCODE SCIPlpExactGetIterations(
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   int*                  iterations          /**< pointer to store the iteration count */
+   )
+{
+   assert(lpexact != NULL);
+
+   SCIP_CALL( SCIPlpiExactGetIterations(lpexact->lpiexact, iterations) );
 
    return SCIP_OKAY;
 }

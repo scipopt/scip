@@ -272,7 +272,7 @@ SCIP_RETCODE projectShiftChooseS(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->includedrows, nextendedrows) );
    for( i = 0; i < nextendedrows; i++ )
       projshiftdata->includedrows[i] = 0;
-   if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+   if( set->exact_psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* determine which dual variables to included in the problem
        * (ones with finite dual objective coef. in [lhs',-rhs',lb',-ub'])
@@ -292,7 +292,7 @@ SCIP_RETCODE projectShiftChooseS(
             projshiftdata->includedrows[2*nrows + ncols + i] = 1;
       }
    }
-   else if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
+   else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_EXLP )
    {
       /* determone which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -328,7 +328,7 @@ SCIP_RETCODE projectShiftChooseS(
       RatFreeBufferArray(set->buffer, &rootactivity, nrows);
       RatFreeBufferArray(set->buffer, &rootprimal, ncols);
    }
-   else if( projshiftdata->psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
+   else if( set->exact_psdualcolselection == PS_DUALCOSTSEL_ACTIVE_FPLP )
    {
       /* determine which dual variables to include in the problem (in this case we choose dual variables whose primal
        * constraints are active at the solution of the exact LP at the root node)
@@ -511,43 +511,6 @@ SCIP_RETCODE projectShiftFactorizeD(
    SCIPsetFreeBufferArray(set, &projlen);
    SCIPsetFreeBufferArray(set, &projbeg);
 
-   return SCIP_OKAY;
-}
-
-/** prints error related to the current lpiexact status, if there is one */
-static
-SCIP_RETCODE printlpiexacterr(
-   SCIP_LPIEXACT*        lpiexact            /**< lpiexact interface */
-   )
-{
-   if( SCIPlpiExactIsOptimal(lpiexact) )
-   {
-      return SCIP_OKAY;
-   }
-   else if( SCIPlpiExactIsObjlimExc(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
-   }
-   else if( SCIPlpiExactIsPrimalInfeasible(lpiexact) )
-   {
-      SCIPerrorMessage(" Exact LP infeas.\n");
-   }
-   else if( SCIPlpiExactExistsPrimalRay(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
-   }
-   else if( SCIPlpiExactIsIterlimExc(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
-   }
-   else if( SCIPlpiExactIsTimelimExc(lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
-   }
-   else
-   {
-      SCIPerrorMessage("lpiexact not solved, or other error\n");
-   }
    return SCIP_OKAY;
 }
 
@@ -1359,6 +1322,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
+   SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
@@ -1375,6 +1339,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    int psnrows;
    int psnnonz;
    int nobjnz;
+   SCIP_Real lptimelimit;
+   SCIP_Bool success;
    SCIP_Rational* tmp;
    SCIP_Rational* alpha;
    SCIP_Rational* beta;
@@ -1461,7 +1427,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    ndvarmap = pos;
 
    /* if we are finding an interior ray, always use the optimized selection */
-   if( projshiftdata->psintpointselection == PS_INTPOINTSEL_OPT || !findintpoint )
+   if( set->exact_psintpointselection == PS_INTPOINTSEL_OPT || !findintpoint )
    {
       /* in this case we will find an optimized interior point for which we will try to push it interior and
        * optimize over its objective value.  To do this we will solve the following problem
@@ -1512,6 +1478,16 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
       /* solve the LP */
       retcode = SCIPlpiExactSolveDual(pslpiexact);
       if( retcode == SCIP_LPERROR )
@@ -1551,12 +1527,11 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexacterr( pslpiexact ) );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
    /* use 'a'rbitrary interior point */
-   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_ARB )
+   else if( set->exact_psintpointselection == PS_INTPOINTSEL_ARB )
    {
       SCIPdebugMessage("building aux. problem with arbitrary interior point\n");
 
@@ -1624,6 +1599,17 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,
             NULL, psnnonz, psbeg, psind, psval) );
 
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
+
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
       retcode = SCIPlpiExactSolveDual(pslpiexact);
@@ -1666,12 +1652,11 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexacterr( pslpiexact ) );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
    /* use 'A'rbitrary interior point in transposed form*/
-   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_ARBDUAL )
+   else if( set->exact_psintpointselection == PS_INTPOINTSEL_ARBDUAL )
    {
       SCIPdebugMessage("building new version of arbitrary interior point aux. problem\n");
 
@@ -1719,6 +1704,17 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,
             NULL, psnnonz, psbeg, psind, psval) );
+
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
 
       /* solve the LP */
       SCIPdebugMessage("solving aux. problem\n");
@@ -1780,11 +1776,10 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         printlpiexacterr( pslpiexact );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
-   else if( projshiftdata->psintpointselection == PS_INTPOINTSEL_TWOSTAGE )
+   else if( set->exact_psintpointselection == PS_INTPOINTSEL_TWOSTAGE )
    {
       /* in this case we will find an optimized interior point for which we will try to push it interior and
        * optimize over its objective value.  To do this we will solve the following two problems
@@ -1835,6 +1830,17 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs,
             NULL, psnnonz, psbeg, psind, psval) );
+
+      /* set the display informatino */
+      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+      /* check if a time limit is set, and set time limit for LP solver accordingly */
+      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+      if( set->istimelimitfinite )
+         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+      if( lptimelimit > 0.0 )
+      {
+         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+      }
 
       /* solve the LP */
       retcode = SCIPlpiExactSolveDual(pslpiexact);
@@ -1931,14 +1937,13 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       }
       else
       {
-         SCIP_CALL( printlpiexacterr(pslpiexact) );
          projshiftdata->projshiftdatafail = TRUE;
       }
    }
    else
    {
       SCIPerrorMessage("invalid parameter setting <%d> for selection method to compute interior point\n",
-         projshiftdata->psintpointselection);
+         set->exact_psintpointselection);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -2061,13 +2066,13 @@ SCIP_RETCODE constructProjectShiftData(
       {
          /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, FALSE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
       }
       if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
-         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, prob, blkmem, TRUE) );
+         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, TRUE) );
       }
    }
 
@@ -2919,7 +2924,7 @@ SCIP_RETCODE boundShift(
 
    assert(lpexact != NULL);
    assert(lp != NULL);
-   assert(lp->solved);
+   assert(lp->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
    assert(set != NULL);
    assert(safebound != NULL);
 
@@ -3138,11 +3143,13 @@ SCIP_RETCODE boundShift(
             {
                stat->nboundshiftinf++;
                stat->nfailboundshiftinf++;
+               SCIPclockStop(stat->provedinfeasbstime, set);
             }
             else
             {
                stat->nboundshift++;
                stat->nfailboundshift++;
+               SCIPclockStop(stat->provedfeasbstime, set);
             }
             goto CLEANUP;
          }
@@ -3303,6 +3310,13 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 #ifdef SCIP_WITH_BOOST
    assert(set->exact_enabled);
    assert(!lp->hasprovedbound);
+
+   /* we need to construct projshiftdata at the root node */
+   if( !lpexact->projshiftdata->projshiftdatacon )
+   {
+      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
+                     prob, blkmem) );
+   }
 
    while( !lp->hasprovedbound && !abort )
    {

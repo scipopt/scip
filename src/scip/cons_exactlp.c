@@ -15596,8 +15596,6 @@ SCIP_DECL_CONSINITLP(consInitlpExactLinear)
       }
    }
 
-   SCIPgetIntParam(scip, "constraints/exactlp/interleavedbfreq", &freq);
-
    return SCIP_OKAY;
 }
 
