@@ -174,16 +174,12 @@
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
 #define DEFAULT_ADDSYMRESACKS        TRUE    /**< Add inequalities for symresacks for each generator? */
 #define DEFAULT_DETECTORBITOPES      TRUE    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-#define DEFAULT_ORBITOPEPCTBINROWS    0.9    /**< percentage of binary rows of an orbitope matrix below which orbitopes are not added */
 #define DEFAULT_DETECTSUBGROUPS     FALSE    /**< Should we try to detect orbitopes in subgroups of the symmetry group? */
 #define DEFAULT_ADDWEAKSBCS          TRUE    /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
+#define DEFAULT_ADDSTRONGSBCS       FALSE    /**< Should we add strong SBCs for enclosing orbit of symmetric subgroups if orbitopes are not used? */
 #define DEFAULT_ADDCONSSTIMING          2    /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
-#define DEFAULT_ROWCOLUMNRATIO        3.0    /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
-                                              *   greater than this value. */
 #define DEFAULT_MAXNCONSSSUBGROUP  500000    /**< Maximum number of constraints up to which subgroup structures are detected */
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
-#define DEFAULT_ONLYBINSUBGROUPS     TRUE    /**< Should only subgroups on binary variables be handled */
-#define DEFAULT_SUBGRPPERMRATIO     0.501    /**< minimum percentage of permutations a subgroup has to use to be valid */
 #define DEFAULT_PREFERLESSROWS       TRUE    /**< Shall orbitopes with less rows be preferred in detection? */
 
 /* default parameters for orbital fixing */
@@ -293,16 +289,12 @@ struct SCIP_PropData
    int                   genlinconsssize;    /**< size of linear constraints array */
    int                   nsymresacks;        /**< number of symresack constraints */
    SCIP_Bool             detectorbitopes;    /**< Should we check whether the components of the symmetry group can be handled by orbitopes? */
-   SCIP_Real             orbitopepctbinrows; /**< percentage of binary rows of an orbitope matrix below which orbitopes are not added */
    SCIP_Bool             detectsubgroups;    /**< Should we try to detect orbitopes in subgroups of the symmetry group? */
    SCIP_Bool             addweaksbcs;        /**< Should we add weak SBCs for enclosing orbit of symmetric subgroups? */
+   SCIP_Bool             addstrongsbcs;      /**< Should we add strong SBCs for enclosing orbit of symmetric subgroups if orbitopes are not used? */
    int                   norbitopes;         /**< number of orbitope constraints */
-   SCIP_Real             rowcolumnratio;     /**< If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is
-                                              *   greater than this value. */
    int                   maxnconsssubgroup;  /**< Maximum number of constraints up to which subgroup structures are detected */
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
-   SCIP_Bool             onlybinsubgroups;   /**< whether only subgroups on binary variables should be handled */
-   SCIP_Real             subgrppermratio;    /**< minimum percentage of permutations a subgroup has to use to be valid */
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
 
    /* data necessary for orbital fixing */
@@ -4031,7 +4023,7 @@ SCIP_RETCODE adaptSymmetryDataSST(
 
 
 /* returns the number of found orbitopes with at least three columns per graph component or 0
- * if the found orbitopes do not satisfy criteria for being used
+ * if the found orbitopes do not satisfy certain criteria for being used
  */
 static
 int getNOrbitopesInComp(
@@ -4122,8 +4114,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int nstrongsbcs = 0;
    int nweaksbcs = 0;
 #endif
-   SCIP_Real rowcolumnratio;
-   SCIP_Real orbitopepctbinrows;
    int** modifiedperms;
    SCIP_VAR** modifiedpermvars;
    int* nvarsincomponent;
@@ -4148,9 +4138,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    assert( propdata->perms != NULL );
    assert( propdata->npermvars > 0 );
    assert( propdata->permvars != NULL );
-
-   rowcolumnratio = propdata->rowcolumnratio;
-   orbitopepctbinrows = propdata->orbitopepctbinrows;
 
    /* create array for permutation order */
    SCIP_CALL( SCIPallocBufferArray(scip, &genorder, propdata->nperms) );
@@ -4288,10 +4275,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
       assert( nusedperms <= ntwocycleperms );
       assert( ncompcolors < propdata->npermvars );
 
-      if ( SCIPisLT(scip, (SCIP_Real) nusedperms, propdata->subgrppermratio * (SCIP_Real) npermsincomp) )
+      if ( nusedperms == 0 )
       {
-         SCIPdebugMsg(scip, "  -> skipping component, since less than %f%% of the permutations were used",
-            propdata->subgrppermratio);
+         SCIPdebugMsg(scip, "  -> skipping component, since less no permutation was used\n");
 
          SCIPfreeBufferArray(scip, &permused);
          SCIPfreeBufferArray(scip, &usedperms);
@@ -4388,9 +4374,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                if ( compsize < 3 )
                {
                   isorbitope = FALSE;
-
-                  if ( propdata->onlybinsubgroups )
-                     break;
+                  break;
                }
 
                largestcompsize = compsize;
@@ -4400,14 +4384,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             {
                /* variable orbits (compsize) have not the same size, cannot define orbitope */
                isorbitope = FALSE;
-
-               if ( propdata->onlybinsubgroups )
-                  break;
-               else if ( compsize > largestcompsize )
-               {
-                  largestcolorcomp = k;
-                  largestcompsize = compsize;
-               }
+               break;
             }
 
             firstvar = propdata->permvars[graphcomponents[graphcompbegins[k]]];
@@ -4436,13 +4413,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
             binaffected, intaffected, contaffected);
 #endif
 
-         /* only use the orbitope if there are enough binary rows according to parameters */
-         if ( nbinarycomps == 0
-            || SCIPisGT(scip, (SCIP_Real) nbinarycomps, rowcolumnratio * (SCIP_Real) largestcompsize)
-            || SCIPisLT(scip, (SCIP_Real) nbinarycomps, orbitopepctbinrows * (SCIP_Real) ncomps) )
-         {
+         /* only use the orbitope if there are binary rows */
+         if ( nbinarycomps == 0 )
             useorbitope = FALSE;
-         }
          else
             useorbitope = TRUE;
 
@@ -4480,7 +4453,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
          }
          /* if no (useable) orbitope was found, possibly add strong SBCs */
-         else if ( ! propdata->onlybinsubgroups )
+         else if ( propdata->addstrongsbcs )
          {
             assert( largestcolorcomp >= 0 );
             assert( largestcolorcomp < ngraphcomponents );
@@ -4695,11 +4668,9 @@ SCIP_RETCODE detectOrbitopes(
       {
          int ntwocyclesperm = 0;
          int nbincyclesperm = 0;
-         SCIP_Bool onlybinorbitopes;
 
-         onlybinorbitopes = propdata->orbitopepctbinrows == 1.0 ? TRUE : FALSE;
          SCIP_CALL( SCIPisInvolutionPerm(perms[components[j]], permvars, npermvars,
-               &ntwocyclesperm, &nbincyclesperm, onlybinorbitopes) );
+               &ntwocyclesperm, &nbincyclesperm, FALSE) );
 
          if ( ntwocyclescomp == 0 )
          {
@@ -4713,8 +4684,8 @@ SCIP_RETCODE detectOrbitopes(
             ntwocyclescomp = ntwocyclesperm;
             nbincyclescomp = nbincyclesperm;
 
-            /* if the percentage of binary rows in the orbitope's action var matrix is too small, discard the orbitope */
-            if ( (SCIP_Real) nbincyclescomp <= (SCIP_Real) ntwocyclesperm * propdata->orbitopepctbinrows )
+            /* if there are no binary rows */
+            if ( nbincyclescomp == 0 )
             {
                isorbitope = FALSE;
                break;
@@ -7234,10 +7205,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Should we check whether the components of the symmetry group can be handled by orbitopes?",
          &propdata->detectorbitopes, TRUE, DEFAULT_DETECTORBITOPES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "propagating/" PROP_NAME "/orbitopepctbinrows",
-         "percentage of binary rows of an orbitope matrix below which orbitopes are not added",
-         &propdata->orbitopepctbinrows, TRUE, DEFAULT_ORBITOPEPCTBINROWS, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/detectsubgroups",
          "Should we try to detect symmetric subgroups of the symmetry group on binary variables?",
@@ -7284,11 +7251,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "Should the number of conss a variable is contained in be exploited in symmetry detection?",
          &propdata->usecolumnsparsity, TRUE, DEFAULT_USECOLUMNSPARSITY, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "propagating/" PROP_NAME "/rowcolumnratio",
-         "If symmetric subgroup inducing orbitope is detected, discard this orbitope if nrows / ncols is greater than this value",
-         &propdata->rowcolumnratio, TRUE, DEFAULT_ROWCOLUMNRATIO, 0.0, SCIPinfinity(scip), NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxnconsssubgroup",
          "maximum number of constraints up to which subgroup structures are detected",
@@ -7300,14 +7262,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/onlybinsubgroups",
-         "Should only subgroups on binary variables be handled?",
-         &propdata->onlybinsubgroups, TRUE, DEFAULT_ONLYBINSUBGROUPS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "propagating/" PROP_NAME "/subgrppermratio",
-         "minimum percentage of permutations a subgroup has to use to be valid",
-         &propdata->subgrppermratio, TRUE, DEFAULT_SUBGRPPERMRATIO, 0.0, 1.0, NULL, NULL) );
+         "propagating/" PROP_NAME "/addstrongsbcs",
+         "Should trong SBCs for enclosing orbit of symmetric subgroups be added if orbitopes are not used?",
+         &propdata->addstrongsbcs, TRUE, DEFAULT_ADDSTRONGSBCS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/ssttiebreakrule",
