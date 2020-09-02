@@ -1161,9 +1161,11 @@ SCIP_Bool isIntervalBetter(
 }
 
 
-/** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a variable-expression) according to given bounds
+/** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a
+ * variable-expression) according to given bounds
  *
- *  The given bounds may very well be the exprs activity (when called from forwardPropExpr), but can also be some tighter bounds (when called from SCIPtightenConsExprExprInterval).
+ *  The given bounds may very well be the exprs activity (when called from forwardPropExpr), but can also be some
+ *  tighter bounds (when called from SCIPtightenConsExprExprInterval).
  *
  *  Nothing will happen if SCIP is not in presolve or solve.
  */
@@ -1171,7 +1173,7 @@ static
 SCIP_RETCODE tightenAuxVarBounds(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which auxvars to be tightened */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression whose auxvar is to be tightened */
    SCIP_INTERVAL           bounds,           /**< bounds to be used for tightening (must not be empty) */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
@@ -1342,11 +1344,12 @@ SCIP_RETCODE forwardPropExpr(
             assert(expr->activitytag < conshdlrdata->curboundstag);
 
             /* for var exprs where varevents are catched, activity is updated immediately when the varbound has been changed
-             * so for all these variables, we can assume that the activity is uptodate
+             * so we can assume that the activity is uptodate for all these variables
              * UNLESS we changed the method used to evaluate activity of variable expressions
              *   or we currently use global bounds (varevents are catched for local bound changes only)
              */
-            if( expr->exprhdlr == conshdlrdata->exprvarhdlr && SCIPisConsExprExprVarEventCatched(expr) && expr->activitytag >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds )
+            if( expr->exprhdlr == conshdlrdata->exprvarhdlr && SCIPisConsExprExprVarEventCatched(expr) &&
+                  expr->activitytag >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds )
             {
 #ifndef NDEBUG
                SCIP_INTERVAL exprhdlrinterval;
@@ -1365,7 +1368,7 @@ SCIP_RETCODE forwardPropExpr(
 
             if( expr->activitytag < conshdlrdata->lastboundrelax )
             {
-               /* reset activity to entire if invalid, because SCIPtightenConsExprExprInterval seems to assume valid activity in expr */
+               /* reset activity to entire if invalid, so we can use it as starting point below */
                SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
             }
             else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->activity) )
@@ -1458,7 +1461,8 @@ SCIP_RETCODE forwardPropExpr(
              * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
              * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
              * do this only if using boundtightening-inteval and not in redundancy check (there we really want to relax all variables)
-             * boundtightening-inteval does not relax integer variables, so can omit expressions without children (constants should be ok, too)
+             * boundtightening-inteval does not relax integer variables, so can omit expressions without children
+             * (constants should be ok, too)
              */
             if( expr->isintegral && conshdlrdata->intevalvar == intEvalVarBoundTightening && expr->nchildren > 0 )
             {
@@ -1568,8 +1572,8 @@ SCIP_RETCODE reversePropQueue(
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, expr->propbounds));
 
       /* this intersects propbounds with activity and auxvar bounds
-       * I doubt this would be much helpful, since propbounds are already subset of activity and we also propagate auxvar bounds separately,
-       * so disabling this for now
+       * I doubt this would be much helpful, since propbounds are already subset of activity and we also propagate
+       * auxvar bounds separately, so disabling this for now
        */
 #ifdef SCIP_DISABLED_CODE
       propbounds = SCIPgetConsExprExprBounds(scip, conshdlr, expr);
@@ -1605,7 +1609,8 @@ SCIP_RETCODE reversePropQueue(
 #endif
 
             nreds = 0;
-            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, propbounds, infeasible, &nreds) );
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+                     propbounds, infeasible, &nreds) );
             assert(nreds >= 0);
             *ntightenings += nreds;
          }
@@ -1621,7 +1626,9 @@ SCIP_RETCODE reversePropQueue(
          SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", expr->activity.inf, expr->activity.sup, expr->exprhdlr->name);
 #endif
 
-         /* if someone added an expr without nlhdlr into the reversepropqueue, then this must be because its enfo hasn't been initialized in detectNlhdlr yes (nenfos < 0) */
+         /* if someone added an expr without nlhdlr into the reversepropqueue, then this must be because its enfo hasn't
+          * been initialized in detectNlhdlr yet (nenfos < 0)
+          */
          assert(expr->nenfos < 0);
 
          /* call the reverseprop of the exprhdlr */
@@ -1649,19 +1656,16 @@ SCIP_RETCODE reversePropQueue(
  *
  *  The algorithm alternates calls of forward and reverse propagation.
  *  Forward propagation ensures that activity of expressions is uptodate.
- *  Reverse propagation tries to derive tighter variable bounds by reversing the activity computing, using the constraints
+ *  Reverse propagation tries to derive tighter variable bounds by reversing the activity computation, using the constraints
  *  [lhs,rhs] interval as starting point.
-
- *  constraints where the activity of the expression exceeds the constraints lhs/rhs (the activity is a superset of [lhs,rhs])
- *  have a
- *  only for nodes which have been tightened during the propagation loop;
  *
  *  the propagation algorithm works as follows:
  *
  *   1.) apply forward propagation (update activities) for all constraints not marked as propagated
  *
  *   2.) if presolve or propauxvars is disabled: collect expressions for which the constraint sides provide tighter bounds
- *       if solve and propauxvars is enabled: collect expressions for which auxvars (including those in root exprs) provide tighter bounds
+ *       if solve and propauxvars is enabled: collect expressions for which auxvars (including those in root exprs)
+ *       provide tighter bounds
  *
  *   3.) apply reverse propagation to all collected expressions; don't explore
  *       sub-expressions which have not changed since the beginning of the propagation loop
@@ -1749,7 +1753,9 @@ SCIP_RETCODE propConss(
          if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
             continue;
 
-         /* skip already propagated constraints, i.e., constraints where no (original) variable has changed and thus activity didn't change */
+         /* skip already propagated constraints, i.e., constraints where no (original) variable has changed and thus
+          * activity didn't change
+          */
          if( consdata->ispropagated )
             continue;
 
@@ -1772,7 +1778,8 @@ SCIP_RETCODE propConss(
          if( !conshdlrdata->propauxvars || consdata->expr->auxvar == NULL )
          {
             /* check whether constraint sides (relaxed by epsilon) or auxvar bounds provide a tightening
-             *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides, so taking auxvar bounds is enough)
+             *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides,
+             *   so taking auxvar bounds is enough)
              */
             if( consdata->expr->auxvar == NULL )
             {
@@ -1851,7 +1858,7 @@ SCIP_RETCODE propConss(
 
    conshdlrdata->forceboundtightening = FALSE;
 
-   /* invalidate propbounds in all exprs, so forwardPropExpr doesn't accidentally use them to do a cutoff  */
+   /* invalidate propbounds in all exprs, so noone accidentally uses them outside propagation */
    ++conshdlrdata->curpropboundstag;
 
    return SCIP_OKAY;
@@ -1911,7 +1918,7 @@ SCIP_RETCODE propExprDomains(
 
       for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !cutoff; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
-         /* call reverseprop for those nlhdlr that participate in (this) activity
+         /* call reverseprop for those nlhdlr that participate in this expr's activity computation
           * this will propagate the current activity
           */
          for( e = 0; e < expr->nenfos; ++e )
@@ -1924,9 +1931,11 @@ SCIP_RETCODE propExprDomains(
             if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
                continue;
 
-            SCIPdebugMsg(scip, "propExprDomains calling reverseprop for expression %p [%g,%g]\n", (void*)expr, expr->activity.inf, expr->activity.sup);
+            SCIPdebugMsg(scip, "propExprDomains calling reverseprop for expression %p [%g,%g]\n", (void*)expr,
+                  expr->activity.inf, expr->activity.sup);
             ntightenings = 0;
-            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, expr->activity, &cutoff, &ntightenings) );
+            SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+                     expr->activity, &cutoff, &ntightenings) );
 
             if( cutoff )
             {
@@ -1963,7 +1972,7 @@ SCIP_RETCODE propExprDomains(
 
    SCIPexpriteratorFree(&it);
 
-   /* invalidate propbounds in all exprs */
+   /* invalidate propbounds in all exprs, so noone accidentally uses them outside propagation */
    ++SCIPconshdlrGetData(conshdlr)->curpropboundstag;
 
    return SCIP_OKAY;
@@ -3129,7 +3138,7 @@ SCIP_RETCODE catchVarEvents(
 
       SCIP_CALL( SCIPcatchConsExprExprVarEvent(scip, expr, eventhdlr, cons) );
 
-      /* from now on, activity of expr will usually be updated in processVarEvent if variable bound is changing
+      /* from now on, activity of var-expr will usually be updated in processVarEvent if variable bound is changing
        * since we just registered this eventhdlr, we should make sure that the activity is also uptodate now
        */
       if( expr->activitytag < conshdlrdata->curboundstag )
@@ -3200,16 +3209,17 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    expr = (SCIP_CONSEXPR_EXPR*) eventdata;
    assert(SCIPisConsExprExprVar(expr));
 
-   SCIPdebugMsg(scip, "  exec event %#x for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype, SCIPvarGetName(SCIPeventGetVar(event)),
-      SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
-      SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
+   SCIPdebugMsg(scip, "  exec event %#x for variable <%s> (local [%g,%g], global [%g,%g])\n", eventtype,
+         SCIPvarGetName(SCIPeventGetVar(event)),
+         SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
+         SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
 
    /* we only catch varevents for variables in constraints, so there should be constraints */
    assert(SCIPgetConsExprExprVarNConss(expr) > 0);
    conshdlr = SCIPconsGetHdlr(SCIPgetConsExprExprVarConss(expr)[0]);  /*lint !e613*/
    assert(conshdlr != NULL);
 
-   /* notify constraints where variable is used to repropagate and possibly resimplify
+   /* notify constraints that use this variable expression (expr) to repropagate and possibly resimplify
     * - propagation can only find something new if a bound was tightened
     * - simplify can only find something new if a var is fixed (or maybe a bound is tightened)
     *   and we look at global changes (that is, we are not looking at boundchanges in probing)
@@ -3241,7 +3251,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
             SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
          }
 
-         /* if still in presolve (but not probing), then mark constraints to be simplified again */
+         /* if still in presolve (but not probing), then mark constraints to be unsimplified */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !SCIPinProbing(scip) )
          {
             consdata->issimplified = FALSE;
@@ -3267,8 +3277,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 
       /* update the activity of the var-expr here immediately
-       * TODO: we know which bounds has changed, so could update only that one (but intevalvar always does both bounds)
-       * TODO: we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated
+       * (we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated)
        */
       SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, &expr->activity, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
@@ -6205,6 +6214,8 @@ SCIP_RETCODE initSepa(
          }
          else
          {
+            assert(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
             /* call reverseprop for those nlhdlr that participate in (this) activity
              * this will propagate the current activity
              */
@@ -6218,8 +6229,10 @@ SCIP_RETCODE initSepa(
                if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
                   continue;
 
-               SCIPdebugMsg(scip, "initsepa calling reverseprop for expression %p [%g,%g]\n", (void*)expr, expr->activity.inf, expr->activity.sup);
-               SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, expr->activity, infeasible, &nreductions) );
+               SCIPdebugMsg(scip, "initsepa calling reverseprop for expression %p [%g,%g]\n", (void*)expr,
+                     expr->activity.inf, expr->activity.sup);
+               SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
+                        expr->activity, infeasible, &nreductions) );
 
                if( *infeasible )
                {
@@ -6233,7 +6246,8 @@ SCIP_RETCODE initSepa(
 
       if( !*infeasible && consdata->expr->auxvar != NULL )
       {
-         SCIPdebugMsg(scip, "tighten auxvar <%s> bounds using constraint sides [%g,%g]\n", SCIPvarGetName(consdata->expr->auxvar), consdata->lhs, consdata->rhs);
+         SCIPdebugMsg(scip, "tighten auxvar <%s> bounds using constraint sides [%g,%g]\n",
+               SCIPvarGetName(consdata->expr->auxvar), consdata->lhs, consdata->rhs);
          /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
          SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, TRUE, infeasible, NULL) );
          if( *infeasible )
@@ -7749,11 +7763,13 @@ SCIP_RETCODE enforceConstraint(
 
    if( inenforcement && !consdata->ispropagated )
    {
-      /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of auxiliary variables,
-       * since some nlhdlr/exprhdlr may look at auxvar bounds or activities (TODO: nlhdlr tells us now whether they do and so we could skip).
-       * For now, update bounds of auxiliary variables only if called from enforcement, since updating auxvar bounds in separation doesn't seem to be right
-       * (it would be ok if the boundchange cuts off the current LP solution by a nice amount, but if not, we may just add a boundchange that
-       * doesn't change the dual bound much and could confuse the stalling check for how long to do separation).
+      /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of
+       * auxiliary variables, since some nlhdlr/exprhdlr may look at auxvar bounds or activities
+       * (TODO: nlhdlr tells us now whether they do and so we could skip).
+       * For now, update bounds of auxiliary variables only if called from enforcement, since updating auxvar bounds in
+       * separation doesn't seem to be right (it would be ok if the boundchange cuts off the current LP solution by a
+       * nice amount, but if not, we may just add a boundchange that doesn't change the dual bound much and could
+       * confuse the stalling check for how long to do separation).
        */
       SCIP_Bool infeasible;
       int ntightenings;
@@ -14195,7 +14211,8 @@ SCIP_INTERVAL SCIPgetConsExprExprBounds(
    return bounds;
 }
 
-/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of corresponding (auxiliary) variable (if any)
+/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of
+ * corresponding (auxiliary) variable (if any)
  *
  * @attention this function should only be called during domain propagation in cons_expr
  */
@@ -14299,11 +14316,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       expr->propboundstag = conshdlrdata->curpropboundstag;
    }
 
-   /* if updated propbounds do not allow a sufficient tightening, then do not consider adding to queue for reverse propagation or update of auxvar bounds
-    * TODO? if we first had a considerable tightening and then only get small tightenings under the same curpropboundstag, then these will still be considered as isIntervalBetter,
-    *   since we compare with activity here and not with the propbounds as set in the beginning; I'm not sure, though, that comparing always with previous propbounds would be better,
-    *   since a number of small updates to propbounds could eventually lead to a considerable one
-    *   or should we not even update propbounds to newbounds if the update is small?
+   /* if updated propbounds do not allow a sufficient tightening, then do not consider adding to queue for reverse
+    * propagation or update of auxvar bounds
+    * TODO? if we first had a considerable tightening and then only get small tightenings under the same
+    *   curpropboundstag, then these will still be considered as isIntervalBetter, since we compare with activity here and
+    *   not with the propbounds as set in the beginning; I'm not sure, though, that comparing always with previous
+    *   propbounds would be better, since a number of small updates to propbounds could eventually lead to a considerable
+    *   one or should we not even update propbounds to newbounds if the update is small?
     */
    if( !isIntervalBetter(scip, conshdlrdata->forceboundtightening, newbounds, expr->activity) )
    {

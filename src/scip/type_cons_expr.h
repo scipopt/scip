@@ -751,9 +751,9 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 
 /** nonlinear handler callback for reverse propagation
  *
- * The method propagates given bounds over the arguments of an expression.
+ * The method propagates the given bounds over the arguments of an expression.
  * The arguments of an expression are other expressions and the tighter intervals should be passed
- * to the corresponding argument (expression) by using SCIPtightenConsExprExprInterval().
+ * to the corresponding argument (expression) via SCIPtightenConsExprExprInterval().
  *
  * input:
  *  - scip : SCIP main data structure

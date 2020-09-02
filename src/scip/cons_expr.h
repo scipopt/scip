@@ -867,7 +867,8 @@ SCIP_INTERVAL SCIPgetConsExprExprBounds(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of corresponding (auxiliary) variable (if any)
+/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of
+ * corresponding (auxiliary) variable (if any)
  *
  * @attention this function should only be called during domain propagation in cons_expr
  */
