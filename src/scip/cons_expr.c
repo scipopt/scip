@@ -1867,10 +1867,9 @@ SCIP_RETCODE propConss(
 /* calls the reverseprop callbacks of all nlhdlrs in all expressions in all constraints using activity as bounds
  *
  * This is meant to propagate any domain restricitions on functions onto variable bounds, if possible.
- * So this is similar to first loop in initSepa, but meant to be called in presolve.
  *
- * Assumes that activities and propbounds are still valid and curpropboundstag does not need to be increased
- * that is, it's best to call this function immediately after propConss.
+ * Assumes that activities are still valid and curpropboundstag does not need to be increased.
+ * That is, a good place to call this function is immediately after propConss or after forwardPropExpr if outsite propagation.
  */
 static
 SCIP_RETCODE propExprDomains(
@@ -6130,8 +6129,9 @@ SCIP_RETCODE createAuxVar(
 
 /** initializes separation for constraint
  *
- * for each expression:
+ * - ensures that activities are uptodate in all expressions
  * - creates auxiliary variables where required
+ * - calls propExprDomains to possibly tighten auxvar bounds
  * - calls separation initialization callback of nlhdlrs
  */
 static
@@ -6148,7 +6148,8 @@ SCIP_RETCODE initSepa(
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_INTERVAL activity;
-   int nreductions;
+   SCIP_RESULT result;
+   int nreductions = 0;
    int c, e;
 
    assert(scip != NULL);
@@ -6165,16 +6166,10 @@ SCIP_RETCODE initSepa(
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_LEAVEEXPR);
 
-   /* first create auxvars, ensure activities are uptodate, and run reverseprop
-    * - reverseprop ensures that important bound information (like function domains) is stored in bounds of auxvars,
-    *   since sometimes they cannot be recovered from activity evaluation even after some rounds of domain propagation
-    *   (e.g., log(x*y), which becomes log(w), w=x*y
-    *    log(w) implies w >= 0, but we may not be able to derive bounds on x and y such that w >= 0 is ensured)
-    */
+   /* first ensure activities are uptodate and create auxvars */
    *infeasible = FALSE;
-   for( c = 0; c < nconss && !*infeasible; ++c )
+   for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
       assert(conss[c] != NULL);
@@ -6200,51 +6195,18 @@ SCIP_RETCODE initSepa(
       }
 #endif
 
-      /* ensure we have a valid activity for auxvars and reverseprop calls below */
+      /* ensure we have a valid activity for auxvars and propExprDomains() call below */
       SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, consdata->expr, &activity, TRUE) );
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
       {
-         if( SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPRITERATOR_ENTEREXPR )
+         if( expr->nauxvaruses > 0 )
          {
-            if( expr->nauxvaruses > 0 )
-            {
-               SCIP_CALL( createAuxVar(scip, conshdlr, expr) );
-            }
-         }
-         else
-         {
-            assert(SCIPexpriteratorGetStageDFS(it) == SCIP_CONSEXPRITERATOR_LEAVEEXPR);
-
-            /* call reverseprop for those nlhdlr that participate in (this) activity
-             * this will propagate the current activity
-             */
-            for( e = 0; e < expr->nenfos; ++e )
-            {
-               SCIP_CONSEXPR_NLHDLR* nlhdlr;
-               assert(expr->enfos[e] != NULL);
-
-               nlhdlr = expr->enfos[e]->nlhdlr;
-               assert(nlhdlr != NULL);
-               if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSEXPR_EXPRENFO_ACTIVITY) == 0 )
-                  continue;
-
-               SCIPdebugMsg(scip, "initsepa calling reverseprop for expression %p [%g,%g]\n", (void*)expr,
-                     expr->activity.inf, expr->activity.sup);
-               SCIP_CALL( SCIPreversepropConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata,
-                        expr->activity, infeasible, &nreductions) );
-
-               if( *infeasible )
-               {
-                  /* stop everything if we detected infeasibility */
-                  SCIPdebugMsg(scip, "detect infeasibility for constraint %s during reverseprop()\n", SCIPconsGetName(conss[c]));
-                  break;
-               }
-            }
+            SCIP_CALL( createAuxVar(scip, conshdlr, expr) );
          }
       }
 
-      if( !*infeasible && consdata->expr->auxvar != NULL )
+      if( consdata->expr->auxvar != NULL )
       {
          SCIPdebugMsg(scip, "tighten auxvar <%s> bounds using constraint sides [%g,%g]\n",
                SCIPvarGetName(consdata->expr->auxvar), consdata->lhs, consdata->rhs);
@@ -6267,11 +6229,14 @@ SCIP_RETCODE initSepa(
       }
    }
 
-   /* finish reverse-propagation of eventually found expr bound tightenings; empty reversepropqueue */
-   SCIP_CALL( reversePropQueue(scip, conshdlr, infeasible, &nreductions) );
-
-   /* invalidate propbounds in all exprs, so forwardPropExpr doesn't accidentally use them to do a cutoff  */
-   ++conshdlrdata->curpropboundstag;
+   /* now run a special version of reverseprop to ensure that important bound information (like function domains) is stored in bounds of auxvars,
+    * since sometimes they cannot be recovered from activity evaluation even after some rounds of domain propagation
+    * (e.g., log(x*y), which becomes log(w), w=x*y
+    *  log(w) implies w >= 0, but we may not be able to derive bounds on x and y such that w >= 0 is ensured)
+    */
+   SCIP_CALL( propExprDomains(scip, conshdlr, conss, nconss, &result, &nreductions) );
+   if( result == SCIP_CUTOFF )
+      *infeasible = TRUE;
 
    /* now call initsepa of nlhdlrs
     * TODO skip if !SCIPconsIsInitial(conss[c]) ?
