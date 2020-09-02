@@ -519,7 +519,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    }
 
    /* execute actual slackprune heuristic */
-   SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, (graph->edges < SLACK_MAXTOTNEDGES)) );
+   SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, vars, graph, soledge, &success, FALSE, FALSE) );
 
    /* solution found by slackprune heuristic? */
    if( success )
