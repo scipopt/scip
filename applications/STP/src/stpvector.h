@@ -154,6 +154,7 @@ extern "C" {
          char* _p_ = &((char*) (vec))[(int) sizeof(int) * (-2)];                                         \
          const int _nbytes_ = vecinternalComputeNBytes(vecinternalGetCapacity((vec)), (vec));         \
          SCIPfreeBlockMemoryArray((scip), &_p_, _nbytes_);                                                   \
+         (vec) = NULL; \
       }                                                                                                \
    } while( 0 )
 
