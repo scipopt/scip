@@ -37,7 +37,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
- //#define SCIP_DEBUG
+// #define SCIP_DEBUG
 //#define STP_DEBUG_EXT
 
 #include <string.h>
@@ -920,6 +920,191 @@ SCIP_Real bottleneckGetDist(
 }
 
 
+/** helper */
+static inline
+void bottleneckMarkEqualityPath(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   path_start,         /**< vertex to start from */
+   int                   path_end,           /**< vertex to end at */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Bool* const edges_isEqForbidden = extdata->sdeq_edgesIsForbidden;
+   const int* const parentNode = extdata->tree_parentNode;
+
+   assert(edges_isEqForbidden);
+   assert(path_start != path_end);
+   assert(graph_knot_isInRange(graph, path_start));
+   assert(graph_knot_isInRange(graph, path_end));
+
+   for( int currentNode = path_start; currentNode != path_end; currentNode = parentNode[currentNode] )
+   {
+      int e;
+      const int parent = parentNode[currentNode];
+
+      assert(graph_knot_isInRange(graph, parent));
+
+      for( e = graph->outbeg[parent]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         if( graph->head[e] == currentNode )
+         {
+            assert(EQ(graph->cost[e], extdata->tree_parentEdgeCost[currentNode]));
+            if( !edges_isEqForbidden[e / 2] )
+            {
+#ifdef SCIP_DEBUG
+               SCIPdebugMessage("forbid equality edge: ");
+               graph_edge_printInfo(graph, e);
+#endif
+               edges_isEqForbidden[e / 2] = TRUE;
+               StpVecPushBack(scip, extdata->sdeq_resetStack, e / 2);
+            }
+            break;
+         }
+      }
+
+      assert(e != EAT_LAST);
+   }
+}
+
+
+/** markes bottleneck edges used for equality rule-out */
+static inline
+void bottleneckMarkEqualityEdges(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             dist_eq,            /**< distance that was used for equality rule-out */
+   int                   vertex_pathmarked,  /**< vertex with marked rootpath */
+   int                   vertex_unmarked,    /**< second vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const SCIP_Real* const bottleneckDist_node = extdata->tree_bottleneckDistNode;
+   const SCIP_Real* const parentEdgeCost = extdata->tree_parentEdgeCost;
+   const int* const parentNode = extdata->tree_parentNode;
+   int* const tree_deg = extdata->tree_deg;
+   SCIP_Real bottleneck_local;
+   const int tree_root = extdata->tree_root;
+   int ancestor = UNKNOWN;
+   int bottleneck_start;
+   const SCIP_Bool isPc = graph_pc_isPc(graph);
+
+   assert(bottleneckDist_node && parentEdgeCost && parentNode);
+   assert(bottleneckDist_node[vertex_pathmarked] == -1.0 || vertex_pathmarked == tree_root);
+   assert(bottleneckDist_node[vertex_unmarked] == -1.0 || vertex_unmarked == tree_root || tree_deg[vertex_unmarked] > 1);
+   assert(bottleneckDist_node[tree_root] >= 0.0);
+   assert(vertex_pathmarked != vertex_unmarked);
+
+   /* 1. go down from vertex_unmarked to lowest common ancestor with vertex_pathmarked */
+
+   if( vertex_unmarked == tree_root )
+   {
+      ancestor = vertex_unmarked;
+   }
+   else
+   {
+      assert(parentNode[vertex_unmarked] >= 0);
+      bottleneck_start = UNKNOWN;
+      bottleneck_local = 0.0;
+
+      for( int currentNode = vertex_unmarked; bottleneckDist_node[currentNode] < -0.5; currentNode = parentNode[currentNode] )
+      {
+         assert(tree_deg[currentNode] >= 0 && parentEdgeCost[currentNode] >= 0.0);
+         assert(EQ(bottleneckDist_node[currentNode], -1.0));
+         assert(currentNode != vertex_pathmarked);
+
+         if( tree_deg[currentNode] == 2 )
+         {
+            bottleneck_local += parentEdgeCost[currentNode];
+            if( isPc && Is_term(graph->term[currentNode]) )
+            {
+               assert(graph_pc_termIsNonLeafTerm(graph, currentNode) && graph->prize[currentNode] > 0.0);
+               bottleneck_local -= graph->prize[currentNode];
+            }
+         }
+         else
+         {
+            bottleneck_start = currentNode;
+            bottleneck_local = parentEdgeCost[currentNode];
+         }
+
+         if( EQ(bottleneck_local, dist_eq) )
+         {
+            assert(parentNode[currentNode] >= 0);
+            bottleneckMarkEqualityPath(scip, graph, bottleneck_start, parentNode[currentNode], extdata);
+
+            return;
+         }
+
+         assert(parentNode[currentNode] >= 0 && parentNode[currentNode] != vertex_unmarked);
+      }
+   }
+
+
+   /* 2. go down from vertex_marked to ancestor */
+
+   assert(parentNode[vertex_pathmarked] >= 0);
+   assert(ancestor != UNKNOWN);
+   bottleneck_start = UNKNOWN;
+   bottleneck_local = 0.0;
+
+   for( int currentNode = vertex_pathmarked; currentNode != ancestor; currentNode = parentNode[currentNode] )
+   {
+      assert(tree_deg[currentNode] >= 0 && parentEdgeCost[currentNode] >= 0.0);
+      assert(currentNode != vertex_unmarked);
+
+      if( tree_deg[currentNode] == 2 )
+      {
+         bottleneck_local += parentEdgeCost[currentNode];
+         if( isPc && Is_term(graph->term[currentNode]) )
+         {
+            assert(graph_pc_termIsNonLeafTerm(graph, currentNode) && graph->prize[currentNode] > 0.0);
+            bottleneck_local -= graph->prize[currentNode];
+         }
+      }
+      else
+      {
+         bottleneck_start = currentNode;
+         bottleneck_local = parentEdgeCost[currentNode];
+      }
+
+      if( EQ(bottleneck_local, dist_eq) )
+      {
+         assert(parentNode[currentNode] >= 0);
+         bottleneckMarkEqualityPath(scip, graph, bottleneck_start, parentNode[currentNode], extdata);
+
+         return;
+      }
+
+      assert(parentNode[currentNode] >= 0 && parentNode[currentNode] != vertex_unmarked);
+   }
+
+   assert(0 && "should never arrive here!");
+}
+
+
+/** markes single bottleneck edge used for equality rule-out */
+static inline
+void bottleneckMarkEqualityEdge(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   edge,               /**< the edge to mark */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Bool* const edges_isEqForbidden = extdata->sdeq_edgesIsForbidden;
+
+   assert(edges_isEqForbidden);
+   assert(graph_edge_isInRange(g, edge));
+
+   if( !edges_isEqForbidden[edge / 2] )
+   {
+      edges_isEqForbidden[edge / 2] = TRUE;
+      StpVecPushBack(scip, extdata->sdeq_resetStack, edge / 2);
+   }
+}
+
+
 /** helper to check the case of quality */
 static inline
 SCIP_Bool bottleneckIsEqualityDominated(
@@ -927,14 +1112,13 @@ SCIP_Bool bottleneckIsEqualityDominated(
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real             dist_eq,            /**< critical distance */
    int                   edge_forbidden,     /**< forbidden edge */
-   const SCIP_Bool*      edges_isForbidden,  /**< blocked edges marked, or NULL */
    int                   vertex1,            /**< first vertex */
    int                   vertex2,            /**< second vertex */
    EXTDATA*              extdata             /**< extension data */
 )
 {
    const SCIP_Real sd_eq = extreduce_distDataGetSdDoubleForbidden(scip, g, dist_eq,
-         edge_forbidden, edges_isForbidden, vertex1, vertex2, extdata);
+         edge_forbidden, vertex1, vertex2, extdata);
 
    if( sd_eq < -0.5 )
       return FALSE;
@@ -997,9 +1181,10 @@ SCIP_Bool bottleneckIsDominated(
 #endif
 
       if( bottleneckIsEqualityDominated(scip, graph, specialDist, edge_forbidden,
-         NULL, vertex_pathmarked, vertex_unmarked, extdata) )
+         vertex_pathmarked, vertex_unmarked, extdata) )
       {
-       //  printf("...ruled out with equality! \n");
+         SCIPdebugMessage("...ruled out with equality! \n");
+         bottleneckMarkEqualityEdges(scip, graph, specialDist, vertex_pathmarked, vertex_unmarked, extdata);
 
          return TRUE;
       }
@@ -1033,7 +1218,22 @@ SCIP_Bool bottleneckWithExtedgeIsDominated(
       return FALSE;
 
    if( LT(specialDist, graph->cost[extedge]) )
+   {
       return TRUE;
+   }
+   else if( LE(specialDist, graph->cost[extedge]) )
+   {
+      const int vertex1 = graph->head[extedge];
+
+      if( bottleneckIsEqualityDominated(scip, graph, specialDist, extedge,
+         vertex1, vertex_unmarked, extdata) )
+      {
+         bottleneckMarkEqualityEdge(scip, graph, extedge, extdata);
+         SCIPdebugMessage("...ruled out with equality by single edge ! \n");
+
+         return TRUE;
+      }
+   }
 
    if( vertex_pathmarked == vertex_unmarked )
       return FALSE;
@@ -1043,9 +1243,6 @@ SCIP_Bool bottleneckWithExtedgeIsDominated(
 #else
    bottleneckDist = bottleneckGetDist(graph, extdata, vertex_unmarked);
 #endif
-
-   if( graph->cost[extedge] > bottleneckDist )
-      bottleneckDist = graph->cost[extedge];
 
    SCIPdebugMessage("extedge domination test %d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDist, bottleneckDist);
 
@@ -1066,9 +1263,11 @@ SCIP_Bool bottleneckWithExtedgeIsDominated(
 #endif
 
       if( bottleneckIsEqualityDominated(scip, graph, specialDist, extedge,
-         NULL, vertex1, vertex_unmarked, extdata) )
+         vertex1, vertex_unmarked, extdata) )
       {
-    //     printf("...ruled out with equality! \n");
+         bottleneckMarkEqualityEdges(scip, graph, specialDist, vertex_pathmarked, vertex_unmarked, extdata);
+         SCIPdebugMessage("...ruled out with equality! \n");
+
          return TRUE;
       }
    }
@@ -1119,8 +1318,11 @@ SCIP_Bool bottleneckToSiblingIsDominated(
          const int vertex2 = graph->head[extedge];
 
          if( bottleneckIsEqualityDominated(scip, graph, specialDist, edge2sibling,
-               NULL, vertex1, vertex2, extdata) )
+            vertex1, vertex2, extdata) )
          {
+            bottleneckMarkEqualityEdge(scip, graph, edge2sibling, extdata);
+            SCIPdebugMessage("...ruled out edge1 with equality! \n");
+
             return TRUE;
          }
       }
@@ -1131,8 +1333,11 @@ SCIP_Bool bottleneckToSiblingIsDominated(
          const int vertex2 = graph->head[extedge];
 
          if( bottleneckIsEqualityDominated(scip, graph, specialDist, extedge,
-               NULL, vertex1, vertex2, extdata) )
+            vertex1, vertex2, extdata) )
          {
+            bottleneckMarkEqualityEdge(scip, graph, extedge, extdata);
+            SCIPdebugMessage("...ruled out edge2 with equality! \n");
+
             return TRUE;
          }
       }
@@ -1226,6 +1431,7 @@ SCIP_Bool dbgBottleneckFromLeafIsDominated(
 
          if( bottleneckIsDominated(scip, graph, topleaf, leaf, specialDist, edge_forbidden, extdata) )
          {
+            SCIPdebugMessage("...debug check ruled out! \n");
             ruleOut = TRUE;
             break;
          }

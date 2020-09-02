@@ -74,6 +74,7 @@ void postCleanMSTs(
 
 /** cleans-up after trying to rule out a component */
 void extreduce_extCompClean(
+   SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    const EXTCOMP*        extcomp,            /**< component to be cleaned for */
    SCIP_Bool             unhash,             /**< unhash component? */
@@ -88,8 +89,12 @@ void extreduce_extCompClean(
    const int* const compedges = extcomp->compedges;
    const int ncompedges = extcomp->ncompedges;
    int* const tree_deg = extdata->tree_deg;
+   SCIP_Bool* const sdeq_edgesIsForbidden = extdata->sdeq_edgesIsForbidden;
+   const STP_Vectype(int) sdeq_resetStack = extdata->sdeq_resetStack;
+   const int sdeq_size = StpVecGetSize(sdeq_resetStack);
 
    assert(ncompedges >= 1);
+   assert(sdeq_size >= 0);
 
    for( int i = 0; i < ncompedges; ++i )
    {
@@ -97,12 +102,26 @@ void extreduce_extCompClean(
       const int head = graph->head[edge];
       const int tail = graph->tail[edge];
 
+      assert(graph_edge_isInRange(graph, edge));
+
       tree_deg[head] = 0;
       tree_deg[tail] = 0;
 
       if( unhash )
          graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
    }
+
+   for( int i = 0; i < sdeq_size; i++ )
+   {
+      const int edge = sdeq_resetStack[i];
+
+      assert(graph_edge_isInRange(graph, 2 * edge));
+      assert(sdeq_edgesIsForbidden[edge]);
+
+      sdeq_edgesIsForbidden[edge] = FALSE;
+   }
+
+   StpVecFree(scip, extdata->sdeq_resetStack);
 
    postCleanSDs(sds_vertical);
    postCleanSDs(sds_horizontal);
@@ -344,6 +363,9 @@ SCIP_Bool extreduce_extdataIsClean(
    const EXTDATA*        extdata             /**< extension data */
 )
 {
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+
    if( extdata->extstack_ncomponents != 0 )
    {
       printf("extdata->extstack_ncomponents %d \n", extdata->extstack_ncomponents);
@@ -410,7 +432,7 @@ SCIP_Bool extreduce_extdataIsClean(
       return FALSE;
    }
 
-   for( int i = 0; i < graph->knots; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( !(extdata->tree_deg[i] == 0 || extdata->tree_deg[i] == -1) )
       {
@@ -421,6 +443,15 @@ SCIP_Bool extreduce_extdataIsClean(
       if( !EQ(extdata->tree_bottleneckDistNode[i], -1.0) )
       {
          printf("extdata->bottleneckDistNode[i] %f \n", extdata->tree_bottleneckDistNode[i]);
+         return FALSE;
+      }
+   }
+
+   for( int i = 0; i < nedges / 2; ++i )
+   {
+      if( extdata->sdeq_edgesIsForbidden[i] )
+      {
+         printf("extdata->sdeq_edgesIsForbidden[%d] not reset \n", i);
          return FALSE;
       }
    }

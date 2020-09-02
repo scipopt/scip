@@ -1597,7 +1597,7 @@ void extProcessComponent(
    /* early rule-out? or no extension possible? */
    if( *deletable || !success )
    {
-      extreduce_extCompClean(graph, extcomp, FALSE, extdata);
+      extreduce_extCompClean(scip, graph, extcomp, FALSE, extdata);
       return;
    }
 
@@ -1653,7 +1653,7 @@ void extProcessComponent(
 
    *deletable = success;
 
-   extreduce_extCompClean(graph, extcomp, TRUE, extdata);
+   extreduce_extCompClean(scip, graph, extcomp, TRUE, extdata);
 }
 
 
@@ -1679,6 +1679,7 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_Real* tree_parentEdgeCost;
    SCIP_Real* tree_redcostSwap;
    int* pseudoancestor_mark;
+   SCIP_Bool* sdeq_edgesIsForbidden;
    const int nnodes = graph->knots;
    const int maxstacksize = extreduce_getMaxStackSize();
    const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
@@ -1699,6 +1700,7 @@ SCIP_RETCODE extreduce_checkComponent(
       SCIP_CALL( SCIPallocBufferArray(scip, &pcSdCands, nnodes) );
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &sdeq_edgesIsForbidden, graph->edges / 2) );
 
    {
       const SCIP_Bool* isterm = extpermanent->isterm;
@@ -1727,6 +1729,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_nDelUpArcs = 0, .tree_root = -1, .tree_starcenter = -1, .tree_nedges = 0, .tree_depth = 0,
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata,
+         .sdeq_resetStack = NULL, .sdeq_edgesIsForbidden = sdeq_edgesIsForbidden,
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
          .tree_maxdepth = extpermanent->tree_maxdepth,
          .tree_maxnleaves = extpermanent->tree_maxnleaves,
@@ -1753,6 +1756,7 @@ SCIP_RETCODE extreduce_checkComponent(
 
    assert(extreduce_extPermaIsClean(graph, extpermanent));
 
+   SCIPfreeCleanBufferArray(scip, &sdeq_edgesIsForbidden);
    SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
    SCIPfreeBufferArrayNull(scip, &pcSdCands);
    SCIPfreeBufferArray(scip, &tree_redcostSwap);

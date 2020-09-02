@@ -159,6 +159,8 @@ typedef struct extension_data
    REDDATA* const reddata;
    DISTDATA* const distdata;
    PCDATA* const pcdata;
+   SCIP_Bool* const sdeq_edgesIsForbidden;
+   STP_Vectype(int) sdeq_resetStack;
    SCIP_Real tree_redcost;
    SCIP_Real tree_cost;
    int tree_nDelUpArcs;
@@ -419,7 +421,7 @@ extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const E
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
-extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GRAPH*, SCIP_Real, int, const SCIP_Bool*, int, int, EXTDATA*);
+extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GRAPH*, SCIP_Real, int, int, int, EXTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);
@@ -484,7 +486,7 @@ extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
 /* extreduce_data.c
  */
 
-void                      extreduce_extCompClean(const GRAPH*, const EXTCOMP*, SCIP_Bool, EXTDATA*);
+void                      extreduce_extCompClean(SCIP*, const GRAPH*, const EXTCOMP*, SCIP_Bool, EXTDATA*);
 extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
 extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
 extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
