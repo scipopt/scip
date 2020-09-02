@@ -1003,11 +1003,12 @@ void bottleneckMarkEqualityEdges(
    }
    else
    {
+      int currentNode;
       assert(parentNode[vertex_unmarked] >= 0);
       bottleneck_start = UNKNOWN;
       bottleneck_local = 0.0;
 
-      for( int currentNode = vertex_unmarked; bottleneckDist_node[currentNode] < -0.5; currentNode = parentNode[currentNode] )
+      for( currentNode = vertex_unmarked; bottleneckDist_node[currentNode] < -0.5; currentNode = parentNode[currentNode] )
       {
          assert(tree_deg[currentNode] >= 0 && parentEdgeCost[currentNode] >= 0.0);
          assert(EQ(bottleneckDist_node[currentNode], -1.0));
@@ -1038,6 +1039,9 @@ void bottleneckMarkEqualityEdges(
 
          assert(parentNode[currentNode] >= 0 && parentNode[currentNode] != vertex_unmarked);
       }
+
+      ancestor = currentNode;
+      assert(GE(bottleneckDist_node[ancestor], 0.0));
    }
 
 
