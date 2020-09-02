@@ -1694,7 +1694,8 @@ void mstCompLeafGetSDs(
 
    if( *leafRuledOut )
    {
-      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, TRUE, edge2leaf, extdata));
+      /* NOTE: does not need to hold in case of equality rule out! */
+      assert(extInitialCompIsEdge(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, TRUE, edge2leaf, extdata));
       return;
    }
 
@@ -1703,7 +1704,8 @@ void mstCompLeafGetSDs(
 
    if( *leafRuledOut )
    {
-      assert(dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata));
+      /* NOTE: does the following not need to hold in case of equality rule out! */
+      assert(extInitialCompIsEdge(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata));
       return;
    }
 
