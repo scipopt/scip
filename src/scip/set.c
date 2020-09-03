@@ -850,6 +850,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -957,6 +958,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
       }
    }
+
+    /* copy all cut selector plugins */
+    if( copycutselectors && sourceset->cutsels != NULL )
+    {
+        for( p = sourceset->ncutsels - 1; p >= 0; --p )
+        {
+            SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
+        }
+    }
 
    /* copy all propagators plugins */
    if( copypropagators && sourceset->props != NULL )
@@ -1144,6 +1154,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nconcsolvers = 0;
    (*set)->concsolverssize = 0;
    (*set)->concurrent_paramsetprefix = NULL;
+   (*set)->cutsels = NULL;
+   (*set)->ncutsels = 0;
+   (*set)->cutselssize = 0;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;

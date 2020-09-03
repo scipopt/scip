@@ -37,6 +37,12 @@ extern "C" {
  * @{
  */
 
+/** gets name of cut selector */
+SCIP_EXPORT
+const char* SCIPcutselGetName(
+        SCIP_CUTSEL*          cutsel              /**< cut selector */
+);
+
 
 /** @} */
 

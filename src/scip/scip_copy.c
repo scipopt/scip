@@ -272,6 +272,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxation handlers be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
@@ -302,7 +303,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    }
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
-         copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
+         copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copycutselectors, copypropagators,
          copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copynlpis, valid) );
 
    return SCIP_OKAY;
@@ -2645,7 +2646,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )

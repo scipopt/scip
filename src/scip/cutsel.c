@@ -171,6 +171,8 @@ SCIP_RETCODE SCIPcutselsSelect(
    /* sort the cut selectors by priority */
    //TODO: SCIPsetSortCutselectors(set);
 
+   printf("We have <%d> cut selectors! \n", set->ncutsels);
+
    /* try all cut selectors until one succeeds */
    for( i = 0; i < set->ncutsels && result == SCIP_DIDNOTFIND; ++i )
    {
@@ -178,4 +180,33 @@ SCIP_RETCODE SCIPcutselsSelect(
    }
 
    return SCIP_OKAY;
+}
+
+/** copies the given cut selector to a new scip */
+SCIP_RETCODE SCIPcutselCopyInclude(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+)
+{
+    assert(cutsel != NULL);
+    assert(set != NULL);
+    assert(set->scip != NULL);
+
+    if( cutsel->cutselcopy != NULL )
+    {
+        SCIPsetDebugMsg(set, "including cut selector %s in subscip %p\n", SCIPcutselGetName(cutsel), (void*)set->scip);
+        SCIP_CALL( cutsel->cutselcopy(set->scip, cutsel) );
+    }
+    return SCIP_OKAY;
+}
+
+/** sets copy method of cut selector */
+void SCIPcutselSetCopy(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+        )
+{
+    assert(cutsel != NULL);
+
+    cutsel->cutselcopy = cutselcopy;
 }

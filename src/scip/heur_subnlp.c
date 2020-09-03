@@ -191,6 +191,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* presolvers */
          FALSE, /* relaxators */
          FALSE, /* separators */
+         FALSE, /* cutselectors */
          TRUE,  /* propagators */
          FALSE, /* heuristics */
          TRUE,  /* eventhandler */

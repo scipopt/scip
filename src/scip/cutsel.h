@@ -68,6 +68,18 @@ SCIP_RETCODE SCIPcutselsSelect(
    int*                  nselectedcuts       /**< pointer to return number of selected cuts */
    );
 
+/** copies the given cut selector to a new scip */
+SCIP_RETCODE SCIPcutselCopyInclude(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+);
+
+/** sets copy method of cut selector */
+void SCIPcutselSetCopy(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+);
+
 #ifdef __cplusplus
 }
 #endif

@@ -98,6 +98,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
    SCIP_Bool             copyrelaxators,     /**< should the relaxation handler be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copycutselectors,   /**< should the cut selectors be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */

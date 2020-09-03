@@ -55,6 +55,19 @@ struct SCIP_CutselData
  * Callback methods of cut selector
  */
 
+static
+SCIP_DECL_CUTSELCOPY(cutselCopyHello)
+{  /*lint --e{715}*/
+    assert(scip != NULL);
+    assert(cutsel != NULL);
+    assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
+
+    /* call inclusion method of node selector */
+    SCIP_CALL( SCIPincludeCutselHello(scip) );
+
+    return SCIP_OKAY;
+}
+
 /* TODO: Implement all necessary cut selector methods. The methods with an #if 0 ... #else #define ... are optional */
 
 
@@ -69,7 +82,7 @@ SCIP_DECL_CUTSELCOPY(cutselCopyHello)
    return SCIP_OKAY;
 }
 #else
-#define cutselCopyHello NULL
+//#define cutselCopyHello NULL
 #endif
 
 /** destructor of cut selector to free user data (called when SCIP is exiting) */

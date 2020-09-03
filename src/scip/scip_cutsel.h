@@ -62,11 +62,37 @@ SCIP_RETCODE SCIPincludeCutsel(
    SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
    );
 
+/** Creates a cut selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
+ *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
+ *  Optional callbacks can be set via specific setter functions, see SCIPsetCutselCopy(), SCIPsetCutselFree(),
+ *  SCIPsetCutselInit(), SCIPsetCutselExit(), SCIPsetCutselInitsol(), and SCIPsetCutselExitsol()
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeCutsel() instead
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeCutselBasic(
+        SCIP*                 scip,               /**< SCIP data structure */
+        SCIP_CUTSEL**         cutsel,             /**< reference to a cut selector, or NULL */
+        const char*           name,               /**< name of cut selector */
+        const char*           desc,               /**< description of cut selector */
+        int                   priority,           /**< priority of the cut selector in standard mode */
+        SCIP_DECL_CUTSELSELECT((*cutselselect)),/**< cut selection method */
+        SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
+);
+
+/** sets copy method of cut selector */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetCutselCopy(
+        SCIP*                 scip,               /**< SCIP data structure */
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+);
+
 /** returns the cut selector of the given name, or NULL if not existing */
 SCIP_EXPORT
 SCIP_CUTSEL* SCIPfindCutsel(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of node selector */
+   const char*           name                /**< name of cut selector */
    );
 
 
