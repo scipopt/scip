@@ -57,8 +57,10 @@ struct node_one_hop_star
    int*                  edgesPromising;    /**< edges that might still be ruled out (of size maxNodeDegree) */
    int*                  edgesSelected;     /**< list of currently selected edges (of size maxNodeDegree) */
    int*                  edgesSelectedPos;  /**< list of position of currently selected edges w.r.t. edgeId (of size maxNodeDegree) */
+   int*                  edgesSelectedPosPrev;  /**< list of position of previously selected edges w.r.t. edgeId (of size maxNodeDegree) */
    int                   nodeDegree;        /**< degree of current node */
    int                   starDegree;        /**< degree of current star */
+   int                   starDegreePrev;    /**< degree of previous star */
    int                   maxNodeDegree;     /**< maximum allowed node degree */
    int                   starcenter;        /**< node for which the star is created */
    int                   nedgesPromising;   /**< edges that are promising */
@@ -720,7 +722,7 @@ void starSelectedPositionsReset(
    STAR*                 star                /**< the star */
 )
 {
-   int* const edgesSelectedPos =  star->edgesSelectedPos;
+   int* RESTRICT edgesSelectedPos = star->edgesSelectedPos;
    const int starDegree = star->starDegree;
 
    for( int i = 0; i < starDegree; i++ )
@@ -784,6 +786,14 @@ void starSelectedPositionsSetNext(
    int* const edgesSelectedPos = star->edgesSelectedPos;
 
    assert(3 <= starDegree && starDegree <= nodeDegree);
+
+   star->starDegreePrev = starDegree;
+   BMScopyMemoryArray(star->edgesSelectedPosPrev, edgesSelectedPos, starDegree);
+
+#ifndef NDEBUG
+   for( int i = starDegree; i < nodeDegree; i++ )
+      star->edgesSelectedPosPrev[i] = -1;
+#endif
 
    /* all current positions are stored in edgesSelectedPos[0,...,starDegree-1] */
 
@@ -1753,6 +1763,7 @@ SCIP_RETCODE reduce_starInit(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgeId), maxdegree) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelected), maxdegree) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelectedPos), maxdegree) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelectedPosPrev), maxdegree) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgeIsFailed), maxdegree) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesPromising), maxdegree) );
 
@@ -1774,6 +1785,7 @@ void reduce_starFree(
 
    SCIPfreeMemoryArray(scip, &(s->edgesPromising));
    SCIPfreeMemoryArray(scip, &(s->edgeIsFailed));
+   SCIPfreeMemoryArray(scip, &(s->edgesSelectedPosPrev));
    SCIPfreeMemoryArray(scip, &(s->edgesSelectedPos));
    SCIPfreeMemoryArray(scip, &(s->edgesSelected));
    SCIPfreeMemoryArray(scip, &(s->edgeId));
@@ -1795,6 +1807,7 @@ void reduce_starReset(
 
    star->nodeDegree = g->grad[node];
    star->starDegree = star->nodeDegree;
+   star->starDegreePrev = -1;
    star->allStarsChecked = FALSE;
    star->starcenter = node;
    star->nedgesPromising = g->grad[node];
@@ -1805,6 +1818,11 @@ void reduce_starReset(
       star->edgeId[i] = e;
       star->edgeIsFailed[i] = FALSE;
    }
+
+#ifndef NDEBUG
+   for( int i = 0; i < star->nodeDegree; i++ )
+      star->edgesSelectedPosPrev[i] = -1;
+#endif
 
    /* initially, select the entire star */
    starSelectedPositionsReset(star);
@@ -1890,14 +1908,9 @@ const int* reduce_starGetRuledOutEdges(
 
    for( int i = 0; i < star->nodeDegree; i++ )
    {
-      const int pos = star->edgesSelectedPos[i];
-
-      assert(pos >= 0);
-      assert(pos < star->nodeDegree);
-
-      if( !star->edgeIsFailed[pos] )
+      if( !star->edgeIsFailed[i] )
       {
-         const int edge = star->edgesSelected[i];
+         const int edge = star->edgeId[i];
          assert(edge >= 0);
 
          star->edgesPromising[count++] = edge;
@@ -1933,11 +1946,12 @@ void reduce_starCurrentSetFailed(
    assert(star);
    assert(!reduce_starAllAreChecked(star));
 
-   nedges = star->starDegree;
+   nedges = star->starDegreePrev;
+   assert(nedges >= 0);
 
    for( int i = 0; i < nedges; i++ )
    {
-      const int pos = star->edgesSelectedPos[i];
+      const int pos = star->edgesSelectedPosPrev[i];
 
       assert(pos >= 0);
       assert(pos < star->nodeDegree);
