@@ -175,8 +175,8 @@ struct SCIP_ProjShiftData
    SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
    SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
    SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
-   int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
-   int*                  projshiftbasis;     /**< mapping for basis used in factorization */
+   int*                  includedrows;       /**< 1 if constraints (or vars) dual variable is included in original S-interior point/ray */
+   int*                  projshiftbasis;     /**< mapping for basis used in factorization (maps [1,...,|includedrows|] -> 2*nrows+2*ncols) */
 #ifdef SCIP_WITH_GMP
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
 #endif
