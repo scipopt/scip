@@ -904,26 +904,36 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* get maximal number of cuts to add to the LP */
    maxsepacuts = SCIPsetGetSepaMaxcuts(set, root);
 
-   if( root )
+   /* if all cuts are forced cuts, no selection is required */
+   if( sepastore->nforcedcuts >= MIN(sepastore->ncuts, maxsepacuts) )
    {
-      maxparall = 1.0 - set->sepa_minorthoroot;
-      goodmaxparall = MAX(0.5, 1.0 - set->sepa_minorthoroot);
+      nselectedcuts = sepastore->nforcedcuts;
    }
    else
    {
-      maxparall = 1.0 - set->sepa_minortho;
-      goodmaxparall = MAX(0.5, 1.0 - set->sepa_minortho);
+      if( root )
+      {
+         maxparall = 1.0 - set->sepa_minorthoroot;
+         goodmaxparall = MAX(0.5, 1.0 - set->sepa_minorthoroot);
+      }
+      else
+      {
+         maxparall = 1.0 - set->sepa_minortho;
+         goodmaxparall = MAX(0.5, 1.0 - set->sepa_minortho);
+      }
+
+      // choose cut selector
+      // and select
+      SCIP_CALL( SCIPcutselsSelect(set, sepastore->cuts, sepastore->ncuts, sepastore->nforcedcuts, root, maxsepacuts,
+               &nselectedcuts) );
+      assert(nselectedcuts <= maxsepacuts);
+
+
+      ///* call cut selection algorithm */
+      //SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, 0.9, 0.0, goodmaxparall, maxparall,
+      //         set->sepa_dircutoffdistfac, set->sepa_efficacyfac, set->sepa_objparalfac, set->sepa_intsupportfac,
+      //         sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
    }
-
-   // choose cut selector
-   // and select
-   SCIP_CALL( SCIPcutselsSelect(set, sepastore->cuts, &nselectedcuts) );
-
-
-   /* call cut selection algorithm */
-   SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, 0.9, 0.0, goodmaxparall, maxparall,
-         set->sepa_dircutoffdistfac, set->sepa_efficacyfac, set->sepa_objparalfac, set->sepa_intsupportfac,
-         sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
 
    /*
     * apply all selected cuts

@@ -520,10 +520,6 @@ struct SCIP_Set
    SCIP_Real             sepa_minefficacyroot; /**< minimal efficacy for a cut to enter the LP in the root node */
    SCIP_Real             sepa_minortho;      /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
-   SCIP_Real             sepa_efficacyfac;   /**< factor to scale efficacy of cut in score calc. */
-   SCIP_Real             sepa_dircutoffdistfac;/**< factor to scale directed cutoff distance of cut in score calc. */
-   SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in score calc. */
-   SCIP_Real             sepa_intsupportfac; /**< factor to scale integral support of cut in score calculation */
    SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
                                                 *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */

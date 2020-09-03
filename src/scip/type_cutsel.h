@@ -109,6 +109,8 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
  *  - scip            : SCIP main data structure
  *  - cutsel          : the cut selector itself
  *  - cuts            : cutting planes to select from
+ *  - ncuts           : number of cutting planes to select from
+ *  - root            : are we at the root node?
  *  - nselectedcuts   : the first nselectedcuts from cuts are selected
  *  - result          : pointer to store the result of the cut selection call
  *
@@ -116,7 +118,8 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
  *  - SCIP_SUCCESS    : the cut selection succeeded
  *  - SCIP_DIDNOTFIND : the cut selection did not find good enough cuts to select
  */
-#define SCIP_DECL_CUTSELSELECT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CUTSEL* cutsel, SCIP_ROW** cuts, int* nselectedcuts, SCIP_RESULT* result)
+#define SCIP_DECL_CUTSELSELECT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CUTSEL* cutsel, SCIP_ROW** cuts, int ncuts, \
+      int nforcedcuts, SCIP_Bool root, int maxnselectedcuts, int* nselectedcuts, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

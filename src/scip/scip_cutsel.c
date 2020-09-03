@@ -80,14 +80,14 @@ SCIP_RETCODE SCIPincludeCutsel(
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeCutsel() instead
  */
 SCIP_RETCODE SCIPincludeCutselBasic(
-        SCIP*                 scip,               /**< SCIP data structure */
-        SCIP_CUTSEL**         cutsel,             /**< reference to a cut selector, or NULL */
-        const char*           name,               /**< name of cut selector */
-        const char*           desc,               /**< description of cut selector */
-        int                   priority,           /**< priority of the cut selector in standard mode */
-        SCIP_DECL_CUTSELSELECT((*cutselselect)),/**< cut selection method */
-        SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL**         cutsel,             /**< reference to a cut selector, or NULL */
+   const char*           name,               /**< name of cut selector */
+   const char*           desc,               /**< description of cut selector */
+   int                   priority,           /**< priority of the cut selector in standard mode */
+   SCIP_DECL_CUTSELSELECT((*cutselselect)),  /**< cut selection method */
+   SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
+   )
 {
     SCIP_CUTSEL* cutselptr;
 

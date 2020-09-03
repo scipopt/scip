@@ -100,22 +100,6 @@ SCIP_RETCODE doCutselCreate(
    return SCIP_OKAY;
 }
 
-/** calls the given cut selector to select cuts */
-static
-SCIP_RETCODE cutselSelect(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_ROW**            cuts,               /**< array with cuts to select from */
-   int*                  nselectedcuts,      /**< pointer to return number of selected cuts */
-   SCIP_RESULT*          result              /**< pointer to store the result of the cut selector */
-   )
-{
-   SCIP_CALL( cutsel->cutselselect(set->scip, cutsel, cuts, nselectedcuts, result) );
-   assert(*result == SCIP_SUCCESS || *result == SCIP_DIDNOTFIND);
-
-   return SCIP_OKAY;
-}
-
 
 /** creates a cut selector */
 SCIP_RETCODE SCIPcutselCreate(
@@ -162,6 +146,10 @@ const char* SCIPcutselGetName(
 SCIP_RETCODE SCIPcutselsSelect(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW**            cuts,               /**< array with cuts to select from */
+   int                   ncuts,              /**< length of cuts */
+   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   int                   maxnselectedcuts,   /**< maximum number of cuts to be selected */
    int*                  nselectedcuts       /**< pointer to return number of selected cuts */
    )
 {
@@ -176,7 +164,13 @@ SCIP_RETCODE SCIPcutselsSelect(
    /* try all cut selectors until one succeeds */
    for( i = 0; i < set->ncutsels && result == SCIP_DIDNOTFIND; ++i )
    {
-      SCIP_CALL( cutselSelect(set, set->cutsels[i], cuts, nselectedcuts, &result) );
+      SCIP_CUTSEL* cutsel;
+      cutsel = set->cutsels[i];
+
+      SCIP_CALL( cutsel->cutselselect(set->scip, cutsel, cuts, ncuts, nforcedcuts, root, maxnselectedcuts,
+               nselectedcuts, &result) );
+      assert(*nselectedcuts <= maxnselectedcuts);
+      assert(result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND);
    }
 
    return SCIP_OKAY;
@@ -184,9 +178,9 @@ SCIP_RETCODE SCIPcutselsSelect(
 
 /** copies the given cut selector to a new scip */
 SCIP_RETCODE SCIPcutselCopyInclude(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
-)
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
 {
     assert(cutsel != NULL);
     assert(set != NULL);
@@ -202,11 +196,21 @@ SCIP_RETCODE SCIPcutselCopyInclude(
 
 /** sets copy method of cut selector */
 void SCIPcutselSetCopy(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
-        )
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   )
 {
     assert(cutsel != NULL);
 
     cutsel->cutselcopy = cutselcopy;
+}
+
+/** gets user data of cut selector */
+SCIP_CUTSELDATA* SCIPcutselGetData(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   )
+{
+   assert(cutsel != NULL);
+
+   return cutsel->cutseldata;
 }

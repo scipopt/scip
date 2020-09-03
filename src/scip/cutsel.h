@@ -65,6 +65,10 @@ const char* SCIPcutselGetName(
 SCIP_RETCODE SCIPcutselsSelect(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW**            cuts,               /**< array with cuts to select from */
+   int                   ncuts,              /**< length of cuts */
+   int                   nforcedcuts,        /**< number of forced cuts at start of given array */
+   SCIP_Bool             root,               /**< are we at the root node? */
+   int                   maxnselectedcuts,   /**< maximum number of cuts to be selected */
    int*                  nselectedcuts       /**< pointer to return number of selected cuts */
    );
 

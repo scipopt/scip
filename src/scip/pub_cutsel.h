@@ -40,8 +40,14 @@ extern "C" {
 /** gets name of cut selector */
 SCIP_EXPORT
 const char* SCIPcutselGetName(
-        SCIP_CUTSEL*          cutsel              /**< cut selector */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
 );
+
+/** gets user data of cut selector */
+SCIP_EXPORT
+SCIP_CUTSELDATA* SCIPcutselGetData(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+   );
 
 
 /** @} */

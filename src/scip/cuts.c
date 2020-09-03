@@ -2653,10 +2653,6 @@ SCIP_RETCODE SCIPselectCuts(
          nnonforcedcuts = filterWithParallelism(cuts[i], nonforcedcuts, nonforcedscores, nnonforcedcuts, goodscore, goodmaxparall, maxparall);
       }
 
-      /* if the maximal number of cuts was exceeded after selecting the forced cuts, we can stop here */
-      if( *nselectedcuts >= maxselectedcuts )
-         goto TERMINATE;
-
       /* now greedily select the remaining cuts */
       while( nnonforcedcuts > 0 )
       {

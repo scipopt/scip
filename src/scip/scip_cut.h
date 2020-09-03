@@ -49,6 +49,20 @@ extern "C" {
  * @{
  */
 
+/** returns row's cutoff distance in the direction of the given primal solution
+ *
+ *  @return the cutoff distance of the cut with respect to the LP solution in the direction of the given primal solution
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetCutLPSolCutoffDistance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to compute direction for cutoff distance; must not be NULL */
+   SCIP_ROW*             cut                 /**< separated cut */
+   );
+
 /** returns efficacy of the cut with respect to the given primal solution or the current LP solution:
  *  e = -feasibility/norm
  *
