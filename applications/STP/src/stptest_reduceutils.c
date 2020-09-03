@@ -474,6 +474,97 @@ SCIP_RETCODE testStar4IsCorrect(
 }
 
 
+
+/** STAR of degree 4 edge rule-out should be correctly computed */
+static
+SCIP_RETCODE testStar4EdgeIsCorrect(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   STAR* star;
+   GRAPH* graph;
+   const int* promisingedges;
+   int nnodes = 5;
+   int nedges = 8;
+   int nstaredges = -1;
+   int nedgespromising;
+   const int* staredges;
+
+   SCIP_CALL( reduce_starInit(scip, 5, &star) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   graph_knot_add(graph, STP_TERM);
+   for( int i = 1; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 1.0); // 4
+   graph_edge_addBi(scip, graph, 0, 4, 1.0); // 6
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   reduce_starReset(graph, 2, star);
+   reduce_starReset(graph, 0, star);
+
+   /* full star */
+   staredges = reduce_starGetNext(star, &nstaredges);
+   STPTEST_ASSERT(nstaredges == 4);
+   STPTEST_ASSERT(staredges[0] == 6);
+   STPTEST_ASSERT(staredges[1] == 4);
+   STPTEST_ASSERT(staredges[2] == 2);
+   STPTEST_ASSERT(staredges[3] == 0);
+
+   /* 1st degree 3 star */
+   staredges = reduce_starGetNext(star, &nstaredges);
+   STPTEST_ASSERT(nstaredges == 3);
+   STPTEST_ASSERT(staredges[0] == 6);
+   STPTEST_ASSERT(staredges[1] == 4);
+   STPTEST_ASSERT(staredges[2] == 2);
+
+
+   /* 2nd degree 3 star */
+   staredges = reduce_starGetNext(star, &nstaredges);
+   STPTEST_ASSERT(nstaredges == 3);
+   STPTEST_ASSERT(staredges[0] == 6);
+   STPTEST_ASSERT(staredges[1] == 4);
+   STPTEST_ASSERT(staredges[2] == 0);
+
+   /* 3rd degree 3 star */
+   staredges = reduce_starGetNext(star, &nstaredges);
+   STPTEST_ASSERT(nstaredges == 3);
+   STPTEST_ASSERT(staredges[0] == 6);
+   STPTEST_ASSERT(staredges[1] == 2);
+   STPTEST_ASSERT(staredges[2] == 0);
+
+   reduce_starCurrentSetFailed(star);
+
+   /* 4th degree 3 star */
+   staredges = reduce_starGetNext(star, &nstaredges);
+   STPTEST_ASSERT(nstaredges == 3);
+   STPTEST_ASSERT(staredges[0] == 4);
+   STPTEST_ASSERT(staredges[1] == 2);
+   STPTEST_ASSERT(staredges[2] == 0);
+
+
+   STPTEST_ASSERT(reduce_starHasPromisingEdges(star));
+   promisingedges = reduce_starGetRuledOutEdges(star, &nedgespromising);
+   STPTEST_ASSERT(nedgespromising == 1);
+   STPTEST_ASSERT(promisingedges[0] == 4);
+
+   STPTEST_ASSERT(reduce_starAllAreChecked(star));
+
+   stptest_graphTearDown(scip, graph);
+   reduce_starFree(scip, &star);
+
+
+   return SCIP_OKAY;
+}
+
+
 /** STAR of degree 5 should be correctly computed */
 static
 SCIP_RETCODE testStar5IsCorrect(
@@ -853,6 +944,7 @@ SCIP_RETCODE stptest_reduceStar(
 {
    SCIP_CALL( testStar3IsCorrect(scip) );
    SCIP_CALL( testStar4IsCorrect(scip) );
+   SCIP_CALL( testStar4EdgeIsCorrect(scip) );
    SCIP_CALL( testStar5IsCorrect(scip) );
 
    printf("reduce star test: all ok \n");

@@ -52,13 +52,16 @@ struct dynamic_complete_minimum_spanning_tree
 /** see reduce.h */
 struct node_one_hop_star
 {
+   SCIP_Bool*            edgeIsFailed;      /**< marker for each adjacent edge of current node (of size maxNodeDegree) */
    int*                  edgeId;            /**< IDs for each adjacent edge of current node (of size maxNodeDegree) */
+   int*                  edgesPromising;    /**< edges that might still be ruled out (of size maxNodeDegree) */
    int*                  edgesSelected;     /**< list of currently selected edges (of size maxNodeDegree) */
    int*                  edgesSelectedPos;  /**< list of position of currently selected edges w.r.t. edgeId (of size maxNodeDegree) */
    int                   nodeDegree;        /**< degree of current node */
    int                   starDegree;        /**< degree of current star */
    int                   maxNodeDegree;     /**< maximum allowed node degree */
    int                   starcenter;        /**< node for which the star is created */
+   int                   nedgesPromising;   /**< edges that are promising */
    SCIP_Bool             allStarsChecked;   /**< have all stars been checked? */
 };
 
@@ -1744,11 +1747,14 @@ SCIP_RETCODE reduce_starInit(
    s->starcenter = -1;
    s->nodeDegree = -1;
    s->starDegree = -1;
+   s->nedgesPromising = -1;
    s->maxNodeDegree = maxdegree;
    s->allStarsChecked = FALSE;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgeId), maxdegree) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelected), maxdegree) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesSelectedPos), maxdegree) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgeIsFailed), maxdegree) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(s->edgesPromising), maxdegree) );
 
    return SCIP_OKAY;
 }
@@ -1766,6 +1772,8 @@ void reduce_starFree(
    s = *star;
    assert(s);
 
+   SCIPfreeMemoryArray(scip, &(s->edgesPromising));
+   SCIPfreeMemoryArray(scip, &(s->edgeIsFailed));
    SCIPfreeMemoryArray(scip, &(s->edgesSelectedPos));
    SCIPfreeMemoryArray(scip, &(s->edgesSelected));
    SCIPfreeMemoryArray(scip, &(s->edgeId));
@@ -1789,11 +1797,13 @@ void reduce_starReset(
    star->starDegree = star->nodeDegree;
    star->allStarsChecked = FALSE;
    star->starcenter = node;
+   star->nedgesPromising = g->grad[node];
 
    for( int e = g->outbeg[node], i = 0; e != EAT_LAST; e = g->oeat[e], i++ )
    {
       assert(i < star->nodeDegree);
       star->edgeId[i] = e;
+      star->edgeIsFailed[i] = FALSE;
    }
 
    /* initially, select the entire star */
@@ -1866,45 +1876,92 @@ const int* reduce_starGetNextAndPosition(
 }
 
 
-
 /** gets ruled out edges after termination */
 const int* reduce_starGetRuledOutEdges(
    STAR*                 star,               /**< the star */
-   int*                  nedges              /**< number of edges of next star (out) */
+   int*                  nedges              /**< number of ruled-out edges */
 )
 {
+   int count = 0;
+
    assert(star);
+   assert(star->nodeDegree >= 0);
    assert(reduce_starAllAreChecked(star));
 
-   // todo fill later
-   // todo also add a method to abort early if no ruled-out edges can be found anymore
+   for( int i = 0; i < star->nodeDegree; i++ )
+   {
+      const int pos = star->edgesSelectedPos[i];
 
-   return NULL;
+      assert(pos >= 0);
+      assert(pos < star->nodeDegree);
+
+      if( !star->edgeIsFailed[pos] )
+      {
+         const int edge = star->edgesSelected[i];
+         assert(edge >= 0);
+
+         star->edgesPromising[count++] = edge;
+      }
+   }
+
+   assert(count == star->nedgesPromising);
+   *nedges = count;
+
+   return star->edgesPromising;
 }
 
 
 /** sets current star to ruled-out */
-void reduce_starSetRuledOut(
+void reduce_starCurrentSetRuledOut(
    STAR*                 star                /**< the star */
 )
 {
    assert(star);
    assert(!reduce_starAllAreChecked(star));
 
-
-   // todo fill later for edge rule out
+   /* do nothing ... */
 }
 
 
 /** sets current star to failed */
-void reduce_starSetFailed(
+void reduce_starCurrentSetFailed(
    STAR*                 star                /**< the star */
 )
 {
+   int nedges;
+
    assert(star);
    assert(!reduce_starAllAreChecked(star));
 
-   // todo fill later for edge rule out
+   nedges = star->starDegree;
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      const int pos = star->edgesSelectedPos[i];
+
+      assert(pos >= 0);
+      assert(pos < star->nodeDegree);
+
+      if( !star->edgeIsFailed[pos] )
+      {
+         star->edgeIsFailed[pos] = TRUE;
+         star->nedgesPromising--;
+
+         assert(star->nedgesPromising >= 0);
+      }
+   }
+}
+
+
+/** are there edge that might still be ruled out? */
+SCIP_Bool reduce_starHasPromisingEdges(
+   const STAR*           star                /**< the star */
+)
+{
+   assert(star);
+   assert(star->nedgesPromising >= 0);
+
+   return (star->nedgesPromising > 0);
 }
 
 
