@@ -41,9 +41,10 @@ won't autolink, so be sure to include an explicit link. Also, please apply the
 
 # Code Analysis
 
-Currently, we use three tools to perform a static analysis of the code.
+Currently, we use (at least) four tools to perform a static analysis of the code.
 These tools have helped to detect many errors that would not have been discovered otherwise.
-The code analysis tools `pclint` (older versions: `flexelint`) and `cppcheck` investigate the source code and possibly output warnings.
+The code analysis tools `pclint` (older versions: `flexelint`), `cppcheck`, and the Clang Static Analyzer (`scan-build`)
+investigate the source code and possibly output warnings.
 Moreover, from time to time, `coverity` is used to analyze different pathways of the code.
 In addition, one can use `valgrind` to detect memory leaks and access problems.
 These tools (except `coverity`) are also automatically run in the gitlab CI for merge requests.
