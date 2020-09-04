@@ -585,7 +585,7 @@
  *
  * ```
  * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
- * cmake --build build
+ * cmake --build build --config Release
  * ```
  *
  * Linux/macOS Makefile-based build instructions:
