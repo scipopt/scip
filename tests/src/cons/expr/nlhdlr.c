@@ -463,18 +463,18 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
    assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
-   rhs = SCIPgetConsExprExprActivity(scip, expr);
+   rhs = bounds;
    SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &rhs, rhs, nlhdlrexprdata->constant);
 
    /* solve conv({x in xbnds : xxcoef*x^2 + yycoef*y^2 + xycoef*x*y + xcoef*x + ycoef*y \in rhs, y \in ybnds}) */
    SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry));
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->exprx, childbounds, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->exprx, childbounds, infeasible, nreductions) );
 
    if( !*infeasible )
    {
       /* solve conv({y in ybnds : yycoef*y^2 + xxcoef*x^2 + xycoef*y*x + ycoef*y + xcoef*x \in rhs, x \in xbnds}) */
       SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx));
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->expry, childbounds, force, reversepropqueue, infeasible, nreductions) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->expry, childbounds, infeasible, nreductions) );
    }
 
    return SCIP_OKAY;

@@ -841,9 +841,6 @@ unsigned int SCIPgetConsExprExprActivityTag(
  * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
  * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
  * since last evaluation.
- *
- * @note To evaluate an expression with respect to its global variable bounds, i.e., global = TRUE, requires a call of
- *       @ref SCIPincrementConsExprCurBoundsTag before and after calling using @ref SCIPevalConsExprExprActivity.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExprActivity(
@@ -851,13 +848,29 @@ SCIP_RETCODE SCIPevalConsExprExprActivity(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          activity,         /**< interval where to store expression */
-   SCIP_Bool               validsufficient,  /**< whether any valid activity is sufficient */
-   SCIP_Bool               global            /**< whether to evaluate expressions w.r.t. global bounds */
+   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
    );
 
-/** tightens the activity of an expression and bounds of corresponding (auxiliary) variable (if any)
+/** returns bounds on the expression
  *
- *  If a reversepropqueue is given, then the expression will be added to the queue if the tightening is sufficient.
+ * This gives an intersection of bounds from
+ * - activity calculation (\ref SCIPgetConsExprExprActivity), if valid,
+ * - auxiliary variable, if present,
+ * - stored by \ref SCIPtightenConsExprExprInterval during domain propagation
+ *
+ * @note The returned interval can be empty!
+ */
+SCIP_EXPORT
+SCIP_INTERVAL SCIPgetConsExprExprBounds(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of
+ * corresponding (auxiliary) variable (if any)
+ *
+ * @attention this function should only be called during domain propagation in cons_expr
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtightenConsExprExprInterval(
@@ -865,8 +878,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool               force,            /**< force tightening of variable bound and add to reversepropqueue even if tightening is below bound strengthening tolerance */
-   SCIP_QUEUE*             reversepropqueue, /**< reverse propagation queue, or NULL if not in reverse propagation */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
    int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
    );
@@ -1599,8 +1610,7 @@ SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss,             /**< total number of constraints */
-   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
+   int                   nconss              /**< total number of constraints */
    );
 
 /** add the cut and maybe report branchscores */

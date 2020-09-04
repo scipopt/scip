@@ -518,6 +518,26 @@ SCIP_Bool SCIPintervalAreDisjoint(
    return (operand1.sup < operand2.inf) || (operand2.sup < operand1.inf);
 }
 
+/** indicates whether operand1 and operand2 are disjoint with epsilon tolerance
+ *
+ * Returns whether minimal (relative) distance of intervals is larger than epsilon.
+ * Same as SCIPintervalIsEmpty(SCIPintervalIntersectEps(operand1, operand2)).
+ */
+SCIP_Bool SCIPintervalAreDisjointEps(
+   SCIP_Real             eps,                /**< epsilon */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   )
+{
+   if( operand1.sup < operand2.inf )
+      return SCIPrelDiff(operand2.inf, operand1.sup) > eps;
+
+   if( operand1.inf > operand2.sup )
+      return SCIPrelDiff(operand1.inf, operand2.sup) > eps;
+
+   return FALSE;
+}
+
 /** intersection of two intervals */
 void SCIPintervalIntersect(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */

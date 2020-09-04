@@ -588,9 +588,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
 {  /*lint --e{715}*/
    SCIP_INTERVAL newinterval;
-   SCIP_INTERVAL exprinterval;
    SCIP_INTERVAL childinterval;
-
    SCIP_CONSEXPR_EXPR* child;
 
    assert(scip != NULL);
@@ -601,15 +599,14 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropEntropy)
    *nreductions = 0;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
-   childinterval = SCIPgetConsExprExprActivity(scip, child);
-   exprinterval = SCIPgetConsExprExprActivity(scip, expr);
+   childinterval = SCIPgetConsExprExprBounds(scip, conshdlr, child);
 
-   /* compute resulting intervals */
-   SCIP_CALL( reverseProp(scip, exprinterval, childinterval, &newinterval) );
+   /* compute resulting intervals (reverseProp handles childinterval being empty) */
+   SCIP_CALL( reverseProp(scip, bounds, childinterval, &newinterval) );
    assert(SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newinterval) || newinterval.inf >= 0.0);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newinterval, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newinterval, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -667,7 +664,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityEntropy)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE) );
 
    if( childbounds.sup <= brpoint )
       *result = SCIP_MONOTONE_INC;

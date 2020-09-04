@@ -1684,7 +1684,7 @@ SCIP_RETCODE checkSubproblemConvexity(
                SCIP_INTERVAL activity;
 
                /* make sure activities are uptodate, SCIPhasConsExprExprCurvature currently assumes that this is already the case */
-               SCIP_CALL( SCIPevalConsExprExprActivity(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), &activity, TRUE, FALSE) );
+               SCIP_CALL( SCIPevalConsExprExprActivity(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), &activity, TRUE) );
 
                SCIP_CALL( SCIPhasConsExprExprCurvature(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
             }

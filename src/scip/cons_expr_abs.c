@@ -449,15 +449,17 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= 0.0);
+   assert(bounds.inf >= 0.0);  /* bounds should have been intersected with activity, which is >= 0 */
 
    *nreductions = 0;
 
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
-   right = SCIPgetConsExprExprActivity(scip, expr);  /* I */
+   right = bounds;  /* I */
    SCIPintervalSetBounds(&left, -right.sup, -right.inf); /* -I */
 
-   childbounds = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+   childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0]);
+   /* childbounds can be empty here already, but that should work fine here */
+
    SCIPintervalIntersect(&left, left, childbounds);    /* -I \cap bounds(x), could become empty */
    SCIPintervalIntersect(&right, right, childbounds);  /*  I \cap bounds(x), could become empty */
    /* compute smallest interval containing (-I \cap bounds(x)) \cup (I \cap bounds(x)) = (-I \cup I) \cap bounds(x)
@@ -466,8 +468,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropAbs)
    SCIPintervalUnify(&childbounds, left, right);
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbounds, force, reversepropqueue, infeasible,
-         nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -507,7 +508,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE) );
    childinf = SCIPintervalGetInf(childbounds);
    childsup = SCIPintervalGetSup(childbounds);
 
@@ -539,7 +540,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityAbs)
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childbounds, FALSE) );
 
    if( childbounds.sup <= 0.0 )
       *result = SCIP_MONOTONE_DEC;

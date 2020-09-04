@@ -1895,8 +1895,8 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
    if( SCIPgetConsExprExprNChildren(expr) > 10 )
       return SCIP_OKAY;
 
-   /* not possible to learn bounds if expression interval is unbounded in both directions */
-   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPgetConsExprExprActivity(scip, expr)) )
+   /* not possible to learn bounds on children if expression bounds are unbounded in both directions */
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, bounds) )
       return SCIP_OKAY;
 
    exprdata = SCIPgetConsExprExprData(expr);
@@ -1915,21 +1915,34 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropProduct)
          if( i == j )
             continue;
 
-         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor,
-               SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[j]));
+         /* TODO we should compute these only one time instead of repeating this for almost every i */
+         childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[j]);
+         if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
+         SCIPintervalMul(SCIP_INTERVAL_INFINITY, &otherfactor, otherfactor, childbounds);
+      }
+
+      childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]);
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
       }
 
       /* solve x*otherfactor = f for x in c_i */
-      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor,
-         SCIPgetConsExprExprActivity(scip, expr), SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]));
+      SCIPintervalSolveUnivariateQuadExpression(SCIP_INTERVAL_INFINITY, &childbounds, zero, otherfactor, bounds, childbounds);
+
       SCIPdebugMsg(scip, "child %d: solved [%g,%g]*x = [%g,%g] with x in [%g,%g] -> x = [%g,%g]\n", i, otherfactor.inf, otherfactor.sup,
-         SCIPgetConsExprExprActivity(scip, expr).inf, SCIPgetConsExprExprActivity(scip, expr).sup,
-         SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]).inf, SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[i]).sup,
+         bounds.inf, bounds.sup,
+         SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]).inf, SCIPgetConsExprExprBounds(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i]).sup,
          childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], childbounds, force, reversepropqueue,
-         infeasible, nreductions) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], childbounds, infeasible, nreductions) );
    }
 
    return SCIP_OKAY;
@@ -1983,7 +1996,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityProduct)
          continue;
 
       assert(SCIPgetConsExprExprChildren(expr)[i] != NULL);
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], &interval, FALSE, TRUE) );
+      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[i], &interval, FALSE) );
 
       if( SCIPintervalGetSup(interval) <= 0.0 )
          nneg++;

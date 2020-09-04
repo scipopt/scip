@@ -110,7 +110,6 @@ struct SCIP_ConsExpr_Expr
 
    /* separation */
    SCIP_VAR*               auxvar;        /**< auxiliary variable used for outer approximation cuts */
-   int                     auxfilterpos;  /**< filter position of variable event data for auxiliary variable */
 
    /* branching */
    SCIP_Real               violscoresum;  /**< sum of violation scores for branching stored for this expression */
@@ -130,7 +129,11 @@ struct SCIP_ConsExpr_Expr
    /* activity */
    SCIP_INTERVAL           activity;      /**< activity of expression with respect to local variable bounds */
    unsigned int            activitytag;   /**< tag of local variable bounds for which activity is valid */
-   SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
+
+   /* propagation */
+   SCIP_INTERVAL           propbounds;    /**< bounds to propagate in reverse propagation */
+   unsigned int            propboundstag; /**< tag to indicate whether propbounds are valid for the current propagation rounds */
+   SCIP_Bool               inpropqueue;   /**< whether expression is queued for propagation */
 
    /* expression iterators data */
    SCIP_CONSEXPR_EXPR_ITERDATA iterdata[SCIP_CONSEXPRITERATOR_MAXNACTIVE];  /**< data for expression iterators */

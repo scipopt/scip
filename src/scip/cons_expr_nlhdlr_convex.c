@@ -471,12 +471,12 @@ DECL_CURVCHECK(curvCheckSignomial)
       if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrPower(conshdlr) )
       {
          exponents[i] = 1.0;
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &bounds[i], FALSE, TRUE) );
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &bounds[i], FALSE) );
       }
       else
       {
          exponents[i] = SCIPgetConsExprExprPowExponent(child);
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &bounds[i], FALSE, TRUE) );
+         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(child)[0], &bounds[i], FALSE) );
       }
    }
 
@@ -624,8 +624,8 @@ DECL_CURVCHECK(curvCheckProductComposite)
 
    assert(c != 0.0);
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, f, &fbounds, FALSE, TRUE) );
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, h, &hbounds, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, f, &fbounds, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, h, &hbounds, FALSE) );
 
    /* if h has mixed sign, then cannot conclude anything */
    if( hbounds.inf < 0.0 && hbounds.sup > 0.0 )
