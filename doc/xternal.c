@@ -77,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.2
+ * @version  7.0.1.3
  *
  * \image html scippy.png
  */
@@ -357,7 +357,6 @@
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
  *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
- *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
  *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated in the file formats
@@ -812,8 +811,6 @@
  * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
  *
  * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
- *
- * - <code>GAMS=\<true|false\></code> Enable or disable (default) reading functionality in GAMS reader (needs GAMS).
  *
  * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal \SCIP block and buffer memory off or on (default).
  *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
@@ -7653,8 +7650,8 @@
   * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
   * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
   * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
-  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
+  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface is available <a
+  * href="https://github.com/coin-or/GAMSlinks">here</a>.
   *
   * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
   * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
@@ -8235,7 +8232,6 @@
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
  * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
- * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>
