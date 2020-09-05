@@ -834,15 +834,25 @@ void SCIPstatPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   const char* filename;
    va_list ap;
 
    assert( sourcefile != NULL );
    assert( stat != NULL );
 
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\') + 1;
+#else
+   filename = strrchr(sourcefile, '/') + 1;
+#endif
+   if ( filename == NULL )
+      filename = sourcefile;
+
    if ( stat->subscipdepth > 0 )
-      printf("%d: [%s:%d] debug: ", stat->subscipdepth, sourcefile, sourceline);
+      printf("%d: [%s:%d] debug: ", stat->subscipdepth, filename, sourceline);
    else
-      printf("[%s:%d] debug: ", sourcefile, sourceline);
+      printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    printf(formatstr, ap);
