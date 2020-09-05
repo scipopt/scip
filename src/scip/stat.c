@@ -842,12 +842,14 @@ void SCIPstatPrintDebugMessage(
 
    /* strip directory from filename */
 #if defined(_WIN32) || defined(_WIN64)
-   filename = strrchr(sourcefile, '\\') + 1;
+   filename = strrchr(sourcefile, '\\');
 #else
-   filename = strrchr(sourcefile, '/') + 1;
+   filename = strrchr(sourcefile, '/');
 #endif
    if ( filename == NULL )
       filename = sourcefile;
+   else
+      ++filename;
 
    if ( stat->subscipdepth > 0 )
       printf("%d: [%s:%d] debug: ", stat->subscipdepth, filename, sourceline);
