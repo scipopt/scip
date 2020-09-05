@@ -324,7 +324,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    )
 {
-   SCIP_Bool* pprows;
+   SCIP_Bool* pprows = NULL;
    int npprows;
    int nrowsorig;
 
@@ -347,6 +347,9 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
    {
       int r = *nrows - 1;
       int i;
+
+      assert( pprows != NULL );
+
       while ( r >= 0 )
       {
          if ( ! pprows[r] )
@@ -365,7 +368,11 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
       *type = SCIP_ORBITOPETYPE_PACKING;
    }
 
-   SCIPfreeBlockMemoryArray(scip, &pprows, nrowsorig);
+   /* pprows might not have been initialized if there are no setppc conss */
+   if ( pprows != NULL )
+   {
+      SCIPfreeBlockMemoryArray(scip, &pprows, nrowsorig);
+   }
 
    return SCIP_OKAY;
 }
