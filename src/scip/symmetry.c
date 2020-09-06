@@ -1188,7 +1188,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, pprows, nrows) );
       for (i = 0; i < nrows; ++i)
-         (*pprows)[i] = covered[i];
+         (*pprows)[i] = covered[i] > 0 ? 1 : 0;
    }
 
    SCIPfreeBufferArray(scip, &rowsinsetppc);
