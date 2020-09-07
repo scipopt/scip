@@ -223,7 +223,7 @@ SCIP_RETCODE bdkGetCliqueSds(
 }
 
 
-/** gets SDs bdk test; stored in cliquegraph */
+/** gets SDs for bdk node test; stored in clique-graph */
 static inline
 void bdkGetCutoffs(
    const GRAPH*          g,                 /**< graph data structure */
@@ -235,6 +235,7 @@ void bdkGetCutoffs(
    const GRAPH* cliquegraph = bdk->cliquegraph;
    const int node_degree = bdk->node_degree;
    int edgecount = 0;
+   int todo; // why not < node_degree???
 
  //  printf("go degree=%d \n", bdk->node_degree);
 
@@ -260,13 +261,87 @@ void bdkGetCutoffs(
 }
 
 
+/** gets SDs for bdk edge test; stored in clique-graph */
+static inline
+void bdkGetEdgeCutoffs(
+   const GRAPH*          g,                 /**< graph data structure */
+   const BDK*            bdk,               /**< storage */
+   int                   edge,              /**< the edge; replacement goes towards the head! */
+   SCIP_Real*            cutoffs            /**< cutoffs */
+)
+{
+   const GRAPH* cliquegraph = bdk->cliquegraph;
+   const int* const adjverts = bdk->node_neighbors;
+   const int node_degree = bdk->node_degree;
+   const int tail = g->tail[edge];
+   int tail_pos = -1;
+   int edgecount = 0;
+
+   for( int k = 0; k < node_degree; k++ )
+   {
+      if( adjverts[k] == tail )
+      {
+         tail_pos = k;
+         break;
+      }
+   }
+
+   assert(tail_pos >= 0);
+   assert(adjverts[tail_pos] == tail);
+
+   for( int e = cliquegraph->outbeg[tail_pos]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+   {
+      const int k = cliquegraph->head[e];
+
+      if( k >= node_degree )
+         continue;
+
+      cutoffs[edgecount++] = cliquegraph->cost[e];
+
+      SCIPdebugMessage("%d->%d cutoff=%f \n", tail, adjverts[k], cliquegraph->cost[e]);
+   }
+
+   assert(edgecount == node_degree - 1);
+
+#if 0
+   for( int k = 0; k < STP_BDKIMP_MAXDEGREE - 1; k++ )
+   {
+      if( k >= node_degree )
+         continue;
+
+      for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
+      {
+         const int k2 = cliquegraph->head[e];
+
+         if( k2 >= node_degree )
+            continue;
+
+         if( k2 > k )
+         {
+            printf("%d, %d  %f\n", adjverts[k], adjverts[k2], cliquegraph->cost[e]);
+         }
+      }
+   }
+#endif
+}
+
+
 /** gets next star */
 static inline
 void bdkStarLoadNext(
+   const GRAPH*          g,                 /**< graph data structure */
    BDK*                  bdk                /**< storage */
    )
 {
    bdk->star_outedges = reduce_starGetNextAndPosition(bdk->star, bdk->star_outedges_pos, &(bdk->star_degree));
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("checking star: \n");
+   for( int i = 0; i < bdk->star_degree; i++ )
+   {
+      graph_edge_printInfo(g, bdk->star_outedges[i]);
+   }
+#endif
 }
 
 
@@ -444,14 +519,6 @@ SCIP_Bool bdkStarIsSdMstReplacable(
 
    bdkStarMarkCliqueNodes(bdk);
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("star neighbors: \n");
-   for( int i = 0; i < bdk->star_degree; i++ )
-   {
-      graph_edge_printInfo(g, bdk->star_outedges[i]);
-   }
-#endif
-
    startnode = bdkStarGetMstStartNode(cliquegraph);
 
    /* compute MST  */
@@ -461,6 +528,8 @@ SCIP_Bool bdkStarIsSdMstReplacable(
 
    /* get best combination of MST edge costs and SD distance graph MST costs */
    sdcost = bdkStarGetCombinedSdCost(g, bdk);
+
+   SCIPdebugMessage("sdcost=%f, starcost=%f \n", sdcost, starcost);
 
    if( SCIPisLE(scip, sdcost, starcost) )
    {
@@ -528,7 +597,7 @@ SCIP_Bool bdkStarIsReplacableDeg3(
     * because in the case the corresponding walks cannot contain the whole star! */
    if( SCIPisLE(scip, maxcosts[0] + maxcosts[1], starcost) )
    {
-      SCIPdebugMessage("3-star is distance-graph MST replacable \n");
+      SCIPdebugMessage("3-star is distance-graph MST replacable: %f <= %f \n", maxcosts[0] + maxcosts[1], starcost);
 
       return TRUE;
    }
@@ -619,16 +688,19 @@ SCIP_RETCODE bdkTryDegGe4(
 )
 {
    STAR* const star = bdk->star;
-   SCIP_Bool isPseudoDeletable = TRUE;
+   SCIP_Bool nodeIsReplacable = TRUE;
+   SCIP_Bool isDeleted = FALSE;
 
    assert(4 <= g->grad[node] && g->grad[node] <= STP_BDKIMP_MAXDEGREE);
 
    reduce_starReset(g, node, star);
 
-   /* check all stars of degree >= 3, as long as they can be ruled-out */
-   while ( isPseudoDeletable )
+   /* check all stars of degree >= 3, as long as at least one edge might be ruled-out */
+   while ( !reduce_starAllAreChecked(star) )
    {
-      bdkStarLoadNext(bdk);
+      SCIP_Bool isPseudoDeletable;
+
+      bdkStarLoadNext(g, bdk);
 
       if( bdk->star_degree == 3 )
       {
@@ -639,23 +711,63 @@ SCIP_RETCODE bdkTryDegGe4(
          isPseudoDeletable = bdkStarIsReplacableDegGe4(scip, node, g, bdk);
       }
 
-      if( reduce_starAllAreChecked(star) )
-         break;
-   }
-
-   if( isPseudoDeletable )
-   {
-      SCIP_Real cutoffs[STP_BDKIMP_MAXNEDGES];
-      bdkGetCutoffs(g, bdk, node, cutoffs);
-
-      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, NULL, &isPseudoDeletable));
-
-      if( isPseudoDeletable )
+      if( !isPseudoDeletable )
       {
-         SCIPdebugMessage("BD%d-implied reduction of node %d \n ", bdk->node_degree, node);
-         (*nelims)++;
+         SCIPdebugMessage("...not deletable \n");
+         nodeIsReplacable = FALSE;
+         reduce_starCurrentSetFailed(star);
+      }
+
+      if( !reduce_starHasPromisingEdges(star) )
+      {
+         assert(!nodeIsReplacable);
+         assert(!isPseudoDeletable);
+         break;
       }
    }
+
+   if( nodeIsReplacable )
+   {
+      SCIP_Real cutoffs[STP_BDKIMP_MAXNEDGES];
+
+      bdkGetCutoffs(g, bdk, node, cutoffs);
+
+      SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, node, NULL, &isDeleted));
+
+      if( isDeleted )
+         SCIPdebugMessage("BD%d-implied reduction of node %d \n ", bdk->node_degree, node);
+   }
+
+   if( !isDeleted && reduce_starHasPromisingEdges(star) )
+   {
+      SCIP_Real cutoffs[STP_BDKIMP_MAXDEGREE];
+      int ndeledges;
+      const int* const deledges = reduce_starGetRuledOutEdges(star, &ndeledges);
+
+      assert(ndeledges >= 1);
+
+      for( int i = 0; i < ndeledges; i++ )
+      {
+         const int edge = flipedge(deledges[i]);
+
+         assert(graph_edge_isInRange(g, deledges[i]));
+         assert(g->head[edge] == node);
+         assert(!isDeleted);
+
+         bdkGetEdgeCutoffs(g, bdk, edge, cutoffs);
+
+         SCIP_CALL(graph_edge_delPseudo(scip, g, g->cost, cutoffs, NULL, edge, NULL, &isDeleted));
+
+         if( isDeleted )
+         {
+            SCIPdebugMessage("BD%d-implied reduction of edge %d \n ", bdk->node_degree, edge);
+            break;
+         }
+      }
+   }
+
+   if( isDeleted )
+      (*nelims)++;
 
    return SCIP_OKAY;
 }
@@ -755,7 +867,7 @@ SCIP_RETCODE reduce_bdkWithSd(
          if( bdkNodeIsInvalid(g, i, degree, bdk) )
             continue;
 
-         SCIPdebugMessage("check node %d (degree=%d) \n", i, degree);
+         SCIPdebugMessage("\n check node %d (degree=%d) \n", i, degree);
 
          bdkGetNeighborhood(g, i, bdk);
          SCIP_CALL( bdkGetCliqueSds(scip, g, i, dijkdata, bdk) );

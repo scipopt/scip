@@ -29,6 +29,7 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                             */
+
 //#define SCIP_DEBUG
 
 #include "scip/misc.h"
@@ -1060,8 +1061,8 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
 )
 {
    int* hasharr;
-   int edgecount = 0;
    int replacecount = 0;
+   int cutoffidx = 0;
    const int degree = delpseudo->degree;
    const int *incedge = delpseudo->incedge;
    const SCIP_Real *ecost = delpseudo->ecost;
@@ -1089,13 +1090,15 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
 
    for( int i = 0; i < degree; i++ )
    {
-      assert(edgecount < degree);
-
       if( i != edge_pos )
       {
          const int adjvertex = adjvert[i];
          const int iedge = incedge[i];
-         SCIP_Bool skipedge = isCutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, edge_pos, edgecount);
+         SCIP_Bool skipedge = isCutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, edge_pos, cutoffidx);
+
+         SCIPdebugMessage("in (degree=%d): %d->%d cutoff=%f \n", degree, tail, adjvertex, cutoffs[cutoffidx]);
+
+         cutoffidx++;
 
          assert((iedge / 2) != (edge / 2));
 
@@ -1104,7 +1107,8 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
 
          if( skipedge )
          {
-            neigbedge[edgecount] = STP_DELPSEUDO_SKIPEDGE;
+            SCIPdebugMessage("skip edge %d->%d \n", tail, g->head[iedge]);
+            neigbedge[i] = STP_DELPSEUDO_SKIPEDGE;
          }
          else
          {
@@ -1116,25 +1120,26 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
                if( g->head[e] == tail )
                {
                   assert(e >= 0);
-                  neigbedge[edgecount] = e;
+                  neigbedge[i] = e;
+                  SCIPdebugMessage("edge exist: %d->%d  \n", g->tail[e], g->head[e]);
                   break;
                }
             }
 
-            if( e != EAT_LAST )
-               continue;
-
-            /* more than one edge to be reinserted? */
-            if( ++replacecount > 1 )
+            /* edge does not exist? */
+            if( e == EAT_LAST )
             {
-               *success = FALSE;
-               break;
+               /* more than one edge to be reinserted? */
+               if( ++replacecount > 1 )
+               {
+                  *success = FALSE;
+                  break;
+               }
             }
          }
       }
-
-      edgecount++;
    }  /* neighbor loop */
+
 
    graph_pseudoAncestors_unhashEdge(g->pseudoancestors, edge, hasharr);
    SCIPfreeCleanBufferArray(scip, &hasharr);
@@ -1164,7 +1169,6 @@ SCIP_RETCODE delPseudoEdgeDeleteEdge(
    const int edge = delpseudo->edge;
    const int tail = g->tail[edge];
    const int head = g->head[edge];
-   int edgecount = 0;
    int replacecount = 0;
 
    for( int i = 0; i < degree; i++ )
@@ -1179,7 +1183,7 @@ SCIP_RETCODE delPseudoEdgeDeleteEdge(
    {
       if( i != edge_pos )
       {
-         const SCIP_Bool skipedge = (neigbedge[edgecount] == STP_DELPSEUDO_SKIPEDGE);
+         const SCIP_Bool skipedge = (neigbedge[i] == STP_DELPSEUDO_SKIPEDGE);
 
          if( !skipedge )
          {
@@ -1187,7 +1191,7 @@ SCIP_RETCODE delPseudoEdgeDeleteEdge(
             int newijedge;
             const SCIP_Real newijcost = ecostreal[i] + ecostreal[edge_pos] - delpseudo->vertexprize;
             const int oldincedge = (replacecount == 0)? flipedge(edge) : -1;
-            const int oldAdjToTailEdge = neigbedge[edgecount];
+            const int oldAdjToTailEdge = neigbedge[i];
 
             assert(replacecount <= 1);
             assert(replacecount == 0 || oldAdjToTailEdge != STP_DELPSEUDO_NOEDGE);
@@ -1231,8 +1235,6 @@ SCIP_RETCODE delPseudoEdgeDeleteEdge(
             }
          }
       }
-      edgecount++;
-      assert(edgecount <= STP_DELPSEUDO_MAXNEDGES);
    }
 
    for( int i = 0; i < degree; i++ )
@@ -2092,7 +2094,7 @@ SCIP_RETCODE graph_edge_delPseudo(
    const SCIP_Real*      cutoffcosts,        /**< edge costs for cutoff */
    const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
    const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
-   int                   edge,               /**< the edge */
+   int                   edge,               /**< the edge, mind the orientation! */
    SCIP_Real*            edgecosts_adapt,    /**< costs to adapt or NULL */
    SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
    )

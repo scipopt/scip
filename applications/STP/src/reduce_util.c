@@ -1944,7 +1944,6 @@ void reduce_starCurrentSetFailed(
    int nedges;
 
    assert(star);
-   assert(!reduce_starAllAreChecked(star));
 
    nedges = star->starDegreePrev;
    assert(nedges >= 0);
