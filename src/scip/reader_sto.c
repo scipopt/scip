@@ -1983,6 +1983,12 @@ SCIP_RETCODE addScenarioVarsToProb(
       obj = SCIPvarGetObj(vars[i])*probability;
 
       vartype = SCIPvarGetType(vars[i]);
+#if 0
+      if( getScenarioStageNum(scip, scenario) == 0 )
+         vartype = SCIPvarGetType(vars[i]);
+      else
+         vartype = SCIP_VARTYPE_CONTINUOUS;
+#endif
 
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));

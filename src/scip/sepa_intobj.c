@@ -271,6 +271,27 @@ SCIP_DECL_SEPAFREE(sepaFreeIntobj)
 }
 
 
+/** deinitialization method of separator (called before transformed problem is freed) */
+static
+SCIP_DECL_SEPAEXIT(sepaExitIntobj)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* release objective variable */
+   if( sepadata->objvar != NULL )
+   {
+      /* remove locks in createObjRow() */
+      SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
+      SCIP_CALL( SCIPreleaseVar(scip, &sepadata->objvar) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
 SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
@@ -284,14 +305,6 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolIntobj)
    if( sepadata->objrow != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &sepadata->objrow) );
-   }
-
-   /* release objective variable */
-   if( sepadata->objvar != NULL )
-   {
-      /* remove locks in createObjRow() */
-      SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, -1, -1) );
-      SCIP_CALL( SCIPreleaseVar(scip, &sepadata->objvar) );
    }
 
    return SCIP_OKAY;
@@ -431,6 +444,7 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyIntobj) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeIntobj) );
+   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitIntobj) );
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolIntobj) );
 
    /* include event handler for objective change events */

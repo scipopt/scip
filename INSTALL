@@ -243,6 +243,9 @@ Here is what you have to do to get SCIP running:
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
    - "EXPRINT=none"    to use no expressions interpreter
 
+   - "GAMS=true"       to enable reading of GAMS model files (needs GAMS; only for models that do one solve)
+   - "GAMS=false"      to disable GAMS interface (default)
+
    - "VERBOSE=false"   to suppress display of compiler and linker invocations (default)
    - "VERBOSE=true"    to display compiler and linker invocations
 
@@ -392,7 +395,7 @@ make[1]: Leaving directory `/sw/scip'
    the interfaces to IPOPT, WORHP, and FilterSQP. You will be asked the following questions on
    the first call to "make" (example answers are already given):
 
-- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad
+- Current settings: LPS=spx2 OSTYPE=linux ARCH=x86_64 COMP=gnu SHARED=false SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=true IPOPTOPT=opt FILTERSQP=true EXPRINT=cppad GAMS=false
 
 * SCIP needs some softlinks to external programs, in particular, LP-solvers.
 * Please insert the paths to the corresponding directories/libraries below.
@@ -617,6 +620,9 @@ make[1]: Leaving directory `/sw/scip'
    (k) to use FilterSQP as NLP solver
        - ln -s <path to FilterSQP library> <path to SCIP>/lib/libfiltersqp.$(OSTYPE).$(ARCH).$(COMP).a
        - ln -s <path to BQPD library> <path to SCIP>/lib/libbqpd.$(OSTYPE).$(ARCH).$(COMP).a
+
+   (l) to use GAMS
+       - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 
    (m) to use bliss
        - ln -s <path to bliss *.hh files> <path to SCIP>/lib/include/bliss

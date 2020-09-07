@@ -61,7 +61,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solve.h"
 #include "scip/scip_var.h"
-#include "symmetry/type_symmetry.h"
 #include <string.h>
 
 /* depending on whether the GMP library is available we use a GMP data type or a SCIP_Longint */
@@ -1832,24 +1831,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 {  /*lint --e{715}*/
    SCIP_Bool active;
    int usesymmetry;
+   int symcomptiming = 2;
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   if ( usesymmetry == 1 || usesymmetry == 3 )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
+   }
+   else if ( usesymmetry == 2 )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
+   }
 
    if ( usesymmetry != 0 )
    {
-      int symcomptiming = 2;
-
-      /* get timing of symmetry computation */
-      if ( (usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
-      }
-      else if ( usesymmetry == 2 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
-      }
-
-      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
+      if ( symcomptiming < 2 &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
@@ -1934,6 +1930,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displayfeasST;
    int nrestarts;
    int usesymmetry;
+   int symcomptiming = 2;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1954,22 +1951,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    }
 
    SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &usesymmetry) );
+   if ( usesymmetry == 1 || usesymmetry == 3 )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
+   }
+   else if ( usesymmetry == 2 )
+   {
+      SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
+   }
 
    if ( usesymmetry != 0 )
    {
-      int symcomptiming = 2;
-
-      /* get timing of symmetry computation */
-      if ( (usesymmetry & SYM_HANDLETYPE_SYMCONS) != 0 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/addconsstiming", &symcomptiming) );
-      }
-      else if ( usesymmetry == 2 )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
-      }
-
-      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
+      if ( symcomptiming < 2 &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \

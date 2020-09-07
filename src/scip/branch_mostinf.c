@@ -332,8 +332,8 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextMostinf)
 
    brpoint = SCIPgetBranchingPoint(scip, bestcand, bestsol);
 
-   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s> (sol=%g, locdom=[%g,%g], obj=%g, factor=%g, score=%g), branching point=%g\n",
-      nexterncands, SCIPvarGetName(bestcand), bestsol, SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand), bestobj,
+   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
+      nexterncands, SCIPvarGetName(bestcand), bestsol, bestobj,
       SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
 
    /* perform the branching */
