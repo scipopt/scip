@@ -161,16 +161,26 @@ SCIP_RETCODE SCIPcutselsSelect(
 
    printf("We have <%d> cut selectors! \n", set->ncutsels);
 
+   /* TODO: cutselect callback should select from nonforced ones */
+   maxnselectedcuts -= nforcedcuts;
+
    /* try all cut selectors until one succeeds */
+   *nselectedcuts = 0;
    for( i = 0; i < set->ncutsels && result == SCIP_DIDNOTFIND; ++i )
    {
       SCIP_CUTSEL* cutsel;
       cutsel = set->cutsels[i];
 
-      SCIP_CALL( cutsel->cutselselect(set->scip, cutsel, cuts, ncuts, nforcedcuts, root, maxnselectedcuts,
-               nselectedcuts, &result) );
+      assert(cutsel != NULL);
+      assert(ncuts - nforcedcuts > 0);
+      assert(maxnselectedcuts > 0);
+
+      SCIP_CALL( cutsel->cutselselect(set->scip, cutsel, &(cuts[nforcedcuts]), ncuts - nforcedcuts, cuts, nforcedcuts,
+               root, maxnselectedcuts, nselectedcuts, &result) );
+
       assert(*nselectedcuts <= maxnselectedcuts);
       assert(result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND);
+      assert(result != SCIP_DIDNOTFIND || *nselectedcuts == 0);
    }
 
    return SCIP_OKAY;

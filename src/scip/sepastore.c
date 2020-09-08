@@ -883,8 +883,6 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    )
 {
    SCIP_NODE* node;
-   SCIP_Real maxparall;
-   SCIP_Real goodmaxparall;
    int maxsepacuts;
    int ncutsapplied;
    int nselectedcuts;
@@ -911,28 +909,11 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    }
    else
    {
-      if( root )
-      {
-         maxparall = 1.0 - set->sepa_minorthoroot;
-         goodmaxparall = MAX(0.5, 1.0 - set->sepa_minorthoroot);
-      }
-      else
-      {
-         maxparall = 1.0 - set->sepa_minortho;
-         goodmaxparall = MAX(0.5, 1.0 - set->sepa_minortho);
-      }
-
-      // choose cut selector
-      // and select
+      /* call cut selection algorithms */
+      nselectedcuts = 0;
       SCIP_CALL( SCIPcutselsSelect(set, sepastore->cuts, sepastore->ncuts, sepastore->nforcedcuts, root, maxsepacuts,
                &nselectedcuts) );
-      assert(nselectedcuts <= maxsepacuts);
-
-
-      ///* call cut selection algorithm */
-      //SCIP_CALL( SCIPselectCuts(set->scip, sepastore->cuts, sepastore->randnumgen, 0.9, 0.0, goodmaxparall, maxparall,
-      //         set->sepa_dircutoffdistfac, set->sepa_efficacyfac, set->sepa_objparalfac, set->sepa_intsupportfac,
-      //         sepastore->ncuts, sepastore->nforcedcuts, maxsepacuts, &nselectedcuts) );
+      assert(nselectedcuts + sepastore->nforcedcuts <= maxsepacuts);
    }
 
    /*

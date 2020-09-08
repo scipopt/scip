@@ -48,6 +48,7 @@
 #include "string.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipdefplugins.h"
+#include "scip/cutsel_default.h"
 
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
@@ -2333,7 +2334,7 @@ SCIP_RETCODE doSeparation(
    {
       int nselectedcuts;
 
-      SCIP_CALL( SCIPselectCuts(scip, sepadata->cuts, sepadata->randnumgen, sepadata->goodscore, sepadata->badscore,
+      SCIP_CALL( SCIPselectCutsDefault(scip, sepadata->cuts, NULL, sepadata->randnumgen, sepadata->goodscore, sepadata->badscore,
             sepadata->goodmaxparall, sepadata->maxparall, sepadata->dircutoffdistweight, sepadata->efficacyweight, sepadata->objparalweight, 0.0,
             sepadata->ncuts, 0, maxsepacuts, &nselectedcuts) );
 
