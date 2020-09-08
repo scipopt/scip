@@ -46,11 +46,13 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #include <assert.h>
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlp.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_presol.h"
 #include "scip/pub_var.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_presol.h"
 #include "scip/scip_var.h"
@@ -62,6 +64,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
 #include "scip/scip_randnumgen.h"
+#include "scip/struct_rational.h"
+#include "scip/rational.h"
 #include "papilo/core/Presolve.hpp"
 #include "papilo/core/ProblemBuilder.hpp"
 #include "papilo/Config.hpp"
@@ -172,6 +176,60 @@ Problem<SCIP_Real> buildProblem(
    return builder.build();
 }
 
+/** builds the presolvelib problem datastructure from the matrix */
+static
+Problem<Rational> buildProblemRational(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
+   )
+{
+   ProblemBuilder<Rational> builder;
+
+   /* build problem from matrix */
+   int nnz = SCIPmatrixGetNNonzs(matrix);
+   int ncols = SCIPmatrixGetNColumns(matrix);
+   int nrows = SCIPmatrixGetNRows(matrix);
+   builder.reserve(nnz, nrows, ncols);
+
+   /* set up columns */
+   builder.setNumCols(ncols);
+   for(int i = 0; i != ncols; ++i)
+   {
+      SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
+      SCIP_Rational* lb = SCIPvarGetLbGlobalExact(var);
+      SCIP_Rational* ub = SCIPvarGetUbGlobalExact(var);
+      builder.setColLb(i, lb->val);
+      builder.setColUb(i, ub->val);
+      builder.setColLbInf(i, RatIsNegInfinity(lb));
+      builder.setColUbInf(i, RatIsInfinity(ub));
+
+      builder.setColIntegral(i, SCIPvarIsIntegral(var));
+      builder.setObj(i, SCIPvarGetObjExact(var)->val);
+   }
+
+   /* set up rows */
+   builder.setNumRows(nrows);
+   for(int i = 0; i != nrows; ++i)
+   {
+      int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
+      SCIP_Rational** rowvalsscip = SCIPmatrixGetRowValPtrExact(matrix, i);
+      std::vector<Rational> rowvals;
+      int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
+      for(int j = 0; j < rowlen; ++j)
+         rowvals.push_back(rowvalsscip[j]->val);
+      builder.addRowEntries(i, rowlen, rowcols, rowvals.data());
+
+      SCIP_Rational* lhs = SCIPmatrixGetRowLhsExact(matrix, i);
+      SCIP_Rational* rhs = SCIPmatrixGetRowRhsExact(matrix, i);
+      builder.setRowLhs(i, lhs->val);
+      builder.setRowRhs(i, rhs->val);
+      builder.setRowLhsInf(i, RatIsNegInfinity(lhs));
+      builder.setRowRhsInf(i, RatIsInfinity(rhs));
+   }
+
+   return builder.build();
+}
+
 /*
  * Callback methods of presolver
  */
@@ -207,6 +265,490 @@ SCIP_DECL_PRESOLINIT(presolInitMILP)
    data->lastncols = -1;
    data->lastnrows = -1;
 
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE doMilpPresolveRational(
+   SCIP* scip,
+   SCIP_PRESOL* presol,
+   SCIP_MATRIX* matrix,
+   SCIP_PRESOLDATA* data,
+   SCIP_Bool initialized,
+   SCIP_Bool complete,
+   SCIP_Bool infeasible,
+   SCIP_Real timelimit,
+   int nrounds,
+   SCIP_PRESOLTIMING presoltiming,
+   int nnewfixedvars,
+   int nnewaggrvars,
+   int nnewchgvartypes,
+   int nnewchgbds,
+   int nnewholes,
+   int nnewdelconss,
+   int nnewaddconss,
+   int nnewupgdconss,
+   int nnewchgcoefs,
+   int nnewchgsides,
+   int* nfixedvars,
+   int* naggrvars,
+   int* nchgvartypes,
+   int* nchgbds,
+   int* naddholes,
+   int* ndelconss,
+   int* naddconss,
+   int* nupgdconss,
+   int* nchgcoefs,
+   int* nchgsides,
+   SCIP_RESULT* result
+   )
+{
+   int nvars = SCIPgetNVars(scip);
+   int nconss = SCIPgetNConss(scip);
+
+   Problem<Rational> problem = buildProblemRational(scip, matrix);
+   Presolve<Rational> presolve;
+
+   /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
+   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear-exact");
+   assert(linconshdlr != NULL);
+   bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
+
+   /* store current numbers of aggregations, fixings, and changed bounds for statistics */
+   int oldnaggrvars = *naggrvars;
+   int oldnfixedvars = *nfixedvars;
+   int oldnchgbds = *nchgbds;
+
+   /* important so that SCIP does not throw an error, e.g. when an integer variable is substituted
+    * into a knapsack constraint */
+   presolve.getPresolveOptions().substitutebinarieswithints = false;
+
+   /* currently these changes cannot be communicated to SCIP correctly since a constraint needs
+    * to be modified in the cases where slackvariables are removed from constraints but for the
+    * presolve library those look like normal substitution on the postsolve stack */
+   presolve.getPresolveOptions().removeslackvars = false;
+
+   /* communicate the SCIP parameters to the presolve libary */
+   presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
+   presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
+   presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
+   presolve.getPresolveOptions().hugeval = data->hugebound;
+
+   /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
+   presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
+
+   /* communicate the random seed */
+   presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
+
+   /* set number of threads to be used for presolve */
+   presolve.getPresolveOptions().threads = data->threads;
+
+   /* disable dual reductions that are not permitted */
+   if( !complete )
+      presolve.getPresolveOptions().dualreds = 0;
+   else if( SCIPallowStrongDualReds(scip) )
+      presolve.getPresolveOptions().dualreds = 2;
+   else if( SCIPallowWeakDualReds(scip) )
+      presolve.getPresolveOptions().dualreds = 1;
+   else
+      presolve.getPresolveOptions().dualreds = 0;
+
+   /* set up the presolvers that shall participate */
+   using uptr = std::unique_ptr<PresolveMethod<Rational>>;
+
+   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleProbing<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new ConstraintPropagation<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new FixContinuous<Rational>() ) );
+
+   if( data->enableparallelrows )
+      presolve.addPresolveMethod( uptr( new ParallelRowDetection<Rational>() ) );
+
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new SingletonCols<Rational>() ) );
+   presolve.addPresolveMethod( uptr( new DualFix<Rational>() ) );
+
+   if( data->enablemultiaggr )
+      presolve.addPresolveMethod( uptr( new Substitution<Rational>() ) );
+
+   if( data->enableprobing )
+      presolve.addPresolveMethod( uptr( new Probing<Rational>() ) );
+
+   if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new Sparsify<Rational>() ) );
+
+   if( data->enabledualinfer )
+      presolve.addPresolveMethod( uptr( new DualInfer<Rational>() ) );
+
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<Rational>() ) );
+
+   if( data->enabledomcol )
+      presolve.addPresolveMethod( uptr( new DominatedCols<Rational>() ) );
+
+   /* todo: parallel cols cannot be handled by SCIP currently
+    * addPresolveMethod( uptr( new ParallelColDetection<Rational>() ) ); */
+
+   /* set tolerances */
+   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
+   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+
+   /* adjust output settings of presolve libary */
+#ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
+   problem.setName(SCIPgetProbName(scip));
+#else
+   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
+#endif
+
+   /* communicate the time limit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
+
+   /* call the presolving */
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
+   int oldnnz = problem.getConstraintMatrix().getNnz();
+   PresolveResult<Rational> res = presolve.apply(problem);
+   data->lastncols = problem.getNCols();
+   data->lastnrows = problem.getNRows();
+
+   /* evaluate the result */
+   switch(res.status)
+   {
+      case PresolveStatus::kInfeasible:
+         *result = SCIP_CUTOFF;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) MILP presolver detected infeasibility\n",
+               SCIPgetSolvingTime(scip));
+         SCIPmatrixFree(scip, &matrix);
+         return SCIP_OKAY;
+      case PresolveStatus::kUnbndOrInfeas:
+      case PresolveStatus::kUnbounded:
+         *result = SCIP_UNBOUNDED;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) MILP presolver detected unboundedness\n",
+               SCIPgetSolvingTime(scip));
+         SCIPmatrixFree(scip, &matrix);
+         return SCIP_OKAY;
+      case PresolveStatus::kUnchanged:
+         *result = SCIP_DIDNOTFIND;
+         data->lastncols = nvars;
+         data->lastnrows = nconss;
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   (%.1fs) MILP presolver found nothing\n",
+               SCIPgetSolvingTime(scip));
+         SCIPmatrixFree(scip, &matrix);
+         return SCIP_OKAY;
+      case PresolveStatus::kReduced:
+         data->lastncols = problem.getNCols();
+         data->lastnrows = problem.getNRows();
+         *result = SCIP_SUCCESS;
+   }
+
+   /* result indicated success, now populate the changes into the SCIP structures */
+   std::vector<SCIP_VAR*> tmpvars;
+
+   /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
+   int newnnz = problem.getConstraintMatrix().getNnz();
+   bool constraintsReplaced = false;
+   if( newnnz == 0 || (allowconsmodification &&
+         (problem.getNRows() <= data->modifyconsfac * data->lastnrows ||
+          newnnz <= data->modifyconsfac * oldnnz)) )
+   {
+      int oldnrows = SCIPmatrixGetNRows(matrix);
+      int newnrows = problem.getNRows();
+
+      constraintsReplaced = true;
+
+      /* capture constraints that are still present in the problem after presolve */
+      for( int i = 0; i < newnrows; ++i )
+      {
+         SCIP_CONS* c = SCIPmatrixGetCons(matrix, res.postsolve.origrow_mapping[i]);
+         SCIP_CALL( SCIPcaptureCons(scip, c) );
+      }
+
+      /* delete all constraints */
+      *ndelconss += oldnrows;
+      *naddconss += newnrows;
+
+      for( int i = 0; i < oldnrows; ++i )
+      {
+         SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, i)) );
+      }
+
+      /* now loop over rows of presolved problem and create them as new linear constraints,
+       * then release the old constraint after its name was passed to the new constraint */
+      const Vec<RowFlags>& rflags = problem.getRowFlags();
+      const auto& consmatrix = problem.getConstraintMatrix();
+      for( int i = 0; i < newnrows; ++i )
+      {
+         auto rowvec = consmatrix.getRowCoefficients(i);
+         const int* rowcols = rowvec.getIndices();
+         /* SCIPcreateConsBasicLinear() requires a non const pointer */
+         Rational* rowvals = const_cast<Rational*>(rowvec.getValues());
+         int rowlen = rowvec.getLength();
+
+         /* retrieve SCIP compatible left and right hand sides */
+         Rational lhs = rflags[i].test(RowFlag::kLhsInf) ? - SCIPinfinity(scip) : consmatrix.getLeftHandSides()[i];
+         Rational rhs = rflags[i].test(RowFlag::kRhsInf) ? SCIPinfinity(scip) : consmatrix.getRightHandSides()[i];
+
+         /* create variable array matching the value array */
+         tmpvars.clear();
+         tmpvars.reserve(rowlen);
+         for( int j = 0; j < rowlen; ++j )
+            tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[rowcols[j]]));
+
+         /* create and add new constraint with name of old constraint */
+         SCIP_CONS* oldcons = SCIPmatrixGetCons(matrix, res.postsolve.origrow_mapping[i]);
+         SCIP_CONS* cons;
+         SCIP_Rational** tmpvals;
+         SCIP_Rational* tmplhs;
+         SCIP_Rational* tmprhs;
+
+         SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmprhs) );
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmplhs) );
+
+         for( int j = 0; j < rowlen; j++ )
+         {
+            tmpvals[j]->val = rowvals[j];
+         }
+         tmprhs->val = rhs;
+         tmplhs->val = lhs;
+
+         SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, SCIPconsGetName(oldcons), rowlen, tmpvars.data(), tmpvals, tmplhs, tmprhs) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+         /* release old and new constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &oldcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         RatFreeBuffer(SCIPbuffer(scip), &tmprhs);
+         RatFreeBuffer(SCIPbuffer(scip), &tmplhs);
+         RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
+      }
+   }
+
+   /* loop over res.postsolve and add all fixed variables and aggregations to scip */
+   for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
+   {
+      ReductionType type = res.postsolve.types[i];
+      int first = res.postsolve.start[i];
+      int last = res.postsolve.start[i + 1];
+
+      switch( type )
+      {
+      case ReductionType::kFixedCol:
+      {
+         SCIP_Bool infeas;
+         SCIP_Bool fixed;
+         int col = res.postsolve.indices[first];
+
+         SCIP_VAR* colvar = SCIPmatrixGetVar(matrix, col);
+
+         Rational value = res.postsolve.values[first];
+         SCIP_Rational* tmpval;
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
+         tmpval->val = value;
+
+         SCIP_CALL( SCIPfixVarExact(scip, colvar, tmpval, &infeas, &fixed) );
+         *nfixedvars += 1;
+
+         RatFreeBuffer(SCIPbuffer(scip), &tmpval);
+
+         assert(!infeas);
+         assert(fixed);
+         break;
+      }
+      case ReductionType::kSubstitutedCol:
+      {
+         int col = res.postsolve.indices[first];
+         Rational side = res.postsolve.values[first];
+
+         int rowlen = last - first - 1;
+         SCIP_Bool infeas;
+         SCIP_Bool aggregated;
+         SCIP_Bool redundant = FALSE;
+         if( rowlen == 2 )
+         {
+            SCIP_VAR* varx = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 1]);
+            SCIP_VAR* vary = SCIPmatrixGetVar(matrix, res.postsolve.indices[first + 2]);
+            Rational scalarx = res.postsolve.values[first + 1];
+            Rational scalary = res.postsolve.values[first + 2];
+
+            SCIP_Rational* constant;
+            SCIP_Rational* tmpscalarx;
+            SCIP_Rational* tmpscalary;
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalarx) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalary) );
+            tmpscalarx->val = scalarx;
+            tmpscalary->val = scalary;
+
+            SCIP_CALL( SCIPgetProbvarSumExact(scip, &varx, tmpscalarx, constant) );
+            assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
+
+            SCIP_CALL( SCIPgetProbvarSumExact(scip, &vary, tmpscalary, constant) );
+            assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
+
+            side -= constant->val;
+            constant->val = side;
+
+            SCIP_CALL( SCIPaggregateVarsExact(scip, varx, vary, tmpscalarx, tmpscalary, constant, &infeas, &redundant, &aggregated) );
+
+            RatFreeBuffer(SCIPbuffer(scip), &tmpscalary);
+            RatFreeBuffer(SCIPbuffer(scip), &tmpscalarx);
+            RatFreeBuffer(SCIPbuffer(scip), &constant);
+         }
+         else
+         {
+            /** @todo exip this has to be done in rational form still */
+            SCIP_Rational* colCoef;
+            SCIP_Rational* constant;
+            std::vector<SCIP_Real> tmpvals;
+
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &colCoef) );
+
+            for( int j = first + 1; j < last; ++j )
+            {
+               if( res.postsolve.indices[j] == col )
+               {
+                  colCoef->val = res.postsolve.values[j];
+                  break;
+               }
+            }
+
+            tmpvars.clear();
+            tmpvals.clear();
+            tmpvars.reserve(rowlen);
+            tmpvals.reserve(rowlen);
+
+            assert(!RatIsZero(colCoef));
+            SCIP_VAR* aggrvar = SCIPmatrixGetVar(matrix, col);
+
+            SCIP_CALL( SCIPgetProbvarSumExact(scip, &aggrvar, colCoef, constant) );
+            assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            side -= constant->val;
+
+            for( int j = first + 1; j < last; ++j )
+            {
+               if( res.postsolve.indices[j] == col )
+                  continue;
+
+               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+               tmpvals.push_back(- (SCIP_Real)res.postsolve.values[j] / RatApproxReal(colCoef));
+            }
+
+            constant->val = side / colCoef->val;
+
+            SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
+               tmpvars.data(), tmpvals.data(), RatApproxReal(constant), &infeas, &aggregated) );
+
+            RatFreeBuffer(SCIPbuffer(scip), &colCoef);
+            RatFreeBuffer(SCIPbuffer(scip), &constant);
+         }
+
+         if( aggregated )
+            *naggrvars += 1;
+         else if( constraintsReplaced && !redundant )
+         {
+            /* if the constraints where replaced, we need to add the failed substitution as an equality to SCIP */
+            SCIP_Rational** tmpvals;
+            SCIP_Rational* tmpside;
+
+            SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
+
+            tmpside->val = side;
+
+            tmpvars.clear();
+            for( int j = first + 1; j < last; ++j )
+            {
+               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
+               tmpvals[j]->val = (res.postsolve.values[j]);
+            }
+
+            SCIP_CONS* cons;
+            String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(SCIPmatrixGetVar(matrix, col)));
+            SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, name.c_str(),
+               tmpvars.size(), tmpvars.data(), tmpvals, tmpside, tmpside ) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            *naddconss += 1;
+
+            RatFreeBuffer(SCIPbuffer(scip), &tmpside);
+            RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
+         }
+
+         if( infeas )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         break;
+      }
+      default:
+      case ReductionType::kParallelCol:
+         return SCIP_INVALIDRESULT;
+      }
+   }
+
+   /* tighten bounds of variables that are still present after presolving */
+   if( *result != SCIP_CUTOFF )
+   {
+      /** @todo exip: exact versions of tightenBound */
+      VariableDomains<Rational>& varDomains = problem.getVariableDomains();
+      for( int i = 0; i != problem.getNCols(); ++i )
+      {
+         SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
+         if( !varDomains.flags[i].test(ColFlag::kLbInf) )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarLb(scip, var, (SCIP_Real)varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
+
+            if( tightened )
+               *nchgbds += 1;
+
+            if( infeas )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
+         }
+
+         if( !varDomains.flags[i].test(ColFlag::kUbInf) )
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool tightened;
+            SCIP_CALL( SCIPtightenVarUb(scip, var, (SCIP_Real)varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
+
+            if( tightened )
+               *nchgbds += 1;
+
+            if( infeas )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
+         }
+      }
+   }
+
+   /* finish with a final verb message and return */
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      "   (%.1fs) MILP presolver (%d rounds): %d aggregations, %d fixings, %d bound changes\n",
+      SCIPgetSolvingTime(scip), presolve.getStatistics().nrounds, *naggrvars - oldnaggrvars,
+      *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds);
+
+   /* free the matrix */
+   assert(initialized);
+   SCIPmatrixFree(scip, &matrix);
    return SCIP_OKAY;
 }
 
@@ -263,6 +805,17 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
    assert(linconshdlr != NULL);
    bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_Retcode retcode;
+      retcode = doMilpPresolveRational(scip, presol, matrix, data, initialized, complete,
+         infeasible, timelimit, nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
+         nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss,
+         nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
+         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
+      return retcode;
+   }
 
    Problem<SCIP_Real> problem = buildProblem(scip, matrix);
    Presolve<SCIP_Real> presolve;
@@ -770,6 +1323,8 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "presolving/" PRESOL_NAME "/enablesparsify",
          "should the sparsify presolver be enabled within the presolve library?",
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+
+   SCIPpresolSetExact(presol);
 
    return SCIP_OKAY;
 }
