@@ -90,6 +90,12 @@ SCIP_RETCODE SCIPcutselInit(
         SCIP_SET*             set                 /**< global SCIP settings */
 );
 
+/** deinitializes cut selector */
+SCIP_RETCODE SCIPcutselExit(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** frees memory of cut selector */
 SCIP_RETCODE SCIPcutselFree(
         SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */

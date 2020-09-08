@@ -85,6 +85,7 @@ SCIP_RETCODE doCutselCreate(
    (*cutsel)->cutselselect = cutselselect;
    (*cutsel)->cutseldata = cutseldata;
    (*cutsel)->initialized = FALSE;
+
    /* create clocks */
    SCIP_CALL( SCIPclockCreate(&(*cutsel)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*cutsel)->cutseltime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -192,16 +193,16 @@ SCIP_RETCODE SCIPcutselCopyInclude(
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    )
 {
-    assert(cutsel != NULL);
-    assert(set != NULL);
-    assert(set->scip != NULL);
+   assert(cutsel != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
 
-    if( cutsel->cutselcopy != NULL )
-    {
-        SCIPsetDebugMsg(set, "including cut selector %s in subscip %p\n", SCIPcutselGetName(cutsel), (void*)set->scip);
-        SCIP_CALL( cutsel->cutselcopy(set->scip, cutsel) );
-    }
-    return SCIP_OKAY;
+   if( cutsel->cutselcopy != NULL )
+   {
+      SCIPsetDebugMsg(set, "including cut selector %s in subscip %p\n", SCIPcutselGetName(cutsel), (void*)set->scip);
+      SCIP_CALL( cutsel->cutselcopy(set->scip, cutsel) );
+   }
+   return SCIP_OKAY;
 }
 
 /** sets copy method of cut selector */
@@ -210,74 +211,106 @@ void SCIPcutselSetCopy(
    SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
-    assert(cutsel != NULL);
+   assert(cutsel != NULL);
 
-    cutsel->cutselcopy = cutselcopy;
+   cutsel->cutselcopy = cutselcopy;
 }
 
 /** frees memory of cut selector */
 SCIP_RETCODE SCIPcutselFree(
-        SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
-        SCIP_SET*             set                 /**< global SCIP settings */
-)
+   SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
 {
-    assert(cutsel != NULL);
-    if( *cutsel == NULL )
-        return SCIP_OKAY;
-    assert(!(*cutsel)->initialized);
-    assert(set != NULL);
+   assert(cutsel != NULL);
+   if( *cutsel == NULL )
+      return SCIP_OKAY;
 
-    /* call destructor of cut selector */
-    if( (*cutsel)->cutselfree != NULL )
-    {
-        SCIP_CALL( (*cutsel)->cutselfree(set->scip, *cutsel) );
-    }
+   assert(!(*cutsel)->initialized);
+   assert(set != NULL);
 
-    /* free clocks */
-    SCIPclockFree(&(*cutsel)->cutseltime);
-    SCIPclockFree(&(*cutsel)->setuptime);
+   /* call destructor of cut selector */
+   if( (*cutsel)->cutselfree != NULL )
+   {
+      SCIP_CALL( (*cutsel)->cutselfree(set->scip, *cutsel) );
+   }
 
-    BMSfreeMemoryArrayNull(&(*cutsel)->name);
-    BMSfreeMemoryArrayNull(&(*cutsel)->desc);
-    BMSfreeMemory(cutsel);
+   /* free clocks */
+   SCIPclockFree(&(*cutsel)->cutseltime);
+   SCIPclockFree(&(*cutsel)->setuptime);
 
-    return SCIP_OKAY;
+   BMSfreeMemoryArrayNull(&(*cutsel)->name);
+   BMSfreeMemoryArrayNull(&(*cutsel)->desc);
+   BMSfreeMemory(cutsel);
+
+   return SCIP_OKAY;
 }
 
 /** initializes  cut selector */
 SCIP_RETCODE SCIPcutselInit(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_SET*             set                 /**< global SCIP settings */
-)
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
 {
-    assert(cutsel != NULL);
-    assert(set != NULL);
+   assert(cutsel != NULL);
+   assert(set != NULL);
 
-    if( cutsel->initialized )
-    {
-        SCIPerrorMessage("cut selector <%s> already initialized", cutsel->name);
-        return SCIP_INVALIDCALL;
-    }
+   if( cutsel->initialized )
+   {
+      SCIPerrorMessage("cut selector <%s> already initialized", cutsel->name);
+      return SCIP_INVALIDCALL;
+   }
 
-    if( set->misc_resetstat )
-    {
-        SCIPclockReset(cutsel->setuptime);
-        SCIPclockReset(cutsel->cutseltime);
-    }
+   if( set->misc_resetstat )
+   {
+      SCIPclockReset(cutsel->setuptime);
+      SCIPclockReset(cutsel->cutseltime);
+   }
 
-    if( cutsel->cutselinit != NULL )
-    {
-        /* start timing */
-        SCIPclockStart(cutsel->setuptime, set);
+   if( cutsel->cutselinit != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(cutsel->setuptime, set);
 
-        SCIP_CALL( cutsel->cutselinit(set->scip, cutsel) );
+      SCIP_CALL( cutsel->cutselinit(set->scip, cutsel) );
 
-        /* stop timing */
-        SCIPclockStop(cutsel->setuptime, set);
-    }
-    cutsel->initialized = TRUE;
+      /* stop timing */
+      SCIPclockStop(cutsel->setuptime, set);
+   }
 
-    return SCIP_OKAY;
+   cutsel->initialized = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** deinitializes cut selector */
+SCIP_RETCODE SCIPcutselExit(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cutsel != NULL);
+   assert(set != NULL);
+
+   if( !cutsel->initialized )
+   {
+      SCIPerrorMessage("cut selector <%s> not initialized", cutsel->name);
+      return SCIP_INVALIDCALL;
+   }
+
+   if( cutsel->cutselexit != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(cutsel->setuptime, set);
+
+      SCIP_CALL( cutsel->cutselexit(set->scip, cutsel) );
+
+      /* stop timing */
+      SCIPclockStop(cutsel->setuptime, set);
+   }
+   cutsel->initialized = FALSE;
+
+   return SCIP_OKAY;
 }
 
 /** gets user data of cut selector */

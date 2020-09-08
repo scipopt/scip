@@ -101,18 +101,13 @@ SCIP_DECL_CUTSELFREE(cutselFreeHello)
 
 
 /** initialization method of cut selector (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_CUTSELINIT(cutselInitHello)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of hello cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   printf("We are initializing, Mark\n");
 
    return SCIP_OKAY;
 }
-#else
-#define cutselInitHello NULL
-#endif
 
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */

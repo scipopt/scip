@@ -2730,7 +2730,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free cut selectors */
    for( i = 0; i < (*set)->ncutsels; ++i)
    {
-       SCIP_CALL( SCIPcutselFree(&(*set)->cutsels[i], *set) );
+      SCIP_CALL( SCIPcutselFree(&(*set)->cutsels[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->cutsels);
 
@@ -5089,7 +5089,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
    /* cut selectors */
    for( i = 0; i < set->ncutsels; ++i )
    {
-       SCIP_CALL( SCIPcutselInit(set->cutsels[i], set) );
+      SCIP_CALL( SCIPcutselInit(set->cutsels[i], set) );
    }
 
    /* propagators */
@@ -5197,6 +5197,12 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nsepas; ++i )
    {
       SCIP_CALL( SCIPsepaExit(set->sepas[i], set) );
+   }
+
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselExit(set->cutsels[i], set) );
    }
 
    /* propagators */
