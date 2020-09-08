@@ -77,7 +77,14 @@ TestSuite(rationals, .init = setup, .fini = teardown);
 /* TESTS  */
 Test(rationals, create_and_free)
 {
-   /* calls setup and teardown */
+   SCIP_Rational** buffer;
+   int nusedbuffers;
+   nusedbuffers = BMSgetNUsedBufferMemory(buffmem);
+
+   RatCreateBufferArray(buffmem, &buffer, 5);
+   RatReallocBufferArray(buffmem, &buffer, 5, 10);
+   RatFreeBufferArray(buffmem, &buffer, 10);
+   cr_assert_eq(nusedbuffers, BMSgetNUsedBufferMemory(buffmem));
 }
 
 Test(rationals, setting, .description = "tests all the different methods to set/get rationals")
@@ -226,13 +233,13 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    /* Invert */
    RatInvert(rbuf, r1);
    RatSetInt(r1, 40, 27);
-   cr_assert(RatIsEqual(rbuf, r1)); 
+   cr_assert(RatIsEqual(rbuf, r1));
 
    /* min/max */
    RatMIN(r2, r1, rbuf);
-   cr_assert(RatIsEqual(rbuf, r2)); 
+   cr_assert(RatIsEqual(rbuf, r2));
    RatMAX(r2, r1, rbuf);
-   cr_assert(RatIsEqual(r1, r2)); 
+   cr_assert(RatIsEqual(r1, r2));
 
    /* comparisons (GT/LT/GE/LE) (only one checed, since use each other)*/
    RatInvert(r1, r1);
@@ -267,7 +274,7 @@ Test(rationals, arithmetic, .description = "tests rational arithmetic methods")
    cr_log_info("rounding first:       %.17e \n", 2 * doub);
    cr_assert_leq(2 * doub, RatApproxReal(rbuf));
    cr_assert(!RatIsFpRepresentable(rbuf));
-   cr_assert(RatIsFpRepresentable(r2));
+
    cr_assert(!RatIsIntegral(rbuf));
    RatMultReal(rbuf, r1, 3);
    cr_assert(RatIsIntegral(rbuf));
