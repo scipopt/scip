@@ -59,10 +59,11 @@ static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are cons
 /*
  * Creation methods
  */
+/** @todo exip take care of long overflow */
 #ifdef SCIP_WITH_BOOST
-static
-SCIP_Longint Rnumerator(
-   SCIP_Rational*        rational
+/** returns the numerator of a rational as a long */
+SCIP_Longint RatNumerator(
+   SCIP_Rational*        rational            /**< the rational */
    )
 {
    long result;
@@ -72,29 +73,29 @@ SCIP_Longint Rnumerator(
    return result;
 }
 
-static
-SCIP_Longint Rdenominator(
-   SCIP_Rational*        rational
+/** returns the denominator of a rational as a long */
+SCIP_Longint RatDenominator(
+   SCIP_Rational*        rational            /**< the rational */
    )
 {
    long result;
 
-    result = (boost::multiprecision::denominator(rational->val)).convert_to<long>();
+   result = (boost::multiprecision::denominator(rational->val)).convert_to<long>();
 
    return result;
 }
 #else
-static
+/** returns the numerator of a rational as a long */
 SCIP_Longint Rnumerator(
-   SCIP_Rational*        rational
+   SCIP_Rational*        rational            /**< the rational */
    )
 {
    return rational->val.val;
 }
 
-static
+/** returns the denominator of a rational as a long */
 SCIP_Longint Rdenominator(
-   SCIP_Rational*        rational
+   SCIP_Rational*        rational            /**< the rational */
    )
 {
    return 1.0;
@@ -226,6 +227,7 @@ SCIP_RETCODE RatCreateBufferArray(
    return SCIP_OKAY;
 }
 
+
 /** copy an array of rationals */
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -237,10 +239,52 @@ SCIP_RETCODE RatCopyBlockArray(
    int i;
 
    BMSduplicateBlockMemoryArray(mem, result, src, len);
- 
+
    for( i = 0; i < len; ++i )
    {
       SCIP_CALL( RatCopy(mem, &(*result)[i], src[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** copy an array of rationals */
+SCIP_RETCODE RatCopyBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_Rational**       src,                /**< src array */
+   int                   len                 /**< size of src array */
+   )
+{
+   int i;
+
+   BMSduplicateBufferMemoryArray(mem, result, src, len);
+
+   for( i = 0; i < len; ++i )
+   {
+      SCIP_CALL( RatCopyBuffer(mem, &(*result)[i], src[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** realloc a rational buffer arrray */
+SCIP_RETCODE RatReallocBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   )
+{
+   int i;
+
+   assert(newlen >= oldlen);
+
+   BMSreallocBufferMemoryArray(mem, result, newlen);
+
+   for( i = oldlen; i < newlen; ++i )
+   {
+      SCIP_CALL( RatCreateBuffer(mem, &(*result)[i]) );
    }
 
    return SCIP_OKAY;
@@ -256,6 +300,20 @@ SCIP_RETCODE RatCopy(
    )
 {
    SCIP_CALL( RatCreateBlock(mem, result) );
+
+   RatSet(*result, src);
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a rational */
+SCIP_RETCODE RatCopyBuffer(
+   BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   )
+{
+   SCIP_CALL( RatCreateBuffer(mem, result) );
 
    RatSet(*result, src);
 
@@ -1358,9 +1416,9 @@ void RatPrint(
 {
    assert(rational != NULL);
    if( rational->isinf )
-      std::cout << rational->val.sign() << "inf" << "\n";
+      std::cout << rational->val.sign() << "inf" << std::flush;
    else
-      std::cout << rational->val << "\n";
+      std::cout << rational->val << std::flush;
 }
 
 
@@ -1564,8 +1622,8 @@ SCIP_Real RatRoundReal(
       }
    }
 
-   nom = Rnumerator(rational);
-   denom = Rdenominator(rational);
+   nom = RatNumerator(rational);
+   denom = RatDenominator(rational);
 
    SCIPdebugMessage("computing %lld/%lld \n", nom, denom);
 
