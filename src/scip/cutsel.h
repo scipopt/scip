@@ -84,6 +84,30 @@ void SCIPcutselSetCopy(
         SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
 );
 
+/** initializes node selector */
+SCIP_RETCODE SCIPcutselInit(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_SET*             set                 /**< global SCIP settings */
+);
+
+/** frees memory of cut selector */
+SCIP_RETCODE SCIPcutselFree(
+        SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
+        SCIP_SET*             set                 /**< global SCIP settings */
+);
+
+/** sets destructor method of cut selector */
+void SCIPcutselSetFree(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_DECL_CUTSELFREE  ((*cutselfree))    /**< destructor of cut selector */
+);
+
+/** sets initialization method of cut selector */
+void SCIPcutselSetInit(
+        SCIP_CUTSEL*          cutsel,             /**< cut selector */
+        SCIP_DECL_CUTSELINIT  ((*cutselinit))     /**< initialize cut selector */
+);
+
 #ifdef __cplusplus
 }
 #endif

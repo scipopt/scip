@@ -263,18 +263,19 @@ int filterWithParallelism(
 
 
 /** copy method for cut selector plugin (called when SCIP copies plugins) */
-#if 0
 static
 SCIP_DECL_CUTSELCOPY(cutselCopyDefault)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of default cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   assert(scip != NULL);
+   assert(cutsel != NULL);
+   assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeCutselDefault(scip) );
 
    return SCIP_OKAY;
 }
-#else
-#define cutselCopyDefault NULL
-#endif
 
 /** destructor of cut selector to free user data (called when SCIP is exiting) */
 static

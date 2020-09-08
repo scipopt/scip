@@ -164,7 +164,9 @@ SCIP_DECL_CUTSELEXITSOL(cutselExitsolHello)
 static
 SCIP_DECL_CUTSELSELECT(cutselSelectHello)
 {  /*lint --e{715}*/
-   printf("Hello Mark, I am a cut selector plugin\n");
+   //printf("Hello Mark, I am a cut selector plugin\n");
+
+   *nselectedcuts = 0;
 
    return SCIP_OKAY;
 }
