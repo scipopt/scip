@@ -187,6 +187,13 @@ struct SCIP_Aggregate
    SCIP_VAR*             var;                /**< variable y in aggregation */
 };
 
+/** exact aggregation information: x = a*y + c */
+struct SCIP_AggregateExact
+{
+   SCIP_Rational*        scalar;             /**< multiplier a in aggregation */
+   SCIP_Rational*        constant;           /**< constant shift c in aggregation */
+};
+
 /** multiple aggregation information: x = a_1*y_1 + ... + a_k*y_k + c */
 struct SCIP_Multaggr
 {
@@ -210,6 +217,7 @@ struct SCIP_VarDataExact
    SCIP_DOMEXACT         locdom;             /**< exact local bounds */
    SCIP_DOMEXACT         glbdom;             /**< exact global bound */
    SCIP_DOMEXACT         origdom;            /**< original domain */
+   SCIP_AGGREGATEEXACT   aggregate;          /**< exact aggregation data */
    SCIP_COLEXACT*        colexact;           /**< column in exact lp */
    SCIP_VARSTATUS        varstatusexact;     /**< status in exact lp */
    int                   certificateindex;   /**< original probindex (needed for certificate), or -1 */

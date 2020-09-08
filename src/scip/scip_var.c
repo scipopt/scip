@@ -1898,6 +1898,72 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    return SCIP_OKAY;
 }
 
+/** Transforms a given linear sum of variables, that is a_1*x_1 + ... + a_n*x_n + c into a corresponding linear sum of
+ *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
+ *
+ *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
+ *  representation is stored in the variable array, scalar array and constant.
+ *
+ *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  @note The resulting linear sum is stored into the given variable array, scalar array, and constant. That means the
+ *        given entries are overwritten.
+ *
+ *  @note That method can be used to convert a single variables into variable space of active variables. Therefore call
+ *        the method with the linear sum 1.0*x + 0.0.
+ */
+SCIP_RETCODE SCIPgetProbvarLinearSumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variable array x_1, ..., x_n in the linear sum which will be
+                                              *   overwritten by the variable array y_1, ..., y_m in the linear sum
+                                              *   w.r.t. active variables */
+   SCIP_Rational**       scalars,            /**< scalars a_1, ..., a_n in linear sum which will be overwritten to the
+                                              *   scalars b_1, ..., b_m in the linear sum of the active variables  */
+   int*                  nvars,              /**< pointer to number of variables in the linear sum which will be
+                                              *   overwritten by the number of variables in the linear sum corresponding
+                                              *   to the active variables */
+   int                   varssize,           /**< available slots in vars and scalars array which is needed to check if
+                                              *   the array are large enough for the linear sum w.r.t. active
+                                              *   variables */
+   SCIP_Rational*        constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
+                                              *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
+                                              *   d w.r.t. the active variables */
+   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
+                                              *   active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   )
+{
+   assert( scip != NULL );
+   assert( nvars != NULL );
+   assert( vars != NULL || *nvars == 0 );
+   assert( scalars != NULL || *nvars == 0 );
+   assert( constant != NULL );
+   assert( requiredsize != NULL );
+   assert( *nvars <= varssize );
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarLinearSumExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPvarGetActiveRepresentativesExact(scip->set, vars, scalars, nvars, varssize, constant, requiredsize, mergemultiples) );
+
+   return SCIP_OKAY;
+}
+
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
  *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
  *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
@@ -1933,6 +1999,45 @@ SCIP_RETCODE SCIPgetProbvarSum(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
    SCIP_CALL( SCIPvarGetProbvarSum(var, scip->set, scalar, constant) );
+
+   return SCIP_OKAY;
+}
+
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or
+ *  multi-aggregated variable, scalar and constant; if the variable resolves to a fixed variable,
+ *  "scalar" will be 0.0 and the value of the sum will be stored in "constant"; a multi-aggregation
+ *  with only one active variable (this can happen due to fixings after the multi-aggregation),
+ *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPgetProbvarSumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
+   SCIP_Rational*        scalar,             /**< pointer to scalar a in sum a*x + c */
+   SCIP_Rational*        constant            /**< pointer to constant c in sum a*x + c */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(scalar != NULL);
+   assert(constant != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarSumExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPvarGetProbvarSumExact(var, scip->set, scalar, constant) );
 
    return SCIP_OKAY;
 }
@@ -8575,6 +8680,126 @@ SCIP_RETCODE SCIPfixVar(
    }  /*lint !e788*/
 }
 
+/** in problem creation and solving stage, both bounds of the variable are set to the given value;
+ *  in presolving stage, the variable is converted into a fixed variable, and bounds are changed respectively;
+ *  conversion into a fixed variable changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
+ *  and also renders arrays returned from the SCIPvarGetImpl...() methods invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPfixVarExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to fix */
+   SCIP_Rational*        fixedval,           /**< value to fix variable to */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
+   SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
+   )
+{
+   assert(var != NULL);
+   assert(infeasible != NULL);
+   assert(fixed != NULL);
+   assert(SCIPisExactSolve(scip));
+   assert(var->exactdata != NULL);
+   /** @todo exip: unfotunate things could happen if the fixval is not fp-representable */
+
+   if( !SCIPisExactSolve(scip) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPfixVarExact", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   *fixed = FALSE;
+
+   /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
+   if( scip->set->stage != SCIP_STAGE_PROBLEM )
+   {
+      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !RatIsIntegral(fixedval))
+         || RatIsLT(fixedval, SCIPvarGetLbLocalExact(var))
+         || RatIsGT(fixedval, SCIPvarGetUbLocalExact(var)) )
+      {
+         *infeasible = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
+      {
+         *infeasible = !RatIsEqual(fixedval, SCIPvarGetLbLocalExact(var));
+         return SCIP_OKAY;
+      }
+   }
+   else
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL);
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      /* in the problem creation stage, modify the bounds as requested, independently from the current bounds;
+       * we have to make sure, that the order of the bound changes does not intermediately produce an invalid
+       * interval lb > ub
+       */
+      if( RatIsLE(fixedval, SCIPvarGetLbLocalExact(var)) )
+      {
+         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_DOWNWARDS)) );
+         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_UPWARDS)) );
+         *fixed = TRUE;
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_UPWARDS)) );
+         SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_DOWNWARDS)) );
+         *fixed = TRUE;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_PRESOLVING:
+      if( SCIPtreeGetCurrentDepth(scip->tree) == 0 )
+      {
+         SCIP_CALL( SCIPvarFixExact(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, fixedval, infeasible, fixed) );
+         return SCIP_OKAY;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      if( RatIsGT(fixedval, SCIPvarGetLbLocalExact(var)) )
+      {
+         if( RatIsGT(fixedval, SCIPvarGetUbLocalExact(var)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarLb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_DOWNWARDS)) );
+            *fixed = TRUE;
+         }
+      }
+      if( RatIsLT(fixedval, SCIPvarGetUbLocalExact(var)) )
+      {
+         if( RatIsLT(fixedval, SCIPvarGetLbLocalExact(var)) )
+         {
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarUb(scip, var, RatRoundReal(fixedval, SCIP_ROUND_UPWARDS)) );
+            *fixed = TRUE;
+         }
+      }
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+}
+
 /** From a given equality a*x + b*y == c, aggregates one of the variables and removes it from the set of
  *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
  *  and also renders the arrays returned from the SCIPvarGetImpl...() methods for the two variables invalid.
@@ -8713,6 +8938,156 @@ SCIP_RETCODE SCIPaggregateVars(
             scip->eventqueue, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
       *redundant = *aggregated;
    }
+
+   return SCIP_OKAY;
+}
+
+/** From a given equality a*x + b*y == c, aggregates one of the variables and removes it from the set of
+ *  active problem variables. This changes the vars array returned from SCIPgetVars() and SCIPgetVarsData(),
+ *  and also renders the arrays returned from the SCIPvarGetImpl...() methods for the two variables invalid.
+ *  In the first step, the equality is transformed into an equality with active problem variables
+ *  a'*x' + b'*y' == c'. If x' == y', this leads to the detection of redundancy if a' == -b' and c' == 0,
+ *  of infeasibility, if a' == -b' and c' != 0, or to a variable fixing x' == c'/(a'+b') (and possible
+ *  infeasibility) otherwise.
+ *  In the second step, the variable to be aggregated is chosen among x' and y', prefering a less strict variable
+ *  type as aggregation variable (i.e. continuous variables are preferred over implicit integers, implicit integers
+ *  over integers, and integers over binaries). If none of the variables is continuous, it is tried to find an integer
+ *  aggregation (i.e. integral coefficients a'' and b'', such that a''*x' + b''*y' == c''). This can lead to
+ *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
+ *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - redundant:  the equality can be deleted from the constraint set
+ *  - aggregated: the aggregation was successfully performed (the variables were not aggregated before)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
+ */
+SCIP_RETCODE SCIPaggregateVarsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             varx,               /**< variable x in equality a*x + b*y == c */
+   SCIP_VAR*             vary,               /**< variable y in equality a*x + b*y == c */
+   SCIP_Rational*        scalarx,            /**< multiplier a in equality a*x + b*y == c */
+   SCIP_Rational*        scalary,            /**< multiplier b in equality a*x + b*y == c */
+   SCIP_Rational*        rhs,                /**< right hand side c in equality a*x + b*y == c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            redundant,          /**< pointer to store whether the equality is (now) redundant */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   SCIP_Rational* constantx;
+   SCIP_Rational* constanty;
+
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constantx) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constanty) );
+
+   assert(infeasible != NULL);
+   assert(redundant != NULL);
+   assert(aggregated != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaggregateVarsExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   *infeasible = FALSE;
+   *redundant = FALSE;
+   *aggregated = FALSE;
+
+   if( SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("cannot aggregate variables during probing\n");
+      return SCIP_INVALIDCALL;
+   }
+   assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+
+   /* do not perform aggregation if it is globally deactivated */
+   if( scip->set->presol_donotaggr )
+      return SCIP_OKAY;
+
+   /* get the corresponding equality in active problem variable space:
+    * transform both expressions "a*x + 0" and "b*y + 0" into problem variable space
+    */
+   SCIP_CALL( SCIPvarGetProbvarSumExact(&varx, scip->set, scalarx, constantx) );
+   SCIP_CALL( SCIPvarGetProbvarSumExact(&vary, scip->set, scalary, constanty) );
+
+   /* we cannot aggregate multi-aggregated variables */
+   if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
+   /* move the constant to the right hand side to acquire the form "a'*x' + b'*y' == c'" */
+   RatDiff(rhs, rhs, constantx);
+   RatDiff(rhs, rhs, constanty);
+
+   /* if a scalar is zero, treat the variable as fixed-to-zero variable */
+   if( RatIsZero(scalarx) )
+      varx = NULL;
+   if( RatIsZero(scalary) )
+      vary = NULL;
+
+   /* capture the special cases that less than two variables are left, due to resolutions to a fixed variable or
+    * to the same active variable
+    */
+   if( varx == NULL && vary == NULL )
+   {
+      /* both variables were resolved to fixed variables */
+      *infeasible = !RatIsZero(rhs);
+      *redundant = TRUE;
+   }
+   else if( varx == NULL )
+   {
+      assert(RatIsZero(scalarx));
+      assert(!RatIsZero(scalary));
+
+      RatDiv(rhs, rhs, scalary);
+      /* variable x was resolved to fixed variable: variable y can be fixed to c'/b' */
+      SCIP_CALL( SCIPvarFixExact(vary, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, rhs, infeasible, aggregated) );
+      *redundant = TRUE;
+   }
+   else if( vary == NULL )
+   {
+      assert(RatIsZero(scalarx));
+      assert(!RatIsZero(scalary));
+
+      RatDiv(rhs, rhs, scalarx);
+      /* variable y was resolved to fixed variable: variable x can be fixed to c'/a' */
+      SCIP_CALL( SCIPvarFixExact(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+            scip->cliquetable, rhs, infeasible, aggregated) );
+      *redundant = TRUE;
+   }
+   else if( varx == vary )
+   {
+      /* both variables were resolved to the same active problem variable: this variable can be fixed */
+      RatAdd(scalarx, scalarx, scalary);
+      if( RatIsZero(scalarx) )
+      {
+         /* left hand side of equality is zero: equality is potentially infeasible */
+         *infeasible = !RatIsZero(rhs);
+      }
+      else
+      {
+         RatDiv(rhs, rhs, scalarx);
+         /* sum of scalars is not zero: fix variable x' == y' to c'/(a'+b') */
+         SCIP_CALL( SCIPvarFixExact(varx, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+               scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventfilter, scip->eventqueue,
+               scip->cliquetable, rhs, infeasible, aggregated) );
+      }
+      *redundant = TRUE;
+   }
+   else
+   {
+      /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
+      SCIP_CALL( SCIPvarTryAggregateVarsExact(scip->set, scip->mem->probmem, scip->stat, scip->transprob, scip->origprob,
+            scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter,
+            scip->eventqueue, varx, vary, scalarx, scalary, rhs, infeasible, aggregated) );
+      *redundant = *aggregated;
+   }
+
+   RatFreeBuffer(SCIPbuffer(scip), &constanty);
+   RatFreeBuffer(SCIPbuffer(scip), &constantx);
 
    return SCIP_OKAY;
 }
