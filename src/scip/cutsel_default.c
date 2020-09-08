@@ -285,8 +285,6 @@ SCIP_DECL_CUTSELFREE(cutselFreeDefault)
 
    cutseldata = SCIPcutselGetData(cutsel);
 
-   //TODO free randnumber generator or in EXIT?
-
    SCIPfreeBlockMemory(scip, &cutseldata);
 
    return SCIP_OKAY;
@@ -309,19 +307,16 @@ SCIP_DECL_CUTSELINIT(cutselInitDefault)
 
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_CUTSELEXIT(cutselExitDefault)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of default cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-   //TODO free randnumber generator or in FREE??
+   SCIP_CUTSELDATA* cutseldata;
+
+   cutseldata = SCIPcutselGetData(cutsel);
+   SCIPfreeRandom(scip, &cutseldata->randnumgen);
 
    return SCIP_OKAY;
 }
-#else
-#define cutselExitDefault NULL
-#endif
 
 
 /** solving process initialization method of cut selector (called when branch and bound process is about to begin) */
@@ -362,6 +357,8 @@ SCIP_DECL_CUTSELSELECT(cutselSelectDefault)
    SCIP_Real goodmaxparall;
    SCIP_Real maxparall;
 
+   *result = SCIP_SUCCESS;
+
    cutseldata = SCIPcutselGetData(cutsel);
 
    if( root )
@@ -393,7 +390,6 @@ SCIP_RETCODE SCIPincludeCutselDefault(
    )
 {
    SCIP_CUTSELDATA* cutseldata;
-   SCIP_CUTSEL* cutsel;
 
    /* create default cut selector data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &cutseldata) );
@@ -405,7 +401,8 @@ SCIP_RETCODE SCIPincludeCutselDefault(
 
 
    /* include cut selector */
-#if 0
+   // TODO: change the 1 for 0 after you implement the setters
+#if 1
    /* use SCIPincludeCutsel() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
     */
@@ -493,12 +490,13 @@ SCIP_RETCODE SCIPselectCutsDefault(
    int*                  nselectedcuts       /**< pointer to return number of selected cuts from cuts array */
    )
 {
-   int i;
    SCIP_Real* scores;
+   SCIP_Real* scoresptr;
    SCIP_Real maxforcedscores;
    SCIP_Real maxnonforcedscores;
    SCIP_Real goodscore;
    SCIP_Real badscore;
+   int i;
 
    assert(cuts != NULL && ncuts > 0);
    assert(forcedcuts != NULL || nforcedcuts == 0);
@@ -515,7 +513,7 @@ SCIP_RETCODE SCIPselectCutsDefault(
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
 
    /* compute scores of cuts and max score of cuts and forced cuts (used to define goodscore) */
-   maxforcedscores = scoring(scip, forcedcuts, randnumgen, dircutoffdistweight, efficacyweight, objparalweight, intsupportweight, ncuts, NULL);
+   maxforcedscores = scoring(scip, forcedcuts, randnumgen, dircutoffdistweight, efficacyweight, objparalweight, intsupportweight, nforcedcuts, NULL);
    maxnonforcedscores = scoring(scip, cuts, randnumgen, dircutoffdistweight, efficacyweight, objparalweight, intsupportweight, ncuts, scores);
 
    goodscore = MAX(maxforcedscores, maxnonforcedscores);
@@ -533,6 +531,7 @@ SCIP_RETCODE SCIPselectCutsDefault(
       }
 
       /* now greedily select the remaining cuts */
+      scoresptr = scores;
       while( ncuts > 0 )
       {
          SCIP_ROW* selectedcut;
@@ -559,8 +558,8 @@ SCIP_RETCODE SCIPselectCutsDefault(
       }
    }
 
-  TERMINATE:
-   SCIPfreeBufferArray(scip, &scores);
+TERMINATE:
+   SCIPfreeBufferArray(scip, &scoresptr);
 
    return SCIP_OKAY;
 }
