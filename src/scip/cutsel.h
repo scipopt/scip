@@ -16,6 +16,7 @@
 /**@file   cutsel.h
  * @ingroup INTERNALAPI
  * @brief  internal methods for cut selectors
+ * @author Felipe Serrano
  * @author Mark Turner
  */
 

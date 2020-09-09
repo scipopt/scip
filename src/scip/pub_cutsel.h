@@ -17,6 +17,7 @@
  * @ingroup PUBLICCOREAPI
  * @brief  public methods for cut selectors
  * @author Mark Turner
+ * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

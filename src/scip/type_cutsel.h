@@ -16,6 +16,7 @@
 /**@file   type_cutsel.h
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for cut selectors
+ * @author Felipe Serrano
  * @author Mark Turner
  */
 

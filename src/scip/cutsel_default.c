@@ -17,6 +17,7 @@
  * @ingroup DEFPLUGINS_CUTSEL
  * @brief  default cut selector
  * @author Leona Gottwald
+ * @author Felipe Serrano
  * @author Mark Turner
  */
 

@@ -16,6 +16,7 @@
 /**@file   cutsel.c
  * @ingroup OTHER_CFILES
  * @brief  methods for cut selectors
+ * @author Felipe Serrano
  * @author Mark Turner
  */
 

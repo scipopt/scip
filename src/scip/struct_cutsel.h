@@ -16,6 +16,7 @@
 /**@file   struct_cutsel.h
  * @ingroup INTERNALAPI
  * @brief  data structures for cut selectors
+ * @author Felipe Serrano
  * @author Mark Turner
  */
 

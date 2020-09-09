@@ -17,6 +17,7 @@
 /**@file   scip_cutsel.c
  * @ingroup OTHER_CFILES
  * @brief  public methods for cut selector plugins
+ * @author Felipe Serrano
  * @author Mark Turner
  *
  */
