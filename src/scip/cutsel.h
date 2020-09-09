@@ -109,6 +109,18 @@ SCIP_RETCODE SCIPcutselFree(
         SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** informs cut selector that process is being started */
+SCIP_RETCODE SCIPcutselInitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** informs cut selector that process data is being freed */
+SCIP_RETCODE SCIPcutselExitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** sets destructor method of cut selector */
 void SCIPcutselSetFree(
         SCIP_CUTSEL*          cutsel,             /**< cut selector */

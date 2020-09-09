@@ -161,7 +161,7 @@ SCIP_RETCODE SCIPcutselsSelect(
    /* sort the cut selectors by priority */
    //TODO: SCIPsetSortCutselectors(set);
 
-   printf("We have <%d> cut selectors! \n", set->ncutsels);
+   //printf("We have <%d> cut selectors! \n", set->ncutsels);
 
    /* TODO: cutselect callback should select from nonforced ones */
    maxnselectedcuts -= nforcedcuts;
@@ -309,6 +309,54 @@ SCIP_RETCODE SCIPcutselExit(
       SCIPclockStop(cutsel->setuptime, set);
    }
    cutsel->initialized = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** informs cut selector that the branch and bound process is being started */
+SCIP_RETCODE SCIPcutselInitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cutsel != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of cut selector */
+   if( cutsel->cutselinitsol != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(cutsel->setuptime, set);
+
+      SCIP_CALL( cutsel->cutselinitsol(set->scip, cutsel) );
+
+      /* stop timing */
+      SCIPclockStop(cutsel->setuptime, set);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** informs cut selector that the branch and bound process is being started */
+SCIP_RETCODE SCIPcutselExitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(cutsel != NULL);
+   assert(set != NULL);
+
+   /* call solving process deinitialization method of cut selector */
+   if( cutsel->cutselexitsol != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(cutsel->setuptime, set);
+
+      SCIP_CALL( cutsel->cutselexitsol(set->scip, cutsel) );
+
+      /* stop timing */
+      SCIPclockStop(cutsel->setuptime, set);
+   }
 
    return SCIP_OKAY;
 }

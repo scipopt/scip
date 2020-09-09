@@ -5390,6 +5390,12 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPsepaInitsol(set->sepas[i], set) );
    }
 
+   /* cut selectors */
+   for( i =0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselInitsol(set->cutsels[i], set) );
+   }
+
    /* propagators */
    for( i = 0; i < set->nprops; ++i )
    {
@@ -5483,6 +5489,12 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nsepas; ++i )
    {
       SCIP_CALL( SCIPsepaExitsol(set->sepas[i], set) );
+   }
+
+   /* cut selectors */
+   for( i = 0; i < set->ncutsels; ++i )
+   {
+      SCIP_CALL( SCIPcutselExitsol(set->cutsels[i], set) );
    }
 
    /* propagators */
