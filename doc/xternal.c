@@ -169,8 +169,17 @@
  * This chapter is a detailed guide to the installation procedure of SCIP.
  *
  * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator. For new users, we strongly
- * recommend to use CMake, if available on their targeted platform.
+ * or the CMake cross platform build system generator.
+ *
+ * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
+ *
+ * Which one you choose depends on you use case and your level of expertise.
+ * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
+ * <b>This is highly recommended for new users.</b>
+ * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ *
+ * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
  * Please note that there are differences between both systems, most notably, the generated
  * library libscip will not be compatible between the versions. For more information, we
@@ -726,6 +735,8 @@
 
 /**@page MAKE Makefiles / Installation information
  *
+ * <b>Please note, that the Makefile system is not actively maintained anymore.
+ * If possible, please use \ref CMAKE "the cmake system".</b>
  *
  * In most cases (LINUX and MAC) it is quite easy to compile and install \SCIP. Therefore, reading the section
  * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find a
@@ -734,8 +745,8 @@
  *
  * @section BRIEFINSTALL Brief installation description
  *
- * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL. For
- * that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
+ * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
+ * For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
  * to specify any directories, the compiling process is fully automated).
  *
  * Compiling \SCIP directly can be done as follows:
