@@ -21,8 +21,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SCIP_NODESEL_H__
-#define __SCIP_SCIP_NODESEL_H__
+#ifndef __SCIP_SCIP_CUTSEL_H__
+#define __SCIP_SCIP_CUTSEL_H__
 
 
 #include "scip/def.h"
@@ -93,6 +93,16 @@ SCIP_EXPORT
 SCIP_CUTSEL* SCIPfindCutsel(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of cut selector */
+   );
+
+/** returns the array of currently available cut selectors */
+SCIP_CUTSEL** SCIPgetCutsels(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available cut selectors */
+int SCIPgetNCutsels(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 

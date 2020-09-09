@@ -141,6 +141,28 @@ SCIP_CUTSEL* SCIPfindCutsel(
    return SCIPsetFindCutsel(scip->set, name);
 }
 
+/** returns the array of currently available cut selectors */
+SCIP_CUTSEL** SCIPgetCutsels(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->cutsels;
+}
+
+/** returns the number of currently available cut selectors */
+int SCIPgetNCutsels(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return scip->set->ncutsels;
+}
+
 
 #ifdef TODO // adapt the code below
 /** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental

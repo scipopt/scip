@@ -187,6 +187,16 @@ SCIP_RETCODE SCIPcutselsSelect(
    return SCIP_OKAY;
 }
 
+/** gets description of cut selector */
+const char* SCIPcutselGetDesc(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   return cutsel->desc;
+}
+
 /** copies the given cut selector to a new scip */
 SCIP_RETCODE SCIPcutselCopyInclude(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
@@ -321,4 +331,28 @@ SCIP_CUTSELDATA* SCIPcutselGetData(
    assert(cutsel != NULL);
 
    return cutsel->cutseldata;
+}
+
+/** gets priority of cut selector */
+int SCIPcutselGetPriority(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   return cutsel->priority;
+}
+
+/** sets priority of cut selector */
+void SCIPcutselSetPriority(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the cut selector */
+)
+{
+   assert(cutsel != NULL);
+   assert(set != NULL);
+
+   cutsel->priority = priority;
+   //set->cutsel = NULL;
 }

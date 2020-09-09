@@ -881,38 +881,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
    return SCIP_OKAY;
 }
 
-///** dialog execution method for the display cutselectors command */
-//SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors)
-//{  /*lint --e{715}*/
-//   SCIP_CUTSEL** cutsels;
-//   int ncutsels;
-//   int i;
-//
-//   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-//
-//   cutsels = SCIPgetCutsels(scip);
-//   ncutsels = SCIPgetNCutsels(scip);
-//
-//   /* display list of node selectors */
-//   SCIPdialogMessage(scip, NULL, "\n");
-//   SCIPdialogMessage(scip, NULL, " cut selector         priority  description\n");
-//   SCIPdialogMessage(scip, NULL, " ------------         --------  -----------\n");
-//   for( i = 0; i < ncutsels; ++i )
-//   {
-//      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPcutselGetName(cutsels[i]));
-//      if( strlen(SCIPcutselGetName(cutsels[i])) > 20 )
-//         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-//      SCIPdialogMessage(scip, NULL, "%12d ", SCIPcutselGetPriority(cutsels[i]));
-//      SCIPdialogMessage(scip, NULL, "%s", SCIPcutselGetDesc(cutsels[i]));
-//      SCIPdialogMessage(scip, NULL, "\n");
-//   }
-//   SCIPdialogMessage(scip, NULL, "\n");
-//
-//   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-//
-//   return SCIP_OKAY;
-//}
-
 /** dialog execution method for the display displaycols command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
 {  /*lint --e{715}*/
@@ -956,6 +924,38 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDisplaycols)
          break;
       }
       SCIPdialogMessage(scip, NULL, "%s", SCIPdispGetDesc(disps[i]));
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display cutselectors command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors)
+{  /*lint --e{715}*/
+   SCIP_CUTSEL** cutsels;
+   int ncutsels;
+   int i;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   cutsels = SCIPgetCutsels(scip);
+   ncutsels = SCIPgetNCutsels(scip);
+
+   /* display list of cut selectors */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " cut selector         priority  description\n");
+   SCIPdialogMessage(scip, NULL, " ------------         --------  -----------\n");
+   for( i = 0; i < ncutsels; ++i )
+   {
+      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPcutselGetName(cutsels[i]));
+      if( strlen(SCIPcutselGetName(cutsels[i])) > 20 )
+         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+      SCIPdialogMessage(scip, NULL, "%8d ", SCIPcutselGetPriority(cutsels[i]));
+      SCIPdialogMessage(scip, NULL, "%s", SCIPcutselGetDesc(cutsels[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -4115,17 +4115,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   ///* display cut selectors */
-   //if( !SCIPdialogHasEntry(submenu, "cutselectors") )
-   //{
-   //   SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-   //         NULL,
-   //         SCIPdialogExecDisplayCutselectors, NULL, NULL,
-   //         "cutselectors", "display cut selectors", FALSE, NULL) );
-   //   SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
-   //   SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   //}
-
    /* display displaycols */
    if( !SCIPdialogHasEntry(submenu, "displaycols") )
    {
@@ -4133,6 +4122,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplayDisplaycols, NULL, NULL,
             "displaycols", "display display columns", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display cut selectors */
+   if( !SCIPdialogHasEntry(submenu, "cutselectors") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+         NULL,
+         SCIPdialogExecDisplayCutselectors, NULL, NULL,
+         "cutselectors", "display cut selectors", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4983,6 +4983,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    SCIP_BRANCHRULE** branchrules; 
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_CUTSEL** cutsels;
    SCIP_DISP** disps;
    SCIP_HEUR** heurs;
    SCIP_NLPI** nlpis;
@@ -4994,6 +4995,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nbranchrules;
    int nconflicthdlrs;
    int nconshdlrs;
+   int ncutsels;
    int ndisps;
    int nheurs;
    int nnlpis;
@@ -5184,6 +5186,38 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
                NULL,
                SCIPdialogExecMenu, NULL, NULL,
                SCIPconshdlrGetName(conshdlrs[i]), SCIPconshdlrGetDesc(conshdlrs[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* set cutselection */
+   if( !SCIPdialogHasEntry(setmenu, "cutselection") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+                                   NULL,
+                                   SCIPdialogExecMenu, NULL, NULL,
+                                   "cutselection", "change parameters for cut selectors", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(setmenu, "cutselection", &submenu) != 1 )
+   {
+      SCIPerrorMessage("cutselection sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   ncutsels = SCIPgetNCutsels(scip);
+   cutsels = SCIPgetCutsels(scip);
+
+   for( i = 0; i < ncutsels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPcutselGetName(cutsels[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+                                      NULL,
+                                      SCIPdialogExecMenu, NULL, NULL,
+                                      SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -5802,6 +5836,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP_BRANCHRULE** branchrules;
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_CUTSEL** cutsels;
    SCIP_DISP** disps;
    SCIP_HEUR** heurs;
    SCIP_NLPI** nlpis;
@@ -5813,6 +5848,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
    int nbranchrules;
    int nconflicthdlrs;
    int nconshdlrs;
+   int ncutsels;
    int ndisps;
    int nheurs;
    int nnlpis;
@@ -5936,6 +5972,38 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
                NULL,
                SCIPdialogExecMenu, NULL, NULL,
                SCIPconshdlrGetName(conshdlrs[i]), SCIPconshdlrGetDesc(conshdlrs[i]), TRUE, NULL) );
+         SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+         SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+      }
+   }
+
+   /* fix cutselection */
+   if( !SCIPdialogHasEntry(fixmenu, "cutselection") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+                                   NULL,
+                                   SCIPdialogExecMenu, NULL, NULL,
+                                   "cutselection", "fix parameters for cut selectors", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+   if( SCIPdialogFindEntry(fixmenu, "cutselection", &submenu) != 1 )
+   {
+      SCIPerrorMessage("cutselection sub menu not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   ncutsels = SCIPgetNCutsels(scip);
+   cutsels = SCIPgetCutsels(scip);
+
+   for( i = 0; i < ncutsels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPcutselGetName(cutsels[i])) )
+      {
+         SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+                                      NULL,
+                                      SCIPdialogExecMenu, NULL, NULL,
+                                      SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
