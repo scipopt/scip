@@ -1170,8 +1170,10 @@ SCIP_RETCODE delPseudoEdgeDeleteEdge(
    const int edge_pos = delPseudoGetEdgePosition(delpseudo);
    const int edge = delpseudo->edge;
    const int tail = g->tail[edge];
-   const int head = g->head[edge];
    int replacecount = 0;
+#ifndef NDEBUG
+   const int head = g->head[edge];
+#endif
 
    for( int i = 0; i < degree; i++ )
    {

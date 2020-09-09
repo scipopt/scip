@@ -235,15 +235,11 @@ void bdkGetCutoffs(
    const GRAPH* cliquegraph = bdk->cliquegraph;
    const int node_degree = bdk->node_degree;
    int edgecount = 0;
-   int todo; // why not < node_degree???
 
  //  printf("go degree=%d \n", bdk->node_degree);
 
-   for( int k = 0; k < STP_BDKIMP_MAXDEGREE - 1; k++ )
+   for( int k = 0; k < node_degree; k++ )
    {
-      if( k >= node_degree )
-         continue;
-
       for( int e = cliquegraph->outbeg[k]; e != EAT_LAST; e = cliquegraph->oeat[e] )
       {
          const int k2 = cliquegraph->head[e];
