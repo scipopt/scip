@@ -101,6 +101,7 @@
 
 // turn off messages for quad precision
 -emacro(644,SCIPquadprecSumQD)
+-emacro(644,SCIPquadprecSumQQ)
 -emacro(644,SCIPquadprecProdQD)
 -emacro(644,QUAD_ASSIGN)
 -emacro(644,QUAD_TO_DBL)
