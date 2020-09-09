@@ -35,6 +35,65 @@
 #include "portab.h"
 #include "extreduce.h"
 
+#ifndef NDEBUG
+/** recomputes simple reduced costs for current tree */
+static
+SCIP_Real getTreeRedcosts_dbg(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   root                /**< the root for the orientation */
+)
+{
+   const REDDATA* const reddata = extdata->reddata;
+   const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
+   const SCIP_Real* const redcost = reddata->redCosts;
+   const int* const tree_edges = extdata->tree_edges;
+   const int* const tree_leaves = extdata->tree_leaves;
+   const int tree_nedges = extdata->tree_nedges;
+   const int nleaves = extdata->tree_nleaves;
+   const int tree_root = extdata->tree_root;
+   SCIP_Real tree_redcost;
+
+   tree_redcost = reddata->rootToNodeDist[root];
+
+   for( int i = 0; i < nleaves; i++ )
+   {
+      const int leaf = tree_leaves[i];
+      if( leaf == root )
+         continue;
+
+      tree_redcost += nodeTo3TermsPaths[leaf].dist;
+   }
+
+   for( int i = 0; i < tree_nedges; i++ )
+   {
+      const int edge = tree_edges[i];
+      assert(edge >= 0 && edge < graph->edges);
+
+      tree_redcost += redcost[edge];
+      assert(LT(tree_redcost, FARAWAY));
+   }
+
+   for( int node = root; node != tree_root; node = extdata->tree_parentNode[node] )
+   {
+      int e;
+      const int parent = extdata->tree_parentNode[node];
+      assert(graph_knot_isInRange(graph, parent));
+
+      for( e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         if( graph->head[e] == parent )
+            break;
+      }
+
+      assert(e != EAT_LAST);
+      tree_redcost += redcost[e];
+      tree_redcost -= redcost[flipedge(e)];
+   }
+
+   return tree_redcost;
+}
+#endif
 
 
 /** insertion sort; todo
@@ -328,6 +387,11 @@ SCIP_Bool extTreeRedcostCutoff(
    {
       const int leaf = tree_leaves[i];
       const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(graph, extdata, leaf);
+
+     // printf("%f  >= %f \n", tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf));
+
+     // assert(GE(tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf)));
+
 
       if( allowEquality ? LT(tree_redcost_new, cutoff) : LE(tree_redcost_new, cutoff) )
       {
