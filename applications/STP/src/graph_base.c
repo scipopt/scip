@@ -29,7 +29,6 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                             */
-
 //#define SCIP_DEBUG
 
 #include "scip/misc.h"
@@ -146,6 +145,8 @@ SCIP_Bool isCutoffEdge(
 
    if( cutoffs == NULL )
       return FALSE;
+
+   assert(GE(cutoffs[cutoffidx], 0.0));
 
    newcost = ecostrev[edgeidx1] + ecost[edgeidx2] - prize;
 
@@ -1062,7 +1063,6 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
 {
    int* hasharr;
    int replacecount = 0;
-   int cutoffidx = 0;
    const int degree = delpseudo->degree;
    const int *incedge = delpseudo->incedge;
    const SCIP_Real *ecost = delpseudo->ecost;
@@ -1094,11 +1094,9 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
       {
          const int adjvertex = adjvert[i];
          const int iedge = incedge[i];
-         SCIP_Bool skipedge = isCutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, edge_pos, cutoffidx);
+         SCIP_Bool skipedge = isCutoffEdge(scip, cutoffs, cutoffsrev, ecost, ecostrev, vertexprize, i, edge_pos, i);
 
-         SCIPdebugMessage("in (degree=%d): %d->%d cutoff=%f \n", degree, tail, adjvertex, cutoffs[cutoffidx]);
-
-         cutoffidx++;
+         SCIPdebugMessage("in (degree=%d): %d->%d cutoff=%f \n", degree, tail, adjvertex, cutoffs[i]);
 
          assert((iedge / 2) != (edge / 2));
 
@@ -1137,6 +1135,10 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
                }
             }
          }
+      }
+      else
+      {
+         assert(EQ(cutoffs[i], -1.0));
       }
    }  /* neighbor loop */
 
@@ -2086,44 +2088,6 @@ SCIP_RETCODE graph_knot_contractLowdeg2High(
 }
 
 
-/** Pseudo deletes edge, i.e. reconnects tail of edge with neighbors of head; maximum degree of STP_DELPSEUDO_MAXGRAD!
- *  The orientation of the edge is important! */
-SCIP_RETCODE graph_edge_delPseudo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< the graph */
-   const SCIP_Real*      cutoffcosts,        /**< edge costs for cutoff */
-   const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
-   const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
-   int                   edge,               /**< the edge, mind the orientation! */
-   SCIP_Real*            edgecosts_adapt,    /**< costs to adapt or NULL */
-   SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
-   )
-{
-   DELPSEUDO delpseudo = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1.0, -1, -1, edge };
-
-   assert(scip && success && g);
-   assert(graph_edge_isInRange(g, edge));
-   assert(4 <= g->grad[g->head[edge]]);
-   assert(g->grad[g->head[edge]] <= STP_DELPSEUDO_MAXGRAD);
-   assert(delPseudoIsEdgeDeletionMode(&delpseudo));
-
-   *success = TRUE;
-
-   SCIP_CALL( delPseudoEdgeInit(scip, cutoffcosts, edgecosts_adapt, g, &delpseudo) );
-   SCIP_CALL( delPseudoEdgeGetReplaceEdges(scip, g, cutoffs, cutoffsrev, &delpseudo, success) );
-
-   /* enough spare edges? */
-   if( (*success) )
-   {
-      SCIP_CALL( delPseudoEdgeDeleteEdge(scip, g, edgecosts_adapt, &delpseudo) );
-   }
-
-   delPseudoFreeData(scip, &delpseudo);
-
-   return SCIP_OKAY;
-}
-
-
 /** redirects given edge eki */
 int graph_edge_redirect(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2471,6 +2435,43 @@ void graph_edge_delBlocked(
          graph_edge_del(scip, g, e * 2, freeancestors);
 }
 
+
+/** Pseudo deletes edge, i.e. reconnects tail of edge with neighbors of head; maximum degree of STP_DELPSEUDO_MAXGRAD!
+ *  The orientation of the edge is important! */
+SCIP_RETCODE graph_edge_delPseudo(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   const SCIP_Real*      cutoffcosts,        /**< edge costs for cutoff */
+   const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
+   const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
+   int                   edge,               /**< the edge, mind the orientation! */
+   SCIP_Real*            edgecosts_adapt,    /**< costs to adapt or NULL */
+   SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
+   )
+{
+   DELPSEUDO delpseudo = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1.0, -1, -1, edge };
+
+   assert(scip && success && g);
+   assert(graph_edge_isInRange(g, edge));
+   assert(4 <= g->grad[g->head[edge]]);
+   assert(g->grad[g->head[edge]] <= STP_DELPSEUDO_MAXGRAD);
+   assert(delPseudoIsEdgeDeletionMode(&delpseudo));
+
+   *success = TRUE;
+
+   SCIP_CALL( delPseudoEdgeInit(scip, cutoffcosts, edgecosts_adapt, g, &delpseudo) );
+   SCIP_CALL( delPseudoEdgeGetReplaceEdges(scip, g, cutoffs, cutoffsrev, &delpseudo, success) );
+
+   /* enough spare edges? */
+   if( (*success) )
+   {
+      SCIP_CALL( delPseudoEdgeDeleteEdge(scip, g, edgecosts_adapt, &delpseudo) );
+   }
+
+   delPseudoFreeData(scip, &delpseudo);
+
+   return SCIP_OKAY;
+}
 
 /** hide edge */
 void graph_edge_hide(

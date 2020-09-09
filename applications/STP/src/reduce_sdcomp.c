@@ -275,7 +275,11 @@ void bdkGetEdgeCutoffs(
    const int node_degree = bdk->node_degree;
    const int tail = g->tail[edge];
    int tail_pos = -1;
+#ifndef NDEBUG
    int edgecount = 0;
+   for( int k = 0; k < node_degree; k++ )
+      cutoffs[k] = -1.0;
+#endif
 
    for( int k = 0; k < node_degree; k++ )
    {
@@ -286,6 +290,8 @@ void bdkGetEdgeCutoffs(
       }
    }
 
+
+
    assert(tail_pos >= 0);
    assert(adjverts[tail_pos] == tail);
 
@@ -293,12 +299,17 @@ void bdkGetEdgeCutoffs(
    {
       const int k = cliquegraph->head[e];
 
-      if( k >= node_degree )
-         continue;
+      if( k < node_degree )
+      {
+         assert(EQ(cutoffs[k], -1.0));
+         cutoffs[k] = cliquegraph->cost[e];
 
-      cutoffs[edgecount++] = cliquegraph->cost[e];
+#ifndef NDEBUG
+         edgecount++;
+#endif
 
-      SCIPdebugMessage("%d->%d cutoff=%f \n", tail, adjverts[k], cliquegraph->cost[e]);
+         SCIPdebugMessage("%d->%d cutoff=%f \n", tail, adjverts[k], cliquegraph->cost[e]);
+      }
    }
 
    assert(edgecount == node_degree - 1);
