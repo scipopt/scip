@@ -1221,7 +1221,7 @@ SCIP_RETCODE delPseudoEdgeDeleteEdge(
                graph_edge_printInfo(g, newijedge);
 #endif
 
-               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, head, g) );
+               // todo add conflicts
             }
 
             /* does no original edge exist? */
