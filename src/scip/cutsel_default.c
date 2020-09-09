@@ -390,6 +390,7 @@ SCIP_RETCODE SCIPincludeCutselDefault(
    )
 {
    SCIP_CUTSELDATA* cutseldata;
+   SCIP_CUTSEL* cutsel;
 
    /* create default cut selector data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &cutseldata) );
@@ -398,21 +399,6 @@ SCIP_RETCODE SCIPincludeCutselDefault(
    cutseldata->goodscore = GOODSCORE;
    cutseldata->badscore  = BADSCORE;
 
-
-
-   /* include cut selector */
-   // TODO: change the 1 for 0 after you implement the setters
-#if 1
-   /* use SCIPincludeCutsel() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeCutsel(scip, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY,
-         cutselCopyDefault, cutselFreeDefault, cutselInitDefault, cutselExitDefault, cutselInitsolDefault, cutselExitsolDefault, cutselSelectDefault,
-         cutseldata) );
-#else
-   /* use SCIPincludeCutselBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectDefault,
             cutseldata) );
 
@@ -421,12 +407,11 @@ SCIP_RETCODE SCIPincludeCutselDefault(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetCutselCopy(scip, cutsel, cutselCopyDefault) );
 
-   //SCIP_CALL( SCIPsetCutselFree(scip, cutsel, cutselFreeDefault) );
-   //SCIP_CALL( SCIPsetCutselInit(scip, cutsel, cutselInitDefault) );
-   //SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitDefault) );
-   //SCIP_CALL( SCIPsetCutselInitsol(scip, cutsel, cutselInitsolDefault) );
-   //SCIP_CALL( SCIPsetCutselExitsol(scip, cutsel, cutselExitsolDefault) );
-#endif
+   SCIP_CALL( SCIPsetCutselFree(scip, cutsel, cutselFreeDefault) );
+   SCIP_CALL( SCIPsetCutselInit(scip, cutsel, cutselInitDefault) );
+   SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitDefault) );
+   SCIP_CALL( SCIPsetCutselInitsol(scip, cutsel, cutselInitsolDefault) );
+   SCIP_CALL( SCIPsetCutselExitsol(scip, cutsel, cutselExitsolDefault) );
 
    /* add default cut selector parameters */
    SCIP_CALL( SCIPaddRealParam(scip,

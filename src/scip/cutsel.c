@@ -215,17 +215,6 @@ SCIP_RETCODE SCIPcutselCopyInclude(
    return SCIP_OKAY;
 }
 
-/** sets copy method of cut selector */
-void SCIPcutselSetCopy(
-   SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
-   )
-{
-   assert(cutsel != NULL);
-
-   cutsel->cutselcopy = cutselcopy;
-}
-
 /** frees memory of cut selector */
 SCIP_RETCODE SCIPcutselFree(
    SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
@@ -343,6 +332,86 @@ int SCIPcutselGetPriority(
    return cutsel->priority;
 }
 
+/** enables or disables all clocks of \p cutsel, depending on the value of the flag */
+void SCIPcutselEnableOrDisableClocks(
+   SCIP_CUTSEL*          cutsel,             /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   )
+{
+   assert(cutsel != NULL);
+
+   SCIPclockEnableOrDisable(cutsel->setuptime, enable);
+   SCIPclockEnableOrDisable(cutsel->cutseltime, enable);
+}
+
+/* new callback/method setter methods */
+
+/** sets copy method of cut selector */
+void SCIPcutselSetCopy(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutselcopy = cutselcopy;
+}
+
+/** sets destructor method of cut selector */
+void SCIPcutselSetFree(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELFREE  ((*cutselfree))  /**< destructor of cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutselfree = cutselfree;
+}
+
+/** sets initialization method of cut selector */
+void SCIPcutselSetInit(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELINIT  ((*cutselinit))  /**< initialize cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutselinit = cutselinit;
+}
+
+/** sets deinitialization method of cut selector */
+void SCIPcutselSetExit(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELEXIT  ((*cutselexit))     /**< deinitialize cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutselexit = cutselexit;
+}
+
+/** sets solving process initialization method of cut selector */
+void SCIPcutselSetInitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELINITSOL ((*cutselinitsol))/**< solving process initialization method of cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutselinitsol = cutselinitsol;
+}
+
+/** sets solving process deinitialization method of cut selector */
+void SCIPcutselSetExitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELEXITSOL ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   cutsel->cutselexitsol = cutselexitsol;
+}
+
 /** sets priority of cut selector */
 void SCIPcutselSetPriority(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
@@ -355,4 +424,14 @@ void SCIPcutselSetPriority(
 
    cutsel->priority = priority;
    //set->cutsel = NULL;
+}
+
+/** is node selector initialized? */
+SCIP_Bool SCIPcutselIsInitialized(
+   SCIP_CUTSEL*          cutsel               /**< cut selector */
+)
+{
+   assert(cutsel != NULL);
+
+   return cutsel->initialized;
 }

@@ -61,6 +61,12 @@ const char* SCIPcutselGetName(
    SCIP_CUTSEL*         cutsel             /**< cut selector */
    );
 
+/** enables or disables all clocks of \p cutsel, depending on the value of the flag */
+void SCIPcutselEnableOrDisableClocks(
+   SCIP_CUTSEL*          cutsel,             /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   );
+
 /** calls cut selectors to select cuts */
 SCIP_RETCODE SCIPcutselsSelect(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -100,19 +106,37 @@ SCIP_RETCODE SCIPcutselExit(
 SCIP_RETCODE SCIPcutselFree(
         SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
         SCIP_SET*             set                 /**< global SCIP settings */
-);
+   );
 
 /** sets destructor method of cut selector */
 void SCIPcutselSetFree(
         SCIP_CUTSEL*          cutsel,             /**< cut selector */
         SCIP_DECL_CUTSELFREE  ((*cutselfree))    /**< destructor of cut selector */
-);
+   );
 
 /** sets initialization method of cut selector */
 void SCIPcutselSetInit(
         SCIP_CUTSEL*          cutsel,             /**< cut selector */
         SCIP_DECL_CUTSELINIT  ((*cutselinit))     /**< initialize cut selector */
-);
+   );
+
+/** sets deinitialization method of cut selector */
+void SCIPcutselSetExit(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELEXIT  ((*cutselexit))     /**< deinitialize cut selector */
+   );
+
+/** sets solving process initialization method of cut selector */
+void SCIPcutselSetInitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELINITSOL ((*cutselinitsol))/**< solving process initialization method of cut selector */
+   );
+
+/** sets solving process deinitialization method of cut selector */
+void SCIPcutselSetExitsol(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELEXITSOL ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
+   );
 
 #ifdef __cplusplus
 }

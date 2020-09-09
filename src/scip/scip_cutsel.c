@@ -116,7 +116,7 @@ SCIP_RETCODE SCIPsetCutselCopy(
         SCIP*                 scip,               /**< SCIP data structure */
         SCIP_CUTSEL*          cutsel,             /**< cut selector */
         SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
-)
+   )
 {
     SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -127,6 +127,85 @@ SCIP_RETCODE SCIPsetCutselCopy(
     return SCIP_OKAY;
 }
 
+/** sets destructor method of cut selector */
+SCIP_RETCODE SCIPsetCutselFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELFREE  ((*cutselfree))    /**< destructor of cut selector */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(cutsel != NULL);
+
+   SCIPcutselSetFree(cutsel, cutselfree);
+
+   return SCIP_OKAY;
+}
+
+/** sets initialization method of cut selector */
+SCIP_RETCODE SCIPsetCutselInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELINIT ((*cutselinit))     /**< initialize node selector */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(cutsel != NULL);
+
+   SCIPcutselSetInit(cutsel, cutselinit);
+
+   return SCIP_OKAY;
+}
+
+/** sets deinitialization method of cut selector */
+SCIP_RETCODE SCIPsetCutselExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELEXIT  ((*cutselexit))     /**< deinitialize cut selector */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselExit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(cutsel != NULL);
+
+   SCIPcutselSetExit(cutsel, cutselexit);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process initialization method of cut selector */
+SCIP_RETCODE SCIPsetCutselInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELINITSOL  ((*cutselinitsol))/**< solving process initialization method of cut selector */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(cutsel != NULL);
+
+   SCIPcutselSetInitsol(cutsel, cutselinitsol);
+
+   return SCIP_OKAY;
+}
+
+/** sets solving process deinitialization method of cut selector */
+SCIP_RETCODE SCIPsetCutselExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELEXITSOL  ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(cutsel != NULL);
+
+   SCIPcutselSetExitsol(cutsel, cutselexitsol);
+
+   return SCIP_OKAY;
+}
 
 /** returns the cut selector of the given name, or NULL if not existing */
 SCIP_CUTSEL* SCIPfindCutsel(
