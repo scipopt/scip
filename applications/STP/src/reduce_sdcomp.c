@@ -35,7 +35,7 @@
 #include "scip/scip.h"
 #include "portab.h"
 
-
+#define STP_BDK_WITH_EDGEREPLACINGS FALSE
 #define STP_BDKIMP_MAXDEGREE 7
 #define STP_BDKIMP_MAXNEDGES 21
 
@@ -57,6 +57,7 @@ typedef struct bottleneck_distance_storage
    const SDPROFIT*       sdprofit;           /**< non-owned! */
    int                   node_degree;        /**< degree of current node */
    int                   star_degree;        /**< degree of star */
+   SCIP_Bool             doEdgeReplacement;  /**< try to replace edges as well? */
 } BDK;
 
 
@@ -76,6 +77,7 @@ SCIP_RETCODE bdkInit(
 
    assert(reduce_sdgraphHasMstHalfMark(sdistance->sdgraph));
 
+   bdk_d->doEdgeReplacement = STP_BDK_WITH_EDGEREPLACINGS;
    bdk_d->sdistance = sdistance;
    bdk_d->node_degree = -1;
    bdk_d->star_degree = -1;
@@ -695,6 +697,7 @@ SCIP_RETCODE bdkTryDegGe4(
 )
 {
    STAR* const star = bdk->star;
+   const SCIP_Bool doEdgeReplacement = bdk->doEdgeReplacement;
    SCIP_Bool nodeIsReplacable = TRUE;
    SCIP_Bool isDeleted = FALSE;
 
@@ -722,6 +725,10 @@ SCIP_RETCODE bdkTryDegGe4(
       {
          SCIPdebugMessage("...not deletable \n");
          nodeIsReplacable = FALSE;
+
+         if( !doEdgeReplacement )
+            break;
+
          reduce_starCurrentSetFailed(star);
       }
 
@@ -745,7 +752,7 @@ SCIP_RETCODE bdkTryDegGe4(
          SCIPdebugMessage("BD%d-implied reduction of node %d \n ", bdk->node_degree, node);
    }
 
-   if( !isDeleted && reduce_starHasPromisingEdges(star) )
+   if( doEdgeReplacement && !isDeleted && reduce_starHasPromisingEdges(star) )
    {
       SCIP_Real cutoffs[STP_BDKIMP_MAXDEGREE];
       int ndeledges;
