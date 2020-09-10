@@ -1125,6 +1125,9 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
 
                assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
+               /* NOTE: the new arc vert->ver2 is cut off if its (combined) reduced cost
+                * is greater than cutoffs[edgecount].
+                * Analogously for the reverse arc.  */
                cutoffs[edgecount] = cutoffbound - (rootToNodeDist[vert] + nodeTo3TermsPaths[vert2].dist);
                cutoffsrev[edgecount] = cutoffbound - (rootToNodeDist[vert2] + nodeTo3TermsPaths[vert].dist);
 
@@ -1139,6 +1142,9 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
          graph_knot_printInfo(graph, k);
 #endif
 
+         {
+            int todo; // try to give redcost as well and dont do the node touch check!
+         }
          /* now try to eliminate */
          SCIP_CALL( graph_knot_delPseudo(scip, graph, redcost, cutoffs, cutoffsrev, k, NULL, &success) );
 

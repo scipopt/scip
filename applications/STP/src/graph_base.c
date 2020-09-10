@@ -146,8 +146,6 @@ SCIP_Bool isCutoffEdge(
    if( cutoffs == NULL )
       return FALSE;
 
-   assert(GE(cutoffs[cutoffidx], 0.0));
-
    newcost = ecostrev[edgeidx1] + ecost[edgeidx2] - prize;
 
    if( !SCIPisGT(scip, newcost, cutoffs[cutoffidx]) )
