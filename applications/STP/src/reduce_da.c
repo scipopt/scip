@@ -96,6 +96,28 @@ void setCutoff(
 }
 
 
+/** increases reduced cost for deleted arcs */
+static
+void redcostIncreaseOnDeletedArcs(
+   const GRAPH*          graph,              /**< graph */
+   const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
+   REDCOST*              redcostdata         /**< reduced cost data */
+)
+{
+   SCIP_Real* redEdgeCost = redcostdata->redEdgeCost;
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Real offset = 2.0 * redcostdata->cutoff + 1.0;
+
+   assert(GE(offset, 1.0));
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      if( arcsdeleted[i] )
+         redEdgeCost[i] += offset;
+   }
+}
+
+
 /** returns maximum allowed deviation for dual-ascent */
 static
 SCIP_Real getDaMaxDeviation(
@@ -2528,8 +2550,9 @@ SCIP_RETCODE reduce_da(
          if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) )
          {
             int extfixed;
+            redcostIncreaseOnDeletedArcs(graph, arcsdeleted, &redcostdata);
 
-            SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, arcsdeleted, &extfixed) );
+            SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
             ndeletions += extfixed;
 //#define EXT_WRITE
          //   graph_printInfo(graph);

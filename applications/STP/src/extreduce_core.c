@@ -668,11 +668,38 @@ SCIP_Bool extTreeRuleOutPeriph(
    EXTDATA*              extdata             /**< extension data */
 )
 {
+#ifdef EXT_PRINT_STATS
+   static SCIP_Longint mst = 0;
+   static SCIP_Longint red = 0;
+#endif
+
    if( extreduce_redcostRuleOutPeriph(graph, extdata) )
+   {
+#ifdef EXT_PRINT_STATS
+      red++;
+      if( red % 10000 == 0 )
+      {
+         printf("rule-out-red=%lld \n", red);
+         printf("rule-out-mst=%lld \n", mst);
+      }
+#endif
+
       return TRUE;
+   }
 
    if( extreduce_mstRuleOutPeriph(scip, graph, extdata) )
+   {
+#ifdef EXT_PRINT_STATS
+      mst++;
+      if( mst % 10000 == 0 )
+      {
+         printf("rule-out-red=%lld \n", red);
+         printf("rule-out-mst=%lld \n", mst);
+      }
+#endif
+
       return TRUE;
+   }
 
    return FALSE;
 }

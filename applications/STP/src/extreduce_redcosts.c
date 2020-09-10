@@ -389,9 +389,7 @@ SCIP_Bool extTreeRedcostCutoff(
       const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(graph, extdata, leaf);
 
      // printf("%f  >= %f \n", tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf));
-
-     // assert(GE(tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf)));
-
+      assert(GE(tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf)));
 
       if( allowEquality ? LT(tree_redcost_new, cutoff) : LE(tree_redcost_new, cutoff) )
       {

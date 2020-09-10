@@ -237,6 +237,12 @@ SCIP_Bool extreduce_extPermaIsClean(
 
    assert(extperm);
 
+   if( extperm->edgedeleted )
+   {
+      SCIPdebugMessage("use of edge-deleted array is deprecated! \n");
+      return FALSE;
+   }
+
    bottleneckDistNode = extperm->bottleneckDistNode;
    pcSdToNode = extperm->pcSdToNode;
    tree_deg = extperm->tree_deg;

@@ -559,7 +559,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    DISTDATA distdata;
    EXTPERMA extpermanent;
 
-   assert(scip && redcostdata && edgedeletable);
+   assert(scip && redcostdata);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
 
    *nelims = 0;
