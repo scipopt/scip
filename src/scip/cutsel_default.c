@@ -65,8 +65,6 @@ struct SCIP_CutselData
    SCIP_Real             efficacyweight;     /**< weight of efficacy in cut score calculation */
    SCIP_Real             dircutoffdistweight;/**< weight of directed cutoff distance in cut score calculation */
    SCIP_Real             intsupportweight;   /**< weight of integral support in cut score calculation */
-   SCIP_Real             goodmaxparall;      /**< maximum parallelism for good cuts */
-   SCIP_Real             maxparall;          /**< maximum parallelism for non-good cuts */
    SCIP_Real             minortho;           /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             minorthoroot;       /**< minimal orthogonality for a cut to enter the LP in the root node */
    //TODO: maybe this information should be asked from some global info

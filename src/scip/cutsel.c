@@ -43,6 +43,22 @@
 #include "scip/struct_cutsel.h"
 #include "scip/struct_scip.h"
 
+
+/** method to call, when the priority of a cut selector was changed */
+static
+SCIP_DECL_PARAMCHGD(paramChgdCutselPriority)
+{  /*lint --e{715}*/
+   SCIP_PARAMDATA* paramdata;
+
+   paramdata = SCIPparamGetData(param);
+   assert(paramdata != NULL);
+
+   /* use SCIPsetCutselPriority() to mark the sepas unsorted */
+   SCIP_CALL( SCIPsetCutselPriority(scip, (SCIP_CUTSEL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
+
+   return SCIP_OKAY;
+}
+
 /** internal method for creating a cut selector */
 static
 SCIP_RETCODE doCutselCreate(
@@ -63,8 +79,8 @@ SCIP_RETCODE doCutselCreate(
    SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
    )
 {
-   //char paramname[SCIP_MAXSTRLEN];
-   //char paramdesc[SCIP_MAXSTRLEN];
+   char paramname[SCIP_MAXSTRLEN];
+   char paramdesc[SCIP_MAXSTRLEN];
 
    assert(cutsel != NULL);
    assert(name != NULL);
@@ -92,12 +108,12 @@ SCIP_RETCODE doCutselCreate(
    SCIP_CALL( SCIPclockCreate(&(*cutsel)->cutseltime, SCIP_CLOCKTYPE_DEFAULT) );
 
    // TODO
-   ///* add parameters */
-   //(void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "cutselection/%s/priority", name);
-   //(void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of cut selection rule <%s>", name);
-   //SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-   //               &(*cutsel)->priority, FALSE, priority, INT_MIN/4, INT_MAX/2,
-   //               paramChgdCutselPriority, (SCIP_PARAMDATA*)(*cutsel)) ); /*lint !e740*/
+   /* add parameters */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "cutselection/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of cut selection rule <%s>", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*cutsel)->priority, FALSE, priority, INT_MIN/4, INT_MAX/2,
+                  paramChgdCutselPriority, (SCIP_PARAMDATA*)(*cutsel)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -374,7 +390,7 @@ SCIP_CUTSELDATA* SCIPcutselGetData(
 /** gets priority of cut selector */
 int SCIPcutselGetPriority(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 

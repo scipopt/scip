@@ -243,6 +243,21 @@ int SCIPgetNCutsels(
    return scip->set->ncutsels;
 }
 
+/** sets the priority of a cut selector */
+SCIP_RETCODE SCIPsetCutselPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   int                   priority            /**< new priority of the separator */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIPcutselSetPriority(cutsel, scip->set, priority);
+
+   return SCIP_OKAY;
+}
+
 
 #ifdef TODO // adapt the code below
 /** Creates a node selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental

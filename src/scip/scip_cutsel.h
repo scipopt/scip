@@ -141,6 +141,13 @@ int SCIPgetNCutsels(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets the priority of a cut selector */
+SCIP_RETCODE SCIPsetCutselPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   int                   priority            /**< new priority of the separator */
+   );
+
 
 /** @} */
 

@@ -109,13 +109,13 @@ SCIP_RETCODE SCIPcutselFree(
         SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** informs cut selector that process is being started */
+/** informs cut selector that the branch and bound process is being started */
 SCIP_RETCODE SCIPcutselInitsol(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** informs cut selector that process data is being freed */
+/** informs cut selector that the branch and bound process is being started */
 SCIP_RETCODE SCIPcutselExitsol(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -149,6 +149,18 @@ void SCIPcutselSetInitsol(
 void SCIPcutselSetExitsol(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELEXITSOL ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
+   );
+
+/** sets priority of cut selector */
+void SCIPcutselSetPriority(
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   priority            /**< new priority of the cut selector */
+   );
+
+/** gets priority of cut selector */
+int SCIPcutselGetPriority(
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
    );
 
 #ifdef __cplusplus
