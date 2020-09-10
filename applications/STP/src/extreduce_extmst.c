@@ -48,7 +48,7 @@
 #include "portab.h"
 #include "extreduce.h"
 
-#define EXT_PC_SDMAXVISITS 10  /**< maximum visits for PC specific SD computation */
+#define EXT_PC_SDMAXVISITS 20  /**< maximum visits for PC specific SD computation */
 #define EXT_DOUBLESD_ALWAYS
 
 typedef struct mst_extension_tree_component
@@ -62,6 +62,7 @@ typedef struct mst_extension_tree_component
    int                   comp_size;          /**< size of component */
    SCIP_Bool             isExtended;         /**< mst_new already extended? */
 } MSTXCOMP;
+
 
 /** returns special distance computed only for PC and for current leaf */
 static inline
@@ -85,7 +86,6 @@ void extGetSdPcUpdate(
       *sd = sdpc;
    }
 }
-
 
 
 /** Returns special distance.
@@ -1351,12 +1351,9 @@ SCIP_Bool bottleneckToSiblingIsDominated(
 }
 
 
-// todo check here always the bottleneck distances to some or all internal tree
-// nodes. Apart from the base! Need to keep them in a list similar to the leaves!
-
-/** checks tree bottleneck distances to non-leaves of the tree */
+/** checks tree bottleneck distances to non-leaves of the tree that were marked before */
 static inline
-void bottleneckCheckNonLeaves(
+void bottleneckCheckNonLeaves_pc(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
@@ -1395,6 +1392,45 @@ void bottleneckCheckNonLeaves(
          SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
          *ruledOut = TRUE;
 
+         return;
+      }
+   }
+}
+
+
+/** checks tree bottleneck distances to non-leaves of the tree */
+static inline
+void bottleneckCheckNonLeaves(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Bool*            ruledOut            /**< could the extension be ruled out */
+)
+{
+   const int* const innerNodes = extdata->tree_innerNodes;
+   const int nInnerNodes = extdata->tree_ninnerNodes;
+   const int neighbor = graph->head[edge2neighbor];
+   const int neighbor_base = graph->tail[edge2neighbor];
+
+   assert(ruledOut);
+   assert(!(*ruledOut));
+
+   /* also check non-leaves */
+   for( int i = 0; i < nInnerNodes; i++ )
+   {
+      SCIP_Real specialDist;
+      const int node = innerNodes[i];
+      assert(graph_knot_isInRange(graph, node));
+      assert(extdata->tree_deg[node] > 1);
+      assert(node != neighbor_base);
+
+      specialDist = extGetSd(scip, graph, neighbor, node, extdata);
+
+      if( bottleneckWithExtedgeIsDominated(scip, graph, edge2neighbor, neighbor_base, node, specialDist, extdata) )
+      {
+         SCIPdebugMessage("---non-leaf bottleneck rule-out---\n");
+         *ruledOut = TRUE;
          return;
       }
    }
@@ -2235,12 +2271,19 @@ void extreduce_mstLevelVerticalAddLeaf(
       mstLevelLeafTryExtMst(scip, graph, neighbor, extdata, leafRuledOut);
    }
 
-   /* if not yet ruled out, try bottleneck distances to non-leaves of the tree */
-   // todo do this also for STP!
+   /* if not yet ruled out and in PC mode, try bottleneck distances to tree vertices marked before */
    if( isPc && !(*leafRuledOut) )
+   {
+      bottleneckCheckNonLeaves_pc(scip, graph, edge2neighbor, extdata, leafRuledOut);
+   }
+
+#if 1
+   /* if not yet ruled out, try bottleneck distances to non-leaves of the tree */
+   if( !(*leafRuledOut) )
    {
       bottleneckCheckNonLeaves(scip, graph, edge2neighbor, extdata, leafRuledOut);
    }
+#endif
 
    mstLevelLeafExit(graph, neighbor_base, neighbor, *leafRuledOut, extdata);
 }
