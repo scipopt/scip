@@ -1018,9 +1018,9 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    ncovered = 0;
    ncoveredpart = 0;
 
-   /* array storing index of orbitope row a variable is contained in */
    nprobvars = SCIPgetNTotalVars(scip);
 
+   /* array storing index of orbitope row a variable is contained in */
    SCIP_CALL( SCIPallocBufferArray(scip, &rowidxvar, nprobvars) );
 
    for (i = 0; i < nprobvars; ++i)
@@ -1030,7 +1030,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    {
       for (j = 0; j < ncols; ++j)
       {
-         assert( SCIPvarGetIndex(vars[i][j]) >= 0 && SCIPvarGetIndex(vars[i][j]) < nprobvars );
+         assert( 0 <= SCIPvarGetIndex(vars[i][j]) && SCIPvarGetIndex(vars[i][j]) < nprobvars );
          rowidxvar[SCIPvarGetIndex(vars[i][j])] = i;
       }
    }
@@ -1048,7 +1048,6 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    {
       int nsetppcvars;
       SCIP_VAR** setppcvars;
-      SCIP_VAR* var;
       int nrowintersect = 0;
       int nvarsinorbitope;
 
@@ -1056,7 +1055,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
       if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
          continue;
 
-      /* get set packing/partitioning variables */
+      /* get number of set packing/partitioning variables */
       nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
 
       /* constraint does not contain enough variables */
@@ -1075,14 +1074,14 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
        */
       for (i = 0; i < nsetppcvars && nvarsinorbitope >= ncols; ++i)
       {
+         SCIP_VAR* var;
          int idx;
          int rowidx;
 
          var = setppcvars[i];
          idx = SCIPvarGetIndex(var);
 
-         assert( idx < nprobvars );
-         assert( idx >= 0 );
+         assert( 0 <= idx && idx < nprobvars );
 
          rowidx = rowidxvar[idx];
 
