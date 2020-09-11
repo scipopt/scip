@@ -1102,7 +1102,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
          /* store information which rows intersect the setppc cons's support */
          if ( rowcoveragesetppc[rowidx] == 0 )
             rowsinsetppc[nrowintersect++] = rowidx;
-         rowcoveragesetppc[rowidx] += 1;
+         ++(rowcoveragesetppc[rowidx]);
 
          /* we can stop early if not enough variables are left to completely cover one of the rows that
           * intersect the setppc cons
@@ -1148,8 +1148,10 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
       else
          *type = SCIP_ORBITOPETYPE_PACKING;
    }
+
    if ( npprows != NULL )
       *npprows = ncovered;
+
    if ( pprows != NULL )
    {
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, pprows, nrows) );
