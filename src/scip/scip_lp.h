@@ -1758,17 +1758,16 @@ SCIP_Bool SCIPinDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
- *  based on the changes applied when reducing the problem to the optimal face
+/** computes the changes to the problem when fixing to the optimal face
  *
- *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
- *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
+ *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLPDualDegeneracy(
+SCIP_RETCODE SCIPgetLPDegeneracy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
-   SCIP_Real*            varconsratio        /**< pointer to store the variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
+   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
    );
 
 /**@} */

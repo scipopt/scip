@@ -787,7 +787,7 @@ SCIP_RETCODE checkExec(
       SCIP_Real degeneracy;
       SCIP_Real varconsratio;
 
-      SCIP_CALL( SCIPgetLPDualDegeneracy(scip, &degeneracy, &varconsratio) );
+      SCIP_CALL( SCIPgetLPDegeneracy(scip, &degeneracy, &varconsratio) );
 
       SCIPdebugMsg(scip, "degeneracy: %.2f ratio: %.2f\n", degeneracy, varconsratio);
 

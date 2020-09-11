@@ -36,11 +36,6 @@ extern "C" {
 
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
 
-/** symmetry timings */
-#define SYM_COMPUTETIMING_BEFOREPRESOL    0  /**< compute symmetries before presolving */
-#define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
-#define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
-
 /** define sense of rhs */
 enum SYM_Rhssense
 {
@@ -59,8 +54,6 @@ typedef enum SYM_Rhssense SYM_RHSSENSE;
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
 #define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
 #define SYM_HANDLETYPE_ORBITALFIXING    UINT32_C(0x00000002)  /**< orbital fixing */
-#define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
-#define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)
 
 typedef uint32_t SYM_HANDLETYPE;        /**< type of symmetry handling */
 

@@ -77,7 +77,7 @@
  *
  * \verbinclude output.log
  *
- * @version  7.0.1.3
+ * @version  7.0.2
  *
  * \image html scippy.png
  */
@@ -169,8 +169,17 @@
  * This chapter is a detailed guide to the installation procedure of SCIP.
  *
  * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator. For new users, we strongly
- * recommend to use CMake, if available on their targeted platform.
+ * or the CMake cross platform build system generator.
+ *
+ * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
+ *
+ * Which one you choose depends on you use case and your level of expertise.
+ * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
+ * <b>This is highly recommended for new users.</b>
+ * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ *
+ * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
  * Please note that there are differences between both systems, most notably, the generated
  * library libscip will not be compatible between the versions. For more information, we
@@ -357,6 +366,7 @@
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
  *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
  *          <li>Compile with <code>FILTERSQP=true</code> for better performance.</li>
+ *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
  *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated in the file formats
@@ -584,7 +594,7 @@
  *
  * ```
  * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
- * cmake --build build
+ * cmake --build build --config Release
  * ```
  *
  * Linux/macOS Makefile-based build instructions:
@@ -725,6 +735,8 @@
 
 /**@page MAKE Makefiles / Installation information
  *
+ * <b>Please note, that the Makefile system is not actively maintained anymore.
+ * If possible, please use \ref CMAKE "the cmake system".</b>
  *
  * In most cases (LINUX and MAC) it is quite easy to compile and install \SCIP. Therefore, reading the section
  * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find a
@@ -733,8 +745,8 @@
  *
  * @section BRIEFINSTALL Brief installation description
  *
- * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL. For
- * that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
+ * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
+ * For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
  * to specify any directories, the compiling process is fully automated).
  *
  * Compiling \SCIP directly can be done as follows:
@@ -811,6 +823,8 @@
  * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
  *
  * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
+ *
+ * - <code>GAMS=\<true|false\></code> Enable or disable (default) reading functionality in GAMS reader (needs GAMS).
  *
  * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal \SCIP block and buffer memory off or on (default).
  *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
@@ -7650,8 +7664,8 @@
   * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
   * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
   * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface is available <a
-  * href="https://github.com/coin-or/GAMSlinks">here</a>.
+  * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
+  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
   *
   * The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI project</a> by Jonathan Currie provides an external
   * MATLAB interface for the \SCIP Optimization Suite. Furthermore,
@@ -8232,6 +8246,7 @@
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
  * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
+ * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>
  * <tr><td>\ref reader_mps.h "MPS format"</td> <td>for mixed-integer (quadratically constrained quadratic) programs</td></tr>
  * <tr><td>\ref reader_opb.h "OPB format"</td> <td>for pseudo-Boolean optimization instances</td></tr>
