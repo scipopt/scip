@@ -4850,7 +4850,6 @@ SCIP_RETCODE canonicalizeConstraints(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_CONSEXPR_ITERATOR* it;
    int* nlockspos;
    int* nlocksneg;
    SCIP_Bool havechange;
@@ -4870,8 +4869,6 @@ SCIP_RETCODE canonicalizeConstraints(
    ++(conshdlrdata->ncanonicalizecalls);
 
    SCIP_CALL( SCIPstartClock(scip, conshdlrdata->canonicalizetime) );
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
    *infeasible = FALSE;
 
@@ -4918,6 +4915,9 @@ SCIP_RETCODE canonicalizeConstraints(
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSEXPR_ITERATOR* it;
+
+      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -4929,6 +4929,7 @@ SCIP_RETCODE canonicalizeConstraints(
          assert(expr->nlocksneg == 0);
          assert(expr->nlockspos == 0);
       }
+      SCIPexpriteratorFree(&it);
    }
 #endif
 
@@ -5125,7 +5126,6 @@ SCIP_RETCODE canonicalizeConstraints(
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &nlocksneg);
    SCIPfreeBufferArray(scip, &nlockspos);
-   SCIPexpriteratorFree(&it);
 
    SCIP_CALL( SCIPstopClock(scip, conshdlrdata->canonicalizetime) );
 
