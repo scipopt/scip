@@ -2385,10 +2385,6 @@ SCIP_Bool isRestartApplicable(
    if( eventhdlrdata->restartlimit != -1 && eventhdlrdata->nrestartsperformed >= eventhdlrdata->restartlimit )
       return FALSE;
 
-   /* check whether orbital fixing is active */
-   if ( SCIPgetSymmetryNGenerators(scip) > 0 && SCIPisOrbitalfixingEnabled(scip) )
-      return FALSE;
-
    /* check if number of nodes exceeds the minimum number of nodes */
    if( eventhdlrdata->countonlyleaves )
       nnodes = eventhdlrdata->treedata->nleaves;

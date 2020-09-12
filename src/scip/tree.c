@@ -4033,11 +4033,8 @@ SCIP_RETCODE focusnodeToFork(
       SCIP_CALL( SCIPlpCleanupNew(lp, blkmem, set, stat, eventqueue, eventfilter, (tree->focusnode->depth == 0)) );
 
       /* resolve LP after cleaning up */
-      if( !lp->solved || !lp->flushed )
-      {
-         SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
-      }
+      SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
    }
    assert(lp->flushed);
    assert(lp->solved || lperror || lp->resolvelperror);
@@ -4157,11 +4154,8 @@ SCIP_RETCODE focusnodeToSubroot(
       }
 
       /* resolve LP after cleaning up */
-      if( !lp->solved || !lp->flushed )
-      {
-         SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
-         SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
-      }
+      SCIPsetDebugMsg(set, "resolving LP after cleanup\n");
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, TRUE, &lperror) );
    }
    assert(lp->flushed);
    assert(lp->solved || lperror);

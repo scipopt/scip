@@ -77,10 +77,11 @@ BINID           =       $(notdir $(EXECUTABLE))
 OUTPUTDIR       =       results
 CLUSTERNODES    =       all
 SLURMACCOUNT    =       default
+GAMS		=	gams
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=	7.0.2
+SCIP_VERSION	=	7.0.1.3
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -136,7 +137,6 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 WORHPOPT	=	opt
 LPSCHECK        =	false
-GAMS		=	false
 
 # compiler and linker parameters
 CC		=	gcc
@@ -630,10 +630,6 @@ endif
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP
 NLPILIBSHORTNAMECPPAD = .cppad
-endif
-
-ifeq ($(GAMS),true)
-LDFLAGS		+=	-ldl -lpthread
 endif
 
 #-----------------------------------------------------------------------------
