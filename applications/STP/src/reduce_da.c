@@ -2538,14 +2538,6 @@ SCIP_RETCODE reduce_da(
             ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
-         // todo don't call anymore!
-         if( extended && !isRpcmw )
-         {
-            int extfixed = reduce_extendedEdge(scip, graph, redcostdata.nodeTo3TermsPaths, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, (havenewsol ? result : NULL), cutoffbound, redcostdata.redCostRoot, arcsdeleted, FALSE);
-            ndeletions += extfixed;
-        //    printf("newly fixedFIRST =%d \n", extfixed);
-         }
-
          // todo call this methods fewer times, at the end maybe
          if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) )
          {
@@ -2575,7 +2567,7 @@ SCIP_RETCODE reduce_da(
 
          if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
          {
-            SCIP_CALL( updateNodeReplaceBounds(scip, &redcostdata, graph, nodereplacebounds, upperbound, (run == 0), extended && !isRpcmw));
+            SCIP_CALL( updateNodeReplaceBounds(scip, &redcostdata, graph, nodereplacebounds, upperbound, (run == 0), FALSE));
          }
 
          if( ndeletions > 0 && !isRpcmw )
