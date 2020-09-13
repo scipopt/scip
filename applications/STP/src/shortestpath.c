@@ -238,7 +238,7 @@ void computeSteinerTree_exec(
             const SCIP_Real distnew = k_dist + cost_csr[e];
 
             /* closer to k than to current predecessor? */
-            if( distnew < nodes_dist[m] )
+            if( LT(distnew, nodes_dist[m]) )
             {
                nodes_pred[m] = k;
                nodes_dist[m] = distnew;
@@ -423,7 +423,7 @@ void computeSteinerTree_execPcMw(
             const SCIP_Real distnew = k_dist + cost_csr[e];
 
             /* closer to k than to current predecessor? */
-            if( distnew < nodes_dist[m] )
+            if( LT(distnew, nodes_dist[m]) )
             {
                nodes_pred[m] = k;
                nodes_dist[m] = distnew;
@@ -614,7 +614,7 @@ void computeSteinerTree_execPcMwFull(
             const SCIP_Real distnew = k_dist + cost_csr[e];
 
             /* closer to k than to current predecessor? */
-            if( distnew < nodes_dist[m] )
+            if( LT(distnew, nodes_dist[m]) )
             {
                nodes_pred[m] = k;
                nodes_dist[m] = distnew;

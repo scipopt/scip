@@ -183,7 +183,7 @@ void vnoiCompute(
             const SCIP_Real newdist = nodes_dist[k] + gCost[e];
 
             /* check whether the path (to m) including k is shorter than the so far best known */
-            if( nodes_dist[m] > newdist )
+            if( GT(nodes_dist[m], newdist) )
             {
                graph_heap_correct(m, newdist, dheap);
                nodes_pred[m] = e;

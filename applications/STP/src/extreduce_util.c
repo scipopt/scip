@@ -751,7 +751,7 @@ SCIP_RETCODE closeNodesRunCompute(
 
             assert(GE(distnew, 0.0));
 
-            if( distnew < dist[m] )
+            if( LT(distnew, dist[m]) )
             {
                if( !visited[m] )
                {
