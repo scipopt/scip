@@ -257,6 +257,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool                reformbinprods;  /**< whether to reformulate products of binary variables during presolving */
    SCIP_Bool                reformbinprodsand;/**< whether to use the AND constraint handler for reformulating binary products */
    int                      reformbinprodsfac; /**< minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled) */
+   SCIP_Bool                forbidmultaggrnlvar; /**< whether to forbid multiaggregation of variables that appear in a nonlinear term of a constraint */
    SCIP_Bool                tightenlpfeastol;/**< whether to tighten LP feasibility tolerance during enforcement, if it seems useful */
    SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
    SCIP_Real                weakcutthreshold;/**< threshold for when to regard a cut from an estimator as weak */
@@ -2804,6 +2805,72 @@ SCIP_RETCODE freeVarExprs(
    return SCIP_OKAY;
 }
 
+/** forbid multiaggrations of variables that appear nonlinear in constraints */
+static
+SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSEXPR_EXPR* expr;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   if( !SCIPconshdlrGetData(conshdlr)->forbidmultaggrnlvar )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* if root expression is sum, then forbid multiaggregation only for variables that are not in linear terms of sum,
+       *   i.e., skip children of sum that are variables
+       */
+      if( SCIPgetConsExprExprHdlr(consdata->expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+      {
+         int i;
+         SCIP_CONSEXPR_EXPR* child;
+         for( i = 0; i < SCIPgetConsExprExprNChildren(consdata->expr); ++i )
+         {
+            child = SCIPgetConsExprExprChildren(consdata->expr)[i];
+
+            /* skip variable expression, as they correspond to a linear term */
+            if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+               continue;
+
+            for( expr = SCIPexpriteratorRestartDFS(it, child); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+               if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetConsExprExprVarVar(expr)) );
+               }
+         }
+      }
+      else
+      {
+         for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+            if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+            {
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetConsExprExprVarVar(expr)) );
+            }
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+
 /** computes violation of a constraint */
 static
 SCIP_RETCODE computeViolation(
@@ -5100,6 +5167,12 @@ SCIP_RETCODE canonicalizeConstraints(
       }
 
       SCIPfreeBufferArray(scip, &consssorted);
+
+      /* forbid multiaggregation for nonlinear variables again (in case new variables appeared now)
+       * a multiaggregation of a nonlinear variable can yield to a large increase in expressions due to
+       * expanding terms in simplify, e.g. ,(sum_i x_i)^2, so we just forbid these
+       */
+      SCIP_CALL( forbidNonlinearVariablesMultiaggration(scip, conshdlr, conss, nconss) );
    }
 
    /* restore locks */
@@ -15734,6 +15807,10 @@ SCIP_RETCODE includeConshdlrExprBasic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/reformbinprodsfac",
          "minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled)",
          &conshdlrdata->reformbinprodsfac, FALSE, 50, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forbidmultaggrnlvar",
+         "whether to forbid multiaggregation of nonlinear variables",
+         &conshdlrdata->forbidmultaggrnlvar, TRUE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/tightenlpfeastol",
          "whether to tighten LP feasibility tolerance during enforcement, if it seems useful",
