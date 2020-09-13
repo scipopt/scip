@@ -333,7 +333,6 @@ SCIP_Bool closeNodesPathIsForbidden(
    assert(g->head[prededges[pred_pos]] == closenode);
    assert(pred != node);
    assert(size > 0);
-   assert(edges_isForbidden);
 
 
   // printf("check path %d->%d \n", node, closenode);
@@ -356,7 +355,7 @@ SCIP_Bool closeNodesPathIsForbidden(
 
       pred_edgeHalf = pred_edge / 2;
 
-      if( edges_isForbidden[pred_edgeHalf] )
+      if( edges_isForbidden && edges_isForbidden[pred_edgeHalf] )
       {
          isForbidden = TRUE;
          break;
@@ -405,9 +404,45 @@ SCIP_Real getCloseNodeDistance(
 }
 
 
-/** as above, but with forbidden edge/edges */
+/** as above, but with forbidden edge */
 static inline
 SCIP_Real getCloseNodeDistanceForbidden(
+   const GRAPH*          g,                  /**< graph data structure */
+   const DISTDATA*       distdata,           /**< to be initialized */
+   int                   edge_forbidden,     /**< forbidden edge */
+   int                   node,               /**< the node */
+   int                   closenode           /**< the close node whose position is to be found */
+)
+{
+   const int* const indices = distdata->closenodes_indices;
+   const RANGE* const range = distdata->closenodes_range;
+   const int start = range[node].start;
+   const int end = range[node].end;
+   const int size = end - start;
+   int position;
+   SCIP_Real dist = -1.0;
+
+   assert(size > 0);
+
+   position = findEntryFromSorted(&indices[start], size, closenode);
+
+   if( position >= 0 )
+   {
+      assert(indices[start + position] == closenode);
+
+      if( !closeNodesPathIsForbidden(g, distdata, edge_forbidden, NULL, node, closenode, start + position) )
+      {
+         dist = distdata->closenodes_distances[start + position];
+      }
+   }
+
+   return dist;
+}
+
+
+/** as above, but with forbidden edge/edges and known equality value */
+static inline
+SCIP_Real getCloseNodeDistanceForbiddenEq(
    const GRAPH*          g,                  /**< graph data structure */
    const DISTDATA*       distdata,           /**< to be initialized */
    SCIP_Real             dist_eq,            /**< critical distance */
@@ -1120,9 +1155,38 @@ SCIP_Real distDataGetNormalDist(
 }
 
 
-/** as above, but with forbidden edges */
+/** as above, but with forbidden edge */
 static inline
 SCIP_Real distDataGetNormalDistForbidden(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   edge_forbidden,     /**< forbidden edge */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   assert(distdata);
+   assert(vertex1 >= 0 && vertex2 >= 0);
+   assert(graph_edge_isInRange(g, edge_forbidden));
+
+   /* neighbors list not valid anymore? */
+   if( distdata->pathroot_isdirty[vertex1] )
+   {
+      distDataRecomputeNormalDist(scip, g, vertex1, distdata);
+   }
+
+   dist = getCloseNodeDistanceForbidden(g, distdata, edge_forbidden, vertex1, vertex2);
+
+   return dist;
+}
+
+
+/** as above, but with forbidden edges and known equality value */
+static inline
+SCIP_Real distDataGetNormalDistForbiddenEq(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real             dist_eq,            /**< critical distance */
@@ -1147,11 +1211,10 @@ SCIP_Real distDataGetNormalDistForbidden(
    }
 
    /* look in neighbors list of vertex1 */
-   dist = getCloseNodeDistanceForbidden(g, distdata, dist_eq, edge_forbidden, edges_isForbidden, vertex1, vertex2);
+   dist = getCloseNodeDistanceForbiddenEq(g, distdata, dist_eq, edge_forbidden, edges_isForbidden, vertex1, vertex2);
 
    return dist;
 }
-
 
 
 /** returns v1->v2 special distance */
@@ -1526,8 +1589,9 @@ SCIP_Real extreduce_distDataGetSdDouble(
 
 
 /** Same as extreduce_distDataGetSdDouble, but only takes paths that do not include
- *  given edge or any edges marked as blocked */
-SCIP_Real extreduce_distDataGetSdDoubleForbidden(
+ *  given edge or any edges marked as blocked.
+ *  User needs to provide (known) equality value */
+SCIP_Real extreduce_distDataGetSdDoubleForbiddenEq(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real             dist_eq,            /**< critical distance */
@@ -1547,7 +1611,7 @@ SCIP_Real extreduce_distDataGetSdDoubleForbidden(
    if( extInitialCompIsEdge(extdata) )
    {
       const SCIP_Bool* const edges_isForbidden = extdata->sdeq_edgesIsForbidden;
-      dist = distDataGetNormalDistForbidden(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex1, vertex2, distdata);
+      dist = distDataGetNormalDistForbiddenEq(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex1, vertex2, distdata);
 
       if( EQ(dist_eq, dist) )
          return dist;
@@ -1556,11 +1620,11 @@ SCIP_Real extreduce_distDataGetSdDoubleForbidden(
       if( dist < -0.5 )
       {
          assert(EQ(dist, -1.0));
-         dist = distDataGetNormalDistForbidden(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex2, vertex1, distdata);
+         dist = distDataGetNormalDistForbiddenEq(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex2, vertex1, distdata);
       }
       else
       {
-         const SCIP_Real distrev = distDataGetNormalDistForbidden(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex2, vertex1, distdata);
+         const SCIP_Real distrev = distDataGetNormalDistForbiddenEq(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex2, vertex1, distdata);
 
          if( distrev > -0.5 && distrev < dist  )
             dist = distrev;
@@ -1577,6 +1641,62 @@ SCIP_Real extreduce_distDataGetSdDoubleForbidden(
       if( !Is_term(g->term[vertex1]) || !Is_term(g->term[vertex2]) )
       {
          dist = distDataGetSpecialDistIntermedTerms(g, vertex1, vertex2, distdata);
+      }
+   }
+
+   assert(EQ(dist, -1.0) || dist >= 0.0);
+
+   return dist;
+}
+
+
+/** Same as extreduce_distDataGetSdDouble, but only takes paths that do not contain given edge */
+SCIP_Real extreduce_distDataGetSdDoubleForbiddenSingle(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   edge_forbidden,     /**< edge */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist = -1.0;
+
+   assert(scip && g && distdata);
+   assert(graph_edge_isInRange(g, edge_forbidden));
+
+   /* NOTE: does not work for pseudo-elimination, because paths might get destroyed */
+   {
+      dist = distDataGetNormalDistForbidden(scip, g, edge_forbidden, vertex1, vertex2, distdata);
+
+      /* no distance found? */
+      if( dist < -0.5 )
+      {
+         assert(EQ(dist, -1.0));
+
+         dist = distDataGetNormalDistForbidden(scip, g, edge_forbidden, vertex2, vertex1, distdata);
+      }
+      else
+      {
+         const SCIP_Real distrev = distDataGetNormalDistForbidden(scip, g, edge_forbidden, vertex2, vertex1, distdata);
+
+         if( distrev > -0.5 && distrev < dist  )
+            dist = distrev;
+
+         assert(GE(dist, 0.0));
+      }
+   }
+
+   if( distdata->sdistdata )
+   {
+      if( !Is_term(g->term[vertex1]) || !Is_term(g->term[vertex2]) )
+      {
+         const SCIP_Real dist_sd = distDataGetSpecialDistIntermedTerms(g, vertex1, vertex2, distdata);
+
+         assert(GE(dist_sd, 0.0));
+
+         if( LT(dist_sd, dist) || dist < -0.5 )
+            dist = dist_sd;
       }
    }
 

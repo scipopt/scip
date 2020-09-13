@@ -1121,7 +1121,7 @@ SCIP_Bool bottleneckIsEqualityDominated(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const SCIP_Real sd_eq = extreduce_distDataGetSdDoubleForbidden(scip, g, dist_eq,
+   const SCIP_Real sd_eq = extreduce_distDataGetSdDoubleForbiddenEq(scip, g, dist_eq,
          edge_forbidden, vertex1, vertex2, extdata);
 
    if( sd_eq < -0.5 )

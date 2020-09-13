@@ -99,6 +99,86 @@ void extFree(
 }
 
 
+/** deletes */
+static
+SCIP_RETCODE deleteGeneralStars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data structures */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   for( int i = 0; i < graph->edges; i += 2 )
+   {
+      if( !graph_edge_isDeleted(graph, i) )
+      {
+         const int tail = graph->tail[i];
+         const int head = graph->head[i];
+
+         if( graph->grad[tail] + graph->grad[head] <= 7 && !Is_term(graph->term[tail]) && !Is_term(graph->term[head]) )
+         {
+            int edges_tail[5];
+            int ntails = 0;
+            int edges_head[5];
+            int nheads = 0;
+
+            printf("next: \n");
+            graph_edge_printInfo(graph, i);
+            graph_knot_printInfo(graph, tail);
+            graph_knot_printInfo(graph, head);
+
+            for( int e = graph->outbeg[tail]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               const int myhead = graph->head[e];
+
+               if( myhead != head )
+               {
+                  graph_edge_printInfo(graph, e);
+
+                  edges_tail[ntails++] = e;
+               }
+            }
+
+            for( int e = graph->outbeg[head]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               const int myhead = graph->head[e];
+
+               if( myhead != tail )
+               {
+                  graph_edge_printInfo(graph, e);
+
+                  edges_head[nheads++] = e;
+               }
+            }
+
+            assert(ntails + nheads <= 5);
+
+            for( int j = 0; j < ntails; j++ )
+            {
+               for( int k = 0; k < nheads; k++ )
+               {
+                  const int node_j = graph->head[edges_tail[j]];
+                  const int node_k = graph->head[edges_head[k]];
+
+                  SCIP_Real sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edges_tail[j],
+                        node_j, node_k, distdata);
+
+                  assert(EQ(extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edges_tail[j], node_j, node_k, distdata),
+                            extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edges_head[k], node_j, node_k, distdata)));
+
+                  printf("%d->%d %f \n", node_j, node_k, sd);
+               }
+            }
+         }
+      }
+   }
+
+   exit(1);
+
+   return SCIP_OKAY;
+}
+
+
 /** initializes new star */
 static inline
 SCIP_RETCODE pseudodeleteInitStar(
@@ -606,6 +686,7 @@ SCIP_RETCODE extreduce_deleteEdges(
 
   // printf("extelimsedges=%d \n", *nelims);
 
+  // SCIP_CALL( deleteGeneralStars(scip, graph, redcostdata, &distdata) );
 
    extFree(scip, graph, &distdata, &extpermanent);
 
