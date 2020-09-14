@@ -1838,6 +1838,43 @@ void reduce_starReset(
 }
 
 
+/** resets star data structure with explicitely given edges */
+void reduce_starResetWithEdges(
+   const GRAPH*          g,                  /**< graph */
+   const STP_Vectype(int) staredges,        /**< the edges */
+   STAR*                 star                /**< the star */
+)
+{
+   const int nedges = StpVecGetSize(staredges);
+
+   assert(3 <= nedges && nedges <= star->maxNodeDegree);
+
+   star->nodeDegree = nedges;
+   star->starDegree = star->nodeDegree;
+   star->starDegreePrev = -1;
+   star->allStarsChecked = FALSE;
+   star->starcenter = -1;
+   star->nedgesPromising = nedges;
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      const int edge = staredges[i];
+      assert(graph_edge_isInRange(g, edge));
+
+      star->edgeId[i] = edge;
+      star->edgeIsFailed[i] = FALSE;
+   }
+
+#ifndef NDEBUG
+   for( int i = 0; i < star->nodeDegree; i++ )
+      star->edgesSelectedPosPrev[i] = -1;
+#endif
+
+   /* initially, select the entire star */
+   starSelectedPositionsReset(star);
+}
+
+
 /** gets center */
 int reduce_starGetCenter(
    const STAR*           star                /**< the star (in/out) */

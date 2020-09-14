@@ -333,6 +333,7 @@ extern SCIP_Real*      reduce_dcmstGetAdjcostBuffer(const DCMST*);
 extern SCIP_RETCODE    reduce_starInit(SCIP*, int, STAR**);
 extern void            reduce_starFree(SCIP*, STAR**);
 extern void            reduce_starReset(const GRAPH*, int, STAR*);
+extern void            reduce_starResetWithEdges(const GRAPH*, const STP_Vectype(int), STAR*);
 extern const int*      reduce_starGetNext(STAR*, int*);
 extern const int*      reduce_starGetNextAndPosition(STAR*, int*, int*);
 extern const int*      reduce_starGetRuledOutEdges(STAR*, int*);
