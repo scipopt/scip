@@ -27,6 +27,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_misc.h"
 #include "scip/type_cutsel.h"
 
 #ifdef __cplusplus

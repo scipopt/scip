@@ -730,6 +730,7 @@ set(scipheaders
     scip/scip_cons.h
     scip/scip_copy.h
     scip/scip_cut.h
+    scip/scip_cutsel.h
     scip/scip_datastructures.h
     scip/scip_debug.h
     scip/scip_dcmp.h
