@@ -469,7 +469,7 @@ SCIP_RETCODE testBdkSdMstStarDeletesNodeDeg4(
 }
 
 
-
+#if 0
 /** tests that BDk test fully eliminates edge */
 static
 SCIP_RETCODE testBdkDeletesEdge(
@@ -559,7 +559,7 @@ SCIP_RETCODE testBdkReplacesEdge(
 
    return SCIP_OKAY;
 }
-
+#endif
 
 /** tests that BDk test pseudo-eliminates node of degree 3 */
 static
@@ -1574,8 +1574,10 @@ SCIP_RETCODE stptest_reduceBdk(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+#if 0
    SCIP_CALL( testBdkDeletesEdge(scip) );
    SCIP_CALL( testBdkReplacesEdge(scip) );
+#endif
    SCIP_CALL( testBdkSdMstDeletesNodeDeg3(scip) );
    SCIP_CALL( testBdkTreeDistDeletesNodeDeg4(scip) );
    SCIP_CALL( testBdkSdMstDeletesNodeDeg4(scip) );

@@ -186,14 +186,13 @@ void generalStarCheckExit(
    int* const nodes_mark = genstar->nodes_mark;
    const int degree = StpVecGetSize(genstar->edges_all);
 
-   assert(EQ(degree, StpVecGetSize(genstar->edges_head) +  StpVecGetSize(genstar->edges_tail)));
+   assert(EQ(degree, StpVecGetSize(genstar->edges_head) + StpVecGetSize(genstar->edges_tail)));
 
    for( int i = 0; i < degree; i++ )
    {
       const int edge = genstar->edges_all[i];
       const int head = g->head[edge];
       assert(graph_edge_isInRange(g, edge));
-      assert(nodes_mark[head] != GENSTAR_NODE_OTHER);
 
       nodes_mark[head] = GENSTAR_NODE_OTHER;
    }
@@ -253,7 +252,6 @@ void generalStarCheckGetNextStar(
       {
          ntailnodes++;
          assert(g->tail[outedge] == center_tail);
-
       }
       else if( nodes_mark[head] == GENSTAR_NODE_HEAD )
       {
@@ -262,8 +260,15 @@ void generalStarCheckGetNextStar(
       }
       else if( nodes_mark[head] == GENSTAR_NODE_COMBI )
       {
-         ntailnodes++;
-         nheadnodes++;
+         if( g->tail[outedge] == center_tail )
+         {
+            ntailnodes++;
+         }
+         else
+         {
+            assert(g->tail[outedge] == g->head[center_edge]);
+            nheadnodes++;
+         }
       }
 
       /* mark as visited */
@@ -276,12 +281,13 @@ void generalStarCheckGetNextStar(
       const int outedge = staredges[i];
       const int head = g->head[outedge];
       assert(graph_edge_isInRange(g, outedge));
-      assert(nodes_mark[head] < 0);
+      assert(nodes_mark[head] != GENSTAR_NODE_OTHER);
 
-      nodes_mark[head] *= -1;
+      if( nodes_mark[head] < 0 )
+         nodes_mark[head] *= -1;
    }
 
-   if( ntailnodes == 0 || nheadnodes == 0 )
+   if( !hasConflict && (ntailnodes == 0 || nheadnodes == 0) )
    {
       SCIPdebugMessage("one sided star... \n");
       hasConflict = TRUE;
@@ -290,8 +296,14 @@ void generalStarCheckGetNextStar(
    if( hasConflict )
    {
       SCIPdebugMessage("...conflict found! \n");
-      if( !reduce_starAllAreChecked(genstar->star) )
+      if( reduce_starAllAreChecked(genstar->star) )
+      {
+         *allVisited = TRUE;
+      }
+      else
+      {
          generalStarCheckGetNextStar(g, genstar, extcomp, allVisited);
+      }
 
       return;
    }
@@ -311,7 +323,7 @@ void generalStarCheckGetNextStar(
       }
       else
       {
-         assert(g->tail[outedge] == center_head);
+         assert(g->tail[outedge] == g->head[center_edge]);
          compedges[i] = outedge;
       }
    }
@@ -356,9 +368,14 @@ SCIP_RETCODE generalStarCheck(
 
    assert(graph_edge_isInRange(graph, edge));
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("checking edge ");
+   graph_edge_printInfo(graph, edge);
+#endif
+
    if( graph->grad[graph->tail[edge]] < 3 || graph->grad[graph->head[edge]] < 3 )
    {
-      printf("general-star early rule-out! \n");
+      SCIPdebugMessage("general-star early rule-out! \n");
       return SCIP_OKAY;
    }
 
@@ -435,7 +452,7 @@ void generalStarSetUp(
 
          if( myhead != head )
          {
-            graph_edge_printInfo(graph, e);
+          //  graph_edge_printInfo(graph, e);
             StpVecPushBack(scip, genstar->edges_tail, e);
          }
       }
@@ -446,7 +463,7 @@ void generalStarSetUp(
 
          if( myhead != tail )
          {
-            graph_edge_printInfo(graph, e);
+          //  graph_edge_printInfo(graph, e);
             StpVecPushBack(scip, genstar->edges_head, e);
          }
       }
@@ -491,7 +508,7 @@ void generalStarSetUp(
 
 /** deletes center edges of general stars */
 static
-SCIP_RETCODE generalStarDeletEdges(
+SCIP_RETCODE generalStarDeleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
    EXTPERMA*             extpermanent,       /**< extension data */
@@ -501,6 +518,8 @@ SCIP_RETCODE generalStarDeletEdges(
 {
    GENSTAR genstar = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1 };
    int nelims = 0;
+
+   SCIPdebugMessage("General-star deletion starts \n");
 
    //todo extra method
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &(genstar.nodes_mark), graph->knots) );
@@ -525,7 +544,6 @@ SCIP_RETCODE generalStarDeletEdges(
 
             if( isDeletable )
             {
-               printf("deleting %d \n", i);
                extreduce_edgeRemove(scip, i, graph, distdata, extpermanent);
                nelims++;
             }
@@ -547,8 +565,6 @@ SCIP_RETCODE generalStarDeletEdges(
    SCIPfreeCleanBufferArray(scip,  &(genstar.nodes_mark));
 
    printf("nelims=%d \n", nelims);
-
-   exit(1);
 
    return SCIP_OKAY;
 }
@@ -1131,7 +1147,7 @@ SCIP_RETCODE extreduce_deleteGeneralStars(
       SCIP_CALL( reduce_sdRepairSetUp(scip, graph, distdata.sdistdata) );
    }
 
-   SCIP_CALL( generalStarDeletEdges(scip, redcostdata, &extpermanent, graph, &distdata) );
+   SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, &extpermanent, graph, &distdata) );
 
    extFree(scip, graph, &distdata, &extpermanent);
 
