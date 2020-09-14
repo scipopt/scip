@@ -39,6 +39,7 @@
 #include "scip/cutsel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_misc_sort.h"
 
 #include "scip/struct_cutsel.h"
 #include "scip/struct_scip.h"
@@ -175,7 +176,7 @@ SCIP_RETCODE SCIPcutselsSelect(
    SCIP_RESULT result = SCIP_DIDNOTFIND;
 
    /* sort the cut selectors by priority */
-   //TODO: SCIPsetSortCutselectors(set);
+   SCIPsetSortCutsels(set);
 
    //printf("We have <%d> cut selectors! \n", set->ncutsels);
 
@@ -415,7 +416,7 @@ void SCIPcutselEnableOrDisableClocks(
 void SCIPcutselSetCopy(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -426,7 +427,7 @@ void SCIPcutselSetCopy(
 void SCIPcutselSetFree(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELFREE  ((*cutselfree))  /**< destructor of cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -437,7 +438,7 @@ void SCIPcutselSetFree(
 void SCIPcutselSetInit(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELINIT  ((*cutselinit))  /**< initialize cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -448,7 +449,7 @@ void SCIPcutselSetInit(
 void SCIPcutselSetExit(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELEXIT  ((*cutselexit))     /**< deinitialize cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -459,7 +460,7 @@ void SCIPcutselSetExit(
 void SCIPcutselSetInitsol(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELINITSOL ((*cutselinitsol))/**< solving process initialization method of cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -470,7 +471,7 @@ void SCIPcutselSetInitsol(
 void SCIPcutselSetExitsol(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_DECL_CUTSELEXITSOL ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -482,21 +483,28 @@ void SCIPcutselSetPriority(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
    assert(set != NULL);
 
    cutsel->priority = priority;
+   set->cutselssorted = FALSE;
    //set->cutsel = NULL;
 }
 
 /** is node selector initialized? */
 SCIP_Bool SCIPcutselIsInitialized(
    SCIP_CUTSEL*          cutsel               /**< cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
    return cutsel->initialized;
+}
+
+/** compares two cut selectors w. r. to their priority */
+SCIP_DECL_SORTPTRCOMP(SCIPcutselComp)
+{  /*lint --e{715}*/
+   return ((SCIP_CUTSEL*)elem2)->priority - ((SCIP_CUTSEL*)elem1)->priority;
 }

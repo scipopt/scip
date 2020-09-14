@@ -229,6 +229,8 @@ SCIP_CUTSEL** SCIPgetCutsels(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
+   SCIPsetSortCutsels(scip->set);
+
    return scip->set->cutsels;
 }
 

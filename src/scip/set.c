@@ -1151,6 +1151,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->cutsels = NULL;
    (*set)->ncutsels = 0;
    (*set)->cutselssize = 0;
+   (*set)->cutselssorted = FALSE;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -4184,7 +4185,7 @@ SCIP_RETCODE SCIPsetIncludeCutsel(
 
    set->cutsels[set->ncutsels] = cutsel;
    set->ncutsels++;
-   //set->cutselssorted = FALSE;
+   set->cutselssorted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -4207,6 +4208,20 @@ SCIP_CUTSEL* SCIPsetFindCutsel(
    }
 
    return NULL;
+}
+
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->cutselssorted )
+   {
+      SCIPsortPtr((void**)set->cutsels, SCIPcutselComp, set->ncutsels);
+      set->cutselssorted = TRUE;
+   }
 }
 
 

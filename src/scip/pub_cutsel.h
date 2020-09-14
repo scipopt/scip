@@ -87,6 +87,10 @@ SCIP_Real SCIPcutselGetTime(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
 );
 
+/** compares two cut selectors w. r. to their priority */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPcutselComp);
+
 
 /** @} */
 

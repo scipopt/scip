@@ -155,6 +155,7 @@ struct SCIP_Set
    SCIP_Bool             relaxsnamesorted;   /**< are the relaxators sorted by name? */
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
+   SCIP_Bool             cutselssorted;      /**< are the cutsels sorted by priority? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
    SCIP_Bool             propspresolsorted;  /**< are the propagators in prop_presol sorted? */
    SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */

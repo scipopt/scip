@@ -35,7 +35,7 @@
 /* TODO: change name to something meaningful, unlike wsum */
 #define CUTSEL_NAME              "default"
 #define CUTSEL_DESC              "TODO"
-#define CUTSEL_PRIORITY                 0
+#define CUTSEL_PRIORITY           8000
 
 #define RANDSEED                  0x5EED
 #define GOODSCORE                 0.9

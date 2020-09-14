@@ -670,6 +670,11 @@ SCIP_CUTSEL* SCIPsetFindCutsel(
    const char*           name                /**< name of separator */
    );
 
+/** sorts cut selectors by priorities */
+void SCIPsetSortCutsels(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */
