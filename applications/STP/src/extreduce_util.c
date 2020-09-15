@@ -1817,8 +1817,6 @@ SCIP_Real extreduce_distDataGetSdDoubleForbiddenLast(
       assert(GE(dist, 0.0));
    }
 
-   dist = -1.0;
-
    if( distdata->sdistdata )
    {
 #if 1
