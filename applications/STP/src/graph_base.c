@@ -148,6 +148,7 @@ SCIP_Bool isCutoffEdge(
 
    newcost = ecostrev[edgeidx1] + ecost[edgeidx2] - prize;
 
+   /* NOTE: don't replace by GT, to keep epsilon change valid! */
    if( !SCIPisGT(scip, newcost, cutoffs[cutoffidx]) )
       return FALSE;
 
