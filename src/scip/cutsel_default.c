@@ -414,32 +414,32 @@ SCIP_RETCODE SCIPincludeCutselDefault(
 
    /* add default cut selector parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-            "cutselectors/" CUTSEL_NAME "/efficacyweight",
+            "cutselection/" CUTSEL_NAME "/efficacyweight",
             "weight of efficacy in cut score calculation",
             &cutseldata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "cutselectors/" CUTSEL_NAME "/dircutoffdistweight",
+         "cutselection/" CUTSEL_NAME "/dircutoffdistweight",
          "weight of directed cutoff distance in cut score calculation",
          &cutseldata->dircutoffdistweight, FALSE, DEFAULT_DIRCUTOFFDISTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "cutselectors/" CUTSEL_NAME "/objparalweight",
+         "cutselection/" CUTSEL_NAME "/objparalweight",
          "weight of objective parallelism in cut score calculation",
          &cutseldata->objparalweight, FALSE, DEFAULT_OBJPARALWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "cutselectors/" CUTSEL_NAME "/intsupportweight",
+         "cutselection/" CUTSEL_NAME "/intsupportweight",
          "weight of integral support in cut score calculation",
          &cutseldata->intsupportweight, FALSE, DEFAULT_INTSUPPORTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "cutselectors/" CUTSEL_NAME "/minortho",
+         "cutselection/" CUTSEL_NAME "/minortho",
          "minimal orthogonality for a cut to enter the LP",
          &cutseldata->minortho, FALSE, DEFAULT_MINORTHO, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "cutselectors/" CUTSEL_NAME "/minorthoroot",
+         "cutselection/" CUTSEL_NAME "/minorthoroot",
          "minimal orthogonality for a cut to enter the LP in the root node",
          &cutseldata->minorthoroot, FALSE, DEFAULT_MINORTHOROOT, 0.0, 1.0, NULL, NULL) );
 
