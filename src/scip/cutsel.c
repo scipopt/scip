@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPcutselCreate(
 
    SCIP_CALL_FINALLY( doCutselCreate(cutsel, set, messagehdlr, blkmem, name, desc, priority,
       cutselcopy, cutselfree, cutselinit, cutselexit, cutselinitsol, cutselexitsol, cutselselect,
-      cutseldata), /* TODO: (void) SCIPcutselFree(cutsel, set)*/ NULL );
+      cutseldata), (void) SCIPcutselFree(cutsel, set) );
 
    return SCIP_OKAY;
 }

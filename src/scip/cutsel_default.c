@@ -34,7 +34,7 @@
 
 /* TODO: change name to something meaningful, unlike wsum */
 #define CUTSEL_NAME              "default"
-#define CUTSEL_DESC              "TODO"
+#define CUTSEL_DESC              "weighted sum of efficacy, dircutoffdist, objparal, and intsupport"
 #define CUTSEL_PRIORITY           8000
 
 #define RANDSEED                  0x5EED
@@ -270,7 +270,7 @@ SCIP_DECL_CUTSELCOPY(cutselCopyDefault)
    assert(cutsel != NULL);
    assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
 
-   /* call inclusion method of node selector */
+   /* call inclusion method of cut selector */
    SCIP_CALL( SCIPincludeCutselDefault(scip) );
 
    return SCIP_OKAY;
@@ -289,22 +289,6 @@ SCIP_DECL_CUTSELFREE(cutselFreeDefault)
    return SCIP_OKAY;
 }
 
-
-/** initialization method of cut selector (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_CUTSELINIT(cutselInitDefault)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of default cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define cutselInitDefault NULL
-#endif
-
-
 /** deinitialization method of cut selector (called before transformed problem is freed) */
 static
 SCIP_DECL_CUTSELEXIT(cutselExitDefault)
@@ -316,37 +300,6 @@ SCIP_DECL_CUTSELEXIT(cutselExitDefault)
 
    return SCIP_OKAY;
 }
-
-
-/** solving process initialization method of cut selector (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_CUTSELINITSOL(cutselInitsolDefault)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of default cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define cutselInitsolDefault NULL
-#endif
-
-
-/** solving process deinitialization method of cut selector (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_CUTSELEXITSOL(cutselExitsolDefault)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of default cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define cutselExitsolDefault NULL
-#endif
-
 
 /** cut selection method of cut selector */
 static
@@ -407,10 +360,7 @@ SCIP_RETCODE SCIPincludeCutselDefault(
    SCIP_CALL( SCIPsetCutselCopy(scip, cutsel, cutselCopyDefault) );
 
    SCIP_CALL( SCIPsetCutselFree(scip, cutsel, cutselFreeDefault) );
-   SCIP_CALL( SCIPsetCutselInit(scip, cutsel, cutselInitDefault) );
    SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitDefault) );
-   SCIP_CALL( SCIPsetCutselInitsol(scip, cutsel, cutselInitsolDefault) );
-   SCIP_CALL( SCIPsetCutselExitsol(scip, cutsel, cutselExitsolDefault) );
 
    /* add default cut selector parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
