@@ -1103,6 +1103,12 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
          if ( rowcoveragesetppc[rowidx] == 0 )
             rowsinsetppc[nrowintersect++] = rowidx;
          rowcoveragesetppc[rowidx] += 1;
+
+         /* we can stop early if not enough variables are left to completely cover one of the rows that
+          * intersect the setppc cons
+          */
+         if ( nsetppcvars - nrowintersect < ncols - 1 )
+            break;
       }
 
       /* store whether rows coincide with set partitioning cons's support or whether
