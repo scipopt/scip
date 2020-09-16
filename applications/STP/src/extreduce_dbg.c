@@ -254,6 +254,92 @@ SCIP_Bool mstTopLevelBaseValidWeight(
 
 
 
+/** returns shortest distance between given vertices */
+static
+SCIP_Real distGetRestricted(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertexBlocked,      /**< forbidden vertex */
+   const DISTDATA*       distdata,           /**< distance data */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2             /**< second vertex */
+   )
+{
+   SCIP_Real* dist;
+   DHEAP* dheap = NULL;
+   int* state;
+   const SCIP_Real* const pc_costshifts = distdata->dijkdata->node_bias;
+   const int nnodes = g->knots;
+   const SCIP_Bool isPc = graph_pc_isPc(g);
+   SCIP_Real distance = FARAWAY;
+
+   assert(!isPc || pc_costshifts);
+
+   SCIP_CALL_ABORT( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &dist, nnodes) );
+
+   state = dheap->position;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      dist[k] = FARAWAY;
+      assert(state[k] == UNKNOWN);
+   }
+
+   dist[vertex1] = 0.0;
+   graph_heap_correct(vertex1, 0.0, dheap);
+
+   assert(dheap->size == 1);
+
+   /* main loop */
+   while( dheap->size > 0 )
+   {
+      /* get nearest labeled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const SCIP_Real k_dist = dist[k];
+
+      if( isPc && k != vertex1 )
+      {
+         dist[k] += pc_costshifts[k];
+      }
+
+      if( k == vertex2 )
+      {
+         distance = k_dist;
+         break;
+      }
+
+      /* correct adjacent nodes */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int m = g->head[e];
+         assert(g->mark[m]);
+
+         if( m == vertexBlocked )
+            continue;
+
+         if( state[m] != CONNECT )
+         {
+            const SCIP_Real distnew = isPc ?
+               k_dist + g->cost[e] - pc_costshifts[m]
+             : k_dist + g->cost[e];
+
+            if( distnew < dist[m] )
+            {
+               dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+
+   SCIPfreeMemoryArray(scip, &dist);
+   graph_heap_free(scip, TRUE, TRUE, &dheap);
+
+   return distance;
+}
+
+
 /** Helper.
  *  Gives maximum cost among all close nodes. */
 static inline
@@ -1067,6 +1153,31 @@ SCIP_Bool extreduce_distCloseNodesAreValid(
    SCIPfreeMemoryArray(scip, &closenodes_indices);
 
    return isValid;
+}
+
+
+/** Computes actual distance between two nodes.
+ *  NOTE: expensive method, just designed for debugging! */
+SCIP_Real extreduce_distComputeRestrictedDist(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertexBlocked,      /**< forbidden vertex */
+   const DISTDATA*       distdata,           /**< distance data */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2             /**< second vertex */
+)
+{
+   SCIP_Real dist;
+
+   assert(scip && g && distdata);
+   assert(graph_knot_isInRange(g, vertex1));
+   assert(graph_knot_isInRange(g, vertex2));
+   assert(vertex1 != vertex2);
+   assert(vertexBlocked != vertex1 && vertexBlocked != vertex2);
+
+   dist = distGetRestricted(scip, g, vertexBlocked, distdata, vertex1, vertex2);
+
+   return dist;
 }
 
 

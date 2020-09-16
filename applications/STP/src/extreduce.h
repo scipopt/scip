@@ -510,6 +510,7 @@ extern SCIP_Bool       extreduce_treeIsFlawed(SCIP*, const GRAPH*, const EXTDATA
 extern SCIP_Bool       extreduce_treeIsHashed(const GRAPH*, const EXTDATA*);
 extern SCIP_Bool       extreduce_nodeIsInStackTop(const GRAPH*, const EXTDATA*, int);
 extern SCIP_Bool       extreduce_distCloseNodesAreValid(SCIP*, const GRAPH*, const DISTDATA*);
+extern SCIP_Real       extreduce_distComputeRestrictedDist(SCIP*, const GRAPH*, int, const DISTDATA*, int, int);
 extern void            extreduce_printStack(const GRAPH*, const EXTDATA*);
 extern void            extreduce_printLeaves(const EXTDATA*);
 extern void            extreduce_printTopLevel(const EXTDATA*);
