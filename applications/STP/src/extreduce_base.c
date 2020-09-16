@@ -61,9 +61,13 @@ typedef struct general_star
 /** helper */
 typedef struct extension_pseudo_deletion
 {
-   int*                  nodestouches;       /**< touches */
+   SCIP_Real*            cutoffs;            /**< cutoffs array of size STP_DELPSEUDO_MAXNEDGES */
+   int*                  nodestouches;       /**< touches array on nodes */
    SCIP_Real*            offsetp;            /**< pointer to store offset */
    int*                  nelimsp;            /**< pointer number of eliminations */
+   int                   node;               /**< current node */
+   SCIP_Bool             cutoffIsPromising;  /**< is sufficient cutoff possible? */
+   SCIP_Bool             cutoffIsComputed;   /**< already computed?? */
 } EXTPSEUDO;
 
 
@@ -589,6 +593,7 @@ SCIP_RETCODE pseudodeleteInit(
    EXTPSEUDO*            extpseudo           /**< to initialize */
    )
 {
+   SCIP_Real* cutoffs;
    int* nodestouches;
    const int nnodes = graph_get_nNodes(g);
 
@@ -596,17 +601,24 @@ SCIP_RETCODE pseudodeleteInit(
 
    *nelims = 0;
 
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutoffs, STP_DELPSEUDO_MAXNEDGES) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodestouches, nnodes) );
 
    for( int i = 0; i < nnodes; ++i )
       nodestouches[i] = 0;
 
+   extpseudo->cutoffIsPromising = FALSE;
+   extpseudo->cutoffIsComputed = FALSE;
+   extpseudo->node = -1;
    extpseudo->offsetp = offsetp;
    extpseudo->nelimsp = nelims;
    extpseudo->nodestouches = nodestouches;
+   extpseudo->cutoffs = cutoffs;
 
    return SCIP_OKAY;
 }
+
 
 /** frees */
 static inline
@@ -616,6 +628,7 @@ void pseudodeleteExit(
    )
 {
    SCIPfreeBufferArray(scip, &(extpseudo->nodestouches));
+   SCIPfreeBufferArray(scip, &(extpseudo->cutoffs));
 }
 
 
@@ -738,11 +751,13 @@ SCIP_Bool pseudodeleteNodeIsPromising(
 }
 
 
-/** pseudo-deletes single node */
+
+/** computes cutoffs for pseudo-deletion of given node */
 static inline
-SCIP_RETCODE pseudodeleteDeleteNode(
+SCIP_RETCODE pseudodeleteDeleteComputeCutoffs(
    SCIP*                 scip,               /**< SCIP data structure */
-   REDCOST*              redcostdata,        /**< reduced cost data */
+   SCIP_Bool             checkpromising,     /**< check whether promising? */
+   SCIP_Bool             abortDeg3,          /**< abort for degree 3? */
    DISTDATA*             distdata,           /**< distance data */
    int                   node,               /**> to be deleted */
    GRAPH*                graph,              /**< graph data structure */
@@ -750,24 +765,25 @@ SCIP_RETCODE pseudodeleteDeleteNode(
 )
 {
    int adjedges[STP_DELPSEUDO_MAXGRAD];
-   SCIP_Real cutoffs[STP_DELPSEUDO_MAXNEDGES];
-   int* const nodestouches = extpseudo->nodestouches;
-   SCIP_Real* redcost = redcostdata->redEdgeCost;
-   SCIP_Real prize = -1.0;
+   SCIP_Real* cutoffs = extpseudo->cutoffs;
+   const int* const nodestouches = extpseudo->nodestouches;
    int edgecount = 0;
    const int degree = graph->grad[node];
-   SCIP_Bool rpc3term = FALSE;
-   SCIP_Bool success;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
    const SCIP_Real eps = 2.0 * SCIPepsilon(scip);
 
-   assert(redcost);
+   extpseudo->node = node;
 
-   if( isPc && graph_pc_knotIsNonLeafTerm(graph, node) && graph->grad[node] == 3 )
+   if( abortDeg3 && degree <= 3 )
    {
-      rpc3term = TRUE;
-      prize = graph->prize[node];
+      extpseudo->cutoffIsPromising = TRUE;
+      extpseudo->cutoffIsComputed = FALSE;
+      return SCIP_OKAY;
+   }
+   extpseudo->cutoffIsComputed = TRUE;
 
+   if( isPc && graph_pc_knotIsNonLeafTerm(graph, node) )
+   {
       for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
       {
          const int head = graph->head[e];
@@ -790,22 +806,23 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       {
          const int vert2 = graph->head[adjedges[i2]];
          const SCIP_Real edgecost2 = graph->cost[adjedges[i2]];
+         const SCIP_Real newedgecost = edgecost + edgecost2;
 
          assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
          cutoffs[edgecount] = extreduce_distDataGetSdDouble(scip, graph, vert, vert2, distdata);
 
-         if( nodestouches[node] == 0 && nodestouches[vert] == 0 && nodestouches[vert2] == 0 && SCIPisEQ(scip, (edgecost + edgecost2), cutoffs[edgecount]) )
+         if( SCIPisEQ(scip, newedgecost, cutoffs[edgecount]) && nodestouches[node] == 0 && nodestouches[vert] == 0 && nodestouches[vert2] == 0 )
          {
             cutoffs[edgecount] = extreduce_distDataGetSdDoubleForbiddenLast(scip, graph, vert, vert2,
                   adjedges[i2], adjedges[i], distdata);
-            assert(SCIPisLE(scip, (edgecost + edgecost2), cutoffs[edgecount]) || EQ(cutoffs[edgecount], -1.0));
+            assert(SCIPisLE(scip, newedgecost, cutoffs[edgecount]) || EQ(cutoffs[edgecount], -1.0));
 
-            if( SCIPisEQ(scip, (edgecost + edgecost2), cutoffs[edgecount]) )
+            if( SCIPisEQ(scip, newedgecost, cutoffs[edgecount]) )
             {
                //const SCIP_Real dist_dbg = extreduce_distComputeRestrictedDist(scip, graph, node, distdata, vert, vert2);
                cutoffs[edgecount] -= eps;
-               assert(SCIPisGT(scip, (edgecost + edgecost2), cutoffs[edgecount]));
+               assert(SCIPisGT(scip, newedgecost, cutoffs[edgecount]));
             }
          }
 
@@ -818,7 +835,49 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       }
    }
 
-   assert(edgecount > 0);
+   extpseudo->cutoffIsPromising = FALSE;
+
+   if( checkpromising )
+   {
+      SCIP_CALL( graph_knot_delPseudoCheckIfPossible(scip, graph, graph->cost, cutoffs, NULL, node, &(extpseudo->cutoffIsPromising)) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** pseudo-deletes single node */
+static inline
+SCIP_RETCODE pseudodeleteDeleteNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   node,               /**> to be deleted */
+   REDCOST*              redcostdata,        /**< reduced cost data */
+   DISTDATA*             distdata,           /**< distance data */
+   GRAPH*                graph,              /**< graph data structure */
+   EXTPSEUDO*            extpseudo           /**< data */
+)
+{
+   const SCIP_Real* cutoffs = extpseudo->cutoffs;
+   int* const nodestouches = extpseudo->nodestouches;
+   SCIP_Real* redcost = redcostdata->redEdgeCost;
+   SCIP_Real prize = -1.0;
+   SCIP_Bool rpc3term = FALSE;
+   SCIP_Bool success;
+   const SCIP_Bool isPc = graph_pc_isPc(graph);
+
+   assert(redcost);
+   assert(node == extpseudo->node);
+
+   if( !extpseudo->cutoffIsComputed )
+   {
+      SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, FALSE, FALSE, distdata, node, graph, extpseudo) );
+   }
+
+   if( isPc && graph_pc_knotIsNonLeafTerm(graph, node) && graph->grad[node] == 3 )
+   {
+      rpc3term = TRUE;
+      prize = graph->prize[node];
+   }
 
    for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
       nodestouches[graph->head[e]]++;
@@ -875,7 +934,8 @@ SCIP_RETCODE pseudodeleteDeleteMarkedNodes(
       {
          assert(!Is_term(graph->term[k]));
 
-         SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, distdata, k, graph, extpseudo) );
+         SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, FALSE, FALSE, distdata, k, graph, extpseudo) );
+         SCIP_CALL( pseudodeleteDeleteNode(scip, k, redcostdata, distdata, graph, extpseudo) );
       }
    }
 
@@ -926,13 +986,18 @@ SCIP_RETCODE pseudodeleteExecute(
 
       if( pseudodeleteNodeIsPromising(graph, i) )
       {
-         SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
+         SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, TRUE, TRUE, &distdata, i, graph, &extpseudo) );
+
+         if( extpseudo.cutoffIsPromising )
+         {
+            SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
+         }
       }
 
       if( !nodeisDeletable )
          continue;
 
-      SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, &extpseudo) );
+      SCIP_CALL( pseudodeleteDeleteNode(scip, i, redcostdata, &distdata, graph, &extpseudo) );
    }
 
    reduce_starFree(scip, &stardata);
