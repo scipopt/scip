@@ -44,6 +44,7 @@
 #define GENSTAR_NODE_COMBI 3
 
 
+/** generalized star */
 typedef struct general_star
 {
    STAR* star;
@@ -56,6 +57,14 @@ typedef struct general_star
    int edge;
 } GENSTAR;
 
+
+/** helper */
+typedef struct extension_pseudo_deletion
+{
+   int*                  nodestouches;       /**< touches */
+   SCIP_Real*            offsetp;            /**< pointer to store offset */
+   int*                  nelimsp;            /**< pointer number of eliminations */
+} EXTPSEUDO;
 
 
 #ifndef NDEBUG
@@ -570,6 +579,46 @@ SCIP_RETCODE generalStarDeleteEdges(
 }
 
 
+/** initializes */
+static inline
+SCIP_RETCODE pseudodeleteInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure  */
+   SCIP_Real*            offsetp,            /**< pointer to store offset */
+   int*                  nelims,             /**< number of eliminations (out) */
+   EXTPSEUDO*            extpseudo           /**< to initialize */
+   )
+{
+   int* nodestouches;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(nelims && extpseudo);
+
+   *nelims = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodestouches, nnodes) );
+
+   for( int i = 0; i < nnodes; ++i )
+      nodestouches[i] = 0;
+
+   extpseudo->offsetp = offsetp;
+   extpseudo->nelimsp = nelims;
+   extpseudo->nodestouches = nodestouches;
+
+   return SCIP_OKAY;
+}
+
+/** frees */
+static inline
+void pseudodeleteExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXTPSEUDO*            extpseudo           /**< to initialize */
+   )
+{
+   SCIPfreeBufferArray(scip, &(extpseudo->nodestouches));
+}
+
+
 /** initializes new star */
 static inline
 SCIP_RETCODE pseudodeleteInitStar(
@@ -697,12 +746,12 @@ SCIP_RETCODE pseudodeleteDeleteNode(
    DISTDATA*             distdata,           /**< distance data */
    int                   node,               /**> to be deleted */
    GRAPH*                graph,              /**< graph data structure */
-   SCIP_Real*            offsetp,            /**< offset pointer (for PC) */
-   int*                  nelims              /**< number of eliminations */
+   EXTPSEUDO*            extpseudo           /**< data */
 )
 {
-   int adjvert[STP_DELPSEUDO_MAXGRAD];
+   int adjedges[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real cutoffs[STP_DELPSEUDO_MAXNEDGES];
+   int* const nodestouches = extpseudo->nodestouches;
    SCIP_Real* redcost = redcostdata->redEdgeCost;
    SCIP_Real prize = -1.0;
    int edgecount = 0;
@@ -710,6 +759,7 @@ SCIP_RETCODE pseudodeleteDeleteNode(
    SCIP_Bool rpc3term = FALSE;
    SCIP_Bool success;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
+   const SCIP_Real eps = 2.0 * SCIPepsilon(scip);
 
    assert(redcost);
 
@@ -722,31 +772,45 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       {
          const int head = graph->head[e];
          if( !graph_pc_knotIsDummyTerm(graph, head) )
-            adjvert[edgecount++] = head;
+            adjedges[edgecount++] = e;
       }
    }
    else
    {
       for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
-         adjvert[edgecount++] = graph->head[e];
+         adjedges[edgecount++] = e;
    }
 
    edgecount = 0;
    for( int i = 0; i < degree - 1; i++ )
    {
-      const int vert = adjvert[i];
+      const int vert = graph->head[adjedges[i]];
+      const SCIP_Real edgecost = graph->cost[adjedges[i]];
       for( int i2 = i + 1; i2 < degree; i2++ )
       {
-         const int vert2 = adjvert[i2];
+         const int vert2 = graph->head[adjedges[i2]];
+         const SCIP_Real edgecost2 = graph->cost[adjedges[i2]];
+
          assert(edgecount < STP_DELPSEUDO_MAXNEDGES);
 
          cutoffs[edgecount] = extreduce_distDataGetSdDouble(scip, graph, vert, vert2, distdata);
 
+         if( nodestouches[node] == 0 && nodestouches[vert] == 0 && nodestouches[vert2] == 0 && SCIPisEQ(scip, (edgecost + edgecost2), cutoffs[edgecount]) )
+         {
+            cutoffs[edgecount] = extreduce_distDataGetSdDoubleForbiddenLast(scip, graph, vert, vert2,
+                  adjedges[i2], adjedges[i], distdata);
+            assert(SCIPisLE(scip, (edgecost + edgecost2), cutoffs[edgecount]) || EQ(cutoffs[edgecount], -1.0));
+
+            if( SCIPisEQ(scip, (edgecost + edgecost2), cutoffs[edgecount]) )
+            {
+               //const SCIP_Real dist_dbg = extreduce_distComputeRestrictedDist(scip, graph, node, distdata, vert, vert2);
+               cutoffs[edgecount] -= eps;
+               assert(SCIPisGT(scip, (edgecost + edgecost2), cutoffs[edgecount]));
+            }
+         }
+
          if( LT(cutoffs[edgecount], 0.0) )
          {
-            assert(graph_pc_isPc(graph));
-            assert(EQ(cutoffs[edgecount], -1.0));
-
             cutoffs[edgecount] = FARAWAY;
          }
 
@@ -756,12 +820,15 @@ SCIP_RETCODE pseudodeleteDeleteNode(
 
    assert(edgecount > 0);
 
+   for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
+      nodestouches[graph->head[e]]++;
+
    /* now try to eliminate... */
    SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, node, redcost, &success) );
 
    if( success )
    {
-      (*nelims)++;
+      (*(extpseudo->nelimsp))++;
       graph->mark[node] = FALSE;
 
       SCIPdebugMessage("deletion successful! \n");
@@ -769,11 +836,16 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       if( rpc3term )
       {
          assert(isPc);
-         assert(offsetp);
+         assert(extpseudo->offsetp);
          assert(GE(prize, 0.0));
 
-         *offsetp += prize;
+         *(extpseudo->offsetp) += prize;
       }
+   }
+   else
+   {
+      for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
+         nodestouches[graph->head[e]]--;
    }
 
    return SCIP_OKAY;
@@ -789,8 +861,8 @@ SCIP_RETCODE pseudodeleteDeleteMarkedNodes(
    REDCOST*              redcostdata,        /**< reduced cost data */
    DISTDATA*             distdata,           /**< distance data */
    GRAPH*                graph,              /**< graph data structure */
-   SCIP_Real*            offsetp,            /**< offset pointer (for PC) */
-   int*                  nelims              /**< number of eliminations */
+   EXTPSEUDO*            extpseudo           /**< data */
+
 )
 {
    const int nnodes = graph_get_nNodes(graph);
@@ -803,7 +875,7 @@ SCIP_RETCODE pseudodeleteDeleteMarkedNodes(
       {
          assert(!Is_term(graph->term[k]));
 
-         SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, distdata, k, graph, offsetp, nelims) );
+         SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, distdata, k, graph, extpseudo) );
       }
    }
 
@@ -823,22 +895,25 @@ SCIP_RETCODE pseudodeleteExecute(
    int*                  nelims              /**< number of eliminations (out) */
 )
 {
+
+
    const int nnodes = graph_get_nNodes(graph);
    STAR* stardata;
    DISTDATA distdata;
    EXTPERMA extpermanent;
+   EXTPSEUDO extpseudo;
 
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
    assert(graph_isMarked(graph));
 
-   *nelims = 0;
    extpermanent.redcostEqualAllow = FALSE;
 
+   SCIP_CALL( pseudodeleteInit(scip, graph, offsetp, nelims, &extpseudo) );
    SCIP_CALL( extInit(scip, !graph_pc_isPc(graph), graph, NULL, &distdata, &extpermanent) );
 
    if( pseudoDelNodes )
    {
-      SCIP_CALL( pseudodeleteDeleteMarkedNodes(scip, pseudoDelNodes, redcostdata, &distdata, graph, offsetp, nelims) );
+      SCIP_CALL( pseudodeleteDeleteMarkedNodes(scip, pseudoDelNodes, redcostdata, &distdata, graph, &extpseudo) );
       SCIPdebugMessage("number of eliminations after initial pseudo-elimination %d \n", *nelims);
    }
 
@@ -857,11 +932,14 @@ SCIP_RETCODE pseudodeleteExecute(
       if( !nodeisDeletable )
          continue;
 
-      SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, offsetp, nelims) );
+      SCIP_CALL( pseudodeleteDeleteNode(scip, redcostdata, &distdata, i, graph, &extpseudo) );
    }
 
    reduce_starFree(scip, &stardata);
    extFree(scip, graph, &distdata, &extpermanent);
+   pseudodeleteExit(scip, &extpseudo);
+
+   SCIPdebugMessage("number of eliminations after extended pseudo-elimination %d \n", *nelims);
 
    /* todo in I015 we get isolated vertices...not sure whether this is a bug or normal behaviour */
    SCIP_CALL( reduceLevel0(scip, graph));

@@ -1820,7 +1820,7 @@ SCIP_Real extreduce_distDataGetSdDoubleForbiddenLast(
    if( distdata->sdistdata )
    {
 #if 1
-      if( !Is_term(g->term[vertex1]) || !Is_term(g->term[vertex2]) )
+      if( !Is_term(g->term[vertex1]) && !Is_term(g->term[vertex2]) )
       {
          const SCIP_Real dist_sd = distDataGetSpecialDistIntermedTerms(g, vertex1, vertex2, distdata);
 
