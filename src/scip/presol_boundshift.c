@@ -172,6 +172,10 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
+      /* do not shift non-active (fixed or (multi-)aggregated) variables */
+      if( !SCIPvarIsActive(var) )
+         continue;
+
       /* get current variable's bounds */
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
