@@ -2723,24 +2723,25 @@ SCIP_Bool SCIPinDive(
    return SCIPlpDiving(scip->lp);
 }
 
-/** computes the changes to the problem when fixing to the optimal face
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
  *
- *  returns the degeneracy rate, i.e., the number of nonbasic variables with reduced cost 0
- *  and the variable constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
  */
-SCIP_RETCODE SCIPgetLPDegeneracy(
+SCIP_RETCODE SCIPgetLPDualDegeneracy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            degeneracy,         /**< pointer to store degeneracy share */
-   SCIP_Real*            varconsratio        /**< pointer to store variable constraint ratio */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable-constraint ratio */
    )
 {
    assert(scip != NULL);
    assert(degeneracy != NULL);
    assert(varconsratio != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetLPDegeneracy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetLPDualDegeneracy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPlpGetDegeneracy(scip->lp, scip->set, scip->stat, degeneracy, varconsratio) );
+   SCIP_CALL( SCIPlpGetDualDegeneracy(scip->lp, scip->set, scip->stat, degeneracy, varconsratio) );
 
    return SCIP_OKAY;
 }

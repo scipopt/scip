@@ -8814,6 +8814,7 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
  * Callback methods of conflict handler
  */
 
+/** conflict processing method of conflict handler (called when conflict was found) */
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
 {  /*lint --e{715}*/

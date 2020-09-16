@@ -1,3 +1,109 @@
+@page RNNEXT Release notes for SCIP NEXT
+
+@section RNNEXT SCIP NEXT
+*************************
+
+Features
+--------
+
+- Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
+  are now deleted when during a restart.
+- New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
+  which is able to handle symmetries of arbitrary kinds of variables.
+
+Performance improvements
+------------------------
+
+- Use the objective cutoff row as base row for separation in sepa_aggregation.c
+- Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+### New and changed callbacks
+### Deleted and changed API methods
+
+- If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
+  variable is added to the transformed problem (SCIPaddVar()).
+  SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+- SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
+  changed from SCIP_Shortbool* to unsigned*.
+- removed SCIPsetParam()
+
+### New API functions
+
+- added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
+  that is initialized to zeros
+- New internal functions for changing the default values of parameters:
+    SCIPparamsetSetDefaultLongint(), SCIPparamsetSetDefaultReal(), SCIPparamsetSetDefaultChar(),
+    SCIPparamsetSetDefaultString() and
+    SCIPparamSetDefaultLongint(), SCIPparamSetDefaultReal(), SCIPparamSetDefaultChar(),
+    SCIPparamSetDefaultString()
+
+### Command line interface
+### Interfaces to external software
+
+- removed GAMS interface (originally in interfaces/gams) and reading capability of gms reader;
+  the removed interface was a poorly maintained copy of the GAMS/SCIP interface that is available at
+  https://github.com/coin-or/GAMSlinks
+
+### Changed parameters
+
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
+
+### New parameters
+
+- It is now possible to add orbitope constraints to handle symmetries even if not all variables
+  in a component of the symmetry group are binary. This feature can be enabled using the
+  parameter "propagating/symmetry/onlybinorbitope".
+
+- new parameter "propagating/symmetry/sstleaderrule" to select a rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/ssttiebreakrule" to select a tiebreak rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/sstleadervartype" to select the possible variable types
+  for a leader in SST cuts
+- new parameter "propagating/symmetry/addconflictcuts" to control whether SST cuts are added if
+  a binary leader variable is in conflict with a variable in its orbit
+- new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
+- new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
+  if a symmetry component contains variables of different types
+
+
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+### Cmake
+### Makefile
+
+Fixed bugs
+----------
+
+Miscellaneous
+-------------
+
+- in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+- when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
+  only captured by the transformed problem.
+- Avoid redundant calls to LP solver when LP is already flushed and solved
+
+Known bugs
+----------
+
 @page RN70 Release notes for SCIP 7.0
 
 @section RN000 SCIP 7.0.2
@@ -67,6 +173,8 @@ Fixed bugs
 - Fixed potential indexing error in prop_vbounds.c
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
+- Fixed order of linker flags when building AMPL interface with cmake system.
+- Fixed bug with ofsymcomptiming == 0: now symmetry is actually computed
 
 Miscellaneous
 -------------
@@ -437,7 +545,7 @@ Interface changes
   The meaning of the argument 'heur' in all creation methods for primal solutions such as SCIPcreateSol() stays unchanged.
 - added SCIProwGetOriginConshdlr(), SCIPcreateRowConshdlr(), SCIPcreateEmptyRowConshdlr()
 - new API functions SCIPsetCommonSubscipParams(), SCIPtranslateSubSol(), and SCIPtranslateSubSols() shared by several Large Neighborhood Search heuristics.
-- new API function SCIPgetLPDegeneracy() to get two measures for the degeneracy of the current LP
+- new API function SCIPgetLPDualDegeneracy() to get two measures for the dual degeneracy of the current LP
 - new API functions SCIPdivesetIsAvailable() to check preconditions of a dive set and SCIPdivesetIsPublic() to check if the dive set can be used
   by other primal heuristics.
 - new API functions SCIPcomputeOrbitsSym(), SCIPcomputeOrbitsFilterSym(), SCIPgetPropertiesPerm(), SCIPdetermineBinvarAffectedSym(),

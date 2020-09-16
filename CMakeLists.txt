@@ -28,9 +28,9 @@ endif()
 
 set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
-set(SCIP_VERSION_PATCH 2)
-set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 68)
+set(SCIP_VERSION_PATCH 1)
+set(SCIP_VERSION_SUB 3)
+set(SCIP_VERSION_API 72)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -501,13 +501,21 @@ add_custom_target(all_executables DEPENDS scip unittests examples applications)
 # use sub directory bin/examples for executables of examples
 #
 set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+if(MSVC)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+else()
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+endif()
 add_subdirectory(examples)
 
 #
 # add applications
 #
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+if(MSVC)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+else()
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+endif()
 add_subdirectory(applications)
 
 #
