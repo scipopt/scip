@@ -72,19 +72,6 @@ struct SCIP_PresolData
  * Local methods
  */
 
-/** initializes the presolver data */
-static
-void initPresoldata(
-   SCIP_PRESOLDATA*      presoldata          /**< presolver data */
-   )
-{
-   assert(presoldata != NULL);
-
-   presoldata->maxshift = DEFAULT_MAXSHIFT;
-   presoldata->flipping = DEFAULT_FLIPPING;
-   presoldata->integer = DEFAULT_INTEGER;
-}
-
 /*
  * Callback methods of presolver
  */
@@ -274,7 +261,6 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
 
    /* create boundshift presolver data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
-   initPresoldata(presoldata);
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
@@ -288,15 +274,17 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
 
    /* add probing presolver parameters */
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "presolving/boundshift/maxshift", 
+         "presolving/boundshift/maxshift",
          "absolute value of maximum shift",
          &presoldata->maxshift, TRUE, DEFAULT_MAXSHIFT, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/boundshift/flipping", 
+         "presolving/boundshift/flipping",
          "is flipping allowed (multiplying with -1)?",
          &presoldata->flipping, TRUE, DEFAULT_FLIPPING, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/boundshift/integer", 
+         "presolving/boundshift/integer",
          "shift only integer ranges?",
          &presoldata->integer, TRUE, DEFAULT_INTEGER, NULL, NULL) );
 
