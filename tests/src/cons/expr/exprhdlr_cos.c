@@ -127,7 +127,8 @@ Test(cos, parse, .description = "Tests the expression parsing.")
 
    cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
-   cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[0]));
+   cr_expect(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(expr)[0]) == x);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -241,7 +242,7 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, cosexpr, x), results[i]));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprDerivative(xexpr), results[i]));
    }
 
    /* random part */
@@ -251,7 +252,7 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, cosexpr, x), -SIN(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprDerivative(xexpr), -SIN(randnum)));
    }
 }
 
