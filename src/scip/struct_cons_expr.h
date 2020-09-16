@@ -98,7 +98,7 @@ struct SCIP_ConsExpr_Expr
 
    int                     nuses;         /**< reference counter */
    int                     nlockspos;     /**< positive locks counter */
-   int                     nlocksneg ;    /**< negative locks counter */
+   int                     nlocksneg;     /**< negative locks counter */
 
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
    SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
