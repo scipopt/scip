@@ -299,28 +299,34 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropCos)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= -1.0);
-   assert(SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)) <= 1.0);
+   /* bounds should have been intersected with activity, which is within [-1,1] */
+   assert(SCIPintervalGetInf(bounds) >= -1.0);
+   assert(SCIPintervalGetSup(bounds) <= 1.0);
 
    *nreductions = 0;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   /* get the child interval and shift it to match sine */
-   newbounds = SCIPgetConsExprExprActivity(scip, child);
-   newbounds.inf += M_PI_2;
-   newbounds.sup += M_PI_2;
+   /* get the child interval */
+   newbounds = SCIPgetConsExprExprBounds(scip, conshdlr, child);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* shift child interval to match sine */
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &newbounds, newbounds, M_PI_2);  /* TODO use bounds on Pi/2 instead of approximation of Pi/2 */
 
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprActivity(scip, expr), newbounds, &newbounds) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );
 
    /* shift the new interval back */
-   newbounds.inf -= M_PI_2;
-   newbounds.sup -= M_PI_2;
+   SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &newbounds, newbounds, -M_PI_2);  /* TODO use bounds on Pi/2 instead of approximation of Pi/2 */
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -357,7 +363,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureCos)
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE) );
 
    /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
    *success = TRUE;
@@ -388,7 +394,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityCos)
    assert(childidx == 0);
 
    assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], &interval, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], &interval, FALSE) );
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);

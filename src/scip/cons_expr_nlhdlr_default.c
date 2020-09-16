@@ -315,7 +315,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    assert(expr != NULL);
 
    /* call the interval evaluation callback of the expression handler */
-   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, global, intevalvardata) );
+   SCIP_CALL( SCIPintevalConsExprExprHdlr(scip, expr, interval, intevalvar, intevalvardata) );
 
    return SCIP_OKAY;
 }
@@ -327,7 +327,7 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
    assert(expr != NULL);
 
    /* call the reverse propagation callback of the expression handler */
-   SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, conshdlr, expr, reversepropqueue, infeasible, nreductions, force) );
+   SCIP_CALL( SCIPreversepropConsExprExprHdlr(scip, conshdlr, expr, bounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }

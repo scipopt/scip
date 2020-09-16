@@ -79,6 +79,12 @@ SCIP_RETCODE SCIPdropConsExprExprVarEvent(
    SCIP_CONS*            cons                /**< expr constraint */
    );
 
+/** returns whether the variable events on variable are catched */
+SCIP_EXPORT
+SCIP_Bool SCIPisConsExprExprVarEventCatched(
+   SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
+   );
+
 /** gives number of constraints for which the expression catches bound change events on the variable */
 SCIP_EXPORT
 int SCIPgetConsExprExprVarNConss(

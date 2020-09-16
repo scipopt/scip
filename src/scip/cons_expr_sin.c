@@ -1117,21 +1117,26 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreductions != NULL);
-   assert(SCIPintervalGetInf(SCIPgetConsExprExprActivity(scip, expr)) >= -1.0);
-   assert(SCIPintervalGetSup(SCIPgetConsExprExprActivity(scip, expr)) <= 1.0);
+   assert(SCIPintervalGetInf(bounds) >= -1.0);
+   assert(SCIPintervalGetSup(bounds) <= 1.0);
 
    *nreductions = 0;
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
 
-   newbounds = SCIPgetConsExprExprActivity(scip, child);
+   newbounds = SCIPgetConsExprExprBounds(scip, conshdlr, child);
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, SCIPgetConsExprExprActivity(scip, expr), newbounds, &newbounds) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, force, reversepropqueue, infeasible, nreductions) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -1167,7 +1172,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
 
    child = SCIPgetConsExprExprChildren(expr)[0];
    assert(child != NULL);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE) );
 
    /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
    *success = TRUE;
@@ -1198,7 +1203,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
    assert(childidx == 0);
 
    assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], &interval, FALSE, TRUE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], &interval, FALSE) );
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);

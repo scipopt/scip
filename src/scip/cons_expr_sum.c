@@ -986,7 +986,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSum)
 
    SCIP_CALL( SCIPreverseConsExprExprPropagateWeightedSum(scip, conshdlr, SCIPgetConsExprExprNChildren(expr),
             SCIPgetConsExprExprChildren(expr), exprdata->coefficients, exprdata->constant,
-            SCIPgetConsExprExprActivity(scip, expr), reversepropqueue, infeasible, nreductions, force) );
+            bounds, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -1237,10 +1237,8 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    SCIP_Real*            weights,            /**< weights of expressions in sum */
    SCIP_Real             constant,           /**< constant in sum */
    SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i in interval */
-   SCIP_QUEUE*           reversepropqueue,   /**< queue used in reverse prop, pass to SCIPtightenConsExprExprInterval */
    SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
-   int*                  nreductions,        /**< buffer to store the number of interval reductions */
-   SCIP_Bool             force               /**< to force tightening */
+   int*                  nreductions         /**< buffer to store the number of interval reductions */
    )
 {
    SCIP_INTERVAL* bounds;
@@ -1279,10 +1277,16 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
    /* shift coefficients into the intervals of the children; compute the min and max activities */
    for( c = 0; c < nexprs; ++c )
    {
-      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], SCIPgetConsExprExprActivity(scip, exprs[c]),
-         weights[c]);  /*lint !e613 */
+      childbounds = SCIPgetConsExprExprBounds(scip, conshdlr, exprs[c]);
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], childbounds.inf, childbounds.sup); /*lint !e613 */
 
-      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], SCIPgetConsExprExprActivity(scip, exprs[c]).inf, SCIPgetConsExprExprActivity(scip, exprs[c]).sup); /*lint !e613 */
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], childbounds, weights[c]);  /*lint !e613 */
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
@@ -1361,8 +1365,7 @@ SCIP_RETCODE SCIPreverseConsExprExprPropagateWeightedSum(
       SCIPdebugMsgPrint(scip, " -> x = [%.20g,%.20g]\n", childbounds.inf, childbounds.sup);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, exprs[c], childbounds, force, reversepropqueue,
-            infeasible, nreductions) );  /*lint !e613 */
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, exprs[c], childbounds, infeasible, nreductions) );  /*lint !e613 */
    }
 
 TERMINATE:

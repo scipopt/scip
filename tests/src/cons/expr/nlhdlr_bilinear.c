@@ -479,7 +479,7 @@ Test(nlhdlrbilinear, inteval_corner)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -10.0), "expect -10.0 got %g\n", SCIPintervalGetInf(interval));
@@ -518,7 +518,7 @@ Test(nlhdlrbilinear, inteval_single_line)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -3.0625), "expect -3.0625 got %g\n", SCIPintervalGetInf(interval));
@@ -572,7 +572,7 @@ Test(nlhdlrbilinear, inteval_three_lines)
     * here we want to reevaluate the whole constraint, to get the factor of -2 again
     */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), &interval, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -19.2), "expect -19.2 got %g\n", SCIPintervalGetInf(interval));
@@ -614,7 +614,7 @@ Test(nlhdlrbilinear, inteval_parallel)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
 
    /* compute interval */
    cr_expect(SCIPisEQ(scip, SCIPintervalGetInf(interval), -0.25), "expect -0.25 got %g\n", SCIPintervalGetInf(interval));
@@ -656,13 +656,13 @@ Test(nlhdlrbilinear, reverseprop_single)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
    cr_expect(SCIPisEQ(scip, activity.inf, -1.0));
    cr_expect(SCIPisEQ(scip, activity.sup, 0.0));
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
-   reversePropBilinear(scip, expr, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
+   reversePropBilinear(scip, conshdlr, expr, expr->activity, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
    cr_expect(SCIPisEQ(scip, intervalx.inf, -1.0));
    cr_expect(SCIPisEQ(scip, intervalx.sup, 0.0));
    cr_expect(SCIPisEQ(scip, intervaly.inf, 0.0));
@@ -708,20 +708,20 @@ Test(nlhdlrbilinear, reverseprop_levelset)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
    cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
    cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
-   /* tighten the lower bound of the expression */
+   /* tighten the bounds of the expression */
    SCIPintervalSetBounds(&interval, -0.8, 0.5);
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, interval, &cutoff, &ntightenings) );
    cr_expect(!cutoff);
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -0.8));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
+   cr_expect(SCIPisEQ(scip, expr->propbounds.inf, -0.8));
+   cr_expect(SCIPisEQ(scip, expr->propbounds.sup, 0.5));
 
    /* compute intervals; inequality cuts off two corner points */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
-   reversePropBilinear(scip, expr, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
+   reversePropBilinear(scip, conshdlr, expr, expr->propbounds, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
    cr_expect(SCIPisEQ(scip, intervalx.inf, -1.0));
    cr_expect_float_eq(intervalx.sup, 0.64371709509590, 1e-8);
    cr_expect(intervalx.sup >= 0.64371709509590); /* intervalarith.c gives us safe bounds */
@@ -744,8 +744,6 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    SCIP_INTERVAL intervaly;
    SCIP_INTERVAL interval;
    SCIP_Bool success;
-   SCIP_Bool cutoff = FALSE;
-   int ntightenings = 0;
    SCIP_CONSEXPR_EXPR* expr;
 
    /* set variable bounds */
@@ -767,20 +765,14 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
 
    /* reevaluate expression (SCIPincrementConsExprCurBoundsTag would normally be called by prop_obbt) */
    SCIPincrementConsExprCurBoundsTag(conshdlr, FALSE);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &interval, FALSE) );
    cr_expect(SCIPisEQ(scip, interval.inf, -1.0));
    cr_expect(SCIPisEQ(scip, interval.sup, 1.0));
 
-   /* tighten the lower bound of the expression */
-   SCIPintervalSetBounds(&interval, -1.0, 0.5);
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, expr, interval, FALSE, NULL, &cutoff, &ntightenings) );
-   cr_expect(!cutoff);
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).inf, -1.0));
-   cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprActivity(scip, expr).sup, 0.5));
-
    /* compute intervals; inequality does not intersect the level set in the interior of the domain -> no tightening */
    nlhdlrexprdata = SCIPgetConsExprNlhdlrExprData(nlhdlr, expr);
-   reversePropBilinear(scip, expr, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
+   SCIPintervalSetBounds(&interval, -1.0, 0.5);
+   reversePropBilinear(scip, conshdlr, expr, interval, nlhdlrexprdata->underineqs, nlhdlrexprdata->nunderineqs, nlhdlrexprdata->overineqs, nlhdlrexprdata->noverineqs, &intervalx, &intervaly);
    cr_expect(SCIPisEQ(scip, intervalx.inf, -1.0));
    cr_expect(SCIPisEQ(scip, intervalx.sup, 1.0));
    cr_expect(SCIPisEQ(scip, intervaly.inf, -1.0));
