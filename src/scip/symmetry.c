@@ -1038,7 +1038,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    /* storage for number of vars per row that are contained in current setppc cons and
     * labels of rows intersecting with current setppc cons
     */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowcoveragesetppc, nrows) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &rowcoveragesetppc, nrows) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &rowsinsetppc, nrows) );
 
    /* iterate over set packing and partitioning constraints and check whether the constraint's
@@ -1152,7 +1152,7 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    }
 
    SCIPfreeBufferArray(scip, &rowsinsetppc);
-   SCIPfreeBufferArray(scip, &rowcoveragesetppc);
+   SCIPfreeCleanBufferArray(scip, &rowcoveragesetppc);
    SCIPfreeBufferArray(scip, &rowidxvar);
    SCIPfreeBufferArray(scip, &covered);
 
