@@ -128,6 +128,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( SCIPdoNotAggr(scip) )
+      return SCIP_OKAY;
+
    /* get presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
@@ -140,12 +143,9 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    if( nvars == 0 )
       return SCIP_OKAY;
 
-   if( SCIPdoNotAggr(scip) )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
-   /* copy the integer variables into an own array, since adding new integer variables affects the left-most slots in
+   /* copy the integer/continuous variables into an own array, since adding new variables affects the left-most slots in
     * the array and thereby interferes with our search loop
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nvars) );
@@ -229,12 +229,12 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          assert(redundant);
          assert(aggregated);
          SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
-            SCIPvarGetName(newvar),SCIPvarGetLbGlobal(newvar),SCIPvarGetUbGlobal(newvar),SCIPvarGetObj(newvar));
+            SCIPvarGetName(newvar), SCIPvarGetLbGlobal(newvar), SCIPvarGetUbGlobal(newvar), SCIPvarGetObj(newvar));
 
          /* release variable */
          SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 
-         /* take care of statistic */
+         /* take care of statistics */
          (*naggrvars)++;
          *result = SCIP_SUCCESS;
       }
