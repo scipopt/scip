@@ -964,7 +964,9 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
 }
 
 
-/** checks whether an orbitope is a packing or partitioning orbitope */
+/** checks whether an orbitope is a packing or partitioning orbitope; if npprows != NULL,
+ *  count how many rows are contained in packing/partitioning constraints
+ */
 SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
@@ -1009,7 +1011,11 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
    nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
 
-   if ( nsetppcconss == 0 )
+   /* we can terminate early if there are not sufficiently many setppc conss
+    * (for orbitopes treating a full component, we might allow to remove rows
+    * not contained in setppc cons; for this reason we need the second check)
+    */
+   if ( nsetppcconss == 0 || (nsetppcconss < nrows && npprows == NULL ))
       return SCIP_OKAY;
    assert( setppcconss != NULL );
 
