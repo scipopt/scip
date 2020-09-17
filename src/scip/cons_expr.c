@@ -9465,41 +9465,6 @@ SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
    return SCIPhashTwo(SCIPvarGetIndex(entry->x), SCIPvarGetIndex(entry->y));
 }
 
-/** compare two auxiliary expressions
- *
- *  Compares auxiliary variables, followed by coefficients and then constants.
- */
-static
-int auxexprCompare(
-   SCIP_CONSEXPR_AUXEXPR* auxexpr1,           /**< first auxiliary expression */
-   SCIP_CONSEXPR_AUXEXPR* auxexpr2            /**< second auxiliary expression */
-)
-{
-   int compvars;
-   int i;
-
-   /* compare the auxiliary variables */
-   compvars = SCIPvarCompare(auxexpr1->auxvar, auxexpr2->auxvar); /* TODO can one of these be NULL? */
-
-   if( compvars != 0 )
-      return compvars;
-
-   /* compare the coefficients and constants */
-   for( i = 0; i < 3; ++i )
-   {
-      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] )
-         return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
-   }
-
-   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1;
-}
-
-/** comparison method for sorting variables by non-decreasing index */
-SCIP_DECL_SORTPTRCOMP(SCIPauxexprComp)
-{
-   return auxexprCompare((SCIP_CONSEXPR_AUXEXPR*)elem1, (SCIP_CONSEXPR_AUXEXPR*)elem2);
-}
-
 /** ensures the auxexprs array in the bilinear term is large enough to store n entries */
 static
 SCIP_RETCODE ensureBilinTermSize(
@@ -10126,7 +10091,6 @@ void quadFree(
    )
 {
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -15798,6 +15762,40 @@ SCIP_Real SCIPevalConsExprBilinAuxExpr(
           auxexpr->coefs[1] * SCIPgetSolVal(scip, sol, x) + auxexpr->coefs[2] * SCIPgetSolVal(scip, sol, y);
 }
 
+/** compare two auxiliary expressions
+ *
+ *  Compares auxiliary variables, followed by coefficients and then constants.
+ */
+int auxexprCompare(
+   SCIP_CONSEXPR_AUXEXPR* auxexpr1,           /**< first auxiliary expression */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr2            /**< second auxiliary expression */
+   )
+{
+   int compvars;
+   int i;
+
+   /* compare the auxiliary variables */
+   compvars = SCIPvarCompare(auxexpr1->auxvar, auxexpr2->auxvar); /* TODO can one of these be NULL? */
+
+   if( compvars != 0 )
+      return compvars;
+
+   /* compare the coefficients and constants */
+   for( i = 0; i < 3; ++i )
+   {
+      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] )
+      return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
+   }
+
+   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1;
+}
+
+/** comparison method for sorting variables by non-decreasing index */
+SCIP_DECL_SORTPTRCOMP(SCIPauxexprComp)
+{
+   return auxexprCompare((SCIP_CONSEXPR_AUXEXPR*)elem1, (SCIP_CONSEXPR_AUXEXPR*)elem2);
+}
+
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_RETCODE bilinearTermsInsertExisting(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -15812,7 +15810,6 @@ SCIP_RETCODE bilinearTermsInsertExisting(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_BILINTERM* term;
    SCIP_CONSEXPR_BILINTERM entry;
-   int idx;
 
    assert(conshdlr != NULL);
    assert(x != NULL);
@@ -15834,8 +15831,7 @@ SCIP_RETCODE bilinearTermsInsertExisting(
    /* use a new entry to find the image in the bilinear hash table */
    entry.x = x;
    entry.y = y;
-
-   idx = -1;
+   /* TODO the check should be here? */
 
    /* this is the first time we encounter this product */
    /* ensure size of bilinterms array */

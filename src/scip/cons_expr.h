@@ -1320,6 +1320,19 @@ SCIP_Real SCIPevalConsExprBilinAuxExpr(
    SCIP_SOL*             sol
    );
 
+/** compare two auxiliary expressions
+ *
+ *  Compares auxiliary variables, followed by coefficients and then constants.
+ */
+SCIP_EXPORT
+int auxexprCompare(
+   SCIP_CONSEXPR_AUXEXPR* auxexpr1,           /**< first auxiliary expression */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr2            /**< second auxiliary expression */
+);
+
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPauxexprComp);
+
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE bilinearTermsInsertExisting(
