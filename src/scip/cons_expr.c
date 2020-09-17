@@ -769,6 +769,89 @@ SCIP_RETCODE copyExpr(
    return SCIP_OKAY;
 }
 
+/** creates and captures an expr constraint
+ *
+ * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr, e.g., when created by copyExpr.
+ */
+static
+SCIP_RETCODE createConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             copyexpr,           /**< whether to copy the expression or reuse the given expr (capture it) */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* TODO remove this once we allow for local expression constraints */
+   if( local && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPerrorMessage("Locally valid expression constraints are not supported, yet.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* TODO remove this once we allow for non-initial expression constraints */
+   if( !initial )
+   {
+      SCIPerrorMessage("Non-initial expression constraints are not supported, yet.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
+
+   if( copyexpr )
+   {
+      SCIP_CALL( copyExpr(scip, scip, conshdlr, expr, &consdata->expr, NULL, NULL) );
+   }
+   else
+   {
+      consdata->expr = expr;
+      SCIPcaptureConsExprExpr(consdata->expr);
+   }
+   consdata->lhs = lhs;
+   consdata->rhs = rhs;
+   consdata->consindex = conshdlrdata->lastconsindex++;
+   consdata->curv = SCIP_EXPRCURV_UNKNOWN;
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+         local, modifiable, dynamic, removable, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
@@ -10574,10 +10657,9 @@ SCIP_DECL_CONSTRANS(consTransExpr)
    SCIP_CALL( copyExpr(scip, scip, conshdlr, sourcedata->expr, &targetexpr, transformVar, NULL) );
    assert(targetexpr != NULL);  /* copyExpr cannot fail if source and target scip are the same */
 
-   /* create transformed cons (captures targetexpr) */
-   /* TODO this makes an identical copy of targetexpr, which we could skip */
-   SCIP_CALL( SCIPcreateConsExpr(scip, targetcons, SCIPconsGetName(sourcecons),
-      targetexpr, sourcedata->lhs, sourcedata->rhs,
+   /* create transformed cons (only captures targetexpr, no need to copy again) */
+   SCIP_CALL( createConsExpr(scip, conshdlr, targetcons, SCIPconsGetName(sourcecons),
+      targetexpr, sourcedata->lhs, sourcedata->rhs, FALSE,
       SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
       SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
       SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
@@ -11223,10 +11305,9 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    /* validity depends only on the SCIPgetVarCopy() returns from copyVar, which are accumulated in mapvardata.valid */
    *valid = mapvardata.valid;
 
-   /* create copy (captures targetexpr) */
-   /* TODO this makes an identical copy of targetexpr, which we could skip */
-   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
-      targetexpr, sourcedata->lhs, sourcedata->rhs,
+   /* create copy (only capture targetexpr, no need to copy again) */
+   SCIP_CALL( createConsExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+      targetexpr, sourcedata->lhs, sourcedata->rhs, FALSE,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* release target expr */
@@ -11360,8 +11441,8 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    }
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,
-      consexprtree, lhs, rhs,
+   SCIP_CALL( createConsExpr(scip, conshdlr, cons, name,
+      consexprtree, lhs, rhs, TRUE,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
    assert(*cons != NULL);
 
@@ -16169,8 +16250,6 @@ SCIP_RETCODE SCIPcreateConsExpr(
    /* TODO: (optional) modify the definition of the SCIPcreateConsExpr() call, if you don't need all the information */
 
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
 
    assert(expr != NULL);
 
@@ -16181,35 +16260,10 @@ SCIP_RETCODE SCIPcreateConsExpr(
       SCIPerrorMessage("expr constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* TODO remove this once we allow for local expression constraints */
-   if( local && SCIPgetDepth(scip) != 0 )
-   {
-      SCIPerrorMessage("Locally valid expression constraints are not supported, yet.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* TODO remove this once we allow for non-initial expression constraints */
-   if( !initial )
-   {
-      SCIPerrorMessage("Non-initial expression constraints are not supported, yet.\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* create constraint data */
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
-
-   SCIP_CALL( copyExpr(scip, scip, conshdlr, expr, &consdata->expr, NULL, NULL) );
-   consdata->lhs = lhs;
-   consdata->rhs = rhs;
-   consdata->consindex = conshdlrdata->lastconsindex++;
-   consdata->curv = SCIP_EXPRCURV_UNKNOWN;
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, FALSE) );
+   SCIP_CALL( createConsExpr(scip, conshdlr, cons, name, expr, lhs, rhs, TRUE,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    return SCIP_OKAY;
 }
@@ -16286,8 +16340,8 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
    assert(expr != NULL);
 
    /* create expression constraint */
-   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs, initial, separate, enforce, check, propagate,
-      local, modifiable, dynamic, removable) );
+   SCIP_CALL( createConsExpr(scip, conshdlr, cons, name, expr, lhs, rhs, TRUE,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    /* release quadratic expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
