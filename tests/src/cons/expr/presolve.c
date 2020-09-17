@@ -98,6 +98,9 @@ Test(presolve, mergeconss)
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
+   /* re-discover that exprs in all constraints are the same */
+   SCIP_CALL( replaceCommonSubexpressions(scip, conss, 3) );
+
    /* merge constraints */
    SCIP_CALL( presolMergeConss(scip, conss, 3, &success) );
    cr_expect(success);
