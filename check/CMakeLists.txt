@@ -299,7 +299,7 @@ endif()
 #
 set(instances_MINLP
     "instances/MINLP/bip_cross_min.10.10.10.1.pip\;1"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"

@@ -403,7 +403,7 @@
  *          <li>See the comments for MINLP.</li>
  *          <li>In addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
  *          problem in cases where the automated detection is not strong enough.</li>
- *          <li>Test instances are available at <code>check/instances/MINLP/circle.cip</code>.</li>
+ *          <li>Test instances are available at <code>check/instances/MINLP/circle.lp</code>.</li>
  *       </ul>
  *    </td>
  * </td>
