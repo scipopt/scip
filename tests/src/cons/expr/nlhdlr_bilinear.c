@@ -227,7 +227,8 @@ Test(nlhdlrbilinear, add_inequality)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
-
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /*
     * add inequalities to product expression
@@ -264,7 +265,6 @@ Test(nlhdlrbilinear, add_inequality)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /** auxiliary function to check coefficients of a cut */
@@ -331,6 +331,8 @@ Test(nlhdlrbilinear, separation_single)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    SCIP_CALL( SCIPconstructLP(scip, &dummy) );
 
@@ -372,7 +374,6 @@ Test(nlhdlrbilinear, separation_single)
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 }
 
@@ -401,6 +402,8 @@ Test(nlhdlrbilinear, separation_two)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    SCIP_CALL( SCIPconstructLP(scip, &dummy) );
 
@@ -445,7 +448,6 @@ Test(nlhdlrbilinear, separation_two)
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 }
 
@@ -469,6 +471,8 @@ Test(nlhdlrbilinear, inteval_corner)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* INITSOL should have added a request for an auxiliary variable to the product expression (tight might change in the future) */
    cr_assert( SCIPgetConsExprExprNAuxvarUses(expr) > 0);
@@ -488,7 +492,6 @@ Test(nlhdlrbilinear, inteval_corner)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* tests the interval evaluation callback when linear inequalities are available */
@@ -511,6 +514,8 @@ Test(nlhdlrbilinear, inteval_single_line)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* add linear inequality -x <= -y + 3.5 => maximum of xy is attained at (-1.75,1.75) */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, -1.0, 3.5, &success) );
@@ -527,7 +532,6 @@ Test(nlhdlrbilinear, inteval_single_line)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* tests the interval evaluation callback when three intersecting linear inequalities are available */
@@ -605,6 +609,8 @@ Test(nlhdlrbilinear, inteval_parallel)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* add inequalities with the same slope: x <= y + 1 and x >= y - 1 */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, 1.0, &success) );
@@ -623,7 +629,6 @@ Test(nlhdlrbilinear, inteval_parallel)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* tests the reverse propagation callback when linear inequalities are available */
@@ -649,6 +654,8 @@ Test(nlhdlrbilinear, reverseprop_single)
    /* create constraint containing a single product expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* add inequality x <= y - 1 */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 1.0, -1.0, &success) );
@@ -671,7 +678,6 @@ Test(nlhdlrbilinear, reverseprop_single)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* tests the reverse propagation callback when a linear inequality together with the level set of a bilinear term
@@ -701,6 +707,8 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    /* create expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* add inequality x <= 0.7 y + 0.1 */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, 1.0, 0.7, 0.1, &success) );
@@ -732,7 +740,6 @@ Test(nlhdlrbilinear, reverseprop_levelset)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* tests the reverse propagation callback when a linear inequality does not intersect the level set */
@@ -758,6 +765,8 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    /* create expression */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* add inequality -x <= y */
    SCIP_CALL( SCIPaddConsExprNlhdlrBilinearIneq(scip, nlhdlr, expr, -1.0, 1.0, 0.0, &success) );
@@ -781,5 +790,4 @@ Test(nlhdlrbilinear, reverseprop_levelset_nointersection)
    /* free memory */
    SCIP_CALL( freeEnfoData(expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
