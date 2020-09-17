@@ -73,6 +73,7 @@
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
 #define CUT_MAXTOTNEDGES  50000
+#define CUT_MINTOTNEDGES  12000
 
 #ifdef WITH_UG
 const char*
@@ -1803,6 +1804,34 @@ SCIP_RETCODE createInitialCuts(
    return SCIP_OKAY;
 }
 
+
+/** helper */
+static
+SCIP_Bool setParamsSepaIsBad(
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+#ifndef WITH_UG
+	GRAPH* const graph = probdata->graph;
+	const SCIP_Bool tooBig = (graph->edges > CUT_MAXTOTNEDGES)
+		|| ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS));
+	const SCIP_Bool tooSmall = (graph->edges < CUT_MINTOTNEDGES);
+
+	if( tooBig || tooSmall )
+	{
+	   const SCIP_Real redratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
+	   assert(LE(redratio, 1.0));
+
+	   if( redratio < CUT_MINREDUCTION_RATIO )
+	   {
+	      return TRUE;
+	   }
+	}
+
+#endif
+	return FALSE;
+}
+
 /** set parameters */
 static
 SCIP_RETCODE setParams(
@@ -1816,21 +1845,13 @@ SCIP_RETCODE setParams(
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
 
-#ifndef WITH_UG
-   if( (graph->edges > CUT_MAXTOTNEDGES) || ((graph->edges > CUT_MAXNEDGES) && (graph->terms > CUT_MAXNTERMINALS)) )
+   if( setParamsSepaIsBad(probdata) )
    {
-	   const SCIP_Real redratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
-	   assert(LE(redratio, 1.0));
-
-	   if( redratio < CUT_MINREDUCTION_RATIO )
-	   {
-		  SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
-		  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
-		  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
-		  SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
-	   }
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
+	  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
+	  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
    }
-#endif
 
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
 
