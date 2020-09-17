@@ -3094,7 +3094,7 @@ SCIP_RETCODE detectOrbitopes(
       if ( ! infeasibleorbitope )
       {
          /* to ensure same orbitope is added if different sets of generators are found */
-         SCIP_CALL( SCIPsortOrbitope(scip, orbitopevaridx, vars, ntwocyclescomp, npermsincomponent + 1) );
+         SCIP_CALL( SCIPsortOrbitope(scip, orbitopevaridx, vars, nbincyclescomp, npermsincomponent + 1) );
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
                nbincyclescomp, npermsincomponent + 1, TRUE, FALSE,
