@@ -2760,11 +2760,11 @@ SCIP_RETCODE determineSymmetry(
  */
 static
 SCIP_RETCODE SCIPsortOrbitope(
-   SCIP*                 scip,
-   int**                 orbitopevaridx,
-   SCIP_VAR***           vars,
-   int                   nrows,
-   int                   ncols
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 orbitopevaridx,     /**< variable index matrix of orbitope */
+   SCIP_VAR***           vars,               /**< variable matrix of orbitope */
+   int                   nrows,              /**< number of binary rows of orbitope */
+   int                   ncols               /**< number of columns of orbitope */
    )
 {
    int i;
