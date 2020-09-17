@@ -48,7 +48,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXUNKNOWNTERMS      -1 /**< default value for parameter maxunknownterms */
-#define DEFAULT_MAXUSEDVARS          -1 /**< default value for parameter maxusedvars */
+#define DEFAULT_MAXUSEDVARS         100 /**< default value for parameter maxusedvars */
 #define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
 #define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
 #define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
@@ -56,9 +56,9 @@
 #define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
-#define DEFAULT_USEPROJECTION      TRUE /**< default value for parameter useprojection */
-#define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
-#define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
+#define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
+#define DEFAULT_DETECTHIDDEN      FALSE /**< default value for parameter detecthidden */
+#define DEFAULT_HIDDENRLT         FALSE /**< default value for parameter hiddenrlt */
 #define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
 
 #define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
