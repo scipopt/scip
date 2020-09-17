@@ -1214,8 +1214,10 @@ SCIP_RETCODE detectSocNorm(
    SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), nchildren) );
    SCIP_CALL( SCIPhashsetCreate(&linexprs, SCIPblkmem(scip), nchildren) );
 
-   /* we create coefs array here already, since we have to fill it in first loop in case of success */
-   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nchildren) );
+   /* we create coefs array here already, since we have to fill it in first loop in case of success
+    * +1 for auxvar
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &transcoefs, nchildren+1) );
 
    nterms = 0;
 
