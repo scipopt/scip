@@ -2078,7 +2078,7 @@ SCIP_RETCODE checkRedundancyConss(
          var = SCIPgetConsExprExprVarVar(consdata->expr);
          assert(var != NULL);
 
-         SCIPdebugMsg(scip, "variable constraint <%s> can be made redundant: <%s>[%g,%g] in [%g,%g] ", SCIPconsGetName(conss[i]), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), consdata->lhs, consdata->rhs);
+         SCIPdebugMsg(scip, "variable constraint <%s> can be made redundant: <%s>[%g,%g] in [%g,%g]\n", SCIPconsGetName(conss[i]), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), consdata->lhs, consdata->rhs);
 
          /* ensure that variable bounds are within constraint sides */
          if( !SCIPisInfinity(scip, -consdata->lhs) )
