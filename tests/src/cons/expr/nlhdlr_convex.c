@@ -192,6 +192,67 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
    detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
 }
 
+/** test detection for block-decomposable quadratic */
+Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
+{
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONSEXPR_EXPR* oexpr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_Bool changed;
+   SCIP_Bool infeas;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
+   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_CONS* cons;
+   SCIP_CONSEXPR_QUADEXPR* quaddata;
+   int nquadexprs;
+   int i;
+
+   /* create expression and constraint */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x1>^2+2*<x1>*<x2>+<x2>^2+5*<x3>^2", NULL, &oexpr) );
+   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+   cr_expect(!infeas);
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
+
+   SCIPprintCons(scip, cons, NULL);
+   SCIPinfoMessage(scip, NULL, "\n");
+
+   /* detect */
+   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
+
+   cr_expect_eq(enforcing, participating);
+   cr_expect(enforcing == SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   cr_assert_not_null(nlhdlrexprdata);
+
+   SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
+   cr_assert_not_null(quaddata);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
+   cr_expect(nquadexprs == 3);
+
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* varexpr;
+      SCIP_CONSEXPR_EXPR* sqrexpr;
+      SCIP_VAR* var;
+
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &varexpr, NULL, NULL, NULL, NULL, &sqrexpr);
+      cr_assert(SCIPisConsExprExprVar(varexpr));
+      cr_assert_not_null(sqrexpr);
+
+      var = SCIPgetConsExprExprVarVar(varexpr);
+      cr_expect(var != x_3 || sqrexpr->nauxvaruses == 1);
+      cr_expect(var == x_3 || sqrexpr->nauxvaruses == 0);
+   }
+
+   SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 /** given a string for f(x) and its curvature, run nlhdlr_convex detect on f(x) = 0 and estimate on the enforced side and check whether the estimator is as expected */
 static
 SCIP_RETCODE estimate(

@@ -324,6 +324,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    SCIP_CONSEXPR_QUADEXPR* quaddata;
    SCIP_EXPRCURV presentcurv;
    SCIP_EXPRCURV wantedcurv;
+   SCIP_HASHSET* lonelysquares = NULL;
    int nbilinexprs;
    int nquadexprs;
    int i;
@@ -377,6 +378,28 @@ DECL_CURVCHECK(curvCheckQuadratic)
 
    *success = TRUE;
 
+   if( !nlhdlrdata->detectsum )
+   {
+      /* first step towards block-decomposition of quadratic term:
+       * collect all square-expressions (in original expr) which have no adjacent bilinear term
+       * we will treat these x^2 as linear, i.e., add an auxvar for them, so x^2 maybe linearized
+       * more efficiently (in particular if x is discrete)
+       */
+      SCIP_CALL( SCIPhashsetCreate(&lonelysquares, SCIPblkmem(scip), nquadexprs) );
+      for( i = 0; i < nquadexprs; ++i )
+      {
+         int nadjbilin;
+         SCIP_CONSEXPR_EXPR* sqrexpr;
+
+         SCIPgetConsExprQuadraticQuadTermData(quaddata, i, NULL, NULL, NULL, &nadjbilin, NULL, &sqrexpr);
+         if( nadjbilin == 0 )
+         {
+            assert(sqrexpr != NULL);
+            SCIP_CALL( SCIPhashsetInsert(lonelysquares, SCIPblkmem(scip), (void*)sqrexpr) );
+         }
+      }
+   }
+
    /* add immediate children to nlexpr */
    SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, nlexpr, NULL) );
    assert(SCIPgetConsExprExprNChildren(nlexpr) == SCIPgetConsExprExprNChildren(expr));
@@ -396,9 +419,10 @@ DECL_CURVCHECK(curvCheckQuadratic)
       assert(SCIPhashmapGetImage(nlexpr2origexpr, (void*)child) == SCIPgetConsExprExprChildren(expr)[i]);
 
       if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
-         SCIPgetConsExprExprPowExponent(child) == 2.0 )
+         SCIPgetConsExprExprPowExponent(child) == 2.0 &&
+         (lonelysquares == NULL || !SCIPhashsetExists(lonelysquares, SCIPgetConsExprExprChildren(expr)[i])) )
       {
-         /* square term */
+         /* square term that isn't lonely, i.e., orig-version of child is a square-expr and nadjbilin>0 */
          SCIP_CALL( nlhdlrExprGrowChildren(scip, conshdlr, nlexpr2origexpr, child, curvlinear) );
          assert(SCIPgetConsExprExprNChildren(child) == 1);
          SCIP_CALL( exprstackPush(scip, stack, 1, SCIPgetConsExprExprChildren(child)) );
@@ -419,6 +443,9 @@ DECL_CURVCHECK(curvCheckQuadratic)
          SCIP_CALL( exprstackPush(scip, stack, 1, &child) );
       }
    }
+
+   if( lonelysquares != NULL )
+      SCIPhashsetFree(&lonelysquares, SCIPblkmem(scip));
 
    return SCIP_OKAY;
 }
