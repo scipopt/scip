@@ -49,8 +49,6 @@
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_rowprep.h"
 
-#include "nlpi/nlpi_ipopt.h" /* for LAPACK */
-
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "quadratic"
 #define NLHDLR_DESC               "handler for quadratic expressions"
@@ -66,6 +64,7 @@
 /* some default values */
 #define INTERCUTS_MINVIOL      1e-4
 #define DEFAULT_USEINTERCUTS   TRUE
+#define DEFAULT_USESTRENGTH    TRUE
 #define BINSEARCH_MAXITERS     120
 #define DEFAULT_NCUTSROOT       20
 #define DEFAULT_NCUTS            2
@@ -3712,6 +3711,17 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropQuadratic)
    return SCIP_OKAY;
 }
 
+/** callback to free data of handler */
+static
+SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataQuadratic)
+{ /*lint --e{715}*/
+   assert(nlhdlrdata != NULL);
+
+   SCIPfreeBlockMemory(scip, nlhdlrdata);
+
+   return SCIP_OKAY;
+}
+
 /** nonlinear handler copy callback
  *
  * the method includes the nonlinear handler into a expression constraint handler
@@ -3751,6 +3761,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
       NLHDLR_ENFOPRIORITY, nlhdlrDetectQuadratic, nlhdlrEvalAuxQuadratic, nlhdlrdata) );
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrcopyHdlrQuadratic);
+   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataQuadratic);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrfreeExprDataQuadratic);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, nlhdlrEnfoQuadratic, NULL, NULL);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalQuadratic, nlhdlrReversepropQuadratic);
@@ -3758,11 +3769,11 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    /* parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/useintersectioncuts",
          "whether to use intersection cuts for quadratic constraints to separate",
-         &nlhdlrdata->useintersectioncuts, FALSE, TRUE, NULL, NULL) );
+         &nlhdlrdata->useintersectioncuts, FALSE, DEFAULT_USEINTERCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/usestrengthening",
          "whether the strengthening should be used",
-         &nlhdlrdata->usestrengthening, FALSE, TRUE, NULL, NULL) );
+         &nlhdlrdata->usestrengthening, FALSE, DEFAULT_USESTRENGTH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ncutslimit",
          "limit for number of cuts generated consecutively",
