@@ -9979,6 +9979,7 @@ void quadFree(
    )
 {
    int i;
+   int n;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -9988,16 +9989,20 @@ void quadFree(
    if( expr->quaddata == NULL )
       return;
 
+   n = expr->quaddata->nquadexprs;
+
    SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->linexprs, expr->quaddata->nlinexprs);
    SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
    SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->eigenvalues, n);
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->eigenvectors, n * n);
 
-   for( i = 0; i < expr->quaddata->nquadexprs; ++i )
+   for( i = 0; i < n; ++i )
    {
       SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->quadexprterms[i].adjbilin,
          expr->quaddata->quadexprterms[i].adjbilinsize);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->quadexprterms, expr->quaddata->nquadexprs);
+   SCIPfreeBlockMemoryArrayNull(scip, &expr->quaddata->quadexprterms, n);
 
    SCIPfreeBlockMemory(scip, &expr->quaddata);
 }
@@ -17638,6 +17643,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr)
  * Use SCIPgetConsExprQuadraticQuadTermData() and SCIPgetConsExprQuadraticBilinTermData()
  * to access the data for a quadratic or bilinear term.
  *
+ * It can also return the eigenvalues and the eigenvectors of the matrix Q when the quadratic is written
+ * as x^T Q x + b^T x + c^T y + d, where c^T y defines the purely linear part.
+ * Note, however, that to have access to them one needs to call SCIPgetConsExprQuadraticCurvature()
+ * with storeeigeninfo equals to TRUE. If the eigen infortmation was not stored or it failed to be computed,
+ * eigenvalues and eigenvectors will be set to NULL.
+ *
+ *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
  */
@@ -17648,7 +17660,9 @@ void SCIPgetConsExprQuadraticData(
    SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
    SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
    int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
-   int*                          nbilinexprs       /**< buffer to store number of bilinear expressions terms, or NULL */
+   int*                          nbilinexprs,      /**< buffer to store number of bilinear expressions terms, or NULL */
+   SCIP_Real**                   eigenvalues,      /**< buffer to store pointer to array of eigenvalues of Q, or NULL */
+   SCIP_Real**                   eigenvectors      /**< buffer to store pointer to array of eigenvectors of Q, or NULL */
    )
 {
    assert(quaddata != NULL);
@@ -17665,6 +17679,10 @@ void SCIPgetConsExprQuadraticData(
       *nquadexprs = quaddata->nquadexprs;
    if( nbilinexprs != NULL )
       *nbilinexprs = quaddata->nbilinexprterms;
+   if( eigenvalues != NULL )
+      *eigenvalues = quaddata->eigenvalues;
+   if( eigenvectors != NULL )
+      *eigenvectors = quaddata->eigenvectors;
 }
 
 /** gives the data of a quadratic expression term
@@ -17896,7 +17914,8 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
    SCIP_EXPRCURV*          curv,             /**< pointer to store the curvature of quadratics */
-   SCIP_HASHMAP*           assumevarfixed    /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_HASHMAP*           assumevarfixed,   /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool               storeeigeninfo    /**< whether the eigenvalues and eigenvectors should be stored */
    )
 {
    SCIP_HASHMAP* expr2matrix;
@@ -17910,7 +17929,11 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    assert(quaddata != NULL);
    assert(curv != NULL);
 
-   if( quaddata->curvaturechecked )
+   /* do not store eigen information if we are not considering full matrix */
+   if( assumevarfixed != NULL )
+      storeeigeninfo = FALSE;
+
+   if( quaddata->eigeninfostored || (quaddata->curvaturechecked && ! storeeigeninfo) )
    {
       *curv = quaddata->curvature;
       /* if we are convex or concave on the full set of variables, then we will also be so on a subset */
@@ -17942,8 +17965,20 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    assert(nn > 0);
    assert((unsigned)nn < UINT_MAX / sizeof(SCIP_Real));
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
+   if( storeeigeninfo )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &quaddata->eigenvalues, n));
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &quaddata->eigenvectors, nn));
+
+      alleigval = quaddata->eigenvalues;
+      matrix = quaddata->eigenvectors;
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &matrix, nn) );
+   }
+
 
    SCIP_CALL( SCIPhashmapCreate(&expr2matrix, SCIPblkmem(scip), n) );
 
@@ -18018,8 +18053,17 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
 
 CLEANUP:
    SCIPhashmapFree(&expr2matrix);
-   SCIPfreeBufferArray(scip, &matrix);
-   SCIPfreeBufferArray(scip, &alleigval);
+
+   if( ! storeeigeninfo )
+   {
+      SCIPfreeBufferArray(scip, &matrix);
+      SCIPfreeBufferArray(scip, &alleigval);
+   }
+   else
+   {
+      assert(! quaddata->eigeninfostored);
+      quaddata->eigeninfostored = TRUE;
+   }
 
    /* if checked convexity on full Q matrix, then remember it
     * if indefinite on submatrix, then it will also be indefinite on full matrix, so can remember that, too */

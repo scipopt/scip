@@ -1833,6 +1833,13 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(SCIPestimateConsExprNlhdlr);
  * Use SCIPgetConsExprQuadraticQuadTermData() and SCIPgetConsExprQuadraticBilinTermData()
  * to access the data for a quadratic or bilinear term.
  *
+ * It can also return the eigenvalues and the eigenvectors of the matrix Q when the quadratic is written
+ * as x^T Q x + b^T x + c^T y + d, where c^T y defines the purely linear part.
+ * Note, however, that to have access to them one needs to call SCIPgetConsExprQuadraticCurvature()
+ * with storeeigeninfo equals to TRUE. If the eigen infortmation was not stored or it failed to be computed,
+ * eigenvalues and eigenvectors will be set to NULL.
+ *
+ *
  * This function returns pointers to internal data in linexprs and lincoefs.
  * The user must not change this data.
  */
@@ -1844,7 +1851,9 @@ void SCIPgetConsExprQuadraticData(
    SCIP_CONSEXPR_EXPR***         linexprs,         /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
    SCIP_Real**                   lincoefs,         /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
    int*                          nquadexprs,       /**< buffer to store number of expressions in quadratic terms, or NULL */
-   int*                          nbilinexprs       /**< buffer to store number of bilinear expressions terms, or NULL */
+   int*                          nbilinexprs,      /**< buffer to store number of bilinear expressions terms, or NULL */
+   SCIP_Real**                   eigenvalues,      /**< buffer to store pointer to array of eigenvalues of Q, or NULL */
+   SCIP_Real**                   eigenvectors      /**< buffer to store pointer to array of eigenvectors of Q, or NULL */
    );
 
 /** gives the data of a quadratic expression term
@@ -1926,7 +1935,8 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_QUADEXPR* quaddata,         /**< quadratic coefficients data */
    SCIP_EXPRCURV*          curv,             /**< pointer to store the curvature of quadratics */
-   SCIP_HASHMAP*           assumevarfixed    /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_HASHMAP*           assumevarfixed,   /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool               storeeigeninfo    /**< whether the eigenvalues and eigenvectors should be stored */
    );
 
 /** @} */

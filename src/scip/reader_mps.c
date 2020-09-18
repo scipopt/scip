@@ -4306,7 +4306,8 @@ SCIP_RETCODE SCIPwriteMps(
          consQuadratic[nConsQuadratic++] = cons;
 
          /* collect linear coefficients of quadratic part */
-         SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL);
+         SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, NULL,
+               NULL);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nquadexprs) );
          SCIP_CALL( SCIPallocBufferArray(scip, &quadvarlincoefs, nquadexprs) );
@@ -4753,7 +4754,7 @@ SCIP_RETCODE SCIPwriteMps(
          SCIP_CALL( SCIPgetQuadExprConsExpr(scip, cons, &quaddata) );
          assert(quaddata != NULL);
 
-         SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nconsvars, &nbilin);
+         SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nconsvars, &nbilin, NULL, NULL);
 
          (void) SCIPsnprintf(namestr, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 

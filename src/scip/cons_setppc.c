@@ -7160,7 +7160,7 @@ SCIP_DECL_EXPRCONSUPGD(exprUpgdSetppc)
    if( quaddata == NULL || !SCIPareConsExprQuadraticExprsVariables(quaddata) )
       return SCIP_OKAY;
 
-   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms);
+   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
 
    /* adjust rhs */
    rhs -= constant;

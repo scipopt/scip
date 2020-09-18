@@ -357,7 +357,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    if( quaddata == NULL )
       return SCIP_OKAY;
 
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, &nbilinexprs);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, &nbilinexprs, NULL, NULL);
 
    /* if only single square term (+linear), then give up here (let curvCheckExprhdlr handle this) */
    if( nquadexprs <= 1 )
@@ -370,7 +370,7 @@ DECL_CURVCHECK(curvCheckQuadratic)
    /* get curvature of quadratic
     * TODO as we know what curvature we want, we could first do some simple checks like computing xQx for a random x
     */
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv, assumevarfixed) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &presentcurv, assumevarfixed, FALSE) );
 
    /* if not having desired curvature, return */
    if( presentcurv != wantedcurv )

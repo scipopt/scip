@@ -1293,7 +1293,7 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
    assert( naddconss != NULL );
 
    /* get the number of bilinear expressions */
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, NULL, &nbilinexprs);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, NULL, &nbilinexprs, NULL, NULL);
 
    /* loop through bilinear terms of quadratic constraint */
    for( j = 0; j < nbilinexprs; ++j )
@@ -1370,7 +1370,7 @@ SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
    assert( naddconss != NULL );
 
    /* get the number of quadratic expressions */
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
 
    /* loop through quadratic terms */
    for( j = 0; j < nquadexprs; ++j )
@@ -1438,8 +1438,8 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
    assert( ndualconss != NULL );
    assert( naddconss != NULL );
 
-  /* get linear and quadratic expression terms */
-   SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL);
+   /* get linear and quadratic expression terms */
+   SCIPgetConsExprQuadraticData(quaddata, NULL, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, NULL, NULL);
 
    /* loop through linear terms */
    for( j = 0; j < nlinexprs; ++j )
@@ -1631,7 +1631,8 @@ SCIP_RETCODE checkConsQuadraticProblem(
       return SCIP_OKAY;
 
    /* get data of the quadratic expression */
-   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprs);
+   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprs, NULL,
+         NULL);
 
    /* adjust lhs and rhs if constant is nonzero */
    if( constant != 0.0 )
@@ -1871,7 +1872,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
    /* desired structure: matrix associated to quadratic constraint is indefinite; otherwise, the problem usually can be
     * solved faster by standard methods
     */
-   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL) );
+   SCIP_CALL( SCIPgetConsExprQuadraticCurvature(scip, quaddata, &curv, NULL, FALSE) );
 
    if( !presoldata->updatequadindef && (curv == SCIP_EXPRCURV_CONVEX || curv == SCIP_EXPRCURV_CONCAVE) )
    {
