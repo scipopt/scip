@@ -240,20 +240,6 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
 #endif
 
 
-/** nonlinear handler callback for reformulation */
-#if 0
-static
-SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(nlhdlrReformulateXyz)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrReformulateXyz NULL
-#endif
-
 /*
  * nonlinear handler specific interface methods
  */
@@ -285,7 +271,6 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
    SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaXyz, nlhdlrEnfoXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
    SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
-   SCIPsetConsExprNlhdlrReformulate(scip, nlhdlr, nlhdlrReformulateXyz);
 
    return SCIP_OKAY;
 }
