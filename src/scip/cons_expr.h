@@ -1335,7 +1335,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPauxexprComp);
 
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE bilinearTermsInsertExisting(
+SCIP_RETCODE SCIPinsertBilinearTermExisting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
@@ -1347,17 +1347,17 @@ SCIP_RETCODE bilinearTermsInsertExisting(
 
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE bilinearTermsInsertImplicit(
+SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
    SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
-   SCIP_Real             coefaux,
-   SCIP_Real             coefx,
-   SCIP_Real             coefy,
-   SCIP_Real             cst,
-   SCIP_Bool             overestimate
+   SCIP_Real             coefaux,            /**< coefficient of auxvar in the linear expression */
+   SCIP_Real             coefx,              /**< coefficient of x in the linear expression */
+   SCIP_Real             coefy,              /**< coefficient of y in the linear expression */
+   SCIP_Real             cst,                /**< constant of the linear expression */
+   SCIP_Bool             overestimate        /**< whether the linear expression overestimates the product */
    );
 
 /** returns the number of enforcements for an expression */

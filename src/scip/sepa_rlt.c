@@ -682,8 +682,8 @@ SCIP_RETCODE extractProducts(
 
    SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) );
 
-   SCIP_CALL( bilinearTermsInsertImplicit(scip, sepadata->conshdlr, x, y, w, lincoefs[0], lincoefs[1], lincoefs[2],
-                                            cst, overest) );
+   SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, lincoefs[0], lincoefs[1], lincoefs[2],
+         cst, overest) );
 
    return SCIP_OKAY;
 }
