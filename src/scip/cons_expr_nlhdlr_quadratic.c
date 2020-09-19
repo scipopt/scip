@@ -2669,11 +2669,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    /* if we use intersection cuts then we can handle any non-convex quadratic */
    if( nlhdlrdata->useintersectioncuts && eigenvalues != NULL && (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) ==
          FALSE && nlexprdata->curvature != SCIP_EXPRCURV_CONVEX )
+   {
       *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+   }
 
    if( nlhdlrdata->useintersectioncuts && eigenvalues != NULL && (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) == FALSE &&
          nlexprdata->curvature != SCIP_EXPRCURV_CONCAVE )
+   {
       *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   }
 
    /* if nobody can do anything, remove data */
    if( *participating == SCIP_CONSEXPR_EXPRENFO_NONE ) /*lint !e845*/

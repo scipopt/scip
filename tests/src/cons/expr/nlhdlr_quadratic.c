@@ -76,9 +76,6 @@ void setup(void)
       }
    cr_assert_not_null(nlhdlr);
 
-   /* we still want to test nlhdlr_quadratic estimating convex quadratics */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/convex/cvxquadratic", FALSE) );
-
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
@@ -120,6 +117,7 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
    SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_CONSEXPR_EXPRENFO_METHOD participatingexpected;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcingexpected;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
    SCIP_VAR* var;
@@ -140,12 +138,16 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
-   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
-   cr_expect_eq(participating, participatingexpected, "expecting %d got %d\n", participatingexpected, participating);
-   cr_assert(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
-   cr_assert(!(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE));
-   cr_assert_eq(participating, enforcing);
    cr_assert_not_null(nlhdlrexprdata);
+
+   /* x^2 + x <= something is convex and so convex nlhdlr should take care of it; x^2 + x >= something is nonconvex
+    * and so intersection cuts participates
+    */
+   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(participating, participatingexpected, "participating expecting %d got %d\n", participatingexpected, participating);
+
+   enforcingexpected = SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(enforcing, enforcingexpected, "enforcing expecting %d got %d\n", enforcingexpected, enforcing);
 
    cr_expect_eq(nlhdlrexprdata->quaddata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", nlhdlrexprdata->quaddata->nlinexprs);
    cr_expect_eq(nlhdlrexprdata->quaddata->nquadexprs, 1, "Expecting 1 quadratic terms, got %d\n", nlhdlrexprdata->quaddata->nquadexprs);
@@ -179,6 +181,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
    SCIP_CONSEXPR_EXPRENFO_METHOD participating;
    SCIP_CONSEXPR_EXPRENFO_METHOD participatingexpected;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcingexpected;
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONSEXPR_EXPR* cosexpr;
@@ -209,15 +212,16 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    cosexpr = SCIPgetConsExprExprChildren(cosexpr)[1]; /* cos(x^2 y) */
    cr_assert_str_eq(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)), "cos", "expecting cos got %s\n",
          SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(cosexpr)));
+
    /* detect */
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, NULL, &enforcing, &participating, &nlhdlrexprdata) );
-   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
-   cr_expect_eq(participating, participatingexpected, "expecting %d got %d\n", participatingexpected, participating);
-   cr_assert(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
-   cr_assert(!(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE));
    cr_assert_not_null(nlhdlrexprdata);
+   participatingexpected = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE | SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   enforcingexpected = SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   cr_expect_eq(participating, participatingexpected, "part expecting %d got %d\n", participatingexpected, participating);
+   cr_expect_eq(enforcing, enforcingexpected, "enfo expecting %d got %d\n", enforcingexpected, enforcing);
 
    cr_expect_eq(nlhdlrexprdata->quaddata->nlinexprs, 0, "Expecting 0 linear vars, got %d\n", nlhdlrexprdata->quaddata->nlinexprs);
    cr_expect_eq(nlhdlrexprdata->quaddata->nquadexprs, 2, "Expecting 2 quadratic terms, got %d\n", nlhdlrexprdata->quaddata->nquadexprs);
@@ -363,7 +367,7 @@ Test(nlhdlrquadratic, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* x^2 + y^2 + w*z should not be handled by this nlhandler */
+/* x^2 + y^2 + w*z should not be propagated by this nlhandler */
 Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -386,16 +390,16 @@ Test(nlhdlrquadratic, notpropagablequadratic1, .init = setup, .fini = teardown)
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
+   cr_expect_not_null(nlhdlrexprdata);
 
    /* shouldn't have detected anything -> provides nothing */
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_NONE);
-   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
-   cr_expect_null(nlhdlrexprdata);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABOTH, "got %d\n", participating);
+   cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-/* log^2 x + sin^2 y + cos^2 z should not be handled by this nlhandler */
+/* log^2 x + sin^2 y + cos^2 z should not be handled by this nlhandler when intersection cuts are not available */
 Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -415,6 +419,7 @@ Test(nlhdlrquadratic, notpropagable2, .init = setup, .fini = teardown)
    expr = simplified;
 
    /* detect */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/quadratic/useintersectioncuts", FALSE) );
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
@@ -463,6 +468,7 @@ Test(nlhdlrquadratic, onlyPropagation, .init = setup, .fini = teardown)
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/quadratic/useintersectioncuts", FALSE) );
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
@@ -515,7 +521,7 @@ Test(nlhdlrquadratic, factorize, .init = setup, .fini = teardown)
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );
 
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", participating);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_ALL, "got %d\n", participating);
    cr_expect_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_ACTIVITY, "got %d\n", enforcing);
    cr_expect_not_null(nlhdlrexprdata);
 
@@ -673,6 +679,8 @@ Test(nlhdlrquadratic, propagation_inteval, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* detect */
+   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/quadratic/useintersectioncuts", FALSE) );
+
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectQuadratic(scip, conshdlr, nlhdlr, expr, FALSE, &enforcing, &participating, &nlhdlrexprdata) );

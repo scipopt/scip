@@ -17940,7 +17940,8 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
       if( assumevarfixed == NULL || quaddata->curvature != SCIP_EXPRCURV_UNKNOWN )
          return SCIP_OKAY;
    }
-   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL);
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL || (storeeigeninfo && !
+            quaddata->eigeninfostored));
 
    *curv = SCIP_EXPRCURV_UNKNOWN;
 
