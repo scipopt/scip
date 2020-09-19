@@ -230,7 +230,7 @@ Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
    cr_assert_not_null(quaddata);
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL);
+   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
    cr_expect(nquadexprs == 3);
 
    for( i = 0; i < nquadexprs; ++i )
