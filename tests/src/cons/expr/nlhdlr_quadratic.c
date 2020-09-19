@@ -43,7 +43,6 @@ static SCIP_VAR* w;
 static SCIP_VAR* z;
 static SCIP_VAR* s;
 static SCIP_VAR* t;
-static int nvars = 6;
 
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
@@ -950,7 +949,6 @@ void simplifyAndDetect(
    )
 {
    SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD provided;
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
    SCIP_Bool enforcing;
    SCIP_Bool participating;
@@ -2401,7 +2399,6 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_ROW* row2;
       SCIP_ROW* row3;
       SCIP_Bool lperror;
-      SCIP_Bool cutoff;
 
       /* 7 x/18 - 8 y/9 - z/2 <= -1/9 */
       SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row1, "row1", -SCIPinfinity(scip), -1.0 / 9, FALSE, FALSE, FALSE) );
