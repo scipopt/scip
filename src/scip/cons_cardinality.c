@@ -1670,7 +1670,7 @@ SCIP_RETCODE branchBalancedCardinality(
          assert(cnt == nbranchvars - (ind + 1));
 
          /* create branching constraint for node 2 */
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brright_#% "SCIP_LONGINT_FORMAT , SCIPgetNNodes(scip));
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brright_#% " SCIP_LONGINT_FORMAT , SCIPgetNNodes(scip));
          SCIP_CALL( SCIPcreateConsCardinality(scip, &cons2, name, cnt, branchvars, (int)splitval2, branchindvars, NULL,
                FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
