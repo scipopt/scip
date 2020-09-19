@@ -176,6 +176,7 @@ Fixed bugs
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 - Fixed order of linker flags when building AMPL interface with cmake system.
 - Fixed bug with ofsymcomptiming == 0: now symmetry is actually computed
+- Fixed bug in presol_boundshift: do not shift non-active variables
 
 Miscellaneous
 -------------
