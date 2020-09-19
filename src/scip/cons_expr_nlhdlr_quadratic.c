@@ -2534,6 +2534,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    SCIP_CALL( SCIPallocClearBlockMemory(scip, nlhdlrexprdata) );
    nlexprdata = *nlhdlrexprdata;
    nlexprdata->quaddata = quaddata;
+   nlexprdata->cons = cons;
 
 #ifdef DEBUG_DETECT
    SCIPinfoMessage(scip, NULL, "Nlhdlr quadratic detected:\n");

@@ -17997,7 +17997,7 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
       if( assumevarfixed != NULL && SCIPisConsExprExprVar(quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(quadexprterm.expr)) )
          continue;
 
-      if( quadexprterm.sqrcoef == 0.0 )
+      if( quadexprterm.sqrcoef == 0.0 && ! storeeigeninfo )
       {
          assert(quadexprterm.nadjbilin > 0);
          /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
@@ -18040,7 +18040,7 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    }
 
    /* compute eigenvalues */
-   if( LapackDsyev(FALSE, n, matrix, alleigval) != SCIP_OKAY )
+   if( LapackDsyev(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
    {
       SCIPwarningMessage(scip, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
       goto CLEANUP;
