@@ -1119,6 +1119,8 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+
+   SCIP_CALL( SCIPclearCuts(scip) );
 }
 
 /* separates simple norm function from different points */
@@ -1202,6 +1204,8 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+
+   SCIP_CALL( SCIPclearCuts(scip) );
 }
 
 /* separates simple function */
