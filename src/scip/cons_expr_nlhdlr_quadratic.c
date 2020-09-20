@@ -2649,6 +2649,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    /* check if we are going to separate or not */
    nlexprdata->curvature = SCIP_EXPRCURV_UNKNOWN;
 
+   /* for now, we do not care about separation if it is not required */
+   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
+   {
+      /* if nobody can do anything, remove data */
+      if( *participating == SCIP_CONSEXPR_EXPRENFO_NONE ) /*lint !e845*/
+      {
+         SCIP_CALL( nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, nlhdlrexprdata) );
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate\n", (void*)expr);
+      }
+      return SCIP_OKAY;
+   }
+
    assert(SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE);  /* separation should only be required in (init)solving stage */
 
    /* check if we can do something more: check curvature of quadratic function stored in nlexprdata
