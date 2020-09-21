@@ -877,7 +877,8 @@ SCIP_RETCODE generateCutSol(
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    if( SCIPisPositive(scip, consdata->lhsval) )
    {
@@ -944,7 +945,7 @@ SCIP_RETCODE generateCutPoint(
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -1040,7 +1041,7 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
