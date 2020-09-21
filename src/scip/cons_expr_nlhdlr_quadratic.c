@@ -2774,7 +2774,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
       SCIP_Real sqrcoef;
       SCIP_CONSEXPR_EXPR* qexpr;
 
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, NULL, NULL, &qexpr);
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, NULL, NULL, NULL);
 
       solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(qexpr));
       *auxvalue += (lincoef + sqrcoef * solval) * solval;
