@@ -26,6 +26,7 @@
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 #include "scip/pub_reader.h"
 #include "scip/reader_mst.h"
 #include "scip/scip_general.h"
@@ -34,7 +35,6 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_sol.h"
 #include <string.h>
-#include <regex.h>
 
 #define READER_NAME             "mstreader"
 #define READER_DESC             "file reader for partial primal solutions"
@@ -125,8 +125,6 @@ SCIP_DECL_READERREAD(readerReadMst)
 {  /*lint --e{715}*/
    SCIP_FILE* file;
    char buffer[SCIP_MAXSTRLEN];
-   regex_t reg;
-   int regretcode;
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -164,40 +162,18 @@ SCIP_DECL_READERREAD(readerReadMst)
    /* close file */
    SCIPfclose(file);
 
-   /* compile regex for determining whether a file is of xml type
-   * ^ only matches at the beginning of the string
-   * [ ]* matches any number of space characters
-   * <?xml matches the characters exactly
-   */
-   regretcode = regcomp(&reg, "^[ ]*<?xml", 0);
-
-   if ( regretcode != 0 )
-   {
-      SCIPerrorMessage("Failed to compile regex.\n");
-      return SCIP_READERROR;
-   }
-
-   /* execute regex reg on the string in buffer */
-   regretcode = regexec(&reg, buffer, 0, NULL, 0);
-
-   /* match found */
-   if ( regretcode == 0 )
+   /* decide whether it is xml */
+   if ( stratstart(buffer, "<?xml", 5) )
    {
       /* read XML solution and add it to the solution pool */
       SCIP_CALL( readMst(scip, filename, TRUE) );
    }
-   else if (regretcode == REG_NOMATCH)
+   else
    {
       /* read the solution and add it to the solution pool */
       SCIP_CALL( readMst(scip, filename, FALSE) );
    }
-   else
-   {
-      SCIPerrorMessage("Failed to execute regex.\n");
-      return SCIP_READERROR;
-   }
 
-   regfree(&reg);
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;

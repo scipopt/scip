@@ -11098,3 +11098,18 @@ int SCIPdisjointsetGetSize(
 
    return djset->size;
 }
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_Bool stratstart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+)
+{
+   /* skip whitespace at beginning */
+   while( isspace((unsigned char)*s) )
+      ++s;
+   if ( strncmp(s, t, tlen) == 0 )
+      return TRUE;
+   return FALSE;
+}
