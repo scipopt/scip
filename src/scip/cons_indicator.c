@@ -2015,8 +2015,8 @@ SCIP_RETCODE addAltLPColumn(
 
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
-   assert( vars != NULL );
-   assert( vals != NULL );
+   assert( vars != NULL || nvars == 0 );
+   assert( vals != NULL || nvars == 0 );
    assert( ! SCIPisInfinity(scip, rhscoef) && ! SCIPisInfinity(scip, -rhscoef) );
    assert( SCIPisEQ(scip, sign, 1.0) || SCIPisEQ(scip, sign, -1.0) );
    assert( colindex != NULL );
