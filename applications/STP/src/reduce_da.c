@@ -1673,7 +1673,7 @@ SCIP_RETCODE daOrderRoots(
       const int grad = graph->grad[terms[i]];
       assert(terms[i] >= 0);
 
-      termdegs[i] = -grad;
+      termdegs[i] = grad;
 
       if( grad > maxdeg )
          maxdeg = termdegs[i];
@@ -1684,7 +1684,7 @@ SCIP_RETCODE daOrderRoots(
 
          /* make sure root is selected for RPC/RMW */
          if( terms[i] == graph->source )
-            termdegs[i] = -graph->knots;
+            termdegs[i] = 2 * graph->knots;
       }
    }
 
@@ -1692,10 +1692,10 @@ SCIP_RETCODE daOrderRoots(
    {
       assert(randnumgen);
       for( int i = 0; i < nterms; i++ )
-         termdegs[i] -= SCIPrandomGetInt(randnumgen, 0, maxdeg);
+         termdegs[i] += SCIPrandomGetInt(randnumgen, 0, 2 * maxdeg);
    }
 
-   SCIPsortIntInt(termdegs, terms, nterms);
+   SCIPsortDownIntInt(termdegs, terms, nterms);
 
    SCIPfreeBufferArray(scip, &termdegs);
 
@@ -2425,7 +2425,6 @@ SCIP_RETCODE reduce_da(
    const SCIP_Bool extended = paramsda->useExtRed;
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
-   const int prevrounds = paramsda->prevrounds;
    REDCOST redcostdata;
 
    assert(scip && graph && nelims);
@@ -2480,7 +2479,7 @@ SCIP_RETCODE reduce_da(
    assert(nruns > 0);
 
    /* select roots for dual ascent */
-   SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
+   SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, TRUE, randnumgen) );
 
    {
       SCIP_Real cutoffbound = -1.0;
