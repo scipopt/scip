@@ -56,7 +56,7 @@
 #define NLHDLR_ENFOPRIORITY       100
 
 /* properties of the quadratic nlhdlr statistics table */
-#define TABLE_NAME_QUADRATIC                 "quadratic nlhdlr"
+#define TABLE_NAME_QUADRATIC                 "quadratic_nlhdlr_table"
 #define TABLE_DESC_QUADRATIC                 "quadratic nlhdlr statistics table"
 #define TABLE_POSITION_QUADRATIC             12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_QUADRATIC       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
@@ -674,6 +674,13 @@ SCIP_RETCODE insertRayEntries(
    {
       SCIP_Real coef;
 
+      /* we have a nonzero ray with base stat zero -> can't generate cut */
+      if( factor == 0.0 && ! SCIPisZero(scip, densetableaucols[nray * raylength + i]) )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
       coef = factor * densetableaucols[nray * raylength + i];
 
       /* this might be a source of numerical issues
@@ -684,13 +691,6 @@ SCIP_RETCODE insertRayEntries(
        */
       if( SCIPisZero(scip, coef) )
          continue;
-
-      /* we have a nonzero ray with base stat zero -> can't generate cut */
-      if( factor == 0.0 )
-      {
-         *success = FALSE;
-         return SCIP_OKAY;
-      }
 
       /* check if nonbasic var entry should come before this one */
       if( conspos > -1 && conspos < rayentry2conspos[i] )
@@ -852,7 +852,6 @@ SCIP_RETCODE createAndStoreSparseRays(
 #endif
       if( ! (*success) )
       {
-         assert(nnonz > oldnnonz);
 #ifdef  DEBUG_INTERSECTIONCUT
          SCIPdebugMsg(scip, "nonzero ray associated with variable <%s> has base status zero -> abort storing rays\n",
                SCIPvarGetName(SCIPcolGetVar(col)));
@@ -1027,7 +1026,7 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
          vdotb += (sidefactor * lincoef) * eigenvectors[offset + j];
 #ifdef INTERCUT_MOREDEBUG
          printf("vdotb: offset %d, eigenvector %d = %g, lincoef quad %g\n", offset, j,
-               nlhdlrexprdata->eigenvectors[offset + j], lincoef);
+               eigenvectors[offset + j], lincoef);
 #endif
          vdotzlp += SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr)) * eigenvectors[offset + j];
       }
@@ -1150,8 +1149,7 @@ SCIP_Real computeWRayLinear(
 
 #ifdef INTERCUT_MOREDEBUG
       printf("wray var in pos %d term %g:: lincoef %g raycoef %g\n", rayidx[i], (sidefactor *
-               nlhdlrexprdata->lincoefs[rayidx[i] - nlhdlrexprdata->nquadexprs]) * raycoefs[i], nlhdlrexprdata->lincoefs[rayidx[i] -
-            nlhdlrexprdata->nquadexprs] ,raycoefs[i]);
+            lincoefs[rayidx[i] - nquadexprs]) * raycoefs[i], lincoefs[rayidx[i] - nquadexprs] ,raycoefs[i]);
 #endif
       retval += (sidefactor * lincoefs[rayidx[i] - nquadexprs]) * raycoefs[i] ;
    }
@@ -2191,7 +2189,6 @@ SCIP_RETCODE generateIntercut(
    if( ! *success )
    {
       INTERLOG(printf("Failed to get rays: there is a var with base status ZERO!\n"); )
-      freeRays(scip, &rays);
       return SCIP_OKAY;
    }
 
@@ -2872,7 +2869,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
             (! overestimate && (auxvalue - SCIPgetRhsConsExpr(scip, cons) < SCIPfeastol(scip)))) )
    {
       INTERLOG(printf("We are actually feasible for the sides of the constraint\n"); )
-      return SCIP_ERROR;
+      return SCIP_OKAY;
    }
 
 #ifdef  DEBUG_INTERSECTIONCUT
