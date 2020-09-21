@@ -1088,6 +1088,9 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
 
    /* iterate over set packing and partitioning constraints and check whether the constraint's
     * support is a row r of the orbitope (covered[r] = 2) or contains row r (covered[r] = 1)
+    *
+    * @todo Check whether we can improve the following loop by using a hash value to check
+    * whether the setppccons intersects the orbitope matrix
     */
    for (c = 0; c < nsetppcconss && ncoveredpart < ncols; ++c)
    {
