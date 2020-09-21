@@ -54,7 +54,7 @@
 #define STP_RED_MINBNDTERMS   750
 #define STP_DABD_MAXDEGREE 5
 #define STP_DABD_MAXDNEDGES 10
-#define DAMAXDEVIATION_RANDOM_LOWER 0.15  /**< random upper bound for max deviation for dual ascent */
+#define DAMAXDEVIATION_RANDOM_LOWER 0.20  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_RANDOM_UPPER 0.30  /**< random upper bound for max deviation for dual ascent */
 #define DAMAXDEVIATION_FAST         0.75
 
@@ -130,10 +130,14 @@ SCIP_Real getDaMaxDeviation(
    assert(paramsda && randnumgen);
    assert(paramsda->prevrounds >= 0);
 
+#if 1
+   damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
+#else
    if( paramsda->prevrounds > 0 )
       damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
    else
       damaxdeviation = -1.0;
+#endif
 
    return damaxdeviation;
 }
@@ -2406,7 +2410,6 @@ SCIP_RETCODE reduce_da(
    SCIP_Real* nodefixingbounds = NULL;
    SCIP_Real* nodereplacebounds = NULL;
    SCIP_Real upperbound;
-   SCIP_Real damaxdeviation;
    const SCIP_Bool isRpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
    const SCIP_Bool isDirected = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
@@ -2478,9 +2481,7 @@ SCIP_RETCODE reduce_da(
 
    /* select roots for dual ascent */
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, (prevrounds > 0), randnumgen) );
-   damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
 
-   for( int outerrounds = 0; outerrounds < 2; outerrounds++ )
    {
       SCIP_Real cutoffbound = -1.0;
       SCIP_Bool havenewsol = FALSE;
@@ -2488,6 +2489,7 @@ SCIP_RETCODE reduce_da(
       /* main reduction loop */
       for( int run = 0; run < nruns; run++ )
       {
+         const SCIP_Real damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
          havenewsol = FALSE;
          redcostdata.redCostRoot = terms[run];
@@ -2508,14 +2510,14 @@ SCIP_RETCODE reduce_da(
 
          if( !isDirected )
          {
-                const SCIP_Bool useSlackPrune = (outerrounds == 0 && run == 1 && paramsda->useSlackPrune);
+            const SCIP_Bool useSlackPrune = (run == 1 && paramsda->useSlackPrune);
             SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, &redcostdata, useSlackPrune,
                         userec, pool, result, &havenewsol, &upperbound) );
          }
 
          setCutoff(upperbound, &redcostdata, &cutoffbound);
 
-         SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata.dualBound, run, outerrounds);
+         SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata.dualBound, run, 0);
 
          if( isRpcmw )
             graph_pc_2org(scip, graph);
@@ -2611,11 +2613,6 @@ SCIP_RETCODE reduce_da(
          assert(graph_valid_ancestors(scip, graph));
          graph_mark(graph);
       }
-
-      if( ndeletions == 0 || !userec )
-         break;
-      else if( userec )
-         damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
    } /* outerrounds */
 
    *nelims = ndeletions;

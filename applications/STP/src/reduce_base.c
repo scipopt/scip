@@ -623,7 +623,6 @@ SCIP_RETCODE redLoopStp_inner(
             sdstar = TRUE;
             sdbiased = TRUE;
             sdc = TRUE;
-            da = TRUE;
             bdk = nodereplacing;
             nvsl = nodereplacing;
 
