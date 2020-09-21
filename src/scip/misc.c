@@ -11109,7 +11109,6 @@ SCIP_Bool SCIPstrAtStart(
 {
    assert(s != NULL);
    assert(t != NULL);
-   assert(tlen >= 0);
 
    /* skip whitespace at beginning */
    while( isspace((unsigned char)*s) )
