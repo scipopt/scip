@@ -2800,7 +2800,7 @@ SCIP_RETCODE SCIPsortOrbitope(
    }
 
    /* sort rows increasingly w.r.t. minimum variable indices */
-   SCIPsortIntPtr2(idcs, (void***) vars, nrows);
+   SCIPsortIntPtr(idcs, (void**) vars, nrows);
 
    /* sort columns increasingly w.r.t. variable indices of first row */
    SCIP_CALL( SCIPallocBufferArray(scip, &colorder, ncols) );

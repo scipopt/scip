@@ -5786,11 +5786,6 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
-/* SCIPsortIntPtr2(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
-#define SORTTPL_NAMEEXT     IntPtr2
-#define SORTTPL_KEYTYPE     int
-#define SORTTPL_FIELD1TYPE  void**
-#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortIntIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntIntInt

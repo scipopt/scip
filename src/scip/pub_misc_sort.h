@@ -440,14 +440,6 @@ void SCIPsortIntPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
-SCIP_EXPORT
-void SCIPsortIntPtr2(
-   int*                  intarray,           /**< int array to be sorted */
-   void***               ptrarray,           /**< pointer array to be permuted in the same way */
-   int                   len                 /**< length of arrays */
-   );
-
 /** sort of two joint arrays of ints/reals, sorted by first array in non-decreasing order */
 SCIP_EXPORT
 void SCIPsortIntReal(
@@ -1035,14 +1027,6 @@ SCIP_EXPORT
 void SCIPsortDownIntPtr(
    int*                  intarray,           /**< int array to be sorted */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
-   int                   len                 /**< length of arrays */
-   );
-
-/** sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order */
-SCIP_EXPORT
-void SCIPsortDownIntPtr2(
-   int*                  intarray,           /**< int array to be sorted */
-   void***               ptrarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -1761,17 +1745,6 @@ void SCIPsortedvecInsertIntPtr(
    void**                ptrarray,           /**< pointer array where an element is to be inserted */
    int                   keyval,             /**< key value of new element */
    void*                 field1val,          /**< additional value of new element */
-   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
-   int*                  pos                 /**< pointer to store the insertion position, or NULL */
-   );
-
-/** insert a new element into two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
-SCIP_EXPORT
-void SCIPsortedvecInsertIntPtr2(
-   int*                  intarray,           /**< int array where an element is to be inserted */
-   void***               ptrarray,           /**< pointer array where an element is to be inserted */
-   int                   keyval,             /**< key value of new element */
-   void**                field1val,          /**< additional value of new element */
    int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
@@ -3374,15 +3347,6 @@ void SCIPsortedvecDelPosIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
-/** delete the element at the given position from two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
-SCIP_EXPORT
-void SCIPsortedvecDelPosIntPtr2(
-   int*                  intarray,           /**< int array where an element is to be deleted */
-   void***               ptrarray,           /**< pointer array where an element is to be deleted */
-   int                   pos,                /**< array position of element to be deleted */
-   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
-   );
-
 /** delete the element at the given position from three joint arrays of ints/pointers/Reals, sorted by first array in non-decreasing order */
 SCIP_EXPORT
 void SCIPsortedvecDelPosIntPtrReal(
@@ -4010,15 +3974,6 @@ SCIP_EXPORT
 void SCIPsortedvecDelPosDownIntPtr(
    int*                  intarray,           /**< int array where an element is to be deleted */
    void**                ptrarray,           /**< pointer array where an element is to be deleted */
-   int                   pos,                /**< array position of element to be deleted */
-   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
-   );
-
-/** delete the element at the given position from two joint arrays of ints/pointers, sorted by first array in non-increasing order */
-SCIP_EXPORT
-void SCIPsortedvecDelPosDownIntPtr2(
-   int*                  intarray,           /**< int array where an element is to be deleted */
-   void***               ptrarray,           /**< pointer array where an element is to be deleted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
