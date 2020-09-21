@@ -94,6 +94,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    unsigned int          activitiestag;      /**< value of activities tag when activities were computed */
 
    SCIP_CONS*            cons;               /**< if expr is the root of constraint cons, store cons; otherwise NULL */
+   SCIP_Bool             separating;         /**< whether we are using the nlhdlr also for separation */
+   SCIP_Bool             origvars;           /**< whether the quad expr in quaddata is in original (non-aux) variables */
 };
 
 /** nonlinear handler data */
@@ -2714,6 +2716,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
       }
 
       SCIPdebugMsg(scip, "expr %p is quadratic and propagable -> propagate and separate\n", (void*)expr);
+
+      nlexprdata->separating = TRUE;
    }
    else
    {
@@ -2724,6 +2728,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
    {
       SCIPsetConsExprExprCurvature(expr, nlexprdata->curvature);
       SCIPdebugMsg(scip, "expr is %s in the original variables\n", nlexprdata->curvature == SCIP_EXPRCURV_CONCAVE ? "concave" : "convex");
+      nlexprdata->origvars = TRUE;
    }
 
    return SCIP_OKAY;
@@ -2733,21 +2738,59 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectQuadratic)
 static
 SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
 {  /*lint --e{715}*/
+   int i;
+   int nlinexprs;
+   int nquadexprs;
+   int nbilinexprs;
+   SCIP_Real constant;
+   SCIP_Real* lincoefs;
+   SCIP_CONSEXPR_EXPR** linexprs;
+   SCIP_CONSEXPR_QUADEXPR* quaddata;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(auxvalue != NULL);
+   assert(nlhdlrexprdata->separating);
 
-   /* this handler can also handle quadratic expressions whose curvature is unknown or indefinite, since it can
-    * propagate them, but it does not separate these
-    * we then cannot evaluate w.r.t. auxvars, so we return the value of the expression instead
-    */
-   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_UNKNOWN )
+   /* if the quadratic is in the original variable we can just evaluate the expression */
+   if( nlhdlrexprdata->origvars )
    {
       *auxvalue = SCIPgetConsExprExprValue(expr);
       return SCIP_OKAY;
    }
 
-   *auxvalue = SCIPevalConsExprQuadraticAux(scip, nlhdlrexprdata->quaddata, sol);
+   quaddata = nlhdlrexprdata->quaddata;
+   SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprs, NULL, NULL);
+
+   *auxvalue = constant;
+
+   for( i = 0; i < nlinexprs; ++i ) /* linear exprs */
+      *auxvalue += lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(linexprs[i]));
+
+   for( i = 0; i < nquadexprs; ++i ) /* quadratic terms */
+   {
+      SCIP_Real solval;
+      SCIP_Real lincoef;
+      SCIP_Real sqrcoef;
+      SCIP_CONSEXPR_EXPR* qexpr;
+
+      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &qexpr, &lincoef, &sqrcoef, NULL, NULL, &qexpr);
+
+      solval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(qexpr));
+      *auxvalue += (lincoef + sqrcoef * solval) * solval;
+   }
+
+   for( i = 0; i < nbilinexprs; ++i ) /* bilinear terms */
+   {
+      SCIP_CONSEXPR_EXPR* expr1;
+      SCIP_CONSEXPR_EXPR* expr2;
+      SCIP_Real coef;
+
+      SCIPgetConsExprQuadraticBilinTermData(quaddata, i, &expr1, &expr2, &coef, NULL, NULL);
+
+      *auxvalue += coef * SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(expr1)) * SCIPgetSolVal(scip, sol,
+            SCIPgetConsExprExprAuxVar(expr2));
+   }
 
    return SCIP_OKAY;
 }
