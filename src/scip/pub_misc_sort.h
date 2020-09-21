@@ -2654,17 +2654,6 @@ void SCIPsortedvecInsertDownIntPtr(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
-/** insert a new element into two joint arrays of ints/pointers, sorted by first array in non-increasing order */
-SCIP_EXPORT
-void SCIPsortedvecInsertDownIntPtr2(
-   int*                  intarray,           /**< int array where an element is to be inserted */
-   void***               ptrarray,           /**< pointer array where an element is to be inserted */
-   int                   keyval,             /**< key value of new element */
-   void**                field1val,          /**< additional value of new element */
-   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
-   int*                  pos                 /**< pointer to store the insertion position, or NULL */
-   );
-
 /** insert a new element into four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-increasing order */
 SCIP_EXPORT
 void SCIPsortedvecInsertDownIntIntIntPtr(
