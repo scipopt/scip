@@ -26,7 +26,6 @@
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/misc.h"
 #include "scip/pub_reader.h"
 #include "scip/reader_mst.h"
 #include "scip/scip_general.h"
@@ -163,7 +162,7 @@ SCIP_DECL_READERREAD(readerReadMst)
    SCIPfclose(file);
 
    /* decide whether it is xml */
-   if ( stratstart(buffer, "<?xml", 5) )
+   if ( SCIPstrAtStart(buffer, "<?xml", 5) )
    {
       /* read XML solution and add it to the solution pool */
       SCIP_CALL( readMst(scip, filename, TRUE) );

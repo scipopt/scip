@@ -2221,6 +2221,13 @@ void SCIPstrCopySection(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+);
+
 /**@} */
 
 /*

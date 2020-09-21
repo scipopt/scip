@@ -2153,8 +2153,8 @@ SCIP_RETCODE addScenarioConsToProb(
       SCIP_CONS* cons;
       SCIP_VAR** consvars = NULL;
       int nconsvars;
-      SCIP_Bool success1;
-      SCIP_Bool success2;
+      SCIP_Bool success1 = TRUE;
+      SCIP_Bool success2 = TRUE;
 
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
