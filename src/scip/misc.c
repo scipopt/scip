@@ -11107,11 +11107,12 @@ SCIP_Bool SCIPstrAtStart(
         size_t                tlen                /**< length of t */
 )
 {
+   int idxctr = 0;
+
    assert(s != NULL);
    assert(t != NULL);
 
    /* skip whitespace at beginning */
-   int idxctr = 0;
    while( idxctr < SCIP_MAXSTRLEN && isspace((unsigned char)s[idxctr]) )
       ++idxctr;
    if ( strncmp(&s[idxctr], t, tlen) == 0 )
