@@ -42,7 +42,6 @@ static SCIP_VAR* x4;
 static SCIP_VAR* y12;
 static SCIP_VAR* b1;
 static SCIP_VAR* b2;
-static SCIP_VAR* auxvar;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
@@ -288,8 +287,8 @@ Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .descri
    /* the product should be: xy >= (1/(a1c2 - c1a2))*(a1a2w + (a2(b1 - d1) + a1d2)x + a1c2y - a1d2)
     * or, substituting the given values: xy <= (-1/2)*(2w + (3 - 1 + 2*3)x - 2*3)
     * xy <= -w - 4x + 3
-    * the second product: xy >= 3x + 1y - 3 (x = b1, y = x1)            y(x-1) >= 3(x-1)    y <= 3
-    * /
+    * the second product: xy >= 3x + 1y - 3 (x = b1, y = x1)
+    */
 
    /* check the numbers */
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
