@@ -20,7 +20,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/lp.h"
@@ -1685,6 +1684,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 {
    SCIP_Rational* oldval;
    SCIP_Rational* tmp;
+   SCIP_RETCODE retcode;
 
    assert(sol != NULL);
    assert(stat != NULL);
@@ -1751,12 +1751,27 @@ SCIP_RETCODE SCIPsolSetValExact(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /** @todo exip: presolving extension
-       *  - implement this if exact version of SCIP supports aggregated variables
-       */
-      SCIPerrorMessage("cannot set solution value for aggregated variable\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA;
+      assert(!RatIsZero(SCIPvarGetAggrScalarExact(var)));
+      assert(!RatIsAbsInfinity(SCIPvarGetAggrConstantExact(var)));
+      assert(!RatIsAbsInfinity(SCIPvarGetAggrScalarExact(var)));
+
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+
+      if( RatIsAbsInfinity(val) )
+      {
+         if( !RatIsPositive(SCIPvarGetAggrScalarExact(var)) )
+            RatNegate(tmp, val);
+         retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var),  tmp);
+      }
+      else
+      {
+         RatDiff(tmp, val, SCIPvarGetAggrConstantExact(var));
+         RatDiv(tmp, tmp, SCIPvarGetAggrScalarExact(var));
+         retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var), tmp);
+      }
+
+      RatFreeBuffer(set->buffer, &tmp);
+      return retcode;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
@@ -1991,8 +2006,6 @@ void SCIPsolGetValExact(
 {
    SCIP_VAR** vars;
    SCIP_Real* scalars;
-   SCIP_Real solval;
-   SCIP_Real solvalsum;
    int nvars;
    int i;
 
@@ -2068,15 +2081,26 @@ void SCIPsolGetValExact(
       assert(RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
       assert(RatIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
       assert(RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
-      SCIPvarGetLbGlobalExact(var);
+      RatSet(res, SCIPvarGetLbGlobalExact(var));
       break;
 
     case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /** @todo exip: presolving extension
-       *  - implement this if exact version of SCIP supports aggregated variables
-       */
-      SCIPerrorMessage("cannot get solution value of aggregated variable\n");
-      SCIPABORT();
+      SCIPsolGetValExact(res, sol, set, stat, SCIPvarGetAggrVar(var));
+      if( RatIsAbsInfinity(res) )
+      {
+         if( RatGetSign(res) * RatGetSign(SCIPvarGetAggrScalarExact(var)) > 0 )
+         {
+            RatSetString(res, "inf");
+            return;
+         }
+         if( RatGetSign(res) * RatGetSign(SCIPvarGetAggrScalarExact(var)) < 0 )
+         {
+            RatSetString(res, "-inf");
+            return;
+         }
+      }
+      RatMult(res, res, SCIPvarGetAggrScalarExact(var));
+      RatAdd(res, res, SCIPvarGetAggrConstantExact(var));
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
@@ -2321,7 +2345,7 @@ SCIP_RETCODE solCheckExact(
    assert(feasible != NULL);
 
    SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
-      RatApproxReal(sol->valsexact->obj), sol->nodenum, sol->solorigin);
+      sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
 
@@ -2367,7 +2391,7 @@ SCIP_RETCODE solCheckExact(
 #ifdef SCIP_DEBUG
                else
                {
-                  SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", RgetRealApprox(solval), SCIPvarGetName(var),
+                  RatDebugMessage("  -> solution value %q violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
                }
 #endif
@@ -2390,8 +2414,8 @@ SCIP_RETCODE solCheckExact(
 #ifdef SCIP_DEBUG
                   else
                   {
-                     SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                        RgetRealApprox(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                     RatDebugMessage("infinite solution value %q for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #endif
                }

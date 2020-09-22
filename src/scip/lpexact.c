@@ -4549,6 +4549,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    )
 {
    int pos;
+   SCIP_Rational* tmp;
 
    assert(row != NULL);
    assert(lp != NULL);
@@ -4557,6 +4558,8 @@ SCIP_RETCODE SCIProwExactIncCoef(
 
    if( RatIsZero(incval) )
       return SCIP_OKAY;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
    /* search the position of the column in the row's col vector */
    pos = rowExactSearchCoef(row, col);
@@ -4574,23 +4577,26 @@ SCIP_RETCODE SCIProwExactIncCoef(
       assert(row->cols[pos] == col);
       assert(row->cols_index[pos] == col->index);
 
+      RatAdd(tmp, incval, row->vals[pos]);
+
       /* if column knows of the row, change the corresponding coefficient in the column */
       if( row->linkpos[pos] >= 0 )
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(RatIsEqual(col->vals[row->linkpos[pos]], row->vals[pos]));
-         RatAdd(incval, incval, row->vals[pos]);
-         SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], incval) );
+         SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], tmp) );
       }
 
       /* change the coefficient in the row */
-      SCIP_CALL( rowExactChgCoefPos(row, blkmem, set, eventqueue, lp, pos, incval) );
+      SCIP_CALL( rowExactChgCoefPos(row, blkmem, set, eventqueue, lp, pos, tmp) );
    }
 
    checkLinks(lp);
 
    /* invalid the activity */
    row->validactivitylp = -1;
+
+   RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -4607,7 +4613,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
    )
 {
    assert(row != NULL);
-   assert(row->lhs <= row->rhs);
+   assert(RatIsLE(row->lhs, row->rhs));
    assert(!RatIsAbsInfinity(constant));
    assert(stat != NULL);
    assert(lp != NULL);
@@ -4621,6 +4627,8 @@ SCIP_RETCODE SCIProwExactChgConstant(
          RatAdd(row->pseudoactivity, row->pseudoactivity, constant);
          RatDiff(row->pseudoactivity, row->pseudoactivity, row->constant);
       }
+
+      RatSet(row->constant, constant);
    }
 
    return SCIP_OKAY;
@@ -4640,7 +4648,7 @@ SCIP_RETCODE SCIProwExactAddConstant(
    SCIP_Rational* tmp;
 
    assert(row != NULL);
-   assert(row->lhs <= row->rhs);
+   assert(RatIsLE(row->lhs, row->rhs));
    assert(!RatIsAbsInfinity(addval));
    assert(stat != NULL);
    assert(lp != NULL);

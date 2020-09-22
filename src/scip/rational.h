@@ -555,6 +555,12 @@ SCIP_Longint RatDenominator(
    SCIP_Rational*        rational            /**< the rational */
    );
 
+/** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
+SCIP_EXPORT
+int RatGetSign(
+   SCIP_Rational*        rational            /**< the rational */
+   );
+
 /** converts a rational to a string for printing, returns the number of copied characters.
  *
  *  @note If return value is equal to strlen, it means the string was truncated.

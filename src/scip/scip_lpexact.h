@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPreleaseRowExact(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddVarsToRowEx(
+SCIP_RETCODE SCIPaddVarsToRowExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    int                   nvars,              /**< number of variables to add to the row */

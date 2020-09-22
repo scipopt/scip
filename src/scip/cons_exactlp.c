@@ -7178,7 +7178,7 @@ SCIP_RETCODE createRows(
    /** create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->row, consdata->lhs, consdata->rhs) );
 
-   SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
+   SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 
    return SCIP_OKAY;
 }

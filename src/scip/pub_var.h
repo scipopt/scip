@@ -585,9 +585,21 @@ SCIP_Real SCIPvarGetAggrScalar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets aggregation scalar a of an aggregated variable x = a*y + c */
+SCIP_EXPORT
+SCIP_Rational* SCIPvarGetAggrScalarExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets aggregation constant c of an aggregated variable x = a*y + c */
 SCIP_EXPORT
 SCIP_Real SCIPvarGetAggrConstant(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets aggregation constant c of an aggregated variable x = a*y + c */
+SCIP_EXPORT
+SCIP_Rational* SCIPvarGetAggrConstantExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
