@@ -248,7 +248,6 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    cr_assert(SCIProwGetNNonz(rows[0]) == 3);
 
    SCIP_CALL( createProjRows(scip, rows, 1, sol, &projrows, TRUE, &allcst) );
-   printProjRows(scip, projrows, 1, NULL);
 
    /* check results */
 

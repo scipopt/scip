@@ -127,20 +127,20 @@ void checkAuxExpr(
 {
    int i;
 
-   cr_expect_eq(auxvar, term.auxexprs[auxidx]->auxvar);
+   cr_expect_eq(auxvar, term.aux.exprs[auxidx]->auxvar);
 
    for( i = 0; i < 3; ++i )
    {
-      cr_expect(SCIPisEQ(scip, vals[i], term.auxexprs[auxidx]->coefs[i]), "\ni = %d: expected != given: %g != %g", i,
+      cr_expect(SCIPisEQ(scip, vals[i], term.aux.exprs[auxidx]->coefs[i]), "\ni = %d: expected != given: %g != %g", i,
                                                                            vals[i],
-                                                                           term.auxexprs[auxidx]->coefs[i]);
+                                                                           term.aux.exprs[auxidx]->coefs[i]);
    }
-   cr_expect(SCIPisEQ(scip, cst, term.auxexprs[auxidx]->cst), "\nexpected != given: %g != %g", cst,
-                                                               term.auxexprs[auxidx]->cst);
+   cr_expect(SCIPisEQ(scip, cst, term.aux.exprs[auxidx]->cst), "\nexpected != given: %g != %g", cst,
+                                                               term.aux.exprs[auxidx]->cst);
 
-   cr_expect(term.auxexprs[auxidx]->underestimate == underestimate,
+   cr_expect(term.aux.exprs[auxidx]->underestimate == underestimate,
              "linearisation expression [%d] should %sunderestimate", auxidx, underestimate ? "" : "NOT ");
-   cr_expect(term.auxexprs[auxidx]->overestimate == overestimate,
+   cr_expect(term.aux.exprs[auxidx]->overestimate == overestimate,
              "linearisation expression [%d] should %soverestimate", auxidx, overestimate ? "" : "NOT ");
 }
 
@@ -215,8 +215,8 @@ Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .descript
    cr_expect_eq(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
 
    /* check the (sorted) auxiliary expressions and sides */
-   cr_assert(terms[0].auxexprs[0] != NULL);
-   cr_assert(terms[1].auxexprs[0] != NULL);
+   cr_assert(terms[0].aux.exprs[0] != NULL);
+   cr_assert(terms[1].aux.exprs[0] != NULL);
 
    /* first product: b1 * x2 */
    /* check 4 expressions with binary variable = b1: 1) from two implied relations, 2) from 1st implied relation (rhs)

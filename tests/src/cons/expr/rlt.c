@@ -186,11 +186,11 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
 Test(rlt, collect)
 {
    /* check original variables */
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->auxvar, xx);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, y)->auxvar, xy);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, z)->auxvar, xz);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, x)->auxvar, xy);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, x)->auxvar, xz);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->aux.var, xx);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, y)->aux.var, xy);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, z)->aux.var, xz);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, x)->aux.var, xy);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, x)->aux.var, xz);
 
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, z), NULL);
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, y), NULL);
@@ -198,8 +198,8 @@ Test(rlt, collect)
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, z), NULL);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, logvar, logvar)->auxvar, powvar);
-   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, powvar)->auxvar, prodvar);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, logvar, logvar)->aux.var, powvar);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, powvar)->aux.var, prodvar);
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, prodvar), NULL);
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, absvar), NULL);
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, powvar), NULL);

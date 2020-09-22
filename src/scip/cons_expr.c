@@ -9486,7 +9486,7 @@ SCIP_RETCODE ensureBilinTermSize(
    assert(n <= newsize);
 
    /* realloc array */
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &term->auxexprs, term->sauxexprs, newsize) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &term->aux.exprs, term->sauxexprs, newsize) );
    term->sauxexprs = newsize;
 
    return SCIP_OKAY;
@@ -9508,11 +9508,11 @@ SCIP_RETCODE addTermBilinExpr(
    {
       found = FALSE;
       pos = 0;
-      term->auxexprs = NULL;
+      term->aux.exprs = NULL;
    }
    else
    {
-      found = SCIPsortedvecFindPtr((void**)term->auxexprs, SCIPauxexprComp, auxexpr, term->nauxexprs, &pos);
+      found = SCIPsortedvecFindPtr((void**)term->aux.exprs, SCIPauxexprComp, auxexpr, term->nauxexprs, &pos);
    }
 
    if( !found )
@@ -9522,16 +9522,16 @@ SCIP_RETCODE addTermBilinExpr(
       /* insert expression at the correct position */
       for( i = term->nauxexprs; i > pos; --i )
       {
-         term->auxexprs[i] = term->auxexprs[i-1];
+         term->aux.exprs[i] = term->aux.exprs[i-1];
       }
-      term->auxexprs[pos] = auxexpr;
+      term->aux.exprs[pos] = auxexpr;
       ++(term->nauxexprs);
       *added = TRUE;
    }
    else
    {
-      term->auxexprs[pos]->underestimate += auxexpr->underestimate;
-      term->auxexprs[pos]->overestimate += auxexpr->overestimate;
+      term->aux.exprs[pos]->underestimate += auxexpr->underestimate;
+      term->aux.exprs[pos]->overestimate += auxexpr->overestimate;
       *added = FALSE;
    }
 
@@ -9765,25 +9765,25 @@ SCIP_RETCODE bilinearTermsFree(
 
       for( j = 0; j < conshdlrdata->bilinterms[i].nauxexprs; ++j )
       {
-         if( conshdlrdata->bilinterms[i].auxexprs[j]->auxvar != NULL )
+         if( conshdlrdata->bilinterms[i].aux.exprs[j]->auxvar != NULL )
          {
-            SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].auxexprs[j]->auxvar) );
+            SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].aux.exprs[j]->auxvar) );
          }
-         SCIPfreeBlockMemory(scip, &(conshdlrdata->bilinterms[i].auxexprs[j])); /*lint !e866*/
+         SCIPfreeBlockMemory(scip, &(conshdlrdata->bilinterms[i].aux.exprs[j])); /*lint !e866*/
       }
 
       if( conshdlrdata->bilinterms[i].nauxexprs > 0 )
       {
-         SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->bilinterms[i].auxexprs), conshdlrdata->bilinterms[i].sauxexprs);
+         SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->bilinterms[i].aux.exprs), conshdlrdata->bilinterms[i].sauxexprs);
          continue;
       }
 
       /* the rest is for simple terms with a single auxvar */
 
       /* it might be that there is a bilinear term without a corresponding auxiliary variable */
-      if( conshdlrdata->bilinterms[i].auxvar != NULL )
+      if( conshdlrdata->bilinterms[i].aux.var != NULL )
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].auxvar) );
+         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].aux.var) );
       }
    }
 
@@ -15910,7 +15910,7 @@ SCIP_RETCODE SCIPinsertBilinearTermExisting(
 
    /* store the auxiliary variable */
    assert(term->nauxexprs == 0); /* existing terms should be added before implicit terms */
-   term->auxvar = auxvar;
+   term->aux.var = auxvar;
    term->existing = TRUE;
 
    /* capture auxuliary variable */
@@ -15967,7 +15967,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    term->existing = FALSE;
 
    /* create auxexpr if term doesn't already have the maximal allowed number of auxexprs */
-   if( (term->nauxexprs == 0 && (term->auxvar == NULL || conshdlrdata->bilinmaxnauxexprs > 1)) ||
+   if( (term->nauxexprs == 0 && (term->aux.var == NULL || conshdlrdata->bilinmaxnauxexprs > 1)) ||
        (term->nauxexprs > 0 && conshdlrdata->bilinmaxnauxexprs > term->nauxexprs) )
    {
       SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
@@ -15982,7 +15982,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    else
       return SCIP_OKAY;
 
-   if( term->existing && term->auxvar != NULL )
+   if( term->existing && term->aux.var != NULL )
    {
       SCIP_CONSEXPR_AUXEXPR* auxvarexpr;
       /* this is the case where we are adding an implicitly defined relation
@@ -15995,7 +15995,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
       auxvarexpr->coefs[0] = 1.0;
       auxvarexpr->coefs[1] = 0.0;
       auxvarexpr->coefs[2] = 0.0;
-      auxvarexpr->auxvar = term->auxvar;
+      auxvarexpr->auxvar = term->aux.var;
       auxvarexpr->underestimate = term->nlocksneg > 0;
       auxvarexpr->overestimate = term->nlockspos > 0;
 
