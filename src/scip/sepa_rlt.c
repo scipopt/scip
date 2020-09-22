@@ -1551,7 +1551,7 @@ SCIP_RETCODE createSepaData(
       assert(bilinterms[i].nlockspos + bilinterms[i].nlocksneg > 0);
 
       /* skip bilinear term if it does not have an auxiliary variable */
-      if( bilinterms[i].auxvar == NULL )
+      if( bilinterms[i].aux.var == NULL )
          continue;
 
       /* if only initial rows are requested, skip products that contain at least one auxiliary variable */
@@ -1602,9 +1602,9 @@ SCIP_RETCODE createSepaData(
       sepadata->eqlinexpr[i] = -1;
       for( j = 0; j < bilinterms[i].nauxexprs; ++j )
       {
-         assert(bilinterms[i].auxexprs[j] != NULL);
+         assert(bilinterms[i].aux.exprs[j] != NULL);
 
-         if( bilinterms[i].auxexprs[j]->underestimate && bilinterms[i].auxexprs[j]->overestimate )
+         if( bilinterms[i].aux.exprs[j]->underestimate && bilinterms[i].aux.exprs[j]->overestimate )
          {
             sepadata->eqlinexpr[i] = j;
             break;
@@ -1675,15 +1675,15 @@ void getBestEstimators(
       /* if there are any auxexprs, look there */
       for( i = 0; i < terms[j].nauxexprs; ++i )
       {
-         linval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].auxexprs[i], sol);
+         linval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
          prodviol = linval - prodval;
 
-         if( terms[j].auxexprs[i]->underestimate && prodviol > viol_below )
+         if( terms[j].aux.exprs[i]->underestimate && prodviol > viol_below )
          {
             viol_below = prodviol;
             bestunderestimators[j] = i;
          }
-         if( terms[j].auxexprs[i]->overestimate && -prodviol > viol_above )
+         if( terms[j].aux.exprs[i]->overestimate && -prodviol > viol_above )
          {
             viol_above = -prodviol;
             bestoverestimators[j] = i;
@@ -1728,7 +1728,7 @@ SCIP_RETCODE isAcceptableRow(
       }
 
       /* known terms are only those that have equality estimators */
-      if( sepadata->eqlinexpr[idx] == -1 && !(terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL) )
+      if( sepadata->eqlinexpr[idx] == -1 && !(terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL) )
       {
          ++(*currentnunknown);
       }
@@ -1850,16 +1850,16 @@ SCIP_RETCODE addRltTerm(
    {
       SCIPdebugMsg(scip, "linearisation for %s and %s found, will be added to cut:\n",
                           SCIPvarGetName(colvar), SCIPvarGetName(var));
-      addAuxexprToRow(var, colvar, terms[idx].auxexprs[linpos], coefterm, &coefauxvar, coefvar, &coefcolvar, finalside);
-      auxvar = terms[idx].auxexprs[linpos]->auxvar;
+      addAuxexprToRow(var, colvar, terms[idx].aux.exprs[linpos], coefterm, &coefauxvar, coefvar, &coefcolvar, finalside);
+      auxvar = terms[idx].aux.exprs[linpos]->auxvar;
    }
    /* for an existing term, use the auxvar if there is one */
-   else if( idx >= 0 && terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
+   else if( idx >= 0 && terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
    {
       SCIPdebugMsg(scip, "auxvar for %s and %s found, will be added to cut:\n",
                    SCIPvarGetName(colvar), SCIPvarGetName(var));
       coefauxvar += coefterm;
-      auxvar = terms[idx].auxvar;
+      auxvar = terms[idx].aux.var;
    }
    /* otherwise, use clique information or the McCormick estimator in place of the bilinear term */
    else if( colvar != var )
@@ -2568,10 +2568,10 @@ SCIP_RETCODE markRowsXj(
        */
       if( bestunderest[idx] == -1 )
       {
-         if( terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
+         if( terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
          {
             assert(terms[idx].existing);
-            viol_below = SCIPgetSolVal(scip, sol, terms[idx].auxvar) - valj * vali;
+            viol_below = SCIPgetSolVal(scip, sol, terms[idx].aux.var) - valj * vali;
          }
          else
          {
@@ -2582,15 +2582,15 @@ SCIP_RETCODE markRowsXj(
       {
          assert(bestunderest[idx] >= 0 && bestunderest[idx] < terms[idx].nauxexprs);
          viol_below = SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
-               terms[idx].auxexprs[bestunderest[idx]], sol) - valj * vali;
+               terms[idx].aux.exprs[bestunderest[idx]], sol) - valj * vali;
       }
 
       if( bestoverest[idx] == -1 )
       {
-         if( terms[idx].nauxexprs == 0 && terms[idx].auxvar != NULL )
+         if( terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
          {
             assert(terms[idx].existing);
-            viol_above = valj * vali - SCIPgetSolVal(scip, sol, terms[idx].auxvar);
+            viol_above = valj * vali - SCIPgetSolVal(scip, sol, terms[idx].aux.var);
          }
          else
          {
@@ -2601,7 +2601,7 @@ SCIP_RETCODE markRowsXj(
       {
          assert(bestoverest[idx] >= 0 && bestoverest[idx] < terms[idx].nauxexprs);
          viol_above = valj * vali - SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
-               terms[idx].auxexprs[bestoverest[idx]], sol);
+               terms[idx].aux.exprs[bestoverest[idx]], sol);
       }
 
       SCIPdebugMsg(scip, "prodval = %g, prod viol below = %g, above = %g\n", valj * vali, viol_below, viol_above);
@@ -3071,9 +3071,9 @@ SCIP_RETCODE separateMcCormickImplicit(
          /* if underestimate, separate auxexpr <= x*y; if !underestimate, separate x*y <= auxexpr */
          underestimate = j == 0;
          if( underestimate && bestunderestimators[i] != -1 )
-            auxexpr = terms[i].auxexprs[bestunderestimators[i]];
+            auxexpr = terms[i].aux.exprs[bestunderestimators[i]];
          else if( !underestimate && bestoverestimators[i] != -1 )
-            auxexpr = terms[i].auxexprs[bestoverestimators[i]];
+            auxexpr = terms[i].aux.exprs[bestoverestimators[i]];
          else
             continue;
 
