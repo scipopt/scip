@@ -2567,7 +2567,7 @@ SCIP_RETCODE markRowsXj(
        * if equality cuts are computed, we might end up using a different linearisation;
        * so this is an optimistic (i.e. taking the largest possible violation) estimation
        */
-      if( bestunderest[idx] == -1 )
+      if( bestunderest == NULL || bestunderest[idx] == -1 )
       {
          if( terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
          {
@@ -2576,6 +2576,7 @@ SCIP_RETCODE markRowsXj(
          }
          else
          {
+            assert(bestunderest != NULL);
             viol_below = 0.0;
          }
       }
@@ -2586,7 +2587,7 @@ SCIP_RETCODE markRowsXj(
                terms[idx].aux.exprs[bestunderest[idx]], sol) - valj * vali;
       }
 
-      if( bestoverest[idx] == -1 )
+      if( bestoverest == NULL || bestoverest[idx] == -1 )
       {
          if( terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
          {
@@ -2595,6 +2596,7 @@ SCIP_RETCODE markRowsXj(
          }
          else
          {
+            assert(bestoverest != NULL);
             viol_above = 0.0;
          }
       }
