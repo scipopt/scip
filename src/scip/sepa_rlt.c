@@ -367,6 +367,7 @@ SCIP_RETCODE ensureVarsSize(
 /** compares the priority of two bilinear variables, returns -1 if first is smaller than, and +1 if first is greater
 * than second variable priority; returns 0 if both priorities are equal
 */
+static
 int bilinVarDataCompare(
    BILINVARDATA*         bilinvardata1,               /**< data of the first bilinear variable */
    BILINVARDATA*         bilinvardata2                /**< data of the second bilinear variable */
@@ -384,6 +385,7 @@ int bilinVarDataCompare(
 }
 
 /** comparison method for sorting bilinear variable data by non-decreasing priority */
+static
 SCIP_DECL_SORTPTRCOMP(bilinVarDataComp)
 {
    return bilinVarDataCompare((BILINVARDATA*)elem1, (BILINVARDATA*)elem2);
