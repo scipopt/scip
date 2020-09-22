@@ -940,6 +940,7 @@ SCIP_RETCODE createRelationTables(
    int r;
    int v1;
    int v2;
+   int i;
    int varpos1;
    int varpos2;
    SCIP_COL** cols;
@@ -1031,7 +1032,7 @@ SCIP_RETCODE createRelationTables(
                   if( !found )
                   {
                      /* insert var at the correct position */
-                     for( int i = nrelated_vars[varpos1]; i > varpos2; --i )
+                     for( i = nrelated_vars[varpos1]; i > varpos2; --i )
                         related_vars[varpos1][i] = related_vars[varpos1][i-1];
                      related_vars[varpos1][varpos2] = hashdata.vars[v2];
                      nrelated_vars[varpos1]++;
@@ -1041,7 +1042,7 @@ SCIP_RETCODE createRelationTables(
                {  /* var has not been added yet, add it here */
 
                   /* insert expression at the correct position */
-                  for( int i = *nvars_in_2rels; i > varpos1; --i )
+                  for( i = *nvars_in_2rels; i > varpos1; --i )
                   {
                      vars_in_2rels[i] = vars_in_2rels[i-1];
                      related_vars[i] = related_vars[i-1];
