@@ -166,7 +166,7 @@ typedef struct RLT_SimpleRow RLT_SIMPLEROW;
 /** returns TRUE iff both keys are equal; two constraint arrays are equal if they have the same pointer */
 static
 SCIP_DECL_HASHKEYEQ(hashdataKeyEqConss)
-{
+{  /*lint --e{715}*/
    HASHDATA* hashdata1;
    HASHDATA* hashdata2;
    int v;
@@ -456,7 +456,7 @@ SCIP_RETCODE addProductVars(
    }
    else
    {
-      xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx);
+      xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx); /*lint !e571 */
    }
 
    xdata = sepadata->bilinvardatas[xpos];
@@ -492,7 +492,7 @@ SCIP_RETCODE addProductVars(
    }
    else
    {
-      ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx);
+      ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx); /*lint !e571 */
    }
 
    ydata = sepadata->bilinvardatas[ypos];
@@ -520,8 +520,8 @@ SCIP_RETCODE addProductVars(
       }
    }
 
-   assert(xpos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx));
-   assert(ypos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx));
+   assert(xpos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)); /*lint !e571 */
+   assert(ypos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)); /*lint !e571 */
 
    /* add locks to priorities of both variables */
    xdata->priority += nlocks;
@@ -540,8 +540,8 @@ SCIP_RETCODE extractProducts(
    SCIP_Real*            coefs2,             /**< coefficients of the second inequality */
    SCIP_Real             side1,              /**< side of the first (implied) inequality */
    SCIP_Real             side2,              /**< side of the second (implied) inequality */
-   SCIP_Real             uselhs1,            /**< is the first inequality >=? */
-   SCIP_Real             uselhs2,            /**< is the second inequality >=? */
+   SCIP_Bool             uselhs1,            /**< is the first inequality >=? */
+   SCIP_Bool             uselhs2,            /**< is the second inequality >=? */
    SCIP_HASHMAP*         varmap,             /**< variable map */
    SCIP_Bool             f                   /**< the first relation is an implication x == f */
 )
@@ -2707,9 +2707,9 @@ SCIP_RETCODE separateRltCuts(
          SCIP_ROW* row;
 
          assert(row_marks[r] != 0);
-         assert(SCIPhashmapExists(row_to_pos, (void*)(size_t)row_idcs[r]));
+         assert(SCIPhashmapExists(row_to_pos, (void*)(size_t) row_idcs[r])); /*lint !e571 */
 
-         pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t)row_idcs[r]);
+         pos = SCIPhashmapGetImageInt(row_to_pos, (void*)(size_t) row_idcs[r]); /*lint !e571 */
          row = rows[pos];
          assert(SCIProwGetIndex(row) == row_idcs[r]);
 
@@ -2997,7 +2997,7 @@ SCIP_RETCODE storeSuitableRows(
 
       /* if we are here, the row has passed all checks and should be added to rows */
       rows[new_nrows] = prob_rows[r];
-      SCIP_CALL( SCIPhashmapSetImageInt(row_to_pos, (void*)(size_t)SCIProwGetIndex(prob_rows[r]), new_nrows) );
+      SCIP_CALL( SCIPhashmapSetImageInt(row_to_pos, (void*)(size_t)SCIProwGetIndex(prob_rows[r]), new_nrows) ); /*lint !e571 */
       ++new_nrows;
    }
 

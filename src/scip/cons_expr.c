@@ -9662,7 +9662,6 @@ SCIP_RETCODE bilinearTermsInsertEntry(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_BILINTERM entry;
    SCIP_CONSEXPR_BILINTERM* term;
 
    assert(conshdlr != NULL);
@@ -15870,11 +15869,11 @@ int auxexprCompare(
    /* compare the coefficients and constants */
    for( i = 0; i < 3; ++i )
    {
-      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] )
-      return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
+      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] ) /*lint !e777*/
+         return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
    }
 
-   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1;
+   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1; /*lint !e777*/
 }
 
 /** comparison method for sorting variables by non-decreasing index */
