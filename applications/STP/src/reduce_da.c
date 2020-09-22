@@ -2540,7 +2540,7 @@ SCIP_RETCODE reduce_da(
          }
 
          // todo call this methods fewer times, at the end maybe
-         if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) )
+         if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) && run == nruns - 1 )
          {
             int extfixed;
             redcostIncreaseOnDeletedArcs(graph, arcsdeleted, &redcostdata);
