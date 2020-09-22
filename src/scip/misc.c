@@ -11111,9 +11111,10 @@ SCIP_Bool SCIPstrAtStart(
    assert(t != NULL);
 
    /* skip whitespace at beginning */
-   while( isspace((unsigned char)*s) )
-      ++s;
-   if ( strncmp(s, t, tlen) == 0 )
+   int idxctr = 0;
+   while( idxctr < SCIP_MAXSTRLEN && isspace((unsigned char)s[idxctr]) )
+      ++idxctr;
+   if ( strncmp(&s[idxctr], t, tlen) == 0 )
       return TRUE;
    return FALSE;
 }
