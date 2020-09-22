@@ -64,9 +64,6 @@
 #define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
                                          *   so that less strict filtering is applied */
 #define DEFAULT_BADSCORE            0.5 /**< threshold for score of cut relative to best score to be discarded */
-#define DEFAULT_MINVIOL             0.1 /**< minimal violation to generate zerohalfcut for */
-#define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
-#define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_OBJPARALWEIGHT      0.0 /**< weight of objective parallelism in cut score calculation */
 #define DEFAULT_EFFICACYWEIGHT      1.0 /**< weight of efficacy in cut score calculation */
 #define DEFAULT_DIRCUTOFFDISTWEIGHT 0.0 /**< weight of directed cutoff distance in cut score calculation */
@@ -450,7 +447,7 @@ SCIP_RETCODE addProductVars(
       SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
       sepadata->varssorted[sepadata->nbilinvars] = x;
-      SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) );
+      SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) ); /*lint !e866*/
       xpos = sepadata->nbilinvars;
       ++sepadata->nbilinvars;
    }
@@ -486,7 +483,7 @@ SCIP_RETCODE addProductVars(
       SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
       sepadata->varssorted[sepadata->nbilinvars] = y;
-      SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) );
+      SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) ); /*lint !e866*/
       ypos = sepadata->nbilinvars;
       ++sepadata->nbilinvars;
    }
@@ -2361,6 +2358,7 @@ SCIP_RETCODE createProjRows(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DEBUG
 /* prints the projected LP */
 static
 void printProjRows(
@@ -2409,6 +2407,7 @@ void printProjRows(
    }
    SCIPinfoMessage(scip, file, "\n");
 }
+#endif
 
 /** frees the projected rows */
 static

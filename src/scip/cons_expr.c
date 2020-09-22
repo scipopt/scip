@@ -9769,7 +9769,7 @@ SCIP_RETCODE bilinearTermsFree(
          {
             SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->bilinterms[i].auxexprs[j]->auxvar) );
          }
-         SCIPfreeBlockMemory(scip, &(conshdlrdata->bilinterms[i].auxexprs[j]));
+         SCIPfreeBlockMemory(scip, &(conshdlrdata->bilinterms[i].auxexprs[j])); /*lint !e866*/
       }
 
       if( conshdlrdata->bilinterms[i].nauxexprs > 0 )
