@@ -275,7 +275,7 @@ SCIP_RETCODE cut_add(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      xval,               /**< edge values */
+   const SCIP_Real*      xvals,              /**< edge values */
    int*                  capa,               /**< edges capacities (scaled) */
    const int             updatecapa,         /**< update capacities? */
    int*                  ncuts,              /**< pointer to store number of cuts */
@@ -286,14 +286,14 @@ SCIP_RETCODE cut_add(
    SCIP_ROW* row;
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
    SCIP_Real sum = 0.0;
-   SCIP_Bool inccapa = FALSE;
-   unsigned int i;
-   int* gmark = g->mark;
-   int* ghead = g->head;
-   int* gtail = g->tail;
-   unsigned int nedges = (unsigned int) g->edges;
+   const int* const gmark = g->mark;
+   const int* const gtail = g->tail;
+   const int* const ghead = g->head;
+   const int nedges = graph_get_nEdges(g);
 
    assert(g->knots > 0);
+   assert(xvals);
+   assert(!updatecapa);
 
    (*success) = FALSE;
 
@@ -306,16 +306,16 @@ SCIP_RETCODE cut_add(
 
    assert(gmark[g->source]);
 
-   for( i = 0; i < nedges; i++ )
+   for( int i = 0; i < nedges; i++ )
    {
       if( !gmark[ghead[i]] && gmark[gtail[i]] )
       {
+#ifdef STP_USE_ADVANCED_FLOW
          if( updatecapa )
          {
-            if( capa[i] < FLOW_FACTOR )
-               inccapa = TRUE;
+            const SCIP_Bool inccapa = (capa[e] < FLOW_FACTOR);
 
-            capa[i] = FLOW_FACTOR;
+            capa[e] = FLOW_FACTOR;
 
             if( !inccapa )
             {
@@ -324,23 +324,24 @@ SCIP_RETCODE cut_add(
                return SCIP_OKAY;
             }
          }
+#endif
 
-         if( xval != NULL )
+         sum += xvals[i];
+
+         if( SCIPisFeasGE(scip, sum, 1.0) )
          {
-            sum += xval[i];
+            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+          //  printf("Discard cut! %.18f >= 1.0 \n", sum);
 
-            if( SCIPisFeasGE(scip, sum, 1.0) )
-            {
-               SCIP_CALL(SCIPflushRowExtensions(scip, row));
-               SCIP_CALL(SCIPreleaseRow(scip, &row));
-               return SCIP_OKAY;
-            }
+            return SCIP_OKAY;
          }
+
          SCIP_CALL(SCIPaddVarToRow(scip, row, vars[i], 1.0));
       }
    }
 
-   assert(sum < 1.0);
+
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
@@ -1147,8 +1148,8 @@ SCIP_RETCODE sep_2cut(
          residual[e] = capa[e];
          residual[erev] = capa[erev];
 
-         headarr[e] = SCIPisFeasLT(scip, xval[e], 1.0) ? 1 : 0;
-         headarr[erev] = SCIPisFeasLT(scip, xval[erev], 1.0) ? 1 : 0;
+         headarr[e] = SCIPisFeasGE(scip, xval[e], 1.0) ? 0 : 1;
+         headarr[erev] = SCIPisFeasGE(scip, xval[erev], 1.0) ? 0 : 1;
       }
       edgearr[e] = -1;
       edgearr[erev] = -1;
@@ -1312,7 +1313,7 @@ SCIP_RETCODE sep_2cut(
             graph_mincut_exec(g, root, i, nnodes, newnedges, rootcutsize, rootcut, capa, w, start, edgeflipped, headarr, rerun);
 
             /* cut */
-            for( k = nnodes - 1; k >= 0; k-- )
+            for( k = 0; k < nnodes; k++ )
                g->mark[k] = (w[k] != 0);
 
             assert(g->mark[root]);
@@ -1329,7 +1330,7 @@ SCIP_RETCODE sep_2cut(
             if( SCIPisFeasGE(scip, flowsum, 1.0) )
                continue;
 
-            for( k = nnodes - 1; k >= 0; k-- )
+            for( k = 0; k < nnodes; k++ )
                g->mark[k] = TRUE;
 
             g->mark[i] = FALSE;
