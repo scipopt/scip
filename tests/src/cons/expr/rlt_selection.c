@@ -48,7 +48,6 @@ static SCIP_VAR* x4;
 static SCIP_VAR* y12;
 static SCIP_VAR* b1;
 static SCIP_VAR* b2;
-static SCIP_VAR* auxvar;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
@@ -160,8 +159,6 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    SCIP_Bool success;
    SCIP_Bool infeasible;
    SCIP_SEPADATA* sepadata;
-   SCIP_CONSEXPR_EXPR* expr;
-   int c;
    BILINVARDATA** blvardatas;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
