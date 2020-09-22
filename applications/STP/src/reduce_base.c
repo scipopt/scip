@@ -29,9 +29,9 @@
 #define STP_REDBOUND_SDSP    200         /**< visited edges bound for SDSP test  */
 #define STP_REDBOUND_SDSP2   1000        /**< visited edges bound for SDSP test  */
 #define STP_REDBOUND_BDK     500         /**< visited edges bound for BDK test  */
-#define STP_REDBOUND_BDK2    2000        /**< visited edges bound for BDK test  */
+#define STP_REDBOUND_BDK2    1000        /**< visited edges bound for BDK test  */
 #define STP_REDBOUND_SDSTAR     400         /**< visited edges bound for SD Star test  */
-#define STP_REDBOUND_SDSTAR2    2000        /**< visited edges bound for SD Star test  */
+#define STP_REDBOUND_SDSTAR2    1000        /**< visited edges bound for SD Star test  */
 #define STP_RED_EXTENSIVE FALSE
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
