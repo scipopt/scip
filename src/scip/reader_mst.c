@@ -162,7 +162,7 @@ SCIP_DECL_READERREAD(readerReadMst)
    SCIPfclose(file);
 
    /* decide whether it is xml */
-   if ( SCIPstrAtStart(buffer, "<?xml", 5) )
+   if ( SCIPstrAtStart(buffer, "<?xml", (size_t) 5) )
    {
       /* read XML solution and add it to the solution pool */
       SCIP_CALL( readMst(scip, filename, TRUE) );
