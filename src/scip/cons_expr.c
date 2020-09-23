@@ -9495,20 +9495,23 @@ SCIP_RETCODE ensureBilinTermSize(
 static
 SCIP_RETCODE addTermBilinExpr(
    SCIP*                 scip,
+   SCIP_CONSHDLRDATA*    conshdlrdata,
    SCIP_CONSEXPR_BILINTERM* term,
    SCIP_CONSEXPR_AUXEXPR* auxexpr,
    SCIP_Bool*            added
-)
+   )
 {
    SCIP_Bool found;
    int pos;
    int i;
 
+   *added = FALSE;
+
+   /* check if auxexpr has already been added to term */
    if( term->nauxexprs == 0 )
    {
       found = FALSE;
       pos = 0;
-      term->aux.exprs = NULL;
    }
    else
    {
@@ -9517,7 +9520,11 @@ SCIP_RETCODE addTermBilinExpr(
 
    if( !found )
    {
+      if( term->nauxexprs >= conshdlrdata->bilinmaxnauxexprs )
+         return SCIP_OKAY;
+
       SCIP_CALL( ensureBilinTermSize(scip, term, term->nauxexprs + 1) );
+      assert(term->sauxexprs >= term->nauxexprs + 1);
 
       /* insert expression at the correct position */
       for( i = term->nauxexprs; i > pos; --i )
@@ -9532,7 +9539,6 @@ SCIP_RETCODE addTermBilinExpr(
    {
       term->aux.exprs[pos]->underestimate += auxexpr->underestimate;
       term->aux.exprs[pos]->overestimate += auxexpr->overestimate;
-      *added = FALSE;
    }
 
    return SCIP_OKAY;
@@ -9658,7 +9664,8 @@ SCIP_RETCODE bilinearTermsInsertEntry(
    SCIP_VAR*             y,                  /**< the second variable */
    int                   nlockspos,          /**< number of positive locks of the bilinear term */
    int                   nlocksneg,          /**< number of negative locks of the bilinear term */
-   int*                  idx                 /**< pointer to store the position of the term in bilinterms array */
+   int*                  idx,                /**< pointer to store the position of the term in bilinterms array */
+   SCIP_Bool             existing            /**< whether the term exists explicitly in the problem */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -9690,6 +9697,7 @@ SCIP_RETCODE bilinearTermsInsertEntry(
 
       /* get term and add locks */
       term = &conshdlrdata->bilinterms[*idx];
+      assert(existing <= term->existing); /* implicit terms are added after existing ones */
       term->nlockspos += nlockspos;
       term->nlocksneg += nlocksneg;
    }
@@ -9709,6 +9717,11 @@ SCIP_RETCODE bilinearTermsInsertEntry(
       term->sauxexprs = 0;
       term->nlockspos = nlockspos;
       term->nlocksneg = nlocksneg;
+      term->existing = existing;
+      if( existing )
+         term->aux.var = NULL;
+      else
+         term->aux.exprs = NULL;
 
       /* increase the total number of bilinear terms */
       ++(conshdlrdata->nbilinterms);
@@ -15902,16 +15915,14 @@ SCIP_RETCODE SCIPinsertBilinearTermExisting(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( bilinearTermsInsertEntry(scip, conshdlr, x, y, nlockspos, nlocksneg, &idx) );
+   SCIP_CALL( bilinearTermsInsertEntry(scip, conshdlr, x, y, nlockspos, nlocksneg, &idx, TRUE) );
 
    term = &conshdlrdata->bilinterms[idx];
    assert(term != NULL);
-   term->existing = TRUE;
 
    /* store the auxiliary variable */
    assert(term->nauxexprs == 0); /* existing terms should be added before implicit terms */
    term->aux.var = auxvar;
-   term->existing = TRUE;
 
    /* capture auxuliary variable */
    if( auxvar != NULL )
@@ -15952,7 +15963,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    nlockspos = overestimate ? 1 : 0;
    nlocksneg = overestimate ? 0 : 1;
 
-   SCIP_CALL( bilinearTermsInsertEntry(scip, conshdlr, x, y, nlockspos, nlocksneg, &idx) );
+   SCIP_CALL( bilinearTermsInsertEntry(scip, conshdlr, x, y, nlockspos, nlocksneg, &idx, FALSE) );
 
    /* ensure that x.index <= y.index */
    if( SCIPvarCompare(x, y) == 1 )
@@ -15964,33 +15975,18 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
 
    term = &conshdlrdata->bilinterms[idx];
    assert(term != NULL);
-   term->existing = FALSE;
 
-   /* create auxexpr if term doesn't already have the maximal allowed number of auxexprs */
-   if( (term->nauxexprs == 0 && (term->aux.var == NULL || conshdlrdata->bilinmaxnauxexprs > 1)) ||
-       (term->nauxexprs > 0 && conshdlrdata->bilinmaxnauxexprs > term->nauxexprs) )
-   {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
-      auxexpr->underestimate = !overestimate;
-      auxexpr->overestimate = overestimate;
-      auxexpr->auxvar = auxvar;
-      auxexpr->coefs[0] = coefaux;
-      auxexpr->coefs[1] = coefx;
-      auxexpr->coefs[2] = coefy;
-      auxexpr->cst = cst;
-   }
-   else
-      return SCIP_OKAY;
-
-   if( term->existing && term->aux.var != NULL )
+   if( term->existing && term->nauxexprs == 0 && term->aux.var != NULL )
    {
       SCIP_CONSEXPR_AUXEXPR* auxvarexpr;
-      /* this is the case where we are adding an implicitly defined relation
-       * for a product that has already been explicitly defined;
-       * convert auxvar into an auxterm */
+      /* this is the case where we are adding an implicitly defined relation for a product that has already
+       * been explicitly defined; convert auxvar into an auxexpr */
+
+      /* nothing to do if we aren't allowed to add more than one auxexpr per term */
+      if( conshdlrdata->bilinmaxnauxexprs <= 1 )
+         return SCIP_OKAY;
 
       SCIP_CALL( SCIPallocBlockMemory(scip, &auxvarexpr) );
-
       auxvarexpr->cst = 0.0;
       auxvarexpr->coefs[0] = 1.0;
       auxvarexpr->coefs[1] = 0.0;
@@ -15999,15 +15995,25 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
       auxvarexpr->underestimate = term->nlocksneg > 0;
       auxvarexpr->overestimate = term->nlockspos > 0;
 
-      SCIP_CALL( addTermBilinExpr(scip, term, auxvarexpr, &added) );
+      /* before we were working with term->aux.var; now aux.var has been saved and aux.exprs can be initialised to NULL */
+      term->aux.exprs = NULL;
 
-      if( !added )
-      {
-         SCIPfreeBlockMemory(scip, &auxvarexpr);
-      }
+      SCIP_CALL( addTermBilinExpr(scip, conshdlrdata, term, auxvarexpr, &added) );
+
+      /* since there were no auxexprs before and we've already checked for bilinmaxnauxexprs, auxvarexpr should always be added */
+      assert(added);
    }
 
-   SCIP_CALL( addTermBilinExpr(scip, term, auxexpr, &added) );
+   /* create and add auxexpr */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &auxexpr) );
+   auxexpr->underestimate = !overestimate;
+   auxexpr->overestimate = overestimate;
+   auxexpr->auxvar = auxvar;
+   auxexpr->coefs[0] = coefaux;
+   auxexpr->coefs[1] = coefx;
+   auxexpr->coefs[2] = coefy;
+   auxexpr->cst = cst;
+   SCIP_CALL( addTermBilinExpr(scip, conshdlrdata, term, auxexpr, &added) );
 
    if( !added )
    {
