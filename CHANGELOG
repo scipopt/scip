@@ -68,6 +68,7 @@ Fixed bugs
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 - Fixed order of linker flags when building AMPL interface with cmake system.
+- Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 
 Miscellaneous
