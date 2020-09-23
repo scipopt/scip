@@ -74,34 +74,38 @@ if(NOT WIN32)
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
     set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
+    foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
+      find_library(${_LIBRARY}_PATH
+                   NAMES ${_LIBRARY}
+                   PATHS ${_PC_IPOPT_LIBRARY_DIRS}
+                   NO_DEFAULT_PATH)
+      find_library(${_LIBRARY}_PATH
+                   NAMES ${_LIBRARY}
+                   PATHS ${_PC_IPOPT_LIBRARY_DIRS})
+      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
+    endforeach()
 
-    #foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
-    #  find_library(${_LIBRARY}_PATH
-    #               NAMES ${_LIBRARY}
-    #               PATHS ${_PC_IPOPT_LIBRARY_DIRS}
-    #               NO_DEFAULT_PATH)
-    #  find_library(${_LIBRARY}_PATH
-    #               NAMES ${_LIBRARY}
-    #               PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-    #  list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
-    #endforeach()
+    if(APPLE)
+      # turn "-framework;foo;-framework;bar;other" into "-framework foo;-framework bar;other"
+      #string(REPLACE "-framework;" "-framework " IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
+      string(REPLACE "-framework;" "-framework " IPOPT_LDFLAGS_OTHER "${_PC_IPOPT_LDFLAGS_OTHER}")
+      # take "-framework foo;-framework bar;other" and add only frameworks to IPOPT_LIBRARIES
+      foreach(arg ${IPOPT_LDFLAGS_OTHER})
+        if("${arg}" MATCHES "-framework .+")
+          set(IPOPT_LIBRARIES "${IPOPT_LIBRARIES};${arg}")
+        endif("${arg}" MATCHES "-framework .+")
+      endforeach(arg ${IPOPT_LDFLAGS_OTHER})
+    endif(APPLE)
 
-    # Libraries
-    find_library(IPOPT_LIBRARIES
-        NAMES ipopt
-        HINTS ${PC_IPOPT_LIBDIR})
-
-    string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
-    list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
+    #list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
 
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
-    # version ipopt >= 3.13
     set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin-or)
 
     if(NOT EXISTS "${IPOPT_INCLUDE_DIRS}")
-        # version ipopt <= 3.12
+      # # version ipopt <= 3.12
         set(IPOPT_INCLUDE_DIRS ${IPOPT_DIR}/include/coin)
     endif()
 
