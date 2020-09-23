@@ -74,16 +74,23 @@ if(NOT WIN32)
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
     set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
-    foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
-      find_library(${_LIBRARY}_PATH
-                   NAMES ${_LIBRARY}
-                   PATHS ${_PC_IPOPT_LIBRARY_DIRS}
-                   NO_DEFAULT_PATH)
-      find_library(${_LIBRARY}_PATH
-                   NAMES ${_LIBRARY}
-                   PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
-    endforeach()
+
+    #foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
+    #  find_library(${_LIBRARY}_PATH
+    #               NAMES ${_LIBRARY}
+    #               PATHS ${_PC_IPOPT_LIBRARY_DIRS}
+    #               NO_DEFAULT_PATH)
+    #  find_library(${_LIBRARY}_PATH
+    #               NAMES ${_LIBRARY}
+    #               PATHS ${_PC_IPOPT_LIBRARY_DIRS})
+    #  list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
+    #endforeach()
+
+    # Libraries
+    find_library(IPOPT_LIBRARIES
+        NAMES ipopt
+        HINTS ${PC_IPOPT_LIBDIR})
+
     string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
     list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
 
