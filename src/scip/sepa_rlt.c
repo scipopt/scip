@@ -126,7 +126,7 @@ struct SCIP_SepaData
    SCIP_Bool             useinsubscip;       /**< whether the separator should also be used in sub-scips */
    SCIP_Bool             useprojection;      /**< whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
-   SCIP_Bool             hiddenrlt;          /**< whether RLT cuts should be added for hidden products */
+   SCIP_Bool             hiddenrlt;          /**< whether RLT cuts (TRUE) or only McCormick inequalities (FALSE) should be added for hidden products */
    SCIP_Bool             addtopool;          /**< whether globally valid RLT cuts are added to the global cut pool */
 
    /* cut selection parameters */
@@ -3418,7 +3418,7 @@ SCIP_RETCODE SCIPincludeSepaRlt(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "separating/" SEPA_NAME "/hiddenrlt",
-      "if set to true, RLT cuts are added for hidden products",
+      "whether RLT cuts (TRUE) or only McCormick inequalities (FALSE) should be added for hidden products",
       &sepadata->hiddenrlt, FALSE, DEFAULT_HIDDENRLT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
