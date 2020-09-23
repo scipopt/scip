@@ -255,7 +255,7 @@ extern SCIP_RETCODE    reduce_bdkWithSd(SCIP*, int, SD*, GRAPH*, int*);
 /* reduce_sdcomp.c
  */
 extern SCIP_RETCODE    reduce_bd34(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, SCIP_Real*);
-extern SCIP_RETCODE    reduce_bd34WithSd(SCIP*, GRAPH*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*);
+extern SCIP_RETCODE    reduce_bd34WithSd(SCIP*, GRAPH*, GRAPH*, PATH*, int*, int*, int*);
 
 
 /* reduce_bnd.c
@@ -372,6 +372,7 @@ extern SCIP_RETCODE     reduce_sdGetSdsCliquegraph(SCIP*, const GRAPH*, int, con
 /* reduce_sdgraph.c
  */
 extern SCIP_RETCODE     reduce_sdgraphInit(SCIP*, const GRAPH*, SDGRAPH**);
+extern SCIP_RETCODE     reduce_sdgraphInitFromDistGraph(SCIP*, const GRAPH*, GRAPH*, int*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_sdgraphInitBiased(SCIP*, const GRAPH*, const SDPROFIT*, SDGRAPH**);
 extern SCIP_RETCODE     reduce_sdgraphInitBiasedFromTpaths(SCIP*, GRAPH*, const SDPROFIT*, const TPATHS*, SDGRAPH**);
 extern SCIP_Real        reduce_sdgraphGetMaxCost(const SDGRAPH*);
@@ -384,6 +385,7 @@ extern SCIP_Bool        reduce_sdgraphEdgeIsInMst(const SDGRAPH*, int);
 extern SCIP_Bool        reduce_sdgraphHasOrderedMstCosts(const SDGRAPH*);
 extern SCIP_Real        reduce_sdgraphGetSd(int, int, SDGRAPH*);
 extern void             reduce_sdgraphFree(SCIP*, SDGRAPH**);
+extern void             reduce_sdgraphFreeFromDistGraph(SCIP*, SDGRAPH**);
 extern void             reduce_sdgraphInsertEdge(SCIP*, int, int, SCIP_Real, int, int* RESTRICT, SDGRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE     reduce_sdgraphMstBuild(SCIP*, const GRAPH*, SDGRAPH*);
 extern void             reduce_sdgraphMstSortCosts(SDGRAPH*);

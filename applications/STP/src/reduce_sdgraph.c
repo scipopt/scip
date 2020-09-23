@@ -1031,6 +1031,47 @@ SCIP_RETCODE sdgraphAlloc(
    return SCIP_OKAY;
 }
 
+
+
+/** allocates memory */
+static
+SCIP_RETCODE sdgraphAllocRestricted(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   SCIP_Real* mstsdist;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const int nterms = g->terms;
+   SDGRAPH* g_sd;
+
+   SCIP_CALL( SCIPallocMemory(scip, sdgraph) );
+   g_sd = *sdgraph;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->sdmst), nterms) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstcosts), nterms) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_sd->mstsdist), nnodes) );
+
+   mstsdist = g_sd->mstsdist;
+   for( int i = 0; i < nnodes; i++ )
+      mstsdist[i] = -1.0;
+
+   g_sd->nodemapOrgToDist = NULL;
+   g_sd->halfedge_isInMst = NULL;
+   g_sd->nnodesorg = nnodes;
+   g_sd->nedgesorg = nedges;
+   g_sd->mstcostsReady = FALSE;
+   g_sd->edgemarkReady = TRUE;
+
+   g_sd->rmq_edgecosts = NULL;
+   g_sd->rmq_sparseTable = NULL;
+   g_sd->rmq_loglength = -1;
+
+   return SCIP_OKAY;
+}
+
 /** adds edges to distance graph, given terminal paths */
 static
 void distgraphAddEdgesFromTpaths(
@@ -1294,6 +1335,7 @@ SCIP_RETCODE sdgraphMstBuild(
    const int nnodes_distgraph = graph_get_nNodes(distgraph);
    STP_Bool* RESTRICT orgedges_isInMst = g_sd->halfedge_isInMst;
    const int nedges = graph_get_nEdges(g);
+   const SCIP_Bool distgraphIsInit = (distgraph->path_heap != NULL);
 
    if( orgedges_isInMst)
    {
@@ -1304,9 +1346,16 @@ SCIP_RETCODE sdgraphMstBuild(
    for( int k = 0; k < nnodes_distgraph; k++ )
       distgraph->mark[k] = TRUE;
 
-   SCIP_CALL( graph_path_init(scip, distgraph) );
+   if( !distgraphIsInit )
+   {
+      SCIP_CALL( graph_path_init(scip, distgraph) );
+   }
    graph_path_exec(scip, distgraph, MST_MODE, distgraph->source, distgraph->cost, mst);
-   graph_path_exit(scip, distgraph);
+
+   if( !distgraphIsInit )
+   {
+      graph_path_exit(scip, distgraph);
+   }
 
    assert(mst[0].edge == -1);
 
@@ -1363,6 +1412,29 @@ SCIP_RETCODE reduce_sdgraphInit(
    sdgraphMstMarkOrgEdges(g, vnoi, edgeorg, *sdgraph);
 
    sdgraphFinalize(scip, &vnoi, &edgeorg);
+
+   SCIP_CALL( sdqueryInit(scip, g, *sdgraph) );
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes SD graph */
+SCIP_RETCODE reduce_sdgraphInitFromDistGraph(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   GRAPH*                distgraph,          /**< distance graph */
+   int*                  node2dist,          /**< map */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   assert(scip && g && sdgraph && distgraph && node2dist);
+
+   SCIP_CALL( sdgraphAllocRestricted(scip, g, sdgraph) );
+   (*sdgraph)->distgraph = distgraph;
+   (*sdgraph)->nodemapOrgToDist = node2dist;
+
+   SCIP_CALL( sdgraphMstBuild(scip, g, *sdgraph) );
 
    SCIP_CALL( sdqueryInit(scip, g, *sdgraph) );
 
@@ -1626,6 +1698,29 @@ void reduce_sdgraphFree(
    SCIPfreeMemoryArray(scip, &(g_sd->sdmst));
 
    graph_free(scip, &(g_sd->distgraph), TRUE);
+   sdqueryFree(scip, g_sd);
+
+   SCIPfreeMemory(scip, sdgraph);
+}
+
+
+/** frees SD graph, but does not free actual graph and node-map (assumed to be non-owned) */
+void reduce_sdgraphFreeFromDistGraph(
+   SCIP*                 scip,               /**< SCIP */
+   SDGRAPH**             sdgraph             /**< the SD graph */
+)
+{
+   SDGRAPH* g_sd;
+   assert(scip && sdgraph);
+
+   g_sd = *sdgraph;
+   assert(g_sd);
+   assert(!(g_sd->halfedge_isInMst));
+
+   SCIPfreeMemoryArray(scip, &(g_sd->mstsdist));
+   SCIPfreeMemoryArray(scip, &(g_sd->mstcosts));
+   SCIPfreeMemoryArray(scip, &(g_sd->sdmst));
+
    sdqueryFree(scip, g_sd);
 
    SCIPfreeMemory(scip, sdgraph);

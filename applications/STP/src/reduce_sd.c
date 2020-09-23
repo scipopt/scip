@@ -710,13 +710,10 @@ static
 SCIP_Real getSd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
-   GRAPH*                netgraph,           /**< auxiliary graph structure */
-   PATH*                 mst,                /**< MST structure */
+   SDGRAPH*              sdgraph,            /**< special distance graph */
    PATH*                 vnoi,               /**< path structure */
-   SCIP_Real*            mstsdist,           /**< MST distance in aux-graph */
    SCIP_Real             sd_initial,         /**< initial sd or -1.0 */
    int*                  vbase,              /**< bases for nearest terminals */
-   int*                  nodesid,            /**< nodes identification array */
    int                   i,                  /**< first vertex */
    int                   i2,                 /**< second vertex */
    int                   limit               /**< limit for incident edges to consider */
@@ -729,11 +726,8 @@ SCIP_Real getSd(
    int e;
    int j;
    int k;
-   int ne;
    int tj;
    int tk;
-   int nj;
-   int nk;
    int nnodes;
    int nnterms1;
    int nnterms2;
@@ -744,9 +738,6 @@ SCIP_Real getSd(
 
    assert(scip != NULL);
    assert(g != NULL);
-   assert(netgraph != NULL);
-   assert(mst != NULL);
-   assert(mstsdist != NULL);
 
    nnodes = g->knots;
    l = 0;
@@ -822,65 +813,7 @@ SCIP_Real getSd(
          else
          {
             /* get sd between (terminals) tj and tk */
-            nj = nodesid[tj];
-            nk = nodesid[tk];
-            assert(nj != nk);
-
-            l = nj;
-            dist = 0.0;
-            mstsdist[l] = 0.0;
-
-            while( l != 0 )
-            {
-               ne = mst[l].edge;
-
-               assert(netgraph->head[ne] == l);
-               l = netgraph->tail[ne];
-               if( SCIPisGT(scip, netgraph->cost[ne], dist) )
-                  dist = netgraph->cost[ne];
-
-               mstsdist[l] = dist;
-               if( l == nk )
-                  break;
-            }
-
-            if( l == nk )
-            {
-               l = 0;
-            }
-            else
-            {
-               l = nk;
-               dist = 0.0;
-            }
-            while( l != 0 )
-            {
-               ne = mst[l].edge;
-               l = netgraph->tail[ne];
-               if( SCIPisGT(scip, netgraph->cost[ne], dist) )
-                  dist = netgraph->cost[ne];
-
-               if( mstsdist[l] >= 0 )
-               {
-                  if( SCIPisGT(scip, mstsdist[l], dist) )
-                     dist = mstsdist[l];
-                  break;
-               }
-               if( l == 0 )
-                  assert( nj == 0);
-            }
-
-            /* restore */
-            l = nj;
-            mstsdist[l] = -1.0;
-            while( l != 0 )
-            {
-               ne = mst[l].edge;
-               l = netgraph->tail[ne];
-               mstsdist[l] = -1.0;
-               if( l == nk )
-                  break;
-            }
+            dist = reduce_sdgraphGetSd(tj, tk, sdgraph);
 
             assert(SCIPisGT(scip, dist, 0.0));
             if( SCIPisGT(scip, dist, max) )
@@ -1879,7 +1812,7 @@ SCIP_RETCODE reduce_sd(
 
    if( nodereplacing )
    {
-      SCIP_CALL( reduce_bd34WithSd(scip, g, netgraph, mst, vnoi, mstsdist, vbase, nodesid, nelims) );
+      SCIP_CALL( reduce_bd34WithSd(scip, g, netgraph, vnoi, vbase, nodesid, nelims) );
    }
 
    /* free memory*/
@@ -4891,9 +4824,7 @@ SCIP_RETCODE reduce_bd34WithSd(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
    GRAPH*                netgraph,           /**< auxiliary graph structure */
-   PATH*                 netmst,             /**< MST structure */
    PATH*                 vnoi,               /**< path structure */
-   SCIP_Real*            mstsdist,           /**< MST distance in aux-graph */
    int*                  vbase,              /**< bases for nearest terminals */
    int*                  nodesid,            /**< nodes identification array */
    int*                  nelims              /**< number of eliminations */
@@ -4905,10 +4836,13 @@ SCIP_RETCODE reduce_bd34WithSd(
    int edges[STP_BD_MAXDEGREE];
    int adjvert[STP_BD_MAXDEGREE];
    GRAPH* auxg;
+   SDGRAPH* sdgraph;
    const int nnodes = g->knots;
 
-   assert(scip && g && netgraph && netmst && vnoi);
+   assert(scip && g && netgraph && vnoi);
    assert(!graph_pc_isPcMw(g));
+
+   SCIP_CALL( reduce_sdgraphInitFromDistGraph(scip, g, netgraph, nodesid, &sdgraph) );
 
    /* build auxiliary graph */
    SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BD_MAXDEGREE) );
@@ -4950,11 +4884,11 @@ SCIP_RETCODE reduce_bd34WithSd(
          {
             const SCIP_Real costsum = ecost[0] + ecost[1] + ecost[2];
 
-            sd[0] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, ecost[0] + ecost[1], vbase, nodesid, adjvert[0],
+            sd[0] = getSd(scip, g, sdgraph, vnoi, ecost[0] + ecost[1], vbase, adjvert[0],
                   adjvert[1], 300);
-            sd[1] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, ecost[1] + ecost[2], vbase, nodesid, adjvert[1],
+            sd[1] = getSd(scip, g, sdgraph, vnoi, ecost[1] + ecost[2], vbase, adjvert[1],
                   adjvert[2], 300);
-            sd[2] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, ecost[2] + ecost[0], vbase, nodesid, adjvert[2],
+            sd[2] = getSd(scip, g, sdgraph, vnoi, ecost[2] + ecost[0], vbase, adjvert[2],
                   adjvert[0], 300);
 
             if( isPseudoDeletableDeg3(scip, g, sd, edges, costsum, TRUE) )
@@ -4987,7 +4921,7 @@ SCIP_RETCODE reduce_bd34WithSd(
                   const int k2 = auxg->head[e];
                   if( k2 > k )
                   {
-                     auxg->cost[e] = getSd(scip, g, netgraph, netmst, vnoi, mstsdist, ecost[k] + ecost[k2], vbase, nodesid,
+                     auxg->cost[e] = getSd(scip, g, sdgraph, vnoi, ecost[k] + ecost[k2], vbase,
                            adjvert[k], adjvert[k2], 200);
                      auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
@@ -5020,6 +4954,8 @@ SCIP_RETCODE reduce_bd34WithSd(
 
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
+
+   reduce_sdgraphFreeFromDistGraph(scip, &sdgraph);
 
    return SCIP_OKAY;
 }
