@@ -1304,6 +1304,11 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_VAR*                  y               /**< second variable */
    );
 
+/** returns the index of the bilinear term representing the product of the two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns -1 if the variables do not appear bilinearly.
+ */
 SCIP_EXPORT
 int SCIPgetConsExprBilinTermIdx(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
@@ -1311,13 +1316,14 @@ int SCIPgetConsExprBilinTermIdx(
    SCIP_VAR*                  y               /**< second variable */
    );
 
+/** evaluates an auxiliary expression for a bilinear term */
 SCIP_EXPORT
 SCIP_Real SCIPevalConsExprBilinAuxExpr(
-   SCIP*                 scip,
-   SCIP_VAR*             x,
-   SCIP_VAR*             y,
-   SCIP_CONSEXPR_AUXEXPR* auxexpr,
-   SCIP_SOL*             sol
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable of the bilinear term */
+   SCIP_VAR*             y,                  /**< second variable of the bilinear term */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression */
+   SCIP_SOL*             sol                 /**< solution at which to evaluate (can be NULL) */
    );
 
 /** compare two auxiliary expressions
@@ -1340,7 +1346,7 @@ SCIP_RETCODE SCIPinsertBilinearTermExisting(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
    int                   nlockspos,          /**< number of positive expression locks */
    int                   nlocksneg           /**< number of negative expression locks */
    );
@@ -1352,12 +1358,12 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
-   SCIP_Real             coefaux,            /**< coefficient of auxvar in the linear expression */
-   SCIP_Real             coefx,              /**< coefficient of x in the linear expression */
-   SCIP_Real             coefy,              /**< coefficient of y in the linear expression */
-   SCIP_Real             cst,                /**< constant of the linear expression */
-   SCIP_Bool             overestimate        /**< whether the linear expression overestimates the product */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   SCIP_Real             coefaux,            /**< coefficient of auxvar in the auxiliary expression */
+   SCIP_Real             coefx,              /**< coefficient of x in the auxiliary expression */
+   SCIP_Real             coefy,              /**< coefficient of y in the auxiliary expression */
+   SCIP_Real             cst,                /**< constant of the auxiliary expression */
+   SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    );
 
 /** returns the number of enforcements for an expression */

@@ -9471,7 +9471,7 @@ SCIP_RETCODE ensureBilinTermSize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_BILINTERM* term,            /**< bilinear term */
    int                   n                   /**< number of entries to store */
-)
+   )
 {
    int newsize;
 
@@ -9492,13 +9492,14 @@ SCIP_RETCODE ensureBilinTermSize(
    return SCIP_OKAY;
 }
 
+/* add an auxiliary expression to a bilinear term */
 static
-SCIP_RETCODE addTermBilinExpr(
-   SCIP*                 scip,
-   SCIP_CONSHDLRDATA*    conshdlrdata,
-   SCIP_CONSEXPR_BILINTERM* term,
-   SCIP_CONSEXPR_AUXEXPR* auxexpr,
-   SCIP_Bool*            added
+SCIP_RETCODE bilinTermAddAuxExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< expr constraint handler data */
+   SCIP_CONSEXPR_BILINTERM* term,            /**< bilinear term */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to add */
+   SCIP_Bool*            added               /**< pointer to store whether auxexpr has been added */
    )
 {
    SCIP_Bool found;
@@ -9544,7 +9545,7 @@ SCIP_RETCODE addTermBilinExpr(
    return SCIP_OKAY;
 }
 
-/** resizes array of bilinear terms */
+/** resizes an array of bilinear terms */
 static
 SCIP_RETCODE bilinearTermsResize(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -15843,12 +15844,13 @@ int SCIPgetConsExprBilinTermIdx(
    return idx;
 }
 
+/** evaluates an auxiliary expression for a bilinear term */
 SCIP_Real SCIPevalConsExprBilinAuxExpr(
-   SCIP*                 scip,
-   SCIP_VAR*             x,
-   SCIP_VAR*             y,
-   SCIP_CONSEXPR_AUXEXPR* auxexpr,
-   SCIP_SOL*             sol
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable of the bilinear term */
+   SCIP_VAR*             y,                  /**< second variable of the bilinear term */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression */
+   SCIP_SOL*             sol                 /**< solution at which to evaluate (can be NULL) */
    )
 {
    assert(scip != NULL);
@@ -15901,7 +15903,7 @@ SCIP_RETCODE SCIPinsertBilinearTermExisting(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
    int                   nlockspos,          /**< number of positive expression locks */
    int                   nlocksneg           /**< number of negative expression locks */
    )
@@ -15939,12 +15941,12 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable (for non-implicit relations) (might be NULL) */
-   SCIP_Real             coefaux,
-   SCIP_Real             coefx,
-   SCIP_Real             coefy,
-   SCIP_Real             cst,
-   SCIP_Bool             overestimate
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   SCIP_Real             coefaux,            /**< coefficient of the auxiliary variable in the auxiliary expression */
+   SCIP_Real             coefx,              /**< coefficient of x in the auxiliary expression */
+   SCIP_Real             coefy,              /**< coefficient of y in the auxiliary expression */
+   SCIP_Real             cst,                /**< constant of the auxiliary expression */
+   SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -15998,7 +16000,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
       /* before we were working with term->aux.var; now aux.var has been saved and aux.exprs can be initialised to NULL */
       term->aux.exprs = NULL;
 
-      SCIP_CALL( addTermBilinExpr(scip, conshdlrdata, term, auxvarexpr, &added) );
+      SCIP_CALL( bilinTermAddAuxExpr(scip, conshdlrdata, term, auxvarexpr, &added) );
 
       /* since there were no auxexprs before and we've already checked for bilinmaxnauxexprs, auxvarexpr should always be added */
       assert(added);
@@ -16013,7 +16015,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    auxexpr->coefs[1] = coefx;
    auxexpr->coefs[2] = coefy;
    auxexpr->cst = cst;
-   SCIP_CALL( addTermBilinExpr(scip, conshdlrdata, term, auxexpr, &added) );
+   SCIP_CALL( bilinTermAddAuxExpr(scip, conshdlrdata, term, auxexpr, &added) );
 
    if( !added )
    {
