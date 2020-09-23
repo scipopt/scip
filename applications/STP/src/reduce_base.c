@@ -584,7 +584,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( da )
       {
-         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = redparameters->userec,
+         const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = FALSE,
            .useSlackPrune = FALSE, .useExtRed = FALSE, .nodereplacing = nodereplacing };
          SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &danelims, randnumgen));
 
