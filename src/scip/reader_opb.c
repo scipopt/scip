@@ -2342,7 +2342,8 @@ SCIP_RETCODE writeOpbObjective(
 
                      if( topcostfound )
                      {
-                        (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetCapacityKnapsack(scip, cons));
+                        (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n",
+                           (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons));
                         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
                         writeBuffer(scip, file, linebuffer, &linecnt);
                         printed = TRUE;
