@@ -132,6 +132,7 @@ SCIP_RETCODE readBounds(
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
       (void) sscanf(buffer, format, varname, lbstring, ubstring);
 
+      /* coverity[leaked_storage] */
       SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
 
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
@@ -215,7 +216,9 @@ SCIP_RETCODE readBounds(
       }
 
       /* note that we don't need to check if lb > ub in SCIPchgVar{Lb,Ub} */
+      /* coverity[leaked_storage] */
       SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+      /* coverity[leaked_storage] */
       SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
    }
 

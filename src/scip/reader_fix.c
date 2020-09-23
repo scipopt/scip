@@ -158,6 +158,7 @@ SCIP_RETCODE readSol(
       }
 
       /* fix the variable */
+      /* coverity[leaked_storage] */
       SCIP_CALL( SCIPfixVar(scip, var, value, &infeasible, &fixed) );
       if( infeasible )
       {

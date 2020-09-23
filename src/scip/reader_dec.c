@@ -152,7 +152,9 @@ SCIP_RETCODE readDecomposition(
    /* use the number of constraints of the problem as buffer storage size */
    nconss = SCIPgetNConss(scip);
 
+   /* coverity[leaked_storage] */
    SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
+   /* coverity[leaked_storage] */
    SCIP_CALL( SCIPallocBufferArray(scip, &labels, nconss) );
 
    /* start parsing the file */

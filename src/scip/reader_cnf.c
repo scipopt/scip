@@ -404,6 +404,7 @@ SCIP_DECL_READERREAD(readerReadCnf)
    }
 
    /* create problem */
+   /* coverity[leaked_storage] */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* read cnf file */
