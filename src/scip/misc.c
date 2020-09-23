@@ -11115,7 +11115,7 @@ SCIP_Bool SCIPstrAtStart(
    /* skip whitespace at beginning */
    while( idxctr < SCIP_MAXSTRLEN && isspace((unsigned char)s[idxctr]) )
       ++idxctr;
-   if ( strncmp(&s[idxctr], t, tlen) == 0 )
+   if( strncmp(&s[idxctr], t, tlen) == 0 )
       return TRUE;
    return FALSE;
 }
