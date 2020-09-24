@@ -4030,7 +4030,7 @@ SCIP_RETCODE SCIPtrySolFreeExact(
       {
          SCIP_CALL( SCIPprimalAddSolFreeExact(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
                scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lpexact, scip->eventqueue, scip->eventfilter,
-               *sol, stored) );
+               sol, stored) );
 
          if( *stored )
          {
