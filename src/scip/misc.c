@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -11097,4 +11098,24 @@ int SCIPdisjointsetGetSize(
    assert(djset != NULL);
 
    return djset->size;
+}
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+)
+{
+   int idxctr = 0;
+
+   assert(s != NULL);
+   assert(t != NULL);
+
+   /* skip whitespace at beginning */
+   while( idxctr < SCIP_MAXSTRLEN && isspace((unsigned char)s[idxctr]) )
+      ++idxctr;
+   if( strncmp(&s[idxctr], t, tlen) == 0 )
+      return TRUE;
+   return FALSE;
 }
