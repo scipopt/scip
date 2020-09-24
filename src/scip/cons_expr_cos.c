@@ -322,6 +322,12 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropCos)
    /* compute the new child interval */
    SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );
 
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
    /* shift the new interval back */
    SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &newbounds, newbounds, -M_PI_2);  /* TODO use bounds on Pi/2 instead of approximation of Pi/2 */
 
