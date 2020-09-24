@@ -68,13 +68,19 @@ if(NOT WIN32)
     else()
       pkg_check_modules(_PC_IPOPT QUIET ipopt)
     endif()
-
   endif()
 
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
     set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
+    #list(APPEND _PC_IPOPT_LIBRARIES "libgcc_s.1.dylib")
+    #list(APPEND _PC_IPOPT_LIBRARY_DIRS "/usr/local/opt/gcc/lib/gcc/9/")
+    message("^^^^^ LIBDIRS ^^^^^\n${_PC_IPOPT_LIBRARY_DIRS}")
     foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
+        #if("${_LIBRARY}" MATCHES "gfortran")
+        #  continue()
+        #endif()
+      message("$$$$$    ${_LIBRARY}")    
       find_library(${_LIBRARY}_PATH
                    NAMES ${_LIBRARY}
                    PATHS ${_PC_IPOPT_LIBRARY_DIRS}
@@ -82,23 +88,18 @@ if(NOT WIN32)
       find_library(${_LIBRARY}_PATH
                    NAMES ${_LIBRARY}
                    PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
+      if("${_LIBRARY}" MATCHES "gfortran")
+          string(REPLACE ".dylib" ".a" FORTRAN_LIB_PATH ${gfortran_PATH})
+          set(gfortran_PATH "${FORTRAN_LIB_PATH}")
+      endif()
+      message("${_LIBRARY}_PATH: ${${_LIBRARY}_PATH}")
+        
+        list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
     endforeach()
-
-    if(APPLE)
-      # turn "-framework;foo;-framework;bar;other" into "-framework foo;-framework bar;other"
-      #string(REPLACE "-framework;" "-framework " IPOPT_LDFLAGS "${_PC_IPOPT_LDFLAGS}")
-      string(REPLACE "-framework;" "-framework " IPOPT_LDFLAGS_OTHER "${_PC_IPOPT_LDFLAGS_OTHER}")
-      # take "-framework foo;-framework bar;other" and add only frameworks to IPOPT_LIBRARIES
-      foreach(arg ${IPOPT_LDFLAGS_OTHER})
-        if("${arg}" MATCHES "-framework .+")
-          set(IPOPT_LIBRARIES "${IPOPT_LIBRARIES};${arg}")
-        endif("${arg}" MATCHES "-framework .+")
-      endforeach(arg ${IPOPT_LDFLAGS_OTHER})
-    endif(APPLE)
-
-    #list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
-
+    string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS_TMP "${_PC_IPOPT_LDFLAGS}")
+    string(REPLACE "-lgfortran" "-lgcc_s.1" IPOPT_LDFLAGS "${IPOPT_LDFLAGS_TMP}")
+    list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
+    message("*******\n${IPOPT_LDFLAGS}")
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
