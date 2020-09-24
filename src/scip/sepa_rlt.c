@@ -458,6 +458,7 @@ SCIP_RETCODE addProductVars(
 
    assert(sepadata->bilinvardatas != NULL);
    assert(xpos >= 0 && xpos < sepadata->nbilinvars );
+   assert(xpos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)); /*lint !e571 */
 
    xdata = sepadata->bilinvardatas[xpos];
    if( xdata->varbilinvars == NULL )
@@ -473,6 +474,8 @@ SCIP_RETCODE addProductVars(
    if( !found )
    {
       SCIP_CALL( ensureBilinVarDataSize(scip, xdata, xdata->nvarbilinvars + 1) );
+      assert(xdata->varbilinvars != NULL);
+
       for( i = xdata->nvarbilinvars; i > pos; --i )
       {
          xdata->varbilinvars[i] = xdata->varbilinvars[i - 1];
@@ -481,23 +484,28 @@ SCIP_RETCODE addProductVars(
       ++xdata->nvarbilinvars;
    }
 
-   ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx); /*lint !e571 */
+   /* add locks to priority of x */
+   xdata->priority += nlocks;
 
-   if( ypos == INT_MAX )
-   {
-      SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
-      SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
-      sepadata->varssorted[sepadata->nbilinvars] = y;
-      SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) ); /*lint !e866*/
-      ypos = sepadata->nbilinvars;
-      ++sepadata->nbilinvars;
-   }
-
-   assert(ypos >= 0 && ypos < sepadata->nbilinvars );
-
-   ydata = sepadata->bilinvardatas[ypos];
    if( xidx != yidx )
    {
+      ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx); /*lint !e571 */
+
+      if( ypos == INT_MAX )
+      {
+         SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
+         SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
+         sepadata->varssorted[sepadata->nbilinvars] = y;
+         SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) ); /*lint !e866*/
+         ypos = sepadata->nbilinvars;
+         ++sepadata->nbilinvars;
+      }
+
+      assert(ypos >= 0 && ypos < sepadata->nbilinvars );
+      assert(ypos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)); /*lint !e571 */
+
+      ydata = sepadata->bilinvardatas[ypos];
+
       if( ydata->varbilinvars == NULL )
       {
          found = FALSE;
@@ -511,6 +519,8 @@ SCIP_RETCODE addProductVars(
       if( !found )
       {
          SCIP_CALL( ensureBilinVarDataSize(scip, ydata, ydata->nvarbilinvars + 1) );
+         assert(ydata->varbilinvars != NULL);
+
          for( i = ydata->nvarbilinvars; i > pos; --i )
          {
             ydata->varbilinvars[i] = ydata->varbilinvars[i - 1];
@@ -518,14 +528,10 @@ SCIP_RETCODE addProductVars(
          ydata->varbilinvars[pos] = x;
          ++ydata->nvarbilinvars;
       }
+
+      /* add locks to priority of y */
+      ydata->priority += nlocks;
    }
-
-   assert(xpos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)); /*lint !e571 */
-   assert(ypos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)); /*lint !e571 */
-
-   /* add locks to priorities of both variables */
-   xdata->priority += nlocks;
-   ydata->priority += nlocks;
 
    return SCIP_OKAY;
 }
