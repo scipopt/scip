@@ -15696,8 +15696,8 @@ SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
 
 /** collects all bilinear terms for a given set of constraints
  *
- * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
- *       or SCIPgetConsExprBilinTerm().
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms(),
+ *       SCIPgetConsExprBilinTerm() or SCIPgetConsExprBilinTermIdx().
  */
 SCIP_RETCODE SCIPcollectConsExprBilinTerms(
    SCIP*                      scip,           /**< SCIP data structure */
@@ -15751,56 +15751,6 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
    return conshdlrdata->bilinterms;
 }
 
-/** returns the bilinear term representing the product of the two given variables
- *
- * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
- * @return The method returns NULL if the variables do not appear bilinearly.
- */
-SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
-   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_VAR*                  x,              /**< first variable */
-   SCIP_VAR*                  y               /**< second variable */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_BILINTERM entry;
-   int idx;
-
-   assert(consexprhdlr != NULL);
-   assert(x != NULL);
-   assert(y != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->bilinhashtable == NULL )
-   {
-      return NULL;
-   }
-
-   /* ensure that x.index <= y.index */
-   if( SCIPvarCompare(x, y) == 1 )
-   {
-      SCIPswapPointers((void**)&x, (void**)&y);
-   }
-   assert(SCIPvarCompare(x, y) < 1);
-
-   /* use a new entry to find the image in the bilinear hash table */
-   entry.x = x;
-   entry.y = y;
-   idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
-   assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
-
-   if( idx >= 0 )
-   {
-      assert(conshdlrdata->bilinterms[idx].x == x);
-      assert(conshdlrdata->bilinterms[idx].y == y);
-      return &conshdlrdata->bilinterms[idx];
-   }
-
-   return NULL;
-}
-
 /** returns the index of the bilinear term representing the product of the two given variables
  *
  * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
@@ -15840,8 +15790,43 @@ int SCIPgetConsExprBilinTermIdx(
    entry.y = y;
    idx = (int)(size_t)SCIPhashtableRetrieve(conshdlrdata->bilinhashtable, (void*)&entry) - 1;
    assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
+   assert(idx < 0 || conshdlrdata->bilinterms[idx].x == x);
+   assert(idx < 0 || conshdlrdata->bilinterms[idx].y == y);
 
    return idx;
+}
+
+/** returns the bilinear term representing the product of the two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
+ */
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_BILINTERM entry;
+   int idx;
+
+   assert(consexprhdlr != NULL);
+   assert(x != NULL);
+   assert(y != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   idx = SCIPgetConsExprBilinTermIdx(consexprhdlr, x, y);
+   assert(idx >= -1 && idx < conshdlrdata->nbilinterms);
+
+   if( idx >= 0 )
+   {
+      return &conshdlrdata->bilinterms[idx];
+   }
+
+   return NULL;
 }
 
 /** evaluates an auxiliary expression for a bilinear term */

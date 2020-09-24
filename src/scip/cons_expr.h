@@ -1262,8 +1262,8 @@ SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
 
 /** collects all bilinear terms for a given set of constraints
  *
- * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
- *       or SCIPgetConsExprBilinTerm().
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms(),
+ *       SCIPgetConsExprBilinTerm() or SCIPgetConsExprBilinTermIdx().
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcollectConsExprBilinTerms(
@@ -1292,18 +1292,6 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
-/** returns the bilinear term that representing the product of two given variables
- *
- * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
- * @return The method returns NULL if the variables do not appear bilinearly.
- */
-SCIP_EXPORT
-SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
-   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_VAR*                  x,              /**< first variable */
-   SCIP_VAR*                  y               /**< second variable */
-   );
-
 /** returns the index of the bilinear term representing the product of the two given variables
  *
  * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
@@ -1311,6 +1299,18 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
  */
 SCIP_EXPORT
 int SCIPgetConsExprBilinTermIdx(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+   );
+
+/** returns the bilinear term that representing the product of two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns NULL if the variables do not appear bilinearly.
+ */
+SCIP_EXPORT
+SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_VAR*                  x,              /**< first variable */
    SCIP_VAR*                  y               /**< second variable */
