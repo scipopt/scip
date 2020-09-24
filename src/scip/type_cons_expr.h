@@ -60,15 +60,16 @@ struct SCIP_ConsExpr_Auxexpr
 };
 typedef struct SCIP_ConsExpr_Auxexpr SCIP_CONSEXPR_AUXEXPR;
 
-/** bilinear term data
+/** bilinear term structure
  *
- * This can represent either
- * - a product which explicitly exists in the problem and is
- * under- and/over overestimated by a single auxiliary variable
- * (auxvar in the union) or
- * - a product implicitly given by linear constraints with binary
- * variables, under- and/or overestimated by linear expression(s)
- * (auxexprs in the union)
+ * This can represent a product which
+ * - explicitly exists in the problem and is under- and/or overestimated by a single auxiliary variable
+ * stored as auxvar in the union (case nauxexprs == 0) or
+ * - is involved in bilinear relations implicitly given by linear constraints with binary variables, and
+ * is under- and/or overestimated by linear expression(s) stored as auxexprs in the union (case nauxexprs > 0).
+ *
+ * An explicitly existing product can also be involved in implicit relations, then it will be stored as in
+ * the second case.
  */
 struct SCIP_ConsExpr_BilinTerm
 {
@@ -76,8 +77,8 @@ struct SCIP_ConsExpr_BilinTerm
    SCIP_VAR*             y;                  /**< second variable */
    union
    {
-      SCIP_CONSEXPR_AUXEXPR** exprs;      /**< auxiliary expressions for the implicit product of x and y */
-      SCIP_VAR*          var;             /**< auxiliary variable for the explicit product of x and y */
+      SCIP_CONSEXPR_AUXEXPR** exprs;         /**< auxiliary expressions for the implicit product of x and y */
+      SCIP_VAR*          var;                /**< auxiliary variable for the explicit product of x and y */
    } aux;
    int                   nauxexprs;          /**< number of auxexprs (0 for products without implicit relations) */
    int                   sauxexprs;          /**< size of the auxexprs array */
@@ -85,7 +86,7 @@ struct SCIP_ConsExpr_BilinTerm
    int                   nlocksneg;          /**< number of negative expression locks */
    SCIP_Bool             existing;           /**< does the product exist explicitly in the problem? */
 };
-typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear term data */
+typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM; /**< bilinear term structure */
 
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
