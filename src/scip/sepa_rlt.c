@@ -444,7 +444,9 @@ SCIP_RETCODE addProductVars(
    xidx = SCIPvarGetIndex(x);
    yidx = SCIPvarGetIndex(y);
 
-   if( !SCIPhashmapExists(varmap, (void*)(size_t) xidx) )
+   xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx); /*lint !e571 */
+
+   if( xpos == INT_MAX )
    {
       SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
@@ -453,10 +455,9 @@ SCIP_RETCODE addProductVars(
       xpos = sepadata->nbilinvars;
       ++sepadata->nbilinvars;
    }
-   else
-   {
-      xpos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx); /*lint !e571 */
-   }
+
+   assert(sepadata->bilinvardatas != NULL);
+   assert(xpos >= 0 && xpos < sepadata->nbilinvars );
 
    xdata = sepadata->bilinvardatas[xpos];
    if( xdata->varbilinvars == NULL )
@@ -480,7 +481,9 @@ SCIP_RETCODE addProductVars(
       ++xdata->nvarbilinvars;
    }
 
-   if( !SCIPhashmapExists(varmap, (void*)(size_t) yidx) )
+   ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx); /*lint !e571 */
+
+   if( ypos == INT_MAX )
    {
       SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
@@ -489,10 +492,8 @@ SCIP_RETCODE addProductVars(
       ypos = sepadata->nbilinvars;
       ++sepadata->nbilinvars;
    }
-   else
-   {
-      ypos = SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx); /*lint !e571 */
-   }
+
+   assert(ypos >= 0 && ypos < sepadata->nbilinvars );
 
    ydata = sepadata->bilinvardatas[ypos];
    if( xidx != yidx )
