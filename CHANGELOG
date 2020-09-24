@@ -181,6 +181,7 @@ Fixed bugs
 - Fixed bug with ofsymcomptiming == 0: now symmetry is actually computed
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
+- Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 
 Miscellaneous
 -------------
