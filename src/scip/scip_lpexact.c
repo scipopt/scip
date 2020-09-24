@@ -390,23 +390,20 @@ SCIP_RETCODE SCIPprintRowex(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note This method returns the objective value of the current LP solution, which might be primal or dual infeasible
- *        if a limit was hit during solving. It must not be used as a dual bound if the LP solution status returned by
- *        SCIPgetLPSolstat() is SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ *  @note This method returns the objective value of the current exact LP solution, which might be primal or dual infeasible
+ *        if a limit was hit during solving. It must not be used as a dual bound if the exact LP solution status returned by
+ *        SCIPgetLPExactSolstat() is SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_Rational* SCIPgetLPExactObjval(
-   SCIP*                 scip                /**< SCIP data structure */
+void SCIPgetLPExactObjval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< result pointer */
    )
 {
-   SCIP_Rational* res;
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, res);
-
-   return res;
+   SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, result);
 }
 
 /** returns whether the exact lp was solved */
@@ -444,7 +441,6 @@ SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
        return SCIP_LPSOLSTAT_NOTSOLVED;
 }
 
-
 /** initiates exact LP diving, making methods SCIPchgVarObjExactDive(), SCIPchgVarLbExactDive(), and SCIPchgVarUbExactDive() available
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -469,6 +465,12 @@ SCIP_RETCODE SCIPstartExactDive(
    if( SCIPlpExactDiving(scip->lpexact) )
    {
       SCIPerrorMessage("already in exact diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("cannot start exact diving while being in diving mode\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -520,17 +522,14 @@ SCIP_RETCODE SCIPendExactDive(
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
    assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/
 
+   /* we have to set the exact diving flag temporarilly to TRUE since SCIPendDive() needs to know that this happend
+    * in exact diving mode */
+   scip->lpexact->diving = TRUE;
+
    /* end floating-point LP dive, see comment in SCIPstartExactDive() */
    SCIP_CALL( SCIPendDive(scip) );
 
-   /* if a new best solution was created, the cutoff of the tree was delayed due to diving;
-    * the cutoff has to be done now.
-    */
-   if( scip->tree->cutoffdelayed )
-   {
-      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-            scip->eventqueue, scip->lp, scip->primal->cutoffbound) );
-   }
+   scip->lpexact->diving = FALSE;
 
    return SCIP_OKAY;
 }
@@ -544,9 +543,6 @@ SCIP_RETCODE SCIPendExactDive(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- *
- *  @note be aware that the LP solve may take longer than expected if SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL,
- *  compare the explanation of SCIPstartExactDive()
  */
 SCIP_RETCODE SCIPsolveExactDiveLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -556,6 +552,8 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
                                               *   limit was reached (or NULL, if not needed) */
    )
 {
+   SCIP_Rational* objval;
+
    assert(scip != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveExactDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -573,14 +571,19 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
    SCIP_CALL( SCIPlpExactSolveAndEval(scip->lpexact, scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
          scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, lperror, FALSE) );
 
+   SCIP_CALL( RatCreateBuffer(scip->set->buffer, &objval) );
+   SCIPgetLPExactObjval(scip, objval);
+
    /* the LP is infeasible or the objective limit was reached */
    if( SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OBJLIMIT
       || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
-         RatIsGE(SCIPgetLPExactObjval(scip), SCIPgetCutoffboundExact(scip))) )
+         RatIsGE(objval, SCIPgetCutoffboundExact(scip))) )
    {
       if( cutoff != NULL )
          *cutoff = TRUE;
    }
+
+   RatFreeBuffer(scip->set->buffer, &objval);
 
    return SCIP_OKAY;
 }
@@ -604,7 +607,7 @@ SCIP_RETCODE SCIPchgVarLbExactDive(
    assert(scip != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpExactDiving(scip->lpexact) )
    {
@@ -636,7 +639,7 @@ SCIP_RETCODE SCIPchgVarUbExactDive(
    assert(scip != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPlpExactDiving(scip->lpexact) )
    {

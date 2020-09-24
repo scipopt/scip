@@ -24,18 +24,26 @@
 #include <assert.h>
 
 #include "scip/cons_exactsol.h"
-#include "scip/scip_lpexact.h"
+#include "scip/lp.h"
+#include "scip/lpexact.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
-#include "scip/struct_rational.h"
+//#include "scip/struct_rational.h"
+#include "scip/scip_exact.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/struct_scip.h"
+#include "scip/tree.h"
+
 
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "exactsol"
 #define CONSHDLR_DESC          "constraint to ensure that primal solutions report back exact solutions"
 #define CONSHDLR_ENFOPRIORITY  -9999999 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_CHECKPRIORITY -9999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -72,14 +80,14 @@
 /* TODO: fill in the necessary constraint data */
 
 /** constraint data for ExactSol constraints */
-struct SCIP_ConsData
-{
-};
+//struct SCIP_ConsData
+//{
+//};
 
 /** constraint handler data */
-struct SCIP_ConshdlrData
-{
-};
+//struct SCIP_ConshdlrData
+//{
+//};
 
 
 /*
@@ -92,201 +100,6 @@ struct SCIP_ConshdlrData
 /*
  * Callback methods of constraint handler
  */
-
-/* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define conshdlrCopyExactSol NULL
-#endif
-
-/** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 0
-static
-SCIP_DECL_CONSFREE(consFreeExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consFreeExactSol NULL
-#endif
-
-
-/** initialization method of constraint handler (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_CONSINIT(consInitExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consInitExactSol NULL
-#endif
-
-
-/** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_CONSEXIT(consExitExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consExitExactSol NULL
-#endif
-
-
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITPRE(consInitpreExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consInitpreExactSol NULL
-#endif
-
-
-/** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 0
-static
-SCIP_DECL_CONSEXITPRE(consExitpreExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consExitpreExactSol NULL
-#endif
-
-
-/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_CONSINITSOL(consInitsolExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consInitsolExactSol NULL
-#endif
-
-
-/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_CONSEXITSOL(consExitsolExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consExitsolExactSol NULL
-#endif
-
-
-/** frees specific constraint data */
-#if 0
-static
-SCIP_DECL_CONSDELETE(consDeleteExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDeleteExactSol NULL
-#endif
-
-
-/** transforms constraint data into data belonging to the transformed problem */
-#if 0
-static
-SCIP_DECL_CONSTRANS(consTransExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consTransExactSol NULL
-#endif
-
-
-/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 0
-static
-SCIP_DECL_CONSINITLP(consInitlpExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consInitlpExactSol NULL
-#endif
-
-
-/** separation method of constraint handler for LP solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPALP(consSepalpExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consSepalpExactSol NULL
-#endif
-
-
-/** separation method of constraint handler for arbitrary primal solutions */
-#if 0
-static
-SCIP_DECL_CONSSEPASOL(consSepasolExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consSepasolExactSol NULL
-#endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
@@ -330,24 +143,6 @@ static
 SCIP_DECL_CONSCHECK(consCheckExactSol)
 {  /*lint --e{715}*/
 
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_VAR** vars;
-   int nvars;
-   int i;
-
-   assert(scip != NULL);
-   assert(conss != NULL || nconss == 0);
-   assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr); /* don't know if we need that */
-   assert(conshdlrdata != NULL);
-
-   *result = SCIP_FEASIBLE;
-
-   /* if the solution doesn't come from a heuristic, ignore it */
-   if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
-      return SCIP_OKAY;
-
    SCIP_VAR** vars;
    SCIP_Bool lperror;
    int nintvars;
@@ -357,6 +152,37 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_RETCODE retstat;
 #endif
 
+   assert(scip != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   /* if the solution doesn't come from a heuristic, ignore it */
+   if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
+      return SCIP_OKAY;
+
+   /* if we are not solving exactly, we have nothing to check */
+   if( !SCIPisExactSolve(scip) )
+      return SCIP_OKAY;
+
+   /** if we're already in exact diving mode, we already computed an exact solution with this constraint handler and
+     * are checking if it's actually feasible
+     */
+   if( SCIPlpExactDiving(scip->lpexact) )
+      return SCIP_OKAY;
+
+   *result = SCIP_FEASIBLE;
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+      return SCIP_OKAY;
+
+   if( !SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE )
+      return SCIP_OKAY;
+
    /* start exact diving */
    SCIP_CALL( SCIPstartExactDive(scip) );
 
@@ -364,38 +190,42 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-   //for( i = 0; i < nvars; ++i )
-   //{
-   //  if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
-   //   {
-   //      SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
-   //      SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
-   //   }
-   //}
-   for( i = 0; i < nintvars; ++i ) /* apply this after global bounds to not cause an error with intermediate empty domains */
+
+   for( i = 0; i < nintvars; ++i )
    {
       if( SCIPvarGetStatusExact(vars[i]) == SCIP_VARSTATUS_COLUMN )
       {
          SCIP_Real solval;
          solval = SCIPgetSolVal(scip, sol, vars[i]);
-         //solval = SCIPsolGetVal(sol, scip->set, scip->stat, vars[i]);
+         //printf(" (exactsol) lb = %f, ub = %f of var %s \n", RatApproxReal(SCIPvarGetLbLocalExact(vars[i])), RatApproxReal(SCIPvarGetUbLocalExact(vars[i])), SCIPvarGetName(vars[i]));
+         assert(RatIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
 
          /* check if solution value is supposed to be integral */
-         if( SCIPisIntegral(solval) )
+         if( SCIPisIntegral(scip, solval) )
          {
             SCIP_Rational* newbound;
 
-            /* create rational solval */
-            RatSetReal(newbound, SCIPsetRound(scip->set, solval));
+            RatCreateBuffer(SCIPbuffer(scip), &newbound);
+
+            /* create rational solval and round it to the nearest integer */
+            RatSetReal(newbound, solval);
+            RatRound(newbound, newbound, SCIP_ROUND_NEAREST);
+
+            //printf("solval = %f \n",solval );
+            //printf("fp = <%f>, exact = <%f> ---> %d \n", SCIPsetRound(scip->set, solval), RatApproxReal(newbound), RatIsApproxEqualReal(scip->set, newbound, SCIPsetRound(scip->set, solval)));
+
+            SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPsetRound(scip->set, solval)) );
+            SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPsetRound(scip->set, solval)) );
 
             SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], newbound) );
             SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], newbound) );
+
+            RatFreeBuffer(SCIPbuffer(scip), &newbound);
          }
       }
    }
 
    /* solve LP */
-   SCIPdebugMsg(scip, " -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a constraint
     * handler. Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP
@@ -405,22 +235,22 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    retstat = SCIPsolveExactDiveLP(scip, -1, &lperror, NULL);
    if( retstat != SCIP_OKAY )
    {
-      SCIPwarningMessage(scip, "Error while solving LP in Exactheur Constraint Handler; Exact LP solve terminated with code <%d>\n",retstat);
+      SCIPwarningMessage(scip, "Error while solving LP in Exactsol Constraint Handler; Exact LP solve terminated with code <%d>\n",retstat);
    }
 #else
    SCIP_CALL( SCIPsolveExactDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-   //SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-   //SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
-
    /* check if this is a feasible solution */
    if( !lperror && SCIPgetLPExactSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIP_Bool stored;
+      SCIP_SOL* exactsol;
+      SCIP_Bool foundsol;
 
-      /* copy the current LP solution to the working solution */
-      SCIP_CALL( SCIPlinkLPSolExact(scip, sol) );
+      SCIP_CALL( SCIPsolCreateLPSolExact(&exactsol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+          scip->tree, scip->lpexact, NULL) );
+
+      SCIP_CALL( SCIPtrySolFreeExact(scip, &exactsol, FALSE, FALSE, FALSE, FALSE, TRUE, &foundsol) );
 
       /* check solution for feasibility, and add it to solution store if possible
        * neither integrality nor feasibility of LP rows has to be checked, because this is already
@@ -428,11 +258,13 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
        */
       //SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
-      if( stored )
+      if( foundsol )
       {
-         SCIPdebugMsg(scip, "found feasible shifted solution:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
-         *result = SCIP_FOUNDSOL;
+         //SCIPdebugMsg(scip, "found feasible shifted solution:\n");
+         //SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
+         *result = SCIP_FEASIBLE;
+         sol = exactsol;
+         printf("foundsol\n");
       }
    }
 
@@ -442,52 +274,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    return SCIP_OKAY;
 }
 
-
-/** domain propagation method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPROP(consPropExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consPropExactSol NULL
-#endif
-
-
-/** presolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRESOL(consPresolExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consPresolExactSol NULL
-#endif
-
-
-/** propagation conflict resolving method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSRESPROP(consRespropExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consRespropExactSol NULL
-#endif
-
-
 /** variable rounding lock method of constraint handler */
 static
 SCIP_DECL_CONSLOCK(consLockExactSol)
@@ -496,169 +282,6 @@ SCIP_DECL_CONSLOCK(consLockExactSol)
    /* do nothing since we are not handling constraints */
    return SCIP_OKAY;
 }
-
-
-/** constraint activation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSACTIVE(consActiveExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consActiveExactSol NULL
-#endif
-
-
-/** constraint deactivation notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDEACTIVE(consDeactiveExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDeactiveExactSol NULL
-#endif
-
-
-/** constraint enabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSENABLE(consEnableExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consEnableExactSol NULL
-#endif
-
-
-/** constraint disabling notification method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDISABLE(consDisableExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDisableExactSol NULL
-#endif
-
-/** variable deletion of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSDELVARS(consDelvarsExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consDelvarsExactSol NULL
-#endif
-
-
-/** constraint display method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPRINT(consPrintExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consPrintExactSol NULL
-#endif
-
-
-/** constraint copying method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSCOPY(consCopyExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consCopyExactSol NULL
-#endif
-
-
-/** constraint parsing method of constraint handler */
-#if 0
-static
-SCIP_DECL_CONSPARSE(consParseExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consParseExactSol NULL
-#endif
-
-
-/** constraint method of constraint handler which returns the variables (if possible) */
-#if 0
-static
-SCIP_DECL_CONSGETVARS(consGetVarsExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consGetVarsExactSol NULL
-#endif
-
-/** constraint method of constraint handler which returns the number of variables (if possible) */
-#if 0
-static
-SCIP_DECL_CONSGETNVARS(consGetNVarsExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consGetNVarsExactSol NULL
-#endif
-
-/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
-#if 0
-static
-SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsExactSol)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define consGetDiveBdChgsExactSol NULL
-#endif
-
 
 /*
  * constraint specific interface methods
@@ -708,48 +331,9 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          conshdlrdata) );
    assert(conshdlr != NULL);
 
-   /* set non-fundamental callbacks via specific setter functions */
-   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveExactSol) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactSol, consCopyExactSol) );
-   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveExactSol) );
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteExactSol) );
-   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsExactSol) );
-   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableExactSol) );
-   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableExactSol) );
-   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitExactSol) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreExactSol) );
-   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolExactSol) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeExactSol) );
-   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsExactSol) );
-   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsExactSol) );
-   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsExactSol) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitExactSol) );
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreExactSol) );
-   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolExactSol) );
-   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpExactSol) );
-   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseExactSol) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolExactSol, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
-   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintExactSol) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropExactSol, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
-         CONSHDLR_PROP_TIMING) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropExactSol) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExactSol, consSepasolExactSol, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExactSol) );
-   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExactSol) );
-
-#endif
-
-#ifdef LINCONSUPGD_PRIORITY
-   if( SCIPfindConshdlr(scip,"linear") != NULL )
-   {
-      /* include the linear constraint upgrade in the linear constraint handler */
-      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdExactSol, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-   }
-#endif
-
    /* add ExactSol constraint handler parameters */
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
-
+#endif
    return SCIP_OKAY;
 }
 

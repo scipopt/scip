@@ -8528,16 +8528,12 @@ SCIP_RETCODE SCIPvarChgLbExactDive(
    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
    SCIP_Rational*        newbound            /**< new bound for variable */
    )
-
 {
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
    assert(lpexact != NULL);
    assert(SCIPlpExactDiving(lpexact));
-
-   /* adjust bound for integral variables */
-   //SCIPvarAdjustLb(var, set, &newbound);
 
    RatDebugMessage("changing lower bound of <%s> to %q in current exact dive\n", var->name, newbound);
 
@@ -8562,50 +8558,17 @@ SCIP_RETCODE SCIPvarChgLbExactDive(
       SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
       return SCIP_INVALIDDATA;
 
-
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-      printf("aggregated var \n"); /* TODO: handle this */
-   //   assert(var->data.aggregate.var != NULL);
-   //   if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
-   //   {
-   //      SCIP_Real childnewbound;
-
-         /* a > 0 -> change lower bound of y */
-   //      if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-   //         childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-   //      else
-   //         childnewbound = newbound;
-   //      SCIP_CALL( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, childnewbound) );
-   //   }
-   //   else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
-   //   {
-   //      SCIP_Real childnewbound;
-
-         /* a < 0 -> change upper bound of y */
-   //      if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-   //         childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-   //      else
-   //         childnewbound = -newbound;
-   //      SCIP_CALL( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, childnewbound) );
-   //   }
-   //   else
-   //   {
-   //      SCIPerrorMessage("scalar is zero in aggregation\n");
-   //      return SCIP_INVALIDDATA;
-   //   }
-      break;
+      SCIPerrorMessage("cannot change the bounds of an aggregated variable\n");
+      return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
-      printf("negated var \n"); /* TODO: handle this */
-   //   assert(var->negatedvar != NULL);
-   //   assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-   //   assert(var->negatedvar->negatedvar == var);
-   //   SCIP_CALL( SCIPvarChgUbDive(var->negatedvar, set, lp, var->data.negate.constant - newbound) );
-      break;
+      SCIPerrorMessage("cannot change the bounds of a negated variable\n");
+      return SCIP_INVALIDDATA;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -8719,10 +8682,7 @@ SCIP_RETCODE SCIPvarChgUbExactDive(
    assert(lpexact != NULL);
    assert(SCIPlpExactDiving(lpexact));
 
-   /* adjust bound for integral variables */
-   //SCIPvarAdjustUb(var, set, &newbound);
-
-   //SCIPsetDebugMsg(set, "changing upper bound of <%s> to %g in current dive\n", var->name, newbound);
+   RatDebugMessage("changing upper bound of <%s> to %d in current dive\n", var->name, newbound);
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )
@@ -8746,49 +8706,16 @@ SCIP_RETCODE SCIPvarChgUbExactDive(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
-      printf("aggregated var \n"); /* TODO: handle this */
-
-      //assert(var->data.aggregate.var != NULL);
-      //if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
-      //{
-      //   SCIP_Real childnewbound;
-
-         /* a > 0 -> change upper bound of y */
-      //   if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-      //      childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-      //   else
-      //      childnewbound = newbound;
-      //   SCIP_CALL( SCIPvarChgUbDive(var->data.aggregate.var, set, lp, childnewbound) );
-      //}
-      //else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
-      //{
-      //   SCIP_Real childnewbound;
-
-         /* a < 0 -> change lower bound of y */
-      //   if( !SCIPsetIsInfinity(set, -newbound) && !SCIPsetIsInfinity(set, newbound) )
-      //      childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-      //   else
-      //      childnewbound = -newbound;
-      //   SCIP_CALL( SCIPvarChgLbDive(var->data.aggregate.var, set, lp, childnewbound) );
-      //}
-      //else
-      //{
-      //   SCIPerrorMessage("scalar is zero in aggregation\n");
-      //   return SCIP_INVALIDDATA;
-      //}
-      break;
+      SCIPerrorMessage("cannot change the bounds of an aggregated variable\n");
+      return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
-      printf("negated var \n"); /* TODO: handle this */
-      //assert(var->negatedvar != NULL);
-      //assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
-      //assert(var->negatedvar->negatedvar == var);
-      //SCIP_CALL( SCIPvarChgLbDive(var->negatedvar, set, lp, var->data.negate.constant - newbound) );
-      break;
+      SCIPerrorMessage("cannot change the bounds of a negated variable\n");
+      return SCIP_INVALIDDATA;
 
    default:
       SCIPerrorMessage("unknown variable status\n");

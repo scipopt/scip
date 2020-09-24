@@ -36,6 +36,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
 #ifdef SCIP_WITH_BOOST
    SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrExactSol(scip) );
 #endif
    SCIP_CALL( SCIPincludeConshdlrAbspower(scip) ); /* absolute power needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );

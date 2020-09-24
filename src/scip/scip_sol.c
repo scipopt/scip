@@ -3960,3 +3960,118 @@ SCIP_Bool SCIPisExactSol(
 
    return SCIPsolIsExact(sol);
 }
+
+/** checks exact primal solution; if feasible, adds it to storage; solution is freed afterwards
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note Do not call during propagation, use heur_trysol instead.
+ */
+SCIP_RETCODE SCIPtrySolFreeExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
+   )
+{
+   SCIP_SOL* bestsol;
+
+   assert(stored != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPtrySolFreeExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   bestsol = SCIPgetBestSol(scip);
+
+   if( !printreason )
+      completely = FALSE;
+
+   /* we cannot check partial solutions */
+   if( SCIPsolIsPartial(*sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* if the solution is added during presolving and it is not defined on original variables,
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+   }
+
+   if( SCIPsolIsOriginal(*sol) )
+   {
+      SCIP_Bool feasible;
+
+      /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
+       * including modifiable constraints
+       */
+      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+
+      if( feasible )
+      {
+         SCIP_CALL( SCIPprimalAddSolFreeExact(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+               scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lpexact, scip->eventqueue, scip->eventfilter,
+               *sol, stored) );
+
+         if( *stored )
+         {
+            if( bestsol != SCIPgetBestSol(scip) )
+            {
+               /* TODO: maybe update exact statistics instead */
+               SCIPstoreSolutionGap(scip);
+            }
+         }
+      }
+      else
+      {
+         SCIP_CALL( SCIPsolFree(sol, scip->mem->probmem, scip->primal) );
+         *stored = FALSE;
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPprimalTrySolFreeExact(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+            scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lpexact, scip->eventqueue, scip->eventfilter,
+            sol, printreason, completely, checkbounds, checkintegrality, checklprows, stored) );
+
+      if( *stored )
+      {
+         if( bestsol != SCIPgetBestSol(scip) )
+         {
+//#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+//            SCIP_Bool feasible;
+//            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+//
+//            if( ! feasible )
+//            {
+//               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+//               SCIPABORT();
+//            }
+//#endif
+            /* TODO: maybe update exact statistics instead */
+            SCIPstoreSolutionGap(scip);
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}

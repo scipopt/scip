@@ -46,10 +46,6 @@ extern "C" {
 #endif
 
 /*
- * column methods
- */
-
-/*
  * Column methods
  */
 
@@ -335,8 +331,6 @@ SCIP_RETCODE SCIPlpExactShrinkRows(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   newnrows            /**< new number of rows in the LP */
    );
 
@@ -700,6 +694,7 @@ void SCIPlpExactForceExactSolve(
    );
 
 /** returns whether the exact LP is in diving mode */
+SCIP_EXPORT
 SCIP_Bool SCIPlpExactDiving(
    SCIP_LPEXACT*         lpexact             /**< current exact LP data */
    );

@@ -61,6 +61,7 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_exactlp.h"
+#include "scip/cons_exactsol.h"
 #include "scip/cons_linking.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_nonlinear.h"

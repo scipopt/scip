@@ -209,6 +209,7 @@ SCIP_Bool SCIPlpExactIsSolved(
   *
   *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
   */
+SCIP_EXPORT
 SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -241,6 +242,7 @@ SCIP_Rational* SCIPgetLPExactObjval(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarLbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
@@ -257,10 +259,47 @@ SCIP_RETCODE SCIPchgVarLbExactDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarUbExactDive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Rational*        newbound            /**< new value for bound */
+   );
+
+/** solves the exact LP of the current dive; no separation or pricing is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsolveExactDiveLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the diving LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
+   );
+
+/** initiates exact LP diving, making methods SCIPchgVarObjExactDive(), SCIPchgVarLbExactDive(), and SCIPchgVarUbExactDive() available
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPstartExactDive(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values
@@ -273,6 +312,7 @@ SCIP_RETCODE SCIPchgVarUbExactDive(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPendExactDive(
    SCIP*                 scip                /**< SCIP data structure */
    );

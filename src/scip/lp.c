@@ -421,7 +421,7 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->dualchecked = storedsolvals->dualchecked;
       lp->solisbasic = storedsolvals->solisbasic;
 
-      /* solution values are stored only for LPs solved to optimality or unboundedness */
+      /* solution values are stored only for LPs solved without error */
       assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
          lp->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
          lp->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
@@ -16327,8 +16327,11 @@ SCIP_RETCODE SCIPlpEndDive(
          SCIP_CALL( SCIPlpFlush(lp, blkmem, set, eventqueue) );
       }
 
-      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */
-      SCIPstatIncrement(stat, set, lpcount);
+      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp but when we
+       * are in exact diving mode, we don't want to increase it since we want to use the exact diving solution added
+       * by ConsExactSol */
+      if( ! lp->lpexact->diving)
+         SCIPstatIncrement(stat, set, lpcount);
 
       /* restore LP solution values in lp data, columns and rows */
       if( lp->storedsolvals->lpissolved &&

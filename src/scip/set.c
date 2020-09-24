@@ -2648,7 +2648,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/enabled",
          "should the problem be solved exactly (without numerical tolerances)?",
-         &(*set)->exact_enabled, FALSE, SCIP_DEFAULT_EXACT_ENABLED,
+         &(*set)->exact_enabled, FALSE, TRUE, //SCIP_DEFAULT_EXACT_ENABLED,
          paramChgdExactSolve, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "exact/safedbmethod",

@@ -42,6 +42,7 @@
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_tree.h"
+#include "scip/scip_lpexact.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"

@@ -180,9 +180,6 @@ SCIP_Bool colExactInSync(
    assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj));
    assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
    assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
-   assert(RatIsApproxEqualReal(set, colexact->flushedlb, fpcol->flushedlb) || (RatIsNegInfinity(colexact->flushedlb) && SCIPsetIsInfinity(set, -fpcol->flushedlb)));
-   assert(RatIsApproxEqualReal(set, colexact->flushedub, fpcol->flushedub) || (RatIsInfinity(colexact->flushedub) && SCIPsetIsInfinity(set, fpcol->flushedub)));
-
    return TRUE;
 }
 
@@ -1886,7 +1883,7 @@ SCIP_RETCODE lpExactFlushAddCols(
       return SCIP_OKAY;
 
    /* add the additional columns */
-   assert(!lp->fplp->diving);
+   //assert(!lp->fplp->diving);
    assert(lp->ncols > lp->nlpicols);
    SCIP_CALL( ensureLpiExactcolsSize(lp, set, lp->ncols) );
 
@@ -2511,6 +2508,7 @@ SCIP_RETCODE SCIPcolExactCreate(
    SCIP_CALL( RatCreateString(blkmem, &(*col)->redcost, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*col)->farkascoef, "inf") );
 
+   (*col)->storedsolvals = NULL;
    (*col)->size = len;
    (*col)->len = len;
    (*col)->nlprows = 0;
@@ -3006,7 +3004,7 @@ SCIP_RETCODE SCIPcolExactChgLb(
    return SCIP_OKAY;
 }
 
-/** changes upper bound of column */
+/** changes upper bound of exact column */
 SCIP_RETCODE SCIPcolExactChgUb(
    SCIP_COLEXACT*        col,                /**< LP column to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3051,7 +3049,6 @@ SCIP_RETCODE SCIPcolExactChgUb(
    return SCIP_OKAY;
 }
 
-
 /** creates and captures an LP row */
 SCIP_RETCODE SCIProwCreateExact(
    SCIP_ROWEXACT**       row,                /**< pointer to LP row data */
@@ -3083,6 +3080,7 @@ SCIP_RETCODE SCIProwCreateExact(
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, row) );
 
+   (*row)->storedsolvals = NULL;
    (*row)->integral = TRUE;
    (*row)->fprow = fprow;
 
@@ -3372,6 +3370,11 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->chgrows = NULL;
    (*lp)->cols = NULL;
    (*lp)->rows = NULL;
+   (*lp)->divechgsides = NULL;
+   (*lp)->divechgsidetypes = NULL;
+   (*lp)->divechgrows = NULL;
+   (*lp)->divelpistate = NULL;
+   (*lp)->storedsolvals = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->flushdeletedcols = FALSE;
    (*lp)->flushaddedcols = FALSE;
@@ -3382,6 +3385,12 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->solved = FALSE;
    (*lp)->primalfeasible = TRUE;
    (*lp)->primalchecked = TRUE;
+   (*lp)->diving = FALSE;
+   (*lp)->divelpwasprimfeas = TRUE;
+   (*lp)->divelpwasprimchecked = TRUE;
+   (*lp)->divelpwasdualfeas = TRUE;
+   (*lp)->divelpwasdualchecked = TRUE;
+   (*lp)->divingobjchg = FALSE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->dualchecked = TRUE;
    (*lp)->solisbasic = FALSE;
@@ -3418,6 +3427,9 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->looseobjvalinf = 0;
    (*lp)->pseudoobjvalinf = 0;
    (*lp)->glbpseudoobjvalinf = 0;
+   (*lp)->ndivingrows = 0;
+   (*lp)->ndivechgsides = 0;
+   (*lp)->nremovablerows = 0;
    (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
    (*lp)->cutoffbound = SCIPsetInfinity(set);
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpobjval) );
@@ -3808,7 +3820,6 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       SCIPclockStart(stat->provedinfeaslptime, set);
    else
       SCIPclockStart(stat->provedfeaslptime, set);
-
 
    /* set initial LP solver settings */
    fromscratch = FALSE;
@@ -5866,6 +5877,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
       lp->fplp->lpsolstat = lp->lpsolstat;
       lp->fplp->primalfeasible = lp->primalfeasible;
       lp->fplp->dualfeasible = lp->dualfeasible;
+      lp->fplp->solved = lp->solved;
    }
    if( lp->solisbasic )
    {
@@ -7095,14 +7107,15 @@ SCIP_RETCODE lpExactRestoreSolVals(
       lpexact->dualchecked = storedsolvals->dualchecked;
       lpexact->solisbasic = storedsolvals->solisbasic;
 
-      /* solution values are stored only for LPs solved to optimality or unboundedness */
+      /* solution values are stored only for LPs solved without error */
+      //printf("%d       %d \n", lpexact->lpsolstat, lpexact->storedsolvals->lpsolstat);
       assert(lpexact->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
          lpexact->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_ITERLIMIT ||
          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT ||
          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE ||
-         lpexact->validsollp == -1);
+         lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
    }
    /* no values available, mark LP as unsolved */
    else
@@ -7163,8 +7176,6 @@ SCIP_RETCODE SCIPlpExactShrinkRows(
    SCIP_LPEXACT*         lpexact,            /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    int                   newnrows            /**< new number of rows in the LP */
    )
 {
@@ -7357,7 +7368,7 @@ SCIP_RETCODE SCIPlpExactStartDive(
    int r;
 
    assert(lpexact != NULL);
-   assert(lpexact->flushed || !lpexact->solved);
+   //assert(lpexact->flushed || !lpexact->solved);
    assert(lpexact->fplp->diving);
    assert(!lpexact->diving);
    assert(lpexact->divelpistate == NULL);
@@ -7484,11 +7495,13 @@ SCIP_RETCODE SCIPlpExactEndDive(
          SCIP_CALL( SCIPcolExactChgObj(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetObjExact(var)) );
          SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetLbLocalExact(var)) );
          SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetUbLocalExact(var)) );
+         //printf("lb = %f, ub = %f of var %s \n", RatApproxReal(SCIPvarGetLbLocalExact(var)), RatApproxReal(SCIPvarGetUbLocalExact(var)), SCIPvarGetName(var));
       }
    }
 
    /* remove rows which were added in diving mode */
-   SCIP_CALL( SCIPlpExactShrinkRows(lpexact, blkmem, set, eventqueue, eventfilter, lpexact->ndivingrows) );
+   /* note: not needed right now, since we only change bounds in exact diving mode */
+   //SCIP_CALL( SCIPlpExactShrinkRows(lpexact, blkmem, set, lpexact->ndivingrows) );
 
    /* undo changes to left hand sides and right hand sides */
    while( lpexact->ndivechgsides > 0 )
@@ -7560,11 +7573,12 @@ SCIP_RETCODE SCIPlpExactEndDive(
          for( r = 0; r < lpexact->nrows; ++r )
          {
             SCIP_CALL( rowExactRestoreSolVals(lpexact->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers,
-                       lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
+                  lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
          }
       }
       else
       {
+         printf("%d       %d \n", lpexact->lpsolstat, lpexact->storedsolvals->lpsolstat);
          SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem, -1LL) );
       }
    }
