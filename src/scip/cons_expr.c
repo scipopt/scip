@@ -15808,7 +15808,6 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_BILINTERM entry;
    int idx;
 
    assert(consexprhdlr != NULL);
