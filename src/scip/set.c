@@ -1593,7 +1593,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_MEM_NOLIMIT,
+         &(*set)->limit_memory, FALSE, (SCIP_Real)SCIP_DEFAULT_LIMIT_MEMORY, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
