@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -9308,7 +9309,7 @@ SCIP_Bool SCIPrealToRational(
    assert(nominator != NULL);
    assert(denominator != NULL);
 
-   if( REALABS(val) >= 1.0 * SCIP_LONGINT_MAX / maxdnom )
+   if( REALABS(val) >= ((SCIP_Real)SCIP_LONGINT_MAX) / maxdnom )
       return FALSE;
 
    /* try the simple denominators first: each value of the simpledenoms table multiplied by powers of 10
@@ -9385,7 +9386,7 @@ SCIP_Bool SCIPrealToRational(
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
 
-   if( REALABS(g0) > (SCIP_LONGINT_MAX >> 4) || h0 > (SCIP_LONGINT_MAX >> 4) )
+   if( REALABS(g0) > (SCIP_Real)(SCIP_LONGINT_MAX >> 4) || h0 > (SCIP_Real)(SCIP_LONGINT_MAX >> 4) )
       return FALSE;
 
    assert(h0 > 0.5);
@@ -11097,4 +11098,24 @@ int SCIPdisjointsetGetSize(
    assert(djset != NULL);
 
    return djset->size;
+}
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+)
+{
+   int idxctr = 0;
+
+   assert(s != NULL);
+   assert(t != NULL);
+
+   /* skip whitespace at beginning */
+   while( idxctr < SCIP_MAXSTRLEN && isspace((unsigned char)s[idxctr]) )
+      ++idxctr;
+   if( strncmp(&s[idxctr], t, tlen) == 0 )
+      return TRUE;
+   return FALSE;
 }

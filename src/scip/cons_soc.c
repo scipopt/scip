@@ -874,26 +874,34 @@ SCIP_RETCODE generateCutSol(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
-   for( i = 0; i < consdata->nvars; ++i )
+   if( SCIPisPositive(scip, consdata->lhsval) )
    {
-      val  = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
-      val *= consdata->coefs[i] * consdata->coefs[i];
+      /* if lhs is 0, then we cannot linearize
+       * but since we are violated, we have rhs < 0, so underestimating lhs by 0 could still give us a useful cut
+       */
+      SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         val  = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
+         val *= consdata->coefs[i] * consdata->coefs[i];
 
-      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / consdata->lhsval) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / consdata->lhsval) );
 
-      val *= SCIPgetSolVal(scip, sol, consdata->vars[i]);
-      SCIPaddRowprepSide(*rowprep, val);
+         val *= SCIPgetSolVal(scip, sol, consdata->vars[i]);
+         SCIPaddRowprepSide(*rowprep, val);
+      }
+      (*rowprep)->side /= consdata->lhsval;
+      (*rowprep)->side -= consdata->lhsval;
    }
-   (*rowprep)->side /= consdata->lhsval;
-   (*rowprep)->side -= consdata->lhsval - consdata->rhscoeff * consdata->rhsoffset;
 
+   /* add linear rhs: rhscoeff * (rhsvar + rhsoffset) */
+   (*rowprep)->side += consdata->rhscoeff * consdata->rhsoffset;
    SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->rhsvar, -consdata->rhscoeff) );
 
    return SCIP_OKAY;
@@ -937,7 +945,7 @@ SCIP_RETCODE generateCutPoint(
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -1007,11 +1015,11 @@ SCIP_RETCODE generateCutProjectedPoint(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
-   if( !SCIPisZero(scip, consdata->constant) )
-   {  /* have not thought about this case yet */
+   if( !SCIPisZero(scip, consdata->constant) || !SCIPisPositive(scip, consdata->lhsval) )
+   {
+      /* have not thought about the constant=0 case yet; if lhsval is 0, also fall back to simple case */
       SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
    }
@@ -1033,7 +1041,7 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%" SCIP_LONGINT_FORMAT, SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
@@ -1087,10 +1095,9 @@ SCIP_RETCODE generateSparseCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
-   if( consdata->nvars <= 3 )
+   if( consdata->nvars <= 3 || !SCIPisPositive(scip, consdata->lhsval) )
    {
       SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
