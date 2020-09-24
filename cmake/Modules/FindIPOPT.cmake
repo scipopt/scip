@@ -73,14 +73,11 @@ if(NOT WIN32)
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
     set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
-    #list(APPEND _PC_IPOPT_LIBRARIES "libgcc_s.1.dylib")
-    #list(APPEND _PC_IPOPT_LIBRARY_DIRS "/usr/local/opt/gcc/lib/gcc/9/")
-    message("^^^^^ LIBDIRS ^^^^^\n${_PC_IPOPT_LIBRARY_DIRS}")
+    if(APPLE)
+        set(_PC_IPOPT_LIBRARIES "gcc_s.1;${_PC_IPOPT_LIBRARIES}")
+    endif()
+    
     foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
-        #if("${_LIBRARY}" MATCHES "gfortran")
-        #  continue()
-        #endif()
-      message("$$$$$    ${_LIBRARY}")    
       find_library(${_LIBRARY}_PATH
                    NAMES ${_LIBRARY}
                    PATHS ${_PC_IPOPT_LIBRARY_DIRS}
@@ -88,18 +85,21 @@ if(NOT WIN32)
       find_library(${_LIBRARY}_PATH
                    NAMES ${_LIBRARY}
                    PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-      if("${_LIBRARY}" MATCHES "gfortran")
-          string(REPLACE ".dylib" ".a" FORTRAN_LIB_PATH ${gfortran_PATH})
-          set(gfortran_PATH "${FORTRAN_LIB_PATH}")
+      if(APPLE)
+          if("${_LIBRARY}" MATCHES "gfortran")
+              string(REPLACE ".dylib" ".a" FORTRAN_LIB_PATH ${gfortran_PATH})
+              set(gfortran_PATH "${FORTRAN_LIB_PATH}")
+          endif()
       endif()
-      message("${_LIBRARY}_PATH: ${${_LIBRARY}_PATH}")
-        
-        list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
+
+      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
     endforeach()
-    string(REPLACE "-framework;Accelerate" "-framework Accelerate" IPOPT_LDFLAGS_TMP "${_PC_IPOPT_LDFLAGS}")
-    string(REPLACE "-lgfortran" "-lgcc_s.1" IPOPT_LDFLAGS "${IPOPT_LDFLAGS_TMP}")
-    list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
-    message("*******\n${IPOPT_LDFLAGS}")
+
+    if(APPLE)
+        list(APPEND IPOPT_LIBRARIES "-framework Accelerate")
+    endif()
+
+    #list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
