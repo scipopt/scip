@@ -28,11 +28,11 @@
 
 #include <scip/scip.h>
 
+#include <symmetry/type_symmetry.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <symmetry/type_symmetry.h>
 
 /** include symmetry propagator */
 SCIP_EXPORT
