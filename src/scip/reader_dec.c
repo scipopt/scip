@@ -183,6 +183,7 @@ SCIP_RETCODE readDecomposition(
       {
          section = DEC_SECTION_BLOCK;
 
+         /* coverity[secure_coding] */
          nread = sscanf(buffer, "BLOCK %1018d\n", &currblock);
          if( nread < 1 )
          {
@@ -217,6 +218,7 @@ SCIP_RETCODE readDecomposition(
          case DEC_SECTION_NBLOCKS:
             /* read in number of blocks */
             assert(nblocks == -1);
+            /* coverity[secure_coding] */
             nread = sscanf(buffer, "%1024d\n", &nblocks);
             if( nread < 1 )
                error = TRUE;
@@ -226,6 +228,7 @@ SCIP_RETCODE readDecomposition(
          case DEC_SECTION_BLOCK:
          case DEC_SECTION_MASTER:
             /* read constraint name in both cases */
+            /* coverity[secure_coding] */
             nread = sscanf(buffer, "%1024s\n", consname);
             if( nread < 1 )
                error = TRUE;
