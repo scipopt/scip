@@ -2346,9 +2346,11 @@ SCIP_RETCODE priceAndCutLoop(
 
    /* solve initial LP of price-and-cut loop */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
-   SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
-         set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
-   assert(lp->flushed);
+   if( !lp->solved || !lp->flushed )
+   {
+      SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
+            set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+   }
    assert(lp->solved || *lperror);
 
    /* remove previous primal ray, store new one if LP is unbounded */
@@ -2674,8 +2676,11 @@ SCIP_RETCODE priceAndCutLoop(
 
                   /* solve LP (with dual simplex) */
                   SCIPsetDebugMsg(set, "separation: solve LP\n");
-                  SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
-                        set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+                  if( !lp->flushed || !lp->solved )
+                  {
+                     SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
+                           set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
+                  }
                   assert(lp->flushed);
                   assert(lp->solved || *lperror);
 
