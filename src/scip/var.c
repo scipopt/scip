@@ -7860,14 +7860,9 @@ SCIP_RETCODE varProcessChgLbLocal(
    oldbound = var->locdom.lb;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
-   /* todo: exip this is temporary */
+   /* adjust the exact bound as well */
    if( set->exact_enabled )
-   {
-      assert(var->exactdata != NULL);
-
-      if( RatIsLTReal(var->exactdata->locdom.lb, newbound) )
-         RatSetReal(var->exactdata->locdom.lb, newbound);
-   }
+      RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -8035,14 +8030,10 @@ SCIP_RETCODE varProcessChgUbLocal(
    oldbound = var->locdom.ub;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
-   /* todo: exip this is temporary */
+   /* adjust the exact bound as well */
    if( set->exact_enabled )
-   {
-      assert(var->exactdata != NULL);
+      RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
 
-      if( RatIsGTReal(var->exactdata->locdom.ub, newbound) )
-         RatSetReal(var->exactdata->locdom.ub, newbound);
-   }
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
     */
