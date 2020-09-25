@@ -4003,6 +4003,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
             /* create new pseudoboolean constraint */
             /* coverity[var_deref_op] */
+            /* coverity[var_deref_model] */
             SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                   targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
                   indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,

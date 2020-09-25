@@ -6734,6 +6734,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    *success = TRUE;
 
    /* read indicator constraint */
+   /* coverity[secure_coding] */
    nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0", binvarname, &zeroone, slackvarname);
 
    if ( nargs != 3 )

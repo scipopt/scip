@@ -29,10 +29,12 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include <symmetry/type_symmetry.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 /**@addtogroup PublicSymmetryMethods
  *
@@ -188,7 +190,6 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    );
 
-
 /** generate variable matrix for orbitope constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
@@ -204,6 +205,18 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    SCIP_Bool*            infeasible          /**< pointer to store whether the potential orbitope is not an orbitope */
    );
 
+/** checks whether an orbitope is a packing or partitioning orbitope */
+SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
+   int                   nrows,              /**< pointer to number of rows of variable matrix */
+   int                   ncols,              /**< number of columns of variable matrix */
+   SCIP_Bool**           pprows,             /**< pointer to store which rows are are contained in
+                                              *   packing/partitioning constraints or NULL if not needed */
+   int*                  npprows,            /**< pointer to store how many rows are contained
+                                              *   in packing/partitioning constraints or NULL if not needed */
+   SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
+   );
 
 /** @} */
 
