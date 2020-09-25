@@ -28,15 +28,15 @@
 #define REDUCE_C
 #define STP_REDBOUND_SDSP    200         /**< visited edges bound for SDSP test  */
 #define STP_REDBOUND_SDSP2   1000        /**< visited edges bound for SDSP test  */
-#define STP_REDBOUND_BDK     500         /**< visited edges bound for BDK test  */
-#define STP_REDBOUND_BDK2    1000        /**< visited edges bound for BDK test  */
+#define STP_REDBOUND_BDK     400         /**< visited edges bound for BDK test  */
+#define STP_REDBOUND_BDK2    600         /**< visited edges bound for BDK test  */
 #define STP_REDBOUND_SDSTAR     400         /**< visited edges bound for SD Star test  */
-#define STP_REDBOUND_SDSTAR2    1000        /**< visited edges bound for SD Star test  */
+#define STP_REDBOUND_SDSTAR2    800         /**< visited edges bound for SD Star test  */
 #define STP_RED_EXTENSIVE FALSE
 #define STP_RED_MWTERMBOUND 400
 #define STP_RED_MAXNROUNDS 15
-#define STP_RED_EXFACTOR   2
-#define STP_RED_GLBFACTOR  2
+#define STP_RED_EXPENSIVEFACTOR   2
+#define STP_RED_GLBFACTOR  3
 #define STP_RED_EDGELIMIT 100000
 #define STP_BND_THRESHOLD 0.03
 
@@ -535,14 +535,12 @@ SCIP_RETCODE redLoopStp_inner(
 #endif
          SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
 
-/*
-         if( inner_rounds > 0  )
+/*       if( inner_rounds > 0  )
             SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bdk34nelims, STP_REDBOUND_BDK, fixed) );
 */
-
          bdknelims += bdk34nelims;
 
-         if( bdknelims <= reductbound )
+         if( bdknelims <= STP_RED_EXPENSIVEFACTOR * reductbound )
             bdk = FALSE;
          else
             SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &degtnelims, NULL));
@@ -588,7 +586,7 @@ SCIP_RETCODE redLoopStp_inner(
            .useSlackPrune = FALSE, .useExtRed = FALSE, .nodereplacing = nodereplacing };
          SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &danelims, randnumgen));
 
-         if( danelims <= STP_RED_EXFACTOR * reductbound )
+         if( danelims <= STP_RED_EXPENSIVEFACTOR * reductbound )
             da = FALSE;
 
          reduceStatsPrint(fullreduce, "da", danelims);
@@ -614,7 +612,8 @@ SCIP_RETCODE redLoopStp_inner(
       SCIP_CALL(reduce_simple(scip, g, fixed, solnode, &degtnelims, NULL));
 
       /* too few eliminations? */
-      if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) <= 2 * reductbound )
+      if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims +
+           lenelims + brednelims + sdcnelims + sdstarnelims) <= STP_RED_GLBFACTOR * reductbound )
       {
          // at least one successful round and full reduce and no inner_restarts yet?
          if( inner_rounds > 0 && fullreduce && inner_restarts == 0 )
@@ -625,7 +624,6 @@ SCIP_RETCODE redLoopStp_inner(
             sdstar = TRUE;
             sdbiased = TRUE;
             sdc = TRUE;
-            bdk = nodereplacing;
             nvsl = nodereplacing;
 
             assert(extensive || sdcnelims == 0);
@@ -2013,7 +2011,7 @@ SCIP_RETCODE redLoopStp(
             extendedelims += conflictnelims;
          }
 
-         if( extendedelims > STP_RED_EXFACTOR * reductbound )
+         if( extendedelims > STP_RED_EXPENSIVEFACTOR * reductbound )
          {
             rerun = TRUE;
          }

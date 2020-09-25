@@ -1847,10 +1847,10 @@ SCIP_RETCODE setParams(
 
    if( setParamsSepaIsBad(probdata) )
    {
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 3));
-	  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 3));
-	  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 3));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 3));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 0));
+	  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 0));
+	  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 0));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 6));
    }
 
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );

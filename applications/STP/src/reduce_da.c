@@ -46,7 +46,7 @@
 #define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
 #define BND_TMHEUR_NRUNS_RESTRICT 16          /**< number of runs of constructive heuristic */
 #define BND_TMHEUR_NRUNS_RPC      16          /**< number of runs for RPC */
-#define DEFAULT_DARUNS     7                  /**< number of runs for dual ascent heuristic */
+#define DEFAULT_DARUNS     8                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 #define PERTUBATION_RATIO_PC   0.005          /**< pertubation ratio for dual-ascent primal bound computation */
@@ -309,7 +309,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
       SCIP_CALL(solpool_addSol(scip, objval, result, pool, &soladded));
 
    /* should we try recombination? */
-   if( useRec && soladded && pool->size >= 2 && objval < *bestobjval )
+   if( useRec && soladded && pool->size >= 2 && LT(objval, *bestobjval) )
    {
       /* get index of just added solution */
       int solindex = pool->maxindex;
@@ -1703,6 +1703,24 @@ SCIP_RETCODE daOrderRoots(
 }
 
 
+/** number of runs */
+static
+int daGetNruns(
+   const RPDA*           paramsda,           /**< parameters */
+   int                   nterms              /**< number of terminals */
+)
+{
+   int nruns;
+
+   if( paramsda->prevrounds == 0 )
+	   nruns = MIN(nterms, DEFAULT_DARUNS / 2);
+   else
+	   nruns = MIN(nterms, DEFAULT_DARUNS);
+
+   return nruns;
+}
+
+
 /** try to improve both dual and primal solution */
 static
 SCIP_RETCODE computePertubedSol(
@@ -2416,11 +2434,9 @@ SCIP_RETCODE reduce_da(
    int* terms;
    int* result;
    SCIP_Bool* pseudoDelNodes;
-   int nruns;
    int nFixedTerms;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
-   int ndeletions;
    STP_Bool* arcsdeleted;
    const SCIP_Bool extended = paramsda->useExtRed;
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
@@ -2456,7 +2472,6 @@ SCIP_RETCODE reduce_da(
    if( isRpc )
       reduce_identifyNonLeafTerms(scip, graph);
 
-   ndeletions = 0;
    upperbound = (NULL != ub && SCIPisGE(scip, *ub, 0.0)) ? (*ub) : FARAWAY;
    graph_mark(graph);
    collectFixedTerminals(graph, terms, &nFixedTerms);
@@ -2472,30 +2487,27 @@ SCIP_RETCODE reduce_da(
 
    if( isRpcmw )
    {
-          graph_pc_2trans(scip, graph);
+      graph_pc_2trans(scip, graph);
    }
-
-   nruns = MIN(nFixedTerms, DEFAULT_DARUNS);
-   assert(nruns > 0);
 
    /* select roots for dual ascent */
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, TRUE, randnumgen) );
 
    {
+	  const int nruns = daGetNruns(paramsda, nFixedTerms);
+
       SCIP_Real cutoffbound = -1.0;
       SCIP_Bool havenewsol = FALSE;
 
       /* main reduction loop */
-      for( int run = 0; run < nruns; run++ )
+      for( int run = 0; run < nruns && graph->grad[graph->source] > 0; run++ )
       {
+         int ndeletions_run = 0;
          const SCIP_Real damaxdeviation = getDaMaxDeviation(paramsda, randnumgen);
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
          havenewsol = FALSE;
          redcostdata.redCostRoot = terms[run];
 
-         /* graph vanished? */
-         if( graph->grad[graph->source] == 0 )
-            break;
      //   if( rpc ) {      // int todo; // check for more terminals to be added    }
          if( guidedDa )
          {
@@ -2515,7 +2527,6 @@ SCIP_RETCODE reduce_da(
          }
 
          setCutoff(upperbound, &redcostdata, &cutoffbound);
-
          SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata.dualBound, run, 0);
 
          if( isRpcmw )
@@ -2530,34 +2541,30 @@ SCIP_RETCODE reduce_da(
          updateNodeFixingBounds(nodefixingbounds, graph, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, redcostdata.redEdgeCost, redcostdata.rootToNodeDist, redcostdata.nodeTo3TermsPaths, redcostdata.dualBound, nedges, (run == 0), TRUE);
 
-         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, &redcostdata, result, havenewsol, &ndeletions) );
+         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, &redcostdata, result, havenewsol, &ndeletions_run) );
 
          if( !SCIPisZero(scip, cutoffbound) )
          {
-            ndeletions += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
+            ndeletions_run += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
             havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
-            ndeletions += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
+            ndeletions_run += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
-         // todo call this methods fewer times, at the end maybe
          if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) && run == nruns - 1 )
          {
             int extfixed;
             redcostIncreaseOnDeletedArcs(graph, arcsdeleted, &redcostdata);
 
             SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
-            ndeletions += extfixed;
+            ndeletions_run += extfixed;
 //#define EXT_WRITE
          //   graph_printInfo(graph);
           //  printf("newly fixedSECOND =%d \n", extfixed);
-          //  exit(1);
 #ifdef EXT_WRITE
             {
                FILE *fp;
-
                //char filename[SCIP_MAXSTRLEN];
                //(void) SCIPsnprintf(filename, SCIP_MAXSTRLEN,"/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/x%d_pred.stp", node);
-
                fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/STATS/stpall_hash.txt", "a+");
                fprintf(fp, "%s %d \n", SCIPgetProbName(scip), extfixed);
                fclose(fp);
@@ -2571,7 +2578,7 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( updateNodeReplaceBounds(scip, &redcostdata, graph, nodereplacebounds, upperbound, (run == 0), FALSE));
          }
 
-         if( ndeletions > 0 && !isRpcmw )
+         if( ndeletions_run > 0 && !isRpcmw )
             reduceLevel0(scip, graph);
 
          assert(graph_valid(scip, graph));
@@ -2581,6 +2588,7 @@ SCIP_RETCODE reduce_da(
          else
             graph_pc_2trans(scip, graph);
 
+         *nelims += ndeletions_run;
       } /* root loop */
 
       /* do pseudo-elimination? */
@@ -2600,7 +2608,7 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( reduce_applyPseudoDeletions(scip, &redcostdata, pseudoDelNodes, graph, offsetp, &nreplacings) );
          }
         // printf("nreplacings=%d \n", nreplacings);
-         ndeletions += nreplacings;
+         *nelims += nreplacings;
 
          if( nreplacings > 0 && userec )
          {
@@ -2612,9 +2620,7 @@ SCIP_RETCODE reduce_da(
          assert(graph_valid_ancestors(scip, graph));
          graph_mark(graph);
       }
-   } /* outerrounds */
-
-   *nelims = ndeletions;
+   }
 
    if( isRpcmw )
       graph_pc_2orgcheck(scip, graph);
