@@ -62,6 +62,8 @@ SCIP_DECL_CUTSELCOPY(cutselCopyHello)
     assert(cutsel != NULL);
     assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
 
+   printf("We are being copied, Mark\n");
+
     /* call inclusion method of node selector */
     SCIP_CALL( SCIPincludeCutselHello(scip) );
 
@@ -86,18 +88,13 @@ SCIP_DECL_CUTSELCOPY(cutselCopyHello)
 #endif
 
 /** destructor of cut selector to free user data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_CUTSELFREE(cutselFreeHello)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of hello cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   printf("We are being freed, Mark\n");
 
    return SCIP_OKAY;
 }
-#else
-#define cutselFreeHello NULL
-#endif
 
 
 /** initialization method of cut selector (called after problem was transformed) */
@@ -111,48 +108,33 @@ SCIP_DECL_CUTSELINIT(cutselInitHello)
 
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */
-#if 0
 static
 SCIP_DECL_CUTSELEXIT(cutselExitHello)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of hello cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  printf("We are exiting, Mark\n");
 
    return SCIP_OKAY;
 }
-#else
-#define cutselExitHello NULL
-#endif
 
 
 /** solving process initialization method of cut selector (called when branch and bound process is about to begin) */
-#if 0
 static
 SCIP_DECL_CUTSELINITSOL(cutselInitsolHello)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of hello cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   printf("We are initialising at the very beginning, Mark\n");
 
    return SCIP_OKAY;
 }
-#else
-#define cutselInitsolHello NULL
-#endif
 
 
 /** solving process deinitialization method of cut selector (called before branch and bound process data is freed) */
-#if 0
 static
 SCIP_DECL_CUTSELEXITSOL(cutselExitsolHello)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of hello cut selector not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   printf("We are ending the whole thing, Mark\n");
 
    return SCIP_OKAY;
 }
-#else
-#define cutselExitsolHello NULL
-#endif
 
 
 /** cut selection method of cut selector */
