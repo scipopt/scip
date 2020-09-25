@@ -113,7 +113,16 @@ SCIP_RETCODE getActiveVariablesExact(
 
    SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, *vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
-   /** @todo exip implement rational array reallocation */
+   if( requiredsize > *nvars )
+   {
+      SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
+      SCIP_CALL( RatReallocBufferArray(scip, scalars, *nvars, requiredsize) );
+
+      /* call function a second time with enough memory */
+      SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, *vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+      assert(requiredsize <= *nvars);
+   }
+
    assert(requiredsize <= *nvars);
 
    return SCIP_OKAY;

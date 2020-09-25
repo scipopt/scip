@@ -108,6 +108,15 @@ SCIP_RETCODE RatReallocBufferArray(
    int                   newlen              /**< size of src array */
    );
 
+/** realloc a rational block arrray */
+SCIP_EXPORT
+SCIP_RETCODE RatReallocBlockArray(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   );
+
 /** creates a copy of a rational */
 SCIP_EXPORT
 SCIP_RETCODE RatCopy(
@@ -351,12 +360,28 @@ void RatAddProd(
    SCIP_Rational*        op2                 /**< second operand */
    );
 
+/* Computes res += op1 * op2 and saves the result in res */
+SCIP_EXPORT
+void RatAddProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
+   );
+
 /* Computes res -= op1 * op2 and saves the result in res */
 SCIP_EXPORT
 void RatDiffProd(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
    SCIP_Rational*        op2                 /**< second operand */
+   );
+
+/* Computes res -= op1 * op2 and saves the result in res */
+SCIP_EXPORT
+void RatDiffProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
    );
 
 /** set res to -op */

@@ -621,9 +621,21 @@ SCIP_Real* SCIPvarGetMultaggrScalars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets vector of exact aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+SCIP_EXPORT
+SCIP_Rational** SCIPvarGetMultaggrScalarsExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 SCIP_EXPORT
 SCIP_Real SCIPvarGetMultaggrConstant(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets exact aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+SCIP_EXPORT
+SCIP_Rational* SCIPvarGetMultaggrConstantExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

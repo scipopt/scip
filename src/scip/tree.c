@@ -2121,6 +2121,38 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    return SCIP_OKAY;
 }
 
+/** adds exact bound change to focus node, or child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value
+ */
+SCIP_RETCODE SCIPnodeAddBoundchgExact(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
+   )
+{
+   SCIP_Real newboundreal;
+
+   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+   /** @todo exip: do we need an exact version here? */
+   SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, reopt, lpexact->fplp, branchcand, eventqueue,
+         cliquetable, var, newboundreal, boundtype, NULL, NULL, 0, probingchange) );
+
+   return SCIP_OKAY;
+}
+
 /** adds hole with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
  *  at most one of infercons and inferprop may be non-NULL

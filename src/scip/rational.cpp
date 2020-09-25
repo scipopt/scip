@@ -248,6 +248,28 @@ SCIP_RETCODE RatReallocBufferArray(
    return SCIP_OKAY;
 }
 
+/** realloc a rational block arrray */
+SCIP_RETCODE RatReallocBlockArray(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   )
+{
+   int i;
+
+   assert(newlen >= oldlen);
+
+   BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
+
+   for( i = oldlen; i < newlen; ++i )
+   {
+      SCIP_CALL( RatCreateBlock(mem, &(*result)[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 
 /** creates a copy of a rational */
@@ -822,6 +844,36 @@ void RatAddProd(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
+/* Computes res += op1 * op2 and saves the result in res */
+void RatAddProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
+   )
+{
+   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(!res->isinf);
+
+   if( op1->isinf )
+   {
+      if( op2 == 0 )
+         return;
+      else
+      {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         res->val = op1->val.sign() * (op2 > 0);
+         res->isinf = TRUE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
+      }
+   }
+   else
+   {
+      res->isinf = FALSE;
+      res->val += op1->val * op2;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
 /* Computes res -= op1 * op2 and saves the result in res */
 void RatDiffProd(
    SCIP_Rational*        res,                /**< the result */
@@ -848,6 +900,36 @@ void RatDiffProd(
    {
       res->isinf = FALSE;
       res->val -= op1->val * op2->val;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
+/* Computes res += op1 * op2 and saves the result in res */
+void RatDiffProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
+   )
+{
+   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(!res->isinf);
+
+   if( op1->isinf )
+   {
+      if( op2 == 0 )
+         return;
+      else
+      {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         res->val = op1->val.sign() * (op2 > 0);
+         res->isinf = TRUE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
+      }
+   }
+   else
+   {
+      res->isinf = FALSE;
+      res->val -= op1->val * op2;
    }
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }

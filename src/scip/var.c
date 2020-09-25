@@ -1509,6 +1509,22 @@ SCIP_Real adjustedLb(
       return lb;
 }
 
+/** returns adjusted lower bound value, which is rounded for integral variable types */
+static
+void adjustedLbExact(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Rational*        lb                  /**< lower bound to adjust */
+   )
+{
+   if( RatIsNegative(lb) && SCIPsetIsInfinity(set, -RatApproxReal(lb)) )
+      RatSetString(lb, "-inf");
+   else if( RatIsPositive(lb) && SCIPsetIsInfinity(set, RatApproxReal(lb)) )
+      RatSetString(lb, "inf");
+   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      RatRound(lb, lb, SCIP_ROUND_UPWARDS);
+}
+
 /** returns adjusted upper bound value, which is rounded for integral variable types */
 static
 SCIP_Real adjustedUb(
@@ -1527,6 +1543,41 @@ SCIP_Real adjustedUb(
       return 0.0;
    else
       return ub;
+}
+
+/** returns adjusted lower bound value, which is rounded for integral variable types */
+static
+void adjustedUbExact(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_Rational*        ub                  /**< lower bound to adjust */
+   )
+{
+   if( RatIsNegative(ub) && SCIPsetIsInfinity(set, -RatApproxReal(ub)) )
+      RatSetString(ub, "-inf");
+   else if( RatIsPositive(ub) && SCIPsetIsInfinity(set, RatApproxReal(ub)) )
+      RatSetString(ub, "inf");
+   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      RatRound(ub, ub, SCIP_ROUND_DOWNWARDS);
+}
+
+/** writes the approximate exact multi-aggregate data in the floating point structs */
+static
+void overwriteMultAggrWithExactData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< SCIP variable */
+   )
+{
+   int i;
+
+   if( !set->exact_enabled || var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+      return;
+
+   var->data.multaggr.constant = RatApproxReal(var->exactdata->multaggr.constant);
+   for( i = 0; i < var->data.multaggr.nvars; i++ )
+   {
+      var->data.multaggr.scalars[i] = RatApproxReal(var->exactdata->multaggr.scalars[i]);
+   }
 }
 
 /** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
@@ -2107,12 +2158,13 @@ SCIP_RETCODE SCIPvarAddExactData(
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
    SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
 
-   SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
-   SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
-
    var->exactdata->colexact = NULL;
    var->exactdata->varstatusexact = var->varstatus;
    var->exactdata->certificateindex = -1;
+   var->exactdata->multaggr.scalars = NULL;
+   var->exactdata->multaggr.constant = NULL;
+   var->exactdata->aggregate.constant = NULL;
+   var->exactdata->aggregate.scalar = NULL;
 
    if( obj != NULL )
       SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
@@ -2150,8 +2202,30 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
+
+   if( sourcevar->exactdata->aggregate.scalar != NULL )
+   {
+      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
+      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
+   }
+   else
+   {
+      targetvar->exactdata->aggregate.constant = NULL;
+      targetvar->exactdata->aggregate.scalar = NULL;
+   }
+
+   if( sourcevar->exactdata->multaggr.scalars != NULL )
+   {
+      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
+      SCIP_CALL( RatCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
+   }
+   else
+   {
+      targetvar->exactdata->multaggr.constant = NULL;
+      targetvar->exactdata->multaggr.scalars = NULL;
+   }
+
+
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    targetvar->exactdata->colexact = NULL;
    targetvar->exactdata->varstatusexact = SCIP_VARSTATUS_LOOSE;
@@ -2770,6 +2844,18 @@ SCIP_RETCODE varFreeExactData(
       if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
       {
          SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem, set, eventqueue, lp) );
+      }
+
+      if( var->exactdata->aggregate.scalar != NULL )
+      {
+         RatFreeBlock(blkmem, &(var)->exactdata->aggregate.constant);
+         RatFreeBlock(blkmem, &(var)->exactdata->aggregate.scalar);
+      }
+
+      if( var->exactdata->multaggr.scalars != NULL )
+      {
+         RatFreeBlock(blkmem, &(var)->exactdata->multaggr.constant);
+         RatFreeBlockArray(blkmem, &(var)->exactdata->multaggr.scalars, var->data.multaggr.nvars);
       }
 
       RatFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
@@ -4040,6 +4126,7 @@ SCIP_RETCODE SCIPvarFixExact(
       /* set the fixed variable's objective value to 0.0 */
       RatSet(obj, var->exactdata->obj);
       SCIP_CALL( SCIPvarChgObjExact(var, blkmem, set, transprob, primal, lp->lpexact, eventqueue, tmpval) );
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
 
       /* since we change the variable type form loose to fixed, we have to adjust the number of loose
        * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
@@ -4678,6 +4765,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
    int tmpvarssize;
    int ntmpvars;
    int nmultvars;
+   int ntmpvarsnew;
 
    SCIP_VAR* multvar;
    SCIP_Rational* multscalar;
@@ -4825,8 +4913,197 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
-         SCIPerrorMessage("Multi-Aggregation not supported in exact solving mode \n");
-         SCIPABORT();
+         /* x = a_1*y_1 + ... + a_n*y_n + c */
+         nmultvars = var->data.multaggr.nvars;
+         multvars = var->data.multaggr.vars;
+         multscalars = var->exactdata->multaggr.scalars;
+         sortagain = TRUE;
+
+         if( nmultvars + ntmpvars > tmpvarssize )
+         {
+            ntmpvarsnew = tmpvarssize;
+            while( nmultvars + ntmpvars > ntmpvarsnew )
+               ntmpvarsnew *= 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, ntmpvarsnew) );
+            SCIP_CALL( RatReallocBufferArray(set->buffer, &tmpscalars, tmpvarssize, ntmpvarsnew) );
+            assert(nmultvars + ntmpvars <= ntmpvarsnew);
+            tmpvarssize = ntmpvarsnew;
+         }
+
+         if( nmultvars > tmpvarssize2 )
+         {
+            ntmpvarsnew = tmpvarssize2;
+            while( nmultvars > ntmpvarsnew )
+               ntmpvarsnew *= 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars2, ntmpvarsnew) );
+            SCIP_CALL( RatReallocBufferArray(set->buffer, &tmpscalars2, tmpvarssize2, ntmpvarsnew) );
+            assert(nmultvars <= ntmpvarsnew);
+            tmpvarssize2 = ntmpvarsnew;
+         }
+
+         --nmultvars;
+
+         for( ; nmultvars >= 0; --nmultvars )
+         {
+            SCIP_CALL( RatCreateBuffer(set->buffer, &multconstant) );
+            SCIP_CALL( RatCreateBuffer(set->buffer, &multscalar) );
+
+            multvar = multvars[nmultvars];
+            RatSet(multscalar, multscalars[nmultvars]);
+
+            assert(multvar != NULL);
+            SCIP_CALL( SCIPvarGetProbvarSumExact(&multvar, set, multscalar, multconstant) );
+            assert(multvar != NULL);
+
+            assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE
+               || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN
+               || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR
+               || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_FIXED);
+
+            if( !activeconstantinf )
+            {
+               assert(!RatIsAbsInfinity(scalar));
+
+               if( RatIsAbsInfinity(multconstant) )
+               {
+                  assert(!RatIsZero(scalar));
+                  if( RatGetSign(scalar) == RatGetSign(multconstant) && !RatIsZero(scalar) )
+                  {
+                     RatSetString(activeconstant, "inf");
+                     activeconstantinf = TRUE;
+                  }
+                  else
+                  {
+                     RatSetString(activeconstant, "-inf");
+                     activeconstantinf = TRUE;
+                  }
+               }
+               else
+                  RatAddProd(activeconstant, scalar, multconstant);
+            }
+
+            if( SCIPsortedvecFindPtr((void**)tmpvars, SCIPvarComp, multvar, ntmpvars, &pos) )
+            {
+               assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
+               RatAddProd(tmpscalars[pos], scalar, multscalar);
+            }
+            else
+            {
+               tmpvars2[ntmpvars2] = multvar;
+               RatMult(tmpscalars2[ntmpvars2], scalar, multscalar);
+               ++(ntmpvars2);
+               assert(ntmpvars2 <= tmpvarssize2);
+            }
+
+            RatFreeBuffer(set->buffer, &multscalar);
+            RatFreeBuffer(set->buffer, &multconstant);
+         }
+
+         if( ntmpvars2 > 0 )
+         {
+            /* sort all variables to combine equal variables easily */
+            SCIPsortPtrPtr((void**)tmpvars2, (void**)tmpscalars2, SCIPvarComp, ntmpvars2);
+            pos = 0;
+            for( v = 1; v < ntmpvars2; ++v )
+            {
+               /* combine same variables */
+               if( SCIPvarCompare(tmpvars2[v], tmpvars2[pos]) == 0 )
+               {
+                  RatAdd(tmpscalars2[pos], tmpscalars2[pos], tmpscalars2[v]);
+               }
+               else
+               {
+                  ++pos;
+                  if( v > pos )
+                  {
+                     RatSet(tmpscalars2[pos], tmpscalars2[v]);
+                     tmpvars2[pos] = tmpvars2[v];
+                  }
+               }
+            }
+            ntmpvars2 = pos + 1;
+#ifdef SCIP_MORE_DEBUG
+            for( v = 1; v < ntmpvars2; ++v )
+            {
+               assert(SCIPvarCompare(tmpvars2[v], tmpvars2[v-1]) > 0);
+            }
+            for( v = 1; v < ntmpvars; ++v )
+            {
+               assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
+            }
+#endif
+            v = ntmpvars - 1;
+            k = ntmpvars2 - 1;
+            pos = ntmpvars + ntmpvars2 - 1;
+            ntmpvars += ntmpvars2;
+
+            while( v >= 0 && k >= 0 )
+            {
+               assert(pos >= 0);
+               assert(SCIPvarCompare(tmpvars[v], tmpvars2[k]) != 0);
+               if( SCIPvarCompare(tmpvars[v], tmpvars2[k]) >= 0 )
+               {
+                  tmpvars[pos] = tmpvars[v];
+                  RatSet(tmpscalars[pos], tmpscalars[v]);
+                  --v;
+               }
+               else
+               {
+                  tmpvars[pos] = tmpvars2[k];
+                  RatSet(tmpscalars[pos], tmpscalars2[k]);
+                  --k;
+               }
+               --pos;
+               assert(pos >= 0);
+            }
+            while( v >= 0 )
+            {
+               assert(pos >= 0);
+               tmpvars[pos] = tmpvars[v];
+               RatSet(tmpscalars[pos], tmpscalars[v]);
+               --v;
+               --pos;
+            }
+            while( k >= 0 )
+            {
+               assert(pos >= 0);
+               tmpvars[pos] = tmpvars2[k];
+               RatSet(tmpscalars[pos], tmpscalars2[k]);
+               --k;
+               --pos;
+            }
+         }
+#ifdef SCIP_MORE_DEBUG
+         for( v = 1; v < ntmpvars; ++v )
+         {
+            assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
+         }
+#endif
+
+         if( !activeconstantinf )
+         {
+            assert(!RatIsAbsInfinity(scalar));
+
+            multconstant = SCIPvarGetMultaggrConstantExact(var);
+
+            if( RatIsAbsInfinity(multconstant) )
+            {
+               assert(!RatIsZero(scalar));
+               if( RatGetSign(scalar) == RatGetSign(multconstant) && !RatIsZero(scalar) )
+               {
+                  RatSetString(activeconstant, "inf");
+                  activeconstantinf = TRUE;
+               }
+               else
+               {
+                  RatSetString(activeconstant, "-inf");
+                  activeconstantinf = TRUE;
+               }
+            }
+            else
+               RatAddProd(activeconstant, scalar, multconstant);
+         }
+
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -4921,7 +5198,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
       }
    }
 
-   RatFreeBufferArray(set->buffer, &tmpscalars, *nvars);
+   RatFreeBufferArray(set->buffer, &tmpscalars, tmpvarssize);
    SCIPsetFreeBufferArray(set, &tmpvars);
    RatFreeBufferArray(set->buffer, &activescalars, activevarssize);
    SCIPsetFreeBufferArray(set, &activevars);
@@ -4986,15 +5263,37 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    nmultvars = var->data.multaggr.nvars;
    multvarssize = var->data.multaggr.varssize;
 
-   SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
-
-   if( multrequiredsize > multvarssize )
+   if( !set->exact_enabled )
    {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
-      multvarssize = multrequiredsize;
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
-      assert( multrequiredsize <= multvarssize );
+      overwriteMultAggrWithExactData(set, var);
+
+      if( multrequiredsize > multvarssize )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
+         multvarssize = multrequiredsize;
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
+         overwriteMultAggrWithExactData(set, var);
+
+         assert( multrequiredsize <= multvarssize );
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
+         &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
+
+      if( multrequiredsize > multvarssize )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
+         multvarssize = multrequiredsize;
+         SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
+            &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
+
+         assert( multrequiredsize <= multvarssize );
+      }
    }
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
     * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
@@ -5449,7 +5748,7 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
       else
       {
          SCIP_Real oldbd;
-         if( RatIsEqual(aggvarlb, aggvar->exactdata->glbdom.lb) )
+         if( RatIsGT(aggvarlb, aggvar->exactdata->glbdom.lb) )
          {
             RatSet(varlb, aggvar->exactdata->glbdom.lb);
             SCIP_CALL( SCIPvarChgLbGlobalExact(aggvar, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, aggvarlb) );
@@ -5826,8 +6125,6 @@ SCIP_RETCODE SCIPvarAggregateExact(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
-
    /* get active problem variable of aggregation variable */
    SCIP_CALL( SCIPvarGetProbvarSumExact(&aggvar, set, scalar, constant) );
 
@@ -5888,6 +6185,8 @@ SCIP_RETCODE SCIPvarAggregateExact(
    SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, FALSE) );
    assert(var->cliquelist == NULL);
 
+   SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
+
    /* set the aggregated variable's objective value to 0.0 */
    RatSet(obj, var->exactdata->obj);
    SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lp, eventqueue, 0.0) );
@@ -5925,6 +6224,9 @@ SCIP_RETCODE SCIPvarAggregateExact(
       /* convert variable into aggregated variable */
       var->varstatus = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
       var->exactdata->varstatusexact = SCIP_VARSTATUS_AGGREGATED; /*lint !e641*/
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->aggregate.scalar) );
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->aggregate.constant) );
+
       var->data.aggregate.var = aggvar;
       RatSet(var->exactdata->aggregate.scalar, scalar);
       RatSet(var->exactdata->aggregate.constant, constant);
@@ -7225,6 +7527,382 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    return SCIP_OKAY;
 }
 
+/** converts variable into multi-aggregated variable */
+SCIP_RETCODE SCIPvarMultiaggregateExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Rational**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Rational*        constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   SCIP_VAR** tmpvars;
+   SCIP_Rational** tmpscalars;
+   SCIP_Rational* obj;
+   SCIP_Rational* tmpconstant;
+   SCIP_Rational* tmpscalar;
+   SCIP_Rational* tmpval;
+   SCIP_Real branchfactor;
+   int branchpriority;
+   SCIP_BRANCHDIR branchdirection;
+   int nlocksdown[NLOCKTYPES];
+   int nlocksup[NLOCKTYPES];
+   int v;
+   int ntmpvars;
+   int tmpvarssize;
+   int tmprequiredsize;
+   int i;
+
+   assert(var != NULL);
+   assert(var->scip == set->scip);
+   assert(set->exact_enabled);
+   assert(RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb)); /*lint !e777*/
+   assert(RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub)); /*lint !e777*/
+   assert(naggvars == 0 || aggvars != NULL);
+   assert(naggvars == 0 || scalars != NULL);
+   assert(infeasible != NULL);
+   assert(aggregated != NULL);
+
+   SCIPsetDebugMsg(set, "trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+
+   /** @todo exip add debug-solution check */
+
+   *infeasible = FALSE;
+   *aggregated = FALSE;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpconstant) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpscalar) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+      {
+         SCIPerrorMessage("cannot multi-aggregate an untransformed original variable\n");
+         return SCIP_INVALIDDATA;
+      }
+      SCIP_CALL( SCIPvarMultiaggregateExact(var->data.original.transvar, blkmem, set, stat, transprob, origprob, primal, tree,
+            reopt, lpexact, cliquetable, branchcand, eventfilter, eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+      assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
+
+      /* check if we would create a self-reference */
+      ntmpvars = naggvars;
+      tmpvarssize = naggvars;
+      RatSet(tmpconstant, constant);
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpvars, aggvars, ntmpvars) );
+      SCIP_CALL( RatCopyBlockArray(blkmem, &tmpscalars, scalars, ntmpvars) );
+
+      /* get all active variables for multi-aggregation */
+      SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, tmpconstant, &tmprequiredsize, FALSE) );
+      if( tmprequiredsize > tmpvarssize )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tmpvars, tmpvarssize, tmprequiredsize) );
+         SCIP_CALL( RatReallocBlockArray(blkmem, &tmpscalars, tmpvarssize, tmprequiredsize) );
+         tmpvarssize = tmprequiredsize;
+         SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, tmpconstant, &tmprequiredsize, FALSE) );
+         assert( tmprequiredsize <= tmpvarssize );
+      }
+
+      RatSetReal(tmpscalar, 0.0);
+
+      /* iterate over all active variables of the multi-aggregation and filter all variables which are equal to the
+       * possible multi-aggregated variable
+       */
+      for( v = ntmpvars - 1; v >= 0; --v )
+      {
+         assert(tmpvars[v] != NULL);
+         assert(SCIPvarGetStatusExact(tmpvars[v]) == SCIP_VARSTATUS_LOOSE);
+
+         if( tmpvars[v]->index == var->index )
+         {
+            RatAdd(tmpscalar, tmpscalar, tmpscalars[v]);
+            tmpvars[v] = tmpvars[ntmpvars - 1];
+            RatSet(tmpscalars[v], tmpscalars[ntmpvars - 1]);
+            --ntmpvars;
+         }
+      }
+
+      /* this means that x = x + a_1*y_1 + ... + a_n*y_n + c */
+      if( RatIsEqualReal(tmpscalar, 1.0) )
+      {
+         if( ntmpvars == 0 )
+         {
+            if( RatIsZero(tmpconstant) ) /* x = x */
+            {
+               SCIPsetDebugMsg(set, "Possible multi-aggregation was completely resolved and detected to be redundant.\n");
+               goto TERMINATE;
+            }
+            else /* 0 = c and c != 0 */
+            {
+               SCIPsetDebugMsg(set, "Multi-aggregation was completely resolved and led to infeasibility.\n");
+               *infeasible = TRUE;
+               goto TERMINATE;
+            }
+         }
+         else if( ntmpvars == 1 ) /* 0 = a*y + c => y = -c/a */
+         {
+            assert(!RatIsZero(tmpscalars[0]));
+            assert(tmpvars[0] != NULL);
+
+            RatDiv(tmpval, constant, tmpscalars[0]);
+            RatNegate(tmpval, tmpval);
+
+            RatDebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %q.\n", SCIPvarGetName(tmpvars[0]), tmpval);
+            SCIP_CALL( SCIPvarFixExact(tmpvars[0], blkmem, set, stat, transprob, origprob, primal, tree, reopt, lpexact->fplp,
+                  branchcand, eventfilter, eventqueue, cliquetable, tmpval, infeasible, aggregated) );
+            goto TERMINATE;
+         }
+         else if( ntmpvars == 2 ) /* 0 = a_1*y_1 + a_2*y_2 + c => y_1 = -a_2/a_1 * y_2 - c/a_1 */
+         {
+	         /* both variables are different active problem variables, and both scalars are non-zero: try to aggregate them */
+
+            RatNegate(tmpconstant, tmpconstant);
+            RatDebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %q and %q and constant %q.\n",
+                  SCIPvarGetName(tmpvars[0]), SCIPvarGetName(tmpvars[1]), tmpscalars[0], tmpscalars[1], tmpconstant);
+
+            SCIP_CALL( SCIPvarTryAggregateVarsExact(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lpexact->fplp,
+                  cliquetable, branchcand, eventfilter, eventqueue, tmpvars[0], tmpvars[1], tmpscalars[0],
+                  tmpscalars[1], tmpconstant, infeasible, aggregated) );
+
+            goto TERMINATE;
+         }
+         else
+            /* @todo: it is possible to multi-aggregate another variable, does it make sense?,
+             *        rest looks like 0 = a_1*y_1 + ... + a_n*y_n + c and has at least three variables
+             */
+            goto TERMINATE;
+      }
+      /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
+      else if( !RatIsZero(tmpscalar) )
+      {
+         RatDiffReal(tmpscalar, tmpscalar, 1.0);
+         RatNegate(tmpscalar, tmpscalar);
+         RatDiv(tmpconstant, tmpconstant, tmpscalar);
+         for( v = ntmpvars - 1; v >= 0; --v )
+            RatDiv(tmpscalars[v], tmpscalars[v], tmpscalar);
+      }
+
+      /* check, if we are in one of the simple cases */
+      if( ntmpvars == 0 )
+      {
+         RatDebugMessage("Possible multi-aggregation led to fixing of variable <%s> to %q.\n", SCIPvarGetName(var), tmpconstant);
+         SCIP_CALL( SCIPvarFixExact(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lpexact->fplp, branchcand,
+               eventfilter, eventqueue, cliquetable, tmpconstant, infeasible, aggregated) );
+         goto TERMINATE;
+      }
+
+      /* if only one aggregation variable is left, we perform a normal aggregation instead of a multi-aggregation */
+      if( ntmpvars == 1 )
+      {
+         RatNegate(tmpscalars[0], tmpscalars[0]);
+         RatSetReal(tmpval, 1.0);
+         RatDebugMessage("Possible multi-aggregation led to aggregation of variables <%s> and <%s> with scalars %f and %q and constant %q.\n",
+            SCIPvarGetName(var), SCIPvarGetName(tmpvars[0]), 1.0, tmpscalars[0], tmpconstant);
+
+         SCIP_CALL( SCIPvarTryAggregateVarsExact(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lpexact->fplp,
+               cliquetable, branchcand, eventfilter, eventqueue, var, tmpvars[0], tmpval, tmpscalars[0], tmpconstant,
+               infeasible, aggregated) );
+
+         goto TERMINATE;
+      }
+
+      /**@todo currently we don't perform the multi aggregation if the multi aggregation variable has a non
+       *  empty hole list; this should be changed in the future  */
+      if( SCIPvarGetHolelistGlobal(var) != NULL )
+         goto TERMINATE;
+
+      /* if the variable is not allowed to be multi-aggregated */
+      if( SCIPvarDoNotMultaggr(var) )
+      {
+         SCIPsetDebugMsg(set, "variable is not allowed to be multi-aggregated.\n");
+         goto TERMINATE;
+      }
+
+      /* if the variable to be multi-aggregated has implications or variable bounds (i.e. is the implied variable or
+       * variable bound variable of another variable), we have to remove it from the other variables implications or
+       * variable bounds
+       */
+      SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
+      assert(var->vlbs == NULL);
+      assert(var->vubs == NULL);
+      assert(var->implics == NULL);
+      assert(var->cliquelist == NULL);
+
+      /* set the aggregated variable's objective value to 0.0 */
+      RatSet(obj, var->exactdata->obj);
+      SCIP_CALL( SCIPvarChgObj(var, blkmem, set, transprob, primal, lpexact->fplp, eventqueue, 0.0) );
+
+      /* since we change the variable type form loose to multi aggregated, we have to adjust the number of loose
+       * variables in the LP data structure; the loose objective value (looseobjval) in the LP data structure, however,
+       * gets adjusted automatically, due to the event SCIP_EVENTTYPE_OBJCHANGED which dropped in the moment where the
+       * objective of this variable is set to zero
+       */
+      SCIPlpDecNLoosevars(lpexact->fplp);
+
+      /* unlock all rounding locks */
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         nlocksdown[i] = var->nlocksdown[i];
+         nlocksup[i] = var->nlocksup[i];
+
+         var->nlocksdown[i] = 0;
+         var->nlocksup[i] = 0;
+      }
+
+      /* convert variable into multi-aggregated variable */
+      var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
+      var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
+      RatCopyBlockArray(blkmem, &var->exactdata->multaggr.scalars, tmpscalars, ntmpvars);
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
+      RatCopy(blkmem, &var->exactdata->multaggr.constant, tmpconstant);
+      for( i = 0; i < ntmpvars; ++i )
+         var->data.multaggr.scalars[i] = RatApproxReal(tmpscalars[i]);
+      var->data.multaggr.constant = RatApproxReal(tmpconstant);
+      var->data.multaggr.nvars = ntmpvars;
+      var->data.multaggr.varssize = ntmpvars;
+
+      /* mark variable to be non-deletable */
+      SCIPvarMarkNotDeletable(var);
+
+      /* relock the variable, thus increasing the locks of the aggregation variables */
+      for( i = 0; i < NLOCKTYPES; i++ )
+      {
+         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, (SCIP_LOCKTYPE) i, nlocksdown[i], nlocksup[i]) );
+      }
+
+      /* update flags and branching factors and priorities of aggregation variables;
+       * update preferred branching direction of all aggregation variables that don't have a preferred direction yet
+       */
+      branchfactor = var->branchfactor;
+      branchpriority = var->branchpriority;
+      branchdirection = (SCIP_BRANCHDIR)var->branchdirection;
+
+      for( v = 0; v < ntmpvars; ++v )
+      {
+         assert(tmpvars[v] != NULL);
+         tmpvars[v]->removable &= var->removable;
+         branchfactor = MAX(tmpvars[v]->branchfactor, branchfactor);
+         branchpriority = MAX(tmpvars[v]->branchpriority, branchpriority);
+
+         /* mark variable to be non-deletable */
+         SCIPvarMarkNotDeletable(tmpvars[v]);
+      }
+      for( v = 0; v < ntmpvars; ++v )
+      {
+         SCIP_CALL( SCIPvarChgBranchFactor(tmpvars[v], set, branchfactor) );
+         SCIP_CALL( SCIPvarChgBranchPriority(tmpvars[v], branchpriority) );
+         if( (SCIP_BRANCHDIR)tmpvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
+         {
+            if( !RatIsNegative(tmpscalars[v]) )
+            {
+               SCIP_CALL( SCIPvarChgBranchDirection(tmpvars[v], branchdirection) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgBranchDirection(tmpvars[v], SCIPbranchdirOpposite(branchdirection)) );
+            }
+         }
+      }
+      SCIP_CALL( SCIPvarChgBranchFactor(var, set, branchfactor) );
+      SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
+
+      if( var->probindex != -1 )
+      {
+         /* inform problem about the variable's status change */
+         SCIP_CALL( SCIPprobVarChangedStatus(transprob, blkmem, set, branchcand, cliquetable, var) );
+      }
+
+      /* issue VARFIXED event */
+      SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 2) );
+
+      /* reset the objective value of the aggregated variable, thus adjusting the objective value of the aggregation
+       * variables and the problem's objective offset
+       */
+      SCIP_CALL( SCIPvarAddObjExact(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lpexact->fplp, eventfilter, eventqueue, obj) );
+
+      *aggregated = TRUE;
+
+   TERMINATE:
+      RatFreeBlockArray(blkmem, &tmpscalars, tmpvarssize);
+      BMSfreeBlockMemoryArray(blkmem, &tmpvars, tmpvarssize);
+      break;
+
+   case SCIP_VARSTATUS_COLUMN:
+      SCIPerrorMessage("cannot multi-aggregate a column variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot multi-aggregate a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      SCIPerrorMessage("cannot multi-aggregate an aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot multi-aggregate a multiple aggregated variable again\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      /* aggregate negation variable x in x' = offset - x, instead of aggregating x' directly:
+       *   x' = a_1*y_1 + ... + a_n*y_n + c  ->  x = offset - x' = offset - a_1*y_1 - ... - a_n*y_n - c
+       */
+      assert(RatIsZero(var->exactdata->obj));
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+
+      /* switch the signs of the aggregation scalars */
+      for( v = 0; v < naggvars; ++v )
+         RatNegate(scalars[v], scalars[v]);
+
+      RatDiffReal(tmpval, constant, var->data.negate.constant);
+      RatNegate(tmpval, tmpval);
+      /* perform the multi aggregation on the negation variable */
+      SCIP_CALL( SCIPvarMultiaggregateExact(var->negatedvar, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lpexact,
+            cliquetable, branchcand, eventfilter, eventqueue, naggvars, aggvars, scalars,
+            tmpval, infeasible, aggregated) );
+
+      /* switch the signs of the aggregation scalars again, to reset them to their original values */
+      for( v = 0; v < naggvars; ++v )
+         RatNegate(scalars[v], scalars[v]);
+
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   RatFreeBuffer(set->buffer, &tmpval);
+   RatFreeBuffer(set->buffer, &obj);
+   RatFreeBuffer(set->buffer, &tmpscalar);
+   RatFreeBuffer(set->buffer, &tmpconstant);
+
+   return SCIP_OKAY;
+}
+
 /** transformed variables are resolved to their active, fixed, or multi-aggregated problem variable of a variable,
  * or for original variables the same variable is returned
  */
@@ -7309,7 +7987,6 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    }
 }
 
-/** @todo exip: this might not work completely atm. */
 /** adds correct bound-data to negated variable */
 SCIP_RETCODE varNegateExactData(
    SCIP_VAR*             negvar,             /**< the negated variable */
@@ -7330,15 +8007,7 @@ SCIP_RETCODE varNegateExactData(
 
    constant = negvar->data.negate.constant;
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(negvar->exactdata)) );
-
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->glbdom.ub) );
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->glbdom.lb) );
-
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->locdom.lb) );
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->locdom.ub) );
-
-   SCIP_CALL( RatCreateBlock(blkmem, &negvar->exactdata->obj) );
+   SCIPvarCopyExactData(set, blkmem, negvar, origvar, FALSE);
 
    RatDiffReal(negvar->exactdata->glbdom.ub, origvar->exactdata->glbdom.lb, constant);
    RatNegate(negvar->exactdata->glbdom.ub, negvar->exactdata->glbdom.ub);
@@ -7902,7 +8571,7 @@ SCIP_RETCODE SCIPvarChgLbGlobalExact(
    RatSet(var->exactdata->glbdom.lb, scipbound);
    RatSet(var->exactdata->locdom.lb, scipbound);
 
-   SCIPvarChgLbGlobal(var, blkmem, set, stat, NULL, branchcand, eventqueue, cliquetable, RatRoundReal(scipbound, SCIP_ROUND_DOWNWARDS));
+   SCIPvarChgLbGlobal(var, blkmem, set, stat, lpexact != NULL ? lpexact->fplp : NULL, branchcand, eventqueue, cliquetable, RatRoundReal(scipbound, SCIP_ROUND_DOWNWARDS));
 
    RatFreeBuffer(set->buffer, &scipbound);
 
@@ -8042,6 +8711,7 @@ SCIP_RETCODE SCIPvarAddObjExact(
 {
    SCIP_Rational* tmpobj;
    SCIP_Rational* oldobj;
+   SCIP_Rational* multaggrobj;
    SCIP_Real addobjreal;
    SCIP_Real oldobjreal;
 
@@ -8125,14 +8795,18 @@ SCIP_RETCODE SCIPvarAddObjExact(
       case SCIP_VARSTATUS_MULTAGGR:
          assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
+         SCIP_CALL( RatCreateBuffer(set->buffer, &multaggrobj) );
+
+         /** @todo exip: exact offset? */
          SCIPprobAddObjoffset(transprob, var->data.multaggr.constant * addobjreal);
          SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
-            /** @todo exip: do we need an exact variant here? */
-            SCIP_CALL( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, transprob, origprob, primal, tree,
-                  reopt, lp, eventfilter, eventqueue, var->data.multaggr.scalars[i] * addobjreal) );
+            RatMult(multaggrobj, addobj, var->exactdata->multaggr.scalars[i]);
+            SCIP_CALL( SCIPvarAddObjExact(var->data.multaggr.vars[i], blkmem, set, stat, transprob, origprob, primal, tree,
+                  reopt, lp, eventfilter, eventqueue, multaggrobj) );
          }
+         RatFreeBuffer(set->buffer, &multaggrobj);
          break;
 
       case SCIP_VARSTATUS_NEGATED:
@@ -8240,6 +8914,23 @@ void SCIPvarAdjustLb(
    *lb = adjustedLb(set, SCIPvarGetType(var), *lb);
 }
 
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLbExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        lb                  /**< pointer to lower bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(lb != NULL);
+
+   RatDebugMessage("adjust lower bound %q of <%s>\n", lb, var->name);
+
+   adjustedLbExact(set, SCIPvarGetType(var), lb);
+}
+
 /** adjust upper bound to integral value, if variable is integral */
 void SCIPvarAdjustUb(
    SCIP_VAR*             var,                /**< problem variable */
@@ -8255,6 +8946,23 @@ void SCIPvarAdjustUb(
    SCIPsetDebugMsg(set, "adjust upper bound %g of <%s>\n", *ub, var->name);
 
    *ub = adjustedUb(set, SCIPvarGetType(var), *ub);
+}
+
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustUbExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        ub                  /**< pointer to lower bound to adjust */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(ub != NULL);
+
+   RatDebugMessage("adjust upper bound %q of <%s>\n", ub, var->name);
+
+   adjustedUbExact(set, SCIPvarGetType(var), ub);
 }
 
 /** adjust lower or upper bound to integral value, if variable is integral */
@@ -8332,6 +9040,76 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    return SCIP_OKAY;
 }
 
+/** changes exact lower bound of original variable in original problem */
+SCIP_RETCODE SCIPvarChgLbOriginalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   )
+{
+   SCIP_Rational* tmpval;
+   int i;
+
+   assert(var != NULL);
+   assert(!SCIPvarIsTransformed(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(set->stage == SCIP_STAGE_PROBLEM);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+
+   /* check that the bound is feasible */
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsLE(newbound, SCIPvarGetUbOriginalExact(var)));
+
+   /* adjust bound to integral value if variable is of integral type */
+   adjustedLbExact(set, SCIPvarGetType(var), newbound);
+
+   /* original domains are only stored for ORIGINAL variables, not for NEGATED */
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      RatDebugMessage("changing original lower bound of <%s> from %q to %q\n",
+         var->name, var->exactdata->origdom.lb, newbound);
+
+      if( RatIsEqual(var->exactdata->origdom.lb, newbound) )
+         return SCIP_OKAY;
+
+      /* change the bound */
+      RatSet(var->exactdata->origdom.lb, newbound);
+      var->data.original.origdom.lb = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+   }
+   else if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert( var->negatedvar != NULL );
+
+      RatSetReal(tmpval, var->data.negate.constant);
+      RatDiff(tmpval, tmpval, newbound);
+
+      SCIP_CALL( SCIPvarChgUbOriginalExact(var->negatedvar, set, tmpval) );
+   }
+
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      SCIP_VAR* parentvar;
+
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+      assert(SCIPvarGetStatus(parentvar) == SCIP_VARSTATUS_NEGATED);
+      assert(parentvar->negatedvar == var);
+      assert(var->negatedvar == parentvar);
+
+      RatSetReal(tmpval, parentvar->data.negate.constant);
+      RatDiff(tmpval, tmpval, newbound);
+
+      SCIP_CALL( SCIPvarChgUbOriginalExact(parentvar, set, tmpval) );
+   }
+
+   RatFreeBuffer(set->buffer, &tmpval);
+
+   return SCIP_OKAY;
+}
+
 /** changes upper bound of original variable in original problem */
 SCIP_RETCODE SCIPvarChgUbOriginal(
    SCIP_VAR*             var,                /**< problem variable to change */
@@ -8387,6 +9165,76 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
 
       SCIP_CALL( SCIPvarChgLbOriginal(parentvar, set, parentvar->data.negate.constant - newbound) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** changes exact upper bound of original variable in original problem */
+SCIP_RETCODE SCIPvarChgUbOriginalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   )
+{
+   SCIP_Rational* tmpval;
+   int i;
+
+   assert(var != NULL);
+   assert(!SCIPvarIsTransformed(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(set->stage == SCIP_STAGE_PROBLEM);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+
+   /* check that the bound is feasible */
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || RatIsGE(newbound, SCIPvarGetLbOriginalExact(var)));
+
+   /* adjust bound to integral value if variable is of integral type */
+   adjustedUbExact(set, SCIPvarGetType(var), newbound);
+
+   /* original domains are only stored for ORIGINAL variables, not for NEGATED */
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_ORIGINAL )
+   {
+      RatDebugMessage("changing original upper bound of <%s> from %q to %q\n",
+         var->name, var->exactdata->origdom.ub, newbound);
+
+      if( RatIsEqual(var->exactdata->origdom.ub, newbound) )
+         return SCIP_OKAY;
+
+      /* change the bound */
+      RatSet(var->exactdata->origdom.ub, newbound);
+      var->data.original.origdom.ub = RatRoundReal(newbound, SCIP_ROUND_UPWARDS);
+   }
+   else if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_NEGATED )
+   {
+      assert( var->negatedvar != NULL );
+
+      RatSetReal(tmpval, var->data.negate.constant);
+      RatDiff(tmpval, tmpval, newbound);
+
+      SCIP_CALL( SCIPvarChgLbOriginalExact(var->negatedvar, set, tmpval) );
+   }
+
+   /* process parent variables */
+   for( i = 0; i < var->nparentvars; ++i )
+   {
+      SCIP_VAR* parentvar;
+
+      parentvar = var->parentvars[i];
+      assert(parentvar != NULL);
+      assert(SCIPvarGetStatus(parentvar) == SCIP_VARSTATUS_NEGATED);
+      assert(parentvar->negatedvar == var);
+      assert(var->negatedvar == parentvar);
+
+      RatSetReal(tmpval, parentvar->data.negate.constant);
+      RatDiff(tmpval, tmpval, newbound);
+
+      SCIP_CALL( SCIPvarChgLbOriginalExact(parentvar, set, tmpval) );
+   }
+
+   RatFreeBuffer(set->buffer, &tmpval);
 
    return SCIP_OKAY;
 }
@@ -9816,6 +10664,140 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    return SCIP_OKAY;
 }
 
+/** changes current local lower bound of variable; if possible, adjusts bound to integral value; stores inference
+ *  information in variable
+ */
+SCIP_RETCODE SCIPvarChgLbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   )
+{
+   assert(var != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !RatIsGT(newbound, var->exactdata->locdom.ub));
+
+   /* adjust bound to integral value if variable is of integral type */
+   adjustedLbExact(set, SCIPvarGetType(var), newbound);
+
+   /* check that the adjusted bound is feasible */
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !RatIsGT(newbound, var->exactdata->locdom.ub));
+
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to exceed the upperbound, which could have happened due to numerics */
+      RatMIN(newbound, newbound, var->exactdata->locdom.ub);
+   }
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || RatIsIntegral(newbound));
+
+   RatDebugMessage("changing lower bound of <%s>[%q,%q] to %q\n", var->name, var->exactdata->locdom.lb, var->exactdata->locdom.ub, newbound);
+
+   /* change bounds of attached variables */
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar != NULL )
+      {
+         SCIP_CALL( SCIPvarChgLbLocalExact(var->data.original.transvar, blkmem, set, stat, lpexact, branchcand, eventqueue,
+               newbound) );
+      }
+      else
+      {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
+         /** @todo exip: we prob need an exact version here */
+         SCIP_CALL( varProcessChgLbLocal(var, blkmem, set, stat, lpexact->fplp, branchcand, eventqueue, RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      }
+      break;
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      SCIP_CALL( varProcessChgLbLocal(var, blkmem, set, stat, lpexact->fplp, branchcand, eventqueue, RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      break;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( RatIsPositive(var->exactdata->aggregate.scalar) )
+      {
+         SCIP_Rational* childnewbound;
+
+         SCIP_CALL( RatCreateBuffer(set->buffer, &childnewbound) );
+
+         /* a > 0 -> change lower bound of y */
+         if( !RatIsNegInfinity(newbound) && !RatIsInfinity(newbound) )
+         {
+            RatDiff(childnewbound, newbound, var->exactdata->aggregate.constant);
+            RatDiv(childnewbound, childnewbound, var->exactdata->aggregate.scalar);
+         }
+         else
+            RatSet(childnewbound, newbound);
+         SCIP_CALL( SCIPvarChgLbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
+               childnewbound) );
+
+         RatFreeBuffer(set->buffer, &childnewbound);
+      }
+      else if( RatIsNegative(var->exactdata->aggregate.scalar) )
+      {
+         SCIP_Rational* childnewbound;
+
+         SCIP_CALL( RatCreateBuffer(set->buffer, &childnewbound) );
+
+         /* a < 0 -> change upper bound of y */
+         if( !RatIsNegInfinity(newbound) && !RatIsInfinity(newbound) )
+         {
+            RatDiff(childnewbound, newbound, var->exactdata->aggregate.constant);
+            RatDiv(childnewbound, childnewbound, var->exactdata->aggregate.scalar);
+         }
+         else
+            RatNegate(childnewbound, newbound);
+         SCIP_CALL( SCIPvarChgUbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
+               childnewbound) );
+
+         RatFreeBuffer(set->buffer, &childnewbound);
+      }
+      else
+      {
+         SCIPerrorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      RatDiffReal(newbound, newbound, var->data.negate.constant);
+      RatNegate(newbound, newbound);
+      SCIP_CALL( SCIPvarChgUbLocalExact(var->negatedvar, blkmem, set, stat, lpexact, branchcand, eventqueue,
+            newbound) );
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** changes current local upper bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
@@ -9932,6 +10914,140 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       assert(var->negatedvar->negatedvar == var);
       SCIP_CALL( SCIPvarChgLbLocal(var->negatedvar, blkmem, set, stat, lp, branchcand, eventqueue,
             var->data.negate.constant - newbound) );
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes current exact local upper bound of variable; if possible, adjusts bound to integral value; stores inference
+ *  information in variable
+ */
+SCIP_RETCODE SCIPvarChgUbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   )
+{
+   assert(var != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+
+   /* check that the bound is feasible; this must be w.r.t. feastol because SCIPvarFix() allows fixings that are outside
+    * of the domain within feastol
+    */
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !RatIsLT(newbound, var->exactdata->locdom.ub));
+
+   /* adjust bound to integral value if variable is of integral type */
+   adjustedUbExact(set, SCIPvarGetType(var), newbound);
+
+   /* check that the adjusted bound is feasible */
+   assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || !RatIsLT(newbound, var->exactdata->locdom.ub));
+
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
+   {
+      /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+      RatMAX(newbound, newbound, var->exactdata->locdom.lb);
+   }
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || RatIsIntegral(newbound));
+
+   RatDebugMessage("changing upper bound of <%s>[%q,%q] to %q\n", var->name, var->exactdata->locdom.lb, var->exactdata->locdom.ub, newbound);
+
+   /* change bounds of attached variables */
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar != NULL )
+      {
+         SCIP_CALL( SCIPvarChgUbLocalExact(var->data.original.transvar, blkmem, set, stat, lpexact, branchcand, eventqueue,
+               newbound) );
+      }
+      else
+      {
+         assert(set->stage == SCIP_STAGE_PROBLEM);
+         /** @todo exip: we prob need an exact version here */
+         SCIP_CALL( varProcessChgUbLocal(var, blkmem, set, stat, lpexact->fplp, branchcand, eventqueue, RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
+      }
+      break;
+
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_LOOSE:
+      SCIP_CALL( varProcessChgUbLocal(var, blkmem, set, stat, lpexact->fplp, branchcand, eventqueue, RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
+      break;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      assert(var->data.aggregate.var != NULL);
+      if( RatIsPositive(var->exactdata->aggregate.scalar) )
+      {
+         SCIP_Rational* childnewbound;
+
+         SCIP_CALL( RatCreateBuffer(set->buffer, &childnewbound) );
+
+         /* a > 0 -> change upper bound of y */
+         if( !RatIsNegInfinity(newbound) && !RatIsInfinity(newbound) )
+         {
+            RatDiff(childnewbound, newbound, var->exactdata->aggregate.constant);
+            RatDiv(childnewbound, childnewbound, var->exactdata->aggregate.scalar);
+         }
+         else
+            RatSet(childnewbound, newbound);
+         SCIP_CALL( SCIPvarChgUbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
+               childnewbound) );
+
+         RatFreeBuffer(set->buffer, &childnewbound);
+      }
+      else if( RatIsNegative(var->exactdata->aggregate.scalar) )
+      {
+         SCIP_Rational* childnewbound;
+
+         SCIP_CALL( RatCreateBuffer(set->buffer, &childnewbound) );
+
+         /* a < 0 -> change lower bound of y */
+         if( !RatIsNegInfinity(newbound) && !RatIsInfinity(newbound) )
+         {
+            RatDiff(childnewbound, newbound, var->exactdata->aggregate.constant);
+            RatDiv(childnewbound, childnewbound, var->exactdata->aggregate.scalar);
+         }
+         else
+            RatNegate(childnewbound, newbound);
+         SCIP_CALL( SCIPvarChgLbLocalExact(var->data.aggregate.var, blkmem, set, stat, lpexact, branchcand, eventqueue,
+               childnewbound) );
+
+         RatFreeBuffer(set->buffer, &childnewbound);
+      }
+      else
+      {
+         SCIPerrorMessage("scalar is zero in aggregation\n");
+         return SCIP_INVALIDDATA;
+      }
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert(var->negatedvar != NULL);
+      assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert(var->negatedvar->negatedvar == var);
+      RatDiffReal(newbound, newbound, var->data.negate.constant);
+      RatNegate(newbound, newbound);
+      SCIP_CALL( SCIPvarChgLbLocalExact(var->negatedvar, blkmem, set, stat, lpexact, branchcand, eventqueue,
+            newbound) );
       break;
 
    default:
@@ -10216,6 +11332,86 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
    return (MAX(lb, SCIPvarGetLbLocal(var))); /*lint !e666*/
 }
 
+/** for a multi-aggregated variable, gives the exact local lower bound computed by adding the local bounds from all aggregation variables
+ * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multi-aggregated variable is not allowed
+ */
+void SCIPvarGetMultaggrLbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        result              /**< the resulting bound */
+   )
+{
+   int i;
+   SCIP_Rational* lb;
+   SCIP_Rational* bnd;
+   SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
+
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   RatCreateBuffer(set->buffer, &lb);
+   RatCreateBuffer(set->buffer, &bnd);
+
+   posinf = FALSE;
+   neginf = FALSE;
+   RatSet(lb, var->exactdata->multaggr.constant);
+   for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
+   {
+      aggrvar = var->data.multaggr.vars[i];
+      if( RatIsPositive(var->exactdata->multaggr.scalars[i]) )
+      {
+         if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
+            SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd);
+         else
+            RatSet(bnd, SCIPvarGetLbLocalExact(aggrvar));
+
+         if( RatIsInfinity(bnd) )
+            posinf = TRUE;
+         else if( RatIsNegInfinity(bnd) )
+            neginf = TRUE;
+         else
+            RatAddProd(lb, var->exactdata->multaggr.scalars[i], bnd);
+      }
+      else
+      {
+         if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
+            SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd);
+         else
+            RatSet(bnd, SCIPvarGetUbLocalExact(aggrvar));
+
+         if( RatIsNegInfinity(bnd) )
+            posinf = TRUE;
+         else if( RatIsInfinity(bnd) )
+            neginf = TRUE;
+         else
+            RatAddProd(lb, var->exactdata->multaggr.scalars[i], bnd);
+      }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local lower bound of multi aggregated
+       * variable
+       */
+      if( neginf )
+      {
+         RatSet(result, SCIPvarGetLbLocalExact(var));
+         break;
+      }
+   }
+
+   /* if positive infinity flag was set to true return infinity */
+   if( posinf && !neginf )
+      RatSetString(result, "inf");
+   else
+      RatMAX(result, lb, SCIPvarGetLbLocalExact(var));
+
+   RatFreeBuffer(set->buffer, &bnd);
+   RatFreeBuffer(set->buffer, &lb);
+}
+
 /** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
  *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is
  *  not updated if bounds of aggregation variables are changing
@@ -10280,6 +11476,86 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
       return -SCIPsetInfinity(set);
 
    return (MIN(ub, SCIPvarGetUbLocal(var))); /*lint !e666*/
+}
+
+/** for a multi-aggregated variable, gives the exact local upper bound computed by adding the local bounds from all aggregation variables
+ * this upper bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ * calling this function for a non-multi-aggregated variable is not allowed
+ */
+void SCIPvarGetMultaggrUbLocalExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        result              /**< the resulting bound */
+   )
+{
+   int i;
+   SCIP_Rational* ub;
+   SCIP_Rational* bnd;
+   SCIP_VAR* aggrvar;
+   SCIP_Bool posinf;
+   SCIP_Bool neginf;
+
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
+
+   RatCreateBuffer(set->buffer, &ub);
+   RatCreateBuffer(set->buffer, &bnd);
+
+   posinf = FALSE;
+   neginf = FALSE;
+   RatSet(ub, var->exactdata->multaggr.constant);
+   for( i = var->data.multaggr.nvars-1 ; i >= 0 ; --i )
+   {
+      aggrvar = var->data.multaggr.vars[i];
+      if( RatIsPositive(var->exactdata->multaggr.scalars[i]) )
+      {
+         if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
+            SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd);
+         else
+            RatSet(bnd, SCIPvarGetUbLocalExact(aggrvar));
+
+         if( RatIsInfinity(bnd) )
+            posinf = TRUE;
+         else if( RatIsNegInfinity(bnd) )
+            neginf = TRUE;
+         else
+            RatAddProd(ub, var->exactdata->multaggr.scalars[i], bnd);
+      }
+      else
+      {
+         if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
+            SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd);
+         else
+            RatSet(bnd, SCIPvarGetLbLocalExact(aggrvar));
+
+         if( RatIsNegInfinity(bnd) )
+            posinf = TRUE;
+         else if( RatIsInfinity(bnd) )
+            neginf = TRUE;
+         else
+            RatAddProd(ub, var->exactdata->multaggr.scalars[i], bnd);
+      }
+
+      /* stop if two diffrent infinities (or a -infinity) were found and return local lower bound of multi aggregated
+       * variable
+       */
+      if( posinf )
+      {
+         RatSet(result, SCIPvarGetUbLocalExact(var));
+         break;
+      }
+   }
+
+   /* if positive infinity flag was set to true return infinity */
+   if( !posinf && neginf )
+      RatSetString(result, "-inf");
+   else
+      RatMIN(result, ub, SCIPvarGetUbLocalExact(var));
+
+   RatFreeBuffer(set->buffer, &bnd);
+   RatFreeBuffer(set->buffer, &ub);
 }
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
@@ -14474,8 +15750,6 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
    assert(scalar != NULL);
    assert(constant != NULL);
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
-
    while( *var != NULL )
    {
       switch( SCIPvarGetStatusExact(*var) )
@@ -14491,10 +15765,10 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
 
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
-         RatFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_FIXED:       /* x = c'          =>  a*x + c ==             (a*c' + c) */
+         SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
          if( !RatIsInfinity(constant) && !RatIsNegInfinity(constant) )
          {
             if( RatIsInfinity((*var)->exactdata->glbdom.lb) || RatIsNegInfinity(((*var)->exactdata->glbdom.lb)) )
@@ -14516,16 +15790,54 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_MULTAGGR:
-         SCIPerrorMessage("multi-aggregation not supported in exact solving mode \n");
-         SCIPABORT();
+         /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+         if ( (*var)->data.multaggr.nvars == 1 )
+         {
+            assert((*var)->data.multaggr.vars != NULL);
+            assert((*var)->data.multaggr.scalars != NULL);
+            assert((*var)->data.multaggr.vars[0] != NULL);
+            if( !RatIsAbsInfinity(constant) )
+            {
+               /* the multi-aggregation constant can be infinite, if one of the multi-aggregation variables
+                * was fixed to +/-infinity; ensure that the constant is set to +/-infinity, too, and the scalar
+                * is set to 0.0, because the multi-aggregated variable can be seen as fixed, too
+                */
+               if( RatIsAbsInfinity((*var)->exactdata->multaggr.constant) )
+               {
+                  if( RatGetSign(scalar) == RatGetSign((*var)->exactdata->multaggr.constant) && !RatIsZero(scalar) )
+                  {
+                     assert(!RatIsNegInfinity(constant));
+                     RatSetString(constant, "inf");
+                  }
+                  else
+                  {
+                     assert(!RatIsInfinity(constant));
+                     RatSetString(constant, "-inf");
+                  }
+                  RatSetReal(scalar, 0.0);
+               }
+               else
+                  RatAddProd(constant, scalar, (*var)->exactdata->multaggr.constant);
+            }
+            RatMult(scalar, scalar, (*var)->exactdata->multaggr.scalars[0]);
+            *var = (*var)->data.multaggr.vars[0];
+            break;
+         }
          return SCIP_OKAY;
 
       case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
-         SCIPerrorMessage("aggregation not yet supported in exact solving mode \n");
-         SCIPABORT();
-         return SCIP_OKAY;
+         SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+         assert((*var)->data.aggregate.var != NULL);
+         assert(!RatIsAbsInfinity((*var)->exactdata->aggregate.constant));
+         if( !RatIsAbsInfinity(constant) )
+         {
+            RatMult(tmpval, scalar,(*var)->exactdata->aggregate.constant);
+            RatAdd(constant, constant, tmpval);
+         }
+         RatMult(scalar, scalar, (*var)->exactdata->aggregate.scalar);
+         *var = (*var)->data.aggregate.var;
+         RatFreeBuffer(set->buffer, &tmpval);
          break;
-
       case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
          assert((*var)->negatedvar != NULL);
          assert(SCIPvarGetStatus((*var)->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -14546,8 +15858,6 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
       }
    }
    RatSetReal(scalar, 0.0);
-
-   RatFreeBuffer(set->buffer, &tmpval);
 
    return SCIP_OKAY;
 }
@@ -14642,7 +15952,6 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
    return SCIP_OKAY;
 }
 
-/** @todo exip: this does not work exactly yet, needed for aggregation */
 /** retransforms given variable, scalar anqd constant to the corresponding original variable, scalar
  *  and constant, if possible; if the retransformation is impossible, NULL is returned as variable
  */
@@ -14653,7 +15962,6 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
    )
 {
    SCIP_VAR* parentvar;
-   SCIP_Real tmp;
 
    assert(var != NULL);
    assert(*var != NULL);
@@ -14674,8 +15982,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
             ((*var)->negatedvar->nparentvars == 0 || (*var)->negatedvar->parentvars[0] != *var) )
          {
             RatNegate(scalar, scalar);
-            tmp = RatApproxReal(scalar) * (*var)->data.negate.constant;
-            RatDiffReal(constant, constant, tmp);
+            RatDiffProdReal(constant, scalar, (*var)->data.negate.constant);
             *var = (*var)->negatedvar;
 
             continue;
@@ -14710,9 +16017,8 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + b  ->  y = (x-b)/a,  s*y + c = (s/a)*x + c-b*s/a */
          assert(parentvar->data.aggregate.var == *var);
          assert(parentvar->data.aggregate.scalar != 0.0);
-         RatDiffReal(scalar, scalar, parentvar->data.aggregate.scalar);
-         tmp = RatApproxReal(scalar) * parentvar->data.aggregate.constant;
-         RatDiffReal(constant, constant, tmp);
+         RatDiv(scalar, scalar, parentvar->exactdata->aggregate.scalar);
+         RatDiffProd(constant, scalar, parentvar->exactdata->aggregate.constant);
          break;
 
       case SCIP_VARSTATUS_NEGATED: /* x = b - y  ->  y = b - x,  s*y + c = -s*x + c+b*s */
@@ -14720,8 +16026,7 @@ SCIP_RETCODE SCIPvarGetOrigvarSumExact(
          assert(SCIPvarGetStatusExact(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
          RatNegate(scalar, scalar);
-         tmp = RatApproxReal(scalar) * parentvar->data.negate.constant;
-         RatDiffReal(constant, constant, tmp);
+         RatDiffProdReal(constant, scalar, parentvar->data.negate.constant);
          break;
 
       default:
@@ -19756,6 +21061,17 @@ SCIP_Real SCIPvarGetAggrScalar(
    return var->data.aggregate.scalar;
 }
 
+/** gets aggregation scalar a of an aggregated variable x = a*y + c */
+SCIP_Rational* SCIPvarGetAggrScalarExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_AGGREGATED);
+
+   return var->exactdata->aggregate.scalar;
+}
+
 /** gets aggregation constant c of an aggregated variable x = a*y + c */
 SCIP_Real SCIPvarGetAggrConstant(
    SCIP_VAR*             var                 /**< problem variable */
@@ -19765,6 +21081,17 @@ SCIP_Real SCIPvarGetAggrConstant(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED);
 
    return var->data.aggregate.constant;
+}
+
+/** gets aggregation constant c of an aggregated variable x = a*y + c */
+SCIP_Rational* SCIPvarGetAggrConstantExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_AGGREGATED);
+
+   return var->exactdata->aggregate.constant;
 }
 
 /** gets number n of aggregation variables of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
@@ -19803,6 +21130,19 @@ SCIP_Real* SCIPvarGetMultaggrScalars(
    return var->data.multaggr.scalars;
 }
 
+/** gets vector of exact aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+SCIP_Rational** SCIPvarGetMultaggrScalarsExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(!var->donotmultaggr);
+   assert(var->exactdata != NULL);
+
+   return var->exactdata->multaggr.scalars;
+}
+
 /** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 SCIP_Real SCIPvarGetMultaggrConstant(
    SCIP_VAR*             var                 /**< problem variable */
@@ -19813,6 +21153,19 @@ SCIP_Real SCIPvarGetMultaggrConstant(
    assert(!var->donotmultaggr);
 
    return var->data.multaggr.constant;
+}
+
+/** gets exact aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+SCIP_Rational* SCIPvarGetMultaggrConstantExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(!var->donotmultaggr);
+   assert(var->exactdata != NULL);
+
+   return var->exactdata->multaggr.constant;
 }
 
 /** gets the negation of the given variable; may return NULL, if no negation is existing yet */

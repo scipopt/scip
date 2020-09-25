@@ -103,6 +103,7 @@ typedef struct SCIP_Original SCIP_ORIGINAL;       /**< original variable informa
 typedef struct SCIP_Aggregate SCIP_AGGREGATE;     /**< aggregation information */
 typedef struct SCIP_AggregateExact SCIP_AGGREGATEEXACT; /**< exact aggregation information */
 typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation information */
+typedef struct SCIP_MultaggrExact SCIP_MULTAGGREXACT; /**< exact multiple aggregation information */
 typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
 typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */

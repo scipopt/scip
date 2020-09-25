@@ -2005,7 +2005,8 @@ void SCIPsolGetValExact(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real* scalars;
+   SCIP_Rational** scalars;
+   SCIP_Rational* solval;
    int nvars;
    int i;
 
@@ -2104,11 +2105,26 @@ void SCIPsolGetValExact(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      /** @todo exip: presolving extension
-       *  - implement this if exact version of SCIP supports multiaggregated variables
-       */
-      SCIPerrorMessage("cannot get solution value of multiaggregated variable\n");
-      SCIPABORT();
+      RatCreateBuffer(set->buffer, &solval);
+
+      nvars = SCIPvarGetMultaggrNVars(var);
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalarsExact(var);
+      RatSet(res, SCIPvarGetMultaggrConstantExact(var));
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
+         if( RatIsAbsInfinity(solval) )
+         {
+            if( RatGetSign(scalars[i]) == RatGetSign(solval) )
+               RatSetString(res, "inf");
+            if( RatGetSign(scalars[i]) != RatGetSign(solval) && !RatIsZero(scalars[i]) )
+               RatSetString(res, "-inf");
+            break;
+         }
+         RatAddProd(res, scalars[i], solval);
+      }
+      RatFreeBuffer(set->buffer, &solval);
       break;
 
    case SCIP_VARSTATUS_NEGATED:
@@ -2714,8 +2730,6 @@ SCIP_RETCODE SCIPsolRetransform(
    *hasinfval = FALSE;
 
    /* transform exact values first (needs unchanged solorigin) */
-   /** @todo exip: presolving extension this works only now because we do not presolve, and so solvals do not change.
-    * might need to be more sophisticated later */
    if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPsolRetransformExact(sol, set, stat, origprob, transprob, hasinfval) );
@@ -2824,7 +2838,11 @@ SCIP_RETCODE SCIPsolRetransformExact(
 {
    SCIP_VAR** transvars;
    SCIP_VAR** vars;
+   SCIP_VAR** activevars;
+   SCIP_Rational** solvals;
+   SCIP_Rational** activevals;
    SCIP_Rational** transsolvals;
+   SCIP_Rational* constant;
    int requiredsize;
    int ntransvars;
    int nactivevars;
@@ -2858,6 +2876,11 @@ SCIP_RETCODE SCIPsolRetransformExact(
     * values of all active variables and storing the original solution values
     */
    SCIP_CALL( RatCreateBufferArray(set->buffer, &transsolvals, ntransvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &activevals, ntransvars + 1) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &solvals, nvars) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &constant) );
+
    assert(transsolvals != NULL); /* for flexelint */
 
    /* get the solution values of all active variables */
@@ -2866,11 +2889,36 @@ SCIP_RETCODE SCIPsolRetransformExact(
       SCIPsolGetValExact(transsolvals[v], sol, set, stat, transvars[v]);
    }
 
-   /** @todo exip: presolving extension (once we have exact presolving, we need to do here what we do in the fp case */
+   /* get the solution in original problem variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      activevars[0] = vars[v];
+      RatSetReal(activevals[0], 1.0);
+      nactivevars = 1;
+      RatSetReal(constant, 0.0);
+
+      /* get active representation of the original variable */
+      SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, activevars, activevals, &nactivevars, ntransvars + 1, constant,
+            &requiredsize, TRUE) );
+      assert(requiredsize <= ntransvars);
+
+      /* compute solution value of the original variable */
+      RatSet(solvals[v], constant);
+      for( i = 0; i < nactivevars; ++i )
+      {
+         assert(0 <= SCIPvarGetProbindex(activevars[i]) && SCIPvarGetProbindex(activevars[i]) < ntransvars);
+         RatAddProd(solvals[v], activevals[i], transsolvals[SCIPvarGetProbindex(activevars[i])]);
+      }
+
+      if( RatIsAbsInfinity(solvals[v]) )
+         *hasinfval = TRUE;
+   }
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solClearArrays(sol) );
+   /** @todo exip exact obj offset? */
    RatSetReal(sol->valsexact->obj, origprob->objoffset);
+   sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
 
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
@@ -2880,11 +2928,16 @@ SCIP_RETCODE SCIPsolRetransformExact(
       if( !RatIsZero(transsolvals[v]) )
       {
          SCIP_CALL( solSetArrayValExact(sol, set, vars[v], transsolvals[v]) );
-         RatAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), transsolvals[v]);
+         /** @todo exip might need unchangedObjexact if probing mode becomes a thing */
+         RatAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solvals[v]);
       }
    }
 
    /* free temporary memory */
+   RatFreeBuffer(set->buffer, &constant);
+   RatFreeBufferArray(set->buffer, &solvals, nvars);
+   RatFreeBufferArray(set->buffer, &activevals, ntransvars + 1);
+   SCIPsetFreeBufferArray(set, &activevars);
    RatFreeBufferArray(set->buffer, &transsolvals, ntransvars);
 
    return SCIP_OKAY;

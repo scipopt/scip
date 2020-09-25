@@ -5607,6 +5607,138 @@ SCIP_RETCODE SCIPtightenVarLb(
    return SCIP_OKAY;
 }
 
+/** changes exact lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
+ *  is treated like a branching decision
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPtightenVarLbExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Rational* lb;
+   SCIP_Rational* ub;
+
+   assert(infeasible != NULL);
+   assert(SCIPisExactSolve(scip));
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarLbExact", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustLbExact(var, scip->set, newbound);
+
+   /* ignore tightenings of lower bounds to +infinity during solving process */
+   if( RatIsInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore lower bound tightening for %s from %e to +infinity\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
+
+   /* get current bounds */
+   SCIPcomputeVarLbLocalExact(scip, var, lb);
+   SCIPcomputeVarUbLocalExact(scip, var, ub);
+   assert(RatIsLE(lb, ub));
+
+   if( RatIsGT(newbound, ub) )
+   {
+      *infeasible = TRUE;
+      RatFreeBuffer(SCIPbuffer(scip), &lb);
+      RatFreeBuffer(SCIPbuffer(scip), &ub);
+
+      return SCIP_OKAY;
+   }
+
+   RatMIN(newbound, newbound, ub);
+   if( RatIsLE(newbound, lb) )
+   {
+      RatFreeBuffer(SCIPbuffer(scip), &lb);
+      RatFreeBuffer(SCIPbuffer(scip), &ub);
+
+      return SCIP_OKAY;
+   }
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+      SCIP_CALL( SCIPvarChgLbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgLbOriginalExact(var, scip->set, newbound) );
+      break;
+   case SCIP_STAGE_TRANSFORMED:
+      SCIP_CALL( SCIPvarChgLbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+      break;
+   case SCIP_STAGE_PRESOLVING:
+      if( !SCIPinProbing(scip) )
+      {
+         assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+         assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
+
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
+               SCIP_BOUNDTYPE_LOWER, FALSE) );
+
+         if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            assert(!(*infeasible));
+         }
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable,
+            var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   /* check whether the lower bound improved */
+   SCIPcomputeVarLbLocalExact(scip, var, newbound);
+   if( tightened != NULL && RatIsLT(lb, newbound) )
+      *tightened = TRUE;
+
+   RatFreeBuffer(SCIPbuffer(scip), &lb);
+   RatFreeBuffer(SCIPbuffer(scip), &ub);
+
+   return SCIP_OKAY;
+}
+
 /** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
@@ -5720,6 +5852,138 @@ SCIP_RETCODE SCIPtightenVarUb(
    /* check whether the upper bound improved */
    if( tightened != NULL && ub > SCIPcomputeVarUbLocal(scip, var) )
       *tightened = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** changes exact upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
+ *  doesn't store any inference information in the bound change, such that in conflict analysis, this change
+ *  is treated like a branching decision
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPtightenVarUbExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   SCIP_Rational* lb;
+   SCIP_Rational* ub;
+
+   assert(infeasible != NULL);
+   assert(SCIPisExactSolve(scip));
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPtightenVarUbExact", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /** @todo if needed provide pending local/global bound changes that will be flushed after leaving diving mode (as in struct_tree.h) */
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PROBLEM || !SCIPinDive(scip));
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   SCIPvarAdjustUbExact(var, scip->set, newbound);
+
+   /* ignore tightenings of upper bounds to -infinity during solving process */
+   if( RatIsNegInfinity(newbound) && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+#ifndef NDEBUG
+      SCIPwarningMessage(scip, "ignore upper bound tightening for %s from %e to -infinity\n", SCIPvarGetName(var),
+         SCIPvarGetUbLocal(var));
+#endif
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &ub) );
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
+
+   /* get current bounds */
+   SCIPcomputeVarLbLocalExact(scip, var, lb);
+   SCIPcomputeVarUbLocalExact(scip, var, ub);
+   assert(RatIsLE(lb, ub));
+
+   if( RatIsLT(newbound, lb) )
+   {
+      RatFreeBuffer(SCIPbuffer(scip), &lb);
+      RatFreeBuffer(SCIPbuffer(scip), &ub);
+
+      *infeasible = TRUE;
+      return SCIP_OKAY;
+   }
+
+   RatMAX(newbound, newbound, lb);
+   if( RatIsGE(newbound, ub) )
+   {
+      RatFreeBuffer(SCIPbuffer(scip), &lb);
+      RatFreeBuffer(SCIPbuffer(scip), &ub);
+
+      return SCIP_OKAY;
+   }
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      assert(!SCIPvarIsTransformed(var));
+      SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+      SCIP_CALL( SCIPvarChgUbLocalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, newbound) );
+      SCIP_CALL( SCIPvarChgUbOriginalExact(var, scip->set, newbound) );
+      break;
+   case SCIP_STAGE_TRANSFORMED:
+      SCIP_CALL( SCIPvarChgUbGlobalExact(var, scip->mem->probmem, scip->set, scip->stat, scip->lpexact,
+            scip->branchcand, scip->eventqueue, scip->cliquetable, newbound) );
+      break;
+   case SCIP_STAGE_PRESOLVING:
+      if( !SCIPinProbing(scip) )
+      {
+         assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+         assert(scip->tree->root == SCIPtreeGetCurrentNode(scip->tree));
+
+         SCIP_CALL( SCIPnodeAddBoundchgExact(scip->tree->root, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+               scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable, var, newbound,
+               SCIP_BOUNDTYPE_UPPER, FALSE) );
+
+         if( (SCIP_VARTYPE)var->vartype == SCIP_VARTYPE_INTEGER && SCIPvarIsBinary(var) )
+         {
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
+            assert(!(*infeasible));
+         }
+         break;
+      }
+      /*lint -fallthrough*/
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPnodeAddBoundchgExact(SCIPtreeGetCurrentNode(scip->tree), scip->mem->probmem, scip->set, scip->stat,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lpexact, scip->branchcand, scip->eventqueue, scip->cliquetable,
+            var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   /* check whether the lower bound improved */
+   SCIPcomputeVarUbLocalExact(scip, var, newbound);
+   if( tightened != NULL && RatIsGT(ub, newbound) )
+      *tightened = TRUE;
+
+   RatFreeBuffer(SCIPbuffer(scip), &lb);
+   RatFreeBuffer(SCIPbuffer(scip), &ub);
 
    return SCIP_OKAY;
 }
@@ -6824,6 +7088,28 @@ SCIP_Real SCIPcomputeVarLbLocal(
       return SCIPvarGetLbLocal(var);
 }
 
+/** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
+ *
+ *  This local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal.
+ *
+ *  @return the local lower bound computed by adding the global bounds from all aggregation variables
+ */
+void SCIPcomputeVarLbLocalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Rational*        result              /**< rational to store the resulting bound */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
+      SCIPvarGetMultaggrLbLocalExact(var, scip->set, result);
+   else
+      RatSet(result, SCIPvarGetLbLocalExact(var));
+}
+
 /** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
  *
  *  This local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
@@ -6843,6 +7129,28 @@ SCIP_Real SCIPcomputeVarUbLocal(
       return SCIPvarGetMultaggrUbLocal(var, scip->set);
    else
       return SCIPvarGetUbLocal(var);
+}
+
+/** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
+ *
+ *  This local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal.
+ *
+ *  @return the local upper bound computed by adding the global bounds from all aggregation variables
+ */
+void SCIPcomputeVarUbLocalExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to compute the bound for */
+   SCIP_Rational*        result              /**< rational to store the resulting bound */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
+      SCIPvarGetMultaggrUbLocalExact(var, scip->set, result);
+   else
+      RatSet(result, SCIPvarGetUbLocalExact(var));
 }
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
@@ -9132,6 +9440,51 @@ SCIP_RETCODE SCIPmultiaggregateVar(
 
    SCIP_CALL( SCIPvarMultiaggregate(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
          scip->primal, scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventfilter,
+         scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
+
+   return SCIP_OKAY;
+}
+
+/** converts variable into exact multi-aggregated variable; this changes the variable array returned from
+ *  SCIPgetVars() and SCIPgetVarsData();
+ *
+ *  @warning The integrality condition is not checked anymore on the multi-aggregated variable. You must not
+ *           multi-aggregate an integer variable without being sure, that integrality on the aggregation variables
+ *           implies integrality on the aggregated variable.
+ *
+ *  The output flags have the following meaning:
+ *  - infeasible: the problem is infeasible
+ *  - aggregated: the aggregation was successfully performed (the variables were not aggregated before)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can only be called if @p scip is in stage \ref SCIP_STAGE_PRESOLVING
+ */
+SCIP_RETCODE SCIPmultiaggregateVarExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable x to aggregate */
+   int                   naggvars,           /**< number n of variables in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_VAR**            aggvars,            /**< variables y_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Rational**       scalars,            /**< multipliers a_i in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Rational*        constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
+   SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmultiaggregateVarExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(var->scip == scip);
+
+   if( SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("cannot multi-aggregate variables during probing\n");
+      return SCIP_INVALIDCALL;
+   }
+   assert(SCIPtreeGetCurrentDepth(scip->tree) == 0);
+
+   SCIP_CALL( SCIPvarMultiaggregateExact(var, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+         scip->primal, scip->tree, scip->reopt, scip->lpexact, scip->cliquetable, scip->branchcand, scip->eventfilter,
          scip->eventqueue, naggvars, aggvars, scalars, constant, infeasible, aggregated) );
 
    return SCIP_OKAY;
