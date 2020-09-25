@@ -32,7 +32,7 @@
 #include "misc_stp.h"
 #include "portab.h"
 
-#define STP_SDQUERYFULL_MAXTERMS 400
+#define STP_SDQUERYFULL_MAXTERMS 200
 
 //#define SDQUERYFULL_HALFMATRIX
 

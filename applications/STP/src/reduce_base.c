@@ -67,6 +67,7 @@ static
 int getWorkLimits_stp(
    const GRAPH* g,
    int roundnumber,
+   SCIP_Bool fullreduce,
    enum STP_REDTYPE redtype
 )
 {
@@ -87,6 +88,9 @@ int getWorkLimits_stp(
       default:
          assert(0);
    }
+
+   if( !fullreduce )
+      limit /= 3;
 
    assert(limit >= 0);
 
@@ -498,7 +502,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sdstar || extensive )
       {
-         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimits_stp(g, inner_rounds, stp_sdstar), NULL, g, &sdstarnelims) );
+         SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_sdstar), NULL, g, &sdstarnelims) );
 
          if( sdstarnelims <= reductbound )
             sdstar = FALSE;
@@ -533,7 +537,7 @@ SCIP_RETCODE redLoopStp_inner(
             SCIP_CALL( reduce_bdkBiased(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
          else
 #endif
-         SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
+         SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_bdk), g, &bdknelims) );
 
 /*       if( inner_rounds > 0  )
             SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bdk34nelims, STP_REDBOUND_BDK, fixed) );
@@ -553,7 +557,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sdbiased || extensive )
       {
-         SCIP_CALL( reduce_impliedProfitBased(scip, getWorkLimits_stp(g, inner_rounds, stp_sdstarbot), g, solnode, fixed, &sdbiasnelims) );
+         SCIP_CALL( reduce_impliedProfitBased(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_sdstarbot), g, solnode, fixed, &sdbiasnelims) );
 
          if( sdbiasnelims <= reductbound  )
             sdbiased = FALSE;
