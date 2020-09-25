@@ -72,34 +72,7 @@ if(NOT WIN32)
 
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
-    set(IPOPT_LIBRARIES "" CACHE STRING "IPOPT libraries" FORCE)
-    if(APPLE)
-        set(_PC_IPOPT_LIBRARIES "gcc_s.1;${_PC_IPOPT_LIBRARIES}")
-    endif()
-    
-    foreach(_LIBRARY IN ITEMS ${_PC_IPOPT_LIBRARIES})
-      find_library(${_LIBRARY}_PATH
-                   NAMES ${_LIBRARY}
-                   PATHS ${_PC_IPOPT_LIBRARY_DIRS}
-                   NO_DEFAULT_PATH)
-      find_library(${_LIBRARY}_PATH
-                   NAMES ${_LIBRARY}
-                   PATHS ${_PC_IPOPT_LIBRARY_DIRS})
-      if(APPLE)
-          if("${_LIBRARY}" MATCHES "gfortran")
-              string(REPLACE ".dylib" ".a" FORTRAN_LIB_PATH ${gfortran_PATH})
-              set(gfortran_PATH "${FORTRAN_LIB_PATH}")
-          endif()
-      endif()
-
-      list(APPEND IPOPT_LIBRARIES ${${_LIBRARY}_PATH})
-    endforeach()
-
-    if(APPLE)
-        list(APPEND IPOPT_LIBRARIES "-framework Accelerate")
-    endif()
-
-    #list(APPEND IPOPT_LIBRARIES "${IPOPT_LDFLAGS}")
+    set(IPOPT_LIBRARIES "${_PC_IPOPT_LINK_LIBRARIES}" CACHE STRING "IPOPT libraries" FORCE)
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
