@@ -14155,7 +14155,7 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
-   /* use variable to expressions mapping which is stored as the expression handler data */
+   /* use variable to expressions mapping which is stored in the constraint handler data */
    var2expr = SCIPconshdlrGetData(consexprhdlr)->var2expr;
    assert(var2expr != NULL);
    assert(SCIPhashmapExists(var2expr, var));

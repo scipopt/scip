@@ -797,7 +797,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
 
 /** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
  *
- * @note expression must be belong to a constraint
+ * @note expression must belong to a constraint
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprPartialDiff(
