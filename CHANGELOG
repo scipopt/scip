@@ -104,6 +104,7 @@ Miscellaneous
   only captured by the transformed problem.
 - Avoid redundant calls to LP solver when LP is already flushed and solved
 - In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
+- Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
 
 Known bugs
 ----------
