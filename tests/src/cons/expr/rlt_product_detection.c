@@ -20,6 +20,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "scip/struct_scip.h"
 #include "scip/struct_stat.h"
 #include "scip/sepa_rlt.c"
 #include "scip/cons_expr.c"
