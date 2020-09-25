@@ -243,24 +243,6 @@ void resetHistogram(
 {
    BMSclearMemoryArray(histogram, NHISTOGRAMBINS);
 }
-
-/** adds a ratio to the histogram at the right position */
-static
-void addHistogramEntry(
-   int*                  histogram,          /**< the histogram */
-   int                   value,              /**< the value */
-   int                   basevalue           /**< base value */
-   )
-{
-   SCIP_Real ratio;
-   int index;
-   assert(value <= basevalue);
-   ratio = value/ MAX(1.0, (SCIP_Real)basevalue);
-
-   index = (int)(ratio * NHISTOGRAMBINS);
-   ++histogram[index];
-}
-
 #endif
 
 
