@@ -35,7 +35,6 @@ include $(SCIPDIR)/make/make.project
 SCIPVERSION			:=$(shell $(SCIPDIR)/bin/scip.$(BASE).$(LPS).$(TPI)$(EXEEXTENSION) -v | sed -e 's/$$/@/')
 override ARCH		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ARCH=\([^@]*\).*/\1/')
 override EXPRINT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* EXPRINT=\([^@]*\).*/\1/')
-override GAMS		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GAMS=\([^@]*\).*/\1/')
 override GMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GMP=\([^@]*\).*/\1/')
 override SYM		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SYM=\([^@]*\).*/\1/')
 override IPOPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPT=\([^@]*\).*/\1/')
@@ -112,17 +111,17 @@ endif
 
 .PHONY: test
 test:           $(MAINFILE)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
+		@$(LN_sf) $(SCIPREALPATH)/check/check.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/evaluate.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/evalcheck.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/evalcheck_cluster.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/check.awk check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/getlastprob.awk check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/configuration_set.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/configuration_logfiles.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/configuration_solufile.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/configuration_tmpfile_setup_scip.sh check/;
+		@$(LN_sf) $(SCIPREALPATH)/check/run.sh check/;
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 			$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
