@@ -3318,7 +3318,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
    /* reset the forceexactsolve flag */
    lpexact->forceexactsolve = FALSE;
-   assert(SCIPsetIsLE(set, *safebound, oldbound));
 
    return SCIP_OKAY;
 }
