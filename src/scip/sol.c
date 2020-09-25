@@ -2875,7 +2875,7 @@ SCIP_RETCODE SCIPsolRetransformExact(
    /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
     * values of all active variables and storing the original solution values
     */
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &transsolvals, ntransvars) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &transsolvals, ntransvars + 1) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
    SCIP_CALL( RatCreateBufferArray(set->buffer, &activevals, ntransvars + 1) );
    SCIP_CALL( RatCreateBufferArray(set->buffer, &solvals, nvars) );
@@ -2925,9 +2925,9 @@ SCIP_RETCODE SCIPsolRetransformExact(
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !RatIsZero(transsolvals[v]) )
+      if( !RatIsZero(solvals[v]) )
       {
-         SCIP_CALL( solSetArrayValExact(sol, set, vars[v], transsolvals[v]) );
+         SCIP_CALL( solSetArrayValExact(sol, set, vars[v], solvals[v]) );
          /** @todo exip might need unchangedObjexact if probing mode becomes a thing */
          RatAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solvals[v]);
       }
@@ -2938,7 +2938,7 @@ SCIP_RETCODE SCIPsolRetransformExact(
    RatFreeBufferArray(set->buffer, &solvals, nvars);
    RatFreeBufferArray(set->buffer, &activevals, ntransvars + 1);
    SCIPsetFreeBufferArray(set, &activevars);
-   RatFreeBufferArray(set->buffer, &transsolvals, ntransvars);
+   RatFreeBufferArray(set->buffer, &transsolvals, ntransvars + 1);
 
    return SCIP_OKAY;
 }

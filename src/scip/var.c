@@ -5266,7 +5266,6 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    if( !set->exact_enabled )
    {
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
-      overwriteMultAggrWithExactData(set, var);
 
       if( multrequiredsize > multvarssize )
       {
@@ -5274,7 +5273,6 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
          multvarssize = multrequiredsize;
          SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
-         overwriteMultAggrWithExactData(set, var);
 
          assert( multrequiredsize <= multvarssize );
       }
@@ -5283,6 +5281,8 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    {
       SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
          &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
+      overwriteMultAggrWithExactData(set, var);
+
 
       if( multrequiredsize > multvarssize )
       {
@@ -5291,6 +5291,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
          multvarssize = multrequiredsize;
          SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
             &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
+         overwriteMultAggrWithExactData(set, var);
 
          assert( multrequiredsize <= multvarssize );
       }
@@ -6208,6 +6209,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
    {
       /* link both variables as negation pair */
       var->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
+      var->exactdata->varstatusexact = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       var->data.negate.constant = 1.0;
       var->negatedvar = aggvar;
       aggvar->negatedvar = var;
@@ -15843,10 +15845,8 @@ SCIP_RETCODE SCIPvarGetProbvarSumExact(
          assert(SCIPvarGetStatus((*var)->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert((*var)->negatedvar->negatedvar == *var);
          if( !RatIsInfinity(constant) && !RatIsNegInfinity(constant) )
-         {
-            RatMultReal(tmpval, scalar, (*var)->data.negate.constant);
-            RatAdd(constant, constant, tmpval);
-         }
+            RatAddProdReal(constant, scalar, (*var)->data.negate.constant);
+
          RatSetReal(scalar, -1.0);
          *var = (*var)->negatedvar;
          break;
@@ -17710,12 +17710,26 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       RatFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
 
-      SCIPerrorMessage("aggregated variables not implemented in exact mode yet \n");
-      return SCIP_ERROR;
-
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("aggregated variables not implemented in exact mode yet \n");
-      return SCIP_ERROR;
+      assert(!var->donotmultaggr);
+      assert(var->data.multaggr.vars != NULL);
+      assert(var->data.multaggr.scalars != NULL);
+
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2);
+       */
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         RatMult(tmp, var->exactdata->multaggr.scalars[i], val);
+         SCIP_CALL( SCIPvarAddToRowExact(var->data.multaggr.vars[i], blkmem, set, stat, eventqueue, prob, lpexact,
+               rowexact, tmp) );
+      }
+      RatMult(tmp, var->exactdata->multaggr.constant, val);
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+
+      RatFreeBuffer(set->buffer, &tmp);
+      return SCIP_OKAY;
 
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
