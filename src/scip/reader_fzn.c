@@ -4871,7 +4871,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    SCIPfreeBlockMemoryArrayNull(scip, &fzninput.constarrays, fzninput.constarrayssize);
 
    /* evaluate the result */
-   if( fzninput.haserror )
+   if( fzninput.haserror || ! fzninput.valid )
       return SCIP_READERROR;
 
    *result = SCIP_SUCCESS;
