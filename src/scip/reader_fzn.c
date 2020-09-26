@@ -2905,7 +2905,7 @@ CREATE_CONSTRAINT(createSetOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "set operation are not supported yet\n");
+   SCIPwarningMessage(scip, "Line %d: set operation are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -2922,7 +2922,7 @@ CREATE_CONSTRAINT(createArrayOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "array operation are not supported yet\n");
+   SCIPwarningMessage(scip, "Line %d: array operation are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -3132,7 +3132,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    /* check if the function name ends of "reif" (reified constraint) which SCIP does not support yet */
    if( equalTokens(ftokens[nftokens - 1], "reif") )
    {
-      SCIPwarningMessage(scip, "reified constraints are not supported\n");
+      SCIPwarningMessage(scip, "Line %d: reified constraints are not supported.\n", fzninput->linenumber);
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
@@ -3536,7 +3536,7 @@ SCIP_RETCODE parseConstraint(
    if( !hasError(fzninput) && !created )
    {
       fzninput->valid = FALSE;
-      SCIPwarningMessage(scip, "constraint <%s> is not supported yet\n", fname);
+      SCIPwarningMessage(scip, "Line %d: Constraint <%s> is not supported yet.\n", fzninput->linenumber, fname);
    }
 
    /* free memory */
