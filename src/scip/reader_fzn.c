@@ -69,7 +69,7 @@
 #define READER_EXTENSION        "fzn"
 
 
-#define FZN_BUFFERLEN         8192      /**< size of the line buffer for reading or writing */
+#define FZN_BUFFERLEN         65536      /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
