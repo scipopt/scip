@@ -189,9 +189,9 @@ struct FznInput
    int                   nvararrays;         /**< number of variables */
    int                   vararrayssize;      /**< size of variable array */
 
-   CONSTARRAY**          constarrays;        /**< variable arrays to output */
-   int                   nconstarrays;       /**< number of variables */
-   int                   constarrayssize;    /**< size of variable array */
+   CONSTARRAY**          constarrays;        /**< constant arrays */
+   int                   nconstarrays;       /**< number of constant arrays */
+   int                   constarrayssize;    /**< size of constant array */
 };
 typedef struct FznInput FZNINPUT;
 
@@ -2905,7 +2905,7 @@ CREATE_CONSTRAINT(createSetOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "Line %d: set operation are not supported yet.\n", fzninput->linenumber);
+   SCIPwarningMessage(scip, "Line %d: set operations are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -2922,7 +2922,7 @@ CREATE_CONSTRAINT(createArrayOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "Line %d: array operation are not supported yet.\n", fzninput->linenumber);
+   SCIPwarningMessage(scip, "Line %d: array operations are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
