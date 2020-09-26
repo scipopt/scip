@@ -14375,7 +14375,7 @@ SCIP_RETCODE SCIPlpGetSol(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, nlpicols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, nlpirows) );
 
-   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, NULL, redcost) );
+   SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, activity, redcost) );
    if( lp->solisbasic )
    {
       SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
