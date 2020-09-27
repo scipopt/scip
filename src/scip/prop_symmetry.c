@@ -2767,13 +2767,14 @@ SCIP_RETCODE SCIPsortOrbitope(
    int                   ncols               /**< number of columns of orbitope */
    )
 {
-   int i;
-   int j;
+   SCIP_VAR** sortedrow;
+   int* colorder;
    int* idcs;
    int arrlen;
+   int minrowidx = -1;
    int minrow = INT_MAX;
-   int* colorder;
-   SCIP_VAR** sortedrow;
+   int i;
+   int j;
 
    assert( scip != NULL );
    assert( orbitopevaridx != NULL );
@@ -2787,13 +2788,20 @@ SCIP_RETCODE SCIPsortOrbitope(
    /* detect minimum index per row */
    for (i = 0; i < nrows; ++i)
    {
+      int idx;
+
       idcs[i] = INT_MAX;
 
       for (j = 0; j < ncols; ++j)
       {
-         if ( orbitopevaridx[i][j] < idcs[i] )
+         idx = orbitopevaridx[i][j];
+
+         if ( idx < idcs[i] )
+            idcs[i] = idx;
+
+         if ( idx < minrowidx )
          {
-            idcs[i] = orbitopevaridx[i][j];
+            minrowidx = idx;
             minrow = i;
          }
       }
