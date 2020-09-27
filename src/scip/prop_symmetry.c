@@ -2771,7 +2771,7 @@ SCIP_RETCODE SCIPsortOrbitope(
    int* colorder;
    int* idcs;
    int arrlen;
-   int minrowidx = -1;
+   int minrowidx = INT_MAX;
    int minrow = INT_MAX;
    int i;
    int j;
