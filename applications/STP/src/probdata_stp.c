@@ -1832,6 +1832,24 @@ SCIP_Bool setParamsSepaIsBad(
 	return FALSE;
 }
 
+/** helper */
+static
+int sepaBadGetZeroHalfMaxrounds(
+   const GRAPH*          g                   /**< graph data structure */
+)
+{
+   const int nterms = g->terms;
+   int nrounds = nterms / 5;
+
+   if( nrounds < 10 )
+      nrounds = 10;
+   else if( nrounds > 50 )
+      nrounds = 50;
+ // 20 // 50
+   return nrounds;
+}
+
+
 /** set parameters */
 static
 SCIP_RETCODE setParams(
@@ -1847,10 +1865,11 @@ SCIP_RETCODE setParams(
 
    if( setParamsSepaIsBad(probdata) )
    {
+      const int zerhalf_nrounds = sepaBadGetZeroHalfMaxrounds(graph);
       SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 0));
 	  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 0));
 	  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 0));
-      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", 6));
+      SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", zerhalf_nrounds));
    }
 
    SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
