@@ -2781,7 +2781,7 @@ SCIP_RETCODE SCIPsortOrbitope(
    assert( nrows > 0 );
    assert( ncols > 0 );
 
-   arrlen = nrows > ncols ? nrows : ncols;
+   arrlen = MAX(nrows, ncols);
    SCIP_CALL( SCIPallocBufferArray(scip, &idcs, arrlen) );
 
    /* detect minimum index per row */
