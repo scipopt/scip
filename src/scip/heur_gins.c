@@ -106,9 +106,6 @@
 #define DEFAULT_USESELFALLBACK  TRUE         /**< should random initial variable selection be used if decomposition was not successful? */
 #define DEFAULT_OVERLAP          0.0         /**< overlap of blocks between runs - 0.0: no overlap, 1.0: shift by only 1 block */
 #define DEFAULT_CONSECUTIVEBLOCKS TRUE       /**< should blocks be treated consecutively (sorted by ascending label?) */
-#ifdef SCIP_STATISTIC
-#define NHISTOGRAMBINS         10            /**< number of bins for histograms */
-#endif
 
 
 /*
@@ -211,11 +208,6 @@ struct SCIP_HeurData
    char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or
                                               *   (p)seudo solution */
    int                   maxseendistance;    /**< maximum of all distances between two variables */
-#ifdef SCIP_STATISTIC
-   int                   consvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the densities of the constraints */
-   int                   consdiscvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the discrete variable densities of the constraints */
-   int                   conscontvarshist[NHISTOGRAMBINS]; /**< histogram that summarizes the continuous variable densities of the constraints */
-#endif
    int                   nrelaxedconstraints; /**< number of constraints that were relaxed */
    int                   nfailures;           /**< counter for the number of unsuccessful runs of this heuristic */
    SCIP_Longint          nextnodenumber;      /**< the next node number at which the heuristic should be called again */
@@ -233,18 +225,6 @@ typedef struct SolveLimits SOLVELIMITS;
 /*
  * Local methods
  */
-
-#ifdef SCIP_STATISTIC
-/** resets a histogram */
-static
-void resetHistogram(
-   int*                  histogram           /**< the histogram */
-   )
-{
-   BMSclearMemoryArray(histogram, NHISTOGRAMBINS);
-}
-#endif
-
 
 /** check if enough fixings have been found */
 static
@@ -2299,34 +2279,6 @@ void updateFailureStatistic(
       : SCIP_LONGINT_MAX);
 }
 
-#ifdef SCIP_STATISTIC
-/** gets the average neighborhood size of all selected variables */
-static
-SCIP_Real heurdataAvgNeighborhoodSize(
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   return heurdata->sumneighborhoodvars / (MAX(1.0, (SCIP_Real)heurdata->nneighborhoods));
-}
-
-/** prints a histogram */
-static
-void printHistogram(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int*                  histogram,          /**< histogram values */
-   const char*           name                /**< display name of this histogram */
-   )
-{
-   int i;
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Gins: %s", name);
-
-   /* write out entries of this histogram */
-   for( i = 0; i < NHISTOGRAMBINS; ++i )
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %d", histogram[i]);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
-}
-#endif
 
 /*
  * Callback methods of primal heuristic
@@ -2393,12 +2345,6 @@ SCIP_DECL_HEURINIT(heurInitGins)
    heurdata->allblocksunsuitable = FALSE;
    heurdata->taboolist = NULL;
    heurdata->targetnodes = heurdata->minnodes;
-
-#ifdef SCIP_STATISTIC
-   resetHistogram(heurdata->conscontvarshist);
-   resetHistogram(heurdata->consdiscvarshist);
-   resetHistogram(heurdata->conscontvarshist);
-#endif
 
    return SCIP_OKAY;
 }
