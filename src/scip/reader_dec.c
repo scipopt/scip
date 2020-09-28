@@ -108,6 +108,7 @@ SCIP_RETCODE readDecomposition(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_FILE* file;
    SCIP_CONS** conss;
    SCIP_CONS** scip_conss;
@@ -152,10 +153,8 @@ SCIP_RETCODE readDecomposition(
    /* use the number of constraints of the problem as buffer storage size */
    nconss = SCIPgetNConss(scip);
 
-   /* coverity[leaked_storage] */
-   SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
-   /* coverity[leaked_storage] */
-   SCIP_CALL( SCIPallocBufferArray(scip, &labels, nconss) );
+   SCIP_CALL_TERMINATE( retcode, SCIPallocBufferArray(scip, &conss, nconss), TERMINATE );
+   SCIP_CALL_TERMINATE( retcode, SCIPallocBufferArray(scip, &labels, nconss), TERMINATE );
 
    /* start parsing the file */
    section = DEC_SECTION_INIT;
@@ -310,6 +309,13 @@ SCIP_RETCODE readDecomposition(
 
    SCIPfreeBufferArray(scip, &labels);
    SCIPfreeBufferArray(scip, &conss);
+
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfclose(file);
+   }
 
    if( error )
       return SCIP_READERROR;
