@@ -1008,8 +1008,9 @@ SCIP_RETCODE presolveRound(
    }
 
    /* call presolve methods of constraint handlers */
-   while( k < consend && !(*unbounded) && !(*infeasible) && !aborted )
+   while( k < consend && !(*unbounded) && !(*infeasible) && !aborted && !SCIPisExactSolve(scip) )
    {
+      /** @todo exip: add an isexact flag to conshdlrs and only call for exact conshdrls */
       SCIPdebugMsg(scip, "executing presolve method of constraint handler <%s>\n",
          SCIPconshdlrGetName(scip->set->conshdlrs[k]));
       SCIP_CALL( SCIPconshdlrPresolve(scip->set->conshdlrs[k], scip->mem->probmem, scip->set, scip->stat,
