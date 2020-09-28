@@ -156,8 +156,8 @@ SCIP_RETCODE SCIPsepastoreexAddCut(
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
 
-   /* debug: check cut for feasibility */
-   SCIP_CALL( SCIPdebugCheckRow(set, cut) ); /*lint !e506 !e774*/
+   /** @todo exip debug: check cut for feasibility */
+   SCIP_CALL( SCIPdebugCheckRow(set, cut->fprow) ); /*lint !e506 !e774*/
 
    /* update statistics of total number of found cuts */
    if( !sepastoreexact->initiallp )
