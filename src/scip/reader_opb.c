@@ -2473,7 +2473,7 @@ SCIP_RETCODE writeOpbObjective(
 
          assert( linecnt != 0 );
 
-         if( SCIPvarGetObj(var) * mult > SCIP_LONGINT_MAX )
+         if( SCIPvarGetObj(var) * mult > (SCIP_Real)SCIP_LONGINT_MAX )
          {
             SCIPerrorMessage("Integral objective value to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", mult, SCIPvarGetObj(var), SCIPvarGetObj(var) * mult, (SCIP_Longint) SCIPround(scip, SCIPvarGetObj(var) * mult));
          }
@@ -2612,7 +2612,7 @@ SCIP_RETCODE printNLRow(
 
 	 negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
 
-         if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
+         if( vals[v] * (*mult) > (SCIP_Real)SCIP_LONGINT_MAX )
          {
             SCIPerrorMessage("Integral coefficient to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
          }
@@ -2823,7 +2823,7 @@ SCIP_RETCODE printRow(
 
       negated = SCIPvarIsNegated(var);
 
-      if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
+      if( vals[v] * (*mult) > (SCIP_Real)SCIP_LONGINT_MAX )
       {
          SCIPerrorMessage("Integral coefficient to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
       }

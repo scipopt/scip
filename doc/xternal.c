@@ -553,8 +553,8 @@
  * @section CODEDOC Documentation:
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
- * - Do not leave code in comments that has been commented out; put the code within defines,
- *   e.g., `SCIP_DISABLED_CODE` and/or add an explanation
+ * - Please do not leave code in comments that has been commented out, don't use `#if
+ *   0`. Instead put the code within defines `#ifdef SCIP_DISABLED_CODE` and add an explanation.
  * - Todos need double stars to be registered by doxygen.
  * - When documenting methods, the first brief description starts with lower case and is separated by semi-colons, if necessary
  *   The longer description starts capitalized and consists of complete sentences.
