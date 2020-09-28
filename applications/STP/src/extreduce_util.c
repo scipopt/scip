@@ -30,11 +30,13 @@
 #include "misc_stp.h"
 #include "portab.h"
 
+
 #ifdef RED_UTIL_TIME
 #include <time.h>
 #endif
 
 #define MLDISTS_EMPTYSLOT_NONE -1
+#define EDGE_FORBIDDEN_NONE -2
 
 /** Structure for storing distances in the extension tree.
  *  Organized in slots that can be filled by the user.
@@ -410,6 +412,7 @@ SCIP_Real getCloseNodeDistanceForbidden(
    const GRAPH*          g,                  /**< graph data structure */
    const DISTDATA*       distdata,           /**< to be initialized */
    int                   edge_forbidden,     /**< forbidden edge */
+   const SCIP_Bool*      edges_isForbidden,  /**< blocked edges marked or NULL */
    int                   node,               /**< the node */
    int                   closenode           /**< the close node whose position is to be found */
 )
@@ -430,7 +433,7 @@ SCIP_Real getCloseNodeDistanceForbidden(
    {
       assert(indices[start + position] == closenode);
 
-      if( !closeNodesPathIsForbidden(g, distdata, edge_forbidden, NULL, node, closenode, start + position) )
+      if( !closeNodesPathIsForbidden(g, distdata, edge_forbidden, edges_isForbidden, node, closenode, start + position) )
       {
          dist = distdata->closenodes_distances[start + position];
       }
@@ -490,7 +493,7 @@ static inline
 SCIP_Real getCloseNodeDistanceForbiddenEq(
    const GRAPH*          g,                  /**< graph data structure */
    const DISTDATA*       distdata,           /**< to be initialized */
-   SCIP_Real             dist_eq,            /**< critical distance */
+   SCIP_Real             dist_eq,            /**< critical distance or -1.0 if not known */
    int                   edge_forbidden,     /**< forbidden edge */
    const SCIP_Bool*      edges_isForbidden,  /**< blocked edges marked */
    int                   node,               /**< the node */
@@ -1206,6 +1209,7 @@ SCIP_Real distDataGetNormalDistForbidden(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
    int                   edge_forbidden,     /**< forbidden edge */
+   const SCIP_Bool*      edges_isForbidden,  /**< blocked edges marked or NULL */
    int                   vertex1,            /**< first vertex */
    int                   vertex2,            /**< second vertex */
    DISTDATA*             distdata            /**< distance data */
@@ -1215,7 +1219,7 @@ SCIP_Real distDataGetNormalDistForbidden(
 
    assert(distdata);
    assert(vertex1 >= 0 && vertex2 >= 0);
-   assert(graph_edge_isInRange(g, edge_forbidden));
+   assert(edge_forbidden == EDGE_FORBIDDEN_NONE || graph_edge_isInRange(g, edge_forbidden));
 
    /* neighbors list not valid anymore? */
    if( distdata->pathroot_isdirty[vertex1] )
@@ -1223,7 +1227,7 @@ SCIP_Real distDataGetNormalDistForbidden(
       distDataRecomputeNormalDist(scip, g, vertex1, distdata);
    }
 
-   dist = getCloseNodeDistanceForbidden(g, distdata, edge_forbidden, vertex1, vertex2);
+   dist = getCloseNodeDistanceForbidden(g, distdata, edge_forbidden, edges_isForbidden, vertex1, vertex2);
 
    return dist;
 }
@@ -1661,6 +1665,56 @@ SCIP_Real extreduce_distDataGetSdDouble(
 
 
 
+/** Same as extreduce_distDataGetSdDouble, but only takes paths that do not include any edges marked as blocked. */
+SCIP_Real extreduce_distDataGetSdDoubleForbidden(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   DISTDATA* distdata = extdata->distdata;
+   SCIP_Real dist = -1.0;
+
+   assert(scip && g && distdata);
+
+   /* NOTE: does not work for pseudo-elimination, because paths might get destroyed */
+   if( extInitialCompIsEdge(extdata) )
+   {
+      const SCIP_Bool* const edges_isForbidden = extdata->sdeq_edgesIsForbidden;
+      dist = distDataGetNormalDistForbidden(scip, g, EDGE_FORBIDDEN_NONE, edges_isForbidden, vertex1, vertex2, distdata);
+
+      /* no distance found? */
+      if( dist < -0.5 )
+      {
+         assert(EQ(dist, -1.0));
+         dist = distDataGetNormalDistForbidden(scip, g, EDGE_FORBIDDEN_NONE, edges_isForbidden, vertex1, vertex2, distdata);
+      }
+      else
+      {
+         const SCIP_Real distrev = distDataGetNormalDistForbidden(scip, g, EDGE_FORBIDDEN_NONE, edges_isForbidden, vertex1, vertex2, distdata);
+
+         if( distrev > -0.5 && distrev < dist  )
+            dist = distrev;
+
+         assert(GE(dist, 0.0));
+      }
+   }
+
+   if( distdata->sdistdata )
+   {
+      if( !Is_term(g->term[vertex1]) || !Is_term(g->term[vertex2]) )
+      {
+         dist = distDataGetSpecialDistIntermedTerms(g, vertex1, vertex2, distdata);
+      }
+   }
+
+   assert(EQ(dist, -1.0) || dist >= 0.0);
+
+   return dist;
+}
+
 /** Same as extreduce_distDataGetSdDouble, but only takes paths that do not include
  *  given edge or any edges marked as blocked.
  *  User needs to provide (known) equality value */
@@ -1740,18 +1794,18 @@ SCIP_Real extreduce_distDataGetSdDoubleForbiddenSingle(
 
    /* NOTE: does not work for pseudo-elimination, because paths might get destroyed */
    {
-      dist = distDataGetNormalDistForbidden(scip, g, edge_forbidden, vertex1, vertex2, distdata);
+      dist = distDataGetNormalDistForbidden(scip, g, edge_forbidden, NULL, vertex1, vertex2, distdata);
 
       /* no distance found? */
       if( dist < -0.5 )
       {
          assert(EQ(dist, -1.0));
 
-         dist = distDataGetNormalDistForbidden(scip, g, edge_forbidden, vertex2, vertex1, distdata);
+         dist = distDataGetNormalDistForbidden(scip, g, edge_forbidden, NULL, vertex2, vertex1, distdata);
       }
       else
       {
-         const SCIP_Real distrev = distDataGetNormalDistForbidden(scip, g, edge_forbidden, vertex2, vertex1, distdata);
+         const SCIP_Real distrev = distDataGetNormalDistForbidden(scip, g, edge_forbidden, NULL, vertex2, vertex1, distdata);
 
          if( distrev > -0.5 && distrev < dist  )
             dist = distrev;

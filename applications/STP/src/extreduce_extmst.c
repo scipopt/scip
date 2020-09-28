@@ -1555,6 +1555,52 @@ void mstAddRootLevelSDs(
    SCIPdebugMessage("initialized first MST level (%d) \n", extreduce_mldistsTopLevel(sds_vertical));
 }
 
+
+/** can current 3-leaf tree be rule-out in case of equality? */
+static inline
+SCIP_Bool mstEqComp3RuleOut(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             tree_cost,          /**< tree cost */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Real sds[3];
+   const int* leaves = extdata->tree_leaves;
+
+   // todo
+   if( 3 !=  extdata->tree_nleaves )
+      exit(1);
+
+   assert(3 == extdata->tree_nleaves);
+
+   // todo check for flag
+   if( !extInitialCompIsEdge(extdata) )
+      return TRUE;
+
+   sds[0] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
+         leaves[0], leaves[1], extdata);
+
+   sds[1] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
+         leaves[0], leaves[2], extdata);
+
+   if( LE(sds[0] + sds[1], tree_cost) )
+   {
+      return TRUE;
+   }
+
+   sds[2] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
+         leaves[1], leaves[2], extdata);
+
+   if( LE(sds[0] + sds[2], tree_cost) || LE(sds[1] + sds[2], tree_cost) )
+   {
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** Gets SDs from leaf of top tree component to siblings for MST calculation.
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
  *  NOTE: Only restricted bottleneck tests are performed! */
@@ -1823,6 +1869,15 @@ SCIP_Bool mstCompRuleOut(
 
    if( ruledOut )
    {
+#ifdef STP_DISABLED
+      // todo: probably also need to check for > 3! */
+      if( topmst.nedges_max == 3 && EQ(mstweight, tree_cost) && !mstEqComp3RuleOut(scip, graph, tree_cost, extdata) )
+      {
+         return FALSE;
+      }
+
+#endif
+
       SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, tree_cost);
 
       return TRUE;
