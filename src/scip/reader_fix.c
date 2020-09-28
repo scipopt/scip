@@ -69,6 +69,7 @@ SCIP_RETCODE readSol(
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_FILE* file;
    SCIP_Bool error;
    SCIP_Bool unknownvariablemessage;
@@ -158,8 +159,14 @@ SCIP_RETCODE readSol(
       }
 
       /* fix the variable */
-      /* coverity[leaked_storage] */
-      SCIP_CALL( SCIPfixVar(scip, var, value, &infeasible, &fixed) );
+      retcode = SCIPfixVar(scip, var, value, &infeasible, &fixed);
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPerrorMessage("Error fixing variable <%s> to value %.15g in line %d of bounds file <%s>\n",
+            varname, value, lineno, filename);
+         error = TRUE;
+         break;
+      }
       if( infeasible )
       {
          SCIPerrorMessage("infeasible solution value of <%s>[%.15g,%.15g] to %.15g in line %d of solution file <%s>\n",
