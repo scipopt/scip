@@ -8570,7 +8570,7 @@ SCIP_Bool SCIPdoNotAggrVar(
    assert(var != NULL);
    assert(var->scip == scip);
 
-   return scip->set->presol_donotmultaggr || SCIPvarDoNotAggr(var);
+   return scip->set->presol_donotaggr || SCIPvarDoNotAggr(var);
 }
 
 /** returns whether variable is not allowed to be multi-aggregated */
