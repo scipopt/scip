@@ -6026,7 +6026,7 @@ SCIP_RETCODE SCIPvarMarkDoNotAggr(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      SCIPerrorMessage("cannot mark a multi-aggregated variable to not be multi-aggregated.\n");
+      SCIPerrorMessage("cannot mark a multi-aggregated variable to not be aggregated.\n");
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED:
