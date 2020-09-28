@@ -1265,7 +1265,7 @@ SCIP_RETCODE computeRestrictionToRay(
          *e += (sidefactor * eigenvalues[i]) * SQR( dot );
 
 #ifdef INTERCUT_MOREDEBUG
-         printf("Positive eigenvalue: computing D: v^T ray %g, v^T( zlp + b/theta ) %g and theta %g \n", vdotray, dot, (sidefactor * nlhdlrexprdata->eigenvalues[i]));
+         printf("Positive eigenvalue: computing D: v^T ray %g, v^T( zlp + b/theta ) %g and theta %g \n", vdotray, dot, (sidefactor * eigenvalues[i]));
 #endif
       }
       else
@@ -1276,7 +1276,7 @@ SCIP_RETCODE computeRestrictionToRay(
          *c -= (sidefactor * eigenvalues[i]) * SQR( dot );
 
 #ifdef INTERCUT_MOREDEBUG
-         printf("Negative eigenvalue: computing A: v^T ray %g, and theta %g \n", vdotray, (sidefactor * nlhdlrexprdata->eigenvalues[i]));
+         printf("Negative eigenvalue: computing A: v^T ray %g, and theta %g \n", vdotray, (sidefactor * eigenvalues[i]));
 #endif
       }
    }
