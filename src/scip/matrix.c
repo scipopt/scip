@@ -116,7 +116,7 @@ SCIP_RETCODE getActiveVariablesExact(
    if( requiredsize > *nvars )
    {
       SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
-      SCIP_CALL( RatReallocBufferArray(scip, scalars, *nvars, requiredsize) );
+      SCIP_CALL( RatReallocBufferArray(SCIPbuffer(scip), &scalars, *nvars, requiredsize) );
 
       /* call function a second time with enough memory */
       SCIP_CALL( SCIPgetProbvarLinearSumExact(scip, *vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
@@ -1832,12 +1832,15 @@ SCIP_RETCODE SCIPmatrixGetParallelCols(
 #undef SCIPmatrixGetVar
 #undef SCIPmatrixGetColName
 #undef SCIPmatrixGetRowValPtr
+#undef SCIPmatrixGetRowValPtrExact
 #undef SCIPmatrixGetRowIdxPtr
 #undef SCIPmatrixGetRowNNonzs
 #undef SCIPmatrixGetRowName
 #undef SCIPmatrixGetNRows
 #undef SCIPmatrixGetRowLhs
+#undef SCIPmatrixGetRowLhsExact
 #undef SCIPmatrixGetRowRhs
+#undef SCIPmatrixGetRowRhsExact
 #undef SCIPmatrixIsRowRhsInfinity
 #undef SCIPmatrixGetNNonzs
 #undef SCIPmatrixGetRowMinActivity
