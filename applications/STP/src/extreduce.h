@@ -161,6 +161,7 @@ typedef struct extension_data
    PCDATA* const pcdata;
    SCIP_Bool* const sdeq_edgesIsForbidden;
    STP_Vectype(int) sdeq_resetStack;
+   SCIP_Bool sdeq_hasForbiddenEdges;
    SCIP_Real tree_redcost;
    SCIP_Real tree_cost;
    int tree_nDelUpArcs;

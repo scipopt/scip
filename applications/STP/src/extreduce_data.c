@@ -120,6 +120,7 @@ void extreduce_extCompClean(
 
       sdeq_edgesIsForbidden[edge] = FALSE;
    }
+   extdata->sdeq_hasForbiddenEdges = FALSE;
 
    StpVecFree(scip, extdata->sdeq_resetStack);
 

@@ -957,6 +957,7 @@ void bottleneckMarkEqualityPath(
                graph_edge_printInfo(graph, e);
 #endif
                edges_isEqForbidden[e / 2] = TRUE;
+               extdata->sdeq_hasForbiddenEdges = TRUE;
                StpVecPushBack(scip, extdata->sdeq_resetStack, e / 2);
             }
             break;
@@ -1104,6 +1105,7 @@ void bottleneckMarkEqualityEdge(
    if( !edges_isEqForbidden[edge / 2] )
    {
       edges_isEqForbidden[edge / 2] = TRUE;
+      extdata->sdeq_hasForbiddenEdges = TRUE;
       StpVecPushBack(scip, extdata->sdeq_resetStack, edge / 2);
    }
 }
@@ -1568,14 +1570,11 @@ SCIP_Bool mstEqComp3RuleOut(
    SCIP_Real sds[3];
    const int* leaves = extdata->tree_leaves;
 
-   // todo
-   if( 3 !=  extdata->tree_nleaves )
-      exit(1);
-
    assert(3 == extdata->tree_nleaves);
 
-   // todo check for flag
-   if( !extInitialCompIsEdge(extdata) )
+   /* NOTE: initial component non-edge should be ok, because in this case we don't
+    * use simple paths for equality rule-outs */
+   if( !extInitialCompIsEdge(extdata) || !extdata->sdeq_hasForbiddenEdges )
       return TRUE;
 
    sds[0] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
@@ -1869,14 +1868,11 @@ SCIP_Bool mstCompRuleOut(
 
    if( ruledOut )
    {
-#ifdef STP_DISABLED
       // todo: probably also need to check for > 3! */
-      if( topmst.nedges_max == 3 && EQ(mstweight, tree_cost) && !mstEqComp3RuleOut(scip, graph, tree_cost, extdata) )
+      if( extdata->tree_nleaves == 3 && EQ(mstweight, tree_cost) && !mstEqComp3RuleOut(scip, graph, tree_cost, extdata) )
       {
          return FALSE;
       }
-
-#endif
 
       SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, tree_cost);
 

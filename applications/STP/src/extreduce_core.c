@@ -1756,7 +1756,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_nDelUpArcs = 0, .tree_root = -1, .tree_starcenter = -1, .tree_nedges = 0, .tree_depth = 0,
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata,
-         .sdeq_resetStack = NULL, .sdeq_edgesIsForbidden = sdeq_edgesIsForbidden,
+         .sdeq_resetStack = NULL, .sdeq_edgesIsForbidden = sdeq_edgesIsForbidden, .sdeq_hasForbiddenEdges = FALSE,
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
          .tree_maxdepth = extpermanent->tree_maxdepth,
          .tree_maxnleaves = extpermanent->tree_maxnleaves,
