@@ -1186,7 +1186,8 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            coefs1234a,         /**< buffer to store A, B, C, D, and E of cases 1, 2, 3, or 4a */
    SCIP_Real*            coefs4b,            /**< buffer to store A, B, C, D, and E of case 4b (or NULL if not needed) */
-   SCIP_Real*            coefscondition      /**< buffer to store data to evaluate condition to decide case 4a or 4b */
+   SCIP_Real*            coefscondition,     /**< buffer to store data to evaluate condition to decide case 4a or 4b */
+   SCIP_Bool*            success             /**< did we successfully compute the coefficients? */
    )
 {
    SCIP_CONSEXPR_QUADEXPR* quaddata;
@@ -1200,6 +1201,8 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP_Real* e;
    SCIP_Real wray;
    int i;
+
+   *success = TRUE;
 
    quaddata = nlhdlrexprdata->quaddata;
    SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
@@ -1291,7 +1294,19 @@ SCIP_RETCODE computeRestrictionToRay(
 
       /* some sanity checks only applicable to these cases (more at the end) */
       assert(*c >= 0);
-      assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
+
+      /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
+       * the generation of the cut in this case.
+       */
+      if( SQRT( *c ) - *e >= 0 )
+      {
+         /* check if it's really a numerical problem */
+         assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+
+         INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
    }
    else
    {
@@ -1695,8 +1710,6 @@ SCIP_RETCODE computeIntercut(
    SCIP_ROW** rows;
    int i;
 
-   *success = TRUE;
-
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
@@ -1713,7 +1726,10 @@ SCIP_RETCODE computeIntercut(
       /* restrict phi to ray */
       SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
                &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-               rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition) );
+               rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+
+      if( ! *success )
+         return SCIP_OKAY;
 
       /* if restriction to ray is numerically nasty -> abort cut separation */
       // TODO: put this in another function
@@ -1950,7 +1966,8 @@ SCIP_RETCODE findRho(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
                                                   needs to be stored */
-   SCIP_Real*            rho                 /**< pointer to store the oprimal rho */
+   SCIP_Real*            rho,                /**< pointer to store the oprimal rho */
+   SCIP_Bool*            success             /**< could we successfully find the right rho? */
    )
 {
    int i;
@@ -2009,7 +2026,15 @@ SCIP_RETCODE findRho(
 
             /* restrict phi to the "new" ray */
             SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4, newraycoefs, newrayidx,
-                     newraynnonz, vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition) );
+                     newraynnonz, vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+
+            if( ! *success )
+            {
+               SCIPfreeBufferArray(scip, &newrayidx);
+               SCIPfreeBufferArray(scip, &newraycoefs);
+
+               return SCIP_OKAY;
+            }
 
             /* check if restriction to "new" ray is numerically nasty. If so, treat the corresponding rho as if phi is
              * positive
@@ -2100,7 +2125,10 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
       /* compute the smallest rho */
       SCIP_CALL( findRho(scip, nlhdlrdata, nlhdlrexprdata, rays, i, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
-               interpoints, &rho) );
+               interpoints, &rho, success));
+
+      if( ! *success )
+         goto CLEANUP;
 
       /* compute cut coef */
       cutcoef = SCIPisInfinity(scip, -rho) ? 0.0 : 1.0 / rho;
