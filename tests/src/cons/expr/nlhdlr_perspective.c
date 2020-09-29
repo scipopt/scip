@@ -409,6 +409,8 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    /* create expression and constraint */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1>*<x2> + <x2>^2", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
    SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
    SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
@@ -509,5 +511,4 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

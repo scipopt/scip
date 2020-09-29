@@ -141,6 +141,8 @@ Test(propagate, sum)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -157,7 +159,6 @@ Test(propagate, sum)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 1.0));
 
    /* release stuff */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -179,6 +180,8 @@ Test(propagate, product)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.0, 1.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -213,8 +216,7 @@ Test(propagate, product)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 2.0));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 4.0));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -238,6 +240,8 @@ Test(propagate, productwithzero)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 8.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -259,8 +263,7 @@ Test(propagate, productwithzero)
    cr_assert_float_eq(SCIPvarGetLbGlobal(y), 1.0/3.0, SCIPfeastol(scip));
    cr_assert_float_eq(SCIPvarGetLbGlobal(z), 1.0/2.0, SCIPfeastol(scip));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -281,6 +284,8 @@ Test(propagate, abs)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -293,8 +298,7 @@ Test(propagate, abs)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -2.5));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x),  2.5));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -315,6 +319,8 @@ Test(propagate, exp)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 2.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -329,8 +335,7 @@ Test(propagate, exp)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -1.0));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), log(2.0)));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -351,6 +356,8 @@ Test(propagate, log)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -364,8 +371,7 @@ Test(propagate, log)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), exp(-1.0)));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), exp(1.0)));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -386,6 +392,8 @@ Test(propagate, sin)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -400,8 +408,7 @@ Test(propagate, sin)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -1.0));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), ASIN(0.5)));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -427,6 +434,8 @@ Test(propagate, entropy)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, -0.9 * log(0.9)) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -441,8 +450,7 @@ Test(propagate, entropy)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), 0.9));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), 1.5));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /*
@@ -459,6 +467,8 @@ Test(propagate, entropy)
    cr_assert_not(infeasible);
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &originalexpr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -0.1 * log(0.1), exp(-1)) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* forward prop only propagates active constraints and active constraint live in the transformed problem */
    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -473,8 +483,7 @@ Test(propagate, entropy)
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 0.1));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(y), 0.2));
 
-   /* release conss */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -500,9 +509,9 @@ Test(propagate, complicated_expression)
    SCIP_CALL( SCIPchgVarLb(scip, y, 2.0) ); SCIP_CALL( SCIPchgVarUb(scip, y, 3.0) );
    SCIP_CALL( SCIPchgVarLb(scip, z, 1.0) ); SCIP_CALL( SCIPchgVarUb(scip, z, 2.0) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
+   SCIP_CALL( createExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( createExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( createExprVar(scip, conshdlr, &zexpr, z) );
 
    /*
     * create constraint 0 <= (-x^2 + log(y)) / z <= 2
@@ -539,16 +548,22 @@ Test(propagate, complicated_expression)
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
-   SCIP_CALL( forwardPropExpr(scip, conshdlr, SCIPgetExprConsExpr(scip, cons), TRUE, &infeasible, &ntightenings) );
+   /* get expr for root as used in cons */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+   rootexpr = SCIPgetExprConsExpr(scip, cons);
+
+   SCIP_CALL( forwardPropExpr(scip, conshdlr, rootexpr, TRUE, &infeasible, &ntightenings) );
 
    cr_assert_not(infeasible);
    cr_expect(CHECK_EXPRINTERVAL(scip, xexpr, -1.0, 1.0), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(xexpr,-1.0,1.0));
    cr_expect(CHECK_EXPRINTERVAL(scip, yexpr, 2.0, 3.0), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(yexpr,2.0,3.0));
    cr_expect(CHECK_EXPRINTERVAL(scip, zexpr, 1.0, 2.0), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(zexpr,1.0,2.0));
+   /* disabled the following checks, since intervals have been updated in the constraints copy of log/pow/sumexpr only
    cr_expect(CHECK_EXPRINTERVAL(scip, logexpr, log(2), log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(logexpr,log(2),log(3)));
    cr_expect(CHECK_EXPRINTERVAL(scip, powexpr, 0.0, 1.0), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(powexpr,0.0,1.0));
    cr_expect(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(sumexpr,log(2)-1.0,log(3)));
-   cr_expect(CHECK_EXPRINTERVAL(scip, rootexpr, (log(2) - 1) / 1.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,log(2)-1.0,log(3)));
+   */
+   cr_expect(CHECK_EXPRINTERVAL(scip, SCIPgetExprConsExpr(scip, cons), (log(2) - 1) / 1.0, log(3)), "expecting [%g, %g], got [%g, %g]\n", EXPECTING_EXPRINTERVAL(rootexpr,log(2)-1.0,log(3)));
 
    /* initialize reverse-propagation by tightening via constraint sides */
    SCIPintervalSetBounds(&conssides, SCIPgetLhsConsExpr(scip, cons), SCIPgetRhsConsExpr(scip, cons));
@@ -562,8 +577,6 @@ Test(propagate, complicated_expression)
    SCIP_CALL( reversePropQueue(scip, conshdlr, &infeasible, &ntightenings) );
    cr_assert_not(infeasible);
 
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &powexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr) );
@@ -571,6 +584,7 @@ Test(propagate, complicated_expression)
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPfreeTransform(scip) );
 }
 
@@ -591,6 +605,8 @@ Test(propagate, unbounded_sub_expression)
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 * <t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -5.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -603,13 +619,14 @@ Test(propagate, unbounded_sub_expression)
    cr_assert(CHECK_EXPRINTERVAL(scip, expr, -SCIP_INTERVAL_INFINITY, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /*
     *  -inf <= 2 + x - y <= inf
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 + <t_x> - <t_y>", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -622,7 +639,6 @@ Test(propagate, unbounded_sub_expression)
    cr_assert(CHECK_EXPRINTERVAL(scip, expr, -SCIP_INTERVAL_INFINITY, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /*
     *  -inf <= x * y * z <= inf
@@ -631,6 +647,8 @@ Test(propagate, unbounded_sub_expression)
 
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> * <t_y> * <t_z>", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -643,7 +661,6 @@ Test(propagate, unbounded_sub_expression)
    cr_assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, SCIP_INTERVAL_INFINITY));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(propagate, forwardprop_uses_expressions_bounds)
@@ -662,6 +679,8 @@ Test(propagate, forwardprop_uses_expressions_bounds)
 
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<t_x> + <t_y>", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -686,7 +705,6 @@ Test(propagate, forwardprop_uses_expressions_bounds)
    cr_expect(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.4));
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(propagate, infeas_after_forwardprop)
@@ -706,6 +724,8 @@ Test(propagate, infeas_after_forwardprop)
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "2 * <t_x> * <t_y>", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -7.0, -6.1) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -717,13 +737,14 @@ Test(propagate, infeas_after_forwardprop)
    cr_assert(infeasible);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /*
     * -1.0 <= 1 + x / (1 + y) <= -0.1
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + <t_x> / (1 + <t_y>)", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, -0.1) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -735,13 +756,14 @@ Test(propagate, infeas_after_forwardprop)
    cr_assert(infeasible);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /*
     * 0.0 <= 1 + exp(-5 * x + y^2) <= 0.9
     */
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1 + exp(-5 * <t_x> + <t_y>^2)", NULL, &expr) );
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -10.0, -0.1) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPaddCons(scip, cons) );
    cr_assert(SCIPconsIsActive(cons));
 
@@ -753,7 +775,6 @@ Test(propagate, infeas_after_forwardprop)
    cr_assert(infeasible);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 Test(propagate, infeas_after_backwardprop)
@@ -781,10 +802,14 @@ Test(propagate, infeas_after_backwardprop)
    SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr2, 2, exprs, NULL, 0.0) );
 
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", expr1, -1.0, 1.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
+   expr1 = SCIPgetExprConsExpr(scip, cons1);
    SCIP_CALL( SCIPaddCons(scip, cons1) );
    cr_assert(SCIPconsIsActive(cons1));
 
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", expr2, 3.5, 5.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   expr2 = SCIPgetExprConsExpr(scip, cons2);
    SCIP_CALL( SCIPaddCons(scip, cons2) );
    cr_assert(SCIPconsIsActive(cons2));
 
@@ -824,8 +849,6 @@ Test(propagate, infeas_after_backwardprop)
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
 }
@@ -843,9 +866,11 @@ Test(propagate, forwardprop_common_subexpressions)
    SCIP_CONSEXPR_EXPR* prodexpr;
    SCIP_CONS* cons1;
    SCIP_CONS* cons2;
+   SCIP_CONS* conss[2];
    SCIP_INTERVAL interval;
    SCIP_Bool infeasible;
    int ntightenings;
+   int dummy;
 
    /* change bounds of vars */
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) ); SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
@@ -861,11 +886,20 @@ Test(propagate, forwardprop_common_subexpressions)
 
    /* create constraints */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons1, "cons1", sqrexpr, 0.5, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sqrexpr) );
    SCIP_CALL( SCIPaddCons(scip, cons1) );
    cr_assert(SCIPconsIsActive(cons1));
+
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons2, "cons2", prodexpr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
    SCIP_CALL( SCIPaddCons(scip, cons2) );
    cr_assert(SCIPconsIsActive(cons2));
+
+   conss[0] = cons1;
+   conss[1] = cons2;
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, conss, 2, SCIP_PRESOLTIMING_ALWAYS, &infeasible, &dummy, &dummy, &dummy) );
+   sqrexpr = SCIPgetExprConsExpr(scip, cons1);
+   prodexpr = SCIPgetExprConsExpr(scip, cons2);
 
    /* apply propagation for first constraint (x^2 >= 0.5) */
    SCIP_CALL( propCons(cons1, &infeasible) );
@@ -888,8 +922,6 @@ Test(propagate, forwardprop_common_subexpressions)
    /* release memory */
    SCIP_CALL( SCIPreleaseCons(scip, &cons2) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sqrexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
 }

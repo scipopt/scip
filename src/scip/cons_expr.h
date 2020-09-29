@@ -795,7 +795,10 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -807,6 +810,15 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprDerivative(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** returns the difftag stored in an expression
+ *
+ * can be used to check whether partial derivative value is valid
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprDiffTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
@@ -1241,6 +1253,20 @@ SCIP_EXPORT
 SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** notifies conshdlr that a variable expression is to be freed
+ *
+ * the conshdlr will then update its var2expr hashmap
+ *
+ * @note To be called only by var-exprhdlr.
+ * @note Temporary method that will be replaced by ownerdata-free
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*        varexpr         /**< variable expression to be freed */
    );
 
 /** collects all bilinear terms for a given set of constraints
