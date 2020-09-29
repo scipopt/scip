@@ -136,7 +136,7 @@ SCIP_RETCODE readBounds(
       retcode = SCIPparseVarName(scip, buffer, &var, &endptr);
       if( retcode != SCIP_OKAY )
       {
-         SCIPerrorMessage("Error parsing variable name in line %d of bounds file <%s>:\n", lineno, fname);
+         SCIPerrorMessage("Error parsing variable name in line %d of bounds file <%s>\n", lineno, fname);
          error = TRUE;
          break;
       }

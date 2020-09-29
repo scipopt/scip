@@ -3323,6 +3323,7 @@ SCIP_RETCODE SCIPwritePip(
 
          if( ispolynomial )
          {
+            /* coverity[tainted_string_warning] */
             SCIP_CALL( printNonlinearCons(scip, file, consname,
                   SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
                   SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetExprtreesNonlinear(scip, cons),

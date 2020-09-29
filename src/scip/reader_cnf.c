@@ -409,6 +409,7 @@ SCIP_DECL_READERREAD(readerReadCnf)
    {
       SCIPerrorMessage("Error creating problem for filename <%s>\n", filename);
       SCIPfclose(f);
+      return retcode;
    }
 
    /* read cnf file */

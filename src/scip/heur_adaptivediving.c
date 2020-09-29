@@ -644,6 +644,7 @@ TERMINATE:
    if( retcode != SCIP_OKAY )
    {
       SCIPfreeMemory(scip, &heurdata);
+      return retcode;
    }
 
    return SCIP_OKAY;

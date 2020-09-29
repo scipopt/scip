@@ -315,6 +315,7 @@ TERMINATE:
    if( retcode != SCIP_OKAY )
    {
       SCIPfclose(file);
+      return retcode;
    }
 
    if( error )
