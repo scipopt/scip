@@ -273,7 +273,7 @@ SCIP_Bool SCIPmatrixDownlockConflict(
 #define SCIPmatrixGetVar(matrix,col)                   (matrix->vars[col])
 #define SCIPmatrixGetColName(matrix,col)               (SCIPvarGetName(matrix->vars[col]))
 #define SCIPmatrixGetRowValPtr(matrix,row)             (matrix->rowmatval + matrix->rowmatbeg[row])
-#define SCIPmatrixGetRowValPtrExact(matrix,row)        (matrix->matrixvalsexact->rowmatval + matrix->rowmatbeg[row])
+#define SCIPmatrixGetRowValPtrExact(matrix,row)        (matrix->matrixvalsexact->rowmatvalexact + matrix->rowmatbeg[row])
 #define SCIPmatrixGetRowIdxPtr(matrix,row)             (matrix->rowmatind + matrix->rowmatbeg[row])
 #define SCIPmatrixGetRowNNonzs(matrix,row)             (matrix->rowmatcnt[row])
 #define SCIPmatrixGetRowName(matrix,row)               (SCIPconsGetName(matrix->cons[row]))
