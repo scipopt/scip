@@ -259,7 +259,8 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
 
       /* iff cannot be differentiated, then entropyexpr->derivative is SCIP_INVALID */
       cr_expect((SCIPgetConsExprExprDerivative(entropyexpr) == SCIP_INVALID) == (results[i] == SCIP_INVALID));
-      /* if entropyexpr cannot be differentiated, then xexpr->derivative may not be SCIP_INVALID */
+      /* if entropyexpr cannot be differentiated, then the equality may not hold since
+       * xexpr->derivative may not be SCIP_INVALID */
       cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprDerivative(xexpr), results[i]) || (results[i] == SCIP_INVALID));
    }
 
