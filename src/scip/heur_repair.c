@@ -498,7 +498,7 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to SCIP and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
-#ifdef SCIP_STATISTICS
+#ifdef SCIP_STATISTIC
    {
       SCIP_HEURDATA* heurdata;
       heurdata = SCIPheurGetData(heur);
