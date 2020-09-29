@@ -53,7 +53,7 @@ typedef struct Vnoi_List_Node
 typedef struct link_cut_node
 {
    int                   edge;               /**< edge to the node       */
-   struct link_cut_node  *parent;            /**< pointer to parent node */
+   int                   parent;             /**< index of parent node */
 } LCNODE;
 
 
@@ -128,58 +128,64 @@ int GNODECmpByDist(
  */
 
 /** inits a node, setting 'parent' and 'edge' to its default values */
-void SCIPlinkcuttreeInit(
+void SCIPlinkcuttreeInitNode(
    LCNODE*               v                   /**< pointer to node representing the tree */
    );
 
 /** renders w a child of v; v has to be the root of its tree */
 void SCIPlinkcuttreeLink(
-   LCNODE*               v,                  /**< pointer to node representing the tree */
-   LCNODE*               w,                  /**< pointer to the child */
+   LCNODE*               tree,               /**< the tree */
+   int                   v,                  /**< pointer to node representing the tree */
+   int                   w,                  /**< pointer to node of another tree */
    int                   edge                /**< link edge */
    );
 
 /** cut tree at given node */
-void SCIPlinkcuttreeCut(
+void SCIPlinkcuttreeCutNode(
    LCNODE*               v                   /**< node to cut at */
    );
 
 /** finds minimum weight chain between node 'start' and distinct root node (for maximum-weight connected subgraph) **/
 SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    SCIP*                 scip,               /**< SCIP data structure */
+   const LCNODE*         tree,               /**< tree */
    const SCIP_Real*      nodeweight,         /**< node weight array */
-   const int*            head,               /**< head of an arc */
+   const int*            heads,              /**< head of an arc */
    const int*            stdeg,              /**< degree in Steiner tree */
    const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
-   const LCNODE*         start,              /**< the node to start at */
-   const LCNODE**        first,              /**< first node of chain */
-   const LCNODE**        last                /**< last node of chain */
+   int                   start,              /**< the node to start at */
+   int*                  first,              /**< first node of chain */
+   int*                  last                /**< last node of chain */
    );
 
 
 /** finds maximum cost chain between node 'start' and distinct root node **/
 SCIP_Real SCIPlinkcuttreeFindMaxChain(
    SCIP*                 scip,               /**< SCIP data structure */
+   const LCNODE*         tree,               /**< tree */
    const SCIP_Real*      edgecosts,          /**< edge cost array */
    const SCIP_Real*      prizes,             /**< node weight array for PC/RPC */
    const int*            heads,              /**< head of an arc */
    const int*            nonTermDeg,         /**< degree in Steiner tree, or UNKNOWN if vertex is terminal */
    const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
-   const LCNODE*         start,              /**< the node to start at (NOT the root!) */
-   const LCNODE**        first,              /**< first node of chain */
-   const LCNODE**        last                /**< last node of chain */
+   int                   start,              /**< the node to start at (NOT the root!) */
+   int*                  first,              /**< first node of chain */
+   int*                  last                /**< last node of chain */
    );
 
+
 /** finds the max value between node 'v' and the root of the tree **/
-LCNODE* SCIPlinkcuttreeFindMax(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real*      cost,               /**< edge cost array */
-   LCNODE*               v                   /**< the node */
+int SCIPlinkcuttreeFindMax(
+   const LCNODE*         tree,                /**< tree */
+   const SCIP_Real*      cost,                /**< edge cost array */
+   int                   v                    /**< the node */
    );
+
 
 /** makes vertex v the root of the link cut tree */
 void SCIPlinkcuttreeEvert(
-   LCNODE*               v                   /**< the vertex to become the root */
+   LCNODE* RESTRICT      tree,                /**< tree */
+   int                   root_new             /**< the vertex to become the root  */
    );
 
 

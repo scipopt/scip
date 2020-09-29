@@ -301,68 +301,71 @@ void SCIPintListNodeFree(
  */
 
 /** inits a node, setting 'parent' and 'edge' to its default values */
-void SCIPlinkcuttreeInit(
-   LCNODE*               v                   /**< pointer to node representing the tree */
+void SCIPlinkcuttreeInitNode(
+   LCNODE*               v                   /**< pointer to node  */
    )
 {
-   v->parent = NULL;
+   v->parent = -1;
    v->edge = -1;
 }
 
 
-/** renders v a child of w; v has to be the root of its tree */
+/** renders v a child of w; v has to be the root index of its tree */
 void SCIPlinkcuttreeLink(
-   LCNODE*               v,                  /**< pointer to node representing the tree */
-   LCNODE*               w,                  /**< pointer to node of another tree */
+   LCNODE*               tree,               /**< the tree */
+   int                   v,                  /**< pointer to node representing the tree */
+   int                   w,                  /**< pointer to node of another tree */
    int                   edge                /**< link edge */
    )
 {
-   assert(v->parent == NULL);
-   assert(v->edge == -1);
-   v->parent = w;
-   v->edge = edge;
+   assert(tree[v].parent == -1);
+   assert(tree[v].edge == -1);
+   tree[v].parent = w;
+   tree[v].edge = edge;
 }
 
+
 /** cut tree at given node */
-void SCIPlinkcuttreeCut(
+void SCIPlinkcuttreeCutNode(
    LCNODE*               v                   /**< node to cut at */
    )
 {
    v->edge = -1;
-   v->parent = NULL;
+   v->parent = -1;
 }
 
 /** finds minimum weight chain between node 'start' and distinct root node **/
 SCIP_Real SCIPlinkcuttreeFindMinChainMw(
    SCIP*                 scip,               /**< SCIP data structure */
+   const LCNODE*         tree,               /**< tree */
    const SCIP_Real*      nodeweight,         /**< node weight array */
    const int*            heads,              /**< head of an arc */
    const int*            stdeg,              /**< degree in Steiner tree */
    const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
-   const LCNODE*         start,              /**< the node to start at */
-   const LCNODE**        first,              /**< first node of chain */
-   const LCNODE**        last                /**< last node of chain */
+   int                   start,              /**< the node to start at */
+   int*                  first,              /**< first node of chain */
+   int*                  last                /**< last node of chain */
    )
 {
-   const LCNODE* tmpfirst;
+   int tmpfirst = -1;
    SCIP_Real min = 0.0;
    SCIP_Real tmpmin = 0.0;
    SCIP_Bool stopped = TRUE;
 
-   assert(scip && heads && nodeweight && nodeIsBlocked && stdeg && start && first && last);
+   assert(scip && heads && nodeweight && nodeIsBlocked && stdeg && first && last);
 
-   *first = NULL;
-   *last = NULL;
+   *first = -1;
+   *last = -1;
 
    /* while curr is not root */
-   for( const LCNODE* curr = start; curr->parent != NULL; curr = curr->parent )
+   for( int curr = start; tree[curr].parent != -1; curr = tree[curr].parent )
    {
       int head;
-      const SCIP_Bool headIsRoot = (curr->parent->parent == NULL);
+      const SCIP_Bool headIsRoot = (tree[tree[curr].parent].parent == -1);
 
-      assert(curr->edge >= 0);
+      assert(tree[curr].edge >= 0);
 
-      head = heads[curr->edge];
+      head = heads[tree[curr].edge];
 
       if( stdeg[head] == 2 && nodeweight[head] < 0.0 && !headIsRoot && !nodeIsBlocked[head] )
       {
@@ -380,7 +383,7 @@ SCIP_Real SCIPlinkcuttreeFindMinChainMw(
          /* better chain found? */
          if( !stopped && SCIPisLT(scip, tmpmin, min) )
          {
-            assert(tmpfirst != NULL);
+            assert(tmpfirst != -1);
             min = tmpmin;
             *first = tmpfirst;
             *last = curr;
@@ -398,39 +401,40 @@ SCIP_Real SCIPlinkcuttreeFindMinChainMw(
  ** Note: 'last' is the tail of the last edge of the chain. So if 'last' and 'first' coincide, the chain is an edge. */
 SCIP_Real SCIPlinkcuttreeFindMaxChain(
    SCIP*                 scip,               /**< SCIP data structure */
+   const LCNODE*         tree,               /**< tree */
    const SCIP_Real*      edgecosts,          /**< edge cost array */
    const SCIP_Real*      prizes,             /**< node weight array for PC/RPC */
    const int*            heads,              /**< head of an arc */
    const int*            nonTermDeg,         /**< degree in Steiner tree, or UNKNOWN if vertex is terminal */
    const SCIP_Bool*      nodeIsBlocked,      /**< has node been blocked? */
-   const LCNODE*         start,              /**< the node to start at (NOT the root!) */
-   const LCNODE**        first,              /**< first node of chain */
-   const LCNODE**        last                /**< last node of chain */
+   int                   start,              /**< the node to start at (NOT the root!) */
+   int*                  first,              /**< first node of chain */
+   int*                  last                /**< last node of chain */
    )
 {
-   const LCNODE* tmpfirst = NULL;
+   int tmpfirst = -1;
    SCIP_Real max;
    SCIP_Real tmpmax;
    SCIP_Bool reset_chain;
    const SCIP_Bool withPrize = (prizes != NULL);
 
-   assert(edgecosts && heads && nonTermDeg && start && first && last && nodeIsBlocked);
-   assert(start->parent); /* start should not be the root */
-   assert(start->edge >= 0);
+   assert(tree && edgecosts && heads && nonTermDeg && first && last && nodeIsBlocked);
+   assert(tree[start].parent != -1); /* start should not be the root */
+   assert(tree[start].edge >= 0);
 
-   *first = NULL;
-   *last = NULL;
+   *first = -1;
+   *last = -1;
 
    max = -1.0;
    tmpmax = 0.0;
    reset_chain = TRUE;
 
    /* while curr is not root */
-   for( const LCNODE* curr = start; curr->parent != NULL; curr = curr->parent )
+   for( int curr = start; tree[curr].parent != -1; curr = tree[curr].parent )
    {
       int head;
-      const int edge = curr->edge;
-      const SCIP_Bool headIsRoot = (curr->parent->parent == NULL);
+      const int edge = tree[curr].edge;
+      const SCIP_Bool headIsRoot = (tree[tree[curr].parent].parent == -1);
 
       assert(edge >= 0);
 
@@ -463,7 +467,7 @@ SCIP_Real SCIPlinkcuttreeFindMaxChain(
          /* better chain found? */
          if( tmpmax > max )
          {
-            assert(tmpfirst && curr);
+            assert(tmpfirst != -1 && curr != -1);
 
             max = tmpmax;
             *first = tmpfirst;
@@ -475,59 +479,61 @@ SCIP_Real SCIPlinkcuttreeFindMaxChain(
    }
 
    assert(max > -0.5);
-   assert(*last && *first);
+   assert(*last != -1 && *first != -1);
 
    return max;
 }
 
 
-/** finds the max edge value between node 'v' and the root of the tree **/
-LCNODE* SCIPlinkcuttreeFindMax(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const SCIP_Real*      cost,               /**< edge cost array */
-   LCNODE*               v                   /**< the node */
+/** finds the max edge value between node 'v' and the root of the tree
+ *  Returns index of node that has this edge */
+int SCIPlinkcuttreeFindMax(
+   const LCNODE*         tree,                /**< tree */
+   const SCIP_Real*      cost,                /**< edge cost array */
+   int                   v                    /**< the node */
    )
 {
-   LCNODE* p = v;
-   LCNODE* q = v;
-   SCIP_Real max = -1;
+   int p = v;
+   int q = v;
+   SCIP_Real max = -1.0;
 
    /* while p is not the root */
-   while( p->parent != NULL )
+   while( tree[p].parent != -1 )
    {
-      assert(p->edge >= 0);
-      if( SCIPisGE(scip, cost[p->edge], max) )
+      assert(tree[p].edge >= 0);
+      if( GE(cost[tree[p].edge], max) )
       {
-         max = cost[p->edge];
+         max = cost[tree[p].edge];
          q = p;
       }
-      p = p->parent;
+      p = tree[p].parent;
    }
+
    return q;
 }
 
 /** makes vertex v the root of the link cut tree */
 void SCIPlinkcuttreeEvert(
-   LCNODE*               v                   /**< the vertex to become the root */
+   LCNODE* RESTRICT      tree,                /**< tree */
+   int                   root_new             /**< the vertex to become the root  */
    )
 {
-   LCNODE* p = NULL;
-   LCNODE* q = v;
-   int val = -1;
+   int p = -1;
+   int q = root_new;
+   int edge = -1;
 
-   assert(v != NULL);
-
-   while( q != NULL )
+   while( q != -1 )
    {
-      const int tmpval = q->edge;
-      LCNODE* r = q->parent;
+      const int tmpedge = tree[q].edge;
+      const int r = tree[q].parent;
 
-      if( val != -1 )
-         q->edge = flipedge(val);
+      if( edge != -1 )
+         tree[q].edge = flipedge(edge);
       else
-         q->edge = -1;
-      val = tmpval;
-      q->parent = p;
+         tree[q].edge = -1;
+
+      edge = tmpedge;
+      tree[q].parent = p;
       p = q;
       q = r;
    }
