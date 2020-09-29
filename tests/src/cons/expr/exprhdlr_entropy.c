@@ -344,6 +344,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    expr2 = SCIPgetConsExprExprChildren(expr1)[0];
    cr_expect(SCIPgetConsExprExprHdlr(expr2) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr2) == 1);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr2)[0]));
    cr_expect(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(expr2)[0]) == x);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );

@@ -15659,7 +15659,6 @@ SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
  * @note To be called only by var-exprhdlr.
  * @note Temporary method that will be replaced by ownerdata-free
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */

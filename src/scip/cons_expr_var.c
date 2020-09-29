@@ -403,7 +403,7 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    assert(expr != NULL);
    assert(var != NULL);
 
-   /* important to capture variable once since there will be only one variable expression representing this variable */
+   /* capture the variable so that it doesn't disappear while the expr still points to it */
    SCIP_CALL( SCIPcaptureVar(scip, var) );
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprdata) );
