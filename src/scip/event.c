@@ -1029,7 +1029,7 @@ SCIP_RETCODE SCIPeventFree(
    assert(event != NULL);
    assert(blkmem != NULL);
 
-   if( (*event)->data.eventbdchg.newboundexact != NULL && ((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) )
+   if( ((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) && (*event)->data.eventbdchg.newboundexact != NULL )
    {
       RatFreeBlock(blkmem, &(*event)->data.eventbdchg.newboundexact);
       RatFreeBlock(blkmem, &(*event)->data.eventbdchg.oldboundexact);
