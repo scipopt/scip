@@ -1637,11 +1637,25 @@ SCIP_RETCODE updateLpExactBoundChange(
       }
       if( isUb )
       {
-         SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUb(lp, set, var, oldbound, newbound) );
+         }
       }
       else
       {
-         SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLb(lp, set, var, oldbound, newbound) );
+         }
       }
 
       RatFreeBuffer(set->buffer, &oldbound);
