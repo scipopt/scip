@@ -5288,6 +5288,7 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
+         SCIP_CALL( RatReallocBlockArray(blkmem, &(var->exactdata->multaggr.scalars), multvarssize, multrequiredsize) );
          multvarssize = multrequiredsize;
          SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
             &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );

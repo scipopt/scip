@@ -874,7 +874,7 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    assert(lp->solved);
 
    SCIP_CALL( SCIPsolCreateExact(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, lp) );
+   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, set, prob, lp) );
 
    return SCIP_OKAY;
 }
@@ -1204,6 +1204,8 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current exact LP solution into exact CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
@@ -1216,6 +1218,7 @@ SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_CALL( solClearArrays(sol) );
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+   SCIPlpExactGetObjval(lp, set, prob, sol->valsexact->obj);
    RatSet(sol->valsexact->obj, lp->lpobjval);
    sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
@@ -2239,7 +2242,7 @@ SCIP_Rational* SCIPsolGetObjExact(
    assert(SCIPsolIsExact(sol));
 
    /* for original solutions, sol->obj contains the external objective value */
-   if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       /** @todo exip: heuristics extension
        *  - implement this if exact version of SCIP supports getting objective value of original solutions */
