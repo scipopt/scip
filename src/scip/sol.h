@@ -244,6 +244,8 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current exact LP solution into CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 

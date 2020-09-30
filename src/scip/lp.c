@@ -782,7 +782,6 @@ void recomputeSafeLooseObjectiveValue(
    assert(lp != NULL);
    assert(set != NULL);
    assert(prob != NULL);
-   assert(!lp->looseobjvalid);
    assert(set->exact_enabled);
 
    vars = prob->vars;

@@ -6615,8 +6615,10 @@ void SCIPlpExactGetObjval(
 
    if( !lp->flushed || lp->looseobjvalinf > 0 )
       RatSetString(res, "-inf");
-   else
+   else if( RatIsAbsInfinity(lp->lpobjval) )
       RatSet(res, lp->lpobjval);
+   else
+      RatAdd(res, lp->lpobjval, lp->looseobjval);
 }
 
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
