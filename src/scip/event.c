@@ -1029,7 +1029,7 @@ SCIP_RETCODE SCIPeventFree(
    assert(event != NULL);
    assert(blkmem != NULL);
 
-   if( (*event)->data.eventbdchg.newboundexact != NULL && ((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) )
+   if( ((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) && (*event)->data.eventbdchg.newboundexact != NULL )
    {
       RatFreeBlock(blkmem, &(*event)->data.eventbdchg.newboundexact);
       RatFreeBlock(blkmem, &(*event)->data.eventbdchg.oldboundexact);
@@ -1637,11 +1637,25 @@ SCIP_RETCODE updateLpExactBoundChange(
       }
       if( isUb )
       {
-         SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUb(lp, set, var, oldbound, newbound) );
+         }
       }
       else
       {
-         SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLb(lp, set, var, oldbound, newbound) );
+         }
       }
 
       RatFreeBuffer(set->buffer, &oldbound);

@@ -5644,18 +5644,24 @@ SCIP_RETCODE SCIPlpExactUpdateDelVar(
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    )
 {
+   SCIP_Rational* ratzero;
+
    assert(lp != NULL);
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
+   SCIP_CALL( RatCreateBuffer(set->buffer, &ratzero) );
+
    /* subtract the variable from the loose objective value sum */
-   SCIP_CALL( SCIPlpExactUpdateVarObj(lp, set, var, SCIPvarGetObjExact(var), NULL) );
+   SCIP_CALL( SCIPlpExactUpdateVarObj(lp, set, var, SCIPvarGetObjExact(var), ratzero) );
 
    /* update the loose variables counter */
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
    {
       SCIPlpExactDecNLoosevars(lp);
    }
+
+   RatFreeBuffer(set->buffer, &ratzero);
 
    return SCIP_OKAY;
 }
@@ -5705,6 +5711,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
          lpExactUpdateObjval(lp, set, var, tmp, 0, FALSE, TRUE, FALSE);
       }
    }
+
+   SCIPlpDecNLoosevars(lp);
 
    assert(lp->looseobjvalinf >= 0);
 
