@@ -780,7 +780,10 @@ SCIP_RETCODE assignAuxiliaryVariables(
       j = 0;
       targetvar = NULL;
 
-      /* the prefix is required for UG, since we don't know how many copies have been made. */
+      /* the prefix for the variable names is required for UG, since we don't know how many copies have been made. To
+       * find the target variable, we start with an empty prefix. Then t_ is prepended until the target variable is
+       * found
+       */
       prefix[0] = '\0';
       while( targetvar == NULL && j <= subscipdepth )
       {
@@ -4232,7 +4235,7 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       /* if the result is DIDNOTRUN, then the subproblem was not solved */
       (*solved) = (result != SCIP_DIDNOTRUN);
    }
-   else if(subproblem != NULL)
+   else if( subproblem != NULL )
    {
       /* setting up the subproblem */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )

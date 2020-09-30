@@ -364,7 +364,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    varssize = nmastervars;
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%"SCIP_LONGINT_FORMAT, probnumber,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%" SCIP_LONGINT_FORMAT, probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
    if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) )
