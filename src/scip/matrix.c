@@ -637,7 +637,7 @@ SCIP_RETCODE calcActivityBounds(
 
          /* get variable coefficient */
          val = *valpnt;
-         assert(!SCIPisZero(scip, val));
+         assert(!SCIPisZero(scip, val) || SCIPisExactSolve(scip));
 
          assert(matrix->ncols > col);
 

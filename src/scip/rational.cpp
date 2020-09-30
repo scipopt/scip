@@ -851,7 +851,7 @@ void RatAddProdReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != NULL && op1 != NULL);
    assert(!res->isinf);
 
    if( op1->isinf )
@@ -911,7 +911,7 @@ void RatDiffProdReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != NULL && op1 != NULL);
    assert(!res->isinf);
 
    if( op1->isinf )
