@@ -2705,8 +2705,10 @@ char chooseInitialBoundingMethod(
 
    dualboundmethod = 'u';
 
+   if( set->scip->stat->nnodes == 1 )
+      dualboundmethod = 'e';
    /* first, check if we need to solve exactly */
-   if( lpexact->forceexactsolve )
+   else if( lpexact->forceexactsolve )
       dualboundmethod = 'e';
    /* if the LP was solved to optimality and there are no fractional variables we solve exactly to generate a feasible
     * solution
