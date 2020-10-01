@@ -109,7 +109,9 @@ SCIP_Bool SCIPsolveIsStopped(
    /* in case lowerbound >= upperbound, we do not want to terminate with SCIP_STATUS_GAPLIMIT but with the ordinary
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
     */
-   if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) )
+   if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)) && !set->exact_enabled )
+      return TRUE;
+   if( set->stage >= SCIP_STAGE_SOLVING && SCIPgetUpperbound(set->scip) <= SCIPgetLowerbound(set->scip) && set->exact_enabled )
       return TRUE;
 
    /* if some limit has been changed since the last call, we reset the status */
