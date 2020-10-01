@@ -4,27 +4,26 @@
 
 ### Code review
 
-* [ ] Is the code change correct?
-* [ ] Is the code sufficiently documented? Is the coding style OK (http://scip.zib.de/doc/html/CODE.php)?
-* [ ] Is the naming and place of new methods and parameters clear and consistent?
-* [ ] Do emphasis settings need to be adjusted?
+* [ ] The code change is correct.
+* [ ] The naming and place of new methods is clear and consistent **or** no new methods have been added.
+* [ ] Emphasis settings are up to date.
+* [ ] The code is sufficiently documented.
+* [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
 
 ### Documentation and building
 
-* [ ] Are CHANGELOG entries added?
-* [ ] Is necessary user documentation added (doc/xternal.c, doc/inc/faq/, installation instructions, ...)?
-* [ ] Are new files added to makedist.sh and both build systems?  Updated dependencies via makedepend.sh?
+* [ ] The CHANGELOG is up to date (including API changes if present in this MR).
+* [ ] The user documentation is up to date (doc/xternal.c, doc/inc/faq/, installation instructions, ...).
+* [ ] makedist.sh and the Makefile dependencies are up to date.
 
 ### Testing
 
-* [ ] Has ctest been checked: `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress}`?
-* [ ] Has performance impact been checked on mi(nl)pdev-solvable (if affecting default)?
-* [ ] Are coverage settings added to test new code?
-* [ ] Have unit tests been added (if necessary)?
+* [ ] ctest passes without errors (type some of `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress}`).
+* [ ] The performance impact has been checked (type some of `jenkins performance {mip,minlp,minlplib,mip quick,minlp quick,mip continue,minlp continue}`) **or** the changed code will not be executed by default.
+* [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
 
-### Does this merge introduce an API change? :warning:
+### Does this merge request introduce an API change? :warning:
 
-* [ ] Look for a satisfactory solution that ensures backwards compatibility.
-* [ ] Document interface changes in the CHANGELOG.
-* [ ] Increase SCIP_APIVERSION after the merge (use `scripts/updateversion.py -a`!).
-* [ ] Tag this MR with the label 'default parameter' and inform one of the developers responsible for SAP (default: Jakob) if a parameter was added/deleted/changed.
+* [ ] As far as possible, the code ensures backwards compatibility.
+* [ ] After merging, the `SCIP_APIVERSION` is updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
+* [ ] No parameter was added/deleted/changed **or** the MR is tagged with the label 'default parameter'. (This includes the addition of parameters by adding/deleting a plugin.)

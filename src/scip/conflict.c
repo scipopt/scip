@@ -3095,9 +3095,9 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualproofsinfsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsinfsuccess);
    else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualproofsbndsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
 

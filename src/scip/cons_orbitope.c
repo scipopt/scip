@@ -3506,7 +3506,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
       {
          if ( j > 0 )
             SCIPinfoMessage(scip, file, ",");
-         SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(vars[i][j]));
+         SCIP_CALL( SCIPwriteVarName(scip, file, vars[i][j], TRUE) );
       }
       if ( i < nspcons-1 )
          SCIPinfoMessage(scip, file, ".");
@@ -3604,8 +3604,8 @@ static
 SCIP_DECL_CONSPARSE(consParseOrbitope)
 {  /*lint --e{715}*/
    const char* s;
+   char* endptr;
    SCIP_ORBITOPETYPE orbitopetype;
-   char varname[SCIP_MAXSTRLEN];
    SCIP_VAR*** vars;
    SCIP_VAR* var;
    int nspcons;
@@ -3652,21 +3652,20 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    j = 0;
    do
    {
-      /* find variable name */
-      k = 0;
-      while ( *s != '\0' && ! isspace((unsigned char)*s) && *s != ',' && *s != '.' && *s != ')' )
-         varname[k++] = *s++;
-      varname[k] = '\0';
+      /* skip whitespace */
+      while ( isspace((int)*s) )
+         ++s;
 
-      /* get variable */
-      var = SCIPfindVar(scip, varname);
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
       if ( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>\n", varname);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
          *success = FALSE;
          return SCIP_OKAY;
       }
       vars[nspcons][j++] = var;
+      s = endptr;
 
       if ( j > nblocks )
       {
