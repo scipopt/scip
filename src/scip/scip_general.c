@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,6 +35,7 @@
 
 #include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
+#include "lpiexact/lpiexact.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/clock.h"
 #include "scip/debug.h"
@@ -258,6 +259,10 @@ SCIP_RETCODE doScipCreate(
    if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
+   }
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") != 0 )
+   {
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiExactGetSolverName(), SCIPlpiExactGetSolverDesc()) );
    }
 
 #ifdef SCIP_WITH_ZLIB

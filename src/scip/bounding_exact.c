@@ -90,87 +90,10 @@ SCIP_Bool fpLPisIntFeasible(
    return feasible;
 }
 
-/** evaluates the result of the exact LP */
-static
-SCIP_RETCODE evaluateLPExact(
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_LPEXACT*         lpexact,            /**< Exact LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
-   )
-{
-   /** @todo exip:
-    *  - in a similar function for LP in lp.c the case SCIPlpiIsPrimalUnbounded() is not explicitely handled. why? if case
-    *    should be added, include it here as well.
-    */
-   /* evaluate solution status */
-   if( SCIPlpiExactIsOptimal(lpexact->lpiexact) )
-   {
-      SCIPdebugMessage("   exact LP solved to optimality\n");
-
-#ifndef NDEBUG
-      {
-         SCIP_Bool primalfeasible;
-         SCIP_Bool dualfeasible;
-
-         SCIP_CALL( SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &primalfeasible, &dualfeasible) );
-         assert(primalfeasible);
-         assert(dualfeasible);
-      }
-#endif
-      /* check whether exact LP solution is feasible for the MIP; if it is feasible the solution is stored
-       * and the current node is cut off otherwise a branching is created
-       */
-      assert(*result == SCIP_CUTOFF || *result == SCIP_BRANCHED || *result == SCIP_SOLVELP );
-   }
-   else if( SCIPlpiExactIsObjlimExc(lpexact->lpiexact) )
-   {
-      /* CERT: for now we don't trust the exact LP solver on this, so we do not need to print anything here */
-      SCIPdebugMessage("   exact LP exceeds upper objective limit\n");
-      *result = SCIP_CUTOFF;
-   }
-   else if( SCIPlpiExactIsPrimalInfeasible(lpexact->lpiexact) )
-   {
-      SCIPdebugMessage("   exact LP is primal infeasible\n");
-      *result = SCIP_CUTOFF;
-   }
-   else if( SCIPlpiExactExistsPrimalRay(lpexact->lpiexact) )
-   {
-      /* CERT: for now we don't need to handle the unbounded case */
-      SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-   else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
-   {
-      SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-   else if( SCIPlpiExactIsTimelimExc(lpexact->lpiexact) )
-   {
-      /* CERT: for now we should not activate the buggy time limit support of QSopt_ex */
-      SCIPdebugMessage("   exact LP exceeds time limit\n");
-      *result = SCIP_INFEASIBLE;
-   }
-   else
-   {
-      SCIPerrorMessage(" error or unknown return status in current exact LP (internal status: %d)\n",
-         SCIPlpiExactGetInternalStatus(lpexact->lpiexact));
-      return SCIP_LPERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** helper method, compute number of nonzeros in lp */
 static
 int getNNonz(
-   SCIP_LPEXACT* lpexact
+   SCIP_LPEXACT*         lpexact             /**< the exact lp */
    )
 {
    int ret = 0;
@@ -186,7 +109,7 @@ int getNNonz(
 
 /** allocate memory for ps interior point/ray computation */
 static
-SCIP_RETCODE allocIntMem(
+SCIP_RETCODE allocMemForInteriorPointRay(
    SCIP_SET*             set,                /**< scip settings */
    SCIP_Rational***      psobj,              /**< obj function */
    SCIP_Rational***      pslb,               /**< lower bounds */
@@ -233,9 +156,9 @@ SCIP_RETCODE allocIntMem(
 }
 
 #ifdef SCIP_WITH_GMP
-/** subroutine of constructProjectShiftData(); chooses which columns of the matrix are designated as set S, used for projections */
+/** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used for projections */
 static
-SCIP_RETCODE projectShiftChooseS(
+SCIP_RETCODE projectShiftChooseDualSubmatrix(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -272,6 +195,7 @@ SCIP_RETCODE projectShiftChooseS(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->includedrows, nextendedrows) );
    for( i = 0; i < nextendedrows; i++ )
       projshiftdata->includedrows[i] = 0;
+   /* no selection -> include all possible dual columns */
    if( set->exact_psdualcolselection == PS_DUALCOSTSEL_NO || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* determine which dual variables to included in the problem
@@ -361,7 +285,7 @@ SCIP_RETCODE projectShiftChooseS(
 
 /** subroutine of constructProjectShiftData(); computes the LU factorization used by the project-and-shift method */
 static
-SCIP_RETCODE projectShiftFactorizeD(
+SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< scip settings */
@@ -1448,7 +1372,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim;
 
-      SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
+      SCIP_CALL( allocMemForInteriorPointRay(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
       /* the representation of the problem will be:
@@ -1580,7 +1504,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       psnnonz += nobjnz + 1 + 3 * ndvarmap;
 
       /* allocate memory for aux problem */
-      SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
+      SCIP_CALL( allocMemForInteriorPointRay(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
       SCIP_CALL( setupProjectShiftArb(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
@@ -1686,7 +1610,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim + ncols;
 
-      SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
+      SCIP_CALL( allocMemForInteriorPointRay(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
       SCIP_CALL( setupProjectShiftArbDual(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
@@ -1804,7 +1728,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
       psnnonz += 2*projshiftdata->projshiftbasisdim;
 
-      SCIP_CALL( allocIntMem(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
+      SCIP_CALL( allocMemForInteriorPointRay(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
          &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
 
       SCIP_CALL( setupProjectShiftTwoStage(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
@@ -2054,20 +1978,18 @@ SCIP_RETCODE constructProjectShiftData(
    projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
 
    /* call function to select the set S */
-   SCIP_CALL( projectShiftChooseS(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
+   SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
 
    /* compute LU factorization of D == A|_S */
-   SCIP_CALL( projectShiftFactorizeD(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
+   SCIP_CALL( projectShiftFactorizeDualSubmatrix(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
 
    /* if no fail in LU factorization, compute S-interior point and/or ray */
    if( !projshiftdata->projshiftdatafail )
    {
-      if( TRUE || !projshiftdata->projshiftuseintpoint )
-      {
-         /* try to compute the S-interior ray if we want to use it for bounding or infeasibility */
-         SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-         SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
-      }
+      /* always try to compute the S-interior ray (for infeasibility proofs) */
+      SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
+      SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
+
       if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
       {
          /* now, compute S-interior point if we need it OR if the ray construction failed */
@@ -2101,7 +2023,7 @@ SCIP_RETCODE projectShift(
    SCIP_STAT*            stat,               /**< statistics pointer */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             usefarkas,          /**< do we aim to prove infeasibility? */
@@ -2109,7 +2031,7 @@ SCIP_RETCODE projectShift(
    )
 {
    SCIP_COL** cols;
-   SCIP_Rational** approxdual;
+   SCIP_Rational** dualsol;
    SCIP_Rational** violation;
    SCIP_Rational** correction;
    SCIP_Bool useinteriorpoint;
@@ -2122,6 +2044,7 @@ SCIP_RETCODE projectShift(
    SCIP_PROJSHIFTDATA* projshiftdata;
    mpq_t* violationgmp = NULL;
    mpq_t* correctiongmp = NULL;
+   SCIP_Real computedbound;
    SCIP_Bool* isupper;
    int i;
    int j;
@@ -2162,6 +2085,7 @@ SCIP_RETCODE projectShift(
       return SCIP_OKAY;
    }
 
+   /* start the timer */
    if( usefarkas )
    {
       stat->nprojshift++;
@@ -2175,16 +2099,11 @@ SCIP_RETCODE projectShift(
 
    startt = clock();
 
-   lp->hasprovedbound = TRUE;
-
    SCIPdebugMessage("calling projectShift()\n");
 
    /* decide if we should use ray or point to compute bound */
    if( !usefarkas && projshiftdata->projshiftuseintpoint && projshiftdata->projshifthaspoint )
-   {
-      /* if we are supposed to use the interior point, and it exists use it */
       useinteriorpoint = TRUE;
-   }
    else
    {
       /* in this case, since projshiftdatafail != TRUE, projshifthasray should be true -- use it */
@@ -2213,19 +2132,18 @@ SCIP_RETCODE projectShift(
    assert(ncols == projshiftdata->violationsize);
 
    /* allocate memory for approximate dual solution, dual cost vector, violation and correction */
-   SCIPsetAllocBufferArray(set, &approxdual, nrows + ncols);
+   SCIPsetAllocBufferArray(set, &dualsol, nrows + ncols);
    violation = projshiftdata->violation;
    correction = projshiftdata->correction;
 
-   /** @todo: exip this could be removed */
    for( i = 0; i < nrows + ncols; ++i )
    {
       if( i < nrows )
-         approxdual[i] = usefarkas ? lpexact->rows[i]->dualfarkas : lpexact->rows[i]->dualsol;
+         dualsol[i] = usefarkas ? lpexact->rows[i]->dualfarkas : lpexact->rows[i]->dualsol;
       else
-         approxdual[i] = usefarkas ? lpexact->cols[i - nrows]->redcost : lpexact->cols[i - nrows]->farkascoef;
+         dualsol[i] = usefarkas ? lpexact->cols[i - nrows]->redcost : lpexact->cols[i - nrows]->farkascoef;
 
-      RatSetInt(approxdual[i], 0, 1);
+      RatSetInt(dualsol[i], 0, 1);
       if( i < ncols )
          RatSetInt(violation[i], 0, 1);
    }
@@ -2245,11 +2163,12 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < nrows; i++ )
    {
       if( !usefarkas )
-         RatSetReal(approxdual[i], SCIProwGetDualsol(lp->rows[i]));
+         RatSetReal(dualsol[i], SCIProwGetDualsol(lp->rows[i]));
       else
-         RatSetReal(approxdual[i], SCIProwGetDualfarkas(lp->rows[i]));
+         RatSetReal(dualsol[i], SCIProwGetDualfarkas(lp->rows[i]));
 
-      if( RatIsAbsInfinity(approxdual[i]) )
+      /* terminate in case of infinity solution */
+      if( RatIsAbsInfinity(dualsol[i]) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
@@ -2261,7 +2180,8 @@ SCIP_RETCODE projectShift(
          goto TERMINATE;
       }
 
-      if( RatIsPositive(approxdual[i]) )
+      /* positive dual coef -> lhs, negative -> rhs */
+      if( RatIsPositive(dualsol[i]) )
          isupper[i] = FALSE;
       else
          isupper[i] = TRUE;
@@ -2271,11 +2191,12 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < ncols; i++ )
    {
       if( !usefarkas )
-         RatSetReal(approxdual[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
+         RatSetReal(dualsol[i+nrows], SCIPcolGetRedcost(cols[i], stat, lp));
       else
-         RatSetReal(approxdual[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
+         RatSetReal(dualsol[i+nrows], -SCIPcolGetFarkasCoef(cols[i], stat, lp));
 
-      if( RatIsAbsInfinity(approxdual[i + nrows]) )
+      /* terminate in case of infinite redcost */
+      if( RatIsAbsInfinity(dualsol[i + nrows]) )
       {
          SCIPdebugMessage("  no valid unbounded approx dual sol given\n");
          lp->hasprovedbound = FALSE;
@@ -2287,13 +2208,14 @@ SCIP_RETCODE projectShift(
          goto TERMINATE;
       }
 
-      if( RatIsPositive(approxdual[i+nrows]) )
+      /* positive redcost -> lb, negative -> ub */
+      if( RatIsPositive(dualsol[i+nrows]) )
          isupper[i+nrows] = FALSE;
       else
          isupper[i+nrows] = TRUE;
    }
 
-   /* first, fix artificial dual variables to zero */
+   /* first, fix artificial dual variables (with infinity bound) to zero */
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_Rational* val;
@@ -2304,7 +2226,7 @@ SCIP_RETCODE projectShift(
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       if( RatIsAbsInfinity(val) )
-         RatSetInt(approxdual[i], 0, 1);
+         RatSetInt(dualsol[i], 0, 1);
    }
 
 #ifdef PS_OUT
@@ -2321,15 +2243,15 @@ SCIP_RETCODE projectShift(
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
       printf("   i=%d: ", i);
-      RatPrint(approxdual[i]);
+      RatPrint(dualsol[i]);
       printf(" * ");
       RatPrint(val)
       printf("\n");
       if( RatIsAbsInfinity(val) )
-         assert(RatIsZero(approxdual[i]));
+         assert(RatIsZero(dualsol[i]));
       else
       {
-         RatMult(tmp, approxdual[i], val);
+         RatMult(tmp, dualsol[i], val);
          RatAdd(dualbound, dualbound, tmp);
       }
    }
@@ -2346,12 +2268,12 @@ SCIP_RETCODE projectShift(
       if( !usefarkas )
       {
          /* set to obj - bound-redcost */
-         RatDiff(violation[i], lpexact->cols[i]->obj, approxdual[i + nrows]);
+         RatDiff(violation[i], lpexact->cols[i]->obj, dualsol[i + nrows]);
       }
       else
       {
          /* set to 0 - bound-redcost */
-         RatNegate(violation[i], approxdual[i+nrows]);
+         RatNegate(violation[i], dualsol[i+nrows]);
       }
    }
 
@@ -2361,13 +2283,12 @@ SCIP_RETCODE projectShift(
       for( j = 0; j < lpexact->rows[i]->len; j++)
       {
          currentrow = lpexact->rows[i]->cols_index[j];
-         RatMult(tmp, approxdual[i], lpexact->rows[i]->vals[j]);
+         RatMult(tmp, dualsol[i], lpexact->rows[i]->vals[j]);
          RatDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
 
    /* project solution */
-
 #ifdef PS_OUT
    printf("violation of solution:\n");
    for( i = 0; i < ncols; i++ )
@@ -2391,7 +2312,7 @@ SCIP_RETCODE projectShift(
    /* isfeas is equal to one only if approximate dual solution is already feasible for the dual */
    if( !isfeas )
    {
-      /* compute [z] with Dz=r (D depends on projshiftdata->psfpdualcolwiseselection) */
+      /* compute projection [z] with Dz=r (D is pre-determined submatrix of extended dual matrix [A', -A', I, -I]) */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &violationgmp, ncols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &correctiongmp, nextendedrows) );
       RatSetGMPArray(violationgmp, violation, ncols);
@@ -2402,6 +2323,8 @@ SCIP_RETCODE projectShift(
       }
 
       rval = RECTLUsolveSystem(projshiftdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
+
+      /* rval = 0 -> fail */
       if( rval )
       {
          lp->hasprovedbound = FALSE;
@@ -2412,6 +2335,7 @@ SCIP_RETCODE projectShift(
 
          goto TERMINATE;
       }
+
       RatSetArrayGMP(correction, correctiongmp, nextendedrows);
 
 #ifdef PS_OUT
@@ -2427,42 +2351,46 @@ SCIP_RETCODE projectShift(
       rectlut = clock();
 
       /* projection step: compute bold(y)=y^+[z 0];
-       * save the corrected components in the correction vector
+       * save the corrected components in the correction vector; reset the dualsol-vector to 0
        */
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
-         // map is the point in the extended space -> transform it back to the original space
+         /* map is the point in the extended space (A', -A', I, -I)-dual-matrix -> transform it back to the original space */
          int map = projshiftdata->projshiftbasis[i];
+         /* [0, ..., nrows] is a lhs-row of A */
          if( map < nrowsps )
          {
             if( !isupper[map] )
             {
-               RatAdd(correction[i], correction[i], approxdual[map]);
-               RatSetInt(approxdual[map], 0, 1);
+               RatAdd(correction[i], correction[i], dualsol[map]);
+               RatSetInt(dualsol[map], 0, 1);
             }
          }
+         /* [nrows, ..., 2*nrows] is a rhs-row of A */
          else if( map < 2 * nrowsps )
          {
             if( isupper[map - nrowsps] )
             {
-               RatDiff(correction[i], correction[i], approxdual[map - nrowsps]);
-               RatSetInt(approxdual[map - nrowsps], 0, 1);
+               RatDiff(correction[i], correction[i], dualsol[map - nrowsps]);
+               RatSetInt(dualsol[map - nrowsps], 0, 1);
             }
          }
+         /* [2*nrows, ..., 2*nrows+ncols] is a lb-col */
          else if( map < 2 * nrowsps + ncols )
          {
             if( !isupper[map - nrowsps + shift] )
             {
-               RatAdd(correction[i], correction[i], approxdual[map - nrowsps + shift]);
-               RatSetInt(approxdual[map - nrowsps + shift], 0, 1);
+               RatAdd(correction[i], correction[i], dualsol[map - nrowsps + shift]);
+               RatSetInt(dualsol[map - nrowsps + shift], 0, 1);
             }
          }
+         /* [2*nrows+ncols, ..., 2*nrows+2*ncols] is a ub-col */
          else
          {
             if( isupper[map - nrowsps - ncols  + shift] )
             {
-               RatDiff(correction[i], correction[i], approxdual[map - nrowsps - ncols + shift]);
-               RatSetInt(approxdual[map - nrowsps - ncols + shift], 0, 1);
+               RatDiff(correction[i], correction[i], dualsol[map - nrowsps - ncols + shift]);
+               RatSetInt(dualsol[map - nrowsps - ncols + shift], 0, 1);
             }
          }
       }
@@ -2483,7 +2411,7 @@ SCIP_RETCODE projectShift(
          assert(!usefarkas);
          /* shifting step (scale solution with interior point to be dual feasible):
          * y' = lambda1 bold(y) + lambda2 y*, where
-         *   lambda1 = ( slack of int point)/ (slack of int point + max violation) = d/m+d
+         *   lambda1 = MIN{( slack of int point)/ (slack of int point + max violation) = d/m+d}
          *   lambda2 = 1 - lambda1
          */
 
@@ -2509,7 +2437,6 @@ SCIP_RETCODE projectShift(
          /* in this case we are using an interior ray that can be added freely to the solution */
          /* compute lambda values: compute lambda1 componentwise (set lambda1 = 1 and lower it if necessary) */
          RatSetInt(lambda1, 1, 1);
-         //RatSetInt(lambda2, 0, 1);
          for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
          {
             int map = projshiftdata->projshiftbasis[i];
@@ -2531,7 +2458,7 @@ SCIP_RETCODE projectShift(
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         RatPrint(approxdual[i]);
+         RatPrint(dualsol[i]);
          printf("\n");
       }
 
@@ -2540,18 +2467,18 @@ SCIP_RETCODE projectShift(
       printf(")\n");
 #endif
 
-      /* tranfsorm correction back to approxdual */
+      /* tranfsorm correction back to dualsol */
       for( i = 0; i < projshiftdata->projshiftbasisdim; i++ )
       {
          int map = projshiftdata->projshiftbasis[i];
          if( map < nrowsps )
-            RatAdd(approxdual[map], approxdual[map], correction[i]);
+            RatAdd(dualsol[map], dualsol[map], correction[i]);
          else if( map < 2 * nrowsps )
-            RatDiff(approxdual[map - nrowsps], approxdual[map - nrowsps], correction[i]);
+            RatDiff(dualsol[map - nrowsps], dualsol[map - nrowsps], correction[i]);
          else if ( map < 2 * nrowsps + ncols )
-            RatAdd(approxdual[map - nrowsps + shift], approxdual[map - nrowsps + shift], correction[i]);
+            RatAdd(dualsol[map - nrowsps + shift], dualsol[map - nrowsps + shift], correction[i]);
          else
-            RatDiff(approxdual[map - nrowsps - ncols + shift], approxdual[map - nrowsps - ncols + shift], correction[i]);
+            RatDiff(dualsol[map - nrowsps - ncols + shift], dualsol[map - nrowsps - ncols + shift], correction[i]);
       }
 
 #ifdef PS_OUT
@@ -2563,7 +2490,7 @@ SCIP_RETCODE projectShift(
          SCIP_Rational* val;
 
          printf("   i=%d: ", i);
-         RatPrint(approxdual[i]);
+         RatPrint(dualsol[i]);
          printf("\n");
       }
 
@@ -2579,7 +2506,7 @@ SCIP_RETCODE projectShift(
          {
             if( i < nrows && i >= nrowsps )
                continue;
-            RatMult(approxdual[i], approxdual[i], lambda1);
+            RatMult(dualsol[i], dualsol[i], lambda1);
          }
          for( i = 0; i < nrows + ncols; i++ )
          {
@@ -2591,10 +2518,10 @@ SCIP_RETCODE projectShift(
                continue;
             map = (i < nrowsps) ? i + nrowsps : i + nrowsps + ncols - shift;
             RatMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
-            RatDiff(approxdual[i], approxdual[i], tmp);
+            RatDiff(dualsol[i], dualsol[i], tmp);
             map = (i < nrowsps) ? i : i + nrowsps - shift;
             RatMult(tmp, useinteriorpoint ? projshiftdata->interiorpoint[map] : projshiftdata->interiorray[map], lambda2);
-            RatAdd(approxdual[i], approxdual[i], tmp);
+            RatAdd(dualsol[i], dualsol[i], tmp);
          }
       }
       shiftt = clock();
@@ -2604,7 +2531,7 @@ SCIP_RETCODE projectShift(
       for( i = 0; i < nrows+ncols; i++ )
       {
          printf("   i=%d: ", i);
-         RatPrint(approxdual[i]);
+         RatPrint(dualsol[i]);
          printf("\n");
       }
 #endif
@@ -2613,7 +2540,7 @@ SCIP_RETCODE projectShift(
 #ifndef NDEBUG
    SCIPdebugMessage("debug test: verifying feasibility of dual solution:\n");
 
-   /* calculate violation of equality constraints: subtract Ax to get violation b-Ax, subtract A(approxdual) */
+   /* calculate violation of equality constraints: subtract Ax to get violation b-Ax, subtract A(dualsol) */
    rval = 0;
    for( i = 0; i < ncols; i++ )
    {
@@ -2627,13 +2554,13 @@ SCIP_RETCODE projectShift(
       for( j = 0; j < lpexact->rows[i]->len; j++ )
       {
          currentrow = lpexact->rows[i]->cols_index[j];
-         RatMult(tmp, approxdual[i], lpexact->rows[i]->vals[j]);
+         RatMult(tmp, dualsol[i], lpexact->rows[i]->vals[j]);
          RatDiff(violation[currentrow], violation[currentrow], tmp);
       }
    }
    for( i = 0; i < ncols; i++ )
    {
-         RatDiff(violation[i], violation[i], approxdual[i + nrows]);
+         RatDiff(violation[i], violation[i], dualsol[i + nrows]);
    }
 
    for( i = 0; i < ncols && rval == 0; i++ )
@@ -2653,21 +2580,32 @@ SCIP_RETCODE projectShift(
    for( i = 0; i < nrows + ncols; i++ )
    {
       SCIP_Rational* val;
-      if( RatIsPositive(approxdual[i]) )
+      if( RatIsPositive(dualsol[i]) )
          val = i < nrows ? lpexact->rows[i]->lhs : lpexact->cols[i - nrows]->lb;
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
-      RatMult(tmp, approxdual[i], val);
+      RatMult(tmp, dualsol[i], val);
       RatAdd(dualbound, dualbound, tmp);
    }
 
+   computedbound = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+
    if( !usefarkas )
    {
-      if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
+         stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
+         *safebound = computedbound;
+         stat->nfailboundshift++;
+         assert(!lp->hasprovedbound);
+      }
+      else if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
+      {
+         stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
          RatSet(lpexact->lpobjval, dualbound);
-         lp->lpobjval = RatRoundReal(dualbound, SCIP_ROUND_DOWNWARDS);
+         *safebound = computedbound;
+         lp->lpobjval = *safebound;
          lp->hasprovedbound = TRUE;
       }
       else
@@ -2724,7 +2662,7 @@ SCIP_RETCODE projectShift(
    }
 
    SCIPsetFreeBufferArray(set, &isupper);
-   SCIPsetFreeBufferArray(set, &approxdual);
+   SCIPsetFreeBufferArray(set, &dualsol);
 
    RatFreeBuffer(set->buffer, &dualbound);
    RatFreeBuffer(set->buffer, &maxv);
@@ -2774,12 +2712,6 @@ char chooseInitialBoundingMethod(
     * solution
     */
    else if( (SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OPTIMAL && fpLPisIntFeasible(lpexact->fplp, set)) )
-      dualboundmethod = 'e';
-   /** @todo exip: rework this, offset cutoffbound and improve handling in other db-methods */
-   /* if the LP reached the objective limit we also force an exact LP solve; the reason is that other bounding methods
-    * are likely to violate the cutoffbound since they don't provide bounds that are as tight as exactlp
-    */
-   else if( SCIPlpGetSolstat(lpexact->fplp) == SCIP_LPSOLSTAT_OBJLIMIT )
       dualboundmethod = 'e';
    /* if we are not in automatic mode, try an iteration with the static method */
    else if( set->exact_safedbmethod != 'a' )
@@ -2901,8 +2833,8 @@ SCIP_RETCODE boundShift(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Bool             usefarkas,
-   SCIP_Real*            safebound
+   SCIP_Bool             usefarkas,          /**< should an infeasibility proof be computed? */
+   SCIP_Real*            safebound           /**< pointer to store the computed safe bound (usually lpobj) */
    )
 {
    SCIP_ROUNDMODE roundmode;
@@ -2919,6 +2851,7 @@ SCIP_RETCODE boundShift(
    SCIP_Real* fpdual;
    SCIP_Real* fpdualcolwise;
    SCIP_Real c;
+   SCIP_Real computedbound;
    int i;
    int j;
 
@@ -2956,6 +2889,7 @@ SCIP_RETCODE boundShift(
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
+   computedbound = 0;
 
    /* calculate y^Tb */
    SCIPintervalSet(&productsidedualval, 0.0);
@@ -3161,29 +3095,42 @@ SCIP_RETCODE boundShift(
    /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */
    SCIPintervalAdd(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, productsidedualval);
 
-   *safebound = SCIPintervalGetInf(safeboundinterval);
-   SCIPdebugMessage("safebound computed: %e, previous fp-bound: %e.17, difference %e.17 \n", *safebound, lp->lpobjval, *safebound - lp->lpobjval);
+   computedbound = SCIPintervalGetInf(safeboundinterval);
+   SCIPdebugMessage("safebound computed: %e, previous fp-bound: %e.17, difference %e.17 \n", computedbound, lp->lpobjval, computedbound - lp->lpobjval);
 
    /* stop timing and update number of calls and fails, and proved bound status */
    if ( usefarkas )
    {
       SCIPclockStop(stat->provedinfeasbstime, set);
       stat->nboundshiftinf++;
-      if( *safebound <= 0.0 )
+      *safebound = computedbound;
+      if( computedbound <= 0.0 )
       {
          stat->nfailboundshiftinf++;
          assert(!lp->hasprovedbound);
       }
       else
+      {
+         lp->lpobjval = SCIPsetInfinity(set);
          lp->hasprovedbound = TRUE;
+      }
    }
    else
    {
       SCIPclockStop(stat->provedfeasbstime, set);
       stat->nboundshift++;
-      if( !SCIPsetIsInfinity(set, -1.0 * (*safebound)) )
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
-         lp->lpobjval = *safebound;
+         stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
+         *safebound = computedbound;
+         stat->nfailboundshift++;
+         assert(!lp->hasprovedbound);
+      }
+      else if( !SCIPsetIsInfinity(set, -1.0 * (computedbound)) )
+      {
+         stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
+         *safebound = computedbound;
+         lp->lpobjval = computedbound;
          lp->hasprovedbound = TRUE;
       }
       else

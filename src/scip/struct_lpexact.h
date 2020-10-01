@@ -219,8 +219,8 @@ struct SCIP_ProjShiftData
    SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
    SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */
    SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
-   int*                  includedrows;       /**< 1 if constraints dual variable is included in original S-interior point/ray */
-   int*                  projshiftbasis;     /**< mapping for basis used in factorization */
+   int*                  includedrows;       /**< 1 if constraints (or vars) dual variable is included in original S-interior point/ray */
+   int*                  projshiftbasis;     /**< mapping for basis used in factorization (maps [1,...,|includedrows|] -> 2*nrows+2*ncols) */
 #ifdef SCIP_WITH_GMP
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
 #endif
@@ -255,6 +255,7 @@ struct SCIP_LpExact
    SCIP_ROWEXACT**       divechgrows;        /**< stores the rows changed in the current diving */
    SCIP_Real             cutoffbound;        /**< upper objective limit of LP (copy of primal->cutoffbound) */
    SCIP_Real             lpiobjlim;          /**< current objective limit in LPI */
+   SCIP_Real             oldcutoffbound;     /**< place to store cutoffbound if it gets relaxed/removed for safe bounding */
    SCIP_LPIEXACT*        lpiexact;           /**< exact LP solver interface */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before exact diving starts */
    SCIP_COLEXACT**       lpicols;            /**< array with columns currently stored in the LP solver */

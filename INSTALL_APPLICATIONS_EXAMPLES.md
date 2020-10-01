@@ -88,7 +88,7 @@ If SCIP has been compiled into a build-directory as opposed to an installation d
 `SCIP_DIR` or `CMAKE_PREFIX_PATH` to this build directory.
 Finally, this specification should be used to give a local installation precedence over a systemwide installation of SCIP.
 
-Please refer to the [online documentation of SCIP](http://scip.zib.de/doc/html/CMAKE.php)
+Please refer to the [online documentation of SCIP](http://scipopt.org/doc/html/CMAKE.php)
 for a list of available configuration options and available tests.
 
 
@@ -173,4 +173,4 @@ Here is what you have to do to compile and run the application or example projec
 
 On some machines, you should use gmake instead of make.
 For more information and a list of available flags please refer to
-the [online documentation of SCIP](http://scip.zib.de/doc/html/MAKE.php)
+the [online documentation of SCIP](http://scipopt.org/doc/html/MAKE.php)

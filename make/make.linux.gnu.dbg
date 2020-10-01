@@ -7,8 +7,8 @@ CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 # enable sanitizers if GCC >= 5.0
 # the default is to only enable the UndefinedBehaviorSanitizer (SANITIZE=true)
 # if user specifies SANITIZE=full, then also other sanitizers are enabled
-GCCVERSION := $(shell $(CC) -dumpversion | cut -f1-2 -d.)
-SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 5.0 \) + 1), false, true)
+GCCVERSION := $(shell $(CC) -dumpversion | cut -f1 -d.)
+SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 5 \) + 1), false, true)
 
 ifeq ($(SANITIZE),full)
 
@@ -17,38 +17,40 @@ ifeq ($(SANITIZE),full)
 
 ifeq ($(PARASCIP),true)
 # enable ThreadSanitizer (https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
-SANITZERFLAGS = -fsanitize=thread
+SANITIZERFLAGS = -fsanitize=thread
 
 # enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
-SANITZERFLAGS += -fsanitize=leak
+SANITIZERFLAGS += -fsanitize=leak
 
 else
 # enable AddressSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizer)
-SANITZERFLAGS = -fsanitize=address
+SANITIZERFLAGS = -fsanitize=address
 
 endif
 
 # enable UndefinedBehaviorSanitizer
-SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
+SANITIZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 
 endif
 
 ifeq ($(SANITIZE),true)
 
 # enable UndefinedBehaviorSanitizer
-SANITZERFLAGS = -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
+SANITIZERFLAGS = -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 
 # do not enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
 # this does not seem to work well together with Criterion
 # also it may prevents usage of valgrind while also not replacing it
-#SANITZERFLAGS += -fsanitize=leak
+#SANITIZERFLAGS += -fsanitize=leak
 
 endif
 
-CFLAGS += $(SANITZERFLAGS)
-CXXFLAGS += $(SANITZERFLAGS)
+CFLAGS += $(SANITIZERFLAGS)
+CXXFLAGS += $(SANITIZERFLAGS)
+LDFLAGS += $(SANITIZERFLAGS)
 ifeq ($(SHARED),true)
-  LIBBUILDFLAGS += $(SANITZERFLAGS)
-else
-  LDFLAGS += $(SANITZERFLAGS)
+  LIBBUILDFLAGS += $(SANITIZERFLAGS)
 endif
+
+# deprecated
+SANITZERFLAGS = $(SANITIZERFLAGS)

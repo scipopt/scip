@@ -174,12 +174,12 @@ SCIP_Bool colExactInSync(
    assert(colexact->var == fpcol->var);
    assert(colexact->lpipos == fpcol->lpipos);
    assert(colexact->index == fpcol->index);
-   assert(colexact->lpipos == fpcol->lpipos);
 
    assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj));
    assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj));
    assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
    assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
+
    return TRUE;
 }
 
@@ -206,8 +206,6 @@ SCIP_Bool rowExactInSync(
 
    synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = RatIsApproxEqualReal(set, rowexact->flushedlhs, fprow->flushedlhs) || (RatIsNegInfinity(rowexact->flushedlhs) && SCIPsetIsInfinity(set, -fprow->flushedlhs));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->flushedrhs, fprow->flushedrhs) || (RatIsInfinity(rowexact->flushedrhs) && SCIPsetIsInfinity(set, fprow->flushedrhs)));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant) );
 
    if( !synced )
@@ -3432,6 +3430,7 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->nremovablerows = 0;
    (*lp)->lpiobjlim = SCIPlpiExactInfinity((*lp)->lpiexact);
    (*lp)->cutoffbound = SCIPsetInfinity(set);
+   (*lp)->oldcutoffbound = SCIPsetInfinity(set);
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->lpobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->pseudoobjval) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*lp)->glbpseudoobjval) );
@@ -4174,6 +4173,9 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
             "you might consider switching the clock type of SCIP\n");
          stat->status = SCIP_STATUS_TIMELIMIT;
       }
+
+      /* set the status of the floating point lp also to timelimit to avoid using the uncorrected bound */
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       break;
 
    case SCIP_LPSOLSTAT_ERROR:
@@ -5873,6 +5875,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    SCIP_CALL( SCIPlpiExactGetSol(lp->lpiexact, NULL, primsol, dualsol, activity, redcost) );
    if( overwritefplp )
    {
+      stat->boundingerrorexlp += REALABS(lp->fplp->lpobjval - RatRoundReal(lp->lpobjval, SCIP_ROUND_DOWNWARDS));
       lp->fplp->lpobjval = RatRoundReal(lp->lpobjval, SCIP_ROUND_DOWNWARDS);
       lp->fplp->lpsolstat = lp->lpsolstat;
       lp->fplp->primalfeasible = lp->primalfeasible;

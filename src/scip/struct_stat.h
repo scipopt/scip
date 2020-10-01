@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -146,6 +146,9 @@ struct SCIP_Stat
    SCIP_Real             bestefficacy;       /**< best efficacy of global pool cut seen so far */
    SCIP_Real             minefficacyfac;     /**< factor of best efficacy to use as min efficacy */
    SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
+   SCIP_Real             boundingerrorbs;    /**< aggregated error of all bound shift calls */
+   SCIP_Real             boundingerrorps;    /**< aggregated error of all project and shift calls */
+   SCIP_Real             boundingerrorexlp;  /**< aggregated error of all exact lp calls */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
@@ -211,14 +214,14 @@ struct SCIP_Stat
    SCIP_Longint          nfailexlpinf;       /**< number of LPs failed to prove infeasible */
    SCIP_Longint          nexlp;              /**< number of LPs proved feasible */
    SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
-   SCIP_Longint          nboundshift;        /**< number of boundshift calls */
-   SCIP_Longint          nfailboundshift;    /**< number of boundshift calls */
-   SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls */
-   SCIP_Longint          nfailboundshiftinf; /**< number of boundshift calls */
-   SCIP_Longint          nprojshift;         /**< number of boundshift calls */
-   SCIP_Longint          nfailprojshift;     /**< number of boundshift calls */
-   SCIP_Longint          nprojshiftinf;      /**< number of boundshift calls */
-   SCIP_Longint          nfailprojshiftinf;  /**< number of boundshift calls */
+   SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
+   SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
+   SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp*/
+   SCIP_Longint          nfailboundshiftinf; /**< number of failed boundshift calls for feasible lp */
+   SCIP_Longint          nprojshift;         /**< number of project and shift calls for feasible lp */
+   SCIP_Longint          nfailprojshift;     /**< number of failed project and shift calls for feasible lp */
+   SCIP_Longint          nprojshiftinf;      /**< number of project and shift calls for infeasible lp */
+   SCIP_Longint          nfailprojshiftinf;  /**< number of failed project and shift calls for infeasible lp */
    SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */ 
    SCIP_Longint          niterationsexlpinf; /**< number of exact lp iterations attempting infeasibility proof */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */

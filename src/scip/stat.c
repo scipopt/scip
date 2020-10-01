@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -660,6 +660,9 @@ void SCIPstatResetCurrentRun(
    stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
    stat->rootlpbestestimate = SCIP_INVALID;
+   stat->boundingerrorbs = 0;
+   stat->boundingerrorps = 0;
+   stat->boundingerrorexlp = 0;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;

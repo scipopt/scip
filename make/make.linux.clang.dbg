@@ -21,16 +21,16 @@ ifeq ($(SANITIZE),full)
 
 ifeq ($(PARASCIP),true)
 # enable ThreadSanitizer (http://clang.llvm.org/docs/ThreadSanitizer.html)
-SANITZERFLAGS = -fsanitize=thread
+SANITIZERFLAGS = -fsanitize=thread
 
 else
 # enable AddressSanitizer (http://clang.llvm.org/docs/AddressSanitizer.html)
-SANITZERFLAGS = -fsanitize=address
+SANITIZERFLAGS = -fsanitize=address
 
 endif
 
 # enable UndefinedBehaviorSanitizer (http://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
-SANITZERFLAGS += -fsanitize=undefined
+SANITIZERFLAGS += -fsanitize=undefined
 
 endif
 
@@ -39,10 +39,16 @@ ifeq ($(SANITIZE),true)
 # do not enable LeakSanitizer (http://clang.llvm.org/docs/LeakSanitizer.html)
 # this does not seem to work well together with Criterion
 # also it may prevents usage of valgrind while also not replacing it
-#SANITZERFLAGS = -fsanitize=leak
+#SANITIZERFLAGS = -fsanitize=leak
 
 endif
 
-CFLAGS += $(SANITZERFLAGS)
-CXXFLAGS += $(SANITZERFLAGS)
-LDFLAGS += $(SANITZERFLAGS)
+CFLAGS += $(SANITIZERFLAGS)
+CXXFLAGS += $(SANITIZERFLAGS)
+LDFLAGS += $(SANITIZERFLAGS)
+ifeq ($(SHARED),true)
+  LIBBUILDFLAGS += $(SANITIZERFLAGS)
+endif
+
+# deprecated
+SANITZERFLAGS = $(SANITIZERFLAGS)

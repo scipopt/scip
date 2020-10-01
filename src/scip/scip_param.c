@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -382,25 +382,6 @@ SCIP_RETCODE SCIPunfixParam(
    assert(scip->set != NULL);
 
    SCIP_CALL( SCIPsetChgParamFixed(scip->set, name, FALSE) );
-
-   return SCIP_OKAY;
-}
-
-/** changes the value of an existing parameter
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPsetParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIP_CALL( SCIPsetSetParam(scip->set, scip->messagehdlr, name, value) );
 
    return SCIP_OKAY;
 }

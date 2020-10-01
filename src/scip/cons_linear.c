@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -16126,7 +16126,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
       rangedrowpropagation = rangedrowpropagation && !SCIPinRepropagation(scip);
       rangedrowpropagation = rangedrowpropagation && (depth <= conshdlrdata->rangedrowmaxdepth);
       rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
-      rangedrowpropagation = rangedrowpropagation && (depth % rangedrowfreq == 0);
+      rangedrowpropagation = rangedrowpropagation && (conshdlrdata->rangedrowfreq >= 0)
+         && ((rangedrowfreq == 0 && depth == 0) || (rangedrowfreq >= 1 && (depth % rangedrowfreq == 0)));
    }
 
    cutoff = FALSE;
@@ -18704,13 +18705,13 @@ SCIP_RETCODE SCIPupgradeConsLinear(
     * TODO: this needs to be fixed on master by changing the API and passing a pointer to whether the constraint is
     *       proven to be infeasible.
     */
-   if( infeasible )
+   if( infeasible )   /*lint !e774*/
       return SCIP_OKAY;
 
    /* tighten sides */
    SCIP_CALL( tightenSides(scip, cons, &nchgsides, &infeasible) );
 
-   if( infeasible )
+   if( infeasible )   /*lint !e774*/
       return SCIP_OKAY;
 
    /*

@@ -15975,8 +15975,7 @@ SCIP_DECL_CONSPRESOL(consPresolExactLinear)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   SCIPerrorMessage("Exact presolving not implemented yet \n");
-   SCIPABORT();
+   SCIPinfoMessage(scip, NULL, "Exact presolving not implemented yet \n");
    return SCIP_OKAY;
 
 #if 0

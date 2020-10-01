@@ -9,7 +9,7 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -691,7 +691,8 @@ void handleDecl(
       for(; (end >= beg) && (c != key[end].name[k]); end--)
          ;
       k++;
-   } while(beg < end);
+   }
+   while(beg < end);
 
    if ( beg != end )
    {
@@ -704,6 +705,7 @@ void handleDecl(
    {
       assert(beg == end);
       assert(beg <  (int)(sizeof(key) / sizeof(*key)));
+      assert(beg >= 0);
 
       switch(key[beg].what)
       {

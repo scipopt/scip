@@ -6,8 +6,17 @@
 Features
 --------
 
+- Variables that were marked as relaxation-only and that were not used in any solution (SCIP_SOL)
+  are now deleted when during a restart.
+- New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
+  which is able to handle symmetries of arbitrary kinds of variables.
+
 Performance improvements
 ------------------------
+
+- Use the objective cutoff row as base row for separation in sepa_aggregation.c
+- Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
+- In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 
 Examples and applications
 -------------------------
@@ -16,16 +25,55 @@ Interface changes
 -----------------
 ### New and changed callbacks
 ### Deleted and changed API methods
+
+- If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
+  variable is added to the transformed problem (SCIPaddVar()).
+  SCIPvarMarkRelaxationOnly() will automatically call SCIPvarMarkDeletable().
+- SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
+  changed from SCIP_Shortbool* to unsigned*.
+- removed SCIPsetParam()
+
 ### New API functions
+
+- added SCIPallocClearMemory() and SCIPallocClearBlockMemory() to allocate a chunk of (block) memory
+  that is initialized to zeros
+- New internal functions for changing the default values of parameters:
+    SCIPparamsetSetDefaultLongint(), SCIPparamsetSetDefaultReal(), SCIPparamsetSetDefaultChar(),
+    SCIPparamsetSetDefaultString() and
+    SCIPparamSetDefaultLongint(), SCIPparamSetDefaultReal(), SCIPparamSetDefaultChar(),
+    SCIPparamSetDefaultString()
+
 ### Command line interface
 ### Interfaces to external software
+
+- removed GAMS interface (originally in interfaces/gams) and reading capability of gms reader;
+  the removed interface was a poorly maintained copy of the GAMS/SCIP interface that is available at
+  https://github.com/coin-or/GAMSlinks
+
 ### Changed parameters
+
+- Extended range of parameter "misc/usesymmetry" from [0,3] to [0,7], changed default from 3 to 5
+
 ### New parameters
 
 - It is now possible to add orbitope constraints to handle symmetries even if not all variables
   in a component of the symmetry group are binary. This feature can be enabled using the
   parameter "propagating/symmetry/onlybinorbitope".
 
+- new parameter "propagating/symmetry/sstleaderrule" to select a rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/ssttiebreakrule" to select a tiebreak rule for selecting the
+  leader in SST cuts
+- new parameter "propagating/symmetry/sstleadervartype" to select the possible variable types
+  for a leader in SST cuts
+- new parameter "propagating/symmetry/addconflictcuts" to control whether SST cuts are added if
+  a binary leader variable is in conflict with a variable in its orbit
+- new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
+- new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
+  if a symmetry component contains variables of different types
+
+
+
 ### Data structures
 
 Deleted files
@@ -48,16 +96,23 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- in LP, use absolute instead of relative tolerances to check whether solutions from LP solver are primal feasible
+- when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
+  only captured by the transformed problem.
+- Avoid redundant calls to LP solver when LP is already flushed and solved
+
 Known bugs
 ----------
 
 @page RN70 Release notes for SCIP 7.0
 
-@section RN701 SCIP 7.0.1
+@section RN000 SCIP 7.0.2
 *************************
 
 Features
 --------
+
+- Extended check for valid variable and constraint names in PIP writer.
 
 Performance improvements
 ------------------------
@@ -72,7 +127,11 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
+
 ### New API functions
+
+- new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
 
 ### Command line interface
 
@@ -103,13 +162,58 @@ Build system
 Fixed bugs
 ----------
 
-- Fixed handling of constant term in quadratic objective of pip-reader.
+- Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
+- Fixed overflow in inference information of cumulative constraint handler
+- Fixed problem with propfreq == 0 in cons_linear.c
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
+- Fixed problem with incompatibility of symmetry handling in Benders decomposition
+- Fixed parsing of small number in CIP format of nonlinear constraint
+- Fixed problem in upgrading full orbitopes to partitioning orbitopes
+- Fixed potential indexing error in prop_vbounds.c
+- Fixed bug in writing fzn format
+- Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
 
 Miscellaneous
 -------------
 
 Known bugs
 ----------
+
+@section RN701 SCIP 7.0.1
+*************************
+
+Build system
+------------
+
+### Cmake
+
+- Fixed cmake module for Ipopt to support Ipopt 3.13
+- Added cmake variable BLISS_LIBRARY_DIR to pass a bliss library
+- Added warning to require minimal GCC version 4.8
+- Renamed FindCriterion cmake findmodule to FindCRITERION
+
+### Makefile
+
+- Updated make/make.project for macOS
+- Add SANITZERFLAGS (only OPT=dbg) to LDFLAGS also if SHARED=true (and rename SANITZERFLAGS to SANITIZERFLAGS)
+- Fixed GCC version check in make/make.linux.gnu.dbg
+
+Fixed bugs
+----------
+
+- Fixed handling of constant term in quadratic objective of pip-reader
+- Fixed incorrect value string for parameter estimation/completiontype
+- Fixed initialization of first LP which led to wrong output about LPs not resolved correctly
+- Fixed bug in SCIPcutpoolClear() function not clearing internal datastructures properly
+- Fixed inability to set a value in a solution if it was within epsilon to the current value
+- Fixed problems for linking optimized code with debug library of SCIP (and vice versa) by moving debug-only members
+  to end of SCIP structs
+
+Miscellaneous
+-------------
+
+- Variables that are marked as relaxation-only are no longer checked against debug solutions if
+  they are captured by the transformed problem only.
 
 @section RN700 SCIP 7.0.0
 *************************
@@ -5275,7 +5379,7 @@ Build system
 - A bug in the Makefiles of older versions of the SCIP examples may cause
   data loss. If you have a custom Makefile, please ensure that the target
   `clean` is changed as described here:
-  http://scip.zib.de/download/bugfixes/scip-1.2.0/make.txt.
+  http://scipopt.org/download/bugfixes/scip-1.2.0/make.txt.
 
 Fixed bugs
 ----------
