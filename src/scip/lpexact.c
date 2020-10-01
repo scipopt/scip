@@ -5827,7 +5827,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    int r;
 
    assert(lp != NULL);
-   assert(lp->flushed);
+   //assert(lp->flushed); /* TODO: does that work? The exact LP shouldn't need to be flushed when we're storing for diving */
    assert(lp->solved);
    assert(set != NULL);
    assert(stat != NULL);

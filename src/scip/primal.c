@@ -1028,7 +1028,8 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
+      /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)) || ! set->misc_improvingsols);
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
