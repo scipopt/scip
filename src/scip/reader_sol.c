@@ -146,7 +146,6 @@ SCIP_DECL_READERREAD(readerReadSol)
 {  /*lint --e{715}*/
    SCIP_FILE* file;
    char buffer[SCIP_MAXSTRLEN];
-   char *s;
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -188,12 +187,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    SCIPfclose(file);
 
    /* decide whether it is xml */
-   s = buffer;
-
-   /* skip spaces */
-   while( isspace((unsigned char)*s) )
-      ++s;
-   if( s[0] == '<' && s[1] == '?' && s[2] == 'x' && s[3] == 'm' && s[4] == 'l' )
+   if( SCIPstrAtStart(buffer, "<?xml", (size_t) 5) )
    {
       /* read XML solution and add it to the solution pool */
       SCIP_CALL( readSol(scip, filename, TRUE) );

@@ -1444,7 +1444,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             psval               /**< the pseudo obj value */
+   SCIP_Real             psval               /**< the pseudo obj value (or inf to use exact lp value) */
    )
 {
    SCIP_VAR** vars;
@@ -1472,7 +1472,11 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    nvars = SCIPprobGetNVars(prob);
    SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjval) );
 
-   RatSetReal(pseudoobjval, psval);
+   /* infinity means we use the exact lp value */
+   if( SCIPsetIsInfinity(set, psval) )
+      SCIPlpExactGetPseudoObjval(lpexact, set, prob, pseudoobjval);
+   else
+      RatSetReal(pseudoobjval, psval);
    duallen = SCIPprobGetNObjVars(prob, set);
    SCIP_CALL( RatCreateBufferArray(set->buffer, &bounds, duallen) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, duallen) );

@@ -39,6 +39,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_datastructures.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_mem.h"
@@ -1352,7 +1353,7 @@ SCIP_RETCODE initProblem(
    if( SCIPgetDepth(scip) == 0 )
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", SCIPgetProbName(scip));
    else
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_node_%d", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_node_%" SCIP_LONGINT_FORMAT, SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*problem)->name, name, strlen(name)+1) );
 
@@ -2279,7 +2280,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) )
+   if( SCIPgetStage(scip) != SCIP_STAGE_PRESOLVING || SCIPinProbing(scip) || SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
    /* do not run, if not all variables are explicitly known */

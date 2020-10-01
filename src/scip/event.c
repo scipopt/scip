@@ -68,6 +68,76 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
    return SCIP_OKAY;
 }
 
+/** wrapper method to update the exact data of a variable if a bound gets changed */
+static
+SCIP_RETCODE updateLpExactBoundChange(
+   SCIP_VAR*             var,                /**< variable that gets changed */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENT*           event,              /**< event */
+   SCIP_Bool             isUb,               /**< is it an upper bound */
+   SCIP_Bool             isGlb               /**< is it a global or local bound */
+   )
+{
+   /* do nothing if not in exact solving mode */
+   if( !set->exact_enabled )
+    return SCIP_OKAY;
+
+   assert(var != NULL);
+   assert(lp != NULL);
+
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN ||
+         SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
+   {
+      SCIP_Rational* newbound;
+      SCIP_Rational* oldbound;
+
+      SCIP_CALL( RatCreateBuffer(set->buffer, &newbound) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
+      RatSetReal(newbound, event->data.eventbdchg.newbound);
+      RatSetReal(oldbound, event->data.eventbdchg.oldbound);
+
+      if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+      {
+         if( isUb )
+         {
+            SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lp, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lp, newbound) );
+         }
+      }
+      if( isUb )
+      {
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUb(lp, set, var, oldbound, newbound) );
+         }
+      }
+      else
+      {
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLb(lp, set, var, oldbound, newbound) );
+         }
+      }
+
+      RatFreeBuffer(set->buffer, &oldbound);
+      RatFreeBuffer(set->buffer, &newbound);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** internal method for creating an event handler */
 static
 SCIP_RETCODE doEventhdlrCreate(
@@ -1593,76 +1663,6 @@ SCIP_Real SCIPeventGetRowNewSideVal(
    }
 
    return event->data.eventrowsidechanged.newval;
-}
-
-/** wrapper method to update the exact data of a variable if a bound gets changed */
-static
-SCIP_RETCODE updateLpExactBoundChange(
-   SCIP_VAR*             var,                /**< variable that gets changed */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENT*           event,              /**< event */
-   SCIP_Bool             isUb,               /**< is it an upper bound */
-   SCIP_Bool             isGlb               /**< is it a global or local bound */
-   )
-{
-   /* do nothing if not in exact solving mode */
-   if( !set->exact_enabled )
-    return SCIP_OKAY;
-
-   assert(var != NULL);
-   assert(lp != NULL);
-
-   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN ||
-         SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
-   {
-      SCIP_Rational* newbound;
-      SCIP_Rational* oldbound;
-
-      SCIP_CALL( RatCreateBuffer(set->buffer, &newbound) );
-      SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
-      RatSetReal(newbound, event->data.eventbdchg.newbound);
-      RatSetReal(oldbound, event->data.eventbdchg.oldbound);
-
-      if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
-      {
-         if( isUb )
-         {
-            SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lp, newbound) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lp, newbound) );
-         }
-      }
-      if( isUb )
-      {
-         if( isGlb )
-         {
-            SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPlpExactUpdateVarUb(lp, set, var, oldbound, newbound) );
-         }
-      }
-      else
-      {
-         if( isGlb )
-         {
-            SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPlpExactUpdateVarLb(lp, set, var, oldbound, newbound) );
-         }
-      }
-
-      RatFreeBuffer(set->buffer, &oldbound);
-      RatFreeBuffer(set->buffer, &newbound);
-   }
-
-   return SCIP_OKAY;
 }
 
 /** processes event by calling the appropriate event handlers */
