@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPeventhdlrCopyInclude(
 
 /** wrapper method to update the exact data of a variable if a bound gets changed */
 static
-SCIP_RETCODE updateLpexBdChg(
+SCIP_RETCODE updateLpExactBoundChange(
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -110,11 +110,25 @@ SCIP_RETCODE updateLpexBdChg(
       }
       if( isUb )
       {
-         SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUb(lp, set, var, oldbound, newbound) );
+         }
       }
       else
       {
-         SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         if( isGlb )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp, set, var, oldbound, newbound) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLb(lp, set, var, oldbound, newbound) );
+         }
       }
 
       RatFreeBuffer(set->buffer, &oldbound);
@@ -1787,7 +1801,7 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          /* update exact bounds if in exact solving mode */
-         SCIP_CALL( updateLpexBdChg(var, lp->lpexact, set, event, FALSE, FALSE) );
+         SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, FALSE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -1812,7 +1826,7 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
          /* update exact bounds if in exact solving mode */
-         SCIP_CALL( updateLpexBdChg(var, lp->lpexact, set, event, TRUE, FALSE) );
+         SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, TRUE, FALSE) );
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
