@@ -403,7 +403,7 @@ extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
 extern int             extreduce_getMaxStackNedges(const GRAPH*);
 extern void            extreduce_edgeRemove(SCIP*, int, GRAPH*, DISTDATA*, EXTPERMA*);
-extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, int);
+extern SCIP_Bool       extreduce_edgeIsValid(const GRAPH*, const REDCOST*, int);
 extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_core.c

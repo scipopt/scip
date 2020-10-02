@@ -955,8 +955,6 @@ SCIP_RETCODE pseudodeleteExecute(
    int*                  nelims              /**< number of eliminations (out) */
 )
 {
-
-
    const int nnodes = graph_get_nNodes(graph);
    STAR* stardata;
    DISTDATA distdata;
@@ -1089,9 +1087,9 @@ SCIP_RETCODE extreduce_deleteArcs(
 )
 {
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Real* const redcost = redcostdata->redEdgeCost;
    DISTDATA distdata;
    EXTPERMA extpermanent;
+   SCIP_Bool withSol = (result != NULL);
 
    assert(scip && redcostdata && edgedeletable);
 
@@ -1105,17 +1103,11 @@ SCIP_RETCODE extreduce_deleteArcs(
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
-      if( extreduce_edgeIsValid(graph, e) )
+      if( extreduce_edgeIsValid(graph, redcostdata, e) )
       {
          const int erev = e + 1;
-         const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
-
+         extpermanent.redcostEqualAllow = (withSol && result[e] != CONNECT && result[erev] != CONNECT);
          assert(flipedge(e) == erev && SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
-
-         if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
-            continue;
-
-         extpermanent.redcostEqualAllow = allowequality;
 
          if( !edgedeletable[e] )
          {
@@ -1124,7 +1116,12 @@ SCIP_RETCODE extreduce_deleteArcs(
                   &deletable) );
 
             if( deletable )
+            {
+               if( withSol && result[e] == CONNECT )
+                  withSol = FALSE;
+
                edgedeletable[e] = TRUE;
+            }
          }
 
          if( !edgedeletable[erev] )
@@ -1135,7 +1132,12 @@ SCIP_RETCODE extreduce_deleteArcs(
                   &erevdeletable) );
 
             if( erevdeletable )
+            {
+               if( withSol && result[erev] == CONNECT )
+                  withSol = FALSE;
+
                edgedeletable[erev] = TRUE;
+            }
          }
 
          if( edgedeletable[e] && edgedeletable[erev] )
@@ -1169,9 +1171,9 @@ SCIP_RETCODE extreduce_deleteEdges(
 {
    const SCIP_Bool useSd = !graph_pc_isPc(graph);
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Real* const redcost = redcostdata->redEdgeCost;
    DISTDATA distdata;
    EXTPERMA extpermanent;
+   SCIP_Bool withSol = (result != NULL);
 
    assert(scip && redcostdata);
    assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
@@ -1192,26 +1194,22 @@ SCIP_RETCODE extreduce_deleteEdges(
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
    {
-      if( extreduce_edgeIsValid(graph, e) )
+      if( extreduce_edgeIsValid(graph, redcostdata, e) )
       {
          const int erev = e + 1;
          SCIP_Bool deletable = TRUE;
-         const SCIP_Bool allowequality = (result != NULL && result[e] != CONNECT && result[erev] != CONNECT);
+         extpermanent.redcostEqualAllow = (withSol && result[e] != CONNECT && result[erev] != CONNECT);
 
          assert(flipedge(e) == erev && SCIPisEQ(scip, graph->cost[e], graph->cost[erev]));
-
-         if( SCIPisZero(scip, redcost[e]) && SCIPisZero(scip, redcost[erev]) )
-            continue;
-
-         extpermanent.redcostEqualAllow = allowequality;
-
-         // todo acually utilize the allow equality!
 
          SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, e, &distdata, &extpermanent, &deletable) );
 
          if( deletable )
          {
             removeEdge(scip, e, graph, &distdata, &extpermanent);
+
+            if( withSol && (result[e] == CONNECT || result[erev] == CONNECT ) )
+               withSol = FALSE;
 
             (*nelims)++;
          }
@@ -1465,9 +1463,13 @@ void extreduce_edgeRemove(
 /** is the edge valid? */
 SCIP_Bool extreduce_edgeIsValid(
    const GRAPH*          graph,              /**< graph data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
    int                   e                   /**< edge to be checked */
 )
 {
+   assert(graph && redcostdata);
+   assert(graph_edge_isInRange(graph, e));
+
    if( EAT_FREE == graph->oeat[e] )
    {
       return FALSE;
@@ -1486,6 +1488,11 @@ SCIP_Bool extreduce_edgeIsValid(
 
       assert(!graph_pc_knotIsDummyTerm(graph, tail));
       assert(!graph_pc_knotIsDummyTerm(graph, head));
+   }
+
+   if( EQ(0.0, redcostdata->redEdgeCost[e]) && EQ(0.0, redcostdata->redEdgeCost[flipedge(e)]) )
+   {
+      return FALSE;
    }
 
    return TRUE;
