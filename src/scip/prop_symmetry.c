@@ -3661,7 +3661,7 @@ SCIP_RETCODE addSymresackConss(
                SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
                      conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             }
-
+            propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
