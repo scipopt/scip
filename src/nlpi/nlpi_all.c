@@ -25,6 +25,9 @@
 #include "nlpi/nlpi.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
+#ifdef SCIP_STATISTIC
+#include "nlpi/struct_nlpi.h"
+#endif
 
 #include <string.h>
 
