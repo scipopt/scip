@@ -37,6 +37,8 @@
 #include "stpvector.h"
 #include "scip/scip.h"
 
+//#define CUTTREE_PRINT_STATISTICS
+
 
 /** cut nodes/ articulation points */
 typedef struct cut_nodes
@@ -78,6 +80,136 @@ int cutNodesGetLastCutnode(
 
    return lastcutnode;
 }
+
+#ifdef CUTTREE_PRINT_STATISTICS
+/** helper */
+static inline
+void cutNodesTraverseSub(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   node,
+   SCIP_Bool*            isVisited,          /**< */
+   int*                  nterms,
+   int*                  ncompnodes
+   )
+{
+   STP_Vectype(int) stack = NULL;
+   const int nnodes = graph_get_nNodes(g);
+
+   *nterms = 0;
+   *ncompnodes = 0;
+   assert(!isVisited[node]);
+
+   StpVecReserve(scip, stack, nnodes);
+   StpVecPushBack(scip, stack, node);
+   isVisited[node] = TRUE;
+
+   while( StpVecGetSize(stack)  )
+   {
+      const int k = stack[StpVecGetSize(stack) - 1];
+      StpVecPopBack(stack);
+
+      if( Is_term(g->term[k]) )
+      {
+         (*nterms)++;
+      }
+      (*ncompnodes)++;
+
+      assert(isVisited[k]);
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         if( !isVisited[head] )
+         {
+            isVisited[head] = TRUE;
+            StpVecPushBack(scip, stack, head);
+         }
+      }
+   }
+
+   StpVecFree(scip, stack);
+}
+
+
+/** traverses tree from cut-node */
+static inline
+SCIP_RETCODE cutNodesTraverseFromCutNode(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   node,
+   const CUTNODES*       cutnodes            /**< cut nodes */
+   )
+{
+   SCIP_Bool* isVisited;
+   const int nnodes = graph_get_nNodes(g);
+   STP_Vectype(int) comps_id = NULL;
+   STP_Vectype(int) comps_nterms = NULL;
+
+   assert(StpVecGetSize(cutnodes->artpoints) >= 1);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &isVisited, nnodes) );
+
+   printf("check cut-node ");
+   graph_knot_printInfo(g, node);
+
+   for( int i = 0; i < nnodes; ++i )
+      isVisited[i] = FALSE;
+
+   isVisited[node] = TRUE;
+
+   for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      int nterms;
+      int ncompnodes;
+      const int base = g->head[e];
+
+      if( isVisited[base] )
+         continue;
+
+      cutNodesTraverseSub(scip, g, base, isVisited, &nterms, &ncompnodes);
+      StpVecPushBack(scip, comps_id, cutnodes->biconn_nodesmark[base]);
+      StpVecPushBack(scip, comps_nterms, nterms);
+
+      printf("component=%d: ", cutnodes->biconn_nodesmark[base]);
+      printf("nterms=%d, ", nterms);
+      printf("ncompnodes=%d \n", ncompnodes);
+
+   }
+
+   StpVecFree(scip, comps_nterms);
+   StpVecFree(scip, comps_id);
+   SCIPfreeBufferArray(scip, &isVisited);
+
+   return SCIP_OKAY;
+}
+#endif
+
+#ifdef XXXXX
+/** checks bi-connected leaf components */
+static
+SCIP_RETCODE cutNodesTreeCheckLeaveComponents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   CUTTREE*              cuttree             /**< cut tree data */
+   )
+{
+   STP_Vectype(int) stack = NULL;
+   int* RESTRICT nodes_pred = cuttree->nodes_prednode;
+   SCIP_Bool* RESTRICT nodes_isVisited = cutnodes->nodes_isVisited;
+   SCIP_Bool* RESTRICT nodes_isTree = cuttree->nodes_isTree;
+   const int* const biconn_nodesmark = biconn_nodesmark;
+   const int nnodes = graph_get_nNodes(g);
+   const int root = g->source;
+   const int lastcutnode = cutNodesGetLastCutnode(cutnodes);
+   int termscount = g->terms;
+
+   /* save terminals per component, set to -1 if cut node is encountered */
+
+   return SCIP_OKAY;
+}
+#endif
 
 
 /** helper */
@@ -220,6 +352,7 @@ void cutNodesTreeDeleteComponents(
 /** changes required cut-nodes from non-terminals to terminals */
 static
 void cutNodesTreeMakeTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
    const CUTNODES*       cutnodes,           /**< cut nodes */
    const CUTTREE*        cuttree,            /**< cut tree data */
    GRAPH*                g                   /**< graph */
@@ -254,29 +387,12 @@ void cutNodesTreeMakeTerms(
          const int compid = biconn_nodesmark[g->head[g->outbeg[cutnode]]];
          SCIP_Bool isTerm = FALSE;
 
-         /*
-         if( !cuttree->comps_isHit[compid] )
-         {
-            graph_knot_printInfo(g, g->head[g->outbeg[cutnode]]);
-            exit(1);
-         }
-*/
          for( int e = g->outbeg[cutnode]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
 
             if( biconn_nodesmark[head] != compid )
             {
-               /*
-               printf("%d != %d and %d\n", biconn_nodesmark[head], compid, biconn_nodesmark[cutnode]);
-
-               if( !cuttree->comps_isHit[biconn_nodesmark[head]] )
-                       {
-                          graph_knot_printInfo(g, head);
-                          exit(1);
-                       }
-*/
-
                isTerm = TRUE;
                break;
             }
@@ -284,9 +400,6 @@ void cutNodesTreeMakeTerms(
 
          if( isTerm )
          {
-        //    printf("cuttree->cutnode0isNeeded=%d \n", cuttree->cutnode0isNeeded);
-
-            graph_knot_printInfo(g, cutnode);
 #ifdef SCIP_DEBUG
             SCIPdebugMessage("cut node to terminal: ");
             graph_knot_printInfo(g, cutnode);
@@ -610,38 +723,24 @@ SCIP_RETCODE cutNodesReduceWithTree(
    CUTTREE cuttree = { NULL, NULL, NULL, NULL, FALSE };
 
    SCIP_CALL( cutNodesTreeInit(scip, g, cutnodes, &cuttree) );
-
    cutNodesTreeBuildSteinerTree(scip, g, cutnodes, &cuttree);
+
+#ifdef CUTTREE_PRINT_STATISTICS
+   printf("\n STATS:  \n");
+
+   for( int i = 0; i < StpVecGetSize(cutnodes->artpoints); i++ )
+   {
+      const int cutnode = cutnodes->artpoints[i];
+      SCIP_CALL( cutNodesTraverseFromCutNode(scip, g, cutnode, cutnodes) );
+   }
+#endif
+
    cutNodesTreeDeleteComponents(scip, cutnodes, &cuttree, g, nelims);
-   cutNodesTreeMakeTerms(cutnodes, &cuttree, g);
+   cutNodesTreeMakeTerms(scip, cutnodes, &cuttree, g);
 
    cutNodesTreeExit(scip, &cuttree);
 
    return SCIP_OKAY;
-#ifdef XXX_XXX
-   for( int i = 0; i < StpVecGetSize(cutnodes->artpoints); i++ )
-   {
-      int ntermcomps;
-      const int cutnode = cutnodes->artpoints[i];
-
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("cut node: ");
-      graph_knot_printInfo(g, cutnode);
-#endif
-
-      // todo need to find out whether components contain terminals!
-      for( int e = g->outbeg[cutnode]; e != EAT_LAST; e = g->oeat[e] )
-      {
-         const int head = g->head[e];
-
-         // no terminal in connected component?
-         if( head )
-         {
-            // delete subgraph
-         }
-      }
-   }
-#endif
 }
 
 /*
