@@ -1219,7 +1219,6 @@ SCIP_RETCODE SCIPsolLinkLPSolExact(
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
    SCIPlpExactGetObjval(lp, set, prob, sol->valsexact->obj);
-   RatSet(sol->valsexact->obj, lp->lpobjval);
    sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 

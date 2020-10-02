@@ -2855,7 +2855,7 @@ SCIP_RETCODE varFreeExactData(
       if( var->exactdata->multaggr.scalars != NULL )
       {
          RatFreeBlock(blkmem, &(var)->exactdata->multaggr.constant);
-         RatFreeBlockArray(blkmem, &(var)->exactdata->multaggr.scalars, var->data.multaggr.nvars);
+         RatFreeBlockArray(blkmem, &(var)->exactdata->multaggr.scalars, var->data.multaggr.varssize);
       }
 
       RatFreeBlock(blkmem, &(var)->exactdata->glbdom.lb);
@@ -7776,9 +7776,9 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       var->exactdata->varstatusexact = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
-      RatCopyBlockArray(blkmem, &var->exactdata->multaggr.scalars, tmpscalars, ntmpvars);
+      SCIP_CALL( RatCopyBlockArray(blkmem, &(var->exactdata->multaggr.scalars), tmpscalars, ntmpvars) );
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
-      RatCopy(blkmem, &var->exactdata->multaggr.constant, tmpconstant);
+      SCIP_CALL( RatCopy(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
       for( i = 0; i < ntmpvars; ++i )
          var->data.multaggr.scalars[i] = RatApproxReal(tmpscalars[i]);
       var->data.multaggr.constant = RatApproxReal(tmpconstant);

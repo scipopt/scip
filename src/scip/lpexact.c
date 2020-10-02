@@ -5712,7 +5712,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
       }
    }
 
-   SCIPlpDecNLoosevars(lp);
+   SCIPlpExactDecNLoosevars(lp);
 
    assert(lp->looseobjvalinf >= 0);
 
