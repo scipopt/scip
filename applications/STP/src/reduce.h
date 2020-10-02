@@ -289,11 +289,15 @@ extern SCIP_RETCODE    reduce_simple_hc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_sap(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_deleteMultiedges(SCIP*, GRAPH*);
 extern SCIP_RETCODE    reduce_contract0Edges(SCIP*, GRAPH*, SCIP_Bool);
-extern SCIP_RETCODE    reduce_aritculations(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_fixedConflicts(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_cutEdgeTryPrune(SCIP*, int, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern void            reduce_identifyNonLeafTerms(SCIP*, GRAPH*);
+
+
+/* reduce_sepa.c
+ */
+extern SCIP_RETCODE    reduce_articulations(SCIP*, GRAPH*, SCIP_Real*, int*);
 
 
 /* reduce_pcsimple.c

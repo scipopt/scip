@@ -37,7 +37,7 @@
 #include "scip/scip.h"
 
 
-#if 0
+#ifdef XXX_XXX
 /** deletes entire graph */
 static
 void deleteAllEdges(
@@ -54,55 +54,6 @@ void deleteAllEdges(
    }
 }
 #endif
-
-
-/** telling name... todo refactor */
-static
-void getArticulationPoints(
-   const GRAPH*          g,                  /**< graph data structure */
-   int                   k,                  /**< vertex */
-   int                   d,                  /**< depth */
-   int*                  artpoints,          /**< artpoints list */
-   int*                  nartpointsp,        /**< artpoints list counter */
-   int*                  depth,              /**< depth */
-   int*                  lowpoint,           /**< lowpoint */
-   int*                  parent,             /**< parent */
-   SCIP_Bool*            visited             /**< visited */
-   )
-{
-   int nchildren = 0;
-   SCIP_Bool isart = FALSE;
-
-   visited[k] = TRUE;
-   depth[k] = d;
-   lowpoint[k] = d;
-
-   for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-   {
-      const int head = g->head[e];
-
-      if( !g->mark[head] )
-         continue;
-
-      if( !visited[head] )
-      {
-         parent[head] = k;
-         getArticulationPoints(g, head, d + 1, artpoints, nartpointsp, depth, lowpoint, parent, visited);
-         nchildren++;
-         if( lowpoint[head] >= depth[k] )
-            isart = TRUE;
-         lowpoint[k] = MIN(lowpoint[k], lowpoint[head]);
-      }
-      else if( head != parent[k] )
-      {
-         assert(depth[head] >= 0);
-         lowpoint[k] = MIN(lowpoint[k], depth[head]);
-      }
-   }
-
-   if( (parent[k] != -1 && isart) || (parent[k] == -1 && nchildren > 1) )
-      artpoints[(*nartpointsp)++] = k;
-}
 
 
 /** prune */
@@ -778,53 +729,6 @@ SCIP_RETCODE reduce_deleteMultiedges(
    }
 
    SCIPfreeBufferArray(scip, &count);
-
-   return SCIP_OKAY;
-}
-
-
-/** articulation points based reduction */
-SCIP_RETCODE reduce_aritculations(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixedp,             /**< pointer to offset value */
-   int*                  count               /**< pointer to number of reductions */
-   )
-{
-   const int root = g->source;
-   const int nnodes = g->knots;
-   int* depth;
-   int* lowpoint;
-   int* parent;
-   int* artpoints;
-   int nartpoints;
-
-   SCIP_Bool* visited;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &artpoints, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &depth, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lowpoint, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &parent, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) );
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      visited[k] = FALSE;
-      depth[k] = -1;
-      parent[k] = -1;
-      lowpoint[k] = -1;
-   }
-   nartpoints = 0;
-
-   getArticulationPoints(g, root, 0, artpoints, &nartpoints, depth, lowpoint, parent, visited);
-
-      printf("aritculation points found %d \n", nartpoints);
-
-   SCIPfreeBufferArray(scip, &visited);
-   SCIPfreeBufferArray(scip, &parent);
-   SCIPfreeBufferArray(scip, &lowpoint);
-   SCIPfreeBufferArray(scip, &depth);
-   SCIPfreeBufferArray(scip, &artpoints);
 
    return SCIP_OKAY;
 }

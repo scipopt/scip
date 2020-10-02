@@ -55,6 +55,7 @@ add_executable(scipstp
     src/reduce_da.c
     src/reduce_ext.c
     src/reduce_pcsimple.c
+    src/reduce_sepa.c
     src/reduce_sd.c
     src/reduce_sdcomp.c
     src/reduce_sdgraph.c
@@ -73,6 +74,7 @@ add_executable(scipstp
     src/stptest_misc.c
     src/stptest_pcreduce.c
     src/stptest_reducesd.c
+    src/stptest_reducesepa.c
     src/stptest_reduceutils.c
     src/solpool.c
     src/solstp.c
