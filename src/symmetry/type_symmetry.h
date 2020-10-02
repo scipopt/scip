@@ -23,7 +23,7 @@
 #ifndef __SCIP_TYPE_SYMMETRY_H_
 #define __SCIP_TYPE_SYMMETRY_H_
 
-#include <scip/scip.h>
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +96,14 @@ enum SCIP_SSTType
 
 typedef enum SCIP_SSTType SCIP_SSTTYPE;
 
-
+/** type of orbitope constraint: full, packing, or partitioning orbitope */
+enum SCIP_OrbitopeType
+{
+   SCIP_ORBITOPETYPE_FULL         = 0,       /**< constraint is a full orbitope constraint:         rowsum(x) unrestricted */
+   SCIP_ORBITOPETYPE_PARTITIONING = 1,       /**< constraint is a partitioning orbitope constraint: rowsum(x) == 1 */
+   SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
+};
+typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
 
 
 #ifdef __cplusplus

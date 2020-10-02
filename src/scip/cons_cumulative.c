@@ -4082,6 +4082,7 @@ SCIP_RETCODE coretimesUpdateLb(
       /* if we found no peak that means current the job could be scheduled at its earliest start time without
        * conflicting to the core resource profile
        */
+      /* coverity[check_after_sink] */
       if( peak == -1 )
          break;
 
@@ -4239,6 +4240,7 @@ SCIP_RETCODE coretimesUpdateUb(
       /* if we found no peak that means the current job could be scheduled at its latest start time without conflicting
        * to the core resource profile
        */
+      /* coverity[check_after_sink] */
       if( peak == -1 )
          break;
 

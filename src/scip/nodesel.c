@@ -654,7 +654,7 @@ SCIP_RETCODE SCIPnodepqBound(
       node = nodepq->slots[pos];
       assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
+      if( ((!set->exact_enabled) && SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound)) || SCIPnodeGetLowerbound(node) >= cutoffbound )
       {
          SCIPsetDebugMsg(set, "free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
@@ -663,9 +663,11 @@ SCIP_RETCODE SCIPnodepqBound(
           * lower bound than the cut off value
           */
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound));
+            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound)
+            || (set->exact_enabled && SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]) < cutoffbound));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound));
+            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound)
+            || (set->exact_enabled && SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]) < cutoffbound));
 
          /* free the slot in the node PQ */
          parentfelldown = nodepqDelPos(nodepq, set, pos);

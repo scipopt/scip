@@ -893,7 +893,7 @@ SCIP_RETCODE SCIPincludeHeurRens(
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/extratime",
-         "should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!",
+         "should the RENS sub-CIP get its own full time limit? This is only for testing and not recommended!",
          &heurdata->extratime, TRUE, DEFAULT_EXTRATIME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/addallsols",
@@ -901,7 +901,7 @@ SCIP_RETCODE SCIPincludeHeurRens(
          &heurdata->addallsols, TRUE, DEFAULT_ADDALLSOLS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/fullscale",
-         "should the RENS sub-CIP be solved with cuts, conflicts, strong branching,... This is only for tesing and not recommended!",
+         "should the RENS sub-CIP be solved with cuts, conflicts, strong branching,... This is only for testing and not recommended!",
          &heurdata->fullscale, TRUE, DEFAULT_FULLSCALE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
