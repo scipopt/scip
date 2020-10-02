@@ -1951,6 +1951,72 @@ SCIP_Bool raysAreDependent(
 }
 
 static
+SCIP_RETCODE rayInRecessionCone(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nlhdlr data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   RAYS*                 rays,               /**< rays */
+   int                   j,                  /**< index of current ray in recession cone */
+   int                   i,                  /**< index of current ray not in recession cone */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Bool             iscase4,            /**< whether we are in case 4 */
+   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
+   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
+   SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
+   SCIP_Real             wzlp,               /**< value of w at zlp */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             alpha,              /**< coef for combining the two rays */
+   SCIP_Bool*            inreccone,          /**< pointer to store whether the ray is in the recession cone or not */
+   SCIP_Bool*            success             /**< Did numerical troubles occur? */
+   )
+{
+   SCIP_Real coefs1234a[5];
+   SCIP_Real coefs4b[5];
+   SCIP_Real coefscondition[3];
+   SCIP_Real interpoint;
+   SCIP_Real* newraycoefs;
+   int* newrayidx;
+   int newraynnonz;
+
+  *inreccone = FALSE;
+
+   /* allocate memory for new ray */
+   newraynnonz = (rays->raysbegin[i + 1] - rays->raysbegin[i]) + (rays->raysbegin[j + 1] - rays->raysbegin[j]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &newraycoefs, newraynnonz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newrayidx, newraynnonz) );
+
+   /* build the ray alpha * ray_i + (1 - alpha) * ray_j */
+   combineRays(&rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+           rays->raysbegin[i], &rays->rays[rays->raysbegin[j]], &rays->raysidx[rays->raysbegin[j]],
+           rays->raysbegin[j + 1] - rays->raysbegin[j], newraycoefs, newrayidx, &newraynnonz, alpha,
+           -1 + alpha);
+
+   /* restrict phi to the "new" ray */
+   SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4, newraycoefs, newrayidx,
+           newraynnonz, vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+
+   if( ! *success )
+      goto CLEANUP;
+
+   /* check if restriction to "new" ray is numerically nasty. If so, treat the corresponding rho as if phi is
+    * positive
+    */
+
+   /* compute intersection point */
+   interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
+
+   /* no root exists */
+   if( SCIPisInfinity(scip, interpoint) )
+      *inreccone = TRUE;
+
+CLEANUP:
+   SCIPfreeBufferArray(scip, &newrayidx);
+   SCIPfreeBufferArray(scip, &newraycoefs);
+
+   return SCIP_OKAY;
+}
+
+static
 SCIP_RETCODE findRho(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nlhdlr data */
@@ -1971,10 +2037,12 @@ SCIP_RETCODE findRho(
    )
 {
    int i;
+   SCIP_Real maxalpha;
 
    /* go through all rays not in the recession cone and compute the largest negative steplength possible. The
     * smallest of them is then the steplength rho we use for the current ray */
-   *rho = 0;
+   *rho = 0.0;
+   maxalpha = 1.0;
    for( i = 0; i < rays->nrays; ++i )
    {
       SCIP_Real currentrho;
@@ -1992,70 +2060,54 @@ SCIP_RETCODE findRho(
       }
       else
       {
-         SCIP_Real lb;
-         SCIP_Real ub;
+         /*  since the two rays are linearly independent, we need to find the biggest alpha such that
+          *  alpha * ray_i + (1 - alpha) * ray_idx in the recession cone is. For every ray i, we compute
+          *  such a alpha but take the smallest one of them. We use "maxalpha" to keep track of this.
+          *  Since we know that we can only use alpha < maxalpha, we don't need to do the whole binary search
+          *  for every ray i. We only need to search the intervall [0, maxalpha]. Thereby, we start by checking
+          *  if alpha = maxalpha is already feasable */
+
+         SCIP_Bool inreccone;
          SCIP_Real alpha;
-         SCIP_Real* newraycoefs;
-         int* newrayidx;
-         int newraynnonz;
-         int j;
 
-         /* allocate memory for new ray */
-         newraynnonz = (rays->raysbegin[i + 1] - rays->raysbegin[i]) + (rays->raysbegin[idx + 1] - rays->raysbegin[idx]);
-         SCIP_CALL( SCIPallocBufferArray(scip, &newraycoefs, newraynnonz) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &newrayidx, newraynnonz) );
+         SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
+               vzlp, wcoefs, wzlp, kappa, maxalpha, &inreccone, success) );
 
-         /* do binary search by lookig at the convex combinations of r_i and r_j */
-         lb = 0.0;
-         ub = 1.0;
-
-         for( j = 0; j < BINSEARCH_MAXITERS; ++j )
+         if( inreccone )
+            alpha = maxalpha;
+         else
          {
-            SCIP_Real coefs1234a[5];
-            SCIP_Real coefs4b[5];
-            SCIP_Real coefscondition[3];
-            SCIP_Real interpoint;
+            SCIP_Real lb;
+            SCIP_Real ub;
+            int j;
 
-            alpha = (lb + ub) / 2.0;
-
-            /* build the ray alpha * ray_i + (1 - alpha) * ray_idx */
-            combineRays(&rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-                    rays->raysbegin[i], &rays->rays[rays->raysbegin[idx]], &rays->raysidx[rays->raysbegin[idx]],
-                    rays->raysbegin[idx + 1] - rays->raysbegin[idx], newraycoefs, newrayidx, &newraynnonz, alpha,
-                    -1 + alpha);
-
-            /* restrict phi to the "new" ray */
-            SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4, newraycoefs, newrayidx,
-                     newraynnonz, vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
-
-            if( ! *success )
+            lb = 0.0;
+            ub = maxalpha;
+            for( j = 0; j < BINSEARCH_MAXITERS; ++j )
             {
-               SCIPfreeBufferArray(scip, &newrayidx);
-               SCIPfreeBufferArray(scip, &newraycoefs);
+               alpha = (lb + ub) / 2.0;
 
-               return SCIP_OKAY;
+               SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
+                     vzlp, wcoefs, wzlp, kappa, alpha, &inreccone, success) );
+
+               if( ! *success )
+                  return SCIP_OKAY;
+
+               /* no root exists */
+               if( inreccone )
+               {
+                  lb = alpha;
+                  if( SCIPisEQ(scip, ub, lb) )
+                     break;
+               }
+               else
+                  ub = alpha;
             }
 
-            /* check if restriction to "new" ray is numerically nasty. If so, treat the corresponding rho as if phi is
-             * positive
-             */
+            assert(alpha < maxalpha);
 
-            /* compute intersection point */
-            interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
-
-            /* no root exists */
-            if( SCIPisInfinity(scip, interpoint) )
-            {
-               lb = alpha;
-               if( SCIPisEQ(scip, ub, lb) )
-                  break;
-            }
-            else
-               ub = alpha;
+            maxalpha = alpha;
          }
-
-         SCIPfreeBufferArray(scip, &newrayidx);
-         SCIPfreeBufferArray(scip, &newraycoefs);
 
          /* now we found the best convex combination which we use to derive the corresponding coef. If alpha = 0, we
           * cannot move the ray in the recession cone, i.e. strengthening is not possible */
