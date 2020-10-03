@@ -17,6 +17,7 @@ Performance improvements
 - Use the objective cutoff row as base row for separation in sepa_aggregation.c
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
+- improved upgrade of orbisacks to packing/partitioning orbitopes
 
 Examples and applications
 -------------------------
@@ -42,6 +43,8 @@ Interface changes
     SCIPparamsetSetDefaultString() and
     SCIPparamSetDefaultLongint(), SCIPparamSetDefaultReal(), SCIPparamSetDefaultChar(),
     SCIPparamSetDefaultString()
+- new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
+  packing or partitioning type
 
 ### Command line interface
 ### Interfaces to external software
@@ -100,6 +103,8 @@ Miscellaneous
 - when a restart occurs, SCIP now asserts (during EXITSOLVE) that all relaxation-only variables are unlocked and
   only captured by the transformed problem.
 - Avoid redundant calls to LP solver when LP is already flushed and solved
+- In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
+- Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
 
 Known bugs
 ----------
@@ -169,10 +174,15 @@ Fixed bugs
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
+- Fixed treatment of negated variables in parsing orbitope constraints
 - Fixed potential indexing error in prop_vbounds.c
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
+- Fixed order of linker flags when building AMPL interface with cmake system.
 - Fixed bug with ofsymcomptiming == 0: now symmetry is actually computed
+- Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
+- Fixed bug in presol_boundshift: do not shift non-active variables
+- Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 
 Miscellaneous
 -------------

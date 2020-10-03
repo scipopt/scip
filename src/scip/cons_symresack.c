@@ -380,6 +380,10 @@ SCIP_RETCODE packingUpgrade(
 
          /* get set packing/partitioning variables */
          nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
+
+         /* skip empty constraints (might not have been removed by presolving yet) */
+         if ( nsetppcvars == 0 )
+            continue;
          assert( nsetppcvars > 0 );
 
          setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
