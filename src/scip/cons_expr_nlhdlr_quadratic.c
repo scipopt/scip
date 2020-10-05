@@ -1950,6 +1950,9 @@ SCIP_Bool raysAreDependent(
    return TRUE;
 }
 
+/** checks if the ray alpha * ray_i + (1 - alpha) * ray_j is in the recession cone of the S-free set. To do so,
+  * we check if phi restricted to the ray has a positive root.
+  */
 static
 SCIP_RETCODE rayInRecessionCone(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2051,6 +2054,13 @@ SCIP_RETCODE findRho(
       if( SCIPisInfinity(scip, interpoints[i]) )
          continue;
 
+      /* if we cannot strengthen enough, we don't strengthen at all */
+      if( SCIPisInfinity(scip, -*rho) || SCIPisZero(scip, maxalpha) )
+      {
+         *rho = -SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+
       /* if the rays are linearly independent, we don't need to search for rho */
       if( raysAreDependent(scip, &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]],
           rays->raysbegin[i + 1] - rays->raysbegin[i], &rays->rays[rays->raysbegin[idx]],
@@ -2087,6 +2097,13 @@ SCIP_RETCODE findRho(
             {
                alpha = (lb + ub) / 2.0;
 
+               if( SCIPisZero(scip, alpha) )
+               {
+                  alpha = 0.0;
+                  maxalpha = 0.0;
+                  break;
+               }
+
                SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
                      vzlp, wcoefs, wzlp, kappa, alpha, &inreccone, success) );
 
@@ -2104,7 +2121,7 @@ SCIP_RETCODE findRho(
                   ub = alpha;
             }
 
-            assert(alpha < maxalpha);
+            assert(alpha <= maxalpha);
 
             maxalpha = alpha;
          }
@@ -2122,6 +2139,9 @@ SCIP_RETCODE findRho(
 
       if( currentrho < *rho )
          *rho = currentrho;
+
+      if( *rho < -10e+06 )
+         *rho = -SCIPinfinity(scip);
    }
 
    return SCIP_OKAY;
