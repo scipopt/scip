@@ -114,6 +114,7 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   maxrank;            /**< maximal rank a slackvar can have */
    SCIP_Real             mincutviolation;    /**< minimal cut violation the generated cuts must fulfill to be added to the LP */
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n) */
+   int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -2167,6 +2168,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_Real* interpoints;
+   int counter;
    int i;
 
    *success = TRUE;
@@ -2184,6 +2186,9 @@ SCIP_RETCODE computeStrengthenedIntercut(
    if( ! *success )
       goto CLEANUP;
 
+   /* keep track of the number of attempted strengthenings */
+   counter = 0;
+
    /* go through all intersection points that are equal to infinity -> these correspond to the rays which are in the
     * recession cone of C, i.e. the rays for which we (possibly) can compute a negative steplength */
    for( i = 0; i < rays->nrays; ++i )
@@ -2194,6 +2199,12 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
       if( !SCIPisInfinity(scip, interpoints[i]) )
          continue;
+
+      counter += 1;
+
+      /* if we reached the limit of strengthenings, we stop */
+      if( counter > nlhdlrdata->nstrengthlimit )
+         goto CLEANUP;
 
       /* compute the smallest rho */
       SCIP_CALL( findRho(scip, nlhdlrdata, nlhdlrexprdata, rays, i, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
@@ -3947,6 +3958,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/atwhichnodes",
          "determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n",
          &nlhdlrdata->atwhichnodes, FALSE, 1, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/nstrengthlimit",
+         "limit for number of rays we do the strengthening for",
+         &nlhdlrdata->nstrengthlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
