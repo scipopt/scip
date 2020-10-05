@@ -390,8 +390,8 @@ SCIP_RETCODE doMilpPresolveRational(
     * addPresolveMethod( uptr( new ParallelColDetection<Rational>() ) ); */
 
    /* set tolerances */
-   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
-   presolve.getPresolveOptions().epsilon = SCIPfeastol(scip);
+   presolve.getPresolveOptions().feastol = 0.0;
+   presolve.getPresolveOptions().epsilon = 0.0;
 
    /* adjust output settings of presolve libary */
 #ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT

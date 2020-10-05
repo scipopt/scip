@@ -5665,6 +5665,10 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    /* get current bounds */
    SCIPcomputeVarLbLocalExact(scip, var, lb);
    SCIPcomputeVarUbLocalExact(scip, var, ub);
+
+   assert(SCIPisZero(scip, RatApproxReal(lb) - SCIPcomputeVarLbLocal(scip, var)));
+   assert(SCIPisZero(scip, RatApproxReal(ub) - SCIPcomputeVarUbLocal(scip, var)));
+
    assert(RatIsLE(lb, ub));
 
    if( RatIsGT(newbound, ub) )
@@ -5914,6 +5918,10 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    /* get current bounds */
    SCIPcomputeVarLbLocalExact(scip, var, lb);
    SCIPcomputeVarUbLocalExact(scip, var, ub);
+
+   assert(SCIPisZero(scip, RatApproxReal(lb) - SCIPcomputeVarLbLocal(scip, var)));
+   assert(SCIPisZero(scip, RatApproxReal(ub) - SCIPcomputeVarUbLocal(scip, var)));
+
    assert(RatIsLE(lb, ub));
 
    if( RatIsLT(newbound, lb) )

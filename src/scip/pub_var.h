@@ -996,8 +996,9 @@ SCIP_Real SCIPvarGetLPSol(
 
 /** gets primal LP solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLPSolExact(
-   SCIP_VAR*             var                 /**< problem variable */
+void SCIPvarGetLPSolExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        res                 /**< store the resulting value */
    );
 
 /** gets primal NLP solution value of variable */
@@ -1178,8 +1179,9 @@ SCIP_Real SCIPvarGetLPSol_rec(
 
 /** gets primal LP solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLPSolExact_rec(
-   SCIP_VAR*             var                 /**< problem variable */
+void SCIPvarGetLPSolExact_rec(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        res                 /**< store the resulting value */
    );
 
 /** gets primal NLP solution value of variable */
@@ -1209,8 +1211,9 @@ SCIP_Real SCIPvarGetSol(
 
 /** gets current LP or pseudo solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetSolExact(
+void SCIPvarGetSolExact(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        res,                /**< the resulting value */
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 
