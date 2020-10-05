@@ -1621,6 +1621,7 @@ SCIP_RETCODE readExpression(
       }
       else if( strcmp(exprname, "erf") == 0 )
       {
+         SCIPwarningMessage(scip, "Danger! You're entering a construction area. Implementation of support for 'erf' is incomplete.\n");
          SCIP_CALL( SCIPcreateConsExprExprErf(scip, consexprhdlr, expr, arg) );
       }
 
