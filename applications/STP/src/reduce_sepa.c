@@ -37,7 +37,7 @@
 #include "stpvector.h"
 #include "scip/scip.h"
 
-//#define CUTTREE_PRINT_STATISTICS
+#define CUTTREE_PRINT_STATISTICS
 
 
 /** cut nodes/ articulation points */

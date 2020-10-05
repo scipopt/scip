@@ -933,6 +933,7 @@ SCIP_RETCODE delPseudoDeleteVertex(
    const int nspareedges = degree; /* todo we might want to allow additional edges to be inserted */
    int edgecount = 0;
    int replacecount = 0;
+   int pseudoancestor = -1;
 
    for( int i = 0; i < degree; i++ )
    {
@@ -984,7 +985,13 @@ SCIP_RETCODE delPseudoDeleteVertex(
                //   printf("...with costs %f, %f \n", edgecosts_adapt[newijedge],  edgecosts_adapt[flipedge(newijedge)] );
                }
 
-               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, vertex, g) );
+               if( pseudoancestor == -1 )
+               {
+                  graph_addPseudoAncestor(g, &pseudoancestor);
+                  assert(pseudoancestor >= 0);
+               }
+
+               SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, newijedge, pseudoancestor, g) );
             }
 
             /* does no original edge exist? */
@@ -1045,7 +1052,7 @@ SCIP_RETCODE delPseudoGetReplaceEdges(
 
    *success = TRUE;
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, g->knots) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors)) );
 
    for( int i = 0; i < STP_DELPSEUDO_MAXNEDGES; i++ )
       neigbedge[i] = STP_DELPSEUDO_NOEDGE;
@@ -1140,7 +1147,7 @@ SCIP_RETCODE delPseudoCheckReplacement(
 
    *success = TRUE;
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, g->knots) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors)) );
 
    for( int i = 0; i < degree - 1 && *success; i++ )
    {
@@ -1250,7 +1257,7 @@ SCIP_RETCODE delPseudoEdgeGetReplaceEdges(
 
    *success = TRUE;
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, g->knots) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors)) );
    graph_pseudoAncestors_hashEdge(g->pseudoancestors, edge, hasharr);
 
    for( int i = 0; i < degree; i++ )

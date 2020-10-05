@@ -591,9 +591,12 @@ SCIP_RETCODE testEdgeDeletion2_deprecated(
 
    if( variant == 1 )
    {
+      int pseudoancestor;
       SCIP_CALL( graph_init_history(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
+      graph_addPseudoAncestor(graph, &pseudoancestor);
+      graph_addPseudoAncestor(graph, &pseudoancestor);
       SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 1, graph) );
 
       for( int e = graph->outbeg[10]; e != EAT_LAST; e = graph->oeat[e] )

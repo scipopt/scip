@@ -192,34 +192,43 @@ SCIP_RETCODE pseudoAncestorsCreation(
 )
 {
    GRAPH* graph;
+   int pseudoancestor;
 
    assert(scip);
 
    SCIP_CALL( graphBuildV5E5(scip, &graph, FALSE) );
    assert(graph->knots == 5 && graph->edges == 10);
 
-   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
-   assert(graph_edge_nPseudoAncestors(graph, 0) == 1);
-   assert(graph_edge_nPseudoAncestors(graph, 1) == 1);
-   assert(graph_edge_nPseudoAncestors(graph, 2) == 0);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   STPTEST_ASSERT(pseudoancestor == 0);
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 0, graph) );
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 0) == 1);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 1) == 1);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 2) == 0);
 
-   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
-   assert(graph_edge_nPseudoAncestors(graph, 0) == 2);
-   assert(graph_edge_nPseudoAncestors(graph, 1) == 2);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   STPTEST_ASSERT(pseudoancestor == 1);
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 1, graph) );
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 0) == 2);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 1) == 2);
 
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   STPTEST_ASSERT(pseudoancestor == 4);
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 4, graph) );
-   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 1, graph) );
-   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 0, graph) );
-   assert(graph_edge_nPseudoAncestors(graph, 0) == 5);
-   assert(graph_edge_nPseudoAncestors(graph, 1) == 5);
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 3, graph) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 1, 2, graph) );
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 0) == 5);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 1) == 5);
 
    graph_edge_delPseudoAncestors(scip, 1, graph);
-   assert(graph_edge_nPseudoAncestors(graph, 0) == 0);
-   assert(graph_edge_nPseudoAncestors(graph, 1) == 0);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 0) == 0);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 1) == 0);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
-   assert(graph_edge_nPseudoAncestors(graph, 0) == 1);
-   assert(graph_edge_nPseudoAncestors(graph, 1) == 1);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 0) == 1);
+   STPTEST_ASSERT(graph_edge_nPseudoAncestors(graph, 1) == 1);
 
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
@@ -235,28 +244,32 @@ SCIP_RETCODE pseudoAncestorsMerge(
 {
    GRAPH* graph;
    SCIP_Bool conflict;
+   int pseudoancestor;
 
    assert(scip);
 
    SCIP_CALL( graphBuildV5E5(scip, &graph, FALSE) );
    assert(graph->knots == 5 && graph->edges == 10);
 
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 3, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 4, graph) );
    SCIP_CALL( graph_pseudoAncestors_appendMoveEdge(scip, 0, 4, FALSE, graph, &conflict)  );
-   assert(conflict);
-   assert( graph_edge_nPseudoAncestors(graph, 0) == 3 );
-   assert( graph_edge_nPseudoAncestors(graph, 4) == 0);
-
+   STPTEST_ASSERT(conflict);
+   STPTEST_ASSERT( graph_edge_nPseudoAncestors(graph, 0) == 3 );
+   STPTEST_ASSERT( graph_edge_nPseudoAncestors(graph, 4) == 0);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 6, 1, graph) );
    SCIP_CALL( graph_pseudoAncestors_appendMoveEdge(scip, 0, 6, FALSE, graph, &conflict)  );
-   assert(!conflict);
-   assert( graph_edge_nPseudoAncestors(graph, 0) == 4 );
-   assert( graph_edge_nPseudoAncestors(graph, 6) == 0);
-
+   STPTEST_ASSERT(!conflict);
+   STPTEST_ASSERT( graph_edge_nPseudoAncestors(graph, 0) == 4 );
+   STPTEST_ASSERT( graph_edge_nPseudoAncestors(graph, 6) == 0);
 
    graph_path_exit(scip, graph);
    graph_free(scip, &graph, TRUE);
@@ -310,32 +323,37 @@ SCIP_RETCODE pseudoAncestorsHash(
    GRAPH* graph;
    SCIP_Bool conflict;
    int* hasharr;
+   int pseudoancestor;
 
    assert(scip);
 
    SCIP_CALL( graphBuildV5E5(scip, &graph, FALSE) );
    assert(graph->knots == 5 && graph->edges == 10);
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph->knots) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors)) );
 
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
+   graph_addPseudoAncestor(graph, &pseudoancestor);
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 2, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 0, 3, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 3, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 4, 4, graph) );
    graph_pseudoAncestors_hashEdge(graph->pseudoancestors, 0, hasharr);
    graph_pseudoAncestors_hashEdgeDirty(graph->pseudoancestors, 4, TRUE, &conflict, hasharr);
-   assert(conflict);
-
+   STPTEST_ASSERT(conflict);
 
    SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, 6, 1, graph) );
    graph_pseudoAncestors_hashEdgeDirty(graph->pseudoancestors, 6, TRUE, &conflict, hasharr);
-   assert(!conflict);
+   STPTEST_ASSERT(!conflict);
 
    graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, 6, hasharr);
    graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, 0, hasharr);
 
    for( int k = 0; k < graph->knots; k++ )
-      assert(hasharr[k] == 0);
+      STPTEST_ASSERT(hasharr[k] == 0);
 
    SCIPfreeCleanBufferArray(scip, &hasharr);
 
@@ -359,7 +377,7 @@ SCIP_RETCODE pseudoAncestorsHashPc(
    SCIP_CALL( graphBuildV5E5(scip, &graph, TRUE) );
    assert(graph->knots > 5 && graph->edges > 10);
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph->knots) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors)) );
 
    SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 0, 2, graph) );
    SCIP_CALL( graph_pseudoAncestors_addToNode(scip, 0, 3, graph) );

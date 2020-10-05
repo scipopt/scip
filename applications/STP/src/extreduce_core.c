@@ -1726,7 +1726,7 @@ SCIP_RETCODE extreduce_checkComponent(
    if( graph_pc_isPc(graph) )
       SCIP_CALL( SCIPallocBufferArray(scip, &pcSdCands, nnodes) );
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, nnodes) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors)) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &sdeq_edgesIsForbidden, graph->edges / 2) );
 
    {

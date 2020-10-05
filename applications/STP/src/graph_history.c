@@ -53,8 +53,9 @@ struct pseudo_ancestors
 {
    BLOCKANS*             ans_halfedges;      /**< (half) edge ancestors  */
    BLOCKANS*             ans_nodes;          /**< (pc/mw) node ancestors  */
-   int                   halfnedges;         /**< half number of edges */
    int                   nnodes;             /**< number of nodes */
+   int                   halfnedges;         /**< half number of edges */
+   int                   nAllPseudoancestors;/**< number of pseudo-ancestors */
 };
 
 
@@ -224,7 +225,7 @@ static inline
 void blockedAncestors_hash(
    const BLOCKANS*       blockedans,         /**< blocked pseudo-ancestors */
    int                   block_id,           /**< entry for which to reallocate */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array for pseudo ancestors */
 )
 {
    const int nancestors = blockedans->sizes[block_id];
@@ -250,7 +251,7 @@ void blockedAncestors_unhashPartial(
    const BLOCKANS*       blockedans,         /**< blocked pseudo-ancestors */
    int                   block_id,           /**< entry for which to reallocate */
    int                   nAncestorsToClean,  /**< number of (first) ancestors to use for clean, or -1 to clean all */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array for pseudo ancestors */
 )
 {
    const int* const ancestorsblock = blockedans->blocks[block_id];
@@ -278,7 +279,7 @@ void blockedAncestors_hashDirty(
    int                   block_id,           /**< entry for which to reallocate */
    SCIP_Bool             revertIfConflict,   /**< break on conflict? */
    SCIP_Bool*            conflict,           /**< conflict? */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array for pseudo ancestors */
 )
 {
    int k;
@@ -330,7 +331,7 @@ static inline
 void blockedAncestors_unhashDirty(
    const BLOCKANS*       blockedans,         /**< blocked pseudo-ancestors */
    int                   block_id,           /**< entry for which to reallocate */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array for pseudo ancestors */
 )
 {
    const int nancestors = blockedans->sizes[block_id];
@@ -356,7 +357,7 @@ static inline
 SCIP_Bool blockedAncestors_hashIsHit(
    const BLOCKANS*       blockedans,         /**< blocked pseudo-ancestors */
    int                   ancestor,           /**< ancestor to check */
-   const int*            hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   const int*            hasharr             /**< hash array for pseudo ancestors*/
 )
 {
    assert(blockedans && hasharr);
@@ -372,7 +373,7 @@ static inline
 SCIP_Bool blockedAncestors_hashIsHitBlock(
    const BLOCKANS*       blockedans,         /**< blocked pseudo-ancestors */
    int                   block_id,           /**< entry for which to check for conflicts */
-   const int*            hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   const int*            hasharr             /**< hash array for pseudo ancestors */
 )
 {
    const int nancestors = blockedans->sizes[block_id];
@@ -438,7 +439,7 @@ static inline
 SCIP_Bool blockedAncestors_blockIsValid(
    int                   block_id,           /**< entry for which to reallocate */
    const BLOCKANS*       blockedans,         /**< blocked pseudo-ancestors */
-   int*                  hasharr             /**< clean hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< clean hash array for pseudo ancestors */
 )
 {
    SCIP_Bool conflict;
@@ -461,7 +462,7 @@ SCIP_RETCODE blockedAncestors_appendArray(
    const int*            ancestors_source,   /**< ancestors to append */
    int                   size_source,        /**< number of ancestors to append */
    SCIP_Bool             breakOnConflict,    /**< break on conflict */
-   int                   nnodes,             /**< number of nodes of underlying graph */
+   int                   hasharr_size,       /**< size for hash array */
    BLOCKANS*             blockedans_target,  /**< blocked pseudo-ancestors */
    SCIP_Bool*            conflict            /**< conflict? */
 )
@@ -475,7 +476,7 @@ SCIP_RETCODE blockedAncestors_appendArray(
    assert(size_source > 0);
    assert(ancestors_source && blockedans_target);
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, hasharr_size) );
 
    /* need to realloc target ancestor array? */
    if( size_targetPlusSource > blockedans_target->capacities[block_target] )
@@ -495,6 +496,7 @@ SCIP_RETCODE blockedAncestors_appendArray(
    for( int e = 0; e < size_source; e++ )
    {
       const int ancestor = ancestors_source[e];
+      assert(ancestor < hasharr_size);
 
       if( blockedAncestors_hashIsHit(blockedans_target, ancestor, hasharr) )
       {
@@ -533,7 +535,7 @@ SCIP_RETCODE blockedAncestors_appendCopy(
    const BLOCKANS*       blockedans_source,  /**< blocked pseudo-ancestors */
    int                   block_source,       /**< source block */
    SCIP_Bool             breakOnConflict,    /**< break on conflict */
-   int                   nnodes,             /**< number of nodes of underlying graph */
+   int                   hasharr_size,       /**< size of hash array */
    BLOCKANS*             blockedans_target,  /**< blocked pseudo-ancestors */
    SCIP_Bool*            conflict            /**< conflict? */
 )
@@ -541,7 +543,7 @@ SCIP_RETCODE blockedAncestors_appendCopy(
    const int size_source = blockedans_source->sizes[block_source];
 
    assert(scip && blockedans_source && blockedans_target && conflict);
-   assert(nnodes >= 0 && size_source >= 0);
+   assert(hasharr_size >= 1 && size_source >= 0);
    assert(block_target >= 0 && block_target < blockedans_target->nblocks);
    assert(block_source >= 0 && block_source < blockedans_source->nblocks);
 
@@ -552,7 +554,7 @@ SCIP_RETCODE blockedAncestors_appendCopy(
    {
       const int* const ancestors_source = blockedans_source->blocks[block_source];
 
-      SCIP_CALL( blockedAncestors_appendArray(scip, block_target, ancestors_source, size_source, breakOnConflict, nnodes, blockedans_target, conflict) );
+      SCIP_CALL( blockedAncestors_appendArray(scip, block_target, ancestors_source, size_source, breakOnConflict, hasharr_size, blockedans_target, conflict) );
    }
 
    return SCIP_OKAY;
@@ -565,7 +567,7 @@ SCIP_RETCODE blockedAncestors_addAncestor(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   block_target,       /**< block for which to add pseudo ancestor */
    int                   ancestor,           /**< (index of) pseudo ancestor */
-   int                   nnodes,             /**< number of nodes of underlying graph */
+   int                   hasharr_size,       /**< size of hash array */
    BLOCKANS*             blockedans          /**< blocked pseudo-ancestors */
 )
 {
@@ -574,6 +576,7 @@ SCIP_RETCODE blockedAncestors_addAncestor(
 
    assert(scip && blockedans);
    assert(block_target >= 0 && block_target < blockedans->nblocks);
+   assert(ancestor < hasharr_size);
 
    /* need to reallocate? */
    if( sizes[block_target] == capacities[block_target] )
@@ -589,7 +592,8 @@ SCIP_RETCODE blockedAncestors_addAncestor(
 #ifndef NDEBUG
    {
       int* hasharr;
-      SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+      assert(hasharr_size >= 1);
+      SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, hasharr_size) );
       assert(blockedAncestors_blockIsValid(block_target, blockedans, hasharr));
       SCIPfreeCleanBufferArray(scip, &hasharr);
    }
@@ -603,7 +607,7 @@ SCIP_RETCODE blockedAncestors_addAncestor(
 static
 SCIP_Bool blockedAncestors_isValid(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   nnodes,             /**< number of nodes of underlying graph */
+   int                   hasharr_size,       /**< size of hash array */
    const BLOCKANS*       blockedans          /**< blocked pseudo-ancestors */
 )
 {
@@ -611,7 +615,7 @@ SCIP_Bool blockedAncestors_isValid(
    SCIP_Bool isValid = TRUE;
 
    assert(scip && blockedans);
-   assert(nnodes >= 0);
+   assert(hasharr_size >= 1);
 
    /* check whether sizes/capacities are correct */
    for( int e = 0; e < blockedans->nblocks && isValid; e++ )
@@ -626,7 +630,7 @@ SCIP_Bool blockedAncestors_isValid(
          isValid = FALSE;
    }
 
-   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, hasharr_size) );
 
    /* check whether there are conflict within the ancestor blocks */
    for( int e = 0; e < blockedans->nblocks && isValid; e++ )
@@ -693,7 +697,7 @@ void graph_singletonAncestors_freeMembers(
    assert(singletonans->npseudoancestors >= 0);
 
    if( singletonans->npseudoancestors > 0 )
-        SCIPfreeMemoryArray(scip, &(singletonans->pseudoancestors));
+      SCIPfreeMemoryArray(scip, &(singletonans->pseudoancestors));
 
    SCIPintListNodeFree(scip, &(singletonans->ancestors));
    SCIPintListNodeFree(scip, &(singletonans->revancestors));
@@ -760,7 +764,7 @@ SCIP_Bool graph_valid_ancestors(
 void graph_pseudoAncestors_hashEdge(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   edge,               /**< edge for which to hash */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    const int halfedge = edge / 2;
@@ -776,7 +780,7 @@ void graph_pseudoAncestors_hashEdge(
 void graph_pseudoAncestors_hashNode(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   node,               /**< node for which to hash */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    assert(pseudoancestors && hasharr);
@@ -790,7 +794,7 @@ void graph_pseudoAncestors_hashNode(
 void graph_pseudoAncestors_unhashEdge(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   edge,               /**< edge for which to unhash */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    const int halfedge = edge / 2;
@@ -806,7 +810,7 @@ void graph_pseudoAncestors_unhashEdge(
 void graph_pseudoAncestors_unhashNode(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   node,               /**< node for which to unhash */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    assert(pseudoancestors && hasharr);
@@ -822,7 +826,7 @@ void graph_pseudoAncestors_hashEdgeDirty(
    int                   edge,               /**< edge for which to hash */
    SCIP_Bool             revertIfConflict,   /**< revert on conflict? */
    SCIP_Bool*            conflict,           /**< conflict? */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    const int halfedge = edge / 2;
@@ -840,7 +844,7 @@ void graph_pseudoAncestors_hashNodeDirty(
    int                   node,               /**< node for which to hash */
    SCIP_Bool             revertIfConflict,   /**< revert on conflict? */
    SCIP_Bool*            conflict,           /**< conflict? */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    assert(pseudoancestors && hasharr);
@@ -854,7 +858,7 @@ void graph_pseudoAncestors_hashNodeDirty(
 void graph_pseudoAncestors_unhashEdgeDirty(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   edge,               /**< edge for which to unhash */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    const int halfedge = edge / 2;
@@ -870,7 +874,7 @@ void graph_pseudoAncestors_unhashEdgeDirty(
 void graph_pseudoAncestors_unhashNodeDirty(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   node,               /**< node for which to unhash */
-   int*                  hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   int*                  hasharr             /**< hash array */
 )
 {
    assert(pseudoancestors && hasharr);
@@ -884,7 +888,7 @@ void graph_pseudoAncestors_unhashNodeDirty(
 SCIP_Bool graph_pseudoAncestors_edgeIsHashed(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   edge,               /**< edge for which to check */
-   const int*            hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   const int*            hasharr             /**< hash array */
 )
 {
    const int block_id = edge / 2;
@@ -898,7 +902,7 @@ SCIP_Bool graph_pseudoAncestors_edgeIsHashed(
 SCIP_Bool graph_pseudoAncestors_nodeIsHashed(
    const PSEUDOANS*      pseudoancestors,    /**< pseudo-ancestors */
    int                   node,               /**< node for which to check */
-   const int*            hasharr             /**< hash array of size nnodes (wrt pseudo ancestors) */
+   const int*            hasharr             /**< hash array */
 )
 {
    assert(pseudoancestors && hasharr);
@@ -917,13 +921,12 @@ SCIP_Bool graph_pseudoAncestors_edgesInConflict(
 {
    const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
    int* hasharr;
-   const int nnodes = g->knots;
    int i;
    SCIP_Bool conflict = FALSE;
 
    assert(g && edges);
 
-   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors)) );
 
     for( i = 0; i < nedges; i++ )
     {
@@ -937,7 +940,7 @@ SCIP_Bool graph_pseudoAncestors_edgesInConflict(
        graph_pseudoAncestors_unhashEdge(pseudoancestors, edges[j], hasharr);
 
 #ifndef NDEBUG
-    for( int j = 0; j < nnodes; j++ )
+    for( int j = 0; j < g->knots; j++ )
        assert(hasharr[0] == 0);
 #endif
 
@@ -963,6 +966,7 @@ SCIP_RETCODE graph_init_pseudoAncestors(
    g->pseudoancestors = pseudoancestors;
 
    pseudoancestors->nnodes = g->knots;
+   pseudoancestors->nAllPseudoancestors = 0;
    pseudoancestors->halfnedges = g->edges / 2;
 
    SCIP_CALL( blockedAncestors_init(pseudoancestors->halfnedges, &(pseudoancestors->ans_halfedges)) );
@@ -989,7 +993,7 @@ void graph_free_pseudoAncestors(
    PSEUDOANS* pseudoancestors;
 
    assert(scip && g && g->pseudoancestors);
-   assert(g->pseudoancestors->nnodes >= 1);
+   assert(g->pseudoancestors->nAllPseudoancestors >= 0);
 
    pseudoancestors = g->pseudoancestors;
 
@@ -1137,14 +1141,41 @@ const int* graph_knot_getPseudoAncestors(
 }
 
 
-/** returns array number of nodes */
-int graph_pseudoAncestors_getNnodes(
-   const GRAPH*          g            /**< the graph */
+/** returns number of pseudo-ancestors */
+int graph_getNpseudoAncestors(
+   const GRAPH*          g                /**< the graph */
    )
 {
    assert(g && g->pseudoancestors);
 
-   return g->pseudoancestors->nnodes;
+   return g->pseudoancestors->nAllPseudoancestors;
+}
+
+
+/** adds new pseudo ancestor and provides index */
+void graph_addPseudoAncestor(
+   GRAPH*                g,                /**< the graph (in/out)  */
+   int*                  pseudoancestor    /**< gives the new pseudo ancestor index (out) */
+   )
+{
+   assert(pseudoancestor && g && g->pseudoancestors);
+   assert(g->pseudoancestors->nAllPseudoancestors >= 0);
+   g->pseudoancestors->nAllPseudoancestors++;
+
+   *pseudoancestor = (g->pseudoancestors->nAllPseudoancestors - 1);
+}
+
+
+/** returns minimum required number for hash array */
+int graph_pseudoAncestorsGetHashArraySize(
+   const PSEUDOANS*      pseudoancestors     /**< pseudo-ancestors */
+   )
+{
+   assert(pseudoancestors);
+   assert(pseudoancestors->nAllPseudoancestors >= 0);
+   assert(getNextPow2(pseudoancestors->nAllPseudoancestors + 1) > pseudoancestors->nAllPseudoancestors);
+
+   return getNextPow2(pseudoancestors->nAllPseudoancestors + 1);
 }
 
 
@@ -1159,13 +1190,14 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyEdge(
 )
 {
    PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
    const int target = edge_target / 2;
    const int source = edge_source / 2;
 
    assert(scip && g && pseudoancestors && conflict);
 
    SCIP_CALL( blockedAncestors_appendCopy(scip, target, pseudoancestors->ans_halfedges, source, revertIfConflict,
-         pseudoancestors->nnodes, pseudoancestors->ans_halfedges, conflict) );
+         hasharr_size, pseudoancestors->ans_halfedges, conflict) );
 
    return SCIP_OKAY;
 }
@@ -1182,11 +1214,12 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyNode(
 )
 {
    PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
 
    assert(scip && g && pseudoancestors && conflict);
 
    SCIP_CALL( blockedAncestors_appendCopy(scip, node_target,  pseudoancestors->ans_nodes, node_source, revertIfConflict,
-         pseudoancestors->nnodes, pseudoancestors->ans_nodes, conflict) );
+         hasharr_size, pseudoancestors->ans_nodes, conflict) );
 
    return SCIP_OKAY;
 }
@@ -1203,12 +1236,13 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyNodeToEdge(
 )
 {
    PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
    const int target = edge_target / 2;
 
    assert(scip && g && pseudoancestors && conflict);
 
    SCIP_CALL( blockedAncestors_appendCopy(scip, target,  pseudoancestors->ans_nodes, node_source, revertIfConflict,
-         pseudoancestors->nnodes, pseudoancestors->ans_halfedges, conflict) );
+         hasharr_size, pseudoancestors->ans_halfedges, conflict) );
 
    return SCIP_OKAY;
 }
@@ -1225,12 +1259,13 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyEdgeToNode(
 )
 {
    PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
    const int source = edge_source / 2;
 
    assert(scip && g && pseudoancestors && conflict);
 
    SCIP_CALL( blockedAncestors_appendCopy(scip, node_target,  pseudoancestors->ans_halfedges, source, revertIfConflict,
-         pseudoancestors->nnodes, pseudoancestors->ans_nodes, conflict) );
+         hasharr_size, pseudoancestors->ans_nodes, conflict) );
 
    return SCIP_OKAY;
 }
@@ -1309,13 +1344,14 @@ SCIP_RETCODE graph_pseudoAncestors_addToEdge(
 )
 {
    PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
    const int target = edge_target / 2;
 
    assert(scip && g && pseudoancestors);
    assert(target >= 0 && target < g->pseudoancestors->halfnedges);
-   assert(ancestor >= 0 && ancestor < g->pseudoancestors->nnodes);
+   assert(ancestor >= 0 && ancestor < g->pseudoancestors->nAllPseudoancestors);
 
-   SCIP_CALL( blockedAncestors_addAncestor(scip, target, ancestor, pseudoancestors->nnodes, pseudoancestors->ans_halfedges) );
+   SCIP_CALL( blockedAncestors_addAncestor(scip, target, ancestor, hasharr_size, pseudoancestors->ans_halfedges) );
 
    return SCIP_OKAY;
 }
@@ -1330,15 +1366,16 @@ SCIP_RETCODE graph_pseudoAncestors_addToNode(
 )
 {
    PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
 
    assert(scip && g && pseudoancestors);
    assert(graph_pc_isPcMw(g));
    assert(pseudoancestors->ans_nodes);
    assert(node_target >= 0 && node_target < g->pseudoancestors->nnodes);
+   assert(ancestor >= 0 && ancestor < g->pseudoancestors->nAllPseudoancestors);
    assert(!graph_pc_knotIsDummyTerm(g, node_target));
-   assert(ancestor >= 0 && ancestor < g->pseudoancestors->nnodes);
 
-   SCIP_CALL( blockedAncestors_addAncestor(scip, node_target, ancestor, pseudoancestors->nnodes, pseudoancestors->ans_nodes) );
+   SCIP_CALL( blockedAncestors_addAncestor(scip, node_target, ancestor, hasharr_size, pseudoancestors->ans_nodes) );
 
    return SCIP_OKAY;
 }
@@ -1351,19 +1388,19 @@ SCIP_Bool graph_valid_pseudoAncestors(
 )
 {
    const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
-   const int nnodes = pseudoancestors->nnodes;
+   const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
    SCIP_Bool isValid;
 
    assert(scip && g && pseudoancestors);
 
-   isValid = blockedAncestors_isValid(scip, nnodes, pseudoancestors->ans_halfedges);
+   isValid = blockedAncestors_isValid(scip, hasharr_size, pseudoancestors->ans_halfedges);
 
    if( !isValid )
       return FALSE;
 
    if( graph_pc_isPcMw(g) )
    {
-      isValid = blockedAncestors_isValid(scip, nnodes, pseudoancestors->ans_nodes);
+      isValid = blockedAncestors_isValid(scip, hasharr_size, pseudoancestors->ans_nodes);
 
       if( !isValid )
          return FALSE;
