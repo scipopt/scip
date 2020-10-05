@@ -664,15 +664,18 @@ SCIP_RETCODE packPseudoAncestors(
          SCIP_Bool conflict = FALSE;
 
          if( nancestors == 0 )
+         {
+            e_new += 2;
             continue;
+         }
 
          ancestors = graph_edge_getPseudoAncestors(g_old, e_old);
          assert(ancestors);
 
          SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, e_new, ancestors, nancestors, g_new, &conflict) );
          assert(!conflict);
-         assert(graph_edge_getPseudoAncestors(g_new, e_new) == nancestors);
-         assert(graph_edge_getPseudoAncestors(g_new, e_new + 1) == nancestors);
+         assert(graph_edge_nPseudoAncestors(g_new, e_new) == nancestors);
+         assert(graph_edge_nPseudoAncestors(g_new, e_new + 1) == nancestors);
 
          e_new += 2;
       }
