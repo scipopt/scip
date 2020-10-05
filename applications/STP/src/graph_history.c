@@ -1335,11 +1335,12 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyArrayToEdge(
    {
       const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
       const int target = edge_target / 2;
+      const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
       const SCIP_Bool revertIfConflict = FALSE;
 
       assert(pseudoancestors);
 
-      SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, g->knots, pseudoancestors->ans_halfedges, conflict) );
+      SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, hasharr_size, pseudoancestors->ans_halfedges, conflict) );
    }
 
    return SCIP_OKAY;
