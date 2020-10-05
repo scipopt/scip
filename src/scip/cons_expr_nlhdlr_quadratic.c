@@ -3961,7 +3961,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/nstrengthlimit",
          "limit for number of rays we do the strengthening for",
-         &nlhdlrdata->nstrengthlimit, FALSE, 1, -1, INT_MAX, NULL, NULL) );
+         &nlhdlrdata->nstrengthlimit, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
