@@ -26,7 +26,7 @@
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "erf"
-#define EXPRHDLR_DESC         "expression handler template"
+#define EXPRHDLR_DESC         "gaussian error function"
 #define EXPRHDLR_PRECEDENCE   79000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(131071.0)
 
@@ -54,7 +54,7 @@ SCIP_Real errorf(
    SCIP_Real t = 1.0 / (1.0 + p * REALABS(x));
    SCIP_Real y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * exp(-x*x);
 
-    return sign*y;
+   return sign*y;
 }
 
 /*
@@ -71,7 +71,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrErf)
    return SCIP_OKAY;
 }
 
-/** simplifies a erf expression */
+/** simplifies an erf expression */
 static
 SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyErf)
 {  /*lint --e{715}*/
@@ -108,34 +108,10 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareErf)
    assert(expr1 != NULL);
    assert(expr2 != NULL);
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return 0;
-}
-
-/** expression data copy callback */
-static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataErf)
-{  /*lint --e{715}*/
-   assert(targetexprdata != NULL);
-   assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
-
-   *targetexprdata = NULL;
-
-   return SCIP_OKAY;
-}
-
-/** expression data free callback */
-static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataErf)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPsetConsExprExprData(expr, NULL);
-
-   return SCIP_OKAY;
 }
 
 /** expression parse callback */
@@ -182,7 +158,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -221,7 +197,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -233,7 +209,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of erf constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of erf expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -309,21 +285,14 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrErf(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-
-   /* create expression handler data */
-   exprhdlrdata = NULL;
-
-   /* TODO: create and store expression handler specific data here */
 
    /* include expression handler */
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalErf, exprhdlrdata) );
+         EXPRHDLR_PRECEDENCE, evalErf, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrErf, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataErf, freedataErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareErf) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseErf) );
