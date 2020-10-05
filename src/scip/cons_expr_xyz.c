@@ -59,7 +59,7 @@ struct SCIP_ConsExpr_ExprHdlrData
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -69,7 +69,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXyz)
 static
 SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -81,7 +81,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -94,7 +94,7 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
    assert(expr1 != NULL);
    assert(expr2 != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return 0;
@@ -104,7 +104,7 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -116,7 +116,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -128,7 +128,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -140,7 +140,7 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -152,7 +152,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -164,7 +164,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -176,7 +176,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -188,7 +188,7 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -200,7 +200,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -212,7 +212,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -224,7 +224,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -237,7 +237,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
    assert(expr != NULL);
    assert(EXPRHDLR_HASHKEY != 0.0);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -249,9 +249,8 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(curvature != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -265,7 +264,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityXyz)
    assert(expr != NULL);
    assert(result != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -279,7 +278,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityXyz)
    assert(expr != NULL);
    assert(isintegral != NULL);
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -295,7 +294,7 @@ SCIP_DECL_CONSEXPR_EXPRBRANCHSCORE(branchscoreXyz)
 
    *success = FALSE;
 
-   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;

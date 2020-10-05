@@ -50,6 +50,7 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sum.h"
 #include "scip/cons_expr_product.h"
+#include "scip/cons_expr_erf.h"
 #include "scip/cons_expr_exp.h"
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
@@ -16070,6 +16071,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for cosine expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrCos(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "cos") == 0);
+
+   /* include handler for error function expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrErf(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "erf") == 0);
 
    /* include default nonlinear handler */
    SCIP_CALL( SCIPincludeConsExprNlhdlrDefault(scip, conshdlr) );

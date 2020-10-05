@@ -539,6 +539,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_expr.o \
 			scip/cons_expr_abs.o \
 			scip/cons_expr_cos.o \
+			scip/cons_expr_erf.o \
 			scip/cons_expr_exp.o \
 			scip/cons_expr_iterator.o \
 			scip/cons_expr_log.o \
