@@ -584,6 +584,14 @@ SCIP_RETCODE redLoopStp_inner(
 
       ub = -1.0;
 
+      if( fullreduce && 0 )
+      {
+         int nelims = 0;
+
+         SCIP_CALL(reduce_articulations(scip, g, fixed, &nelims));
+         printf("cutelims=%d \n", nelims);
+      }
+
       if( da )
       {
          const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = FALSE,

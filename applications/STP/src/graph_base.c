@@ -636,50 +636,106 @@ void packNodes(
 }
 
 
-/** add edges to new graph during graph packing */
+/** adds pseudo-ancestor to new graph during graph packing */
+static
+SCIP_RETCODE packPseudoAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g_old,              /**< the old graph */
+   GRAPH*                g_new               /**< the new graph */
+   )
+{
+   const int oldnacestors = graph_getNpseudoAncestors(g_old);
+   const int oldnedges = graph_get_nEdges(g_old);
+   int e_new = 0;
+
+   SCIP_CALL( graph_init_pseudoAncestors(scip, g_new) );
+
+   if( oldnacestors == 0 )
+      return SCIP_OKAY;
+
+   graph_addPseudoAncestors(oldnacestors, g_new);
+
+   for( int e_old = 0; e_old < oldnedges; e_old += 2 )
+   {
+      if( g_old->ieat[e_old] != EAT_FREE )
+      {
+         const int* ancestors;
+         const int nancestors = graph_edge_nPseudoAncestors(g_old, e_old);
+         SCIP_Bool conflict = FALSE;
+
+         if( nancestors == 0 )
+            continue;
+
+         ancestors = graph_edge_getPseudoAncestors(g_old, e_old);
+         assert(ancestors);
+
+         SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, e_new, ancestors, nancestors, g_new, &conflict) );
+         assert(!conflict);
+         assert(graph_edge_getPseudoAncestors(g_new, e_new) == nancestors);
+         assert(graph_edge_getPseudoAncestors(g_new, e_new + 1) == nancestors);
+
+         e_new += 2;
+      }
+   }
+
+   assert(e_new == g_new->edges);
+
+ //  printf("added %d pseudo ancestors \n", oldnacestors);
+
+   return SCIP_OKAY;
+}
+
+
+/** adds edges to new graph during graph packing */
 static
 SCIP_RETCODE packEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            old2newNode,        /**< node mapping */
    GRAPH*                g_old,              /**< the old graph */
    int                   nnodes,             /**< number of nodes for new graph */
+   int                   nedges,             /**< number of edges for new graph */
    GRAPH*                g_new               /**< the new graph */
    )
 {
    const int oldnedges = graph_get_nEdges(g_old);
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->ancestors), nedges) );
+
    /* add edges */
-   for( int i = 0; i < oldnedges; i += 2 )
+   for( int e_old = 0; e_old < oldnedges; e_old += 2 )
    {
-      int e;
-
-      if( g_old->ieat[i] == EAT_FREE )
+      int e_new;
+      if( g_old->ieat[e_old] == EAT_FREE )
       {
-         assert(g_old->oeat[i]     == EAT_FREE);
-         assert(g_old->ieat[i + 1] == EAT_FREE);
-         assert(g_old->oeat[i + 1] == EAT_FREE);
+         assert(g_old->oeat[e_old]     == EAT_FREE);
+         assert(g_old->ieat[e_old + 1] == EAT_FREE);
+         assert(g_old->oeat[e_old + 1] == EAT_FREE);
 
-         graph_edge_delHistory(scip, g_old, i);
+         graph_edge_delHistory(scip, g_old, e_old);
          continue;
       }
 
-      assert(g_old->oeat[i]      != EAT_FREE);
-      assert(g_old->ieat[i + 1]  != EAT_FREE);
-      assert(g_old->oeat[i + 1]  != EAT_FREE);
-      assert(old2newNode[g_old->tail[i]] >= 0);
-      assert(old2newNode[g_old->head[i]] >= 0);
+      assert(g_old->oeat[e_old]      != EAT_FREE);
+      assert(g_old->ieat[e_old + 1]  != EAT_FREE);
+      assert(g_old->oeat[e_old + 1]  != EAT_FREE);
+      assert(old2newNode[g_old->tail[e_old]] >= 0);
+      assert(old2newNode[g_old->head[e_old]] >= 0);
 
-      e = g_new->edges;
+      e_new = g_new->edges;
 
-      g_new->ancestors[e] = NULL;
-      g_new->ancestors[e + 1] = NULL;
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e]), g_old->ancestors[i], NULL) );
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e + 1]), g_old->ancestors[i + 1], NULL) );
+      g_new->ancestors[e_new] = NULL;
+      g_new->ancestors[e_new + 1] = NULL;
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new]), g_old->ancestors[e_old], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g_new->ancestors[e_new + 1]), g_old->ancestors[e_old + 1], NULL) );
 
-      assert(old2newNode[g_old->tail[i]] < nnodes && old2newNode[g_old->head[i]] < nnodes);
+      assert(old2newNode[g_old->tail[e_old]] < nnodes && old2newNode[g_old->head[e_old]] < nnodes);
 
-      graph_edge_addSubgraph(scip, g_old, old2newNode, i, g_new);
+      graph_edge_addSubgraph(scip, g_old, old2newNode, e_old, g_new);
    }
+
+   assert(nedges == g_new->edges);
+
+   SCIP_CALL( packPseudoAncestors(scip, g_old, g_new) );
 
    return SCIP_OKAY;
 }
@@ -3771,16 +3827,57 @@ SCIP_RETCODE graph_copy_data(
 /** copy the graph */
 SCIP_RETCODE graph_copy(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orgraph,            /**< original graph */
+   const GRAPH*          orggraph,           /**< original graph */
    GRAPH**               copygraph           /**< graph to be created */
    )
 {
-   const GRAPH* p = orgraph;
+   const GRAPH* p = orggraph;
    assert(p != NULL);
 
    SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
 
-   SCIP_CALL( graph_copy_data(scip, orgraph, *copygraph) );
+   SCIP_CALL( graph_copy_data(scip, orggraph, *copygraph) );
+
+   return SCIP_OKAY;
+}
+
+
+/** copies the pseudo-ancestors */
+SCIP_RETCODE graph_copy_pseudoAncestors(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH*                copygraph           /**< graph to be created */
+   )
+{
+   const int nedges = graph_get_nEdges(orggraph);
+   const int nancestors_all = graph_getNpseudoAncestors(orggraph);
+   assert(orggraph && copygraph);
+   assert(orggraph->edges == copygraph->edges);
+   assert(graph_getNpseudoAncestors(copygraph) == 0);
+
+   if( nancestors_all == 0 )
+      return SCIP_OKAY;
+
+   graph_addPseudoAncestors(nancestors_all, copygraph);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      if( orggraph->ieat[e] != EAT_FREE )
+      {
+         const int* ancestors;
+         const int nancestors = graph_edge_nPseudoAncestors(orggraph, e);
+         SCIP_Bool conflict = FALSE;
+
+         if( nancestors == 0 )
+            continue;
+
+         ancestors = graph_edge_getPseudoAncestors(orggraph, e);
+         assert(ancestors);
+
+         SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, e, ancestors, nancestors, copygraph, &conflict) );
+         assert(!conflict);
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -4077,8 +4174,6 @@ SCIP_RETCODE graph_pack(
 
    assert(nnodes >= 2 && nedges >= 1);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(g_new->ancestors), nedges) );
-
    if( pcmw )
    {
       SCIP_CALL( packPcMwInit(scip, nnodes, g_old, g_new) );
@@ -4089,12 +4184,11 @@ SCIP_RETCODE graph_pack(
 
    /* add root */
    assert(Is_term(g_new->term[old2newNode[g_old->source]]));
-
    g_new->source = old2newNode[g_old->source];
-
    assert(!graph_pc_isRootedPcMw(graph) || FARAWAY == g_new->prize[g_new->source]);
 
-   SCIP_CALL( packEdges(scip, old2newNode, g_old, nnodes, g_new) );
+   /* NOTE: also handles ancestors */
+   SCIP_CALL( packEdges(scip, old2newNode, g_old, nnodes, nedges, g_new) );
 
    SCIPfreeBufferArray(scip, &old2newNode);
 

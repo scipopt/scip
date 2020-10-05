@@ -1160,6 +1160,7 @@ SCIP_RETCODE initPropgraph(
    propdata->propgraph->norgmodelknots = propdata->propgraph->knots;
 
    SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
+   SCIP_CALL( graph_copy_pseudoAncestors(scip, graph, propdata->propgraph) );
 
    assert(propdata->nfixededges == 0);
    assert(propdata->propgraph != NULL);
@@ -1505,6 +1506,7 @@ SCIP_RETCODE fixVarsRedbased(
    else
    {
       // todo Call two times, and with node-replacing!
+      // todo: before make all the node replacements from lurking bounds!
       assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduceLevel0(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );

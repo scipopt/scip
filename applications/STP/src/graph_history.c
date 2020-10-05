@@ -1166,6 +1166,20 @@ void graph_addPseudoAncestor(
 }
 
 
+/** adds n new pseudo ancestor */
+void graph_addPseudoAncestors(
+   int                   nadd,             /**< number of ancestors to add */
+   GRAPH*                g                 /**< the graph (in/out)  */
+   )
+{
+   assert(g && g->pseudoancestors);
+   assert(nadd > 0);
+
+   assert(g->pseudoancestors->nAllPseudoancestors >= 0);
+   g->pseudoancestors->nAllPseudoancestors += nadd;
+}
+
+
 /** returns minimum required number for hash array */
 int graph_pseudoAncestorsGetHashArraySize(
    const PSEUDOANS*      pseudoancestors     /**< pseudo-ancestors */
@@ -1271,7 +1285,7 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopyEdgeToNode(
 }
 
 
-/** appends copy of pseudo ancestors of node source to edge target */
+/** appends given of pseudo ancestors to edge target */
 SCIP_RETCODE graph_pseudoAncestors_appendCopySingToEdge(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   edge_target,        /**< edge target */
@@ -1300,6 +1314,36 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopySingToEdge(
    return SCIP_OKAY;
 }
 
+
+
+/** appends copy of pseudo ancestors in array form to edge target */
+SCIP_RETCODE graph_pseudoAncestors_appendCopyArrayToEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   edge_target,        /**< edge target */
+   const int*            ancestors,          /**< pseudo ancestors array */
+   int                   nancestors,         /**< number of ancestors */
+   GRAPH*                g,                  /**< the graph */
+   SCIP_Bool*            conflict            /**< conflict? */
+)
+{
+   assert(scip && g && conflict && ancestors);
+   assert(nancestors >= 0);
+
+   *conflict = FALSE;
+
+   if( nancestors > 0 )
+   {
+      const PSEUDOANS* const pseudoancestors = g->pseudoancestors;
+      const int target = edge_target / 2;
+      const SCIP_Bool revertIfConflict = FALSE;
+
+      assert(pseudoancestors);
+
+      SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, g->knots, pseudoancestors->ans_halfedges, conflict) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** appends pseudo ancestors of edge_source to edge_target, ancestors for edge_source are deleted */
 SCIP_RETCODE graph_pseudoAncestors_appendMoveEdge(
