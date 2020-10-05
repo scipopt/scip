@@ -122,6 +122,7 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   nbadnonbasic;       /**< number of times a cut was aborted because the nonbasic row was not nonbasic enough */
    int                   nhighre;            /**< number of times a cut was not added because range / efficacy was too large */
    int                   nphinonneg;         /**< number of times a cut was aborted because phi is nonnegative at 0 */
+   int                   nstrengthenings;    /**< number of successful strengthenings */
 };
 
 /* structure to store rays. note that for a given ray, the entries in raysidx are sorted. */
@@ -159,8 +160,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
 
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
-         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas");
+   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
+         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength");
    SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
@@ -169,6 +170,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadrayrestriction);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nphinonneg);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
+   SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
@@ -2162,7 +2164,8 @@ SCIP_RETCODE computeStrengthenedIntercut(
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
-   SCIP_Bool*            success             /**< if a cut candidate could be computed */
+   SCIP_Bool*            success,            /**< if a cut candidate could be computed */
+   SCIP_Bool*            strengthsuccess     /**< if strengthening was successfully applied */
    )
 {
    SCIP_COL** cols;
@@ -2172,6 +2175,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
    int i;
 
    *success = TRUE;
+   *strengthsuccess = FALSE;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
@@ -2215,6 +2219,9 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
       /* compute cut coef */
       cutcoef = SCIPisInfinity(scip, -rho) ? 0.0 : 1.0 / rho;
+
+      if( ! SCIPisZero(scip, cutcoef) )
+         *strengthsuccess = TRUE;
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
@@ -2332,8 +2339,13 @@ SCIP_RETCODE generateIntercut(
     */
    if( nlhdlrdata->usestrengthening )
    {
+      SCIP_Bool strengthsuccess;
+
       SCIP_CALL( computeStrengthenedIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs,
-            wzlp, kappa, rowprep, success) );
+            wzlp, kappa, rowprep, success, &strengthsuccess) );
+
+      if( *success && strengthsuccess )
+         nlhdlrdata->nstrengthenings++;
    }
    else
    {
