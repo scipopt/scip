@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrErf(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates a erf expression */
+/** creates an erf expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsExprExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
