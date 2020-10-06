@@ -10376,8 +10376,28 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Arrays
  */
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
+ */
 SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   SCIPcomputeArraysIntersectionInt(array1, narray1, array2, narray2, intersectarray, nintersectarray);
+
+   return SCIP_OKAY;
+}
+
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+void SCIPcomputeArraysIntersectionInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */
@@ -10427,8 +10447,6 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
 
    /* store size of intersection array */
    *nintersectarray = cnt;
-
-   return SCIP_OKAY;
 }
 
 /** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
@@ -10488,8 +10506,28 @@ void SCIPcomputeArraysIntersectionPtr(
 }
 
 
-/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysSetminusInt().
+ */
 SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   SCIPcomputeArraysSetminusInt(array1, narray1, array2, narray2, setminusarray, nsetminusarray);
+
+   return SCIP_OKAY;
+}
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */
@@ -10531,8 +10569,6 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
 
    /* store size of setminus array */
    *nsetminusarray = cnt;
-
-   return SCIP_OKAY;
 }
 
 
