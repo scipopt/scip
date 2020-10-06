@@ -7051,6 +7051,8 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    SCIP_Bool easyaggr;
    SCIP_Rational* quotxy;
    SCIP_Rational* quotyx;
+   SCIP_Real absquot;
+   SCIP_Real maxscalar;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -7073,11 +7075,18 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
    assert(!RatIsZero(scalarx));
    assert(!RatIsZero(scalary));
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &quotxy) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &quotyx) );
-
    *infeasible = FALSE;
    *aggregated = FALSE;
+
+   absquot = REALABS(RatApproxReal(scalarx) / RatApproxReal(scalary));
+   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
+   maxscalar = MAX(maxscalar, 1.0);
+
+   if( absquot > maxscalar || absquot < 1 / maxscalar )
+      return SCIP_OKAY;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &quotxy) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &quotyx) );
 
    RatDiv(quotxy, scalarx, scalary);
    RatInvert(quotyx, quotxy);
