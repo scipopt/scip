@@ -29,26 +29,26 @@ OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
 
 for APPLICATION in ${APPLICATIONS[@]}
 do
-    echo
-    echo
-    echo ===== $APPLICATION =====
-    echo
-    cd $APPLICATION
-    echo
-    for OPT in ${OPTS[@]}
+  echo
+  echo
+  echo ===== $APPLICATION =====
+  echo
+  cd $APPLICATION
+  echo
+  for OPT in ${OPTS[@]}
+  do
+    for LPS in ${LPSOLVERS[@]}
     do
-	for LPS in ${LPSOLVERS[@]}
-	do
-	    for SHAREDVAL in ${SHARED[@]}
-	    do
-		echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
-		if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
-		then
-		    exit $STATUS
-		fi
-		echo
-	    done
-	done
+      for SHAREDVAL in ${SHARED[@]}
+      do
+        echo make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean
+        if (! make OPT=$OPT LPS=$LPS SHARED=$SHAREDVAL clean )
+        then
+          exit $STATUS
+        fi
+        echo
+      done
     done
-    cd -
+  done
+  cd -
 done
