@@ -258,8 +258,6 @@ int filterWithParallelism(
  * Callback methods of cut selector
  */
 
-/* TODO: Implement all necessary cut selector methods. The methods with an #if 0 ... #else #define ... are optional */
-
 
 /** copy method for cut selector plugin (called when SCIP copies plugins) */
 static
@@ -283,6 +281,7 @@ SCIP_DECL_CUTSELFREE(cutselFreeDefault)
    SCIP_CUTSELDATA* cutseldata;
 
    cutseldata = SCIPcutselGetData(cutsel);
+   SCIPfreeRandom(scip, &cutseldata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &cutseldata);
 
@@ -296,7 +295,7 @@ SCIP_DECL_CUTSELEXIT(cutselExitDefault)
    SCIP_CUTSELDATA* cutseldata;
 
    cutseldata = SCIPcutselGetData(cutsel);
-   SCIPfreeRandom(scip, &cutseldata->randnumgen);
+   assert(cutseldata != NULL);
 
    return SCIP_OKAY;
 }
