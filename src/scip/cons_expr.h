@@ -229,7 +229,7 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrValue(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
    );
 
-/** gives the value of directional derivative from the last evaluation of a directional derivate of expression (or SCIP_INVALID if there was an error) */
+/** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprDot(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */

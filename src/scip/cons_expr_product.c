@@ -1534,11 +1534,12 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffProduct)
 }
 
 /** expression backward forward derivative evaluation callback
+ *
  * computes partial/partial childidx ( <gradient, children.dot> )
  * if expr is Pi_i x_i, and childidx is k then computes
  * partial_k sum_j Pi_(i != j) x_i  x^dot_j
  * = sum_(j != k) Pi_(i != j, k) x_i  x^dot_j
- * */
+ */
 static
 SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffProduct)
 {  /*lint --e{715}*/
