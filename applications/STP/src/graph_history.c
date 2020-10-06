@@ -361,7 +361,6 @@ SCIP_Bool blockedAncestors_hashIsHit(
 )
 {
    assert(blockedans && hasharr);
-   assert(ancestor >= 0 && ancestor < blockedans->nblocks);
    assert(hasharr[ancestor] == 0 || hasharr[ancestor] == 1);
 
    return (hasharr[ancestor] == 1);
@@ -1305,10 +1304,11 @@ SCIP_RETCODE graph_pseudoAncestors_appendCopySingToEdge(
       const int* const ancestors = source->pseudoancestors;
       const int target = edge_target / 2;
       const int nancestors = source->npseudoancestors;
+      const int hasharr_size = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
 
       assert(pseudoancestors);
 
-      SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, g->knots, pseudoancestors->ans_halfedges, conflict) );
+      SCIP_CALL( blockedAncestors_appendArray(scip, target, ancestors, nancestors, revertIfConflict, hasharr_size, pseudoancestors->ans_halfedges, conflict) );
    }
 
    return SCIP_OKAY;
