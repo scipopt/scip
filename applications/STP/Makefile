@@ -112,6 +112,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_sdutil.o \
 			reduce_simple.o \
 			reduce_util.o \
+			sepaspecial.o \
 			shortestpath.o \
 			solpool.o \
 			solstp.o \

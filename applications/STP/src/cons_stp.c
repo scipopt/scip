@@ -44,6 +44,7 @@
 #include "portab.h"
 #include "branch_stp.h"
 #include "prop_stp.h"
+#include "sepaspecial.h"
 
 #include "scip/scip.h"
 #include "scip/misc.h"
@@ -58,6 +59,7 @@
 #endif
 
 #define ADDCUTSTOPOOL 0
+#define STP_PACLIQUES_USE FALSE
 
 #define Q_NULL     -1         /* NULL element of queue/list */
 
@@ -86,7 +88,6 @@
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
-#define PCIMPLICATIONS_ALLOC_FACTOR 4
 #define DEFAULT_BACKCUT        FALSE /**< Try Back-Cuts FALSE*/
 #define DEFAULT_CREEPFLOW      TRUE  /**< Use Creep-Flow */
 #define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
@@ -120,12 +121,12 @@ struct SCIP_ConsData
    GRAPH*                graph;              /**< graph data structure */
 };
 
+
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
-   int*                  pcimplstart;        /**< start for each proper potential terminal */
-   int*                  pcimplverts;        /**< all vertices */
-   int                   pcimplnppterms;     /**< number of poper potential terminals used */
+   PACLIQUES*            pacliques;          /**< pseudo ancestor cliques */
+   PCIMPLICATION*        pcimplications;     /**< prize-collecting implications */
    SCIP_Bool             backcut;            /**< should backcuts be applied? */
    SCIP_Bool             creepflow;          /**< should creepflow cuts be applied? */
    SCIP_Bool             disjunctcut;        /**< should disjunction cuts be applied? */
@@ -142,132 +143,12 @@ struct SCIP_ConshdlrData
 };
 
 
+
 /**@name Local methods
  *
  * @{
  */
 
-
-/** initialize (R)PC implications */
-static
-SCIP_RETCODE init_pcmwimplications(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
-)
-{
-   const int nnodes = g->knots;
-   const int nppterms = graph_pc_nProperPotentialTerms(g);
-   int* start;
-   int* verts;
-   int* termmark;
-   int* visitlist;
-   SCIP_Real* dist;
-   STP_Bool* visited;
-   int nspares;
-   int termscount;
-   int nimplications;
-   const int maxnimplications = PCIMPLICATIONS_ALLOC_FACTOR * g->edges;
-   const int slotsize = ((nppterms == 0) ? 0 : maxnimplications / nppterms);
-
-   assert(g != NULL && conshdlrdata != NULL);
-   assert(graph_pc_isPcMw(g) && !g->extended);
-   assert(!conshdlrdata->pcimplstart);
-   assert(!conshdlrdata->pcimplverts);
-   assert(0 == conshdlrdata->pcimplnppterms);
-
-   assert(slotsize >= 1 && slotsize * nppterms <= maxnimplications);
-
-   SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
-   SCIP_CALL(SCIPallocBufferArray(scip, &visited, nnodes));
-   SCIP_CALL(SCIPallocBufferArray(scip, &visitlist, nnodes));
-   SCIP_CALL(SCIPallocBufferArray(scip, &termmark, nnodes));
-   SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplstart), nppterms + 1));
-   SCIP_CALL(SCIPallocMemoryArray(scip, &(conshdlrdata->pcimplverts), maxnimplications));
-
-   start = conshdlrdata->pcimplstart;
-   verts = conshdlrdata->pcimplverts;
-   conshdlrdata->pcimplnppterms = nppterms;
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      visited[i] = FALSE;
-      g->path_state[i] = UNKNOWN;
-      dist[i] = FARAWAY;
-   }
-
-   graph_pc_termMarkProper(g, termmark);
-
-   start[0] = 0;
-   nspares = 0;
-   termscount = 0;
-   nimplications = 0;
-
-   /* main loop: initialize implication lists */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      int nvisits;
-      int nadded;
-
-      if( !Is_term(g->term[i]) || graph_pc_knotIsFixedTerm(g, i) || graph_pc_termIsNonLeafTerm(g, i) )
-         continue;
-
-      assert(i != g->source);
-      assert(g->path_heap && g->path_state);
-
-      (void) graph_sdWalksConnected(scip, g, termmark, g->cost, NULL, i, 1000, dist, visitlist, &nvisits, visited, TRUE);
-
-      assert(nvisits >= 1 && visitlist[0] == i);
-      assert(nspares >= 0);
-
-      for( int j = 1; j < MIN(nvisits, slotsize + nspares + 1); j++ )
-      {
-         const int vert = visitlist[j];
-         assert(nimplications < maxnimplications);
-
-         verts[nimplications++] = vert;
-      }
-
-      nadded = nimplications - start[termscount];
-      assert(nadded >= 0);
-
-      if( nadded > slotsize )
-         nspares -= nadded - slotsize;
-      else
-         nspares += slotsize - nadded;
-
-      assert(termscount < nppterms);
-      start[++termscount] = nimplications;
-   }
-   assert(termscount == nppterms);
-
-#ifndef WITH_UG
-   printf("number of implications %d \n", nimplications);
-#endif
-
-   SCIPfreeBufferArray(scip, &termmark);
-   SCIPfreeBufferArray(scip, &visitlist);
-   SCIPfreeBufferArray(scip, &visited);
-   SCIPfreeBufferArray(scip, &dist);
-
-   return SCIP_OKAY;
-}
-
-/** returns inconing flow for given node */
-static
-SCIP_Real get_inflow(
-   const GRAPH*          g,                  /**< graph data structure */
-   const SCIP_Real*      xval,               /**< edge values */
-   int                   vert                /**< the vertex */
-)
-{
-   double insum = 0.0;
-
-   for( int e = g->inpbeg[vert]; e != EAT_LAST; e = g->ieat[e] )
-      insum += xval[e];
-
-   return insum;
-}
 
 /** add a cut */
 static
@@ -341,8 +222,6 @@ SCIP_RETCODE cut_add(
       }
    }
 
-
-
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
    /* checks whether cut is sufficiently violated */
@@ -353,6 +232,7 @@ SCIP_RETCODE cut_add(
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
       SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+      assert(!infeasible);
 
 #if ADDCUTSTOPOOL
       /* if at root node, add cut to pool */
@@ -481,146 +361,6 @@ void set_capacity(
          capa[krev] += CREEP_VALUE;
       }
    }
-}
-
-/** separate PCSPG/MWCS implications */
-static
-SCIP_RETCODE sep_implicationsPcMw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   int                   maxcuts,            /**< maximal number of cuts */
-   int*                  ncuts               /**< pointer to store number of cuts */
-   )
-{
-   GRAPH* g = SCIPprobdataGetGraph2(scip);
-   SCIP_Real* nodeinflow;
-   SCIP_VAR** vars = SCIPprobdataGetVars(scip);
-   SCIP_ROW* row = NULL;
-   const SCIP_Real* xval = SCIPprobdataGetXval(scip, NULL);
-   int* verts;
-   int* start;
-   const int nnodes = g->knots;
-   int cutscount;
-   int ptermcount;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(conshdlrdata != NULL);
-   assert(g != NULL);
-   assert(xval != NULL);
-
-   /* nothing to separate? */
-   if( graph_pc_nNonFixedTerms(g) == 0 )
-      return SCIP_OKAY;
-
-   /* initialize? */
-   if( conshdlrdata->pcimplstart == NULL )
-   {
-      assert(conshdlrdata->pcimplverts == NULL);
-      graph_pc_2org(scip, g);
-      SCIP_CALL( init_pcmwimplications(scip, g, conshdlrdata) );
-      graph_pc_2trans(scip, g);
-   }
-
-   verts = conshdlrdata->pcimplverts;
-   start = conshdlrdata->pcimplstart;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodeinflow, nnodes) );
-
-   /* initialize node sums */
-   for( int i = 0; i < nnodes; i++ )
-      nodeinflow[i] = get_inflow(g, xval, i);
-
-   cutscount = 0;
-   ptermcount = 0;
-
-   assert(g->extended);
-
-   /* main separation loop */
-   for( int i = 0; i < nnodes; i++ )
-   {
-      int maxnode;
-      SCIP_Real maxflow;
-      const SCIP_Real inflow = nodeinflow[i];
-
-      if( !Is_pseudoTerm(g->term[i]) )
-         continue;
-
-      ptermcount++;
-
-      if( SCIPisFeasGE(scip, inflow, 1.0) )
-         continue;
-
-      maxnode = -1;
-      maxflow = 0.0;
-      for( int j = start[ptermcount - 1]; j < start[ptermcount]; j++ )
-      {
-         const int vert = verts[j];
-         if( SCIPisFeasGT(scip, nodeinflow[vert], inflow) && nodeinflow[vert] > maxflow )
-         {
-            maxnode = vert;
-            maxflow = nodeinflow[vert];
-         }
-      }
-
-      /* separate? */
-      if( maxnode >= 0 )
-      {
-         SCIP_Bool infeasible;
-
-
-#if 0
-         SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
-         SCIP_CALL(SCIPcacheRowExtensions(scip, row));
-
-         for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
-            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
-
-         for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], -1.0));
-#else
-         {
-            const int twinterm = graph_pc_getTwinTerm(g, i);
-            const int rootedge = graph_pc_getRoot2PtermEdge(g, twinterm);
-            assert(rootedge >= 0);
-
-            SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
-            SCIP_CALL(SCIPcacheRowExtensions(scip, row));
-
-            for( int e = g->inpbeg[maxnode]; e != EAT_LAST; e = g->ieat[e] )
-               SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
-
-            SCIP_CALL(SCIPaddVarToRow(scip, row, vars[rootedge], 1.0));
-         }
-#endif
-
-         SCIP_CALL(SCIPflushRowExtensions(scip, row));
-
-         SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
-
-#if ADDCUTSTOPOOL
-         /* add cut to pool */
-         if( !infeasible )
-         SCIP_CALL( SCIPaddPoolCut(scip, row) );
-#endif
-
-         SCIP_CALL(SCIPreleaseRow(scip, &row));
-
-         if( *ncuts + cutscount++ >= maxcuts )
-            break;
-      }
-   }
-   assert((*ncuts + cutscount > maxcuts) || ptermcount == graph_pc_nProperPotentialTerms(g));
-   assert((*ncuts + cutscount > maxcuts) || ptermcount == conshdlrdata->pcimplnppterms);
-
-
-   *ncuts += cutscount;
-   SCIPdebugMessage("PcImplication Separator: %d Inequalities added\n", cutscount);
-
-   SCIPfreeBufferArray(scip, &nodeinflow);
-
-   return SCIP_OKAY;
 }
 
 
@@ -753,6 +493,7 @@ SCIP_RETCODE sep_flowIn(
 
       SCIP_CALL(SCIPflushRowExtensions(scip, row));
       SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+      assert(!infeasible);
 
 #if ADDCUTSTOPOOL
       /* if at root node, add cut to pool */
@@ -804,6 +545,7 @@ SCIP_RETCODE sep_flowTermIn(
 
       SCIP_CALL(SCIPflushRowExtensions(scip, row));
       SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+      assert(!infeasible);
 
 #if ADDCUTSTOPOOL
       /* add cut to pool */
@@ -859,6 +601,7 @@ SCIP_RETCODE sep_flowBalance(
 
       SCIP_CALL(SCIPflushRowExtensions(scip, row));
       SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+      assert(!infeasible);
 
 #if ADDCUTSTOPOOL
       /* if at root node, add cut to pool */
@@ -917,6 +660,7 @@ SCIP_RETCODE sep_flowEdgeOut(
 
          SCIP_CALL(SCIPflushRowExtensions(scip, row));
          SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
+         assert(!infeasible);
 
 #if ADDCUTSTOPOOL
          /* add cut to pool */
@@ -1504,10 +1248,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolStp)
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   assert(conshdlrdata);
 
-   SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->pcimplstart));
-   SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->pcimplverts));
+   if( conshdlrdata->pcimplications )
+      sepaspecial_pcimplicationsFree(scip, &(conshdlrdata->pcimplications));
+
+   if( conshdlrdata->pacliques )
+      sepaspecial_pacliquesFree(scip, &(conshdlrdata->pacliques));
 
    return SCIP_OKAY;
 }
@@ -1623,7 +1370,25 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    SCIP_CALL( sep_flow(scip, conshdlr, conshdlrdata, consdata, maxcuts, &ncuts) );
 
    if( graph_pc_isPcMw(g) && g->stp_type != STP_BRMWCSP )
-      SCIP_CALL( sep_implicationsPcMw(scip, conshdlr, conshdlrdata, maxcuts, &ncuts) );
+   {
+      if( conshdlrdata->pcimplications == NULL )
+      {
+         graph_pc_2org(scip, g);
+         SCIP_CALL( sepaspecial_pcimplicationsInit(scip, g, &(conshdlrdata->pcimplications)) );
+         graph_pc_2trans(scip, g);
+      }
+
+      SCIP_CALL( sepaspecial_pcimplicationsSeparate(scip, conshdlr, conshdlrdata->pcimplications, maxcuts, &ncuts) );
+   }
+
+#if STP_PACLIQUES_USE
+   if( conshdlrdata->pacliques == NULL )
+   {
+      SCIP_CALL( sepaspecial_pacliquesInit(scip, g, &(conshdlrdata->pacliques)) );
+   }
+
+   SCIP_CALL( sepaspecial_pacliquesSeparate(scip, conshdlr, conshdlrdata->pacliques, maxcuts, &ncuts) );
+#endif
 
    /* change graph according to branch-and-bound terminal changes  */
    if( chgterms )
@@ -1923,9 +1688,8 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
-   conshdlrdata->pcimplstart = NULL;
-   conshdlrdata->pcimplverts = NULL;
-   conshdlrdata->pcimplnppterms = 0;
+   conshdlrdata->pacliques = NULL;
+   conshdlrdata->pcimplications = NULL;
 
    return SCIP_OKAY;
 }
@@ -2023,8 +1787,9 @@ void SCIPStpConshdlrSetGraph(
    assert(consdata->graph != NULL);
 }
 
+
 /** returns implications start array */
-int* SCIPStpGetPcImplStarts(
+const int* SCIPStpGetPcImplStarts(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -2033,10 +1798,12 @@ int* SCIPStpGetPcImplStarts(
 
    conshdlr = SCIPfindConshdlr(scip, "stp");
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   assert(conshdlrdata);
+   assert(conshdlrdata->pcimplications);
 
-   return conshdlrdata->pcimplstart;
+   return sepaspecial_pcimplicationsGetStarts(conshdlrdata->pcimplications);
 }
+
 
 /** returns number implications starts */
 int SCIPStpGetPcImplNstarts(
@@ -2048,14 +1815,15 @@ int SCIPStpGetPcImplNstarts(
 
    conshdlr = SCIPfindConshdlr(scip, "stp");
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   assert(conshdlrdata);
+   assert(conshdlrdata->pcimplications);
 
-   return conshdlrdata->pcimplnppterms;
+   return sepaspecial_pcimplicationsGetNstarts(conshdlrdata->pcimplications);
 }
 
 
 /** returns implications vertices array */
-int* SCIPStpGetPcImplVerts(
+const int* SCIPStpGetPcImplVerts(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -2064,9 +1832,10 @@ int* SCIPStpGetPcImplVerts(
 
    conshdlr = SCIPfindConshdlr(scip, "stp");
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   assert(conshdlrdata);
+   assert(conshdlrdata->pcimplications);
 
-   return conshdlrdata->pcimplverts;
+   return sepaspecial_pcimplicationsGetVerts(conshdlrdata->pcimplications);
 }
 
 

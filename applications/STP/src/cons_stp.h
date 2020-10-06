@@ -40,6 +40,7 @@ extern "C" {
 #define RESTRICT restrict
 #endif
 
+
 /** creates the handler for element constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrStp(
    SCIP*                 scip                /**< SCIP data structure */
@@ -69,7 +70,7 @@ SCIP_RETCODE SCIPStpAddContractionCut(
 
 /** returns implications start array */
 extern
-int* SCIPStpGetPcImplStarts(
+const int* SCIPStpGetPcImplStarts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -80,7 +81,7 @@ int SCIPStpGetPcImplNstarts(
 
 /** returns implications vertices array */
 extern
-int* SCIPStpGetPcImplVerts(
+const int* SCIPStpGetPcImplVerts(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
