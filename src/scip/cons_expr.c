@@ -14167,7 +14167,10 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    return SCIP_OKAY;
 }
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
 SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -14175,30 +14178,33 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_EXPR* varexpr;
-   SCIP_HASHMAP* var2expr;
 
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
    assert(var != NULL);
-   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
 
    /* return 0.0 for value expression */
-   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrValue(consexprhdlr) )
+   {
+      assert(expr->derivative == 0.0);
       return 0.0;
+   }
 
    /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
    if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
-   /* use variable to expressions mapping which is stored in the constraint handler data */
-   var2expr = SCIPconshdlrGetData(consexprhdlr)->var2expr;
-   assert(var2expr != NULL);
-   assert(SCIPhashmapExists(var2expr, var));
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
 
-   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
+   /* use variable to expressions mapping which is stored in the constraint handler data */
+   assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, var);
    assert(varexpr != NULL);
    assert(SCIPisConsExprExprVar(varexpr));
 
@@ -14206,11 +14212,10 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
 }
 
-/*
- * Hessian
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
  */
-
-/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
 static
 SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14219,30 +14224,30 @@ SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_EXPR* varexpr;
-   SCIP_HASHMAP* var2expr;
 
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
    assert(var != NULL);
-   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
 
    /* return 0.0 for value expression */
-   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrValue(consexprhdlr) )
       return 0.0;
 
    /* check if an error occurred during the last SCIPcomputeConsExprHessianDir() call */
    if( expr->bardot == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
-   /* use variable to expressions mapping which is stored as the expression handler data */
-   var2expr = (SCIP_HASHMAP*)SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrVar(consexprhdlr));
-   assert(var2expr != NULL);
-   assert(SCIPhashmapExists(var2expr, var));
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
 
-   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
+   /* use variable to expressions mapping which is stored in the constraint handler data */
+   assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, var);
    assert(varexpr != NULL);
    assert(SCIPisConsExprExprVar(varexpr));
 
