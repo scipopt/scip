@@ -448,6 +448,7 @@ SCIP_RETCODE doMilpPresolveRational(
 
    /* result indicated success, now populate the changes into the SCIP structures */
    std::vector<SCIP_VAR*> tmpvars;
+   std::vector<SCIP_Real> tmpvalsreal;
 
    /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
    int newnnz = problem.getConstraintMatrix().getNnz();
@@ -556,7 +557,10 @@ SCIP_RETCODE doMilpPresolveRational(
          tmpval->val = value;
          tmpval->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
+         RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(colvar), tmpval);
+
          SCIP_CALL( SCIPfixVarExact(scip, colvar, tmpval, &infeas, &fixed) );
+
          *nfixedvars += 1;
 
          RatFreeBuffer(SCIPbuffer(scip), &tmpval);
@@ -601,6 +605,9 @@ SCIP_RETCODE doMilpPresolveRational(
             side -= constant->val;
             constant->val = side;
             constant->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+            RatDebugMessage("Papilo aggregate vars %s, %s with scalars %q, %q and constant %q \n", SCIPvarGetName(varx), SCIPvarGetName(vary),
+               tmpscalarx, tmpscalary, constant);
 
             SCIP_CALL( SCIPaggregateVarsExact(scip, varx, vary, tmpscalarx, tmpscalary, constant, &infeas, &redundant, &aggregated) );
 
@@ -648,14 +655,17 @@ SCIP_RETCODE doMilpPresolveRational(
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
                tmpvals[c]->val = -res.postsolve.values[j] / colCoef->val;
                tmpvals[c]->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
                c++;
             }
 
             constant->val = side / colCoef->val;
             constant->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
+            RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), constant);
+
             SCIP_CALL( SCIPmultiaggregateVarExact(scip, aggrvar, tmpvars.size(),
-               tmpvars.data(), tmpvals, constant, &infeas, &aggregated) );
+                  tmpvars.data(), tmpvals, constant, &infeas, &aggregated) );
 
             RatFreeBufferArray(SCIPbuffer(scip), &tmpvals, rowlen);
             RatFreeBuffer(SCIPbuffer(scip), &colCoef);
@@ -689,6 +699,9 @@ SCIP_RETCODE doMilpPresolveRational(
             String name = fmt::format("{}_failed_aggregation_equality", SCIPvarGetName(SCIPmatrixGetVar(matrix, col)));
             SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, name.c_str(),
                tmpvars.size(), tmpvars.data(), tmpvals, tmpside, tmpside ) );
+
+            SCIPdebugMessage("Papilo adding failed aggregation equality: \n");
+            SCIPdebug(SCIPprintCons(scip, cons, NULL));
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
             *naddconss += 1;
@@ -727,10 +740,14 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_Bool infeas;
             SCIP_Bool tightened;
             varbound->val = varDomains.lower_bounds[i];
+
             SCIP_CALL( SCIPtightenVarLbExact(scip, var, varbound, &infeas, &tightened) );
 
             if( tightened )
+            {
                *nchgbds += 1;
+               RatDebugMessage("Papilo tightened lb of variable %s \n", SCIPvarGetName(var));
+            }
 
             if( infeas )
             {
@@ -744,10 +761,14 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_Bool infeas;
             SCIP_Bool tightened;
             varbound->val = varDomains.upper_bounds[i];
+
             SCIP_CALL( SCIPtightenVarUbExact(scip, var, varbound, &infeas, &tightened) );
 
             if( tightened )
+            {
                *nchgbds += 1;
+               RatDebugMessage("Papilo tightened ub of variable %s \n", SCIPvarGetName(var));
+            }
 
             if( infeas )
             {
