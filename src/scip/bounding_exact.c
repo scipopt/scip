@@ -2105,11 +2105,15 @@ SCIP_RETCODE projectShift(
    /* decide if we should use ray or point to compute bound */
    if( !usefarkas && projshiftdata->projshiftuseintpoint && projshiftdata->projshifthaspoint )
       useinteriorpoint = TRUE;
+   else if( projshiftdata->projshifthasray )
+   {
+      useinteriorpoint = FALSE;
+   }
+   /* we either dont have a ray and want to prove infeasibility or we have neither point nor ray -> can't run */
    else
    {
-      /* in this case, since projshiftdatafail != TRUE, projshifthasray should be true -- use it */
-      assert(projshiftdata->projshifthasray);
-      useinteriorpoint = FALSE;
+      lp->hasprovedbound = FALSE;
+      return SCIP_OKAY;
    }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
