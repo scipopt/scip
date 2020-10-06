@@ -14353,7 +14353,7 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
       {
          derivative = SCIP_INVALID;
          hessiandir = SCIP_INVALID;
-         SCIP_CALL( (*expr->exprhdlr->bwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative) );
+         SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative, NULL, SCIP_INVALID) );
          SCIP_CALL( (*expr->exprhdlr->bwfwdiff)(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &hessiandir, NULL) );
 
          if( derivative == SCIP_INVALID || hessiandir == SCIP_INVALID ) /*lint !e777*/
