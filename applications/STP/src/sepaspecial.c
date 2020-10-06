@@ -357,6 +357,13 @@ SCIP_RETCODE sepaspecial_pcimplicationsInit(
    pcimps = *pcimplications;
    pcimps->pcimplnppterms = 0;
 
+   if( nppterms == 0 )
+   {
+      pcimps->pcimplstart = NULL;
+      pcimps->pcimplverts = NULL;
+      return SCIP_OKAY;
+   }
+
    assert(slotsize >= 1 && slotsize * nppterms <= maxnimplications);
 
    SCIP_CALL(SCIPallocBufferArray(scip, &dist, nnodes));
@@ -441,8 +448,8 @@ void sepaspecial_pcimplicationsFree(
    PCIMPLICATION**       pcimplications      /**< implication data */
 )
 {
-   SCIPfreeMemoryArray(scip, &((*pcimplications)->pcimplstart));
-   SCIPfreeMemoryArray(scip, &((*pcimplications)->pcimplverts));
+   SCIPfreeMemoryArrayNull(scip, &((*pcimplications)->pcimplstart));
+   SCIPfreeMemoryArrayNull(scip, &((*pcimplications)->pcimplverts));
 
    SCIPfreeMemoryArray(scip, pcimplications);
 }
@@ -475,8 +482,13 @@ SCIP_RETCODE sepaspecial_pcimplicationsSeparate(
    assert(xval != NULL);
 
    /* nothing to separate? */
-   if( graph_pc_nNonFixedTerms(g) == 0 )
+   if( pcimplications->pcimplnppterms == 0 )
+   {
+      assert(graph_pc_nNonFixedTerms(g) == 0);
       return SCIP_OKAY;
+   }
+
+   assert(graph_pc_nNonFixedTerms(g) > 0);
 
    assert(pcimplications );
    verts = pcimplications->pcimplverts;
@@ -607,4 +619,5 @@ const int* sepaspecial_pcimplicationsGetVerts(
 {
    assert(pcimp);
 
-   return pcimp->pcimpl
+   return pcimp->pcimplverts;
+}
