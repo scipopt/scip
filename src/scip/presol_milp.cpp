@@ -229,6 +229,24 @@ Problem<Rational> buildProblemRational(
    return builder.build();
 }
 
+static
+void setRational(
+   SCIP*                 scip,
+   SCIP_Rational*        res,
+   Rational              papiloval
+   )
+{
+   assert(scip != NULL);
+   assert(res != NULL);
+
+   res->val = papiloval;
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   if( SCIPisInfinity(scip, REALABS(RatApproxReal(res))) )
+   {
+      res->val > 0 ? RatSetString(res, "inf") : RatSetString(res, "-inf");
+   }
+}
+
 /*
  * Callback methods of presolver
  */
@@ -512,14 +530,10 @@ SCIP_RETCODE doMilpPresolveRational(
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmplhs) );
 
          for( int j = 0; j < rowlen; j++ )
-         {
-            tmpvals[j]->val = rowvals[j];
-            tmpvals[j]->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-         }
-         tmprhs->val = rhs;
-         tmprhs->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-         tmplhs->val = lhs;
-         tmplhs->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+            setRational(scip, tmpvals[j], rowvals[j]);
+
+         setRational(scip, tmprhs, rhs);
+         setRational(scip, tmplhs, lhs);
 
          SCIP_CALL( SCIPcreateConsBasicExactLinear(scip, &cons, SCIPconsGetName(oldcons), rowlen, tmpvars.data(), tmpvals, tmplhs, tmprhs) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -554,8 +568,7 @@ SCIP_RETCODE doMilpPresolveRational(
          Rational value = res.postsolve.values[first];
          SCIP_Rational* tmpval;
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpval) );
-         tmpval->val = value;
-         tmpval->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+         setRational(scip, tmpval, value);
 
          RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(colvar), tmpval);
 
@@ -591,10 +604,9 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalarx) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpscalary) );
-            tmpscalarx->val = scalarx;
-            tmpscalary->val = scalary;
-            tmpscalarx->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-            tmpscalary->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
+            setRational(scip, tmpscalarx, scalarx);
+            setRational(scip, tmpscalary, scalary);
 
             SCIP_CALL( SCIPgetProbvarSumExact(scip, &varx, tmpscalarx, constant) );
             assert(SCIPvarGetStatus(varx) != SCIP_VARSTATUS_MULTAGGR);
@@ -603,8 +615,7 @@ SCIP_RETCODE doMilpPresolveRational(
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
             side -= constant->val;
-            constant->val = side;
-            constant->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+            setRational(scip, constant, side);
 
             RatDebugMessage("Papilo aggregate vars %s, %s with scalars %q, %q and constant %q \n", SCIPvarGetName(varx), SCIPvarGetName(vary),
                tmpscalarx, tmpscalary, constant);
@@ -630,8 +641,7 @@ SCIP_RETCODE doMilpPresolveRational(
             {
                if( res.postsolve.indices[j] == col )
                {
-                  colCoef->val = res.postsolve.values[j];
-                  colCoef->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+                  setRational(scip, colCoef, res.postsolve.values[j]);
                   break;
                }
             }
@@ -653,14 +663,11 @@ SCIP_RETCODE doMilpPresolveRational(
                   continue;
 
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-               tmpvals[c]->val = -res.postsolve.values[j] / colCoef->val;
-               tmpvals[c]->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-
+               setRational(scip, tmpvals[c], -res.postsolve.values[j] / colCoef->val);
                c++;
             }
 
-            constant->val = side / colCoef->val;
-            constant->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+            setRational(scip, constant, side / colCoef->val);
 
             RatDebugMessage("Papilo multiaggregate var %s, constant %q \n", SCIPvarGetName(aggrvar), constant);
 
@@ -683,16 +690,14 @@ SCIP_RETCODE doMilpPresolveRational(
             SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &tmpvals, rowlen) );
             SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpside) );
 
-            tmpside->val = side;
-            tmpside->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+            setRational(scip, tmpside, side);
 
             tmpvars.clear();
             for( int j = first + 1; j < last; ++j )
             {
                int idx = j - first - 1;
                tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-               tmpvals[idx]->val = (res.postsolve.values[j]);
-               tmpvals[idx]->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+               setRational(scip, tmpvals[idx], res.postsolve.values[j]);
             }
 
             SCIP_CONS* cons;
@@ -739,7 +744,8 @@ SCIP_RETCODE doMilpPresolveRational(
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
-            varbound->val = varDomains.lower_bounds[i];
+
+            setRational(scip, varbound, varDomains.lower_bounds[i]);
 
             SCIP_CALL( SCIPtightenVarLbExact(scip, var, varbound, &infeas, &tightened) );
 
@@ -760,7 +766,7 @@ SCIP_RETCODE doMilpPresolveRational(
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
-            varbound->val = varDomains.upper_bounds[i];
+            setRational(scip, varbound, varDomains.upper_bounds[i]);
 
             SCIP_CALL( SCIPtightenVarUbExact(scip, var, varbound, &infeas, &tightened) );
 
