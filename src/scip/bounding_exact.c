@@ -2003,6 +2003,8 @@ SCIP_RETCODE constructProjectShiftData(
    {
       projshiftdata->projshiftdatafail = TRUE;
    }
+   else
+      projshiftdata->projshiftdatafail = FALSE;
 
    SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->violation, lpexact->ncols) );
    SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows) );
