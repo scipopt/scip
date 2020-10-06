@@ -157,7 +157,7 @@ Test(sin, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, sinexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), SIN(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(sinexpr), sin(randnum)));
    }
 }
 
@@ -179,23 +179,23 @@ Test(sin, inteval, .description = "Tests the expression interval evaluation.")
    /* create 5 random cases within specific bounds that have non-trivial results */
    rndlb[0]    = SCIPrandomGetReal(rndgen, 0.0, 0.5*M_PI);
    rndub[0]    = SCIPrandomGetReal(rndgen, 0.5*M_PI, M_PI);
-   rndreslb[0] = MIN(SIN(rndlb[0]), SIN(rndub[0]));
+   rndreslb[0] = MIN(sin(rndlb[0]), sin(rndub[0]));
    rndresub[0] = 1.0;
 
    rndlb[1]    = SCIPrandomGetReal(rndgen, 0.0, 0.5*M_PI);
    rndub[1]    = SCIPrandomGetReal(rndgen, M_PI, 1.5*M_PI);
-   rndreslb[1] = SIN(rndub[1]);
+   rndreslb[1] = sin(rndub[1]);
    rndresub[1] = 1.0;
 
    rndlb[2]    = SCIPrandomGetReal(rndgen, 0.5*M_PI, M_PI);
    rndub[2]    = SCIPrandomGetReal(rndgen, M_PI, 1.5*M_PI);
-   rndreslb[2] = SIN(rndub[2]);
-   rndresub[2] = SIN(rndlb[2]);
+   rndreslb[2] = sin(rndub[2]);
+   rndresub[2] = sin(rndlb[2]);
 
    rndlb[3]    = SCIPrandomGetReal(rndgen, M_PI, 1.5*M_PI);
    rndub[3]    = SCIPrandomGetReal(rndgen, 1.5*M_PI, 2.0*M_PI);
    rndreslb[3] = -1.0;
-   rndresub[3] = MAX(SIN(rndlb[3]), SIN(rndub[3]));
+   rndresub[3] = MAX(sin(rndlb[3]), sin(rndub[3]));
 
    rndlb[4]    = SCIPrandomGetReal(rndgen, 0.0, 0.5*M_PI);
    rndub[4]    = SCIPrandomGetReal(rndgen, 1.5*M_PI, 2.0*M_PI);
@@ -252,7 +252,7 @@ Test(sin, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, sinexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprDerivative(xexpr), COS(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprDerivative(xexpr), cos(randnum)));
    }
 }
 
@@ -301,7 +301,7 @@ Test(sin, simplify, .description = "Tests the expression simplification.")
    cr_expect(changed);
    cr_assert_not(infeasible);
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
-   cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), SIN(5.0)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), sin(5.0)));
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );

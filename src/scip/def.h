@@ -236,22 +236,6 @@ extern "C" {
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
 #endif
 
-#ifndef SIN
-#define SIN(x)       (sin((x)))
-#endif
-
-#ifndef COS
-#define COS(x)       (cos((x)))
-#endif
-
-#ifndef ASIN
-#define ASIN(x)      (asin((x)))
-#endif
-
-#ifndef ACOS
-#define ACOS(x)      (acos((x)))
-#endif
-
 #ifndef COPYSIGN
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
 #define COPYSIGN _copysign

@@ -403,10 +403,10 @@ Test(propagate, sin)
    cr_assert_not(infeasible);
 
    /* get expression and test stuff */
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, SIN(-1)));
-   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, SIN(1.5)));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.inf, sin(-1)));
+   cr_expect(SCIPisFeasEQ(scip, expr->activity.sup, sin(1.5)));
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), -1.0));
-   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), ASIN(0.5)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), asin(0.5)));
 
    /* release cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
