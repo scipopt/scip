@@ -5145,7 +5145,7 @@ void getObjvalDeltaObjExact(
          if( !RatIsNegInfinity(lb) )
          {
             RatDiff(deltaval, newobj, oldobj);
-            RatMult(deltaval, lb, lb);
+            RatMult(deltaval, deltaval, lb);
          }
       }
       /* sign of objective did change, so the best bound does change */

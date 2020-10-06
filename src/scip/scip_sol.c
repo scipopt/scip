@@ -1561,7 +1561,7 @@ void SCIPgetSolValExact(
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolValExact(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-      RatSet(res, SCIPvarGetSolExact(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
+      SCIPvarGetSolExact(var, res, SCIPtreeHasCurrentNodeLP(scip->tree));
    }
 }
 

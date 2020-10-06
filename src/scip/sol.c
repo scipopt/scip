@@ -292,7 +292,7 @@ void solGetArrayValExact(
          break;
 
       case SCIP_SOLORIGIN_LPSOL:
-         RatSet(res, SCIPvarGetLPSolExact(var));
+         SCIPvarGetLPSolExact(var, res);
          break;
 
       case SCIP_SOLORIGIN_PSEUDOSOL:
@@ -404,7 +404,10 @@ SCIP_RETCODE solUnlinkVarExact(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
-      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetLPSolExact(var) ) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
+      SCIPvarGetLPSolExact(var, solval);
+      SCIP_CALL( solSetArrayValExact(sol, set, var, solval) );
+      RatFreeBuffer(set->buffer, &solval);
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
