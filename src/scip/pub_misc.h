@@ -2208,7 +2208,7 @@ SCIP_Bool SCIPstrToRealValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+/** copies the first size characters between a start and end character of str into token, if no error occurred endptr
  *  will point to the position after the read part, otherwise it will point to @p str
  */
 SCIP_EXPORT

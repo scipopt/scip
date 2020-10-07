@@ -10719,7 +10719,7 @@ SCIP_Bool SCIPstrToRealValue(
    return FALSE;
 }
 
-/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+/** copies the first size characters between a start and end character of str into token, if no error occurred endptr
  *  will point to the position after the read part, otherwise it will point to @p str
  */
 void SCIPstrCopySection(
