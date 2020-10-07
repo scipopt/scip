@@ -16596,7 +16596,7 @@ SCIP_RETCODE SCIPvarGetProbvarBoundExact(
    assert(bound != NULL);
    assert(boundtype != NULL);
 
-   SCIPdebugMessage("get probvar bound %g of type %d of variable <%s>\n", bound, *boundtype, (*var)->name);
+   RatDebugMessage("get probvar bound %q of type %d of variable <%s>\n", bound, *boundtype, (*var)->name);
 
    switch( SCIPvarGetStatusExact(*var) )
    {
