@@ -400,7 +400,8 @@ SCIP_EXPORT
 SCIP_Bool RatIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        r1,                 /**< the rational */
-   SCIP_Real             r2                  /**< the real */
+   SCIP_Real             r2,                 /**< the real */
+   SCIP_ROUNDMODE        roundmode           /**< the rounding mode to use */
    );
 
 /** checks if the first rational is greater than the second*/
