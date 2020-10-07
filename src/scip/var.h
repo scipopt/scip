@@ -976,6 +976,22 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
 
+/** changes exact global bound of variable; if possible, adjusts bound to integral value;
+ *  updates local bound if the global bound is tighter
+ */
+SCIP_RETCODE SCIPvarChgBdGlobalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_Rational*        newbound,           /**< new bound for variable */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   );
+
 /** changes current local lower bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */

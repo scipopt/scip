@@ -10765,6 +10765,36 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    }
 }
 
+/** changes exact global bound of variable; if possible, adjusts bound to integral value;
+ *  updates local bound if the global bound is tighter
+ */
+SCIP_RETCODE SCIPvarChgBdGlobalExact(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data, may be NULL for original variables */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_Rational*        newbound,           /**< new bound for variable */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   /* apply bound change to the LP data */
+   switch( boundtype )
+   {
+   case SCIP_BOUNDTYPE_LOWER:
+      return SCIPvarChgLbGlobalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, newbound);
+   case SCIP_BOUNDTYPE_UPPER:
+      return SCIPvarChgUbGlobalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, newbound);
+   default:
+      SCIPerrorMessage("unknown bound type\n");
+      return SCIP_INVALIDDATA;
+   }
+}
+
+
 /** appends LBTIGHTENED or LBRELAXED event to the event queue */
 static
 SCIP_RETCODE varEventLbChanged(
@@ -16542,6 +16572,102 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
          *boundtype = SCIP_BOUNDTYPE_LOWER;
       *var = (*var)->negatedvar;
       SCIP_CALL( SCIPvarGetProbvarBound(var, bound, boundtype) );
+      break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** transforms given variable, boundtype and exact bound to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ */
+SCIP_RETCODE SCIPvarGetProbvarBoundExact(
+   SCIP_VAR**            var,                /**< pointer to problem variable */
+   SCIP_Rational*        bound,              /**< pointer to bound value to transform */
+   SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
+   )
+{
+   assert(var != NULL);
+   assert(*var != NULL);
+   assert(bound != NULL);
+   assert(boundtype != NULL);
+
+   SCIPdebugMessage("get probvar bound %g of type %d of variable <%s>\n", bound, *boundtype, (*var)->name);
+
+   switch( SCIPvarGetStatusExact(*var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( (*var)->data.original.transvar == NULL )
+      {
+         SCIPerrorMessage("original variable has no transformed variable attached\n");
+         return SCIP_INVALIDDATA;
+      }
+      *var = (*var)->data.original.transvar;
+      SCIP_CALL( SCIPvarGetProbvarBoundExact(var, bound, boundtype) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+   case SCIP_VARSTATUS_FIXED:
+      break;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if( (*var)->data.multaggr.nvars == 1 )
+      {
+         assert( (*var)->data.multaggr.vars != NULL );
+         assert( (*var)->data.multaggr.scalars != NULL );
+         assert( (*var)->data.multaggr.scalars[0] != 0.0 );
+
+         RatDiff(bound, bound, (*var)->exactdata->multaggr.constant);
+         RatDiv(bound, bound, (*var)->exactdata->multaggr.scalars[0]);
+
+         if( RatIsNegative((*var)->exactdata->multaggr.scalars[0]) )
+         {
+            if ( *boundtype == SCIP_BOUNDTYPE_LOWER )
+               *boundtype = SCIP_BOUNDTYPE_UPPER;
+            else
+               *boundtype = SCIP_BOUNDTYPE_LOWER;
+         }
+         *var = (*var)->data.multaggr.vars[0];
+         SCIP_CALL( SCIPvarGetProbvarBoundExact(var, bound, boundtype) );
+      }
+      break;
+
+   case SCIP_VARSTATUS_AGGREGATED:  /* x = a*y + c  ->  y = x/a - c/a */
+      assert((*var)->data.aggregate.var != NULL);
+      assert((*var)->data.aggregate.scalar != 0.0);
+
+      RatDiff(bound, bound, (*var)->exactdata->aggregate.constant);
+      RatDiv(bound, bound, (*var)->exactdata->aggregate.scalar);
+
+      if( RatIsNegative((*var)->exactdata->aggregate.scalar) )
+      {
+         if( *boundtype == SCIP_BOUNDTYPE_LOWER )
+            *boundtype = SCIP_BOUNDTYPE_UPPER;
+         else
+            *boundtype = SCIP_BOUNDTYPE_LOWER;
+      }
+      *var = (*var)->data.aggregate.var;
+      SCIP_CALL( SCIPvarGetProbvarBoundExact(var, bound, boundtype) );
+      break;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      assert((*var)->negatedvar != NULL);
+      assert(SCIPvarGetStatus((*var)->negatedvar) != SCIP_VARSTATUS_NEGATED);
+      assert((*var)->negatedvar->negatedvar == *var);
+      RatDiffReal(bound, bound, (*var)->data.negate.constant);
+      RatNegate(bound, bound);
+      if( *boundtype == SCIP_BOUNDTYPE_LOWER )
+         *boundtype = SCIP_BOUNDTYPE_UPPER;
+      else
+         *boundtype = SCIP_BOUNDTYPE_LOWER;
+      *var = (*var)->negatedvar;
+      SCIP_CALL( SCIPvarGetProbvarBoundExact(var, bound, boundtype) );
       break;
 
    default:

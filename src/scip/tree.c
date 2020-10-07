@@ -2096,6 +2096,306 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    return SCIP_OKAY;
 }
 
+/** @todo exip this currently is not complete yet (boundchg not exact) but as it is only used in presolving, where this
+ * is not needed, it should be fine for now */
+/** adds exact bound change with inference information to focus node, child of focus node, or probing node;
+ *  if possible, adjusts bound to integral value;
+ *  at most one of infercons and inferprop may be non-NULL
+ */
+SCIP_RETCODE SCIPnodeAddBoundinferExact(
+   SCIP_NODE*            node,               /**< node to add bound change to */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< variable to change the bounds for */
+   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change, or NULL */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
+   )
+{
+   SCIP_VAR* infervar;
+   SCIP_BOUNDTYPE inferboundtype;
+   SCIP_Rational* oldlb;
+   SCIP_Rational* oldub;
+   SCIP_Rational* oldbound;
+   SCIP_Real newboundreal;
+   SCIP_Real oldboundreal;
+   SCIP_Bool useglobal;
+
+   useglobal = (int) node->depth <= tree->effectiverootdepth;
+   if( useglobal )
+   {
+      oldlb = SCIPvarGetLbGlobalExact(var);
+      oldub = SCIPvarGetUbGlobalExact(var);
+   }
+   else
+   {
+      oldlb = SCIPvarGetLbLocalExact(var);
+      oldub = SCIPvarGetUbLocalExact(var);
+   }
+
+   assert(node != NULL);
+   assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD
+      || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_REFOCUSNODE
+      || node->depth == 0);
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->effectiverootdepth >= 0);
+   assert(tree->root != NULL);
+   assert(var != NULL);
+   assert(node->active || (infercons == NULL && inferprop == NULL));
+   assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
+   assert((boundtype == SCIP_BOUNDTYPE_LOWER && RatIsGT(newbound, oldlb))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && RatIsLT(newbound, oldub)));
+
+   RatDebugMessage("adding boundchange at node %llu at depth %u to variable <%s>: old bounds=[%q,%q], new %s bound: %q (infer%s=<%s>, inferinfo=%d)\n",
+      node->number, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var),
+      boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound, infercons != NULL ? "cons" : "prop",
+      infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
+
+   /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
+   infervar = var;
+   inferboundtype = boundtype;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
+
+   SCIP_CALL( SCIPvarGetProbvarBoundExact(&var, newbound, &boundtype) );
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIPerrorMessage("cannot change bounds of multi-aggregated variable <%s>\n", SCIPvarGetName(var));
+      SCIPABORT();
+      return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   /* the variable may have changed, make sure we have the correct bounds */
+   if( useglobal )
+   {
+      oldlb = SCIPvarGetLbGlobalExact(var);
+      oldub = SCIPvarGetUbGlobalExact(var);
+   }
+   else
+   {
+      oldlb = SCIPvarGetLbLocalExact(var);
+      oldub = SCIPvarGetUbLocalExact(var);
+   }
+   assert(RatIsLE(oldlb, oldub));
+
+   if( boundtype == SCIP_BOUNDTYPE_LOWER )
+   {
+      /* adjust lower bound w.r.t. to integrality */
+      SCIPvarAdjustLbExact(var, set, newbound);
+      assert(RatIsLE(newbound, oldub));
+      RatSet(oldbound, oldlb);
+      RatMIN(newbound, newbound, oldub);
+      oldboundreal = RatRoundReal(oldbound, SCIP_ROUND_UPWARDS);
+
+      if ( set->stage == SCIP_STAGE_SOLVING && RatIsInfinity(newbound) )
+      {
+         SCIPerrorMessage("cannot change lower bound of variable <%s> to infinity.\n", SCIPvarGetName(var));
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+      }
+   }
+   else
+   {
+      assert(boundtype == SCIP_BOUNDTYPE_UPPER);
+
+      /* adjust the new upper bound */
+      SCIPvarAdjustUbExact(var, set, newbound);
+      assert(RatIsGE(newbound, oldlb));
+      RatSet(oldbound, oldub);
+      RatMAX(newbound, newbound, oldlb);
+      oldboundreal = RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS);
+
+      if ( set->stage == SCIP_STAGE_SOLVING && RatIsNegInfinity(newbound) )
+      {
+         SCIPerrorMessage("cannot change upper bound of variable <%s> to minus infinity.\n", SCIPvarGetName(var));
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+      }
+   }
+
+   /* after switching to the active variable, the bounds might become redundant
+    * if this happens, ignore the bound change
+    */
+   if( (boundtype == SCIP_BOUNDTYPE_LOWER && !RatIsGT(newbound, oldlb))
+       || (boundtype == SCIP_BOUNDTYPE_UPPER && !RatIsLT(newbound, oldub)) )
+   {
+      RatFreeBuffer(set->buffer, &oldbound);
+      return SCIP_OKAY;
+   }
+
+   RatDebugMessage(" -> transformed to active variable <%s>: old bounds=[%q,%q], new %s bound: %q, obj: %q\n",
+      SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
+      SCIPvarGetObjExact(var));
+
+   /* if the bound change takes place at an active node but is conflicting with the current local bounds,
+    * we cannot apply it immediately because this would introduce inconsistencies to the bound change data structures
+    * in the tree and to the bound change information data in the variable;
+    * instead we have to remember the bound change as a pending bound change and mark the affected nodes on the active
+    * path to be infeasible
+    */
+   if( node->active )
+   {
+      int conflictingdepth;
+
+      newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+
+      /** @todo exip: do we need this exact as well? */
+      conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newboundreal);
+
+      if( conflictingdepth >= 0 )
+      {
+         /* 0 would mean the bound change conflicts with a global bound */
+         assert(conflictingdepth > 0);
+         assert(conflictingdepth < tree->pathlen);
+
+         RatDebugMessage(" -> bound change <%s> %s %g violates current local bounds [%q,%q] since depth %d: remember for later application\n",
+            SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", newbound,
+            SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var), conflictingdepth);
+
+         /* remember the pending bound change */
+         SCIP_CALL( treeAddPendingBdchg(tree, set, node, var, newboundreal, boundtype, infercons, inferprop, inferinfo,
+               probingchange) );
+
+         /* mark the node with the conflicting bound change to be cut off */
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, transprob, origprob, reopt, lpexact->fplp, blkmem) );
+
+         RatFreeBuffer(set->buffer, &oldbound);
+         return SCIP_OKAY;
+      }
+   }
+
+   SCIPstatIncrement(stat, set, nboundchgs);
+
+   /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
+   if( tree->probingroot != NULL )
+      SCIPstatIncrement(stat, set, nprobboundchgs);
+
+   /* if the node is the root node: change local and global bound immediately */
+   if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
+   {
+      assert(node->active || tree->focusnode == NULL );
+      assert(SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE);
+      assert(!probingchange);
+
+      SCIPsetDebugMsg(set, " -> bound change in root node: perform global bound change\n");
+      SCIP_CALL( SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, cliquetable, newbound, boundtype) );
+
+      if( set->stage == SCIP_STAGE_SOLVING )
+      {
+         /* the root should be repropagated due to the bound change */
+         SCIPnodePropagateAgain(tree->root, set, stat, tree);
+         RatDebugMessage("marked root node to be repropagated due to global bound change <%s>:[%q,%q] -> [%q,%q] found in depth %u\n",
+            SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? newbound : oldlb,
+            boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
+      }
+
+      RatFreeBuffer(set->buffer, &oldbound);
+      return SCIP_OKAY;
+   }
+
+   /* if the node is a child, or the bound is a temporary probing bound
+    *  - the bound change is a branching decision
+    *  - the child's lower bound can be updated due to the changed pseudo solution
+    * otherwise:
+    *  - the bound change is an inference
+    */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || probingchange )
+   {
+      SCIP_Real newpseudoobjval;
+      SCIP_Real lpsolval;
+
+      assert(!node->active || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+
+      /* get the solution value of variable in last solved LP on the active path:
+       *  - if the LP was solved at the current node, the LP values of the columns are valid
+       *  - if the last solved LP was the one in the current lpstatefork, the LP value in the columns are still valid
+       *  - otherwise, the LP values are invalid
+       */
+      if( lpexact->fplp->hasprovedbound && (SCIPtreeHasCurrentNodeLP(tree)
+         || (tree->focuslpstateforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)) )
+      {
+         lpsolval = SCIPvarGetLPSol(var);
+      }
+      else
+         lpsolval = SCIP_INVALID;
+
+      /* remember the bound change as branching decision (infervar/infercons/inferprop are not important: use NULL) */
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype, SCIP_BOUNDCHGTYPE_BRANCHING,
+            lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
+
+      /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
+      newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
+      {
+         /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate */
+         /** @todo exip could this be done differently somewhere else? */
+         SCIP_Rational* bound;
+         bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
+         RatSet(bound, newbound);
+         SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lpexact,
+         node, set, transprob, newpseudoobjval) );
+         RatSet(bound, oldbound);
+      }
+
+      SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, newpseudoobjval);
+   }
+   else
+   {
+      /* check the infered bound change on the debugging solution */
+      /** @todo exip debug solution */
+
+      /* remember the bound change as inference (lpsolval is not important: use 0.0) */
+      SCIP_CALL( SCIPdomchgAddBoundchg(&node->domchg, blkmem, set, var, newboundreal, boundtype,
+            infercons != NULL ? SCIP_BOUNDCHGTYPE_CONSINFER : SCIP_BOUNDCHGTYPE_PROPINFER,
+            0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
+   }
+
+   assert(node->domchg != NULL);
+   assert(node->domchg->domchgdyn.domchgtype == SCIP_DOMCHGTYPE_DYNAMIC); /*lint !e641*/
+   assert(node->domchg->domchgdyn.boundchgs != NULL);
+   assert(node->domchg->domchgdyn.nboundchgs > 0);
+   assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
+   assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].newbound == newboundreal); /*lint !e777*/
+
+   /* if node is active, apply the bound change immediately */
+   if( node->active )
+   {
+      SCIP_Bool cutoff;
+
+      /**@todo if the node is active, it currently must either be the effective root (see above) or the current node;
+       *       if a bound change to an intermediate active node should be added, we must make sure, the bound change
+       *       information array of the variable stays sorted (new info must be sorted in instead of putting it to
+       *       the end of the array), and we should identify now redundant bound changes that are applied at a
+       *       later node on the active path
+       */
+      assert(SCIPtreeGetCurrentNode(tree) == node);
+      SCIP_CALL( SCIPboundchgApply(&node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1],
+            blkmem, set, stat, lpexact->fplp, branchcand, eventqueue, (int) node->depth, node->domchg->domchgdyn.nboundchgs-1, &cutoff) );
+      assert(node->domchg->domchgdyn.boundchgs[node->domchg->domchgdyn.nboundchgs-1].var == var);
+      assert(!cutoff);
+   }
+
+   RatFreeBuffer(set->buffer, &oldbound);
+   return SCIP_OKAY;
+}
+
 /** adds bound change to focus node, or child of focus node, or probing node;
  *  if possible, adjusts bound to integral value
  */
@@ -2146,12 +2446,8 @@ SCIP_RETCODE SCIPnodeAddBoundchgExact(
    SCIP_Bool             probingchange       /**< is the bound change a temporary setting due to probing? */
    )
 {
-   SCIP_Real newboundreal;
-
-   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
-   /** @todo exip: do we need an exact version here? */
-   SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, reopt, lpexact->fplp, branchcand, eventqueue,
-         cliquetable, var, newboundreal, boundtype, NULL, NULL, 0, probingchange) );
+   SCIP_CALL( SCIPnodeAddBoundinferExact(node, blkmem, set, stat, transprob, origprob, tree, reopt, lpexact, branchcand, eventqueue,
+         cliquetable, var, newbound, boundtype, NULL, NULL, 0, probingchange) );
 
    return SCIP_OKAY;
 }
