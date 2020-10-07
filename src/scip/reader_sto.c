@@ -2153,33 +2153,33 @@ SCIP_RETCODE addScenarioConsToProb(
       SCIP_CONS* cons;
       SCIP_VAR** consvars = NULL;
       int nconsvars;
-      SCIP_Bool success;
+      SCIP_Bool success1 = TRUE;
+      SCIP_Bool success2 = TRUE;
 
       if( SCIPconsIsDeleted(conss[i]) )
          continue;
 
       /* getting the number of variables in the constraints */
-      SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &nconsvars, &success) );
+      SCIP_CALL( SCIPgetConsNVars(scip, conss[i], &nconsvars, &success1) );
 
-      if( success )
+      if( success1 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
-         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success) );
+         SCIP_CALL( SCIPgetConsVars(scip, conss[i], consvars, nconsvars, &success2) );
+
+         /* If the get variable callback is not implemented for the constraint, then the success flag will be returned
+          * as FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned.
+          */
+         if( !success2 )
+         {
+            SCIPfreeBufferArrayNull(scip, consvars);
+         }
       }
 
-      /* if the get variable callback is not implemented for the constraint, then the success flag will be returned as
-       * FALSE. In this case, it is not possible to build the stochastic program, so an error will be returned
-       */
-      if( !success )
+      if( !success1 || !success2 )
       {
          SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
             SCIPconsGetName(conss[i]));
-
-         /* freeing buffer memory */
-         if( consvars != NULL )
-         {
-            SCIPfreeBufferArray(scip, consvars);
-         }
 
          return SCIP_READERROR;
       }
@@ -2223,13 +2223,13 @@ SCIP_RETCODE addScenarioConsToProb(
             SCIPconsIsInitial(conss[i]), SCIPconsIsSeparated(conss[i]), SCIPconsIsEnforced(conss[i]),
             SCIPconsIsChecked(conss[i]), SCIPconsIsMarkedPropagate(conss[i]), SCIPconsIsLocal(conss[i]),
             SCIPconsIsModifiable(conss[i]), SCIPconsIsDynamic(conss[i]), SCIPconsIsRemovable(conss[i]),
-            SCIPconsIsStickingAtNode(conss[i]), TRUE, &success) );
+            SCIPconsIsStickingAtNode(conss[i]), TRUE, &success1) );
 
       /* freeing the cons vars buffer array */
       SCIPfreeBufferArray(scip, &consvars);
 
       /* if the copy failed, then the scenarios can not be created. */
-      if( !success )
+      if( !success1 )
       {
          SCIPerrorMessage("It is not possible to copy constraint <%s>. The stochastic program can not be built.\n",
             SCIPconsGetName(conss[i]));

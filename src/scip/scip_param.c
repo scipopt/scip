@@ -390,6 +390,12 @@ SCIP_RETCODE SCIPunfixParam(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @attention This function is not working the way one would probably expect.
+ *             Even if one finds out how to pass the parameter value via the void* argument, the function will fail
+ *             to correctly set negative or fractional parameter values.
+ *
+ *  @deprecated Use SCIPsetBoolParam, SCIPsetIntParam, SCIPsetRealParam, etc., instead
  */
 SCIP_RETCODE SCIPsetParam(
    SCIP*                 scip,               /**< SCIP data structure */

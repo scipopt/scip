@@ -135,10 +135,12 @@ $(BINDIR):
 .PHONY: test
 test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/evaluate.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_solufile.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		cd check; \
