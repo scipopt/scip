@@ -775,7 +775,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
    {
       char prefix[SCIP_MAXSTRLEN];
       char tmpprefix[SCIP_MAXSTRLEN];
-      unsigned int len = 1;
+      int len = 1;
 
       j = 0;
       targetvar = NULL;
@@ -797,7 +797,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
          len += 2;
-         strncpy(prefix, tmpprefix, len);
+         strncpy(prefix, tmpprefix, (size_t)len);
 
          j++;
       }
