@@ -655,7 +655,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       addcut = benderscutdata->addcuts;
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%"SCIP_LONGINT_FORMAT, probnumber,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%" SCIP_LONGINT_FORMAT, probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
