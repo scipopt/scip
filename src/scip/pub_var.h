@@ -203,6 +203,16 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
    SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
    );
 
+/** transforms given variable, boundtype and exact bound to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPvarGetProbvarBoundExact(
+   SCIP_VAR**            var,                /**< pointer to problem variable */
+   SCIP_Rational*        bound,              /**< pointer to bound value to transform */
+   SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
+   );
+
 /** transforms given variable and domain hole to the corresponding active, fixed, or multi-aggregated variable
  *  values
  */
