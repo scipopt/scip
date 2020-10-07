@@ -1096,7 +1096,8 @@ SCIP_Bool RatIsEqualReal(
 SCIP_Bool RatIsApproxEqualReal(
    SCIP_SET*             set,                /**< SCIP set pointer */
    SCIP_Rational*        rat,                /**< the rational */
-   SCIP_Real             real                /**< the real */
+   SCIP_Real             real,               /**< the real */
+   SCIP_ROUNDMODE        roundmode           /**< the rounding mode to use */
    )
 {
    assert(rat != NULL);
@@ -1106,7 +1107,12 @@ SCIP_Bool RatIsApproxEqualReal(
       return RatIsPositive(rat) ? SCIPsetIsInfinity(set, real) : SCIPsetIsInfinity(set, -real);
    }
    else
-      return SCIPsetIsEQ(set, real, RatApproxReal(rat));
+   {
+      if( roundmode == SCIP_ROUND_NEAREST )
+         return SCIPsetIsEQ(set, real, RatApproxReal(rat));
+      else
+         return SCIPsetIsEQ(set, real, RatRoundReal(rat, roundmode));
+   }
 }
 
 /** check if the first rational is greater than the second*/

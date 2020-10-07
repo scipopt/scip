@@ -175,10 +175,10 @@ SCIP_Bool colExactInSync(
    assert(colexact->lpipos == fpcol->lpipos);
    assert(colexact->index == fpcol->index);
 
-   assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj));
-   assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj));
-   assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
-   assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
+   assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj, SCIP_ROUND_NEAREST));
+   assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_ROUND_NEAREST));
+   assert(RatIsApproxEqualReal(set, colexact->lb, fpcol->lb, SCIP_ROUND_DOWNWARDS) || (RatIsNegInfinity(colexact->lb) && SCIPsetIsInfinity(set, -fpcol->lb)));
+   assert(RatIsApproxEqualReal(set, colexact->ub, fpcol->ub, SCIP_ROUND_UPWARDS) || (RatIsInfinity(colexact->ub) && SCIPsetIsInfinity(set, fpcol->ub)));
 
    return TRUE;
 }
@@ -204,9 +204,9 @@ SCIP_Bool rowExactInSync(
    assert(rowexact->lpipos == fprow->lpipos);
    assert(rowexact->lppos == fprow->lppos);
 
-   synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
-   synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant) );
+   synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs, SCIP_ROUND_DOWNWARDS) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs, SCIP_ROUND_UPWARDS) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
+   synced = synced && (RatIsApproxEqualReal(set, rowexact->constant, fprow->constant, SCIP_ROUND_NEAREST) );
 
    if( !synced )
    {
