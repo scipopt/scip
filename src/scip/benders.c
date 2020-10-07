@@ -775,7 +775,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
    {
       char prefix[SCIP_MAXSTRLEN];
       char tmpprefix[SCIP_MAXSTRLEN];
-      int len = 1;
+      unsigned int len = 1;
 
       j = 0;
       targetvar = NULL;
