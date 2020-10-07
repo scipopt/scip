@@ -8369,8 +8369,8 @@ SCIP_RETCODE varEventObjChanged(
    * that make comparison with values close to epsilon inaccurate.
    */
    assert(!SCIPsetIsEQ(set, oldobj, newobj) ||
-          (SCIPsetIsEQ(set, oldobj, newobj) && REALABS(newobj) > 1e+15 * SCIPsetEpsilon(set))
-   );
+          (SCIPsetIsEQ(set, oldobj, newobj) && REALABS(newobj) > 1e+15 * SCIPsetEpsilon(set)) ||
+          (set->exact_enabled && oldobj != newobj));
 
    SCIP_CALL( SCIPeventCreateObjChanged(&event, blkmem, var, oldobj, newobj) );
    SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
@@ -18645,9 +18645,9 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
-      assert(var->glbdom.lb == var->glbdom.ub); /*lint !e777*/
-      assert(var->locdom.lb == var->locdom.ub); /*lint !e777*/
-      assert(var->locdom.lb == var->glbdom.lb); /*lint !e777*/
+      assert(var->glbdom.lb == var->glbdom.ub || (set->exact_enabled && RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->glbdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->locdom.ub || (set->exact_enabled && RatIsEqual(var->exactdata->locdom.lb, var->exactdata->locdom.ub))); /*lint !e777*/
+      assert(var->locdom.lb == var->glbdom.lb || (set->exact_enabled && RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb))); /*lint !e777*/
       assert(!SCIPsetIsInfinity(set, REALABS(var->locdom.lb)));
       SCIP_CALL( SCIProwAddConstant(row, blkmem, set, stat, eventqueue, lp, val * var->locdom.lb) );
       return SCIP_OKAY;
