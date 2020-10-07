@@ -107,10 +107,19 @@ SCIP_RETCODE pacliquesBuildMap(
       ancestors_size += nancestors;
    }
 
-   assert(ancestors_size > 0);
+   /* NOTE: ancestor size might be 0 if all edges with ancestor have been deleted */
+   assert(ancestors_size >= 0);
    printf("pseudo-ancestor cliques total number of ancestors: %d \n", ancestors_size);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(pacliques->halfedges_ancestors), ancestors_size) );
+   if( ancestors_size > 0 )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(pacliques->halfedges_ancestors), ancestors_size) );
+   }
+   else
+   {
+      pacliques->halfedges_ancestors = NULL;
+   }
+
    halfedges_starts = pacliques->halfedges_starts;
    halfedges_ancestors = pacliques->halfedges_ancestors;
    halfedges_starts[0] = 0;
@@ -126,6 +135,8 @@ SCIP_RETCODE pacliquesBuildMap(
       if( nancestors > 0 )
       {
          const int* const ancestors = graph_edge_getPseudoAncestors(g, e);
+         assert(halfedges_ancestors);
+
          BMScopyMemoryArray(halfedges_ancestors + halfedges_starts[e_half], ancestors, nancestors);
       }
    }
@@ -173,6 +184,7 @@ SCIP_RETCODE sepaspecial_pacliquesInit(
    {
       pac->ancestors_lpweights = NULL;
       pac->halfedges_starts = NULL;
+      pac->halfedges_ancestors = NULL;
    }
 
    return SCIP_OKAY;
@@ -230,7 +242,7 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
    vars = SCIPprobdataGetVars(scip);
    xval = SCIPprobdataGetXval(scip, NULL);
 
-   assert(halfedges_starts && halfedges_ancestors && ancestorweights);
+   assert(halfedges_starts && ancestorweights);
    assert(vars && xval);
 
    for( int i = 0; i < nancestors; i++ )
@@ -323,6 +335,8 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
          SCIP_CALL(SCIPreleaseRow(scip, &(rows[i])));
       }
    }
+
+   SCIPfreeBufferArray(scip, &rows);
 
    return SCIP_OKAY;
 }
