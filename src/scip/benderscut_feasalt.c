@@ -359,7 +359,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 #endif
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "altfeasibilitycut_%d_%"SCIP_LONGINT_FORMAT, probnumber,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "altfeasibilitycut_%d_%" SCIP_LONGINT_FORMAT, probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
    /* generating a Benders' decomposition cut using the classical optimality cut methods */

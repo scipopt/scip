@@ -4686,7 +4686,7 @@ SCIP_RETCODE setSubproblemParams(
    SCIP_CALL( SCIPsetHeuristics(subproblem, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* store parameters that are changed for the generation of the subproblem cuts */
-   SCIP_CALL( SCIPsetParam(subproblem, "conflict/enable", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subproblem, "conflict/enable", FALSE) );
 
    SCIP_CALL( SCIPsetIntParam(subproblem, "lp/disablecutoff", 1) );
    SCIP_CALL( SCIPsetIntParam(subproblem, "lp/scaling", 0) );
