@@ -1511,7 +1511,7 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffProduct)
       if( SCIPgetConsExprExprDot(child) == 0.0 )
          continue;
 
-      if( !SCIPisZero(scip, SCIPgetConsExprExprValue(child)) )
+      if( SCIPgetConsExprExprValue(child) != 0.0 )
          *dot += SCIPgetConsExprExprValue(expr) / SCIPgetConsExprExprValue(child) * SCIPgetConsExprExprDot(child);
       else
       {
