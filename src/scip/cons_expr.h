@@ -133,31 +133,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    SCIP_DECL_CONSEXPR_EXPRCOMPARE((*compare))/**< compare callback (can be NULL) */
 );
 
-/** set the derivative evaluation callback of an expression handler */
+/** set derivative evaluation callbacks of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
+SCIP_RETCODE SCIPsetConsExprExprHdlrDiff(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
-);
-
-/** set the forward derivative evaluation callback of an expression handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetConsExprExprHdlrFwdiff(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff))  /**< derivative evaluation callback (can be NULL) */
-);
-
-/** set the backward-forward derivative evaluation callback of an expression handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetConsExprExprHdlrBwfwdiff(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))  /**< derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff)),  /**< backward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff)),  /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))/**< backward-forward derivative evaluation callback (can be NULL) */
 );
 
 /** set the interval evaluation callback of an expression handler */

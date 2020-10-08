@@ -11711,46 +11711,20 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    return SCIP_OKAY;
 }
 
-/** set the derivative evaluation callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
+/** set derivative evaluation callbacks of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrDiff(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
-   )
-{  /*lint --e{715}*/
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff)),  /**< backward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff)),  /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))/**< backward-forward derivative evaluation callback (can be NULL) */
+)
+{
    assert(exprhdlr != NULL);
 
    exprhdlr->bwdiff = bwdiff;
-
-   return SCIP_OKAY;
-}
-
-/** set the forward derivative evaluation callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrFwdiff(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff))  /**< derivative evaluation callback (can be NULL) */
-   )
-{  /*lint --e{715}*/
-   assert(exprhdlr != NULL);
-
    exprhdlr->fwdiff = fwdiff;
-
-   return SCIP_OKAY;
-}
-
-/** set the backward-forward derivative evaluation callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrBwfwdiff(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))  /**< derivative evaluation callback (can be NULL) */
-   )
-{  /*lint --e{715}*/
-   assert(exprhdlr != NULL);
-
    exprhdlr->bwfwdiff = bwfwdiff;
 
    return SCIP_OKAY;
