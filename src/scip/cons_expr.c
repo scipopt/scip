@@ -12263,6 +12263,61 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
    return SCIP_OKAY;
 }
 
+/** calls the backward-forward differentiation callback of an expression handler */
+SCIP_RETCODE SCIPbwfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative    /**< buffer to store value of the backward-forward derivative */
+)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(derivative != NULL);
+
+   if( expr->exprhdlr->bwfwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( expr->exprhdlr->bwfwdiff(scip, expr, childidx, derivative, NULL) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** calls the forward differentiation callback of an expression handler */
+SCIP_RETCODE SCIPfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 derivative    /**< buffer to store value of the forward derivative */
+)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(derivative != NULL);
+
+   if( expr->exprhdlr->fwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( expr->exprhdlr->fwdiff(scip, expr, derivative, NULL) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
@@ -13966,9 +14021,12 @@ SCIP_RETCODE SCIPevalConsExprExpr(
             /* compute forward diff */
             if( diff )
             {
-               /* call expression eval callback */
-               assert(expr->exprhdlr->fwdiff != NULL);
-               SCIP_CALL( expr->exprhdlr->fwdiff(scip, expr, &expr->dot, NULL) );
+               SCIP_Real derivative;
+
+               derivative = SCIP_INVALID;
+
+               SCIP_CALL( SCIPfwdiffConsExprExprHdlr(scip, expr, &derivative) );
+               expr->dot = derivative;
 
                if( expr->dot == SCIP_INVALID ) /*lint !e777*/
                   goto TERMINATE;

@@ -369,6 +369,24 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
    SCIP_Real                  exprval       /**< value for expression, used only if childrenvals is not NULL */
 );
 
+/** calls the backward-forward differentiation callback of an expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPbwfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative    /**< buffer to store value of the backward-forward derivative */
+);
+
+/** calls the forward differentiation callback of an expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 derivative    /**< buffer to store value of the forward derivative */
+);
+
+
 /** calls the evaluation callback of an expression handler
  *
  * further, allows to evaluate w.r.t. given children values
