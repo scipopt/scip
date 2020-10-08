@@ -862,6 +862,36 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeConsExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   );
+
+/** computes the hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via XXX()
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ *
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeConsExprHessianDir(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONS*              cons,             /**< constraint for which we will compute directional derivative */
+   SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   SCIP_SOL*               direction,        /**< direction */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprDerivative(

@@ -14190,7 +14190,6 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
  *
  * @note expression must belong to a constraint
  */
-static
 SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -14239,7 +14238,6 @@ SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
  * TODO: handle tags
  *       better way to handle direction?
  */
-static
 SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
