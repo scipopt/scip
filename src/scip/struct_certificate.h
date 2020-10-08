@@ -81,6 +81,7 @@ struct SCIP_Certificate
    SCIP_Real             filesize;           /**< size of derivation file in MB */
    SCIP_HASHMAP*         rowdatahash;        /**< Hashmap storing mapping between rows and file index */
    SCIP_Rational*        rootbound;          /**< the bound for the root node */
+   SCIP_Rational*        finalbound;         /**< the final dual bound value */
    SCIP_Longint          derindex_root;      /**< index of root bound in certificate */
    SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
    SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
