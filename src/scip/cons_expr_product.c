@@ -1572,7 +1572,7 @@ SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffProduct)
       if( SCIPgetConsExprExprDot(child) == 0.0 )
          continue;
 
-      if( !SCIPisZero(scip, SCIPgetConsExprExprValue(child)) && !SCIPisZero(scip, SCIPgetConsExprExprValue(partialchild)) )
+      if( SCIPgetConsExprExprValue(child) != 0.0 && SCIPgetConsExprExprValue(partialchild) != 0.0 )
          *bardot += SCIPgetConsExprExprValue(expr) /(SCIPgetConsExprExprValue(child) * SCIPgetConsExprExprValue(partialchild)) * SCIPgetConsExprExprDot(child);
       else
       {
