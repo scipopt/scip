@@ -1511,7 +1511,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
          /* retrieve the line in the certificate of the bound */
          RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
          certificate->workbound->varindex = SCIPvarGetCertificateIndex(vars[i]);
-         certificate->workbound->isupper = !RatIsEqual(certificate->workbound->boundval, SCIPvarGetLbLocalExact(vars[i]));
+         certificate->workbound->isupper = RatIsNegative(obj);
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
 
