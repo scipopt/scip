@@ -222,7 +222,7 @@ do
 		    if test "$CLUSTERQUEUE" != "moskito"
 		    then
 		       # the space at the end is necessary
-		       export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		       export SRUN="srun --propagate=STACK --cpu_bind=cores ${SRUN_FLAGS} "
 		    fi
 
                     if test "$SLURMACCOUNT" == "default"
