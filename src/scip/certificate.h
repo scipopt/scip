@@ -269,6 +269,12 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
+/** prints the last part of the certificate header (RTP range/sol, ...) */
+SCIP_RETCODE SCIPcertificateSaveFinalbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   );
 
 /** prints RTP section for infeasibility */
 void SCIPcertificatePrintRtpInfeas(
