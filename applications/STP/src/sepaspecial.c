@@ -31,6 +31,7 @@
 #include "sepaspecial.h"
 #include "probdata_stp.h"
 #include "portab.h"
+#include "stpvector.h"
 #include "prop_stp.h"
 #include "scip/cons_linear.h"
 
@@ -54,6 +55,14 @@ struct prize_collecting_implications
    int*                  pcimplstart;        /**< start for each proper potential terminal */
    int*                  pcimplverts;        /**< all vertices */
    int                   pcimplnppterms;     /**< number of proper potential terminals used */
+};
+
+
+/** cuts for implications between non-terminals and terminals */
+struct vertex_terminal_implications
+{
+   STP_Vectype(int)      impverts;           /**< implications vertices */
+   STP_Vectype(int)      imparcs;            /**< implications arcs (from non-terminals to terminals) */
 };
 
 
@@ -283,13 +292,10 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
    {
       if( SCIPisFeasGT(scip, ancestorweights[i], 1.0) )
       {
-         printf("violation for %d (%f > 1) \n", i, ancestorweights[i]);
+         printf("violation for ancestor %d (%f > 1) \n", i, ancestorweights[i]);
 
          SCIP_CALL(SCIPcreateEmptyRowCons(scip, &(rows[i]), conshdlr, "pa-clique", -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, rows[i]));
-
-         if( *ncuts + cutscount++ >= maxcuts )
-            break;
       }
       else
       {
@@ -319,18 +325,27 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
    {
       if( rows[i] )
       {
-         SCIP_Bool infeasible;
-
          SCIP_CALL(SCIPflushRowExtensions(scip, rows[i]));
-         SCIP_CALL(SCIPaddRow(scip, rows[i], FALSE, &infeasible));
 
-         assert(!infeasible);
+         if( SCIPisCutEfficacious(scip, NULL, rows[i]) )
+         {
+            SCIP_Bool infeasible;
 
+            SCIP_CALL(SCIPaddRow(scip, rows[i], FALSE, &infeasible));
+            assert(!infeasible);
+
+            printf("added conflict-cut for ancestor %d \n", i);
 #if ADDCUTSTOPOOL
          /* add cut to pool */
-         if( !infeasible )
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            if( !infeasible )
+               SCIP_CALL( SCIPaddPoolCut(scip, row) );
 #endif
+            if( *ncuts + cutscount++ >= maxcuts )
+            {
+               SCIP_CALL(SCIPreleaseRow(scip, &(rows[i])));
+               break;
+            }
+         }
 
          SCIP_CALL(SCIPreleaseRow(scip, &(rows[i])));
       }
@@ -550,9 +565,6 @@ SCIP_RETCODE sepaspecial_pcimplicationsSeparate(
       /* separate? */
       if( maxnode >= 0 )
       {
-         SCIP_Bool infeasible;
-
-
 #ifdef XXX_XXX
          SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "pcimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE));
          SCIP_CALL(SCIPcacheRowExtensions(scip, row));
@@ -580,18 +592,24 @@ SCIP_RETCODE sepaspecial_pcimplicationsSeparate(
 
          SCIP_CALL(SCIPflushRowExtensions(scip, row));
 
-         SCIP_CALL(SCIPaddRow(scip, row, FALSE, &infeasible));
-
+         if( SCIPisCutEfficacious(scip, NULL, row) )
+         {
+            SCIP_Bool infeasible;
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 #if ADDCUTSTOPOOL
          /* add cut to pool */
-         if( !infeasible )
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            if( !infeasible )
+               SCIP_CALL( SCIPaddPoolCut(scip, row) );
 #endif
 
-         SCIP_CALL(SCIPreleaseRow(scip, &row));
+            if( *ncuts + cutscount++ >= maxcuts )
+            {
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+               break;
+            }
+         }
 
-         if( *ncuts + cutscount++ >= maxcuts )
-            break;
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
    }
    assert((*ncuts + cutscount > maxcuts) || ptermcount == graph_pc_nProperPotentialTerms(g));
@@ -634,4 +652,166 @@ const int* sepaspecial_pcimplicationsGetVerts(
    assert(pcimp);
 
    return pcimp->pcimplverts;
+}
+
+
+/** initializes implications */
+SCIP_RETCODE sepaspecial_vtimplicationsInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   VTIMPLICATION**       vtimplications      /**< implication data */
+)
+{
+   VTIMPLICATION* vtimps;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, vtimplications) );
+   vtimps = *vtimplications;
+   vtimps->impverts = NULL;
+   vtimps->imparcs = NULL;
+
+   // todo reactivate if it works well
+   if( !graph_typeIsSpgLike(g) )
+   {
+      return SCIP_OKAY;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+         SCIP_Real min = FARAWAY;
+         int minedge = -1;
+
+         for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            if( GE(g->cost[e], BLOCKED) )
+            {
+               minedge = -2;
+               break;
+            }
+
+            if( LT(g->cost[e], min) )
+            {
+               min = g->cost[e];
+               minedge = e;
+            }
+         }
+
+         assert(minedge != -1);
+
+         if( minedge == -2 )
+            continue;
+
+         assert(!Is_term(g->term[g->head[minedge]]));
+
+         StpVecPushBack(scip, vtimps->impverts, g->head[minedge]);
+         StpVecPushBack(scip, vtimps->imparcs, flipedge(minedge));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** frees implications */
+void sepaspecial_vtimplicationsFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VTIMPLICATION**       vtimplications      /**< implication data */
+)
+{
+   StpVecFree(scip, (*vtimplications)->imparcs);
+   StpVecFree(scip, (*vtimplications)->impverts);
+
+   SCIPfreeMemoryArray(scip, vtimplications);
+}
+
+
+/** separates implications */
+SCIP_RETCODE sepaspecial_vtimplicationsSeparate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   VTIMPLICATION*        vtimplications,     /**< implication data */
+   int                   maxcuts,            /**< maximal number of cuts */
+   int*                  ncuts               /**< pointer to store number of cuts */
+   )
+{
+   GRAPH* g = SCIPprobdataGetGraph2(scip);
+   SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   const SCIP_Real* xval = SCIPprobdataGetXval(scip, NULL);
+   int cutscount = 0;
+   int nimplications;
+
+   assert(scip && conshdlr && vtimplications && ncuts);
+   assert(maxcuts > 0);
+   assert(StpVecGetSize(vtimplications->imparcs) == StpVecGetSize(vtimplications->impverts));
+
+   nimplications = StpVecGetSize(vtimplications->imparcs);
+
+   /* nothing to separate? */
+   if( nimplications == 0)
+   {
+      return SCIP_OKAY;
+   }
+
+   for( int i = 0; i < nimplications; i++ )
+   {
+      const int impvert = vtimplications->impverts[i];
+      const int imparc = vtimplications->imparcs[i];
+      const int imparc_rev = flipedge(imparc);
+      const SCIP_Real inflow = get_inflow(g, xval, impvert);
+
+      assert(graph_edge_isInRange(g, imparc));
+      assert(g->tail[imparc] == impvert);
+
+      if( SCIPisFeasLT(scip, xval[imparc] + xval[imparc_rev], inflow) )
+      {
+         SCIP_ROW* row = NULL;
+
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "vtimplicate", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+         printf("found implication cut: %f < %f \n", xval[imparc] + xval[imparc_rev], inflow);
+
+         for( int e = g->inpbeg[impvert]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            if( e != imparc_rev )
+            {
+               SCIP_CALL(SCIPaddVarToRow(scip, row, vars[e], 1.0));
+            }
+            assert(e != imparc);
+         }
+
+         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[imparc], -1.0));
+         SCIP_CALL(SCIPflushRowExtensions(scip, row));
+
+         if( SCIPisCutEfficacious(scip, NULL, row) )
+         {
+            SCIP_Bool infeasible;
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+            printf("...added implication cut! \n");
+
+#if ADDCUTSTOPOOL
+         /* add cut to pool */
+            if( !infeasible )
+               SCIP_CALL( SCIPaddPoolCut(scip, row) );
+#endif
+
+            if( *ncuts + cutscount++ >= maxcuts )
+            {
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
+               break;
+            }
+         }
+
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      }
+   }
+
+   *ncuts += cutscount;
+   SCIPdebugMessage("Vertex-Terminal Implication Separator: %d Inequalities added\n", cutscount);
+
+   return SCIP_OKAY;
 }

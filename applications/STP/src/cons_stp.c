@@ -59,7 +59,9 @@
 #endif
 
 #define ADDCUTSTOPOOL 0
-#define STP_PACLIQUES_USE FALSE
+#define STP_SEPASPECIAL_USECLIQUE FALSE
+#define STP_SEPASPECIAL_USECVTIMP FALSE
+
 
 #define Q_NULL     -1         /* NULL element of queue/list */
 
@@ -127,6 +129,7 @@ struct SCIP_ConshdlrData
 {
    PACLIQUES*            pacliques;          /**< pseudo ancestor cliques */
    PCIMPLICATION*        pcimplications;     /**< prize-collecting implications */
+   VTIMPLICATION*        vtimplications;     /**< vertex-terminal implications */
    SCIP_Bool             backcut;            /**< should backcuts be applied? */
    SCIP_Bool             creepflow;          /**< should creepflow cuts be applied? */
    SCIP_Bool             disjunctcut;        /**< should disjunction cuts be applied? */
@@ -1256,6 +1259,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolStp)
    if( conshdlrdata->pacliques )
       sepaspecial_pacliquesFree(scip, &(conshdlrdata->pacliques));
 
+   if( conshdlrdata->vtimplications )
+      sepaspecial_vtimplicationsFree(scip, &(conshdlrdata->vtimplications));
+
    return SCIP_OKAY;
 }
 
@@ -1381,13 +1387,23 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
       SCIP_CALL( sepaspecial_pcimplicationsSeparate(scip, conshdlr, conshdlrdata->pcimplications, maxcuts, &ncuts) );
    }
 
-#if STP_PACLIQUES_USE
+#if STP_SEPASPECIAL_USECLIQUE
    if( conshdlrdata->pacliques == NULL )
    {
       SCIP_CALL( sepaspecial_pacliquesInit(scip, g, &(conshdlrdata->pacliques)) );
    }
 
    SCIP_CALL( sepaspecial_pacliquesSeparate(scip, conshdlr, conshdlrdata->pacliques, maxcuts, &ncuts) );
+#endif
+
+
+#if STP_SEPASPECIAL_USECVTIMP
+   if( conshdlrdata->vtimplications == NULL )
+   {
+      SCIP_CALL( sepaspecial_vtimplicationsInit(scip, g, &(conshdlrdata->vtimplications)) );
+   }
+
+   SCIP_CALL( sepaspecial_vtimplicationsSeparate(scip, conshdlr, conshdlrdata->vtimplications, maxcuts, &ncuts) );
 #endif
 
    /* change graph according to branch-and-bound terminal changes  */
@@ -1690,6 +1706,7 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
 
    conshdlrdata->pacliques = NULL;
    conshdlrdata->pcimplications = NULL;
+   conshdlrdata->vtimplications = NULL;
 
    return SCIP_OKAY;
 }

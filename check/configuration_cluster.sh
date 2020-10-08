@@ -26,7 +26,7 @@ QUEUETYPE=$4 # either 'srun' or 'qsub'
 
 # new environment variables defined by this script:
 NICE=""
-ACCOUNT="mip"
+ACCOUNT="gas"
 CLUSTERQUEUE=$QUEUE
 
 # check if queue has been defined
