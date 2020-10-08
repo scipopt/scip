@@ -77,7 +77,7 @@ struct myarray
    int*                  vals;               /**< index of the column */
    int                   nvals;
    int                   valssize;
-   SCIP_VAR**            auxvars;            /**< entry of the matrix */
+   SCIP_HASHMAP*         auxvars;            /**< entry of the matrix */
 };
 
 /*
@@ -89,8 +89,6 @@ static
 SCIP_RETCODE sepadataAddMinor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   SCIP_VAR*             x,                  /**< x variable */
-   SCIP_VAR*             y,                  /**< y variable */
    SCIP_VAR*             auxvarxik,          /**< auxiliary variable X_ik = x_i * x_k */
    SCIP_VAR*             auxvarxil,          /**< auxiliary variable X_il = x_i * x_l */
    SCIP_VAR*             auxvarxjk,          /**< auxiliary variable X_jk = x_j * x_k */
@@ -98,41 +96,38 @@ SCIP_RETCODE sepadataAddMinor(
    )
 {
    assert(sepadata != NULL);
-   assert(x != NULL);
-   assert(y != NULL);
-   assert(x != y);
    assert(auxvarxik != NULL);
    assert(auxvarxil != NULL);
    assert(auxvarxjk != NULL);
    assert(auxvarxjl != NULL);
+   assert(auxvarxik != auxvarxil);
+   assert(auxvarxjk != auxvarxjl);
 
-   SCIPdebugMsg(scip, "store 2x2 minor: %s %s %s for x=%s y=%s\n", SCIPvarGetName(auxvarxx), SCIPvarGetName(auxvaryy),
-      SCIPvarGetName(auxvarxy), SCIPvarGetName(x), SCIPvarGetName(y));
+   SCIPdebugMsg(scip, "store 2x2 minor: [%s %s, %s %s]\n", SCIPvarGetName(auxvarxik), SCIPvarGetName(auxvarxil),
+         SCIPvarGetName(auxvarxjk), SCIPvarGetName(auxvarxjl));
 
    /* reallocate if necessary */
-   if( sepadata->minorssize < 5 * (sepadata->nminors + 1) )
+   if( sepadata->minorssize < 4 * (sepadata->nminors + 1) )
    {
-      int newsize = SCIPcalcMemGrowSize(scip, 5 * (sepadata->nminors + 1));
-      assert(newsize > 5 * (sepadata->nminors + 1));
+      int newsize = SCIPcalcMemGrowSize(scip, 4 * (sepadata->nminors + 1));
+      assert(newsize > 4 * (sepadata->nminors + 1));
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->minors), sepadata->minorssize, newsize) );
       sepadata->minorssize = newsize;
    }
 
    /* store minor */
-   sepadata->minors[5 * sepadata->nminors] = x;
-   sepadata->minors[5 * sepadata->nminors + 1] = y;
-   sepadata->minors[5 * sepadata->nminors + 2] = auxvarxx;
-   sepadata->minors[5 * sepadata->nminors + 3] = auxvaryy;
-   sepadata->minors[5 * sepadata->nminors + 4] = auxvarxy;
+   sepadata->minors[4 * sepadata->nminors] = auxvarxik;
+   sepadata->minors[4 * sepadata->nminors + 1] = auxvarxil;
+   sepadata->minors[4 * sepadata->nminors + 2] = auxvarxjk;
+   sepadata->minors[4 * sepadata->nminors + 3] = auxvarxjl;
    ++(sepadata->nminors);
 
    /* capture variables */
-   SCIP_CALL( SCIPcaptureVar(scip, x) );
-   SCIP_CALL( SCIPcaptureVar(scip, y) );
-   SCIP_CALL( SCIPcaptureVar(scip, auxvarxx) );
-   SCIP_CALL( SCIPcaptureVar(scip, auxvaryy) );
-   SCIP_CALL( SCIPcaptureVar(scip, auxvarxy) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvarxik) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvarxil) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvarxjk) );
+   SCIP_CALL( SCIPcaptureVar(scip, auxvarxjl) );
 
    return SCIP_OKAY;
 }
@@ -195,13 +190,23 @@ SCIP_RETCODE getMinorVars(
    return SCIP_OKAY;
 }
 
+
+/**
+ * we have a matrix, M, indexed by the variables
+ * M(xi, xk) is the auxiliary variable of xi * xk if it exists
+ * We store, for each row of the matrix, the indices of the nonzero column entries (assoc with the given row) and the auxiliary variable for xi * xk
+ * The nonzero column entries are stores as an array (struct myarray)
+ * So we have a hasmap mapping each variable (row of the matrix) with its array representing the nonzero entries of the row.
+ */
 static
 SCIP_RETCODE insertIndex(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HASHMAP*         rowmap,
    SCIP_VAR*             row,
    SCIP_VAR*             col,
-   SCIP_VAR*             auxvar
+   SCIP_VAR*             auxvar,
+   int*                  rowindices,
+   int*                  nrows
    )
 {
    SCIPdebugMsg(scip, "inserting %s in row %s and col %s \n", SCIPvarGetName(auxvar), SCIPvarGetName(row), SCIPvarGetName(col));
@@ -226,7 +231,7 @@ SCIP_RETCODE insertIndex(
 
       /* insert */
       arr->vals[arr->nvals] = SCIPvarGetProbindex(col);
-      arr->auxvars[arr->nvals] = auxvar;
+      SCIP_CALL( SCIPhashmapInsert(arr->auxvars, (void*)col, (void *)auxvar) );
       arr->nvals += 1;
    }
    else
@@ -238,15 +243,19 @@ SCIP_RETCODE insertIndex(
       arr->valssize = 10;
       arr->nvals = 0;
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &arr->vals, arr->valssize) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &arr->auxvars, arr->valssize) );
+      SCIP_CALL( SCIPhashmapCreate(&arr->auxvars, SCIPblkmem(scip), arr->valssize) );
 
       /* insert */
       arr->vals[arr->nvals] = SCIPvarGetProbindex(col);
-      arr->auxvars[arr->nvals] = auxvar;
+      SCIP_CALL( SCIPhashmapInsert(arr->auxvars, (void*)col, (void *)auxvar) );
       arr->nvals += 1;
 
       /* store in hashmap */
       SCIP_CALL( SCIPhashmapInsert(rowmap, (void*)row, (void *)arr) );
+
+      /* remember the new row */
+      rowindices[*nrows] = SCIPvarGetProbindex(row);
+      *nrows += 1;
    }
 
    return SCIP_OKAY;
@@ -266,7 +275,10 @@ SCIP_RETCODE detectMinors(
    SCIP_VAR** xs;
    SCIP_VAR** ys;
    SCIP_VAR** auxvars;
+   int* rowvars = NULL;
    int* perm = NULL;
+   int* intersection;
+   int nrowvars = 0;
    int nbilinterms = 0;
    int nquadterms = 0;
    int maxminors;
@@ -303,9 +315,11 @@ SCIP_RETCODE detectMinors(
    SCIP_CALL( SCIPallocBufferArray(scip, &xs, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ys, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowvars, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &intersection, SCIPgetNVars(scip)) );
 
    /* initialize iterator */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
 
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
@@ -351,7 +365,7 @@ SCIP_RETCODE detectMinors(
             quadvar = SCIPgetConsExprExprAuxVar(children[0]);
             assert(quadvar != NULL);
 
-            SCIP_CALL( insertIndex(scip, rowmap, quadvar, quadvar, auxvar) );
+            SCIP_CALL( insertIndex(scip, rowmap, quadvar, quadvar, auxvar, rowvars, &nrowvars) );
          }
          /* check for expr = x_i * x_k */
          else if( SCIPgetConsExprExprNChildren(expr) == 2 && exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr)
@@ -366,54 +380,91 @@ SCIP_RETCODE detectMinors(
             xi = SCIPgetConsExprExprAuxVar(children[0]);
             xk = SCIPgetConsExprExprAuxVar(children[1]);
 
-            SCIP_CALL( insertIndex(scip, rowmap, xk, xi, auxvar) );
-            SCIP_CALL( insertIndex(scip, rowmap, xi, xk, auxvar) );
-            /* check whether variables has an array associated to it */
-            if( SCIPhashmapExists(quadmap, (void*)xi) )
+            SCIP_CALL( insertIndex(scip, rowmap, xk, xi, auxvar, rowvars, &nrowvars) );
+            SCIP_CALL( insertIndex(scip, rowmap, xi, xk, auxvar, rowvars, &nrowvars) );
+         }
+      }
+   }
+
+   /* sort the column entries */
+   for( i = 0; i < nrowvars; ++i )
+   {
+      struct myarray* row;
+
+      row = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
+      (void)SCIPsortInt(row->vals, row->nvals);
+   }
+
+   /* store 2x2 minors */
+   for( i = 0; i < nrowvars; ++i )
+   {
+      int j;
+      struct myarray* rowi;
+
+      rowi = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
+
+      for( j = 0; j < nrowvars; ++j )
+      {
+         struct myarray* rowj;
+         int ninter;
+
+         rowj = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[j]]);
+
+         SCIP_CALL( SCIPcomputeArraysIntersection(rowi->vals, rowi->nvals, rowj->vals, rowj->nvals, intersection,
+                  &ninter) );
+
+         if( ninter > 1)
+         {
+            int p;
+
+            for( p = 0; p < ninter - 1; ++p )
             {
-               /* insert index in index array */
-            }
-            else
-            {
-               /* create index array */
-               SCIP_CALL( SCIPhashmapInsert(quadmap, (void*)quadvar, auxvar) );
-               ++nquadterms;
-            }
-            if( SCIPhashmapExists(quadmap, (void*)xk) )
-            {
-               /* insert index in index array */
-            }
-            else
-            {
-               /* create index array */
-               SCIP_CALL( SCIPhashmapInsert(quadmap, (void*)quadvar, auxvar) );
-               ++nquadterms;
+               int q;
+
+               for( q = p + 1; q < ninter; ++q )
+               {
+                  SCIP_HASHMAP* rowicols;
+                  SCIP_HASHMAP* rowjcols;
+                  SCIP_VAR* colk;
+                  SCIP_VAR* coll;
+                  SCIP_VAR* auxvarik;
+                  SCIP_VAR* auxvaril;
+                  SCIP_VAR* auxvarjk;
+                  SCIP_VAR* auxvarjl;
+
+                  rowicols = rowi->auxvars;
+                  rowjcols = rowj->auxvars;
+
+                  colk = SCIPgetVars(scip)[intersection[p]];
+                  coll = SCIPgetVars(scip)[intersection[q]];
+
+                  auxvarik = SCIPhashmapGetImage(rowicols, colk);
+                  auxvaril = SCIPhashmapGetImage(rowicols, coll);
+                  auxvarjk = SCIPhashmapGetImage(rowjcols, colk);
+                  auxvarjl = SCIPhashmapGetImage(rowjcols, coll);
+
+                  SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarik, auxvaril, auxvarjk, auxvarjl) );
+               }
             }
          }
       }
    }
-   assert(nbilinterms < SCIPgetNVars(scip));
-   SCIPdebugMsg(scip, "stored %d bilinear terms in total\n", nbilinterms);
 
-   /* use max(maxminorsconst, maxminorsfac * # quadratic terms) as a limit for the maximum number of minors */
-   maxminors = (int) MAX(sepadata->maxminorsconst, sepadata->maxminorsfac * nquadterms);
-   SCIPdebugMsg(scip, "maximum number of minors = %d\n", maxminors);
+   ///* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
+   // * prioritize variables because of the order in the bilinear terms where they appear; however, variables that
+   // * appear more often in bilinear terms might be more important than others so the corresponding bilinear terms
+   // * are more likely to be chosen
+   // */
+   //if( maxminors < nbilinterms && maxminors < SQR(nquadterms) )
+   //{
+   //   SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
 
-   /* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
-    * prioritize variables because of the order in the bilinear terms where they appear; however, variables that
-    * appear more often in bilinear terms might be more important than others so the corresponding bilinear terms
-    * are more likely to be chosen
-    */
-   if( maxminors < nbilinterms && maxminors < SQR(nquadterms) )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, nbilinterms) );
+   //   for( i = 0; i < nbilinterms; ++i )
+   //      perm[i] = i;
 
-      for( i = 0; i < nbilinterms; ++i )
-         perm[i] = i;
-
-      /* permute array */
-      SCIPrandomPermuteIntArray(sepadata->randnumgen, perm, 0, nbilinterms);
-   }
+   //   /* permute array */
+   //   SCIPrandomPermuteIntArray(sepadata->randnumgen, perm, 0, nbilinterms);
+   //}
 
    /* store 2x2 principal minors */
    for( i = 0; i < nbilinterms && sepadata->nminors < maxminors; ++i )
