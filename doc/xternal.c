@@ -169,8 +169,17 @@
  * This chapter is a detailed guide to the installation procedure of SCIP.
  *
  * SCIP lets you freely choose between its own, manually maintained Makefile system
- * or the CMake cross platform build system generator. For new users, we strongly
- * recommend to use CMake, if available on their targeted platform.
+ * or the CMake cross platform build system generator.
+ *
+ * <b>For new users and on for installation of the scipoptsuite on windows, we strongly recommend to use CMake, if available on their targeted platform.</b>
+ *
+ * Which one you choose depends on you use case and your level of expertise.
+ * If you just want to use SCIP as a black box solver you should use an installer with a precompiled binary from the <a href="http://scipopt.org/#download">download section</a>.
+ * <b>This is highly recommended for new users.</b>
+ * If you are just curious about SCIP and want to try it out you can use the <a href="http://www.pokutta.com/blog/pages/scip/scip-teaching.html"> dockerized SCIP container</a>.
+ *
+ * However if you want to develop your own plugin for scip you have to compile the SCIPOptSuite from the source code, which is available as a tarball from the <a href="http://scipopt.org/#download">website</a>.
+ * Note that you might need some level of experience to be able to do this, this is described in the following.
  *
  * Please note that there are differences between both systems, most notably, the generated
  * library libscip will not be compatible between the versions. For more information, we
@@ -544,8 +553,8 @@
  * @section CODEDOC Documentation:
  *
  * - Document functions, parameters, and variables in a doxygen conformed way.
- * - Do not leave code in comments that has been commented out; put the code within defines,
- *   e.g., `SCIP_DISABLED_CODE` and/or add an explanation
+ * - Please do not leave code in comments that has been commented out, don't use `#if
+ *   0`. Instead put the code within defines `#ifdef SCIP_DISABLED_CODE` and add an explanation.
  * - Todos need double stars to be registered by doxygen.
  * - When documenting methods, the first brief description starts with lower case and is separated by semi-colons, if necessary
  *   The longer description starts capitalized and consists of complete sentences.
@@ -585,7 +594,7 @@
  *
  * ```
  * cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
- * cmake --build build
+ * cmake --build build --config Release
  * ```
  *
  * Linux/macOS Makefile-based build instructions:
@@ -726,6 +735,8 @@
 
 /**@page MAKE Makefiles / Installation information
  *
+ * <b>Please note, that the Makefile system is not actively maintained anymore.
+ * If possible, please use \ref CMAKE "the cmake system".</b>
  *
  * In most cases (LINUX and MAC) it is quite easy to compile and install \SCIP. Therefore, reading the section
  * \ref BRIEFINSTALL "Brief installation description" should usually be enough. If this is not the case you find a
@@ -734,8 +745,8 @@
  *
  * @section BRIEFINSTALL Brief installation description
  *
- * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL. For
- * that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
+ * The easiest way to install \SCIP is to use the \SCIP Optimization Suite which contains \SCIP, SoPlex, and ZIMPL.
+ * For that we refer to the INSTALL file of the \SCIP Optimization Suite (main advantage: there is no need
  * to specify any directories, the compiling process is fully automated).
  *
  * Compiling \SCIP directly can be done as follows:
@@ -7517,10 +7528,16 @@
  *
  * <code>SCIP&gt; count</code>
  *
- * That means SCIP will count the number of solution but does not store (enumerate) them. If you are interested in that see
- * \ref COLLECTALLFEASEBLES.
+ * @note After completing the counting process, SCIP will terminate with status <tt>infeasible</tt>.  This is intended
+ * behavior, because SCIP counts solutions by the following internal mechanism.  Each feasible solution that is found is
+ * reported as infeasible to the SCIP core. This avoids that SCIP performs reductions based on the primal bound that
+ * could cut off suboptimal feasible solutions, which would then be missing in the count.  However, as a result, the
+ * SCIP core has not found any feasible solutions during the search and reports status <tt>infeasible</tt>.
  *
- * @note Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
+ * By default, SCIP only counts the number of solutions but does not store (enumerate) them. If you are interested in
+ * that see \ref COLLECTALLFEASEBLES.
+ *
+ * @note Since SCIP version 2.0.0 you do not have to worry about the impact of dual reductions anymore. These are
  * automatically turned off. The only thing you should switch off are restarts. These restarts can lead to a wrong
  * counting process. We recommend using the counting settings which can be set in the interactive shell as follows:
  *
@@ -7551,7 +7568,7 @@
  * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
  * that the solution limit is exceeded before SCIP is stopped.
  *
- * @section COLLECTALLFEASEBLES Collect all feasible solution
+ * @section COLLECTALLFEASEBLES Collect all feasible solutions
  *
  * Per default SCIP only counts all feasible solutions. This means, these solutions are not stored. If you switch the
  * parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE) the detected solutions are

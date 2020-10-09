@@ -5033,6 +5033,7 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
  * Callback methods of conflict handler
  */
 
+/** conflict processing method of conflict handler (called when conflict was found) */
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
 {  /*lint --e{715}*/
