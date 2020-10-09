@@ -1793,6 +1793,22 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
+/** calculates hash for floating-point number by using Fibonacci hashing */
+SCIP_EXPORT
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< number to hash */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+
+#endif
+
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
@@ -1973,7 +1989,6 @@ SCIP_RETCODE SCIPgetRandomSubset(
    int                   nsubelems,          /**< number of elements that should be drawn and stored */
    unsigned int          randseed            /**< seed value for random generator */
    );
-
 
 /**@} */
 
