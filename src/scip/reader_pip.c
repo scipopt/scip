@@ -2757,6 +2757,7 @@ SCIP_RETCODE printNonlinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equal constraint */
+      /* coverity[tainted_string_warning] */
       printRowNl(scip, file, rowname, "", "=", activevars, activevals, nactivevars,
          exprtrees, exprtreecoefs, nexprtrees,
          rhs - activeconstant);
@@ -2766,6 +2767,7 @@ SCIP_RETCODE printNonlinearCons(
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
+         /* coverity[tainted_string_warning] */
          printRowNl(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", ">=",
             activevars, activevals, nactivevars,
             exprtrees, exprtreecoefs, nexprtrees,
@@ -2774,6 +2776,7 @@ SCIP_RETCODE printNonlinearCons(
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
+         /* coverity[tainted_string_warning] */
          printRowNl(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "<=",
             activevars, activevals, nactivevars,
             exprtrees, exprtreecoefs, nexprtrees,
@@ -3320,6 +3323,7 @@ SCIP_RETCODE SCIPwritePip(
 
          if( ispolynomial )
          {
+            /* coverity[tainted_string_warning] */
             SCIP_CALL( printNonlinearCons(scip, file, consname,
                   SCIPgetLinearVarsNonlinear(scip, cons), SCIPgetLinearCoefsNonlinear(scip, cons),
                   SCIPgetNLinearVarsNonlinear(scip, cons), SCIPgetExprtreesNonlinear(scip, cons),

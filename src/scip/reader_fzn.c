@@ -20,7 +20,8 @@
  * @author Stefan Heinz
  *
  * FlatZinc is a low-level solver input language that is the target language for MiniZinc. It is designed to be easy to
- * translate into the form required by a solver. For more details see http://www.g12.cs.mu.oz.au/minizinc/ .
+ * translate into the form required by a solver. For more details see https://www.minizinc.org. The format is described
+ * at https://github.com/MiniZinc/minizinc-doc/blob/develop/en/fzn-spec.rst.
  *
  * @todo Support more general constraint types
  */
@@ -69,7 +70,7 @@
 #define READER_EXTENSION        "fzn"
 
 
-#define FZN_BUFFERLEN         8192      /**< size of the line buffer for reading or writing */
+#define FZN_BUFFERLEN         65536      /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
 
 /*
@@ -188,9 +189,9 @@ struct FznInput
    int                   nvararrays;         /**< number of variables */
    int                   vararrayssize;      /**< size of variable array */
 
-   CONSTARRAY**          constarrays;        /**< variable arrays to output */
-   int                   nconstarrays;       /**< number of variables */
-   int                   constarrayssize;    /**< size of variable array */
+   CONSTARRAY**          constarrays;        /**< constant arrays */
+   int                   nconstarrays;       /**< number of constant arrays */
+   int                   constarrayssize;    /**< size of constant array */
 };
 typedef struct FznInput FZNINPUT;
 
@@ -2904,7 +2905,7 @@ CREATE_CONSTRAINT(createSetOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "set operation are not supported yet\n");
+   SCIPwarningMessage(scip, "Line %d: set operations are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -2921,7 +2922,7 @@ CREATE_CONSTRAINT(createArrayOpCons)
       return SCIP_OKAY;
 
    fzninput->valid = FALSE;
-   SCIPwarningMessage(scip, "array operation are not supported yet\n");
+   SCIPwarningMessage(scip, "Line %d: array operations are not supported yet.\n", fzninput->linenumber);
 
    return SCIP_OKAY;
 }
@@ -3131,7 +3132,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    /* check if the function name ends of "reif" (reified constraint) which SCIP does not support yet */
    if( equalTokens(ftokens[nftokens - 1], "reif") )
    {
-      SCIPwarningMessage(scip, "reified constraints are not supported\n");
+      SCIPwarningMessage(scip, "Line %d: reified constraints are not supported.\n", fzninput->linenumber);
       fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
@@ -3535,7 +3536,7 @@ SCIP_RETCODE parseConstraint(
    if( !hasError(fzninput) && !created )
    {
       fzninput->valid = FALSE;
-      SCIPwarningMessage(scip, "constraint <%s> is not supported yet\n", fname);
+      SCIPwarningMessage(scip, "Line %d: Constraint <%s> is not supported yet.\n", fzninput->linenumber, fname);
    }
 
    /* free memory */
@@ -4163,7 +4164,10 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   if( nactivevars > 0 )
+   {
+      SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   }
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
    if( mayhavefloats )
@@ -4867,7 +4871,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    SCIPfreeBlockMemoryArrayNull(scip, &fzninput.constarrays, fzninput.constarrayssize);
 
    /* evaluate the result */
-   if( fzninput.haserror )
+   if( fzninput.haserror || ! fzninput.valid )
       return SCIP_READERROR;
 
    *result = SCIP_SUCCESS;
