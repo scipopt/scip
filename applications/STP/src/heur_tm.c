@@ -37,6 +37,7 @@
 #include "solstp.h"
 #include "scip/misc.h"
 #include "shortestpath.h"
+#include "reduce.h"
 #include <math.h>
 
 #define HEUR_NAME             "TM"
@@ -67,6 +68,7 @@
 #define TM_USE_CSR
 #define TM_USE_CSR_PCMW
 
+
 #ifdef WITH_UG
 int getUgRank(void);
 #endif
@@ -81,6 +83,7 @@ struct TM_base_data
 {
    int*                  heap_position;      /**< heap position array or  */
    DENTRY*               heap_entries;       /**< entries array or NULL */
+   SDPROFIT*             sdprofit1st;        /**< profit or NULL */
    CSR*                  csr;                /**< CSR with possible biased costs.
                                                   NOTE: shares memory with csr_orgcosts! */
    CSR*                  csr_orgcosts;       /**< CSR with original costs.
@@ -237,6 +240,7 @@ SCIP_RETCODE tmBaseInit(
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->nodes_dist), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->nodes_pred), nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->connected), nnodes) );
+   tmbase->sdprofit1st = NULL;
 
 #ifdef TM_USE_CSR
    SCIP_CALL( SCIPallocBufferArray(scip, &(tmbase->heap_position), nnodes) );
@@ -260,6 +264,12 @@ SCIP_RETCODE tmBaseInit(
    {
       graph_csr_buildCosts(graph, tmbase->csr_orgcosts, graph->cost, costorg_csr);
    }
+
+   if( graph_typeIsSpgLike(graph) )
+   {
+      SCIP_CALL( reduce_sdprofitInit1stOnly(scip, graph, &(tmbase->sdprofit1st)));
+   }
+
 #else
    tmbase->heap_position = NULL;
    tmbase->heap_entries = NULL;
@@ -288,6 +298,11 @@ void tmBaseFree(
    SCIPfreeBufferArray(scip, &(tmbase->heap_entries));
    SCIPfreeBufferArray(scip, &(tmbase->heap_position));
 #endif
+
+   if( tmbase->sdprofit1st )
+   {
+      reduce_sdprofitFree(scip, &(tmbase->sdprofit1st));
+   }
 
    assert(tmbase->dheap == NULL);
    assert(tmbase->csr == NULL);
@@ -927,7 +942,10 @@ SCIP_RETCODE computeSteinerTreeCsr(
 
    assert(g->stp_type != STP_DHCSTP);
 
-   shortestpath_computeSteinerTree(g, startnode, &spaths);
+   if( tmbase->sdprofit1st )
+      shortestpath_computeSteinerTreeBiased(g, tmbase->sdprofit1st, startnode, &spaths);
+   else
+      shortestpath_computeSteinerTree(g, startnode, &spaths);
 
    SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, result));
 
@@ -2645,6 +2663,10 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
             *result = SCIP_FOUNDSOL;
          }
+      }
+      else
+      {
+         SCIPdebugMessage("TM solution not added \n");
       }
       SCIPfreeBufferArray(scip, &nval);
    }

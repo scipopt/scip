@@ -359,6 +359,7 @@ extern void            reduce_sdneighborFree(SCIP*, SDN**);
 extern const SCIP_Bool*    reduce_sdneighborGetBlocked(const SDN*);
 extern SCIP_RETCODE    reduce_sdUpdateWithSdNeighbors(SCIP*, GRAPH*, SD*, int*);
 extern SCIP_RETCODE    reduce_sdprofitInit(SCIP*, const GRAPH*, SDPROFIT**);
+extern SCIP_RETCODE    reduce_sdprofitInit1stOnly(SCIP*, const GRAPH*, SDPROFIT**);
 extern void            reduce_sdprofitFree(SCIP*, SDPROFIT**);
 extern SCIP_RETCODE    reduce_sdprofitUpdateFromBLC(SCIP*, const GRAPH*, const BLCTREE*, SCIP_Bool, SDPROFIT*);
 extern SCIP_RETCODE    reduce_sdprofitBuildFromBLC(SCIP*, const GRAPH*, const BLCTREE*, SCIP_Bool, SDPROFIT*);

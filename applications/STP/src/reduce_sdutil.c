@@ -81,6 +81,7 @@ static
 SCIP_RETCODE sdprofitAlloc(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph to initialize from */
+   SCIP_Bool             useSecond,          /**> use second profit? */
    SDPROFIT**            sdprofit            /**< SD profit */
 )
 {
@@ -92,8 +93,17 @@ SCIP_RETCODE sdprofitAlloc(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_bias), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_biassource), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_bias2), nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_biassource2), nnodes) );
+
+   if( useSecond )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_bias2), nnodes) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(sdp->nodes_biassource2), nnodes) );
+   }
+   else
+   {
+      sdp->nodes_bias2 = NULL;
+      sdp->nodes_biassource2 = NULL;
+   }
 
    return SCIP_OKAY;
 }
@@ -116,6 +126,7 @@ void sdprofitBuild(
    const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
 
    assert(graph_pc_isPcMw(g) || !g->extended);
+   assert(node_bias2 && node_biassource2);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -219,6 +230,100 @@ void sdprofitBuild(
       }
    }
 #endif
+}
+
+
+/** gets SD node bias */
+static
+void sdprofitBuild1stOnly(
+   const GRAPH*          g,                  /**< the graph */
+   SDPROFIT*             sdprofit            /**< SD profit */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int pseudoroot = (graph_pc_isUnrootedPcMw(g)) ? g->source : -1;
+   const SCIP_Real* const costs = g->cost;
+   SCIP_Real* RESTRICT node_bias = sdprofit->nodes_bias;
+   int* RESTRICT node_biassource = sdprofit->nodes_biassource;
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
+
+   assert(graph_pc_isPcMw(g) || !g->extended);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      node_bias[k] = 0.0;
+      node_biassource[k] = k;
+   }
+
+   /* compute profits for non-terminals */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && k != pseudoroot )
+      {
+         int minneighbor = -1;
+         SCIP_Real mincost = isPcMw ? g->prize[k] : FARAWAY;
+         SCIP_Real mincost2 = mincost;
+
+         for( int e = g->inpbeg[k]; e != EAT_LAST; e = g->ieat[e] )
+         {
+            const int neighbor = g->tail[e];
+
+            if( neighbor == pseudoroot )
+               continue;
+
+            if( costs[e] < mincost )
+            {
+               assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
+
+               minneighbor = neighbor;
+               mincost2 = mincost;
+               mincost = costs[e];
+            }
+            else if( costs[e] < mincost2 )
+            {
+               mincost2 = costs[e];
+            }
+         }
+
+         assert(minneighbor >= 0 || isPcMw || g->terms == 1);
+
+         if( minneighbor >= 0 )
+         {
+            const SCIP_Real bias = mincost2 - mincost;
+
+            assert(GE(bias, 0.0));
+
+            if( bias > node_bias[minneighbor] )
+            {
+               node_bias[minneighbor] = bias;
+               node_biassource[minneighbor] = k;
+            }
+         }
+      }
+   }
+
+   /* correct profits for terminals */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !Is_term(g->term[k]) )
+      {
+         continue;
+      }
+
+      if( isPcMw )
+      {
+         if( g->prize[k] >= node_bias[k] )
+         {
+            node_bias[k] = g->prize[k];
+            node_biassource[k] = k;
+         }
+
+         continue;
+      }
+
+      node_bias[k] = FARAWAY;
+      node_biassource[k] = k;
+   }
 }
 
 
@@ -920,8 +1025,24 @@ SCIP_RETCODE reduce_sdprofitInit(
 {
    assert(scip && g);
 
-   SCIP_CALL( sdprofitAlloc(scip, g, sdprofit) );
+   SCIP_CALL( sdprofitAlloc(scip, g, TRUE, sdprofit) );
    sdprofitBuild(g, *sdprofit);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes SD profit */
+SCIP_RETCODE reduce_sdprofitInit1stOnly(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph to initialize from */
+   SDPROFIT**            sdprofit            /**< the SD profit */
+)
+{
+   assert(scip && g);
+
+   SCIP_CALL( sdprofitAlloc(scip, g, FALSE, sdprofit) );
+   sdprofitBuild1stOnly(g, *sdprofit);
 
    return SCIP_OKAY;
 }
@@ -976,8 +1097,8 @@ void reduce_sdprofitFree(
    sdp = *sdprofit;
    assert(sdp);
 
-   SCIPfreeMemoryArray(scip, &(sdp->nodes_biassource2));
-   SCIPfreeMemoryArray(scip, &(sdp->nodes_bias2));
+   SCIPfreeMemoryArrayNull(scip, &(sdp->nodes_biassource2));
+   SCIPfreeMemoryArrayNull(scip, &(sdp->nodes_bias2));
    SCIPfreeMemoryArray(scip, &(sdp->nodes_biassource));
    SCIPfreeMemoryArray(scip, &(sdp->nodes_bias));
 

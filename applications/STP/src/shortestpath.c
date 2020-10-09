@@ -22,6 +22,7 @@
  *
  */
 
+#include "reduce.h"
 #include "shortestpath.h"
 #include "portab.h"
 
@@ -236,6 +237,102 @@ void computeSteinerTree_exec(
          if( !connected[m] )
          {
             const SCIP_Real distnew = k_dist + cost_csr[e];
+
+            /* closer to k than to current predecessor? */
+            if( LT(distnew, nodes_dist[m]) )
+            {
+               nodes_pred[m] = k;
+               nodes_dist[m] = distnew;
+               graph_heap_correct(m, distnew, dheap);
+            }
+         }
+      }
+   }
+}
+
+
+/** executes */
+static inline
+void computeSteinerTree_execBiased(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,
+   int                   startnode,          /**< start vertex */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   const CSR* const csr = spaths->csr;
+   DHEAP* const dheap = spaths->dheap;
+   SCIP_Real* RESTRICT nodes_dist = spaths->nodes_dist;
+   int* RESTRICT nodes_pred = spaths->nodes_pred;
+   STP_Bool* RESTRICT connected = spaths->nodes_isConnected;
+   int* const state = dheap->position;
+   const SCIP_Real* const cost_csr = csr->cost;
+   const int* const head_csr = csr->head;
+   const int* const start_csr = csr->start;
+   const int* const nodes_biassource = sdprofit->nodes_biassource;
+   int termscount = 0;
+
+   assert(dheap->size == 1);
+   assert(connected[startnode]);
+
+   if( Is_term(g->term[startnode]) )
+      termscount++;
+
+   /* main loop */
+   while( dheap->size > 0 )
+   {
+      /* get nearest labelled node */
+      const int k = graph_heap_deleteMinReturnNode(dheap);
+      const int k_start = start_csr[k];
+      const int k_end = start_csr[k + 1];
+      register SCIP_Real k_dist;
+
+      SCIPdebugMessage("take node %d from queue \n", k);
+
+      assert(state[k] == CONNECT);
+      /* NOTE: needs to be set for invariant of heap */
+      state[k] = UNKNOWN;
+
+      if( Is_term(g->term[k]) && k != startnode )
+      {
+         assert(!connected[k]);
+         computeSteinerTree_connectTerminal(g, k, nodes_pred, nodes_dist, dheap, connected);
+
+         assert(termscount < g->terms);
+
+         /* have all terminals been reached? */
+         if( ++termscount == g->terms )
+         {
+            break;
+         }
+      }
+
+      k_dist = nodes_dist[k];
+
+      for( int e = k_start; e != k_end; e++ )
+      {
+         const int m = head_csr[e];
+
+         if( !connected[m] )
+         {
+            SCIP_Real distnew = k_dist + cost_csr[e];
+            const int source = nodes_biassource[k];
+            assert(graph_knot_isInRange(g, source));
+
+            if( source != k )
+            {
+               if( source != m && !connected[source] )
+               {
+                  SCIP_Real profitBias = sdprofit->nodes_bias[k];
+                  profitBias = MIN(profitBias, cost_csr[e]);
+                  profitBias = MIN(profitBias, k_dist);
+                  distnew -= profitBias;
+               }
+            }
+            else
+            {
+               assert(EQ(sdprofit->nodes_bias[k], 0.0) || EQ(sdprofit->nodes_bias[k], FARAWAY));
+            }
 
             /* closer to k than to current predecessor? */
             if( LT(distnew, nodes_dist[m]) )
@@ -790,6 +887,29 @@ void shortestpath_computeSteinerTree(
       return;
 
    computeSteinerTree_exec(g, startnode, spaths);
+
+   assert(computeSteinerTree_allTermsAreReached(g, spaths->nodes_isConnected));
+}
+
+
+/** shortest path based heuristic for computing a Steiner tree  */
+void shortestpath_computeSteinerTreeBiased(
+   const GRAPH*          g,                  /**< graph data structure */
+   const SDPROFIT*       sdprofit,
+   int                   startnode,          /**< start vertex */
+   SPATHS*               spaths              /**< shortest paths data */
+)
+{
+   assert(g && spaths && sdprofit);
+   assert(spaths->csr && spaths->nodes_dist && spaths->nodes_pred && spaths->dheap && spaths->nodes_isConnected);
+   assert(graph_typeIsSpgLike(g));
+
+   computeSteinerTree_init(g, startnode, spaths);
+
+   if( g->knots == 1 )
+      return;
+
+   computeSteinerTree_execBiased(g, sdprofit, startnode, spaths);
 
    assert(computeSteinerTree_allTermsAreReached(g, spaths->nodes_isConnected));
 }
