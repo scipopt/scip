@@ -1603,36 +1603,103 @@ void SCIPprobInvalidateDualbound(
    prob->dualbound = SCIP_INVALID;
 }
 
-/** changes objective value of variable */
+/** if possible, scales objective function such that it is integral with gcd = 1 */
 static
-SCIP_RETCODE varScaleObjExact(
-   SCIP_VAR*             var,                /**< variable to change */
+SCIP_RETCODE probScaleObjExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_LPEXACT*         lp,                 /**< current LP data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_Real             scale               /**< new objective value for variable */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   SCIP_Rational* tmp;
+   int v;
+   int nints;
 
-   assert(var != NULL);
+   assert(transprob != NULL);
    assert(set != NULL);
 
-   if( !set->exact_enabled )
+   /** @todo exip: make obj scaling safe and integrate it in certificate printing */
+   if( SCIPcertificateIsActive(stat->certificate) )
       return SCIP_OKAY;
 
-   assert(var->exactdata != NULL);
-   assert(var->scip == set->scip);
+   /* do not change objective if there are pricers involved */
+   if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
+      return SCIP_OKAY;
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+   nints = transprob->nvars - transprob->ncontvars;
 
-   RatMultReal(tmp, SCIPvarGetObjExact(var), scale);
+   /* scan through the continuous variables */
+   for( v = nints; v < transprob->nvars; ++v )
+   {
+      SCIP_Rational* obj;
 
-   SCIP_CALL( SCIPvarChgObjExact(var, blkmem, set, prob, primal, lp, eventqueue, tmp) );
-   RatFreeBuffer(set->buffer, &tmp);
+      /* get objective value of variable; it it is non-zero, no scaling can be applied */
+      obj = SCIPvarGetObjExact(transprob->vars[v]);
+      if( !RatIsZero(obj) )
+         break;
+   }
+
+   /* only continue if all continuous variables have obj = 0 */
+   if( v == transprob->nvars )
+   {
+      SCIP_Rational** objvals;
+      SCIP_Rational* intscalar;
+      SCIP_Bool success;
+
+      /* get temporary memory */
+      SCIP_CALL( RatCreateBuffer(set->buffer, &intscalar) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &objvals, nints) );
+
+      /* get objective values of integer variables */
+      for( v = 0; v < nints; ++v )
+         RatSet(objvals[v], SCIPvarGetObjExact(transprob->vars[v]));
+
+      /* calculate integral scalar */
+      SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
+         intscalar, &success) );
+
+      RatDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
+
+      /* apply scaling */
+      if(  success && RatIsEqualReal(intscalar, 1.0) )
+      {
+         /* calculate scaled objective values */
+         for( v = 0; v < nints; ++v )
+         {
+            RatMult(objvals[v], objvals[v], intscalar);
+            assert(RatIsIntegral(objvals[v]));
+         }
+
+         /* change the variables' objective values and adjust objscale and objoffset */
+         if( v == nints )
+         {
+            for( v = 0; v < nints; ++v )
+            {
+               RatDebugMessage(set, " -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
+               SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, RatApproxReal(objvals[v])) );
+               SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
+            }
+            transprob->objoffset *= RatApproxReal(intscalar);
+            transprob->objscale /= RatApproxReal(intscalar);
+            transprob->objisintegral = TRUE;
+            SCIPsetDebugMsg(set, "integral objective scalar: objscale=%g\n", transprob->objscale);
+
+            /* update upperbound and cutoffbound in primal data structure */
+            SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, origprob, tree, reopt, lp) );
+         }
+      }
+
+      /* free temporary memory */
+      RatFreeBuffer(set->buffer, &intscalar);
+      RatFreeBufferArray(set->buffer, &objvals, nints);
+   }
 
    return SCIP_OKAY;
 }
@@ -1659,12 +1726,17 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /** @todo exip: make obj scaling safe and integrate it in certificate printing */
-   if( set->exact_enabled )
+   if( SCIPcertificateIsActive(stat->certificate) )
       return SCIP_OKAY;
 
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 || set->nactivebenders != 0 || !set->misc_scaleobj )
       return SCIP_OKAY;
+
+   if( set->exact_enabled )
+   {
+      SCIP_CALL( probScaleObjExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
+   }
 
    nints = transprob->nvars - transprob->ncontvars;
 
@@ -1753,7 +1825,6 @@ SCIP_RETCODE SCIPprobScaleObj(
                   {
                      SCIPsetDebugMsg(set, " -> var <%s>: newobj = %.6f\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                      SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, objvals[v]) );
-                     SCIP_CALL( varScaleObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, intscalar) );
                   }
                   transprob->objoffset *= intscalar;
                   transprob->objscale /= intscalar;
