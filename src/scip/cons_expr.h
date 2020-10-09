@@ -823,7 +823,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * This is easy in general, since it is the gradient of the *scalar* function `grad f^T u`, that is, the directional derivative of f
  * in the direction u, D_u f.
  * This is easily computed via the so called forward mode.
- * Just as above, expr->derivative stores the partial derivative of the root w.r.t expr,
+ * Just as expr->derivative stores the partial derivative of the root w.r.t expr,
  * expr->dot stores the directional derivative of expr in the direction 'u'.
  * Then, by the chain rule, expr->dot = sum_(c : children) d_c expr * c->dot.
  * Starting with x_i->dot = u_i, we can compute expr->dot for every expression at the same time we evaluate expr.

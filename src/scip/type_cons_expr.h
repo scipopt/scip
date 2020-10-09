@@ -318,9 +318,13 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
    SCIP_CONSEXPR_EXPR* expr1, \
    SCIP_CONSEXPR_EXPR* expr2)
 
-/** derivative evaluation callback
+/** backward derivative evaluation callback
  *
- * The method computes the partial derivative of expr w.r.t its child at childidx.
+ * The method should compute the partial derivative of expr w.r.t its child at childidx.
+ * That is, it should return
+ * \f[
+ *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
+ * \f]
  *
  * input:
  *  - scip : SCIP main data structure
@@ -334,18 +338,33 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
    int childidx, \
    SCIP_Real* val)
 
-/** derivative evaluation callback for forward mode differentiation
+/** forward derivative evaluation callback
  *
- * The method evaluates the directional derivative of an expression by taking the directional derivative of its children into account and their values.
- * Equivalently, it computes the total derivative, w.r.t its children, of expr.
+ * The method should evaluate the directional derivative of expr.
+ * The expr should be interpreted as an operator \f$ \text{expr}(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$
+ * are the children of the expr.
+ * The directional derivative is evaluated at the point
+ *   \f$ \text{SCIPgetConsExprExprValue}(c_1), \ldots, \text{SCIPgetConsExprExprValue}(c_n) \f$
+ * in the direction given by direction.
  *
- * The directional derivative of a child can be accessed via SCIPgetConsExprExprDot
+ * This method should return
+ * \f[
+ *    \sum_{i = 1}^n \frac{\partial \text{expr}}{\partial c_i} D_u c_i,
+ * \f]
+ * where \f$ u \f$ is the direction and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
+ * which can be accessed via SCIPgetConsExprExprDot.
+ *
+ * See Differentiation methods in cons_expr.h for more details.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be evaluated
  *  - dot : buffer to store derivative value
  *  - direction : direction of the derivative (useful only for var expressions)
+ *
+ *  TODO: think whether we actually need to pass direction. Right now, the direction is being set
+ *  to the var expressions in SCIPcomputeConsExprHessianDir and it is not used anywhere else.
+ *  If we remove direction, update documentation accordingly
  */
 #define SCIP_DECL_CONSEXPR_EXPRFWDIFF(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -357,6 +376,27 @@ typedef struct SCIP_ConsExpr_BilinTerm SCIP_CONSEXPR_BILINTERM;    /**< bilinear
  *
  * The method computes the total derivative, w.r.t its children, of the partial derivative of expr w.r.t childidx
  * Equivalently, it computes the partial derivative w.r.t childidx of the total derivative
+ *
+ * The expr should be interpreted as an operator \f$ \text{expr}(c_1, \ldots, c_n) \f$, where \f$ c_1, \ldots, c_n \f$
+ * are the children of the expr.
+ * The directional derivative is evaluated at the point
+ *   \f$ \text{SCIPgetConsExprExprValue}(c_1), \ldots, \text{SCIPgetConsExprExprValue}(c_n) \f$
+ * in the direction given by direction.
+ *
+ * This method should return
+ * \f[
+ *    \sum_{i = 1}^n \frac{\partial^2 \text{expr}}{\partial c_i} \partial c_{\text{childidx}} D_u c_i,
+ * \f]
+ *
+ * where \f$ u \f$ is the direction and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
+ * which can be accessed via SCIPgetConsExprExprDot.
+ *
+ * Thus, if \f$ n = 1 \f$ (i.e. if expr represents a univariate operator), the method should return
+ * \f[
+ *    \text{expr}^{\prime \prime}}(\text{SCIPgetConsExprExprValue}(c))  D_u c.
+ * \f]
+ *
+ * See Differentiation methods in cons_expr.h for more details.
  *
  * input:
  *  - scip : SCIP main data structure
