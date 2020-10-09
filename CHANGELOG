@@ -67,9 +67,12 @@ Fixed bugs
 - Fixed potential indexing error in prop_vbounds.c
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
+- When a row with invalid minidx and maxidx is added to global cutpool, update the indices instead of failing as assert
 
 Miscellaneous
 -------------
+
+- Added more information about using SCIPcache- and SCIPflushRowExtensions() to the documentation and comments
 
 Known bugs
 ----------
