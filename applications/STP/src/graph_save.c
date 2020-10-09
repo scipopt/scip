@@ -222,7 +222,7 @@ void gmlWriteEdge(
 }
 
 
-/**  Call before graph packing! */
+/**  gets ratios of remaining nodes/edges */
 static
 void getReductionRatiosPcMw(
   const GRAPH*          graph,              /**< graph */
@@ -230,61 +230,10 @@ void getReductionRatiosPcMw(
   SCIP_Real*	        ratio_edges
 )
 {
-   int nnodes_real = 0;
-   int nedges_real = 0;
-   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(graph);
-   const int nnodes = graph->knots;
-   const int norgmodelknots = graph->norgmodelknots;
-   const int norgmodeledges = graph->norgmodeledges;
-   const int pseudoroot = (isRooted ? -1 : graph->source);
-
    assert(graph_pc_isPcMw(graph));
    assert(graph->extended);
 
-   for( int i = 0; i < nnodes; i++ )
-   {
-	   if( pseudoroot == i )
-		  continue;
-
-	   if( graph_pc_knotIsDummyTerm(graph, i) )
-		  continue;
-
-	   if( graph->grad[i] == 0 )
-		  continue;
-
-	   assert(!Is_term(graph->term[i]) || isRooted);
-
-	   nnodes_real++;
-	   nedges_real += graph->grad[i];
-
-	   if( Is_pseudoTerm(graph->term[i]) )
-	   {
-		  if( isRooted )
-		     nedges_real -= 1;
-		  else
-			 nedges_real -= 2;
-	   }
-
-	   if( isRooted && i == graph->source )
-	   {
-	      nedges_real -= graph_pc_nNonFixedTerms(graph);
-	   }
-   }
-
-   assert(1 <= nnodes_real && nnodes_real <= norgmodelknots);
-   assert(nedges_real <= norgmodeledges);
-   assert(2 <= norgmodeledges);
-   assert(norgmodeledges % 2 == 0);
-   assert(nedges_real % 2 == 0);
-
-   printf("norgmodelknots=%d \n", norgmodelknots);
-   printf("norgmodeledges=%d \n", norgmodeledges);
-   printf("nnodes_real=%d \n", nnodes_real);
-   printf("nedges_real=%d \n", nedges_real);
-
-
-   *ratio_nodes = (SCIP_Real) nnodes_real / (SCIP_Real) norgmodelknots;
-   *ratio_edges = (SCIP_Real) nedges_real / (SCIP_Real) norgmodeledges;
+   graph_pc_getReductionRatios(graph, ratio_nodes, ratio_edges);
 }
 
 

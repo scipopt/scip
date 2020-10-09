@@ -479,6 +479,7 @@ extern void   graph_pc_2trans(SCIP*, GRAPH*);
 extern void   graph_pc_2orgcheck(SCIP*, GRAPH*);
 extern void   graph_pc_2transcheck(SCIP*, GRAPH*);
 extern int    graph_pc_getNorgEdges(const GRAPH*);
+extern void   graph_pc_getReductionRatios(const GRAPH*, SCIP_Real*, SCIP_Real*);
 extern void   graph_pc_getOrgCosts(SCIP*, const GRAPH*, SCIP_Real*);
 extern void   graph_pc_getOrgCostsCsr(SCIP*, const GRAPH*, CSR*);
 extern void   graph_pc_markOrgGraph(GRAPH*);

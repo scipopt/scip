@@ -79,9 +79,6 @@
 const char*
 getBranchLinearConsName(const char* names, int i);
 
-const char*
-getBranchSetppcConsName(const char* names, int i);
-
 extern
 int getUgRank(void);
 #endif
@@ -1805,6 +1802,35 @@ SCIP_RETCODE createInitialCuts(
 }
 
 
+
+/** ratio of remaining edges */
+static
+SCIP_Real getEdgeReductionRatio(
+   SCIP_PROBDATA*        probdata,           /**< problem data */
+   const GRAPH*    	     graph               /**< the graph */
+)
+{
+   SCIP_Real ratio;
+   assert(graph);
+   assert(graph->knots >= 1);
+
+   if( graph_pc_isPcMw(graph) )
+   {
+	  SCIP_Real ratio_nodes;
+	  graph_pc_getReductionRatios(graph, &ratio_nodes, &ratio);
+   }
+   else
+   {
+	  ratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
+   }
+
+   assert(GE(ratio, 0.0));
+   assert(LE(ratio, 1.0));
+
+   return ratio;
+}
+
+
 /** helper */
 static
 SCIP_Bool setParamsSepaIsBad(
@@ -1819,8 +1845,7 @@ SCIP_Bool setParamsSepaIsBad(
 
 	if( tooBig || tooSmall )
 	{
-	   const SCIP_Real redratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
-	   assert(LE(redratio, 1.0));
+	   const SCIP_Real redratio = getEdgeReductionRatio(probdata, graph);
 
 	   if( redratio < CUT_MINREDUCTION_RATIO )
 	   {
