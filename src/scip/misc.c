@@ -9768,9 +9768,9 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
       RatMult(ratscm, ratscm, ratupdate);
       RatCanonicalize(ratscm);
 
-      updatemultiplier = RatNumerator(ratscm);
+      scm= RatNumerator(ratscm);
 
-      if( updatemultiplier == SCIP_LONGINT_MAX )
+      if( scm == SCIP_LONGINT_MAX )
       {
          scalable = FALSE;
          break;

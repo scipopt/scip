@@ -1737,6 +1737,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    if( set->exact_enabled )
    {
       SCIP_CALL( probScaleObjExact(transprob, origprob, blkmem, set, stat, primal, tree, reopt, lp, eventfilter, eventqueue) );
+      return SCIP_OKAY;
    }
 
    nints = transprob->nvars - transprob->ncontvars;
