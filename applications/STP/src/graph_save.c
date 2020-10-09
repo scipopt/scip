@@ -222,6 +222,137 @@ void gmlWriteEdge(
 }
 
 
+/**  Call before graph packing! */
+static
+void getReductionRatiosPcMw(
+  const GRAPH*          graph,              /**< graph */
+  SCIP_Real*	        ratio_nodes,
+  SCIP_Real*	        ratio_edges
+)
+{
+   int nnodes_real = 0;
+   int nedges_real = 0;
+   const SCIP_Bool isRooted = graph_pc_isRootedPcMw(graph);
+   const int nnodes = graph->knots;
+   const int norgmodelknots = graph->norgmodelknots;
+   const int norgmodeledges = graph->norgmodeledges;
+   const int pseudoroot = (isRooted ? -1 : graph->source);
+
+   assert(graph_pc_isPcMw(graph));
+   assert(graph->extended);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+	   if( pseudoroot == i )
+		  continue;
+
+	   if( graph_pc_knotIsDummyTerm(graph, i) )
+		  continue;
+
+	   if( graph->grad[i] == 0 )
+		  continue;
+
+	   assert(!Is_term(graph->term[i]) || isRooted);
+
+	   nnodes_real++;
+	   nedges_real += graph->grad[i];
+
+	   if( Is_pseudoTerm(graph->term[i]) )
+	   {
+		  if( isRooted )
+		     nedges_real -= 1;
+		  else
+			 nedges_real -= 2;
+	   }
+
+	   if( isRooted && i == graph->source )
+	   {
+	      nedges_real -= graph_pc_nNonFixedTerms(graph);
+	   }
+   }
+
+   assert(1 <= nnodes_real && nnodes_real <= norgmodelknots);
+   assert(nedges_real <= norgmodeledges);
+   assert(2 <= norgmodeledges);
+   assert(norgmodeledges % 2 == 0);
+   assert(nedges_real % 2 == 0);
+
+   printf("norgmodelknots=%d \n", norgmodelknots);
+   printf("norgmodeledges=%d \n", norgmodeledges);
+   printf("nnodes_real=%d \n", nnodes_real);
+   printf("nedges_real=%d \n", nedges_real);
+
+
+   *ratio_nodes = (SCIP_Real) nnodes_real / (SCIP_Real) norgmodelknots;
+   *ratio_edges = (SCIP_Real) nedges_real / (SCIP_Real) norgmodeledges;
+}
+
+
+/**  Call before graph packing! */
+static
+void getReductionRatios(
+   const GRAPH*         graph,              /**< graph */
+   SCIP_Real*	        ratio_nodes,
+   SCIP_Real*	        ratio_edges
+)
+{
+   const int nnodes = graph->knots;
+   const int nedges = graph->edges;
+   int nnodes_real;
+   int nedges_real;
+
+   assert(!graph_pc_isPcMw(graph));
+
+   graph_get_nVET(graph, &nnodes_real, &nedges_real, NULL);
+
+   assert(nnodes_real <= nnodes);
+   assert(nedges_real <= nedges);
+   assert(nedges % 2 == 0);
+   assert(nedges_real % 2 == 0);
+   assert(nnodes >= 1);
+   assert(nedges >= 2);
+
+   *ratio_nodes = (SCIP_Real) nnodes_real / (SCIP_Real) nnodes;
+   *ratio_edges = (SCIP_Real) nedges_real / (SCIP_Real) nedges;
+}
+
+/*
+ * Interface methods
+ */
+
+
+
+/** Write (append) reduction ratio statistics of current graph to file.
+ *  Call before graph packing!*/
+void graph_writeReductionRatioStats(
+   const GRAPH*          graph,              /**< Graph to be printed */
+   const char*           probname,           /**< Name of the problem */
+   const char*           filename            /**< Name of the output file */
+)
+{
+   FILE* file;
+   SCIP_Real ratio_nodes;
+   SCIP_Real ratio_edges;
+
+   assert(filename && probname);
+
+   if( graph_pc_isPcMw(graph) )
+   {
+	   getReductionRatiosPcMw(graph, &ratio_nodes, &ratio_edges);
+   }
+   else
+   {
+	   getReductionRatios(graph, &ratio_nodes, &ratio_edges);
+   }
+
+   file = fopen(filename, "a+");
+
+   fprintf(file, "%s: %f %f   \n", probname, ratio_nodes, ratio_edges);
+   fclose(file);
+}
+
+
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Graph Save                                               ---*/
 /*--- Function : Write a graph to a file.                                 ---*/
@@ -294,43 +425,6 @@ void graph_writeReductionStats(
    file = fopen(filename, "a+");
 
    fprintf(file, "%s: %d %d     %d %d \n", probname, nnodes, nedges / 2, nnodes_real, nedges_real / 2);
-   fclose(file);
-}
-
-
-/** Write (append) reduction ratio statistics of current graph to file.
- *  Call before graph packing!*/
-void graph_writeReductionRatioStats(
-   const GRAPH*          graph,              /**< Graph to be printed */
-   const char*           probname,           /**< Name of the problem */
-   const char*           filename            /**< Name of the output file */
-)
-{
-   FILE* file;
-   int nnodes_real;
-   int nedges_real;
-   const int nnodes = graph_get_nNodes(graph);
-   const int nedges = graph_get_nEdges(graph);
-   SCIP_Real ratio_nodes;
-   SCIP_Real ratio_edges;
-
-   assert(filename && probname);
-
-   graph_get_nVET(graph, &nnodes_real, &nedges_real, NULL);
-
-   assert(nnodes_real <= nnodes);
-   assert(nedges_real <= nedges);
-   assert(nedges % 2 == 0);
-   assert(nedges_real % 2 == 0);
-   assert(nnodes >= 1);
-   assert(nedges >= 2);
-
-   ratio_nodes = (SCIP_Real) nnodes_real / (SCIP_Real) nnodes;
-   ratio_edges = (SCIP_Real) nedges_real / (SCIP_Real) nedges;
-
-   file = fopen(filename, "a+");
-
-   fprintf(file, "%s: %f %f   \n", probname, ratio_nodes, ratio_edges);
    fclose(file);
 }
 
