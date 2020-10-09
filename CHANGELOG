@@ -33,6 +33,9 @@ Interface changes
 - SCIPcomputeOrbitsFilterSym() and SCIPcomputeComponentsSym(): Type of argument componentblocked
   changed from SCIP_Shortbool* to unsigned*.
 - removed SCIPsetParam()
+- renamed SCIPcomputeArraysIntersection() and SCIPcomputeArraysSetminus() to
+  SCIPcomputeArraysIntersectionInt() and SCIPcomputeArraysSetminusInt(), respectively, and changed
+  their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
 
 ### New API functions
 
@@ -46,6 +49,7 @@ Interface changes
 - new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
   packing or partitioning type
 - added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
+- added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
 
 ### Command line interface
 ### Interfaces to external software
