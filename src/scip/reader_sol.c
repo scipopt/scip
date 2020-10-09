@@ -181,6 +181,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
    {
       SCIPerrorMessage("cannot parse file.\n");
+      SCIPfclose(file);
       return SCIP_READERROR;
    }
    /* close file */

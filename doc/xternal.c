@@ -7525,10 +7525,16 @@
  *
  * <code>SCIP&gt; count</code>
  *
- * That means SCIP will count the number of solution but does not store (enumerate) them. If you are interested in that see
- * \ref COLLECTALLFEASEBLES.
+ * @note After completing the counting process, SCIP will terminate with status <tt>infeasible</tt>.  This is intended
+ * behavior, because SCIP counts solutions by the following internal mechanism.  Each feasible solution that is found is
+ * reported as infeasible to the SCIP core. This avoids that SCIP performs reductions based on the primal bound that
+ * could cut off suboptimal feasible solutions, which would then be missing in the count.  However, as a result, the
+ * SCIP core has not found any feasible solutions during the search and reports status <tt>infeasible</tt>.
  *
- * @note Since SCIP version 2.0.0 you do not have to worry about <tt>dual</tt> reductions anymore. These are
+ * By default, SCIP only counts the number of solutions but does not store (enumerate) them. If you are interested in
+ * that see \ref COLLECTALLFEASEBLES.
+ *
+ * @note Since SCIP version 2.0.0 you do not have to worry about the impact of dual reductions anymore. These are
  * automatically turned off. The only thing you should switch off are restarts. These restarts can lead to a wrong
  * counting process. We recommend using the counting settings which can be set in the interactive shell as follows:
  *
@@ -7559,7 +7565,7 @@
  * subtree detection. Using this technique it is possible to detect several solutions at once. Therefore, it can happen
  * that the solution limit is exceeded before SCIP is stopped.
  *
- * @section COLLECTALLFEASEBLES Collect all feasible solution
+ * @section COLLECTALLFEASEBLES Collect all feasible solutions
  *
  * Per default SCIP only counts all feasible solutions. This means, these solutions are not stored. If you switch the
  * parameter <code>constraints/countsols/collect</code> to TRUE (the default value is FALSE) the detected solutions are
