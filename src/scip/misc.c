@@ -9763,7 +9763,7 @@ SCIP_RETCODE SCIPcalcIntegralScalarExact(
 
       /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
       updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
-      RatSetInt(RatRoundReal, updatemultiplier, 1);
+      RatSetInt(ratupdate, updatemultiplier, 1);
       RatSetInt(ratscm, scm, 1);
       RatMult(ratscm, ratscm, ratupdate);
       RatCanonicalize(ratscm);

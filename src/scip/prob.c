@@ -22,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/branch.h"
+#include "scip/certificate.h"
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/event.h"
@@ -1665,10 +1666,10 @@ SCIP_RETCODE probScaleObjExact(
       SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
          intscalar, &success) );
 
-      RatDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
+      RatPrintf("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
 
       /* apply scaling */
-      if(  success && RatIsEqualReal(intscalar, 1.0) )
+      if(  success && !RatIsEqualReal(intscalar, 1.0) )
       {
          /* calculate scaled objective values */
          for( v = 0; v < nints; ++v )
@@ -1682,7 +1683,7 @@ SCIP_RETCODE probScaleObjExact(
          {
             for( v = 0; v < nints; ++v )
             {
-               RatDebugMessage(set, " -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
+               RatDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
                SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, RatApproxReal(objvals[v])) );
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
