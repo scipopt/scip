@@ -658,8 +658,11 @@ SCIP_RETCODE SCIPcutpoolAddRow(
    if( row->len == 0 )
       return SCIP_OKAY;
 
-   /* only called to ensure that minidx and maxidx are up to date */
-   (void) SCIProwGetMaxidx(row, set);
+   if( !row->validminmaxidx )
+   {
+      /* only called to ensure that minidx and maxidx are up to date */
+      (void) SCIProwGetMaxidx(row, set);
+   }
    assert(row->validminmaxidx);
 
    othercut = (SCIP_CUT*)SCIPhashtableRetrieve(cutpool->hashtable, (void*)row);
@@ -745,8 +748,11 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
 
    assert(! row->inglobalcutpool);
 
-   /* only called to ensure that minidx and maxidx are up-to-date */
-   (void) SCIProwGetMaxidx(row, set);
+   if( !row->validminmaxidx )
+   {
+      /* only called to ensure that minidx and maxidx are up-to-date */
+      (void) SCIProwGetMaxidx(row, set);
+   }
    assert(row->validminmaxidx);
 
    /* create the cut */
