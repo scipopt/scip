@@ -3407,15 +3407,15 @@ void SCIPprintLPStatistics(
 
    if( scip->set->exact_enabled )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError\n");
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.10f",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedfeaslptime),
          scip->stat->nexlp,
          scip->stat->niterationsexlp,
          scip->stat->niterationsexlp > 0 ? (SCIP_Real)scip->stat->niterationsexlp/(SCIP_Real)scip->stat->nexlp : 0.0);
       if( SCIPclockGetTime(scip->stat->provedfeaslptime) >= 0.01 )
       {
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10" SCIP_LONGINT_FORMAT " %10.10f\n",
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10.2f %10" SCIP_LONGINT_FORMAT " %.4e\n",
             (SCIP_Real)scip->stat->niterationsexlp/SCIPclockGetTime(scip->stat->provedfeaslptime),
             scip->stat->nfailexlp, scip->stat->boundingerrorexlp/scip->stat->nexlp);
       }
@@ -3432,22 +3432,26 @@ void SCIPprintLPStatistics(
       else
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          -          -\n", scip->stat->nfailexlpinf);
 
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %10.10f\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPclockGetTime(scip->stat->provedfeasbstime),
          scip->stat->nboundshift,
          scip->stat->nfailboundshift,
-         scip->stat->boundingerrorbs/scip->stat->nboundshift);
+         scip->stat->boundingerrorbs/scip->stat->nboundshift,
+         scip->stat->nboundshiftobjlim,
+         scip->stat->nboundshiftobjlimfail);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift infeas: %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
          SCIPclockGetTime(scip->stat->provedinfeasbstime),
          scip->stat->nboundshiftinf,
          scip->stat->nfailboundshiftinf);
 
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %10.10f\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPclockGetTime(scip->stat->provedfeaspstime),
          scip->stat->nprojshift,
          scip->stat->nfailprojshift,
-         scip->stat->boundingerrorps/scip->stat->nprojshift);
+         scip->stat->boundingerrorps/scip->stat->nprojshift,
+         scip->stat->nprojshiftobjlim,
+         scip->stat->nprojshiftobjlimfail);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  projshift  infeas: %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
          SCIPclockGetTime(scip->stat->provedinfeaspstime),
