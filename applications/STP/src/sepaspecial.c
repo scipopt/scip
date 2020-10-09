@@ -46,6 +46,7 @@ struct pseudoancestor_cliques
    int*                  halfedges_ancestors;/**< CSR like ancestors per edge */
    int                   halfnedges;         /**< |A| / 2 */
    int                   nancestors;         /**< total number of pseudo ancestors */
+   int                   nfails;             /**< number of failures */
 };
 
 
@@ -180,6 +181,8 @@ SCIP_RETCODE sepaspecial_pacliquesInit(
    pac->nancestors = graph_getNpseudoAncestors(g);
    assert(pac->nancestors >= 0);
 
+   pac->nfails = 0;
+
    pac->halfedges_starts = NULL;
 
    if( pac->nancestors > 0 )
@@ -243,6 +246,9 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
    if( nancestors == 0 )
       return SCIP_OKAY;
 
+   if( pacliques->nfails > 1 )
+      return SCIP_OKAY;
+
    cutscount = 0;
 
    halfedges_starts = pacliques->halfedges_starts;
@@ -283,6 +289,7 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
    if( !hasViolations )
    {
       printf("no violations found... \n");
+      pacliques->nfails++;
       return SCIP_OKAY;
    }
 
@@ -352,6 +359,9 @@ SCIP_RETCODE sepaspecial_pacliquesSeparate(
    }
 
    SCIPfreeBufferArray(scip, &rows);
+
+   if( cutscount == 0 )
+      pacliques->nfails++;
 
    return SCIP_OKAY;
 }
