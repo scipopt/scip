@@ -1800,7 +1800,13 @@ unsigned int SCIPcalcFibHash(
    );
 
 #ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
 #define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+
 #endif
 
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
