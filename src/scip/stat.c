@@ -313,10 +313,14 @@ void SCIPstatReset(
    stat->nfailboundshift = 0;
    stat->nboundshiftinf = 0;
    stat->nfailboundshiftinf = 0;
+   stat->nboundshiftobjlim = 0;
+   stat->nboundshiftobjlimfail = 0;
    stat->nprojshift = 0;
    stat->nfailprojshift = 0;
    stat->nprojshiftinf = 0;
    stat->nfailprojshiftinf = 0;
+   stat->nprojshiftobjlim = 0;
+   stat->nprojshiftobjlimfail = 0;
    stat->niterationsexlp = 0;
    stat->niterationsexlpinf = 0;
    stat->nexlpinf = 0;

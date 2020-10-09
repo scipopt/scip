@@ -2096,6 +2096,8 @@ SCIP_RETCODE projectShift(
    else
    {
       stat->nprojshift++;
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+         stat->nprojshiftobjlim++;
       SCIPclockStart(stat->provedfeaspstime, set);
    }
 
@@ -2599,7 +2601,8 @@ SCIP_RETCODE projectShift(
       {
          stat->boundingerrorps += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
-         stat->nfailboundshift++;
+         stat->nfailprojshift++;
+         stat->nprojshiftobjlimfail++;
          assert(!lp->hasprovedbound);
       }
       else if( RatIsGTReal(dualbound, -SCIPsetInfinity(set)) )
@@ -3125,11 +3128,14 @@ SCIP_RETCODE boundShift(
    {
       SCIPclockStop(stat->provedfeasbstime, set);
       stat->nboundshift++;
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+         stat->nboundshiftobjlim++;
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && computedbound < SCIPlpGetCutoffbound(lp) - SCIPlpGetLooseObjval(lp, set, prob) )
       {
          stat->boundingerrorbs += REALABS(lp->lpobjval - computedbound);
          *safebound = computedbound;
          stat->nfailboundshift++;
+         stat->nboundshiftobjlimfail++;
          assert(!lp->hasprovedbound);
          RatSetReal(lpexact->lpobjval, SCIPintervalGetInf(safeboundinterval));
       }

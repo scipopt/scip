@@ -216,12 +216,16 @@ struct SCIP_Stat
    SCIP_Longint          nfailexlp;          /**< number of LPs failed to prove feasible */
    SCIP_Longint          nboundshift;        /**< number of boundshift calls for feasible lp*/
    SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
-   SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp*/
+   SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp */
    SCIP_Longint          nfailboundshiftinf; /**< number of failed boundshift calls for feasible lp */
+   SCIP_Longint          nboundshiftobjlim;
+   SCIP_Longint          nboundshiftobjlimfail;
    SCIP_Longint          nprojshift;         /**< number of project and shift calls for feasible lp */
    SCIP_Longint          nfailprojshift;     /**< number of failed project and shift calls for feasible lp */
    SCIP_Longint          nprojshiftinf;      /**< number of project and shift calls for infeasible lp */
    SCIP_Longint          nfailprojshiftinf;  /**< number of failed project and shift calls for infeasible lp */
+   SCIP_Longint          nprojshiftobjlim;
+   SCIP_Longint          nprojshiftobjlimfail;
    SCIP_Longint          niterationsexlp;    /**< number of exact lp iterations attempting feasible dual bound */ 
    SCIP_Longint          niterationsexlpinf; /**< number of exact lp iterations attempting infeasibility proof */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
