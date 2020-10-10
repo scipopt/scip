@@ -115,6 +115,7 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Real             mincutviolation;    /**< minimal cut violation the generated cuts must fulfill to be added to the LP */
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
+   SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -160,8 +161,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
 
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
-         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength");
+   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
+         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef");
    SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
@@ -171,6 +172,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nphinonneg);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
@@ -2171,6 +2173,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_Real* interpoints;
+   SCIP_Real avecutcoef;
    int counter;
    int i;
 
@@ -2192,6 +2195,9 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
    /* keep track of the number of attempted strengthenings */
    counter = 0;
+
+   /* keep track of average cutcoef */
+   avecutcoef = 0.0;
 
    /* go through all intersection points that are equal to infinity -> these correspond to the rays which are in the
     * recession cone of C, i.e. the rays for which we (possibly) can compute a negative steplength */
@@ -2219,6 +2225,9 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
       /* compute cut coef */
       cutcoef = SCIPisInfinity(scip, -rho) ? 0.0 : 1.0 / rho;
+
+      /* track average cut coef */
+      avecutcoef += cutcoef;
 
       if( ! SCIPisZero(scip, cutcoef) )
          *strengthsuccess = TRUE;
@@ -2253,6 +2262,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
 CLEANUP:
    SCIPfreeBufferArray(scip, &interpoints);
+   nlhdlrdata->cutcoefsum += avecutcoef / counter;
 
    return SCIP_OKAY;
 }
