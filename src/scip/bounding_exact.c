@@ -278,7 +278,7 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
    }
    else
    {
-      SCIPerrorMessage("Invald value for parameter psfpdualcolwiseselection \n");
+      SCIPerrorMessage("Invalid value for parameter psfpdualcolwiseselection \n");
    }
    return SCIP_OKAY;
 }
@@ -322,16 +322,15 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projbeg, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projlen, nextendedrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projind, 2*nnonz + 2*ncols) );
-   for( i = 0; i < 2*nnonz + 2*ncols; i++)
-      projind[i]=0;
+   BMSclearMemoryArray(projind, 2*nnonz + 2*ncols);
    SCIP_CALL( RatCreateBufferArray(set->buffer, &projval, 2*nnonz + 2*ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &projvalgmp, 2*nnonz + 2*ncols) );
 
    /* allocate memory for the basis mapping */
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &projshiftdata->projshiftbasis, nextendedrows) );
 
-   /* use includedrows to construct projshiftbasis, a description/mapping for D it has length projshiftbasisdim and projshiftbasis[i] tells what
-    * column (out of the original nextendecons) the ith column in D is
+   /* use includedrows to construct projshiftbasis, a description/mapping for D; it has length projshiftbasisdim and
+    * projshiftbasis[i] tells what column (out of the original nextendedrows) the ith column in D is
     */
    pos = 0;
    for( i = 0; i < nextendedrows; i++ )
@@ -349,11 +348,11 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
    for( i = 0; i < nextendedrows; i++ )
    {
       /* A part (lhs constraints) */
-      if(i < nrows)
+      if( i < nrows )
       {
          projlen[i] = lpexact->rows[i]->len;
          projbeg[i] = pos;
-         for(j = 0; j < projlen[i]; j++)
+         for( j = 0; j < projlen[i]; j++ )
          {
             projind[ projbeg[i] + j ] = lpexact->rows[i]->cols_index[j];
             RatSet( projval[ projbeg[i] + j], lpexact->rows[i]->vals[j]);
@@ -361,7 +360,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          pos += projlen[i];
       }
       /* -A part (rhs constraints) */
-      else if(i < 2 * nrows)
+      else if( i < 2 * nrows )
       {
          projlen[i] = lpexact->rows[i - nrows]->len;
          projbeg[i] = pos;
@@ -373,7 +372,7 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
          pos += projlen[i];
       }
       /* I part (lb constraints) */
-      else if (i < 2*nrows + ncols)
+      else if( i < 2*nrows + ncols )
       {
          projbeg[i] = pos;
          projlen[i] = 1;
@@ -533,7 +532,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    }
 
    /* set objective to normalized value */
-   for( i = 0; i < ndvarmap; i ++)
+   for( i = 0; i < ndvarmap; i ++ )
       RatMult(psobj[i], psobj[i], alpha);
    RatSet(psobj[ndvarmap], beta);
 
@@ -1893,7 +1892,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPlpiExactFree(&pslpiexact) );
    }
    assert(pslpiexact == NULL);
-   for( i = psncols - 1; i >= 0; i--)
+   for( i = psncols - 1; i >= 0; i-- )
       SCIPsetFreeBufferArray(set, &colnames[i] );
    SCIPsetFreeBufferArray(set, &colnames);
 
@@ -1920,7 +1919,7 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    return SCIP_OKAY;
 }
 
-/** constructs datas used to compute dual bounds by the project-and-shift method */
+/** constructs data used to compute dual bounds by the project-and-shift method */
 static
 SCIP_RETCODE constructProjectShiftData(
    SCIP_LP*              lp,                 /**< LP data */
@@ -2000,9 +1999,7 @@ SCIP_RETCODE constructProjectShiftData(
 
    /* if construction of both point and ray has failed, mark projshiftdatafail as true. */
    if( !projshiftdata->projshifthaspoint && !projshiftdata->projshifthasray )
-   {
       projshiftdata->projshiftdatafail = TRUE;
-   }
    else
       projshiftdata->projshiftdatafail = FALSE;
 
