@@ -130,7 +130,7 @@ do
 		echo set timing clocktype 1            >> $TMPFILE
 		echo set display verblevel 4           >> $TMPFILE
 		echo set display freq $DISPFREQ        >> $TMPFILE
-		echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+		echo set misc benchmarkmode true       >> $TMPFILE # avoid switching to dfs - better abort with memory error
 		echo set vbc filename vbctest.vbc      >> $TMPFILE
 		echo set save $SETFILE                 >> $TMPFILE
 		echo read $i                           >> $TMPFILE
@@ -176,7 +176,7 @@ do
 		echo set timing clocktype 1            >> $TMPFILE
 		echo set display verblevel 4           >> $TMPFILE
 		echo set display freq $DISPFREQ        >> $TMPFILE
-		echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+		echo set misc benchmarkmode true       >> $TMPFILE # avoid switching to dfs - better abort with memory error
 		echo set save $SETFILE                 >> $TMPFILE
 		echo read cipreadparsetest.cip         >> $TMPFILE
 		echo read soltest.sol                  >> $TMPFILE
@@ -213,7 +213,7 @@ do
 		echo set timing clocktype 1            >> $TMPFILE
 		echo set display verblevel 4           >> $TMPFILE
 		echo set display freq $DISPFREQ        >> $TMPFILE
-		echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+		echo set misc benchmarkmode true       >> $TMPFILE # avoid switching to dfs - better abort with memory error
 		echo set save $SETFILE                 >> $TMPFILE
 		echo read $i                           >> $TMPFILE
 		echo presolve                          >> $TMPFILE

@@ -151,7 +151,7 @@ do
             echo set limits memory $MEMLIMIT       >> $TMPFILE
             echo set timing clocktype 1            >> $TMPFILE
             echo set display freq $DISPFREQ        >> $TMPFILE
-            echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+            echo set misc benchmarkmode true       >> $TMPFILE # avoid switching to dfs - better abort with memory error
             if test "$LPS" == "none"
             then
                 echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
