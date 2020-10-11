@@ -974,6 +974,57 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    return SCIP_OKAY;
 }
 
+/** constructs exact LP that needs to be solved to compute data for the project-and-shift method */
+static
+SCIP_RETCODE constructProjectShiftDataLPIExact(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set,                /**< scip settings */
+   SCIP_STAT*            stat,               /**< statistics pointer */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,
+   SCIP_PROB*            prob,               /**< problem data */
+   BMS_BLKMEM*           blkmem
+   )
+{
+   int i;
+   SCIP_PROJSHIFTDATA* projshiftdata;
+
+   assert(lpexact != NULL);
+   assert(lpexact->projshiftdata != NULL);
+
+   projshiftdata = lpexact->projshiftdata;
+
+   /* if the LP was already constructed, exit */
+   if( projshiftdata->lpiexact != NULL )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("calling constructProjectShiftDataLPIExact()\n");
+   SCIPclockStart(stat->provedfeaspstime, set);
+
+   SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
+
+   /* process the bound changes */
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
+
+   assert(lpexact->nrows > 0);
+
+   projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
+
+   /* call function to select the set S */
+   SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
+
+   /* compute LU factorization of D == A|_S */
+   SCIP_CALL( projectShiftFactorizeDualSubmatrix(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
+
+   SCIPclockStop(stat->provedfeaspstime, set);
+   SCIPdebugMessage("exiting constructProjectShiftDataLPIExact()\n");
+
+   return SCIP_OKAY;
+}
+
 /** constructs data used to compute dual bounds by the project-and-shift method */
 static
 SCIP_RETCODE constructProjectShiftData(
@@ -1016,26 +1067,15 @@ SCIP_RETCODE constructProjectShiftData(
    if( projshiftdata->projshiftdatacon )
       return SCIP_OKAY;
 
-   SCIPclockStart(stat->provedfeaspstime, set);
    /* now mark that this function has been called */
    projshiftdata->projshiftdatacon = TRUE;
 
+   /* ensure that the exact LP exists that needs to be solved for obtaining the interior ray and point */
+   SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob,
+         blkmem) );
+
    SCIPdebugMessage("calling constructProjectShiftData()\n");
-   SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
-
-   /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
-   SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
-
-   assert(lpexact->nrows > 0);
-
-   projshiftdata->nextendedrows = 2*lpexact->nrows + 2*lpexact->ncols;
-
-   /* call function to select the set S */
-   SCIP_CALL( projectShiftChooseDualSubmatrix(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob, blkmem) );
-
-   /* compute LU factorization of D == A|_S */
-   SCIP_CALL( projectShiftFactorizeDualSubmatrix(lp, lpexact, set, prob, blkmem, projshiftdata->projshiftuseintpoint) );
+   SCIPclockStart(stat->provedfeaspstime, set);
 
    /* if no fail in LU factorization, compute S-interior point and/or ray */
    if( !projshiftdata->projshiftdatafail )

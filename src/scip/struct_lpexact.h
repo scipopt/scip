@@ -171,6 +171,7 @@ struct SCIP_RowExact
 
 struct SCIP_ProjShiftData
 {
+   SCIP_LPIEXACT*        lpiexact;           /**< exact LP solved for computing interior ray and point */
    SCIP_Rational**       interiorpoint;      /**< stores S-interior point for root node dual problem */
    SCIP_Rational**       interiorray;        /**< stores S-interior ray for root node dual problem */
    SCIP_Rational**       violation;          /**< needed on every iteration, so only construct once and possibly resize */

@@ -3228,6 +3228,7 @@ SCIP_RETCODE SCIPlpPsdataCreate(
 
    projshiftdata = lp->projshiftdata;
 
+   projshiftdata->lpiexact = NULL;
    projshiftdata->interiorpoint = NULL;
    projshiftdata->interiorray = NULL;
    projshiftdata->violation = NULL;
@@ -3269,6 +3270,23 @@ SCIP_RETCODE SCIPlpPsdataFree(
    assert(blkmem != NULL);
 
    projshiftdata = lp->projshiftdata;
+
+   if( projshiftdata->lpiexact != NULL )
+   {
+      int nlpirows;
+      int nlpicols;
+
+      SCIP_CALL( SCIPlpiExactGetNRows(projshiftdata->lpiexact, &nlpirows) );
+      SCIP_CALL( SCIPlpiExactDelRows(projshiftdata->lpiexact, 0, nlpirows - 1) );
+
+      SCIP_CALL( SCIPlpiExactGetNCols(projshiftdata->lpiexact, &nlpicols) );
+      SCIP_CALL( SCIPlpiExactDelCols(projshiftdata->lpiexact, 0, nlpicols - 1) );
+
+      SCIP_CALL( SCIPlpiExactClear(projshiftdata->lpiexact) );
+      SCIP_CALL( SCIPlpiExactFree(&projshiftdata->lpiexact) );
+   }
+   assert(projshiftdata->lpiexact == NULL);
+
    if( projshiftdata->projshiftdatacon )
    {
       if( projshiftdata->interiorpoint != NULL )
