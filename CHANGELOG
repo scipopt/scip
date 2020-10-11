@@ -10,6 +10,7 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
+- Revise way in which external memory (e.g., of LP-solver) is estimated.
 
 Performance improvements
 ------------------------
