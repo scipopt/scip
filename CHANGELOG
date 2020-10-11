@@ -10,6 +10,7 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
+- In benchmark mode the memory limit is ignored to avoid different solving paths depending on memory.
 
 Performance improvements
 ------------------------

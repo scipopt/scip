@@ -3196,12 +3196,18 @@ SCIP_RETCODE SCIPcheckCopyLimits(
    )
 {
    SCIP_Real timelimit;
-   SCIP_Real memorylimit;
 
    SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
-   SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
 
-   *success = timelimit > 0.0 && memorylimit > 2.0 * SCIPgetMemExternEstim(sourcescip) / 1048576.0;
+   /* in benchmark mode ignore memory limit */
+   if( sourcescip->set->misc_benchmarkmode )
+      *success = timelimit > 0.0;
+   else
+   {
+      SCIP_Real memorylimit;
+      SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
+      *success = timelimit > 0.0 && memorylimit > 2.0 * SCIPgetMemExternEstim(sourcescip) / 1048576.0;
+   }
 
    return SCIP_OKAY;
 }
