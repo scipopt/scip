@@ -283,6 +283,7 @@
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
+#define SCIP_DEFAULT_MISC_BENCHMARKMODE   FALSE /**< should we run in benchmark mode (do not try to avoid running into memory limit)? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
 #define SCIP_DEFAULT_MISC_TRANSSOLSORIG    TRUE /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
@@ -697,6 +698,38 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    /* an appropriate error message is already printed in the above method */
    if( retcode == SCIP_INVALIDCALL )
       return SCIP_PARAMETERWRONGVAL;
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of benchmarkmode */
+static
+SCIP_DECL_PARAMCHGD(paramChgdBenchmarkmode)
+{  /*lint --e{715}*/
+   SCIP_Bool benchmarkmode;
+
+   assert( scip != NULL );
+   assert( param != NULL );
+
+   benchmarkmode = SCIPparamGetBool(param);
+
+   if( benchmarkmode )
+   {
+      /* if switched to benchmark mode, turn of memory saving mode */
+      SCIP_CALL( SCIPsetRealParam(scip, "memory/savefac", 1.0) );
+   }
+   else
+   {
+      SCIP_PARAM* savefacparam;
+
+      /* need to get param to access default value */
+      savefacparam = SCIPgetParam(scip, "memory/savefac");
+      if( savefacparam == NULL )
+         return SCIP_PARAMETERUNKNOWN;
+
+      /* if disabled benchmark mode, set value to default value */
+      SCIP_CALL( SCIPsetRealParam(scip, "memory/savefac", SCIPparamGetRealDefault(savefacparam)) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1932,6 +1965,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should the usage of external memory be estimated?",
          &(*set)->misc_estimexternmem, FALSE, SCIP_DEFAULT_MISC_ESTIMEXTERNMEM,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/benchmarkmode",
+         "should we run in benchmark mode (do not try to avoid running into memory limit)?",
+         &(*set)->misc_benchmarkmode, FALSE, SCIP_DEFAULT_MISC_BENCHMARKMODE,
+         paramChgdBenchmarkmode, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/transorigsols",
          "should SCIP try to transfer original solutions to the transformed space (after presolving)?",

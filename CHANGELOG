@@ -79,6 +79,7 @@ Interface changes
 - new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
 - new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
   if a symmetry component contains variables of different types
+- new parameter "misc/benchmarkmode" to run in benchmark mode (do not try to avoid running into memory limit)
 
 
 

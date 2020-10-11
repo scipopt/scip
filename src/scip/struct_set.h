@@ -374,6 +374,7 @@ struct SCIP_Set
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
+   SCIP_Bool             misc_benchmarkmode; /**< should we run in benchmark mode (do not try to avoid running into memory limit)? */
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
    SCIP_Bool             misc_transsolsorig; /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
