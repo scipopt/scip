@@ -50,15 +50,6 @@ typedef struct SCIP_ProjShiftData SCIP_PROJSHIFTDATA;
  */
 typedef struct SCIP_LpExact SCIP_LPEXACT;
 
-enum Ps_intpointsel
-{
-   PS_INTPOINTSEL_ARB         = 0,           /**< arbitrary */
-   PS_INTPOINTSEL_OPT         = 1,           /**< optimized */
-   PS_INTPOINTSEL_ARBDUAL     = 2,           /**< arbitrary in dual form */
-   PS_INTPOINTSEL_TWOSTAGE    = 3            /**< two-stage-optimized interior point */
-};
-typedef enum Ps_intpointsel PS_INTPOINTSEL;
-
 enum Ps_dualcostsel
 {
    PS_DUALCOSTSEL_NO          = 0,           /**< no selection */
