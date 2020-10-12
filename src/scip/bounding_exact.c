@@ -799,8 +799,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols) );
 
-      /* build aux LP using the exact LP interface */
+      /* build aux LP using the exact LP interface and store it in the global data */
       SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MAXIMIZE) );
+      projshiftdata->lpiexact = pslpiexact;
 
       /* add all columns to the exact LP */
       SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
@@ -808,7 +809,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
-      projshiftdata->lpiexact = pslpiexact;
 
       /* free memory for building LPI */
       for( i = psncols - 1; i >= 0; i-- )
