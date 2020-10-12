@@ -237,17 +237,18 @@ void sdprofitBuild(
 static
 void sdprofitBuild1stOnly(
    const GRAPH*          g,                  /**< the graph */
+   const SCIP_Real*      edgecosts,          /**< edge costs (w.r.t graph 'g') */
    SDPROFIT*             sdprofit            /**< SD profit */
 )
 {
    const int nnodes = graph_get_nNodes(g);
    const int pseudoroot = (graph_pc_isUnrootedPcMw(g)) ? g->source : -1;
-   const SCIP_Real* const costs = g->cost;
    SCIP_Real* RESTRICT node_bias = sdprofit->nodes_bias;
    int* RESTRICT node_biassource = sdprofit->nodes_biassource;
    const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
 
    assert(graph_pc_isPcMw(g) || !g->extended);
+   assert(edgecosts);
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -271,17 +272,17 @@ void sdprofitBuild1stOnly(
             if( neighbor == pseudoroot )
                continue;
 
-            if( costs[e] < mincost )
+            if( edgecosts[e] < mincost )
             {
                assert(!graph_pc_isPcMw(g) || !graph_pc_knotIsDummyTerm(g, neighbor));
 
                minneighbor = neighbor;
                mincost2 = mincost;
-               mincost = costs[e];
+               mincost = edgecosts[e];
             }
-            else if( costs[e] < mincost2 )
+            else if( edgecosts[e] < mincost2 )
             {
-               mincost2 = costs[e];
+               mincost2 = edgecosts[e];
             }
          }
 
@@ -293,7 +294,7 @@ void sdprofitBuild1stOnly(
 
             assert(GE(bias, 0.0));
 
-            if( bias > node_bias[minneighbor] )
+            if( GT(bias, node_bias[minneighbor]) )
             {
                node_bias[minneighbor] = bias;
                node_biassource[minneighbor] = k;
@@ -1036,13 +1037,14 @@ SCIP_RETCODE reduce_sdprofitInit(
 SCIP_RETCODE reduce_sdprofitInit1stOnly(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph to initialize from */
+   const SCIP_Real*      edgecosts,          /**< edge costs (w.r.t graph 'g') */
    SDPROFIT**            sdprofit            /**< the SD profit */
 )
 {
    assert(scip && g);
 
    SCIP_CALL( sdprofitAlloc(scip, g, FALSE, sdprofit) );
-   sdprofitBuild1stOnly(g, *sdprofit);
+   sdprofitBuild1stOnly(g, edgecosts, *sdprofit);
 
    return SCIP_OKAY;
 }

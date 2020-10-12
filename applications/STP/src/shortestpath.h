@@ -52,6 +52,7 @@ struct stortest_paths
    int* RESTRICT         nodes_pred;         /**< predecessor node array (on vertices)
                                                   NOTE: might contain uninitialized values in opt mode! */
    STP_Bool* RESTRICT    nodes_isConnected;  /**< array to mark whether a vertex is part of computed Steiner tree */
+   const SCIP_Real       edgecost_zeroOffset;/**< zero offset for edge costs (used instead of actual 0 value) */
 } SPATHS;
 
 

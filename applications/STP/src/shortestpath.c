@@ -271,9 +271,11 @@ void computeSteinerTree_execBiased(
    const int* const start_csr = csr->start;
    const int* const nodes_biassource = sdprofit->nodes_biassource;
    int termscount = 0;
+   const SCIP_Real zeroOffset = spaths->edgecost_zeroOffset;
 
    assert(dheap->size == 1);
    assert(connected[startnode]);
+   assert(zeroOffset > 0.0);
 
    if( Is_term(g->term[startnode]) )
       termscount++;
@@ -326,7 +328,9 @@ void computeSteinerTree_execBiased(
                   SCIP_Real profitBias = sdprofit->nodes_bias[k];
                   profitBias = MIN(profitBias, cost_csr[e]);
                   profitBias = MIN(profitBias, k_dist);
-                  distnew -= profitBias;
+
+                  if( GT(profitBias, zeroOffset) )
+                     distnew -= profitBias;
                }
             }
             else

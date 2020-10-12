@@ -267,7 +267,7 @@ SCIP_RETCODE tmBaseInit(
 
    if( graph_typeIsSpgLike(graph) )
    {
-      SCIP_CALL( reduce_sdprofitInit1stOnly(scip, graph, &(tmbase->sdprofit1st)));
+      SCIP_CALL( reduce_sdprofitInit1stOnly(scip, graph, tmbase->cost, &(tmbase->sdprofit1st)));
    }
 
 #else
@@ -455,6 +455,19 @@ SCIP_HEURDATA* getTMheurData(
    assert(heurdata);
 
    return heurdata;
+}
+
+
+/** returns offset for edge costs */
+static
+SCIP_Real getTmEdgeCostZeroOffset(
+   SCIP*                 scip,           /**< SCIP data structure */
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+   const SCIP_Real eps = SCIPepsilon(scip);
+
+   return (2.0 * eps);
 }
 
 
@@ -938,7 +951,8 @@ SCIP_RETCODE computeSteinerTreeCsr(
 {
    int* RESTRICT result = tmbase->result;
    SPATHS spaths = { .csr = tmbase->csr, .csr_orgcosts = tmbase->csr_orgcosts, .nodes_dist = tmbase->nodes_dist,
-                     .nodes_pred = tmbase->nodes_pred, .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected };
+                     .nodes_pred = tmbase->nodes_pred, .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected,
+                     .edgecost_zeroOffset = getTmEdgeCostZeroOffset(scip, g) };
 
    assert(g->stp_type != STP_DHCSTP);
 
@@ -1021,7 +1035,8 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
 {
 #ifdef TM_USE_CSR_PCMW
    SPATHS spaths = { .csr = tmbase->csr, .csr_orgcosts = tmbase->csr_orgcosts, .nodes_dist = tmbase->nodes_dist,
-                     .nodes_pred = tmbase->nodes_pred, .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected };
+                     .nodes_pred = tmbase->nodes_pred, .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected,
+                     .edgecost_zeroOffset = getTmEdgeCostZeroOffset(scip, g) };
 
    assert(graph_pc_isPcMw(g));
 
@@ -1074,7 +1089,8 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
 #ifdef TM_USE_CSR_PCMW
    SPATHS spaths = { .csr = tmbase->csr, .csr_orgcosts = tmbase->csr_orgcosts, .nodes_dist = tmbase->nodes_dist,
                      .nodes_pred = tmbase->nodes_pred,
-                     .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected };
+                     .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected,
+                     .edgecost_zeroOffset = getTmEdgeCostZeroOffset(scip, g) };
 
    shortestpath_computeSteinerTreePcMwFull(g, start, &spaths);
 
@@ -3134,7 +3150,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    int beststart;
    const int mode = getTmMode(getTMheurData(scip), graph);
    const SCIP_Bool startsgiven = (runs >= 1 && (starts != NULL));
-   TMBASE tmbase = { .dheap = NULL, .cost = cost, .costrev = costrev, .nodes_dist = NULL,
+   TMBASE tmbase = { .dheap = NULL, .cost = cost, .costrev = costrev, .nodes_dist = NULL, .sdprofit1st = NULL,
                      .startnodes = NULL, .result = NULL, .best_result = best_result,
                      .nodes_pred = NULL, .connected = NULL,
                      .best_obj = FARAWAY, .nruns = runs };
@@ -3320,7 +3336,8 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    /* set 0 edge costs to small epsilon (to keep some invariants valid) */
    {
       const SCIP_Real eps = SCIPepsilon(scip);
-      const SCIP_Real double_eps = 2.0 * eps;
+      const SCIP_Real tm_eps = getTmEdgeCostZeroOffset(scip, graph);
+      assert(LE(eps, tm_eps));
 
       for( int e = 0; e < nedges; e++ )
       {
@@ -3330,7 +3347,7 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
          {
             assert(SCIPisZero(scip, cost[e]));
 
-            cost[e] = double_eps;
+            cost[e] = tm_eps;
          }
 
          assert(!SCIPisZero(scip, cost[e]));
