@@ -831,6 +831,15 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
          psncols, ndvarmap, nrows, ncols) );
 
+      /* build aux LP using the exact LP interface */
+      SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MAXIMIZE) );
+
+      /* add all columns to the exact LP */
+      SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
+
+      /* add all constraints to the exact LP */
+      SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
+
       if( !findintpoint )
       {
          /* in this case we want to find an interior ray instead of an interior point
@@ -848,28 +857,30 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
           * and the lower bound for d
           */
 
-         RatSetInt(psobj[ndvarmap], 0, 1);
+         SCIP_Rational* auxval1;
+         SCIP_Rational* auxval2;
+
+         SCIP_CALL( RatCreateBlock(blkmem, &auxval1) );
+         SCIP_CALL( RatCreateBlock(blkmem, &auxval2) );
+
+         /* update the objective on d */
+         RatSetInt(auxval1, 0, 1);
+         SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, 1, &ndvarmap, &auxval1) );
 
          /* update the rhs/lhs */
          for( i = 0; i < ncols; i++ )
          {
-            RatSetInt(pslhs[i], 0, 1);
-            RatSetInt(psrhs[i], 0, 1);
+            SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) );
          }
 
          /* update bounds on d */
-         RatSetString(psub[ndvarmap], "inf");
-         RatSetInt(pslb[ndvarmap], 1 ,1);
+         RatSetInt(auxval1, 1 ,1);
+         RatSetString(auxval2, "inf");
+         SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
+
+         RatFreeBlock(blkmem, &auxval2);
+         RatFreeBlock(blkmem, &auxval1);
       }
-
-      /* build aux LP using the exact LP interface */
-      SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MAXIMIZE) );
-
-      /* add all columns to the exact LP */
-      SCIP_CALL( SCIPlpiExactAddCols(pslpiexact, psncols, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
-
-      /* add all constraints to the exact LP */
-      SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
       /* set the display informatino */
       SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
