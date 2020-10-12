@@ -72,13 +72,7 @@ if(NOT WIN32)
 
   if(_PC_IPOPT_FOUND)
     set(IPOPT_INCLUDE_DIRS ${_PC_IPOPT_INCLUDE_DIRS} CACHE PATH "IPOPT include directory")
-    if(_PC_IPOPT_LINK_LIBRARIES)
-      set(IPOPT_LIBRARIES "${_PC_IPOPT_LINK_LIBRARIES}" CACHE STRING "IPOPT libraries" FORCE)
-    else()
-      # cmake 3.10 and older doesn't find link_libraries. hence we need to find them ourselves
-      # would want to call "target_link_libraries(libscip PUBLIC PkgConfig::IPOPT ..." ideally but haven't figured that out yet
-      set(IPOPT_LIBRARIES PkgConfig::_PC_IPOPT CACHE STRING "IPOPT libraries" FORCE)
-    endif()
+    set(IPOPT_LIBRARIES PkgConfig::_PC_IPOPT CACHE STRING "IPOPT libraries" FORCE)
   else()
   # If pkg-config fails or hasn't been tried, try to find the package using IPOPT_DIR
 
