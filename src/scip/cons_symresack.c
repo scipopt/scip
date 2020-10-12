@@ -1089,9 +1089,25 @@ SCIP_RETCODE maximizeObjectiveSymresack(
          componentobj[componentends[critinv]] = tmpnewcompobj;
 
          /* Connect the endpoints of the newly created path */
-         componentends[componentends[crit]] = componentends[critinv];
-         componentends[componentends[critinv]] = componentends[crit];
+         if (componentends[crit] == crit)
+         {
+            componentends[crit] = componentends[critinv];
+            componentends[componentends[critinv]] = crit;
+         }
+         else
+         {
+            componentends[componentends[crit]] = componentends[critinv];
+            componentends[componentends[critinv]] = componentends[crit];
+         }
       }
+   }
+
+   /* Also iterate over the situation where everything is constant. */
+   tmpobj = helperobj;
+   if (SCIPisGT(scip, tmpobj, *maxsoluval))
+   {
+      *maxsoluval = tmpobj;
+      *maxcrit = nvars;
    }
 
    /* It is always possible to make the first entry critical. */
@@ -1121,7 +1137,7 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
 {
    /* Compute to which components all entries belong. */
    int* entrycomponent;
-   int* componentobjective;
+   double* componentobjective;
 
    int i;
    int c;
@@ -1218,7 +1234,7 @@ SCIP_Bool validateSolution(
    int                   nvars,               /**< Number of variables in symresack */
    SCIP_Real*            objective,           /**< The objective vector */
    int*                  maxsolu,             /**< pointer to the optimal objective array */
-   int                   checkobjval          /**< the objective to check against */
+   double                checkobjval          /**< the objective to check against */
 )
 {
    SCIP_Real obj = 0.0;
@@ -1229,10 +1245,9 @@ SCIP_Bool validateSolution(
       {
          obj += objective[i];
       }
-      else if (maxsolu[i] != 0)
+      else
       {
-         /* Values are not in {0, 1} */
-         return FALSE;
+         assert(maxsolu[i] == 0);
       }
    }
    return SCIPisEQ(scip, obj, checkobjval);
