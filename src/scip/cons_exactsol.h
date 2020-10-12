@@ -13,48 +13,47 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_xyz.h
+/**@file   cons_exactsol.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for xyz constraints
- * @author Tobias Achterberg
+ * @brief  constraint handler for ensuring that primal solution is exact
+ * @author Antonia Chmiela
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_XYZ_H__
-#define __SCIP_CONS_XYZ_H__
-
-
 #include "scip/scip.h"
+#include "scip/lp.h"
+#include "scip/lpexact.h"
+#include "scip/pub_var.h"
+#include "scip/rational.h"
+//#include "scip/struct_rational.h"
+#include "scip/scip_exact.h"
+#include "scip/scip_lpexact.h"
+#include "scip/scip_sol.h"
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/struct_scip.h"
+#include "scip/tree.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the handler for xyz constraints and includes it in SCIP
+/** creates the handler for ExactSol constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
  * */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConshdlrXyz(
+SCIP_RETCODE SCIPincludeConshdlrExactSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup CONSHDLRS
- *
- * @{
- *
- * @name Xyz Constraints
- *
- * @{
- */
-
-/** creates and captures a xyz constraint
+/** creates and captures a ExactSol constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsXyz(
+SCIP_RETCODE SCIPcreateConsExactSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -88,13 +87,13 @@ SCIP_RETCODE SCIPcreateConsXyz(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a xyz constraint with all its constraint flags set to their
+/** creates and captures a ExactSol constraint with all its constraint flags set to their
  *  default values
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsBasicXyz(
+SCIP_RETCODE SCIPcreateConsBasicExactSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -111,6 +110,4 @@ SCIP_RETCODE SCIPcreateConsBasicXyz(
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif
