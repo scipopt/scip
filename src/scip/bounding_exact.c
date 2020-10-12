@@ -107,54 +107,6 @@ int getNNonz(
    return ret;
 }
 
-/** allocate memory for ps interior point/ray computation */
-static
-SCIP_RETCODE allocMemForInteriorPointRay(
-   SCIP_SET*             set,                /**< scip settings */
-   SCIP_Rational***      psobj,              /**< obj function */
-   SCIP_Rational***      pslb,               /**< lower bounds */
-   SCIP_Rational***      psub,               /**< upper bounds */
-   SCIP_Rational***      pslhs,              /**< left hand sides */
-   SCIP_Rational***      psrhs,              /**< right hand sides */
-   SCIP_Rational***      psval,              /**< matrix values */
-   SCIP_Rational***      sol,                /**< solution array */
-   SCIP_Rational**       objval,             /**< objective values */
-   int**                 psbeg,              /**< beg of each row in val array */
-   int**                 pslen,              /**< len of each row */
-   int**                 psind,              /**< index of val-entries */
-   char***               colnames,           /**< column names */
-   int                   psncols,            /**< number of columsns*/
-   int                   psnrows,            /**< number of rows */
-   int                   psnnonz             /**< number of non-zeros */
-   )
-{
-   int i;
-   assert(set != NULL);
-
-   /* allocate memory for aux problem */
-   SCIP_CALL( RatCreateBufferArray(set->buffer, psobj, psncols) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, pslb, psncols) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, psub, psncols) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, pslhs, psnrows) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, psrhs, psnrows) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, psval, psnnonz) );
-   SCIP_CALL( RatCreateBufferArray(set->buffer, sol, psncols) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, objval) );
-
-   SCIP_CALL( SCIPsetAllocBufferArray(set, psbeg, psnrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, pslen, psnrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, psind, psnnonz) );
-
-   SCIP_CALL( SCIPsetAllocBufferArray(set, colnames, psncols) );
-   for( i = 0; i < psncols; i++ )
-   {
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &((*colnames)[i]), SCIP_MAXSTRLEN ) );
-      (void) SCIPsnprintf( (*colnames)[i] , SCIP_MAXSTRLEN, "var%d", i);
-   }
-
-   return SCIP_OKAY;
-}
-
 #ifdef SCIP_WITH_GMP
 /** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used for projections */
 static
@@ -712,23 +664,11 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
    /* lpiexact and data used for the aux. problem */
    SCIP_LPIEXACT* pslpiexact;
-   SCIP_LPISTATE* lpistate;
-   SCIP_Rational** psobj = NULL;
-   SCIP_Rational** pslb = NULL;
-   SCIP_Rational** psub = NULL;
    SCIP_PROJSHIFTDATA* projshiftdata;
    SCIP_ROWEXACT** lprows;
    SCIP_COLEXACT** lpcols;
 
-   SCIP_Rational** pslhs = NULL;
-   SCIP_Rational** psrhs = NULL;
-
-   int* psbeg;
-   int* pslen;
-   int* psind;
-   SCIP_Rational** psval = NULL;
    SCIP_Rational** sol = NULL; /* either primal or dualsol */
-   char ** colnames = NULL;
    SCIP_Rational* objval;
 
    /* mapping between variables used in the aux. problem and the original problem */
@@ -790,28 +730,56 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    }
    ndvarmap = pos;
 
+   /* we will find an optimized interior point for which we will try to push it interior and
+    * optimize over its objective value.  To do this we will solve the following problem
+    * max \alpha * [lhs,-rhs,lb,ub] * y + \beta d
+    *              s.t. [A,-A,I,-I] * y        = c
+    *                                 y_i - d >= 0 for each i \in S
+    *                                     y   >= 0
+    *                                  M >= d >= 0
+    * M is a bound on how interior we will let the point be, S is the set of dual columns chosen earlier
+    * which could have nonzero values for the S-interior point.
+    *
+    * After solving this y will be the S-interior point and d will be the common slack.
+    * Here we actually construct the dual in row representation so it can be solved directly.
+    */
+
+   psncols =  ndvarmap + 1;
+   psnrows = ncols + projshiftdata->projshiftbasisdim;
+   psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
+   psnnonz += 2*projshiftdata->projshiftbasisdim;
+
+   if( projshiftdata->lpiexact == NULL )
    {
-      /* in this case we will find an optimized interior point for which we will try to push it interior and
-       * optimize over its objective value.  To do this we will solve the following problem
-       * max \alpha * [lhs,-rhs,lb,ub] * y + \beta d
-       *              s.t. [A,-A,I,-I] * y        = c
-       *                                 y_i - d >= 0 for each i \in S
-       *                                     y   >= 0
-       *                                  M >= d >= 0
-       * M is a bound on how interior we will let the point be, S is the set of dual columns chosen earlier
-       * which could have nonzero values for the S-interior point.
-       *
-       * After solving this y will be the S-interior point and d will be the common slack.
-       * Here we actually construct the dual in row representation so it can be solved directly.
-       */
+      SCIP_Rational** psobj = NULL;
+      SCIP_Rational** pslb = NULL;
+      SCIP_Rational** psub = NULL;
+      SCIP_Rational** pslhs = NULL;
+      SCIP_Rational** psrhs = NULL;
+      int* psbeg;
+      int* pslen;
+      int* psind;
+      SCIP_Rational** psval = NULL;
+      char ** colnames = NULL;
 
-      psncols =  ndvarmap + 1;
-      psnrows = ncols + projshiftdata->projshiftbasisdim;
-      psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
-      psnnonz += 2*projshiftdata->projshiftbasisdim;
+      /* allocate memory for auxiliary problem */
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &psobj, psncols) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &pslb, psncols) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &psub, psncols) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &pslhs, psnrows) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &psrhs, psnrows) );
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &psval, psnnonz) );
 
-      SCIP_CALL( allocMemForInteriorPointRay(set, &psobj, &pslb, &psub, &pslhs, &psrhs, &psval, &sol,
-         &objval, &psbeg, &pslen, &psind, &colnames, psncols, psnrows, psnnonz) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &psbeg, psnrows) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &pslen, psnrows) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &psind, psnnonz) );
+
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &colnames, psncols) );
+      for( i = 0; i < psncols; i++ )
+      {
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &((colnames)[i]), SCIP_MAXSTRLEN ) );
+         (void) SCIPsnprintf( (colnames)[i] , SCIP_MAXSTRLEN, "var%d", i);
+      }
 
       /* the representation of the problem will be:
        * max:  [\alpha*OBJ, \beta]*[y,d]'
@@ -840,99 +808,125 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiExactAddRows(pslpiexact, psnrows, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
-      if( !findintpoint )
+      projshiftdata->lpiexact = pslpiexact;
+
+      /* free memory for building LPI */
+      for( i = psncols - 1; i >= 0; i-- )
+         SCIPsetFreeBufferArray(set, &colnames[i] );
+      SCIPsetFreeBufferArray(set, &colnames);
+
+      SCIPsetFreeBufferArray(set, &psind);
+      SCIPsetFreeBufferArray(set, &pslen);
+      SCIPsetFreeBufferArray(set, &psbeg);
+
+      RatFreeBufferArray(set->buffer, &psval, psnnonz);
+      RatFreeBufferArray(set->buffer, &psrhs, psnrows);
+      RatFreeBufferArray(set->buffer, &pslhs, psnrows);
+      RatFreeBufferArray(set->buffer, &psub, psncols);
+      RatFreeBufferArray(set->buffer, &pslb, psncols);
+      RatFreeBufferArray(set->buffer, &psobj, psncols);
+   }
+   else
+      pslpiexact = projshiftdata->lpiexact;
+
+   if( !findintpoint )
+   {
+      /* in this case we want to find an interior ray instead of an interior point
+       * the problem will be modified to the following problem:
+       * max:  [OBJ, 0]*[y,d]'
+       * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
+       *       [0] <= [ I* | -1] * [d] <= [\infty] <-- only for dual vars from includecons
+       * bounds:     0 <= y <= \infty
+       *             1 <= d <= \infty
+       * y is a vector of length (ndvarmap) and d is a single variable
+       * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
+       * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
+       *
+       * the parts that change are the objective function, the RHS/LHS of the first constraint set
+       * and the lower bound for d
+       */
+
+      SCIP_Rational* auxval1;
+      SCIP_Rational* auxval2;
+
+      SCIP_CALL( RatCreateBlock(blkmem, &auxval1) );
+      SCIP_CALL( RatCreateBlock(blkmem, &auxval2) );
+
+      /* update the objective on d */
+      RatSetInt(auxval1, 0, 1);
+      SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, 1, &ndvarmap, &auxval1) );
+
+      /* update the rhs/lhs */
+      for( i = 0; i < ncols; i++ )
       {
-         /* in this case we want to find an interior ray instead of an interior point
-          * the problem will be modified to the following problem:
-          * max:  [OBJ, 0]*[y,d]'
-          * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
-          *       [0] <= [ I* | -1] * [d] <= [\infty] <-- only for dual vars from includecons
-          * bounds:     0 <= y <= \infty
-          *             1 <= d <= \infty
-          * y is a vector of length (ndvarmap) and d is a single variable
-          * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
-          * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
-          *
-          * the parts that change are the objective function, the RHS/LHS of the first constraint set
-          * and the lower bound for d
-          */
-
-         SCIP_Rational* auxval1;
-         SCIP_Rational* auxval2;
-
-         SCIP_CALL( RatCreateBlock(blkmem, &auxval1) );
-         SCIP_CALL( RatCreateBlock(blkmem, &auxval2) );
-
-         /* update the objective on d */
-         RatSetInt(auxval1, 0, 1);
-         SCIP_CALL( SCIPlpiExactChgObj(pslpiexact, 1, &ndvarmap, &auxval1) );
-
-         /* update the rhs/lhs */
-         for( i = 0; i < ncols; i++ )
-         {
-            SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) );
-         }
-
-         /* update bounds on d */
-         RatSetInt(auxval1, 1 ,1);
-         RatSetString(auxval2, "inf");
-         SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
-
-         RatFreeBlock(blkmem, &auxval2);
-         RatFreeBlock(blkmem, &auxval1);
+         SCIP_CALL( SCIPlpiExactChgSides(pslpiexact, 1, &i, &auxval1, &auxval1) );
       }
 
-      /* set the display informatino */
-      SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
-      /* check if a time limit is set, and set time limit for LP solver accordingly */
-      lptimelimit = SCIPlpiExactInfinity(pslpiexact);
-      if( set->istimelimitfinite )
-         lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
-      if( lptimelimit > 0.0 )
-      {
-         SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
-      }
-      /* solve the LP */
-      retcode = SCIPlpiExactSolveDual(pslpiexact);
-      if( retcode == SCIP_LPERROR )
-      {
-         projshiftdata->projshiftdatafail = TRUE;
-         SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
-      }
+      /* update bounds on d */
+      RatSetInt(auxval1, 1 ,1);
+      RatSetString(auxval2, "inf");
+      SCIP_CALL( SCIPlpiExactChgBounds(pslpiexact, 1, &ndvarmap, &auxval1, &auxval2) );
 
-      /* recover the optimal solution and set interior point and slack in constraint handler data */
-      if( SCIPlpiExactIsOptimal(pslpiexact) )
-      {
-         SCIPdebugMessage("   exact LP solved to optimality\n");
-         /* get optimal dual solution */
-         SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
+      RatFreeBlock(blkmem, &auxval2);
+      RatFreeBlock(blkmem, &auxval1);
+   }
 
-         RatSet(projshiftdata->commonslack, sol[psncols - 1]);
-         if( RatIsZero(projshiftdata->commonslack) )
-         {
-            /* if commonslack == 0, point/ray is not interior */
-            SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
-         }
-         else
-         {
-            /* assign interior point solution to constraint handler data */
-            for( i = 0; i < ndvarmap; i++ )
-            {
-               if( findintpoint )
-                  RatSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
-               else
-                  RatSet( projshiftdata->interiorray[dvarmap[i]], sol[i]);
-            }
-            if( findintpoint )
-               projshiftdata->projshifthaspoint = TRUE;
-            else
-               projshiftdata->projshifthasray = TRUE;
-         }
+   /* set the display informatino */
+   SCIPlpiExactSetIntpar(pslpiexact, SCIP_LPPAR_LPINFO, set->exact_lpinfo);
+   /* check if a time limit is set, and set time limit for LP solver accordingly */
+   lptimelimit = SCIPlpiExactInfinity(pslpiexact);
+   if( set->istimelimitfinite )
+      lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+   if( lptimelimit > 0.0 )
+   {
+      SCIP_CALL( SCIPlpiExactSetRealpar(pslpiexact, SCIP_LPPAR_LPTILIM, lptimelimit) );
+   }
+   /* solve the LP */
+   retcode = SCIPlpiExactSolveDual(pslpiexact);
+   if( retcode == SCIP_LPERROR )
+   {
+      projshiftdata->projshiftdatafail = TRUE;
+      SCIPwarningMessage(set->scip, "lperror in construction of projshift-data  \n");
+   }
+
+   /* recover the optimal solution and set interior point and slack in constraint handler data */
+   if( SCIPlpiExactIsOptimal(pslpiexact) )
+   {
+      SCIPdebugMessage("   exact LP solved to optimality\n");
+
+      /* get optimal dual solution */
+      SCIP_CALL( RatCreateBufferArray(set->buffer, &sol, psncols) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &objval) );
+      SCIP_CALL( SCIPlpiExactGetSol(pslpiexact, objval, sol, NULL, NULL, NULL) );
+
+      RatSet(projshiftdata->commonslack, sol[psncols - 1]);
+      if( RatIsZero(projshiftdata->commonslack) )
+      {
+         /* if commonslack == 0, point/ray is not interior */
+         SCIPdebugMessage("   --> project-and-shift failed to find interior point/ray\n");
       }
       else
       {
-         projshiftdata->projshiftdatafail = TRUE;
+         /* assign interior point solution to constraint handler data */
+         for( i = 0; i < ndvarmap; i++ )
+         {
+            if( findintpoint )
+               RatSet( projshiftdata->interiorpoint[dvarmap[i]], sol[i]);
+            else
+               RatSet( projshiftdata->interiorray[dvarmap[i]], sol[i]);
+         }
+         if( findintpoint )
+            projshiftdata->projshifthaspoint = TRUE;
+         else
+            projshiftdata->projshifthasray = TRUE;
       }
+
+      RatFreeBuffer(set->buffer, &objval);
+      RatFreeBufferArray(set->buffer, &sol, psncols);
+   }
+   else
+   {
+      projshiftdata->projshiftdatafail = TRUE;
    }
 
    for( i = 0; i < ndvarmap; i++ )
@@ -955,24 +949,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
       SCIP_CALL( SCIPlpiExactClear(pslpiexact) );
       SCIP_CALL( SCIPlpiExactFree(&pslpiexact) );
+
+      projshiftdata->lpiexact = NULL;
    }
-   assert(pslpiexact == NULL);
-   for( i = psncols - 1; i >= 0; i-- )
-      SCIPsetFreeBufferArray(set, &colnames[i] );
-   SCIPsetFreeBufferArray(set, &colnames);
-
-   SCIPsetFreeBufferArray(set, &psind);
-   SCIPsetFreeBufferArray(set, &pslen);
-   SCIPsetFreeBufferArray(set, &psbeg);
-
-   RatFreeBuffer(set->buffer, &objval);
-   RatFreeBufferArray(set->buffer, &sol, psncols);
-   RatFreeBufferArray(set->buffer, &psval, psnnonz);
-   RatFreeBufferArray(set->buffer, &psrhs, psnrows);
-   RatFreeBufferArray(set->buffer, &pslhs, psnrows);
-   RatFreeBufferArray(set->buffer, &psub, psncols);
-   RatFreeBufferArray(set->buffer, &pslb, psncols);
-   RatFreeBufferArray(set->buffer, &psobj, psncols);
 
    SCIPsetFreeBufferArray(set, &dvarincidence);
    SCIPsetFreeBufferArray(set, &dvarmap);
