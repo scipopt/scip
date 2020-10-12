@@ -1080,16 +1080,16 @@ SCIP_RETCODE constructProjectShiftData(
    /* if no fail in LU factorization, compute S-interior point and/or ray */
    if( !projshiftdata->projshiftdatafail )
    {
-      /* always try to compute the S-interior ray (for infeasibility proofs) */
-      SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
-      SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
-
-      if( projshiftdata->projshiftuseintpoint || !projshiftdata->projshifthasray )
+      if( projshiftdata->projshiftuseintpoint )
       {
-         /* now, compute S-interior point if we need it OR if the ray construction failed */
+         /* compute S-interior point if we need it */
          SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows) );
          SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, TRUE) );
       }
+
+      /* always try to compute the S-interior ray (for infeasibility proofs) */
+      SCIP_CALL( RatCreateBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows) );
+      SCIP_CALL( projectShiftComputeSintPointRay(lp, lpexact, set, stat, prob, blkmem, FALSE) );
    }
 
    /* if construction of both point and ray has failed, mark projshiftdatafail as true. */
