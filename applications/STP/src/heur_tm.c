@@ -23,6 +23,10 @@
  * This file implements several shortest paths based primal heuristics for Steiner problems, see
  * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
  * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ * and
+ * "Combining NP-Hard Reduction Techniques and Strong Heuristics in an Exact Algorithm for the
+ *  Maximum-Weight Connected Subgraph Problem" by
+ * Rehfeldt and Koch
  *
  * A list of all interface methods can be found in heur_tm.h
  *
@@ -98,6 +102,7 @@ struct TM_base_data
    int*                  best_result;        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    STP_Bool*             connected;          /**< array indicating whether a node is part of solution (TRUE/FALSE) */
    SCIP_Real             best_obj;           /**< objective */
+   int                   best_start;         /**< start node */
    int                   nruns;              /**< number of runs */
 } TMBASE;
 
@@ -514,6 +519,7 @@ static inline
 void updateBestSol(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
+   int                   startnode,          /**< start vertex */
    SCIP_Bool             solfound,           /**< solution found in this run? */
    TMBASE*               tmbase,             /**< data */
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
@@ -531,6 +537,7 @@ void updateBestSol(
       SCIPdebugMessage("\n improved obj=%f ", obj);
 
       tmbase->best_obj = obj;
+      tmbase->best_start = startnode;
       solstp_convertCsrToGraph(scip, graph, tmbase->csr_orgcosts, result_csr, connected, tmbase->best_result);
 
       (*success) = TRUE;
@@ -939,7 +946,72 @@ SCIP_RETCODE computeStarts(
    return SCIP_OKAY;
 }
 
+
 #ifdef TM_USE_CSR
+/** set terminals */
+static inline
+void keyNodesSetTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            soledge,            /**< solution edges */
+   GRAPH*                g,                  /**< graph structure (in/out) */
+   int*                  solnodes_degree     /**< degree in solution (out) */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+
+   assert(solnodes_degree);
+   assert(solstp_isValid(scip, g, soledge));
+
+   for( int i = 0; i < nnodes; i++ )
+      solnodes_degree[i] = 0;
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( soledge[e] == CONNECT )
+      {
+         solnodes_degree[g->tail[e]]++;
+         solnodes_degree[g->head[e]]++;
+      }
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( solnodes_degree[i] >= 3 && !Is_term(g->term[i]) )
+      {
+         solnodes_degree[i] *= -1;
+         graph_knot_chg(g, i, STP_TERM);
+
+         SCIPdebugMessage("make term: %d \n", i);
+      }
+   }
+}
+
+/** reset terminals */
+static inline
+void keyNodesResetTerms(
+   const int*            solnodes_degree,    /**< degree in solution (in) */
+   GRAPH*                g                   /**< graph structure */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   assert(solnodes_degree);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( solnodes_degree[i] < 0 )
+      {
+         assert(-solnodes_degree[i] <= g->grad[i]);
+         assert(Is_term(g->term[i]));
+
+         graph_knot_chg(g, i, STP_TERM_NONE);
+
+         SCIPdebugMessage("reset term: %d \n", i);
+      }
+   }
+}
+
+
 /** CSR based shortest paths heuristic */
 static inline
 SCIP_RETCODE computeSteinerTreeCsr(
@@ -962,6 +1034,37 @@ SCIP_RETCODE computeSteinerTreeCsr(
       shortestpath_computeSteinerTree(g, startnode, &spaths);
 
    SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, result));
+
+   return SCIP_OKAY;
+}
+
+
+/** CSR based shortest paths heuristic that exploits key nodes of best solution */
+static inline
+SCIP_RETCODE computeSteinerTreeKeyNodesCsr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph structure */
+   int                   startnode,          /**< start vertex*/
+   TMBASE*               tmbase              /**< (in/out) */
+)
+{
+   int* solnodes_degree;
+#ifndef NDEBUG
+   const int nterms = g->terms;
+#endif
+
+   assert(graph_typeIsSpgLike(g));
+   assert(g->stp_type != STP_DHCSTP);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &solnodes_degree, g->knots) );
+   keyNodesSetTerms(scip, tmbase->best_result, g, solnodes_degree);
+
+   SCIP_CALL( computeSteinerTreeCsr(scip, g, startnode, tmbase) );
+
+   keyNodesResetTerms(solnodes_degree, g);
+   SCIPfreeBuffer(scip, &solnodes_degree);
+
+   assert(nterms == g->terms);
 
    return SCIP_OKAY;
 }
@@ -2253,12 +2356,25 @@ SCIP_RETCODE runTm(
       }
 
       /* check whether best solution can be improved, and if so, replace */
-      updateBestSol(scip, graph, solfound, tmbase, success);
+      updateBestSol(scip, graph, start[r], solfound, tmbase, success);
 
       /* stop early? */
       if( SCIPisStopped(scip) )
          break;
    }
+
+#ifdef TM_USE_CSR
+   if( !SCIPisStopped(scip) && mode == TM_DIJKSTRA && graph_typeIsSpgLike(graph) && 0 )
+   {
+      SCIP_CALL( computeSteinerTreeKeyNodesCsr(scip, graph, tmbase->best_start, tmbase) );
+
+  //    const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, tmbase->result, tmbase->connected);
+//printf("%f < %f? \n", obj, tmbase->best_obj);
+
+      updateBestSol(scip, graph, tmbase->best_start, solfound, tmbase, success);
+   }
+#endif
+
 
    return SCIP_OKAY;
 }
@@ -3153,7 +3269,7 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    TMBASE tmbase = { .dheap = NULL, .cost = cost, .costrev = costrev, .nodes_dist = NULL, .sdprofit1st = NULL,
                      .startnodes = NULL, .result = NULL, .best_result = best_result,
                      .nodes_pred = NULL, .connected = NULL,
-                     .best_obj = FARAWAY, .nruns = runs };
+                     .best_obj = FARAWAY, .best_start = -1, .nruns = runs };
    TMVNOI tmvnoi = {NULL, NULL, NULL, NULL, NULL, NULL};
    TMALLSP tmallsp = {NULL, NULL};
 
