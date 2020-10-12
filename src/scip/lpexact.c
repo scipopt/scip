@@ -7077,7 +7077,7 @@ SCIP_RETCODE lpExactStoreSolVals(
    storedsolvals->dualfeasible = lpexact->dualfeasible;
    storedsolvals->dualchecked = lpexact->dualchecked;
    storedsolvals->solisbasic = lpexact->solisbasic;
-   //storedsolvals->lpissolved = lp->solved;
+   storedsolvals->lpissolved = lpexact->solved;
 
    return SCIP_OKAY;
 }

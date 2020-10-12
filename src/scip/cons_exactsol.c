@@ -180,7 +180,13 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
       return SCIP_OKAY;
 
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree))
+      return SCIP_OKAY;
+
    if( !SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE )
+      return SCIP_OKAY;
+
+   if( SCIPisExactSol(scip, sol) )
       return SCIP_OKAY;
 
    /* start exact diving */
@@ -249,7 +255,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       SCIP_CALL( SCIPsolCreateLPSolExact(&exactsol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
           scip->tree, scip->lpexact, NULL) );
-
+      SCIPsolSetHeur(exactsol, SCIPsolGetHeur(sol));
       SCIP_CALL( SCIPtrySolFreeExact(scip, &exactsol, FALSE, FALSE, FALSE, FALSE, TRUE, &foundsol) );
 
       /* check solution for feasibility, and add it to solution store if possible
@@ -260,11 +266,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       if( foundsol )
       {
-         //SCIPdebugMsg(scip, "found feasible shifted solution:\n");
-         //SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
          *result = SCIP_FEASIBLE;
-         sol = exactsol;
-         printf("foundsol\n");
       }
    }
 
