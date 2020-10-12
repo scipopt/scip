@@ -927,9 +927,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
    for( i = 0; i < ndvarmap; i++ )
    {
-      if( projshiftdata->projshifthaspoint )
+      if( findintpoint && projshiftdata->projshifthaspoint )
          RatCanonicalize(projshiftdata->interiorpoint[i]);
-      if( projshiftdata->projshifthasray )
+      if( !findintpoint && projshiftdata->projshifthasray )
          RatCanonicalize(projshiftdata->interiorray[i]);
    }
 
