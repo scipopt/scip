@@ -463,8 +463,7 @@ SCIP_RETCODE setupProjectShiftOpt(
    int                   psncols,            /**< numer of columns */
    int                   ndvarmap,           /**< numer of cols with bounds in extended prob */
    int                   nrows,              /**< numer of rows */
-   int                   ncols,              /**< numer of cols */
-   SCIP_Bool             findintpoint        /**< TRUE, if we search int point, FALSE if we search for ray */
+   int                   ncols               /**< numer of cols */
    )
 {
    SCIP_PROJSHIFTDATA* projshiftdata;
@@ -648,37 +647,6 @@ SCIP_RETCODE setupProjectShiftOpt(
    }
    assert(pos == psnrows);
 
-   if( !findintpoint )
-   {
-      /* in this case we want to find an interior ray instead of an interior point
-      * the problem will be modified to the following problem:
-      * max:  [OBJ, 0]*[y,d]'
-      * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
-      *       [0] <= [ I* | -1] * [d] <= [\infty] <-- only for dual vars from includecons
-      * bounds:     0 <= y <= \infty
-      *             1 <= d <= \infty
-      * y is a vector of length (ndvarmap) and d is a single variable
-      * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
-      * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
-      *
-      * the parts that change are the objective function, the RHS/LHS of the first constraint set
-      * and the lower bound for d
-      */
-
-      RatSetInt(psobj[ndvarmap], 0, 1);
-
-      /* update the rhs/lhs */
-      for( i = 0; i < ncols; i++ )
-      {
-         RatSetInt(pslhs[i], 0, 1);
-         RatSetInt(psrhs[i], 0, 1);
-      }
-
-      /* update bounds on d */
-      RatSetString(psub[ndvarmap], "inf");
-      RatSetInt(pslb[ndvarmap], 1 ,1);
-   }
-
    return SCIP_OKAY;
 }
 
@@ -861,7 +829,38 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
       SCIP_CALL( setupProjectShiftOpt(lp, lpexact, set, prob, psobj, psub, pslb, pslhs, psrhs, psval,
          pslen, psind, psbeg, dvarincidence, dvarmap, alpha, beta, tmp, psnrows, psnnonz,
-         psncols, ndvarmap, nrows, ncols, findintpoint) );
+         psncols, ndvarmap, nrows, ncols) );
+
+      if( !findintpoint )
+      {
+         /* in this case we want to find an interior ray instead of an interior point
+          * the problem will be modified to the following problem:
+          * max:  [OBJ, 0]*[y,d]'
+          * s.t.: [0] <= [ A~ |  0]   [y] <= [  0   ]
+          *       [0] <= [ I* | -1] * [d] <= [\infty] <-- only for dual vars from includecons
+          * bounds:     0 <= y <= \infty
+          *             1 <= d <= \infty
+          * y is a vector of length (ndvarmap) and d is a single variable
+          * and A~ is the submatrix of [A',-A',I,-I] using columns in dvarmap
+          * and OBJ is the subvector of [lhs,-rhs,lb,-ub] using columns in dvarmap
+          *
+          * the parts that change are the objective function, the RHS/LHS of the first constraint set
+          * and the lower bound for d
+          */
+
+         RatSetInt(psobj[ndvarmap], 0, 1);
+
+         /* update the rhs/lhs */
+         for( i = 0; i < ncols; i++ )
+         {
+            RatSetInt(pslhs[i], 0, 1);
+            RatSetInt(psrhs[i], 0, 1);
+         }
+
+         /* update bounds on d */
+         RatSetString(psub[ndvarmap], "inf");
+         RatSetInt(pslb[ndvarmap], 1 ,1);
+      }
 
       /* build aux LP using the exact LP interface */
       SCIP_CALL( SCIPlpiExactCreate(&pslpiexact, NULL, "pslpiexact", SCIP_OBJSEN_MAXIMIZE) );
