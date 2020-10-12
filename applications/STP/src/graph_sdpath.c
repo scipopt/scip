@@ -1806,7 +1806,7 @@ SCIP_Bool graph_sdWalks_csr(
             if( termmark[m] != 0 )
                distnew = MAX(distnew - g->prize[m], 0.0);
 
-            if( distnew < dist[m] )
+            if( LT(distnew, dist[m]) )
             {
                if( !visited[m] )
                {
@@ -1963,7 +1963,7 @@ SCIP_Bool graph_sdWalksTriangle(
             if( termmark[m] != 0 )
                distnew = MAX(distnew - g->prize[m], 0.0);
 
-            if( distnew < dist[m] )
+            if( LT(distnew, dist[m]) )
             {
                if( prizeoffset && termmark[m] != 0 )
                {

@@ -95,7 +95,7 @@ void computeOnMarked_exec(
       {
          const int m = head_csr[e];
 
-         if( state[m] != CONNECT && nodes_isMarked[m] && cost_csr[e] < nodes_dist[m] )
+         if( state[m] != CONNECT && nodes_isMarked[m] && LT(cost_csr[e], nodes_dist[m]) )
          {
             nodes_pred[m] = e;
             nodes_dist[m] = cost_csr[e];

@@ -1806,7 +1806,7 @@ SCIP_RETCODE createInitialCuts(
 /** ratio of remaining edges */
 static
 SCIP_Real getEdgeReductionRatio(
-   SCIP_PROBDATA*        probdata,           /**< problem data */
+   SCIP_PROBDATA*         probdata,           /**< problem data */
    const GRAPH*    	     graph               /**< the graph */
 )
 {
