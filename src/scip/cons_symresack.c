@@ -1271,7 +1271,6 @@ SCIP_RETCODE separateSymresackCovers(
    SCIP_Real constobjective;
    SCIP_Real* sepaobjective;
    SCIP_Real maxsoluobj = 0.0;
-   int* tmpsolu;
    int* maxsolu;
    int* invperm;
    int* perm;
@@ -1315,7 +1314,6 @@ SCIP_RETCODE separateSymresackCovers(
    }
 
    /* allocate memory for temporary and global solution */
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpsolu, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
    /* start separation procedure by iterating over critical rows */
@@ -1354,7 +1352,6 @@ SCIP_RETCODE separateSymresackCovers(
    }
 
    SCIPfreeBufferArrayNull(scip, &maxsolu);
-   SCIPfreeBufferArrayNull(scip, &tmpsolu);
    SCIPfreeBufferArrayNull(scip, &sepaobjective);
 
    return SCIP_OKAY;
