@@ -652,14 +652,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    int nextendedrows; /* number of extended constraints, # of cols in [A',-A',I,-I] */
    int indx;
    int psncols;
-   int psnrows;
-   int psnnonz;
    int nobjnz;
    SCIP_Real lptimelimit;
    SCIP_Bool success;
-   SCIP_Rational* tmp;
-   SCIP_Rational* alpha;
-   SCIP_Rational* beta;
    SCIP_RETCODE retcode;
 
    /* lpiexact and data used for the aux. problem */
@@ -674,7 +669,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    /* mapping between variables used in the aux. problem and the original problem */
    int ndvarmap;
    int* dvarmap;
-   int* dvarincidence;
 
    projshiftdata = lpexact->projshiftdata;
    nrows = lpexact->nrows;
@@ -683,52 +677,8 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
    assert(projshiftdata != NULL);
    nextendedrows = projshiftdata->nextendedrows;
 
-   psncols = 0;
-   psnrows = 0;
-   psnnonz = 0;
    lprows = lpexact->rows;
    lpcols = lpexact->cols;
-
-   /* set up dvarmap - mapping between variables and original problem
-    * - use the rows that are used for aux. problem
-    * - dvarmap[i] is the index in the original problem of the i^th constraint in the reduced size problem
-    *   (reduced from nextendedrows to ndvarmap)
-    * - dvarincidence gives the incidence vector of variables used in aux problem
-    */
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &alpha) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &beta) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarmap, nextendedrows) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarincidence, nextendedrows) );
-   {
-      /* if the aux. lp is not reduced then expand the selection for dvarmap to include all dual vars with finite cost */
-      for( i = 0; i < nextendedrows; i++ )
-         dvarincidence[i] = 0;
-      for( i = 0; i < nrows; i++ )
-      {
-         if( !RatIsNegInfinity(lprows[i]->lhs) )
-            dvarincidence[i] = 1;
-         if( !RatIsInfinity(lprows[i]->rhs) )
-            dvarincidence[nrows + i] = 1;
-      }
-      for( i = 0; i < ncols; i++ )
-      {
-         if( !RatIsNegInfinity(lpcols[i]->lb) )
-            dvarincidence[2*nrows + i] = 1;
-         if( !RatIsInfinity(lpcols[i]->ub) )
-            dvarincidence[2*nrows + ncols + i] = 1;
-      }
-   }
-   pos = 0;
-   for( i = 0; i < nextendedrows; i++ )
-   {
-      if(dvarincidence[i])
-      {
-         dvarmap[pos] = i;
-         pos++;
-      }
-   }
-   ndvarmap = pos;
 
    /* we will find an optimized interior point for which we will try to push it interior and
     * optimize over its objective value.  To do this we will solve the following problem
@@ -744,11 +694,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
     * Here we actually construct the dual in row representation so it can be solved directly.
     */
 
-   psncols =  ndvarmap + 1;
-   psnrows = ncols + projshiftdata->projshiftbasisdim;
-   psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
-   psnnonz += 2*projshiftdata->projshiftbasisdim;
-
    if( projshiftdata->lpiexact == NULL )
    {
       SCIP_Rational** psobj = NULL;
@@ -761,8 +706,70 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       int* psind;
       SCIP_Rational** psval = NULL;
       char ** colnames = NULL;
+      int psnrows;
+      int psnnonz;
+
+      SCIP_Rational* tmp;
+      SCIP_Rational* alpha;
+      SCIP_Rational* beta;
+      int* dvarincidence;
+
+      /* set up dvarmap - mapping between variables and original problem
+       * - use the rows that are used for aux. problem
+       * - dvarmap[i] is the index in the original problem of the i^th constraint in the reduced size problem
+       *   (reduced from nextendedrows to ndvarmap)
+       * - dvarincidence gives the incidence vector of variables used in aux problem
+       */
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &alpha) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &beta) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &dvarincidence, nextendedrows) );
+      {
+         /* if the aux. lp is not reduced then expand the selection for dvarmap to include all dual vars with finite cost */
+         for( i = 0; i < nextendedrows; i++ )
+            dvarincidence[i] = 0;
+         for( i = 0; i < nrows; i++ )
+         {
+            if( !RatIsNegInfinity(lprows[i]->lhs) )
+               dvarincidence[i] = 1;
+            if( !RatIsInfinity(lprows[i]->rhs) )
+               dvarincidence[nrows + i] = 1;
+         }
+         for( i = 0; i < ncols; i++ )
+         {
+            if( !RatIsNegInfinity(lpcols[i]->lb) )
+               dvarincidence[2*nrows + i] = 1;
+            if( !RatIsInfinity(lpcols[i]->ub) )
+               dvarincidence[2*nrows + ncols + i] = 1;
+         }
+      }
+
+      ndvarmap = 0;
+      for( i = 0; i < nextendedrows; i++ )
+      {
+         if(dvarincidence[i])
+            ndvarmap++;
+      }
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &dvarmap, ndvarmap) );
+      pos = 0;
+      for( i = 0; i < nextendedrows; i++ )
+      {
+         if(dvarincidence[i])
+         {
+            assert(pos < ndvarmap);
+            dvarmap[pos] = i;
+            pos++;
+         }
+      }
+      projshiftdata->dvarmap = dvarmap;
+      projshiftdata->ndvarmap = ndvarmap;
 
       /* allocate memory for auxiliary problem */
+      psncols = ndvarmap + 1;
+      psnrows = ncols + projshiftdata->projshiftbasisdim;
+      psnnonz = computeProjectShiftNnonz(lpexact, dvarincidence);
+      psnnonz += 2*projshiftdata->projshiftbasisdim;
+
       SCIP_CALL( RatCreateBufferArray(set->buffer, &psobj, psncols) );
       SCIP_CALL( RatCreateBufferArray(set->buffer, &pslb, psncols) );
       SCIP_CALL( RatCreateBufferArray(set->buffer, &psub, psncols) );
@@ -825,9 +832,21 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       RatFreeBufferArray(set->buffer, &psub, psncols);
       RatFreeBufferArray(set->buffer, &pslb, psncols);
       RatFreeBufferArray(set->buffer, &psobj, psncols);
+
+      SCIPsetFreeBufferArray(set, &dvarincidence);
+
+      RatFreeBuffer(set->buffer, &beta);
+      RatFreeBuffer(set->buffer, &alpha);
+      RatFreeBuffer(set->buffer, &tmp);
    }
    else
+   {
       pslpiexact = projshiftdata->lpiexact;
+      dvarmap = projshiftdata->dvarmap;
+      ndvarmap = projshiftdata->ndvarmap;
+      SCIP_CALL( SCIPlpiExactGetNCols(pslpiexact, &psncols) );
+      assert(psncols == ndvarmap + 1);
+   }
 
    if( !findintpoint )
    {
@@ -952,14 +971,10 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
       SCIP_CALL( SCIPlpiExactFree(&pslpiexact) );
 
       projshiftdata->lpiexact = NULL;
+
+      assert(projshiftdata->dvarmap != NULL);
+      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->dvarmap, projshiftdata->ndvarmap);
    }
-
-   SCIPsetFreeBufferArray(set, &dvarincidence);
-   SCIPsetFreeBufferArray(set, &dvarmap);
-
-   RatFreeBuffer(set->buffer, &beta);
-   RatFreeBuffer(set->buffer, &alpha);
-   RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }

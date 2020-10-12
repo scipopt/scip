@@ -3229,6 +3229,8 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata = lp->projshiftdata;
 
    projshiftdata->lpiexact = NULL;
+   projshiftdata->dvarmap = NULL;
+   projshiftdata->ndvarmap = 0;
    projshiftdata->interiorpoint = NULL;
    projshiftdata->interiorray = NULL;
    projshiftdata->violation = NULL;
@@ -3299,6 +3301,8 @@ SCIP_RETCODE SCIPlpPsdataFree(
       SCIP_CALL( SCIPlpPsdataFreeLPIExact(&projshiftdata->lpiexact) );
    }
    assert(projshiftdata->lpiexact == NULL);
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->dvarmap, projshiftdata->ndvarmap);
 
    if( projshiftdata->projshiftdatacon )
    {
