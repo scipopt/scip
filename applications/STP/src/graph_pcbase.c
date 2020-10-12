@@ -1236,7 +1236,8 @@ SCIP_Bool graph_pc_knotIsFixedTerm(
 {
    assert(g);
    assert(node >= 0 && node < g->knots);
-   assert(g->term2edge && g->prize);
+   assert(g->term2edge);
+   assert(g->prize);
 
 #ifndef NDEBUG
    if( TERM2EDGE_FIXEDTERM == g->term2edge[node] )
@@ -1724,8 +1725,8 @@ int graph_pc_getNorgEdges(
 /** gets ratio of remaining nodes/edges */
 void graph_pc_getReductionRatios(
   const GRAPH*          graph,              /**< graph */
-  SCIP_Real*	        ratio_nodes,
-  SCIP_Real*	        ratio_edges
+  SCIP_Real*	         ratio_nodes,
+  SCIP_Real*	         ratio_edges
 )
 {
    int nnodes_real = 0;
@@ -1739,6 +1740,17 @@ void graph_pc_getReductionRatios(
    assert(ratio_nodes && ratio_edges);
    assert(graph_pc_isPcMw(graph));
    assert(graph->extended);
+
+   /* todo somewhat hacky...but otherwise there is a problem if the graph vanished during presolving, because term2edge
+    * array does not exist */
+   if( graph->terms == 1 )
+   {
+      assert(graph->edges == 0);
+
+      *ratio_nodes = 0.0;
+      *ratio_edges = 0.0;
+      return;
+   }
 
    for( int i = 0; i < nnodes; i++ )
    {

@@ -1816,12 +1816,12 @@ SCIP_Real getEdgeReductionRatio(
 
    if( graph_pc_isPcMw(graph) )
    {
-	  SCIP_Real ratio_nodes;
-	  graph_pc_getReductionRatios(graph, &ratio_nodes, &ratio);
+	   SCIP_Real ratio_nodes;
+	   graph_pc_getReductionRatios(graph, &ratio_nodes, &ratio);
    }
    else
    {
-	  ratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
+	   ratio = (SCIP_Real) graph->edges / (SCIP_Real) probdata->norgedges;
    }
 
    assert(GE(ratio, 0.0));
