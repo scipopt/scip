@@ -61,7 +61,6 @@
 #define SLACKPRUNE_MAXSTALLPROPORTION   0.5       /**< maximum proportion of arcs to be fixed before restarting slack-prune heuristic */
 #define SLACKPRUNE_HARDREDRATIO  0.97
 
-#define BREAKONERROR FALSE
 #define MAXNTERMINALS   1000
 #define MAXNEDGES      20000
 #define MAXNEDGES_SPG  10000
@@ -214,7 +213,7 @@ SCIP_Bool abortSlackPruneEarly(
 	      return TRUE;
 	}
 
-    return FALSE;
+   return FALSE;
 }
 
 
@@ -257,13 +256,13 @@ SCIP_RETCODE reduceExact(
    if( graph_pc_isPc(prunegraph) )
    {
       SCIP_CALL( redLoopPc(scip, NULL, prunegraph, vnoi, path, nodearrreal, heap, state,
-            vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, offset,
+            vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, offset,
             FALSE, FALSE, FALSE, reductbound, FALSE, TRUE) );
    }
    else if( graph_pc_isMw(prunegraph) )
    {
       SCIP_CALL( redLoopMw(scip, prunegraph, vnoi, nodearrreal, state,
-            vbase, nodearrint, NULL, nodearrchar, offset,
+            vbase, nodearrint, solnode, nodearrchar, offset,
             FALSE, FALSE, FALSE, reductbound, FALSE) );
    }
    else
@@ -272,7 +271,7 @@ SCIP_RETCODE reduceExact(
                                                     .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
       SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
-            vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, offset) );
+            vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, offset) );
    }
 
    SCIPfreeBufferArray(scip, &path);
@@ -546,7 +545,6 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
       }
 
       SCIPdebugMessage("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
-      printf("SP final solution: best: old %f, new %f \n",  SCIPgetSolOrigObj(scip, bestsol), pobj + SCIPprobdataGetOffset(scip));
 
       /* try to add new solution to pool */
       SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, &success) );
@@ -706,21 +704,20 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    /* main reduction loop */
    for( i = 0; i < SLACKPRUNE_MAXREDROUNDS && anterms > 2; i++ )
    {
-      SCIP_Bool apsuccess;
+      SCIP_Bool solIsImproved;
+      SCIP_Bool solIsRebuilt;
       int danelims;
       SCIP_Bool solgiven;
 
+      SCIPdebugMessage("starting round %d \n", i);
+
       /* update reduction bounds */
       setMinMaxElims(scip, &minnelims, &lminnelims, annodes, anedges, anterms, i + 1, SLACKPRUNE_MAXREDROUNDS);
-#if BREAKONERROR
-      if( minnelims > (anedges / 2) )
-         return SCIP_ERROR;
-#endif
 
       solgiven = ((i == 0) && !initialreduce);
 
       /*  perform heuristic reductions */
-      SCIP_CALL( reduce_daSlackPrune(scip, prunegraph, minnelims, solgiven, soledge, solnode, &danelims, &ubnew, &apsuccess) );
+      SCIP_CALL( reduce_daSlackPrune(scip, prunegraph, minnelims, solgiven, soledge, solnode, &danelims, &ubnew, &solIsImproved, &solIsRebuilt) );
 
       /* delete all vertices not reachable from the root */
       SCIP_CALL( reduceLevel0(scip, prunegraph) );
@@ -737,36 +734,34 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       /* not enough reductions possible? */
       if( danelims < lminnelims )
       {
-         SCIPdebugMessage("too little elims in DA, break %d < %d\n\n", danelims, lminnelims);
+         SCIPdebugMessage("too few elims in DA, break %d < %d\n\n", danelims, lminnelims);
          i = SLACKPRUNE_MAXREDROUNDS;
       }
 
-      /* compute potential new guiding solution */
-    //  SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, prunegraph, cost, soledge, prunegraph->source, &apsuccess, FALSE) );
-
       /* solution found by ascend and prune? */
-      if( apsuccess )
+      if( solIsImproved )
       {
-         SCIP_Real obj;
          assert(solstp_isValid(scip, prunegraph, soledge));
-
          SCIP_CALL( SCIPStpHeurLocalRun(scip, prunegraph, soledge) );
-
-         assert(solstp_isValid(scip, prunegraph, soledge));
 
          SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, solnode, soledge,
                globalsoledge, &globalobj, TRUE, success) );
-
-         /* calculate objective value of solution */
-         obj = solstp_getObjBounded(prunegraph, soledge, offsetnew, nedges);
-
-         /* obj <= incumbent objective value? */
-         if( SCIPisLE(scip, obj, ubbest) )
-            ubbest = obj;
-
-         SCIPdebugMessage("old solution: %f new solution %f \n\n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
+      }
+      else if( solIsRebuilt )
+      {
+         assert(solstp_isValid(scip, prunegraph, soledge));
+         SCIP_CALL( SCIPStpHeurPruneUpdateSols(scip, g, prunegraph, solnode, soledge,
+               globalsoledge, &globalobj, FALSE, success) );
       }
 
+      if( solIsImproved || solIsRebuilt )
+      {
+         const SCIP_Real obj = solstp_getObj(prunegraph, soledge, offsetnew);
+         SCIPdebugMessage("old solution: %f new solution %f \n\n", ubbest + SCIPprobdataGetOffset(scip), obj + SCIPprobdataGetOffset(scip));
+
+         if( SCIPisLE(scip, obj, ubbest) )
+            ubbest = obj;
+      }
       graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
       reductbound = getRedBound(i, anedges);
 
@@ -783,13 +778,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
    *success = solstp_isValid(scip, g, globalsoledge);
    BMScopyMemoryArray(soledge, globalsoledge, nedges);
 
-#if BREAKONERROR
-   if( !(*success) )
-   {
-      printf("slack prune solution not valid %d \n", 0);
-      return SCIP_ERROR;
-   }
-#endif
+   assert(*success);
 
    graph_free(scip, &prunegraph, TRUE);
    SCIPfreeBufferArray(scip, &globalsoledge);

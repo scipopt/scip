@@ -2657,10 +2657,10 @@ SCIP_RETCODE reduce_daSlackPrune(
    int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed (in/out) */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_Real*            upperbound,         /**< pointer to store new upper bound */
-   SCIP_Bool*            solImproved         /**< solution provided? */
+   SCIP_Bool*            solImproved,        /**< solution improved? */
+   SCIP_Bool*            solReconstructed    /**< solution reconstructed? */
    )
 {
-   const int* grad;
    PATH *vnoi;
    SCIP_Real *cost;
    SCIP_Real *costrev;
@@ -2676,7 +2676,6 @@ SCIP_RETCODE reduce_daSlackPrune(
    SCIP_Real minpathcost;
    SCIP_Bool success;
    SCIP_Bool eliminate;
-   int i = -1;
    int k;
    int e;
    int etmp;
@@ -2684,24 +2683,21 @@ SCIP_RETCODE reduce_daSlackPrune(
    const int nedges = graph_get_nEdges(graph);
    const int nnodes = graph_get_nNodes(graph);
    const int root = graph->source;
+   const int* grad = graph->grad;
    const SCIP_Bool rpcmw = graph_pc_isRootedPcMw(graph);
-
-   int nfixed;
+   SCIP_Bool solutionIsRebuilt = FALSE;
+   int nfixed = 0;
    int redrounds;
    STP_Bool* marked;
 
-   assert(scip != NULL);
-   assert(graph != NULL);
-   assert(nelims != NULL);
-   assert(solnode != NULL);
-   assert(soledge != NULL);
+   assert(scip && graph && nelims && solnode && soledge);
+   assert(solReconstructed && solImproved);
    assert(!graph_pc_isPcMw(graph) || rpcmw);
 
    /* 1. step: initialize */
 
+   *solReconstructed = FALSE;
    *solImproved = FALSE;
-   grad = graph->grad;
-   nfixed = 0;
 
    if( graph->terms <= 2 )
       goto TERMINATE;
@@ -2725,16 +2721,20 @@ SCIP_RETCODE reduce_daSlackPrune(
 
    if( !solgiven )
    {
+      solutionIsRebuilt = TRUE;
+
       /* try to build MST on solnode nodes */
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
          graph->mark[i] = (solnode[i] == CONNECT);
+
+      assert(graph->mark[graph->source]);
 
       for( e = 0; e < nedges; e++ )
          soledge[e] = UNKNOWN;
 
       graph_path_exec(scip, graph, MST_MODE, root, graph->cost, vnoi);
 
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
          e = vnoi[i].edge;
          if( e >= 0 )
@@ -2743,37 +2743,37 @@ SCIP_RETCODE reduce_daSlackPrune(
          }
          else if( Is_term(graph->term[i]) && i != root )
          {
+            solutionIsRebuilt = FALSE;
             break;
          }
       }
 
-      if( i == nnodes )
+      if( solutionIsRebuilt )
       {
-         int l;
          int count;
 
          do
          {
             count = 0;
 
-            for( l = nnodes - 1; l >= 0; --l )
+            for( int i = nnodes - 1; i >= 0; --i )
             {
-               if( (solnode[l] != CONNECT) || Is_term(graph->term[l]) )
+               if( (solnode[i] != CONNECT) || Is_term(graph->term[i]) )
                   continue;
 
-               for( e = graph->outbeg[l]; e != EAT_LAST; e = graph->oeat[e] )
+               for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
                   if( soledge[e] == CONNECT )
                      break;
 
                if( e == EAT_LAST )
                {
                   /* there has to be exactly one incoming edge */
-                  for( e = graph->inpbeg[l]; e != EAT_LAST; e = graph->ieat[e] )
+                  for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
                   {
                      if( soledge[e] == CONNECT )
                      {
                         soledge[e] = UNKNOWN;
-                        solnode[l] = UNKNOWN;
+                        solnode[i] = UNKNOWN;
                         count++;
                         break;
                      }
@@ -2782,11 +2782,15 @@ SCIP_RETCODE reduce_daSlackPrune(
             }
          }
          while( count > 0 );
+
+         solutionIsRebuilt = solstp_isValid(scip, graph, soledge);
       }
    }
 
+   *solReconstructed = solutionIsRebuilt;
+   SCIPdebugMessage("solutionIsRebuilt=%d \n", solutionIsRebuilt);
 
-   if( solgiven || i == nnodes )
+   if( solgiven || solutionIsRebuilt )
    {
       DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = root,
                   .is_pseudoroot = FALSE, .damaxdeviation = -1.0 };
@@ -2814,7 +2818,7 @@ SCIP_RETCODE reduce_daSlackPrune(
    {
       *solImproved = TRUE;
 
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
          solnode[i] = UNKNOWN;
 
       for( e = 0; e < nedges; e++ )
@@ -2828,12 +2832,10 @@ SCIP_RETCODE reduce_daSlackPrune(
       }
    }
 
-   obj = 0.0;
+   obj = getSolObj(scip, graph, soledge);
+
    for( e = 0; e < nedges; e++ )
    {
-      if( soledge[e] == CONNECT )
-         obj += graph->cost[e];
-
       marked[e] = FALSE;
       costrev[e] = cost[flipedge(e)];
    }
