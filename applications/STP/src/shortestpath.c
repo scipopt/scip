@@ -340,7 +340,7 @@ void computeSteinerTree_execBiased(
             }
 
             /* closer to k than to current predecessor? */
-            if( LT(distnew, nodes_dist[m]) )
+            if( LT_HARD(distnew, nodes_dist[m]) )
             {
                nodes_pred[m] = k;
                nodes_dist[m] = distnew;
@@ -349,6 +349,8 @@ void computeSteinerTree_execBiased(
          }
       }
    }
+
+   assert(!graph_typeIsSpgLike(g) || termscount == g->terms);
 }
 
 

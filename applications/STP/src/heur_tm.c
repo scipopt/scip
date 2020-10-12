@@ -541,6 +541,7 @@ void updateBestSol(
       solstp_convertCsrToGraph(scip, graph, tmbase->csr_orgcosts, result_csr, connected, tmbase->best_result);
 
       (*success) = TRUE;
+      assert(solstp_isValid(scip, graph, tmbase->best_result));
    }
 #else
    /* here another measure than in the TM heuristics is being used */

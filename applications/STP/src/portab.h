@@ -56,6 +56,8 @@ typedef unsigned char STP_Bool;
 #endif
 
 #define EPS_ZERO  (DBL_EPSILON * 1e4)
+#define EPS_ZERO_HARD  (DBL_EPSILON * 1e6)
+
 
 #ifndef Fsgn
 #define Fsgn(x)   ((((x) > -EPS_ZERO) && ((x) < EPS_ZERO)) ? 0 : (((x) < 0.0) ? -1 : 1))
@@ -77,6 +79,7 @@ typedef unsigned char STP_Bool;
 #define EQ(a, b)   (fabs((a) - (b)) <= EPS_ZERO)
 #define NE(a, b)   (fabs((a) - (b)) >  EPS_ZERO)
 #define LT(a, b)   (((a) - (b))     < -EPS_ZERO)
+#define LT_HARD(a, b)   (((a) - (b))     < -EPS_ZERO_HARD)
 #define LE(a, b)   (((a) - (b))     <  EPS_ZERO)
 #define GT(a, b)   (((a) - (b))     >  EPS_ZERO)
 #define GE(a, b)   (((a) - (b))     > -EPS_ZERO)
