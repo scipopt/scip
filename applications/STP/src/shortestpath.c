@@ -323,7 +323,8 @@ void computeSteinerTree_execBiased(
 
             if( source != k )
             {
-               if( source != m && !connected[source] )
+               /* NOTE: with need to be careful with numerical issues here... */
+               if( source != m && !connected[source] && k != nodes_pred[m] )
                {
                   SCIP_Real profitBias = sdprofit->nodes_bias[k];
                   profitBias = MIN(profitBias, cost_csr[e]);
