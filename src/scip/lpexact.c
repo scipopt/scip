@@ -3234,13 +3234,13 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata->interiorpoint = NULL;
    projshiftdata->interiorray = NULL;
    projshiftdata->violation = NULL;
+   projshiftdata->correction = NULL;
    projshiftdata->commonslack = NULL;
    projshiftdata->includedrows = NULL;
    projshiftdata->projshiftbasis = NULL;
 #ifdef SCIP_WITH_GMP
    projshiftdata->rectfactor = (qsnum_factor_work*) NULL;
 #endif
-   projshiftdata->commonslack = NULL;
 
    projshiftdata->nextendedrows = 0;
    projshiftdata->projshiftbasisdim = 0;
@@ -3304,24 +3304,25 @@ SCIP_RETCODE SCIPlpPsdataFree(
 
    BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->dvarmap, projshiftdata->ndvarmap);
 
-   if( projshiftdata->projshiftdatacon )
-   {
-      if( projshiftdata->interiorpoint != NULL )
-         RatFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
-      if( projshiftdata->interiorray != NULL )
-         RatFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
+   if( projshiftdata->interiorpoint != NULL )
+      RatFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
+   if( projshiftdata->interiorray != NULL )
+      RatFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
+   if( projshiftdata->violation != NULL )
       RatFreeBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
+   if( projshiftdata->correction != NULL )
       RatFreeBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
-
+   if( projshiftdata->commonslack != NULL )
       RatFreeBlock(blkmem, &projshiftdata->commonslack);
 
-      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
-      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
+   BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
+   BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
+
 #ifdef SCIP_WITH_GMP
-      if( projshiftdata->rectfactor != NULL )
-         RECTLUfreeFactorization(projshiftdata->rectfactor);
+   if( projshiftdata->rectfactor != NULL )
+      RECTLUfreeFactorization(projshiftdata->rectfactor);
 #endif
-   }
+
    assert(projshiftdata->interiorpoint == NULL);
    assert(projshiftdata->interiorray == NULL);
    assert(projshiftdata->includedrows == NULL);

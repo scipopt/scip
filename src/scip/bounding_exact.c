@@ -1144,8 +1144,6 @@ SCIP_RETCODE constructProjectShiftData(
    projshiftdata->projshiftdatacon = TRUE;
 
    /* ensure that the exact LP exists that needs to be solved for obtaining the interior ray and point */
-   SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob,
-         blkmem) );
 
    SCIPdebugMessage("calling constructProjectShiftData()\n");
    SCIPclockStart(stat->provedfeaspstime, set);
@@ -2435,10 +2433,11 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    assert(!lp->hasprovedbound);
 
    /* we need to construct projshiftdata at the root node */
-   if( !lpexact->projshiftdata->projshiftdatacon )
+   if( SCIPgetDepth(set->scip) <= 0 && lpexact->projshiftdata->lpiexact == NULL
+      && !lpexact->projshiftdata->projshiftdatacon && !lpexact->projshiftdata->projshiftdatafail )
    {
-      SCIP_CALL( constructProjectShiftData(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
-                     prob, blkmem) );
+      SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob,
+            blkmem) );
    }
 
    while( !lp->hasprovedbound && !abort )
