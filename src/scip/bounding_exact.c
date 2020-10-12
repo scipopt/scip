@@ -937,8 +937,9 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
          RatCanonicalize(projshiftdata->interiorray[i]);
    }
 
-   /* free memory */
-   if( pslpiexact != NULL )
+   /* free memory for exact LPI if not needed anymore */
+   if( pslpiexact != NULL
+      && (projshiftdata->projshiftdatafail || (projshiftdata->projshifthaspoint && projshiftdata->projshifthasray)) )
    {
       int nlpirows, nlpicols;
       SCIP_CALL( SCIPlpiExactGetNRows(pslpiexact, &nlpirows) );

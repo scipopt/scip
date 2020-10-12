@@ -3255,6 +3255,29 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    return SCIP_OKAY;
 }
 
+/** frees the exact LPI in project-and-shift */
+static
+SCIP_RETCODE SCIPlpPsdataFreeLPIExact(
+   SCIP_LPIEXACT**       lpiexact            /**< pointer to LPI object */
+   )
+{
+   int nlpirows;
+   int nlpicols;
+
+   assert(lpiexact != NULL);
+   assert(*lpiexact != NULL);
+
+   /** @todo: exip This should all happen automatically when calling SCIPlpiExactFree() */
+   SCIP_CALL( SCIPlpiExactGetNRows(*lpiexact, &nlpirows) );
+   SCIP_CALL( SCIPlpiExactDelRows(*lpiexact, 0, nlpirows - 1) );
+
+   SCIP_CALL( SCIPlpiExactGetNCols(*lpiexact, &nlpicols) );
+   SCIP_CALL( SCIPlpiExactDelCols(*lpiexact, 0, nlpicols - 1) );
+
+   SCIP_CALL( SCIPlpiExactClear(*lpiexact) );
+   SCIP_CALL( SCIPlpiExactFree(lpiexact) );
+}
+
 /** frees the data needed for project and shift bounding method */
 static
 SCIP_RETCODE SCIPlpPsdataFree(
@@ -3273,17 +3296,7 @@ SCIP_RETCODE SCIPlpPsdataFree(
 
    if( projshiftdata->lpiexact != NULL )
    {
-      int nlpirows;
-      int nlpicols;
-
-      SCIP_CALL( SCIPlpiExactGetNRows(projshiftdata->lpiexact, &nlpirows) );
-      SCIP_CALL( SCIPlpiExactDelRows(projshiftdata->lpiexact, 0, nlpirows - 1) );
-
-      SCIP_CALL( SCIPlpiExactGetNCols(projshiftdata->lpiexact, &nlpicols) );
-      SCIP_CALL( SCIPlpiExactDelCols(projshiftdata->lpiexact, 0, nlpicols - 1) );
-
-      SCIP_CALL( SCIPlpiExactClear(projshiftdata->lpiexact) );
-      SCIP_CALL( SCIPlpiExactFree(&projshiftdata->lpiexact) );
+      SCIP_CALL( SCIPlpPsdataFreeLPIExact(&projshiftdata->lpiexact) );
    }
    assert(projshiftdata->lpiexact == NULL);
 
