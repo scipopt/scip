@@ -126,8 +126,8 @@ do
 	 then
             cat $RESFILE >> $EXAMPLELOG
 
-            # exit immediately if there was a fail if STOPONFAIL is yes
-            GREPFAILS=$(grep fail ${RESFILE})
+            # exit immediately if there was a fail if STOPONFAIL is yes (||: to avoid error if grep output is empty)
+            GREPFAILS=`grep "fail" ${RESFILE}` ||:
             if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
             then
                echo -e "Testing "${EXAMPLE}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${EXAMPLE} directory for more details."

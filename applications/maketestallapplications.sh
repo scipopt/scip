@@ -134,8 +134,8 @@ do
 	    then
                cat $RESFILE >> ../applicationtestsummary.log
 
-	       # exit immediately if there was a fail if STOPONFAIL is yes
-	       GREPFAILS=$(grep fail ${RESFILE})
+	       # exit immediately if there was a fail if STOPONFAIL is yes (||: to avoid error if grep output is empty)
+	       GREPFAILS=`grep "fail" ${RESFILE}` || :
 	       if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
 	       then
 		  echo -e "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
