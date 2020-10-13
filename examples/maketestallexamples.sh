@@ -19,7 +19,6 @@ echo "Running all tests on examples."
 # parse command line
 MAKEARGS="TIME=10"
 QUIET=0
-STOPONFAIL=no
 LIBTYPE="static"
 LIBEXT="a"
 for i in $@
@@ -52,14 +51,14 @@ ARCH=`uname -m | \
    -e 's/9000..../hppa/' \
    -e 's/Power\ Macintosh/ppc/' \
    -e 's/00........../pwr4/'`
-   OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
-      sed \
-      -e 's/cygwin.*/cygwin/' \
-      -e 's/irix../irix/' \
-      -e 's/windows.*/windows/' \
-      -e 's/mingw.*/mingw/'`
+OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
+   sed \
+   -e 's/cygwin.*/cygwin/' \
+   -e 's/irix../irix/' \
+   -e 's/windows.*/windows/' \
+   -e 's/mingw.*/mingw/'`
 
-   EXAMPLELOG=${PWD}/exampletestsummary.log
+EXAMPLELOG=${PWD}/exampletestsummary.log
 
 # prepare log file
 rm -f $EXAMPLELOG
@@ -123,7 +122,7 @@ do
          fi
 
       # find most recently changed result file and display it ("|| :" to ignore error)
-      RESFILE=`ls -tr check/results/*.res 2>/dev/null | tail -1` || :
+      RESFILE=`ls -tr check/results/check*.res 2>/dev/null | tail -1` || :
       if [ -n "$RESFILE" ] && [ -e "$RESFILE" ]
       then
          cat $RESFILE >> $EXAMPLELOG
@@ -132,7 +131,7 @@ do
         GREPFAILS=$(grep fail ${RESFILE})
         if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
         then
-           echo "Testing "${EXAMPLE}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${EXAMPLE} directory for more details."
+           echo -e "Testing "${EXAMPLE}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${EXAMPLE} directory for more details."
            exit 1
         fi
 

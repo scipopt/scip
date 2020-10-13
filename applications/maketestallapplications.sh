@@ -47,12 +47,12 @@ ARCH=`uname -m | \
    -e 's/9000..../hppa/' \
    -e 's/Power\ Macintosh/ppc/' \
    -e 's/00........../pwr4/'`
-   OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
-      sed \
-      -e 's/cygwin.*/cygwin/' \
-      -e 's/irix../irix/' \
-      -e 's/windows.*/windows/' \
-      -e 's/mingw.*/mingw/'`
+OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
+   sed \
+   -e 's/cygwin.*/cygwin/' \
+   -e 's/irix../irix/' \
+   -e 's/windows.*/windows/' \
+   -e 's/mingw.*/mingw/'`
 
 # prepare log file
 echo "" > applicationtestsummary.log
@@ -130,7 +130,7 @@ do
     # find most recently changed result file and display it
     if test -d check/results
     then
-       RESFILE=`find check/results/*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
+       RESFILE=`find check/results/check*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
        if test -e $RESFILE
        then
           cat $RESFILE >> ../applicationtestsummary.log
@@ -139,7 +139,7 @@ do
        GREPFAILS=$(grep fail ${RESFILE})
        if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
        then
-          echo "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
+          echo -e "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
           exit 1
        fi
 
