@@ -2712,7 +2712,8 @@ SCIP_RETCODE checkSystemGF2(
                   consdata = SCIPconsGetData(conss[i]);
                   assert(consdata != NULL);
 
-                  if ( xoractive[i] && consdata->intvar != NULL )
+                  /* only try for active constraints and integral variable; hope for the best if they are not active */
+                  if ( xoractive[i] && consdata->intvar != NULL && SCIPvarIsActive(consdata->intvar) )
                   {
                      SCIP_Real val;
                      int nones = 0;
