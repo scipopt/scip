@@ -690,7 +690,6 @@ SCIP_RETCODE projectShiftComputeSintPointRay(
 
    if( !findintpoint )
    {
-      assert(projshiftdata->projshifthaspoint == TRUE);
       assert(projshiftdata->projshifthasray == FALSE);
 
       /* in this case we want to find an interior ray instead of an interior point
