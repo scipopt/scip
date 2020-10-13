@@ -3,6 +3,7 @@
 # Run all tests of examples, arguments are passed to the make test command.
 # Parameter "-q" turns on the quiet mode, i.e., does not output the logging of the programs.
 #
+echo "Running all tests on examples."
 
 : ${STOPONFAIL:=no}
 
@@ -13,8 +14,6 @@ EXAMPLES=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 
 LPSOLVERS=(spx2)
 OPTS=(dbg)
-
-echo "Running all tests on examples."
 
 # parse command line
 MAKEARGS="TIME=10"

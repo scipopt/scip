@@ -4,14 +4,13 @@
 # Parameter "-q" turns on the quiet mode, i.e., does not output the logging of the programs.
 #
 #
+echo "Running all tests on applications."
 
 : ${STOPONFAIL:=no}
 
 APPLICATIONS=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 LPSOLVERS=(spx2)
 OPTS=(dbg)
-
-echo "Running all tests on applications."
 
 # parse command line
 MAKEARGS=""
