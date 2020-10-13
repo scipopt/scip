@@ -1324,7 +1324,7 @@ SCIP_RETCODE separateSymresackCovers(
    /* allocate memory for temporary and global solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
-   /* start separation procedure by iterating over critical rows */
+   /* Debugging information: The objective vector and permutation */
 #ifdef SCIP_DEBUG
    for (i = 0; i < nvars; ++i)
    {
@@ -1336,6 +1336,7 @@ SCIP_RETCODE separateSymresackCovers(
    }
 #endif
 
+   /* start separation procedure by iterating over critical rows */
    SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert(maxcrit >= 0);
    SCIPdebugMsg(scip, "Critical row: %i\n", maxcrit);
@@ -1348,7 +1349,7 @@ SCIP_RETCODE separateSymresackCovers(
    /* Check whether the separation objective is positive, i.e., a violated cover was found. */
    if ( SCIPisEfficacious(scip, maxsoluobj) )
    {
-      /* Todo: Fix correct cut. */
+      /* Now add the cut. Recycle array maxsolu as coefficient vector for the constraint. */
       SCIP_Real rhs = -1.0;
       SCIP_Real lhs = 0.0;
 
@@ -1356,13 +1357,13 @@ SCIP_RETCODE separateSymresackCovers(
       {
          if ( i < perm[i] )
          {
-            maxsolu[i] = maxsolu[i] - 1;
             lhs += vals[i] * maxsolu[i];
+            rhs += maxsolu[i];
          }
          else
          {
+            maxsolu[i] = maxsolu[i] - 1;
             lhs += vals[i] * maxsolu[i];
-            rhs += maxsolu[i];
          }
       }
 
