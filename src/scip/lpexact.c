@@ -3259,7 +3259,7 @@ SCIP_RETCODE SCIPlpPsdataCreate(
 
 /** frees the exact LPI in project-and-shift */
 static
-SCIP_RETCODE SCIPlpPsdataFreeLPIExact(
+SCIP_RETCODE SCIPlpExactProjectShiftFreeLPIExact(
    SCIP_LPIEXACT**       lpiexact            /**< pointer to LPI object */
    )
 {
@@ -3269,7 +3269,7 @@ SCIP_RETCODE SCIPlpPsdataFreeLPIExact(
    assert(lpiexact != NULL);
    assert(*lpiexact != NULL);
 
-   /** @todo: exip This should all happen automatically when calling SCIPlpiExactFree() */
+   /** @todo exip This should all happen automatically when calling SCIPlpiExactFree() */
    SCIP_CALL( SCIPlpiExactGetNRows(*lpiexact, &nlpirows) );
    SCIP_CALL( SCIPlpiExactDelRows(*lpiexact, 0, nlpirows - 1) );
 
@@ -3282,7 +3282,7 @@ SCIP_RETCODE SCIPlpPsdataFreeLPIExact(
 
 /** frees the data needed for project and shift bounding method */
 static
-SCIP_RETCODE SCIPlpPsdataFree(
+SCIP_RETCODE SCIPlpExactProjectShiftFree(
    SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory buffers */
@@ -3298,7 +3298,7 @@ SCIP_RETCODE SCIPlpPsdataFree(
 
    if( projshiftdata->lpiexact != NULL )
    {
-      SCIP_CALL( SCIPlpPsdataFreeLPIExact(&projshiftdata->lpiexact) );
+      SCIP_CALL( SCIPlpExactProjectShiftFreeLPIExact(&projshiftdata->lpiexact) );
    }
    assert(projshiftdata->lpiexact == NULL);
 
@@ -3477,7 +3477,7 @@ SCIP_RETCODE SCIPlpExactFree(
    assert(lp != NULL);
    assert(*lp != NULL);
 
-   SCIP_CALL( SCIPlpPsdataFree(*lp, set, blkmem) );
+   SCIP_CALL( SCIPlpExactProjectShiftFree(*lp, set, blkmem) );
    SCIP_CALL( SCIPlpExactClear(*lp, blkmem, set, eventqueue, eventfilter) );
 
    //freeDiveChgSideArrays(*lp);
