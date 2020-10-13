@@ -96,6 +96,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_CONS*            cons;               /**< if expr is the root of constraint cons, store cons; otherwise NULL */
    SCIP_Bool             separating;         /**< whether we are using the nlhdlr also for separation */
    SCIP_Bool             origvars;           /**< whether the quad expr in quaddata is in original (non-aux) variables */
+
+   int                   ncutsadded;         /**< number of intersection cuts added for this quadratic */
 };
 
 /** nonlinear handler data */
@@ -2995,8 +2997,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       nlhdlrdata->lastnodenumber = nodenumber;
       nlhdlrdata->lastncuts = nlhdlrdata->ncutsadded;
    }
-   else if( (depth > 0 && nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimit) || (depth == 0 &&
-            nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimitroot))
+   //else if( (depth > 0 && nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimit) || (depth == 0 &&
+   //         nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimitroot))
+   /* allow the addition of a certain number of cuts per quadratic */
+   if( (depth > 0 && nlhdlrexprdata->ncutsadded >= nlhdlrdata->ncutslimit) || (depth == 0 &&
+      nlhdlrexprdata->ncutsadded >= nlhdlrdata->ncutslimitroot) )
    {
       INTERLOG(printf("Too many cuts added already\n");)
       return SCIP_OKAY;
@@ -3068,8 +3073,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
    /* cut (in the nonbasic space) is of the form alpha^T x >= 1 */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
-
    INTERLOG(printf("Generating inter cut\n"); )
+
    SCIP_CALL( generateIntercut(scip, expr, nlhdlrdata, nlhdlrexprdata, cons, sol, rowprep, overestimate, &success) );
 
    INTERLOG(if( !success) printf("Generation failed\n"); )
@@ -3079,6 +3084,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
    {
       assert(sol == NULL);
       nlhdlrdata->ncutsgenerated += 1;
+      nlhdlrexprdata->ncutsadded += 1;
 
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
