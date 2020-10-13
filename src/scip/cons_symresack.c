@@ -1166,20 +1166,33 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
       }
 
       /* Follow the path forward: Take edges {c, invperm[c]} until c >= crit, or a cycle is found. */
-      c = invperm[i];
-      while (c < crit && entrycomponent[c] == c)
+      c = i;
+      while (c < crit)
       {
+         /* c < crit, so edge {c, invperm[c]} exists. Label invperm[c] as part of component of i */
+         c = invperm[c];
+         if (entrycomponent[c] != c)
+         {
+            /* We found a cycle! */
+            break;
+         }
          entrycomponent[c] = i;
          componentobjective[i] += objective[c];
-         c = invperm[c];
       }
 
       /* Follow the path backward: Take edges {c, perm[c]} until perm[c] >= crit, or a cycle is found. */
-      c = perm[i];
-      while (c < crit && entrycomponent[c] == c)
+      c = perm[c];
+      while (c < crit)
       {
+         /* c < crit, so edge {c, invperm[c]} exists. Label c as part of component of i */
+         if (entrycomponent[c] != c)
+         {
+            /* We found a cycle! */
+            break;
+         }
          entrycomponent[c] = i;
          componentobjective[i] += objective[c];
+         /* For next iteration: We do another step back */
          c = perm[c];
       }
    }
@@ -1242,6 +1255,7 @@ SCIP_Bool validateSolution(
          assert(maxsolu[i] == 0);
       }
    }
+   assert(SCIPisEQ(scip, obj, checkobjval));
    return SCIPisEQ(scip, obj, checkobjval);
 }
 
@@ -1324,6 +1338,7 @@ SCIP_RETCODE separateSymresackCovers(
 
    SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert(maxcrit >= 0);
+   SCIPdebugMsg(scip, "Critical row: %i\n", maxcrit);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
    assert(validateSolution(scip, nvars, sepaobjective, maxsolu, maxsoluobj));
 
