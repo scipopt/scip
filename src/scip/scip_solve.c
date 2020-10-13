@@ -1601,6 +1601,14 @@ SCIP_RETCODE initSolve(
       assert(scip->nlp != NULL);
 
       SCIP_CALL( SCIPnlpAddVars(scip->nlp, scip->mem->probmem, scip->set, scip->transprob->nvars, scip->transprob->vars) );
+
+      /* Adjust estimation of external memory: SCIPtransformProb() estimated the memory used for the LP-solver. As a
+       * very crude approximation just double this number. Only do this once in the first run. */
+      if( scip->set->misc_estimexternmem && scip->stat->nruns <= 1 )
+      {
+         scip->stat->externmemestim *= 2;
+         SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
+      }
    }
 
    /* possibly create visualization output file */
