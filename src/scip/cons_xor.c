@@ -3134,8 +3134,8 @@ SCIP_RETCODE propagateCons(
 
       (*nfixedvars)++;
 
-      /* fix integral variable if present */
-      if ( consdata->intvar != NULL && !consdata->deleteintvar )
+      /* fix integral variable if present and not multi-aggregated */
+      if ( consdata->intvar != NULL && !consdata->deleteintvar && SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
       {
          int fixval;
 
