@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -26,7 +27,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/sepa_minor.h"
+#include "scip/sepa_interminor.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_pow.h"
@@ -35,8 +36,8 @@
 #include "scip/cons_expr_rowprep.h"
 #include "nlpi/nlpi_ipopt.h"
 
-#define SEPA_NAME              "minor"
-#define SEPA_DESC              "separator to ensure that 2x2 principal minors of X - xx' are positive semi-definite"
+#define SEPA_NAME              "interminor"
+#define SEPA_DESC              "separator to ensure that 2x2 minors of X (= xx') have determinant 0"
 #define SEPA_PRIORITY                 0
 #define SEPA_FREQ                    10
 #define SEPA_MAXBOUNDDIST           1.0
@@ -110,7 +111,7 @@ SCIP_RETCODE sepadataAddMinor(
    if( sepadata->minorssize < 4 * (sepadata->nminors + 1) )
    {
       int newsize = SCIPcalcMemGrowSize(scip, 4 * (sepadata->nminors + 1));
-      assert(newsize > 4 * (sepadata->nminors + 1));
+      assert(newsize >= 4 * (sepadata->nminors + 1));
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->minors), sepadata->minorssize, newsize) );
       sepadata->minorssize = newsize;
@@ -168,24 +169,21 @@ static
 SCIP_RETCODE getMinorVars(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    int                   idx,                /**< index of the stored minor */
-   SCIP_VAR**            x,                  /**< pointer to store x variable */
-   SCIP_VAR**            y,                  /**< pointer to store x variable */
-   SCIP_VAR**            auxvarxx,           /**< pointer to store auxiliary variable for x*x */
-   SCIP_VAR**            auxvaryy,           /**< pointer to store auxiliary variable for y*y */
-   SCIP_VAR**            auxvarxy            /**< pointer to store auxiliary variable for x*y */
+   SCIP_VAR**            auxvarxik,          /**< auxiliary variable X_ik = x_i * x_k */
+   SCIP_VAR**            auxvarxil,          /**< auxiliary variable X_il = x_i * x_l */
+   SCIP_VAR**            auxvarxjk,          /**< auxiliary variable X_jk = x_j * x_k */
+   SCIP_VAR**            auxvarxjl           /**< auxiliary variable X_jl = x_j * x_l */
    )
 {
-   assert(sepadata != NULL);
-   assert(idx >= 0 && idx < sepadata->nminors);
-   assert(auxvarxx != NULL);
-   assert(auxvaryy != NULL);
-   assert(auxvarxy != NULL);
+   assert(auxvarxik != NULL);
+   assert(auxvarxil != NULL);
+   assert(auxvarxjk != NULL);
+   assert(auxvarxjl != NULL);
 
-   *x = sepadata->minors[5 * idx];
-   *y = sepadata->minors[5 * idx + 1];
-   *auxvarxx = sepadata->minors[5 * idx + 2];
-   *auxvaryy = sepadata->minors[5 * idx + 3];
-   *auxvarxy = sepadata->minors[5 * idx + 4];
+   *auxvarxik = sepadata->minors[4 * idx];
+   *auxvarxil = sepadata->minors[4 * idx + 1];
+   *auxvarxjk = sepadata->minors[4 * idx + 2];
+   *auxvarxjl = sepadata->minors[4 * idx + 3];
 
    return SCIP_OKAY;
 }
@@ -225,7 +223,6 @@ SCIP_RETCODE insertIndex(
          assert(newsize > arr->nvals + 1);
 
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(arr->vals), arr->valssize, newsize) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(arr->auxvars), arr->valssize, newsize) );
          arr->valssize = newsize;
       }
 
@@ -279,9 +276,6 @@ SCIP_RETCODE detectMinors(
    int* perm = NULL;
    int* intersection;
    int nrowvars = 0;
-   int nbilinterms = 0;
-   int nquadterms = 0;
-   int maxminors;
    int c;
    int i;
 
@@ -466,45 +460,6 @@ SCIP_RETCODE detectMinors(
    //   SCIPrandomPermuteIntArray(sepadata->randnumgen, perm, 0, nbilinterms);
    //}
 
-   /* store 2x2 principal minors */
-   for( i = 0; i < nbilinterms && sepadata->nminors < maxminors; ++i )
-   {
-      SCIP_VAR* x;
-      SCIP_VAR* y;
-      SCIP_VAR* auxvarxy;
-
-      if( perm == NULL )
-      {
-         x = xs[i];
-         y = ys[i];
-         auxvarxy = auxvars[i];
-      }
-      else
-      {
-         x = xs[perm[i]];
-         y = ys[perm[i]];
-         auxvarxy = auxvars[perm[i]];
-      }
-
-      assert(x != NULL);
-      assert(y != NULL);
-      assert(auxvarxy != NULL);
-      assert(x != y);
-
-      if( SCIPhashmapExists(quadmap, (void*)x) && SCIPhashmapExists(quadmap, (void*)y) )
-      {
-         SCIP_VAR* auxvarxx;
-         SCIP_VAR* auxvaryy;
-
-         auxvarxx = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)x);
-         assert(auxvarxx != NULL);
-         auxvaryy = (SCIP_VAR*)SCIPhashmapGetImage(quadmap, (void*)y);
-         assert(auxvaryy != NULL);
-
-         /* store minor into the separation data */
-         SCIP_CALL( sepadataAddMinor(scip, sepadata, x, y, auxvarxx, auxvaryy, auxvarxy) );
-      }
-   }
    SCIPdebugMsg(scip, "found %d principal minors in total\n", sepadata->nminors);
 
    /* free memory */
@@ -523,143 +478,172 @@ SCIP_RETCODE detectMinors(
    return SCIP_OKAY;
 }
 
-/** helper method to compute eigenvectors and eigenvalues */
+/** constructs map between lp position of a basic variable and its row in the tableau */
+/* TODO for Antonia: maybe think of making things nicer to avoid code duplication */
 static
-SCIP_RETCODE getEigenValues(
+SCIP_RETCODE constructBasicVars2TableauRowMap(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             x,                  /**< solution value of x */
-   SCIP_Real             y,                  /**< solution value of y */
-   SCIP_Real             xx,                 /**< solution value of x*x */
-   SCIP_Real             yy,                 /**< solution value of y*y */
-   SCIP_Real             xy,                 /**< solution value of x*y */
-   SCIP_Real*            eigenvals,          /**< array to store eigenvalues (at least of size 3) */
-   SCIP_Real*            eigenvecs,          /**< array to store eigenvalues (at least of size 9) */
-   SCIP_Bool*            success             /**< pointer to store whether eigenvalue computation was successful */
+   int*                  map                 /**< buffer to store the map */
    )
 {
-   assert(eigenvals != NULL);
-   assert(eigenvecs != NULL);
-   assert(success != NULL);
+   int* basisind;
+   int nrows;
+   int i;
 
-   *success = TRUE;
+   nrows = SCIPgetNLPRows(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
 
-   /* construct matrix */
-   eigenvecs[0] = 1.0;
-   eigenvecs[1] = x;
-   eigenvecs[2] = y;
-   eigenvecs[3] = x;
-   eigenvecs[4] = xx;
-   eigenvecs[5] = xy;
-   eigenvecs[6] = y;
-   eigenvecs[7] = xy;
-   eigenvecs[8] = yy;
-
-   /* use LAPACK to compute the eigenvalues and eigenvectors */
-   if( LapackDsyev(TRUE, 3, eigenvecs, eigenvals) != SCIP_OKAY )
+   SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
+   for( i = 0; i < nrows; ++i )
    {
-      SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors of augmented quadratic form matrix.\n");
-      *success = FALSE;
+      if( basisind[i] >= 0 )
+         map[basisind[i]] = i;
+   }
+
+   SCIPfreeBufferArray(scip, &basisind);
+
+   return SCIP_OKAY;
+}
+
+/** separates cuts for stored principal minors */
+/* TODO: Antonia, please, could you split this function into smaller functions */
+static
+SCIP_RETCODE separateDeterminant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             xik,                /**< variable X_ik = x_i * x_k */
+   SCIP_VAR*             xil,                /**< variable X_il = x_i * x_l */
+   SCIP_VAR*             xjk,                /**< variable X_jk = x_j * x_k */
+   SCIP_VAR*             xjl,                /**< variable X_jl = x_j * x_l */
+   int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
+   SCIP_Real*            binvrow,            /**< buffer to store row of Binv */
+   SCIP_Real*            binvarow,           /**< buffer to store row of Binv A */
+   SCIP_HASHMAP*         tableau             /**< map between var an its tableau row */
+   )
+{
+   SCIP_VAR* vars[4] = {xik, xil, xjk, xjl};
+   SCIP_Real* tableaurows[4];
+   int i;
+   int v;
+   int nrows;
+   int ncols;
+   SCIP_COL** cols;
+
+   nrows = SCIPgetNLPRows(scip);
+   ncols = SCIPgetNLPCols(scip);
+
+   /* check if we have the tableau row of the variable and if not compute it */
+   for( v = 0; v < 4; ++v )
+   {
+      if( ! SCIPhashmapExists(tableau, (void*)vars[v]) )
+      {
+         SCIP_COL* col;
+
+         /* get column of variable */
+         col = SCIPvarGetCol(vars[v]);
+
+         /* if variable is basic, then get its tableau row and insert it in the hashmap */
+         /* TODO: if this gets too nasty, Antonia will fix it */
+         if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_BASIC )
+         {
+            int lppos;
+            SCIP_Real* densetableaurow;
+
+            lppos = SCIPcolGetLPPos(col);
+            SCIP_CALL( SCIPallocBufferArray(scip, &densetableaurow, ncols + nrows) );
+
+
+            SCIP_CALL( SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], &densetableaurow[ncols], NULL, NULL) );
+            SCIP_CALL( SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], &densetableaurow[ncols], densetableaurow, NULL, NULL) );
+
+            /* insert tableau row in hashmap*/
+            SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)densetableaurow) );
+         }
+         else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
+         {
+            return SCIP_OKAY; /* don't even bother */
+            /* TODO: please Antonia, could you be so nice to make sure that we are releasing all the memory that we allocated if any */
+         }
+         else
+         {
+            /* if variable is non-basic, then ???? (= TODO antonia) */
+            SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)NULL) );
+         }
+
+      }
+
+      /* get tableau row of var */
+      tableaurows[v] = (SCIP_Real *)SCIPhashmapGetImage(tableau, (void*)vars[v]);
+   }
+
+   /* loop over each non-basic var; get the ray; compute cut coefficient */
+
+   /* loop over non-basic (non-slack) variables */
+   cols = SCIPgetLPCols(scip);
+   for( i = 0; i < ncols; ++i )
+   {
+      SCIP_COL* col;
+      SCIP_Real ray[4];
+      SCIP_Real factor;
+      SCIP_Bool israynonzero;
+
+      col = cols[i];
+
+      /* set factor to store entries of ray as = [-BinvL, BinvU] */
+      if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_LOWER )
+         factor = -1.0;
+      else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_UPPER )
+         factor = 1.0;
+      else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
+         return SCIP_OKAY; /* don't even bother */
+      else
+         continue;
+
+      /* build the ray */
+      israynonzero = FALSE;
+      for( v = 0; v < 4; ++v )
+      {
+         int index;
+
+         index = i;
+
+         if( tableaurows[v] != NULL )
+            ray[v] = factor * (SCIPisZero(scip, tableaurows[v][index]) ? 0.0 : tableaurows[v][index]);
+         else
+         {
+            if( col == SCIPvarGetCol(vars[v]) )
+               ray[v] = factor;
+            else
+               ray[v] = 0.0;
+         }
+
+         israynonzero = israynonzero || (ray[v] != 0.0);
+      }
+
+      /* do nothing if ray is 0 */
+      if( ! israynonzero )
+         continue;
+
+      /* compute the cut */
    }
 
    return SCIP_OKAY;
 }
 
-/** helper generate and add a cut */
-static
-SCIP_RETCODE addCut(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SOL*             sol,                /**< solution to separate (might be NULL) */
-   SCIP_VAR*             x,                  /**< x variable */
-   SCIP_VAR*             y,                  /**< y variable */
-   SCIP_VAR*             xx,                 /**< auxiliary variable for x*x */
-   SCIP_VAR*             yy,                 /**< auxiliary variable for y*y */
-   SCIP_VAR*             xy,                 /**< auxiliary variable for x*y */
-   SCIP_Real*            eigenvec,           /**< array containing an eigenvector */
-   SCIP_Real             eigenval,           /**< eigenvalue */
-   SCIP_Real             mincutviol,         /**< minimal required violation */
-   SCIP_RESULT*          result              /**< pointer to update the result */
-   )
-{
-   SCIP_VAR* vars[5] = {x, y, xx, yy, xy};
-   SCIP_Real coefs[5];
-   SCIP_Real constant;
-   SCIP_ROWPREP* rowprep;
-   SCIP_Bool success;
-
-   assert(x != NULL);
-   assert(y != NULL);
-   assert(xx != NULL);
-   assert(yy != NULL);
-   assert(xy != NULL);
-   assert(eigenvec != NULL);
-   assert(mincutviol >= 0.0);
-   assert(result != NULL);
-
-   /* check whether the resulting cut is violated enough */
-   if( !SCIPisFeasLT(scip, eigenval, -mincutviol) )
-      return SCIP_OKAY;
-
-   /* the resulting cut reads as
-    *              (1 x  y )  (v0)
-    *  (v0 v1 v2)  (x xx xy)  (v1)  >= 0
-    *              (y xy yy)  (v2)
-    *  where v is the eigenvector corresponding to a negative eigenvalue
-    *  that is,
-    *  v0^2 + 2 v0 v1 * x + 2 v0 v2 * y + v1^2 * xx + v2^2 * yy + 2 v1 v2 * xy >= 0
-    */
-   constant = SQR(eigenvec[0]);
-   coefs[0] = 2.0 * eigenvec[0] * eigenvec[1];
-   coefs[1] = 2.0 * eigenvec[0] * eigenvec[2];
-   coefs[2] = SQR(eigenvec[1]);
-   coefs[3] = SQR(eigenvec[2]);
-   coefs[4] = 2.0 * eigenvec[1] * eigenvec[2];
-
-   /* create rowprep */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, FALSE) );
-   SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, 5, vars, coefs) );
-   SCIPaddRowprepConstant(rowprep, constant);
-   SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
-   SCIPdebugMsg(scip, "cut violation %g mincutviol = %g\n", SCIPgetRowprepViolation(scip, rowprep, sol, NULL), mincutviol);
-
-   /* cleanup coefficient and side, esp treat epsilon to integral values; don't consider scaling up here */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
-
-   /* check cut violation */
-   if( success && SCIPgetRowprepViolation(scip, rowprep, sol, NULL) > mincutviol )
-   {
-      SCIP_ROW* row;
-      SCIP_Bool infeasible;
-
-      /* set name of rowprep */
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "minor_%s_%s_%s_%lld", SCIPvarGetName(xx), SCIPvarGetName(yy),
-         SCIPvarGetName(xy), SCIPgetNLPs(scip));
-
-      /* create, add, and release row */
-      SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
-      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-      /* update result pointer */
-      *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
-   }
-
-   /* free rowprep */
-   SCIPfreeRowprep(scip, &rowprep);
-
-   return SCIP_OKAY;
-}
 
 /** separates cuts for stored principal minors */
 static
 SCIP_RETCODE separatePoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_SOL*             sol,                /**< primal solution that should be separated, or NULL for LP solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
    SCIP_SEPADATA* sepadata;
+   SCIP_Real* binvarow;
+   SCIP_Real* binvrow;
+   int* basicvarpos2tableaurow; /* map between basic var and its tableau row */
+   int nrows;
+   int ncols;
    int i;
 
    assert(sepa != NULL);
@@ -676,51 +660,53 @@ SCIP_RETCODE separatePoint(
 
    *result = SCIP_DIDNOTFIND;
 
+   nrows = SCIPgetNLPRows(scip);
+   ncols = SCIPgetNLPCols(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvarow, ncols) );
+
+   /* construct basicvar to tableau row map */
+   SCIP_CALL( constructBasicVars2TableauRowMap(scip, basicvarpos2tableaurow) );
+
+   /* loop over the minors and if they are violated build cut */
    for( i = 0; i < sepadata->nminors && (*result != SCIP_CUTOFF); ++i )
    {
-      SCIP_Real eigenvals[3];
-      SCIP_Real eigenvecs[9];
-      SCIP_VAR* x;
-      SCIP_VAR* y;
-      SCIP_VAR* xx;
-      SCIP_VAR* yy;
-      SCIP_VAR* xy;
-      SCIP_Real solx;
-      SCIP_Real soly;
-      SCIP_Real solxx;
-      SCIP_Real solyy;
-      SCIP_Real solxy;
-      SCIP_Bool success;
-      int k;
+      SCIP_VAR* auxvarxik;
+      SCIP_VAR* auxvarxil;
+      SCIP_VAR* auxvarxjk;
+      SCIP_VAR* auxvarxjl;
+      SCIP_Real solxik;
+      SCIP_Real solxil;
+      SCIP_Real solxjk;
+      SCIP_Real solxjl;
+      SCIP_Real det;
 
       /* get variables of the i-th minor */
-      SCIP_CALL( getMinorVars(sepadata, i, &x, &y, &xx, &yy, &xy) );
-      assert(x != NULL);
-      assert(y != NULL);
-      assert(xx != NULL);
-      assert(yy != NULL);
-      assert(xy != NULL);
+      SCIP_CALL( getMinorVars(sepadata, i, &auxvarxik, &auxvarxil, &auxvarxjk, &auxvarxjl) );
 
       /* get current solution values */
-      solx = SCIPgetSolVal(scip, sol, x);
-      soly = SCIPgetSolVal(scip, sol, y);
-      solxx = SCIPgetSolVal(scip, sol, xx);
-      solyy = SCIPgetSolVal(scip, sol, yy);
-      solxy = SCIPgetSolVal(scip, sol, xy);
-      SCIPdebugMsg(scip, "solution values (x,y,xx,yy,xy)=(%g,%g,%g,%g,%g)\n", solx, soly, solxx, solyy, solxy);
+      solxik = SCIPvarGetLPSol(auxvarxik);
+      solxil = SCIPvarGetLPSol(auxvarxil);
+      solxjk = SCIPvarGetLPSol(auxvarxjk);
+      solxjl = SCIPvarGetLPSol(auxvarxjl);
 
-      /* compute eigenvalues and eigenvectors */
-      SCIP_CALL( getEigenValues(scip, solx, soly, solxx, solyy, solxy, eigenvals, eigenvecs, &success) );
-      if( !success )
+      det = solxik * solxjl - solxil * solxjk;
+
+      if( SCIPisFeasPositive(scip, det) )
+      {
+         SCIP_CALL( separateDeterminant() );
+         printf("separate xik xjl - xil xjk <= 0; det is %g\n", det);
+      }
+      else if( SCIPisFeasNegative(scip, det) )
+      {
+         printf("separate xil xjk - xik xjl <= 0; det is %g\n", det);
+      }
+      else
          continue;
 
-      /* try to generate a cut for each negative eigenvalue */
-      for( k = 0; k < 3 && (*result != SCIP_CUTOFF); ++k )
-      {
-         SCIPdebugMsg(scip, "eigenvalue = %g  eigenvector = (%g,%g,%g)\n", eigenvals[k], eigenvecs[3*k], eigenvecs[3*k + 1], eigenvecs[3*k + 2]);
-         SCIP_CALL( addCut(scip, sepa, sol, x, y, xx, yy, xy, &eigenvecs[3*k], eigenvals[k], sepadata->mincutviol, result) );
-         SCIPdebugMsg(scip, "result: %u\n", *result);
-      }
+      /* try to generate intersection cut if violated */
    }
 
    return SCIP_OKAY;
@@ -739,7 +725,7 @@ SCIP_DECL_SEPACOPY(sepaCopyMinor)
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
 
    /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeSepaMinor(scip) );
+   SCIP_CALL( SCIPincludeSepaInterminor(scip) );
 
    return SCIP_OKAY;
 }
@@ -854,52 +840,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMinor)
    SCIP_CALL( detectMinors(scip, sepadata) );
 
    /* call separation method */
-   SCIP_CALL( separatePoint(scip, sepa, NULL, result) );
+   SCIP_CALL( separatePoint(scip, sepa, result) );
 
    return SCIP_OKAY;
 }
 
-
-/** arbitrary primal solution separation method of separator */
-static
-SCIP_DECL_SEPAEXECSOL(sepaExecsolMinor)
-{  /*lint --e{715}*/
-   SCIP_SEPADATA* sepadata;
-   int ncalls;
-   int depth;
-
-   /* need routine to compute eigenvalues/eigenvectors */
-   if( !SCIPisIpoptAvailableIpopt() )
-      return SCIP_OKAY;
-
-   sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
-   depth = SCIPgetDepth(scip);
-   ncalls = SCIPsepaGetNCallsAtNode(sepa);
-
-   /* only call the separator a given number of times at each node */
-   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
-   {
-      SCIPdebugMsg(scip, "reached round limit for node\n");
-      return SCIP_OKAY;
-   }
-
-   /* try to detect minors */
-   SCIP_CALL( detectMinors(scip, SCIPsepaGetData(sepa)) );
-
-   /* call separation method */
-   SCIP_CALL( separatePoint(scip, sepa, sol, result) );
-
-   return SCIP_OKAY;
-}
 
 /*
  * separator specific interface methods
  */
 
 /** creates the minor separator and includes it in SCIP */
-SCIP_RETCODE SCIPincludeSepaMinor(
+SCIP_RETCODE SCIPincludeSepaInterminor(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -913,7 +865,7 @@ SCIP_RETCODE SCIPincludeSepaMinor(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpMinor, sepaExecsolMinor,
+         sepaExeclpMinor, NULL,
          sepadata) );
 
    assert(sepa != NULL);

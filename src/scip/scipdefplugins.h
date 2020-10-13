@@ -205,6 +205,7 @@
 #include "scip/sepa_gauge.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"
+#include "scip/sepa_interminor.h"
 #include "scip/sepa_intobj.h"
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
