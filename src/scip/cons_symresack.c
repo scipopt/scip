@@ -1077,7 +1077,7 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
          }
          if (SCIPisGT(scip, componentobj[critinv], 0.0))
          {
-            helperobj -= componentobj[crit];
+            helperobj -= componentobj[critinv];
          }
          if (SCIPisGT(scip, tmpnewcompobj, 0.0))
          {
@@ -1165,18 +1165,18 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
          continue;
       }
 
-      /* Follow the path forward: Take edges {c, invperm[c]} until c > crit, or a cycle is found. */
+      /* Follow the path forward: Take edges {c, invperm[c]} until c >= crit, or a cycle is found. */
       c = invperm[i];
-      while (c <= crit && entrycomponent[c] == c)
+      while (c < crit && entrycomponent[c] == c)
       {
          entrycomponent[c] = i;
          componentobjective[i] += objective[c];
          c = invperm[c];
       }
 
-      /* Follow the path backward: Take edges {c, perm[c]} until perm[c] > crit, or a cycle is found. */
+      /* Follow the path backward: Take edges {c, perm[c]} until perm[c] >= crit, or a cycle is found. */
       c = perm[i];
-      while (c <= crit && entrycomponent[c] == c)
+      while (c < crit && entrycomponent[c] == c)
       {
          entrycomponent[c] = i;
          componentobjective[i] += objective[c];
@@ -1311,6 +1311,17 @@ SCIP_RETCODE separateSymresackCovers(
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
    /* start separation procedure by iterating over critical rows */
+#ifdef SCIP_DEBUG
+   for (i = 0; i < nvars; ++i)
+   {
+      SCIPdebugMsg(scip, "Objective vector: %i: %f\n", i, sepaobjective[i]);
+   }
+   for (i = 0; i < nvars; ++i)
+   {
+      SCIPdebugMsg(scip, "invperm: %i: %i\n", i, invperm[i]);
+   }
+#endif
+
    SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert(maxcrit >= 0);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
