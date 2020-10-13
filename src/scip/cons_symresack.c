@@ -979,11 +979,11 @@ SCIP_RETCODE addSymresackInequality(
 }
 
 
-/** Maximize a linear function on a symresack.
+/** Maximize a linear function on a "strict" symresack, that is a symresack where we do not allow the solution x = gamma(x).
  *
  */
 static
-SCIP_RETCODE maximizeObjectiveSymresack(
+SCIP_RETCODE maximizeObjectiveSymresackStrict(
    SCIP*                scip,                /**< SCIP pointer */
    int                  nvars,               /**< Number of variables in symresack */
    SCIP_Real*           objective,           /**< The objective vector */
@@ -1100,14 +1100,6 @@ SCIP_RETCODE maximizeObjectiveSymresack(
             componentends[componentends[critinv]] = componentends[crit];
          }
       }
-   }
-
-   /* Also iterate over the situation where everything is constant. */
-   tmpobj = helperobj;
-   if (SCIPisGT(scip, tmpobj, *maxsoluval))
-   {
-      *maxsoluval = tmpobj;
-      *maxcrit = nvars;
    }
 
    /* It is always possible to make the first entry critical. */
@@ -1306,25 +1298,31 @@ SCIP_RETCODE separateSymresackCovers(
    {
       if ( i < perm[i] )
       {
-         sepaobjective[i] = vals[i];
-         constobjective -= vals[i];
+         sepaobjective[i] = - vals[i];
       }
       else
-         sepaobjective[i] = vals[i] - 1.0;
+      {
+         sepaobjective[i] = 1.0 - vals[i];
+         constobjective += vals[i] - 1.0;
+      }
    }
 
    /* allocate memory for temporary and global solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
    /* start separation procedure by iterating over critical rows */
-   SCIP_CALL( maximizeObjectiveSymresack(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
+   SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert(maxcrit >= 0);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
    assert(validateSolution(scip, nvars, sepaobjective, maxsolu, maxsoluobj));
 
+   /* Add constant to maxsoluobj to get the real objective */
+   maxsoluobj += constobjective;
+
    /* Check whether the separation objective is positive, i.e., a violated cover was found. */
    if ( SCIPisEfficacious(scip, maxsoluobj) )
    {
+      /* Todo: Fix correct cut. */
       SCIP_Real rhs = -1.0;
       SCIP_Real lhs = 0.0;
 
