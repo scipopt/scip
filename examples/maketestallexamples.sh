@@ -120,23 +120,22 @@ do
             make OPT=$OPT LPS=$LPS $MAKEARGS test
          fi
 
-      # find most recently changed result file and display it ("|| :" to ignore error)
-      RESFILE=`ls -tr check/results/check*.res 2>/dev/null | tail -1` || :
-      if [ -n "$RESFILE" ] && [ -e "$RESFILE" ]
-      then
-         cat $RESFILE >> $EXAMPLELOG
+	 # find most recently changed result file and display it ("|| :" to ignore error)
+	 RESFILE=`ls -tr check/results/check*.res 2>/dev/null | tail -1` || :
+	 if [ -n "$RESFILE" ] && [ -e "$RESFILE" ]
+	 then
+            cat $RESFILE >> $EXAMPLELOG
 
-        # exit immediately if there was a fail if STOPONFAIL is yes
-        GREPFAILS=$(grep fail ${RESFILE})
-        if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
-        then
-           echo -e "Testing "${EXAMPLE}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${EXAMPLE} directory for more details."
-           exit 1
-        fi
-
-      fi
-      echo | tee -a $EXAMPLELOG
+            # exit immediately if there was a fail if STOPONFAIL is yes
+            GREPFAILS=$(grep fail ${RESFILE})
+            if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
+            then
+               echo -e "Testing "${EXAMPLE}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${EXAMPLE} directory for more details."
+               exit 1
+            fi
+	 fi
+	 echo | tee -a $EXAMPLELOG
+      done
    done
-done
-popd > /dev/null
+   popd > /dev/null
 done

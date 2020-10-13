@@ -126,29 +126,28 @@ do
          echo "Testing "$APPLICATION" successful."
          echo "Testing "$APPLICATION" successful." >> ../applicationtestsummary.log
 
-    # find most recently changed result file and display it
-    if test -d check/results
-    then
-       RESFILE=`find check/results/check*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
-       if test -e $RESFILE
-       then
-          cat $RESFILE >> ../applicationtestsummary.log
+	 # find most recently changed result file and display it
+	 if test -d check/results
+	 then
+	    RESFILE=`find check/results/check*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
+	    if test -e $RESFILE
+	    then
+               cat $RESFILE >> ../applicationtestsummary.log
 
-       # exit immediately if there was a fail if STOPONFAIL is yes
-       GREPFAILS=$(grep fail ${RESFILE})
-       if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
-       then
-          echo -e "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
-          exit 1
-       fi
-
-       fi
-    fi
-    echo
-    echo >> ../applicationtestsummary.log
- done
-done
-cd - > /dev/null
+	       # exit immediately if there was a fail if STOPONFAIL is yes
+	       GREPFAILS=$(grep fail ${RESFILE})
+	       if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
+	       then
+		  echo -e "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
+		  exit 1
+	       fi
+	    fi
+	 fi
+	 echo
+	 echo >> ../applicationtestsummary.log
+      done
+   done
+   cd - > /dev/null
 done
 
 echo
