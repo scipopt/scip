@@ -36,7 +36,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- //#define SCIP_DEBUG
+// #define SCIP_DEBUG
 //#define STP_DEBUG_EXT
 
 #include <string.h>
@@ -1074,6 +1074,13 @@ void bottleneckMarkEqualityEdges(
 
       if( EQ(bottleneck_local, dist_eq) )
       {
+         // todo not quite sure whether this is correct
+         if( bottleneck_start == UNKNOWN  )
+         {
+            assert(extIsAtInitialGenStar(extdata));
+            bottleneck_start = vertex_pathmarked;
+         }
+
          assert(parentNode[currentNode] >= 0);
          bottleneckMarkEqualityPath(scip, graph, bottleneck_start, parentNode[currentNode], extdata);
 
