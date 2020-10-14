@@ -114,7 +114,7 @@ void extreduce_extCompClean(
       }
    }
 
-   if( extInitialCompIsGenStar(extdata) )
+   if( unhash && extInitialCompIsGenStar(extdata) )
    {
       const int centeredge = extcomp->genstar_centeredge;
       assert(graph_edge_isInRange(graph, centeredge));
