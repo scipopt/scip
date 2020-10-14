@@ -503,7 +503,7 @@ void generalStarSetUp(
             {
                const SCIP_Real sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edge, node_j, node_k, distdata);
 
-               printf("%d->%d %f<=%f? \n", node_j, node_k, sd, pathcost);
+               printf("%d->%d sd=%f pathcost=%f \n", node_j, node_k, sd, pathcost);
 
                if( sd < -0.5 || GT(sd, pathcost) )
                {

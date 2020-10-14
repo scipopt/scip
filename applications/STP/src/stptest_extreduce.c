@@ -1485,6 +1485,71 @@ SCIP_RETCODE testGeneralStarDeletedEdge2(
 }
 
 
+
+/** tests that edge can be deleted by general star test */
+static
+SCIP_RETCODE testGeneralStarDeletedEdge3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST redcostdata;
+   GRAPH* graph;
+   int nelims = 0;
+   const int nnodes = 10;
+   const int nedges = 26;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+
+   assert(scip);
+
+   SCIP_CALL( reduce_redcostdataInit(scip, nnodes, nedges, cutoff, root, &redcostdata) );
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 1 */
+   graph_knot_add(graph, STP_TERM);            /* node 2 */
+   graph_knot_add(graph, STP_TERM);            /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 4 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);            /* node 6 */
+   graph_knot_add(graph, STP_TERM);            /* node 7 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 8 */
+   graph_knot_add(graph, STP_TERM);       /* node 9 */
+
+   graph->source = 2;
+
+   graph_edge_addBi(scip, graph, 0, 1, 2.0);
+   graph_edge_addBi(scip, graph, 0, 2, 2.0);
+   graph_edge_addBi(scip, graph, 0, 3, 2.0);
+   graph_edge_addBi(scip, graph, 1, 4, 2.0);
+   graph_edge_addBi(scip, graph, 1, 5, 3.0);
+
+   graph_edge_addBi(scip, graph, 4, 7, 2.0);
+   graph_edge_addBi(scip, graph, 4, 8, 2.0);
+   graph_edge_addBi(scip, graph, 8, 9, 3.0);
+   graph_edge_addBi(scip, graph, 5, 6, 10.0);
+
+   /* short cuts */
+   graph_edge_addBi(scip, graph, 2, 3, 2.0);
+   graph_edge_addBi(scip, graph, 2, 5, 7.0);
+   graph_edge_addBi(scip, graph, 3, 7, 2.0);
+   graph_edge_addBi(scip, graph, 5, 8, 3.0);
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   extInitRedCostArrays(graph, &redcostdata);
+
+   /* actual test */
+   SCIP_CALL( extreduce_deleteGeneralStars(scip, &redcostdata, NULL, graph, NULL, &nelims) );
+
+   STPTEST_ASSERT_MSG(graph_edge_isDeleted(graph, 0), "edge 0 was not deleted \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that edge can be deleted by using SD MST argument */
 static
 SCIP_RETCODE testPcEdgeDeletedByMst1(
@@ -1885,6 +1950,9 @@ SCIP_RETCODE stptest_extreduce(
 )
 {
    assert(scip);
+
+   SCIP_CALL( testGeneralStarDeletedEdge3(scip) );
+
 
    SCIP_CALL( testGeneralStarDeletedEdge1(scip) );
    SCIP_CALL( testGeneralStarDeletedEdge2(scip) );
