@@ -731,8 +731,6 @@ SCIP_RETCODE SCIPparseConsExprExpr(
  * is passed, then subexpressions are always reevaluated.
  * The tag is stored together with the value and can be received via
  * SCIPgetConsExprExprEvalTag().
- *
- * @note diff assumes that the direction has already be informed to the variables of expr
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalConsExprExpr(
@@ -740,8 +738,7 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated */
-   unsigned int            soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
-   SCIP_Bool               diff              /**< should forward diff be computed */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */

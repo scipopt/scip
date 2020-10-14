@@ -345,6 +345,76 @@ typedef struct
 /*
  * Local methods
  */
+static
+SCIP_RETCODE evalAndDiffConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_SOL*               sol,              /**< solution to be evaluated */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
+
+   /* assume we'll get a domain error, so we don't have to get this expr back if we abort the iteration
+    * if there is no domain error, then we will overwrite the evalvalue in the last leaveexpr stage
+    */
+   expr->evalvalue = SCIP_INVALID;
+   expr->evaltag = soltag;
+   expr->dot = SCIP_INVALID;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
+         {
+            SCIP_Real derivative;
+
+            /* evaluate expression only if necessary */
+            if( soltag == 0 || expr->evaltag != soltag )
+            {
+               SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
+               expr->evaltag = soltag;
+            }
+
+            if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+               goto TERMINATE;
+
+            /* compute forward diff */
+            derivative = SCIP_INVALID;
+
+            SCIP_CALL( SCIPfwdiffConsExprExprHdlr(scip, expr, &derivative) );
+            expr->dot = derivative;
+
+            if( expr->dot == SCIP_INVALID ) /*lint !e777*/
+               goto TERMINATE;
+
+            break;
+         }
+
+         default :
+            /* we should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+TERMINATE:
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
 
 /** creates an expression */
 static
@@ -3020,7 +3090,7 @@ SCIP_RETCODE computeViolation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIP_CALL( SCIPevalConsExprExpr(scip, SCIPconsGetHdlr(cons), consdata->expr, sol, soltag, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, SCIPconsGetHdlr(cons), consdata->expr, sol, soltag) );
    activity = SCIPgetConsExprExprValue(consdata->expr);
 
    /* consider constraint as violated if it is undefined in the current point */
@@ -6307,7 +6377,7 @@ SCIP_RETCODE initSepa(
             /* evaluate expression in debug solution, so we can set the solution value of created auxiliary variables
              * in createAuxVar()
              */
-            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, consdata->expr, debugsol, 0, FALSE) );
+            SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, consdata->expr, debugsol, 0) );
          }
       }
 #endif
@@ -7636,7 +7706,7 @@ SCIP_RETCODE enforceExpr(
    *result = SCIP_DIDNOTFIND;
 
    /* make sure that this expression has been evaluated */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) );
 
    /* decide whether under- or overestimate is required and get amount of violation */
    origviol = getExprAbsOrigViolation(scip, expr, sol, &underestimate, &overestimate);
@@ -13949,15 +14019,13 @@ SCIP_RETCODE SCIPparseConsExprExpr(
  * The tag is stored together with the value and can be received via
  * SCIPgetConsExprExprEvalTag().
  *
- * @note diff assumes that the direction has already be informed to the variables of expr
  */
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
    SCIP_SOL*               sol,              /**< solution to be evaluated */
-   unsigned int            soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
-   SCIP_Bool               diff              /**< should forward diff be computed */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
    SCIP_CONSEXPR_ITERATOR* it;
@@ -13975,8 +14043,6 @@ SCIP_RETCODE SCIPevalConsExprExpr(
     */
    expr->evalvalue = SCIP_INVALID;
    expr->evaltag = soltag;
-   if( diff )
-      expr->dot = SCIP_INVALID;
 
    SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
    SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
@@ -14017,20 +14083,6 @@ SCIP_RETCODE SCIPevalConsExprExpr(
 
             if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
                goto TERMINATE;
-
-            /* compute forward diff */
-            if( diff )
-            {
-               SCIP_Real derivative;
-
-               derivative = SCIP_INVALID;
-
-               SCIP_CALL( SCIPfwdiffConsExprExprHdlr(scip, expr, &derivative) );
-               expr->dot = derivative;
-
-               if( expr->dot == SCIP_INVALID ) /*lint !e777*/
-                  goto TERMINATE;
-            }
 
             break;
          }
@@ -14120,7 +14172,7 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    assert(rootexpr != NULL);
 
    /* ensure expression is evaluated */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag) );
 
    /* check if expression could not be evaluated */
    if( SCIPgetConsExprExprValue(rootexpr) == SCIP_INVALID ) /*lint !e777*/
@@ -14340,7 +14392,7 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
       consdata->varexprs[v]->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v]));
 
    /* evaluate expression and directional derivative */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag, TRUE) );
+   SCIP_CALL( evalAndDiffConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag) );
 
    difftag = ++(conshdlrdata->lastdifftag);
 
@@ -15696,7 +15748,7 @@ SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
    assert(viol != NULL);
 
    /* make sure expression has been evaluated */
-   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag, FALSE) );
+   SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, soltag) );
 
    /* get violation from internal method */
    *viol = getExprAbsOrigViolation(scip, expr, sol, violunder, violover);

@@ -697,7 +697,7 @@ SCIP_RETCODE computeOffValues(
          }
       }
       SCIP_CALL( SCIPsetSolVals(scip, sol, norigvars, origvars, origvals0) );
-      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0, FALSE) );
+      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr, sol, 0) );
 
       if( SCIPgetConsExprExprValue(expr) == SCIP_INVALID ) /*lint !e777*/
       {
