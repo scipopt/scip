@@ -3,12 +3,16 @@
 # Run all tests of applications, arguments are passed to the make test command.
 # Parameter "-q" turns on the quiet mode, i.e., does not output the logging of the programs.
 #
-#
 echo "Running all tests on applications."
 
+# set this if you want to stop execution of this script when detecting a fail in the applications tests
 : ${STOPONFAIL:=no}
 
+# stops the script on error
+set -e
+
 APPLICATIONS=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
+
 LPSOLVERS=(spx2)
 OPTS=(dbg)
 
@@ -30,7 +34,7 @@ do
          LIBTYPE="shared"
          LIBEXT="so"
       fi
-      MAKEARGS="$MAKEARGS $i"
+      MAKEARGS="${MAKEARGS} $i"
    fi
 done
 
@@ -53,106 +57,94 @@ OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
    -e 's/windows.*/windows/' \
    -e 's/mingw.*/mingw/'`
 
+APPLICATIONLOG=${PWD}/applicationtestsummary.log
+
 # prepare log file
-echo "" > applicationtestsummary.log
+echo "" > ${APPLICATIONLOG}
+
+# If script is exiting on error, then write this to log
+trap "echo Last command failed >> ${APPLICATIONLOG}" ERR
+
+# If script is exiting on exit, then output a summary to the log
+trap "
+echo
+echo
+echo ===== Summary =====
+
+cat ${APPLICATIONLOG}
+" EXIT
 
 # pretest
 for OPT in ${OPTS[@]}
 do
    for LPS in ${LPSOLVERS[@]}
    do
-      LPILIB=../lib/$LIBTYPE/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
-      if test ! -e $LPILIB
+      LPILIB=../lib/${LIBTYPE}/liblpi${LPS}.${OSTYPE}.${ARCH}.gnu.${OPT}.${LIBEXT}
+      if test ! -e ${LPILIB}
       then
-         echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
-         echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"."
+         echo "Error: "${LPILIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"." >> ${APPLICATIONLOG}
+         echo "Error: "${LPILIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"."
          exit 1
       fi
-      SCIPLIB=../lib/$LIBTYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
-      if test ! -e $SCIPLIB
+      SCIPLIB=../lib/${LIBTYPE}/libscip.${OSTYPE}.${ARCH}.gnu.${OPT}.${LIBEXT}
+      if test ! -e ${SCIPLIB}
       then
-         echo "Error: "$SCIPLIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
-         echo "Error: "$SCIPLIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"."
+         echo "Error: "${SCIPLIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"." >> ${APPLICATIONLOG}
+         echo "Error: "${SCIPLIB}" does not exist, please compile SCIP with OPT="${OPT}" and LPS="${LPS}"."
          exit 1
       fi
    done
 done
 
 # run tests
-for APPLICATION in $APPLICATIONS
+for APPLICATION in ${APPLICATIONS}
 do
    # See issues #1100 and #1169
-   if test $APPLICATION = "PolySCIP"
+   if test ${APPLICATION} = "PolySCIP"
    then
       continue
    fi
    echo
+   echo ===== ${APPLICATION} ===== >> ${APPLICATIONLOG}
+   echo ===== ${APPLICATION} =====
    echo
-   echo ===== $APPLICATION =====
-   echo ===== $APPLICATION ===== >> applicationtestsummary.log
-   echo
-   cd $APPLICATION
+   pushd ${APPLICATION}
    for OPT in ${OPTS[@]}
    do
       for LPS in ${LPSOLVERS[@]}
       do
-         echo make OPT=$OPT LPS=$LPS $MAKEARGS
-         if (! make OPT=$OPT LPS=$LPS $MAKEARGS )
-         then
-            echo "Making "$APPLICATION" failed." >> ../applicationtestsummary.log
-            exit 1
-         else
-            echo "Making "$APPLICATION" successful." >> ../applicationtestsummary.log
-         fi
+         echo make OPT=${OPT} LPS=${LPS} ${MAKEARGS} >> ${APPLICATIONLOG}
+         make OPT=${OPT} LPS=${LPS} ${MAKEARGS}
          echo
-         if test $QUIET = 1
+         echo make OPT=${OPT} LPS=${LPS} ${MAKEARGS} test >> ${APPLICATIONLOG}
+
+         if test ${QUIET} = 1
          then
-            echo make OPT=$OPT LPS=$LPS $MAKEARGS test
-            if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test > /dev/null )
-            then
-               echo "Testing "$APPLICATION" failed."
-               echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
-               exit 1
-            fi
+            make OPT=${OPT} LPS=${LPS} ${MAKEARGS} test > /dev/null
          else
-            echo make OPT=$OPT LPS=$LPS $MAKEARGS test
-            if ( ! make OPT=$OPT LPS=$LPS $MAKEARGS test )
+            make OPT=${OPT} LPS=${LPS} ${MAKEARGS} test
+         fi
+
+         # find most recently changed result file and display it
+         if test -d check/results
+         then
+            RESFILE=`find check/results/check*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
+            if test -e ${RESFILE}
             then
-               echo "Testing "$APPLICATION" failed."
-               echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
-               exit 1
+               cat ${RESFILE} >> ${APPLICATIONLOG}
+
+               # exit immediately if there was a fail if STOPONFAIL is yes (||: to avoid error if grep output is empty)
+               GREPFAILS=`grep "fail" ${RESFILE}` || :
+               if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
+               then
+                  echo -e "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
+                  exit 1
+               fi
             fi
          fi
-         echo "Testing "$APPLICATION" successful."
-         echo "Testing "$APPLICATION" successful." >> ../applicationtestsummary.log
-
-	 # find most recently changed result file and display it
-	 if test -d check/results
-	 then
-	    RESFILE=`find check/results/check*.res -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" "`
-	    if test -e $RESFILE
-	    then
-               cat $RESFILE >> ../applicationtestsummary.log
-
-	       # exit immediately if there was a fail if STOPONFAIL is yes (||: to avoid error if grep output is empty)
-	       GREPFAILS=`grep "fail" ${RESFILE}` || :
-	       if test "${GREPFAILS}" != "" -a "${STOPONFAIL}" = "yes"
-	       then
-		  echo -e "Testing "${APPLICATION}" failed:\n${GREPFAILS}\nsee ${RESFILE} in ${APPLICATION} directory for more details."
-		  exit 1
-	       fi
-	    fi
-	 fi
-	 echo
-	 echo >> ../applicationtestsummary.log
+         echo >> ${APPLICATIONLOG}
+         echo
       done
    done
-   cd - > /dev/null
+   popd > /dev/null
 done
-
-echo
-echo
-echo ===== Summary =====
-
-cat applicationtestsummary.log
-rm -f applicationtestsummary.log
