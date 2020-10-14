@@ -1181,7 +1181,7 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
       }
 
       /* Follow the path backward: Take edges {c, perm[c]} until perm[c] >= crit, or a cycle is found. */
-      c = perm[c];
+      c = perm[i];
       while (c < crit)
       {
          /* c < crit, so edge {c, invperm[c]} exists. Label c as part of component of i */
