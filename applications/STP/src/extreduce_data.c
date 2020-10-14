@@ -473,15 +473,14 @@ SCIP_Bool extreduce_reddataIsClean(
    const REDDATA*        reddata             /**< reduction data */
 )
 {
-   const int nnodes = graph_get_nNodes(graph);
+   const int nancestors = graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors);
 
    assert(reddata);
 
-   for( int i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nancestors; i++ )
    {
       if( reddata->pseudoancestor_mark[i] != 0 )
       {
-         graph_knot_printInfo(graph, i);
          printf("pseudoancestor_mark %d \n", reddata->pseudoancestor_mark[i]);
          return FALSE;
       }
