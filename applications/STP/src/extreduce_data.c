@@ -89,6 +89,7 @@ void extreduce_extCompClean(
    const int* const compedges = extcomp->compedges;
    const int ncompedges = extcomp->ncompedges;
    int* const tree_deg = extdata->tree_deg;
+   int* const pseudoancestor_mark = extdata->reddata->pseudoancestor_mark;
    SCIP_Bool* const sdeq_edgesIsForbidden = extdata->sdeq_edgesIsForbidden;
    const STP_Vectype(int) sdeq_resetStack = extdata->sdeq_resetStack;
    const int sdeq_size = StpVecGetSize(sdeq_resetStack);
@@ -108,7 +109,17 @@ void extreduce_extCompClean(
       tree_deg[tail] = 0;
 
       if( unhash )
-         graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, extdata->reddata->pseudoancestor_mark);
+      {
+         graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, edge, pseudoancestor_mark);
+      }
+   }
+
+   if( extInitialCompIsGenStar(extdata) )
+   {
+      const int centeredge = extcomp->genstar_centeredge;
+      assert(graph_edge_isInRange(graph, centeredge));
+
+      graph_pseudoAncestors_unhashEdge(graph->pseudoancestors, centeredge, pseudoancestor_mark);
    }
 
    for( int i = 0; i < sdeq_size; i++ )
@@ -481,7 +492,7 @@ SCIP_Bool extreduce_reddataIsClean(
    {
       if( reddata->pseudoancestor_mark[i] != 0 )
       {
-         printf("pseudoancestor_mark %d \n", reddata->pseudoancestor_mark[i]);
+         printf("%d pseudoancestor_mark %d \n", i, reddata->pseudoancestor_mark[i]);
          return FALSE;
       }
    }

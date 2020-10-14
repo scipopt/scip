@@ -1661,6 +1661,14 @@ void extUnhashInitialComponent(
    {
       graph_pseudoAncestors_unhashEdge(pseudoancestors, compedges[i], pseudoancestor_mark);
    }
+
+   if( extInitialCompIsGenStar(extdata) )
+   {
+      const int centeredge = extcomp->genstar_centeredge;
+      assert(graph_edge_isInRange(graph, centeredge));
+
+      graph_pseudoAncestors_unhashEdge(pseudoancestors, centeredge, pseudoancestor_mark);
+   }
 }
 
 
