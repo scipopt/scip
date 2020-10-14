@@ -2531,7 +2531,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( set->exact_enabled && lpobjval > SCIPnodeGetLowerbound(node) )
+   if( set->exact_enabled && (lpobjval > SCIPnodeGetLowerbound(node) || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node))) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
