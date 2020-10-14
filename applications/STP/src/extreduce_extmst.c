@@ -1730,8 +1730,9 @@ void mstCompLeafGetSDsToAncestors(
 
    memcpy(sds, adjedgecosts, nleaves_ancestors * sizeof(sds[0]));
 
-   /* if there are no siblings, then there is a chance to find a non-trivial bottleneck rule-out */
-   if( !hasSiblings )
+   /* if there are no siblings, then there is a chance to find a non-trivial bottleneck rule-out
+    * ...if the initial component is a general star, rule-out is also possible otherwise */
+   if( !hasSiblings || extIsAtInitialGenStar(extdata) )
    {
       const int* const leaves = extdata->tree_leaves;
 
