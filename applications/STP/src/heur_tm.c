@@ -1049,6 +1049,9 @@ SCIP_RETCODE computeSteinerTreeKeyNodesCsr(
    TMBASE*               tmbase              /**< (in/out) */
 )
 {
+   SPATHS spaths = { .csr = tmbase->csr, .csr_orgcosts = tmbase->csr_orgcosts, .nodes_dist = tmbase->nodes_dist,
+                     .nodes_pred = tmbase->nodes_pred, .dheap = tmbase->dheap, .nodes_isConnected = tmbase->connected,
+                     .edgecost_zeroOffset = getTmEdgeCostZeroOffset(scip, g) };
    int* solnodes_degree;
 #ifndef NDEBUG
    const int nterms = g->terms;
@@ -1060,10 +1063,15 @@ SCIP_RETCODE computeSteinerTreeKeyNodesCsr(
    SCIP_CALL( SCIPallocBufferArray(scip, &solnodes_degree, g->knots) );
    keyNodesSetTerms(scip, tmbase->best_result, g, solnodes_degree);
 
-   SCIP_CALL( computeSteinerTreeCsr(scip, g, startnode, tmbase) );
+   if( tmbase->sdprofit1st )
+      shortestpath_computeSteinerTreeBiased(g, tmbase->sdprofit1st, startnode, &spaths);
+   else
+      shortestpath_computeSteinerTree(g, startnode, &spaths);
 
    keyNodesResetTerms(solnodes_degree, g);
    SCIPfreeBuffer(scip, &solnodes_degree);
+
+   SCIP_CALL( solstp_pruneFromTmHeur_csr(scip, g, &spaths, tmbase->result));
 
    assert(nterms == g->terms);
 
@@ -2369,7 +2377,7 @@ SCIP_RETCODE runTm(
    {
       SCIP_CALL( computeSteinerTreeKeyNodesCsr(scip, graph, tmbase->best_start, tmbase) );
 
-  //    const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, tmbase->result, tmbase->connected);
+    //  const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, tmbase->result, tmbase->connected);
 //printf("%f < %f? \n", obj, tmbase->best_obj);
 
       updateBestSol(scip, graph, tmbase->best_start, solfound, tmbase, success);
