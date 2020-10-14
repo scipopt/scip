@@ -499,6 +499,9 @@ void generalStarSetUp(
 
             assert(*isPromising);
 
+            if( node_j == node_k )
+               continue;
+
             if( GE(maxsdcost, pathcost) || halfedges_isInSdMst[edge / 2] )
             {
                const SCIP_Real sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edge, node_j, node_k, distdata);
