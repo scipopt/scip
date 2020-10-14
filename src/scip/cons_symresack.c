@@ -1357,12 +1357,16 @@ SCIP_RETCODE separateSymresackCovers(
       {
          if ( i < perm[i] )
          {
+            maxsolu[i] = -maxsolu[i];
             lhs += vals[i] * maxsolu[i];
-            rhs += maxsolu[i];
          }
          else
          {
-            maxsolu[i] = maxsolu[i] - 1;
+            if (maxsolu[i] == 0)
+            {
+               rhs += 1.0;
+            }
+            maxsolu[i] = 1 - maxsolu[i];
             lhs += vals[i] * maxsolu[i];
          }
       }
