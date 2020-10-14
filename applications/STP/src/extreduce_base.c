@@ -446,6 +446,7 @@ void generalStarSetUp(
    {
       const SCIP_Real edgecost = graph->cost[edge];
       const SCIP_Real maxsdcost = reduce_sdgraphGetMaxCost(distdata->sdistdata->sdgraph);
+      const STP_Bool* halfedges_isInSdMst = reduce_sdgraphGetMstHalfMark(distdata->sdistdata->sdgraph);
       int ntails;
       int nheads;
       const STP_Vectype(int) edges_tail;
@@ -498,9 +499,8 @@ void generalStarSetUp(
 
             assert(*isPromising);
 
-            if( GE(maxsdcost, pathcost) )
+            if( GE(maxsdcost, pathcost) || halfedges_isInSdMst[edge / 2] )
             {
-               int todo; // check whether is contained, and with equality
                const SCIP_Real sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edge, node_j, node_k, distdata);
 
                printf("%d->%d %f<=%f? \n", node_j, node_k, sd, pathcost);

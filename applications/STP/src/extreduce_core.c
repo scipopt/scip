@@ -1834,7 +1834,7 @@ SCIP_RETCODE extreduce_checkComponent(
    int* pcSdCands = NULL;
    SCIP_Real* tree_parentEdgeCost;
    SCIP_Real* tree_redcostSwap;
-   int* pseudoancestor_mark;
+   int* pseudoancestor_mark = NULL;
    SCIP_Bool* sdeq_edgesIsForbidden;
    const int nnodes = graph->knots;
    const int maxstacksize = extreduce_getMaxStackSize();
@@ -1852,10 +1852,16 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentEdgeCost, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_redcostSwap, nnodes) );
-   if( graph_pc_isPc(graph) )
-      SCIP_CALL( SCIPallocBufferArray(scip, &pcSdCands, nnodes) );
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors)) );
+   if( graph_pc_isPc(graph) )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &pcSdCands, nnodes) );
+   }
+
+   if( graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors) > 0 )
+   {
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &pseudoancestor_mark, graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors)) );
+   }
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &sdeq_edgesIsForbidden, graph->edges / 2) );
 
    {
@@ -1914,7 +1920,8 @@ SCIP_RETCODE extreduce_checkComponent(
    assert(extreduce_extPermaIsClean(graph, extpermanent));
 
    SCIPfreeCleanBufferArray(scip, &sdeq_edgesIsForbidden);
-   SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
+   if( pseudoancestor_mark )
+      SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
    SCIPfreeBufferArrayNull(scip, &pcSdCands);
    SCIPfreeBufferArray(scip, &tree_redcostSwap);
    SCIPfreeBufferArray(scip, &tree_parentEdgeCost);

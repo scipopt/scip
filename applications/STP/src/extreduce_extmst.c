@@ -36,8 +36,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-// #define SCIP_DEBUG
+ //#define SCIP_DEBUG
 //#define STP_DEBUG_EXT
 
 #include <string.h>
@@ -1995,7 +1994,7 @@ void mstLevelLeafSetVerticalSDs(
 
       if( bottleneckWithExtedgeIsDominated(scip, graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
       {
-         SCIPdebugMessage("---bottleneck rule-out---\n");
+         SCIPdebugMessage("---bottleneck rule-out (%d->%d)---\n", neighbor, leaf);
          assert(*ruledOut == FALSE);
 
          *ruledOut = TRUE;
