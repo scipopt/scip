@@ -440,6 +440,8 @@ void extreduce_redcostAddEdge(
    const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
    const int head = graph->head[edge];
 
+   assert(!edgedeleted && "deprecated!");
+
    if( *noReversedTree || (edgedeleted && edgedeleted[flipedge(edge)]) )
    {
       tree_redcostSwap[head] = FARAWAY;

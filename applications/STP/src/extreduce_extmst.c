@@ -776,7 +776,7 @@ void bottleneckMarkRootPath(
 
       assert(currentNode != -1);
       assert(!extInitialCompIsEdge(extdata) || tree_deg[childNode] == 1);
-      assert(childNode == extdata->tree_starcenter || tree_deg[childNode] == 1);
+      assert(childNode == extdata->tree_starcenter || extInitialCompIsGenStar(extdata) || tree_deg[childNode] == 1);
 
       while( currentNode != -1 )
       {
@@ -1621,18 +1621,24 @@ void mstCompLeafGetSDsToSiblings(
    const int topedges_end = extStackGetTopOutEdgesEnd(extdata, stackpos);
    const int topleaf = ghead[edge2top];
    SCIP_Bool hitTopLeaf = FALSE;
+   const SCIP_Bool isAtInitialGenStar = extIsAtInitialGenStar(extdata);
 
 #ifndef NDEBUG
    {
-      const SCIP_Bool atInitialStar = extIsAtInitialStar(extdata);
+      const SCIP_Bool atInitialAnyStar = extIsAtInitialStar(extdata) || extIsAtInitialGenStar(extdata);
 
       assert(leafRuledOut && sds);
       assert((*leafRuledOut) == FALSE);
-      assert(atInitialStar || extreduce_mldistsLevelNTopTargets(sds_horizontal) >= extStackGetTopSize(extdata) - 1);
+      assert(atInitialAnyStar || extreduce_mldistsLevelNTopTargets(sds_horizontal) >= extStackGetTopSize(extdata) - 1);
       assert(extreduce_sdshorizontalInSync(scip, graph, topleaf, extdata));
       assert(topedges_start <= topedges_end);
    }
 #endif
+
+   if( isAtInitialGenStar )
+   {
+      bottleneckMarkRootPath(graph, topleaf, extdata);
+   }
 
    for( int i = topedges_start, j = 0; i != topedges_end; i++, j++ )
    {
@@ -1641,7 +1647,6 @@ void mstCompLeafGetSDsToSiblings(
 
       assert(extreduce_nodeIsInStackTop(graph, extdata, sibling));
       assert(extdata->tree_deg[sibling] == 1);
-      assert(graph->tail[edge2top] == graph->tail[edge2sibling]);
       assert(EQ(sds[j], -1.0));
 
       if( sibling == topleaf )
@@ -1656,6 +1661,19 @@ void mstCompLeafGetSDsToSiblings(
 
       sds[j] = extreduce_mldistsTopTargetDist(sds_horizontal, topleaf, sibling);
 
+      if( graph->tail[edge2top] != graph->tail[edge2sibling] )
+      {
+         assert(isAtInitialGenStar);
+         if( bottleneckIsDominated(scip, graph, topleaf, sibling, sds[j], edge2sibling, extdata) )
+         {
+            SCIPdebugMessage("---bottleneck rule-out component (GENSTAR siblings test)---\n");
+            *leafRuledOut = TRUE;
+            break;
+         }
+
+         continue;
+      }
+
       /* only make bottleneck test for 'right' siblings to avoid double checks */
       if( !hitTopLeaf )
       {
@@ -1667,6 +1685,11 @@ void mstCompLeafGetSDsToSiblings(
          *leafRuledOut = TRUE;
          break;
       }
+   }
+
+   if( isAtInitialGenStar )
+   {
+      bottleneckUnmarkRootPath(graph, topleaf, extdata);
    }
 
    assert(hitTopLeaf || *leafRuledOut);

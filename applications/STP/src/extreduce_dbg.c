@@ -1264,12 +1264,10 @@ SCIP_Bool extreduce_sdshorizontalInSync(
 {
    const MLDISTS* const sds_horizontal = extdata->reddata->sds_horizontal;
    const int* const extstack_data = extdata->extstack_data;
-   const int* const extstack_start = extdata->extstack_start;
    const int* const ghead = graph->head;
-   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && extIsAtInitialComp(extdata);
    const int stackpos = extStackGetPosition(extdata);
-   const int stackstart = atInitialStar ? (extstack_start[stackpos] + 1) : extstack_start[stackpos];
-   const int stackend = extstack_start[stackpos + 1];
+   const int stackstart = extStackGetTopOutEdgesStart(extdata, stackpos);
+   const int stackend = extStackGetTopOutEdgesEnd(extdata, stackpos);
    SCIP_Bool isInSync = TRUE;
 #ifndef NDEBUG
    SCIP_Bool hitTopLeaf = FALSE;
@@ -1679,10 +1677,15 @@ int extreduce_extStackCompNOutedges(
    const int* const stack_start = extdata->extstack_start;
    int size = stack_start[stackpos + 1] - stack_start[stackpos];
    const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && (stackpos == 0);
+   const SCIP_Bool atInitialGenStar = extInitialCompIsGenStar(extdata) && (stackpos == 0);
 
    if( atInitialStar )
    {
-      size--;
+      size -= 1;
+   }
+   else if( atInitialGenStar )
+   {
+      size -= 2;
    }
 
    assert(extdata->extstack_state[stackpos] != EXT_STATE_NONE);

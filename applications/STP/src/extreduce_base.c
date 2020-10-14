@@ -182,7 +182,15 @@ void generalStarCheckInit(
       }
    }
 
-   assert(EQ(StpVecGetSize(genstar->edges_all), ntails + nheads));
+   assert(StpVecGetSize(genstar->edges_all) == ntails + nheads);
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("\n all general star edges: \n");
+   for( int i = 0; i < StpVecGetSize(genstar->edges_all); i++ )
+   {
+      graph_edge_printInfo(g, genstar->edges_all[i]);
+   }
+#endif
 
    reduce_starResetWithEdges(g, genstar->edges_all, genstar->star);
 }
@@ -321,24 +329,17 @@ void generalStarCheckGetNextStar(
       return;
    }
 
-   extcomp->ncompedges = nstaredges + 1;
+   extcomp->ncompedges = nstaredges;
    extcomp->nextleaves = nstaredges - 1;
 
    assert(g->tail[staredges[0]] == center_tail);
+   compedges[0] = flipedge(staredges[0]);
 
-   for( int i = 0; i < nstaredges; i++ )
+   for( int i = 1; i < nstaredges; i++ )
    {
       const int outedge = staredges[i];
 
-      if( g->tail[outedge] == center_tail )
-      {
-         compedges[i] = flipedge(outedge);
-      }
-      else
-      {
-         assert(g->tail[outedge] == g->head[center_edge]);
-         compedges[i] = outedge;
-      }
+      compedges[i] = outedge;
    }
 
 
@@ -349,7 +350,7 @@ void generalStarCheckGetNextStar(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("component edges: \n");
+   SCIPdebugMessage("select component edges: \n");
    for( int i = 0; i < nstaredges; i++ )
    {
       graph_edge_printInfo(g, compedges[i]);
@@ -398,9 +399,10 @@ SCIP_RETCODE generalStarCheck(
    while ( *isDeletable )
    {
       SCIP_Bool allVisited;
+      // todo allow reversion
       EXTCOMP extcomp = { .compedges = genstar->tmp_compedges, .extleaves = genstar->tmp_extleaves,
-                          .nextleaves = -1, .ncompedges = -1,
-                          .comproot = -1, .allowReversion = TRUE };
+                          .nextleaves = -1, .ncompedges = -1,  .genstar_centeredge = genstar->edge,
+                          .comproot = -1, .allowReversion = FALSE };
 
       generalStarCheckGetNextStar(graph, genstar, &extcomp, &allVisited);
 
@@ -408,8 +410,7 @@ SCIP_RETCODE generalStarCheck(
          break;
 
       *isDeletable = FALSE;
-      *isDeletable = TRUE;
-   //   SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isDeletable) );
+      SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isDeletable) );
 
       if( reduce_starAllAreChecked(genstar->star) )
          break;
@@ -1098,7 +1099,7 @@ SCIP_RETCODE extreduce_deleteArcs(
    if( SCIPisZero(scip, redcostdata->cutoff) )
       return SCIP_OKAY;
 
-   SCIP_CALL( extInit(scip, FALSE, graph, edgedeletable, &distdata, &extpermanent) );
+   SCIP_CALL( extInit(scip, FALSE, graph, NULL, &distdata, &extpermanent) );
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -1351,6 +1352,7 @@ SCIP_RETCODE extreduce_checkArc(
       int compedge = edge;
       EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
          .nextleaves = 1, .ncompedges = 1, .comproot = graph->tail[edge],
+         .genstar_centeredge = -1,
          .allowReversion = FALSE };
 
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
@@ -1393,7 +1395,7 @@ SCIP_RETCODE extreduce_checkEdge(
       int comphead = graph->head[edge];
       int compedge = edge;
       EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
-                          .nextleaves = 1, .ncompedges = 1,
+                          .nextleaves = 1, .ncompedges = 1, .genstar_centeredge = -1,
                           .comproot = graph->tail[edge], .allowReversion = TRUE };
 
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
@@ -1429,7 +1431,7 @@ SCIP_RETCODE extreduce_checkNode(
    while ( *isPseudoDeletable )
    {
       EXTCOMP extcomp = { .compedges = compedges, .extleaves = extleaves,
-                          .nextleaves = -1, .ncompedges = -1,
+                          .nextleaves = -1, .ncompedges = -1, .genstar_centeredge = -1,
                           .comproot = -1, .allowReversion = TRUE };
 
       pseudodeleteGetNextStar(graph, stardata, &extcomp);

@@ -173,6 +173,7 @@ typedef struct extension_data
    int tree_ninnerNodes;
    int extstack_ncomponents;
    int ncostupdatestalls;           /**< cost update stalls counter */
+   int genstar_centeredge;           /* center edge or -1  */
    const int extstack_maxncomponents;
    const int extstack_maxsize;
    const int tree_maxnleaves;
@@ -191,6 +192,7 @@ typedef struct initial_extension_component
    int                   nextleaves;         /**< number of extension nodes */
    int                   ncompedges;         /**< number of edges of the component */
    int                   comproot;           /**< component root */
+   int                   genstar_centeredge; /**< center-edge or -1 */
    SCIP_Bool             allowReversion;     /**< allow change of comproot? (with extleaves = \{comproot\}) */
 } EXTCOMP;
 
@@ -221,6 +223,7 @@ SCIP_Bool extInitialCompIsEdge(
    assert(extdata);
    assert(extdata->extstack_start[1] >= 1);
    assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
+   assert(extdata->extstack_start[1] != 1 || extdata->genstar_centeredge == -1);
 
    return (extdata->extstack_start[1] == 1);
 }
@@ -236,8 +239,21 @@ SCIP_Bool extInitialCompIsStar(
    assert(extdata->extstack_start[1] >= 1);
    assert(extdata->extstack_start[1] == 1 || extdata->extstack_start[1] >= 3);
 
-   return (extdata->extstack_start[1] >= 3);
+   return (extdata->extstack_start[1] >= 3 && extdata->genstar_centeredge == -1);
 }
+
+
+/** is the initial component a star? */
+static inline
+SCIP_Bool extInitialCompIsGenStar(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(extdata);
+
+   return (extdata->genstar_centeredge != -1);
+}
+
 
 /** currently at initial star? */
 static inline
@@ -246,6 +262,16 @@ SCIP_Bool extIsAtInitialStar(
 )
 {
    return (extInitialCompIsStar(extdata) && extIsAtInitialComp(extdata));
+}
+
+
+/** currently at initial general star? */
+static inline
+SCIP_Bool extIsAtInitialGenStar(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   return (extInitialCompIsGenStar(extdata) && extIsAtInitialComp(extdata));
 }
 
 
@@ -279,35 +305,6 @@ int extStackGetTopRoot(
 }
 
 
-/** returns start of outgoing edges of top */
-static inline
-int extStackGetTopOutEdgesStart(
-   const EXTDATA*        extdata,            /**< extension data */
-   int                   stackpos            /**< current position */
-)
-{
-   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && extIsAtInitialComp(extdata);
-
-   assert(stackpos == extStackGetPosition(extdata));
-
-   return (atInitialStar ? (extdata->extstack_start[stackpos] + 1) : extdata->extstack_start[stackpos]);
-}
-
-
-/** returns end of outgoing edges of top */
-static inline
-int extStackGetTopOutEdgesEnd(
-   const EXTDATA*        extdata,            /**< extension data */
-   int                   stackpos            /**< current position */
-)
-{
-   assert(extdata);
-   assert(stackpos == extStackGetPosition(extdata));
-
-   return (extdata->extstack_start[stackpos + 1]);
-}
-
-
 /** returns start of outgoing edges */
 static inline
 int extStackGetOutEdgesStart(
@@ -315,11 +312,25 @@ int extStackGetOutEdgesStart(
    int                   stackpos            /**< current position */
 )
 {
-   const SCIP_Bool atInitialStar = extInitialCompIsStar(extdata) && (stackpos == 0);
+   int start;
 
+   assert(extdata);
    assert(stackpos >= 0 && stackpos <= extStackGetPosition(extdata));
 
-   return (atInitialStar ? (extdata->extstack_start[stackpos] + 1) : extdata->extstack_start[stackpos]);
+   if( stackpos == 0 && extInitialCompIsStar(extdata) )
+   {
+      start = extdata->extstack_start[stackpos] + 1;
+   }
+   else if( stackpos == 0 && extInitialCompIsGenStar(extdata) )
+   {
+      start = extdata->extstack_start[stackpos] + 2;
+   }
+   else
+   {
+      start = extdata->extstack_start[stackpos];
+   }
+
+   return start;
 }
 
 
@@ -335,6 +346,35 @@ int extStackGetOutEdgesEnd(
 
    return (extdata->extstack_start[stackpos + 1]);
 }
+
+
+/** returns start of outgoing edges of top */
+static inline
+int extStackGetTopOutEdgesStart(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< current position */
+)
+{
+   assert(extdata);
+   assert(stackpos == extStackGetPosition(extdata));
+
+   return extStackGetOutEdgesStart(extdata, stackpos);
+}
+
+
+/** returns end of outgoing edges of top */
+static inline
+int extStackGetTopOutEdgesEnd(
+   const EXTDATA*        extdata,            /**< extension data */
+   int                   stackpos            /**< current position */
+)
+{
+   assert(extdata);
+   assert(stackpos == extStackGetPosition(extdata));
+
+   return extStackGetOutEdgesEnd(extdata, stackpos);
+}
+
 
 
 /** Finds position of given leaf in leaves data.

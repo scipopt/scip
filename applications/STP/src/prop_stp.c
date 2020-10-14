@@ -308,6 +308,7 @@ SCIP_RETCODE getRedCostDistances(
    int* pathedge = NULL;
    const int nedges = graph_get_nEdges(g);
    const int nnodes = graph_get_nNodes(g);
+   int todo; // second next should be enough!
 
    assert(graph_isMarked(g));
 
@@ -1391,6 +1392,8 @@ SCIP_RETCODE fixVarsExtendedRed(
          .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .dualBound = -1.0, .redCostRoot = graph->source};
 
       /* reduce graph and mark deletable arcs
+       // todo: adjust the redcosts, set all deleted ars to FARAWAY!
+       // also if several redcosts are used at the same time!
        * Note that all in-root arcs will be set to 0! (w.r.t redCostRoot) */
       SCIP_CALL( extreduce_deleteArcs(scip, &redcostdata, NULL, propgraph,
             arcdeleted, &nfixededges) );

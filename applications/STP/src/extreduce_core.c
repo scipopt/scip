@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//  #define SCIP_DEBUG
+//#define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -377,6 +377,7 @@ void extInnerNodeRemoveTop(
    {
       assert(!extInitialCompIsEdge(extdata) || extdata->tree_ninnerNodes == 0);
       assert(!extInitialCompIsStar(extdata) || extdata->tree_ninnerNodes == 1);
+      assert(!extInitialCompIsGenStar(extdata) || extdata->tree_ninnerNodes == 2);
    }
 }
 
@@ -396,20 +397,23 @@ void extTreeAddEdge(
    const SCIP_Real edgecost = graph->cost[edge];
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
+   const int genstar_centerhead = (extdata->genstar_centeredge == -1) ? -1 : graph->head[extdata->genstar_centeredge];
 
    assert(tree_deg[head] == 0);
    assert(tree_deg[tail] > 0 || tail == extdata->tree_root);
 
-   if( extdata->tree_starcenter != head )
+   if( extdata->tree_starcenter != head && genstar_centerhead != head )
    {
       extLeafAdd(head, extdata);
    }
    else
    {
-      assert(extInitialCompIsStar(extdata));
+      assert(extInitialCompIsStar(extdata) || extInitialCompIsGenStar(extdata));
       assert(extIsAtInitialComp(extdata));
    }
 
+   /* NOTE: a bit hacky, but also works for general stars, because of the order
+    * in which the initial edges are processed */
    extdata->tree_cost += edgecost;
    tree_deg[head] = 1;
    tree_edges[(extdata->tree_nedges)++] = edge;
@@ -447,8 +451,22 @@ void extTreeStackTopRootRemove(
 
       if( extInitialCompIsStar(extdata) )
       {
-         assert(extdata->tree_starcenter >= 0);
-         extdata->tree_deg[extdata->tree_starcenter] = 0;
+         const int starcenter = extdata->tree_starcenter;
+         assert(graph_knot_isInRange(graph, starcenter));
+
+         extdata->tree_deg[starcenter] = 0;
+      }
+      else if( extInitialCompIsGenStar(extdata) )
+      {
+         const int centeredge = extdata->genstar_centeredge;
+         const int starcenter = extdata->tree_starcenter;
+
+         assert(graph_edge_isInRange(graph, centeredge));
+         assert(graph_knot_isInRange(graph, starcenter));
+         assert(graph->tail[centeredge] == starcenter);
+
+         extdata->tree_deg[starcenter] = 0;
+         extdata->tree_deg[graph->head[centeredge]] = 0;
       }
    }
 }
@@ -1050,12 +1068,27 @@ void extStackAddCompInitialExpanded(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const SCIP_Bool compIsStar = extInitialCompIsStar(extdata);
    const int* const extstack_data = extdata->extstack_data;
    const int* const extstack_start = extdata->extstack_start;
-   /* in case of star component we want to skip the root edge for the horizontal SD computation */
-   const int* const extedges = compIsStar ? &(extstack_data[1]) : extstack_data;
-   const int nextedges = compIsStar ? (extstack_start[1] - 1) : extstack_start[1];
+   const int* extedges;
+   int nextedges;
+
+   /* NOTE: in case of star component we want to skip the root edge for the horizontal SD computation */
+   if( extInitialCompIsStar(extdata) )
+   {
+      extedges = &(extstack_data[1]);
+      nextedges = (extstack_start[1] - 1);
+   }
+   else if( extInitialCompIsGenStar(extdata) )
+   {
+      extedges = &(extstack_data[2]);
+      nextedges = (extstack_start[1] - 2);
+   }
+   else
+   {
+      extedges = extstack_data;
+      nextedges = extstack_start[1];
+   }
 
    assert(nextedges > 0);
    assert(graph->tail[extstack_data[0]] == extdata->tree_root);
@@ -1120,6 +1153,28 @@ void extStackTopCollectExtEdges(
 }
 
 
+/** Gets start of data for initial component */
+static inline
+int extStackTopGetInitalDataStart(
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   const int* const extstack_start = extdata->extstack_start;
+   int start;
+
+   assert(extStackGetPosition(extdata) == 0);
+
+   if( extInitialCompIsEdge(extdata) )
+      start = extstack_start[0];
+   else if( extInitialCompIsGenStar(extdata) )
+      start = extstack_start[0] + 2;
+   else
+      start = extstack_start[0] + 1;
+
+   return start;
+}
+
+
 /** Computes ancestor SDs for leaves of initial component.
  *  Also checks for possible rule-out. */
 static inline
@@ -1134,7 +1189,7 @@ void extStackTopProcessInitialEdges(
    const int* const extstack_start = extdata->extstack_start;
    const int stackpos = extStackGetPosition(extdata);
    const SCIP_Bool compIsEdge = extInitialCompIsEdge(extdata);
-   const int data_start = compIsEdge ? extstack_start[stackpos] : extstack_start[stackpos] + 1;
+   const int data_start = extStackTopGetInitalDataStart(extdata);
    const int data_end = extstack_start[stackpos + 1];
 
    assert(*initialRuleOut == FALSE);
@@ -1415,7 +1470,7 @@ void extPreprocessInitialEdge(
    assert(graph->tail[edge] == extcomp->comproot);
 
 #ifdef SCIP_DEBUG
-   printf("\n --- ADD initial edge component --- \n\n");
+   printf("\n --- ADD initial EDGE component --- \n\n");
    SCIPdebugMessage("...initial edge %d: %d->%d \n\n", edge, graph->tail[edge], graph->head[edge]);
 #endif
 
@@ -1443,7 +1498,7 @@ void extPreprocessInitialStar(
    assert(graph->tail[rootedge] == comproot);
 
 #ifdef SCIP_DEBUG
-   printf("\n --- ADD initial star component --- \n\n");
+   printf("\n --- ADD initial STAR component --- \n\n");
    SCIPdebugMessage("...root star edge %d: %d->%d \n", rootedge, comproot, starcenter);
 #endif
 
@@ -1457,13 +1512,77 @@ void extPreprocessInitialStar(
    {
       const int e = compedges[i];
 
-      assert(graph->tail[e] == starcenter);
       SCIPdebugMessage("...star edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
-
+      assert(graph->tail[e] == starcenter);
       extdata->extstack_data[i] = e;
    }
 
    extInnerNodeAdd(graph, starcenter, extdata);
+
+#ifdef SCIP_DEBUG
+   printf(" \n");
+#endif
+}
+
+
+
+/** adds initial general star component edges to stack */
+/*  NOTE: it is vital the the first edge of the star component comes from the root! */
+static inline
+void extPreprocessInitialGenStar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTCOMP*        extcomp,            /**< component to be checked */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const int* const compedges = extcomp->compedges;
+   const int ncompedges = extcomp->ncompedges;
+   const int rootedge = compedges[0];
+   const int starcenter = graph->head[rootedge];
+   const int comproot = extcomp->comproot;
+   const int centeredge = extdata->genstar_centeredge;
+   const int centerhead = graph->head[centeredge];
+
+   assert(extInitialCompIsGenStar(extdata));
+   assert(ncompedges >= 3);
+   assert(graph->tail[rootedge] == comproot);
+   assert(graph_edge_isInRange(graph, extdata->genstar_centeredge));
+   assert(graph->tail[centeredge] == starcenter);
+
+#ifdef SCIP_DEBUG
+   printf("\n --- ADD initial GENERAL star component --- \n\n");
+   SCIPdebugMessage("...root star edge %d: %d->%d \n", rootedge, comproot, starcenter);
+   SCIPdebugMessage("...center star edge %d: %d->%d \n", centeredge, starcenter, centerhead);
+#endif
+
+   extdata->extstack_data[0] = rootedge;
+   /* NOTE: one time for root edge, one time for center edge */
+   extdata->tree_deg[starcenter] = 2;
+   extdata->tree_parentNode[starcenter] = comproot;
+   extdata->tree_parentEdgeCost[starcenter] = graph->cost[rootedge];
+   extdata->tree_starcenter = starcenter;
+
+   extdata->extstack_data[1] = centeredge;
+   extdata->tree_deg[centerhead] = 1;
+   extdata->tree_parentNode[centerhead] = starcenter;
+   extdata->tree_parentEdgeCost[centerhead] = graph->cost[centeredge];
+
+   for( int i = 1; i < ncompedges; i++ )
+   {
+      const int e = compedges[i];
+
+      SCIPdebugMessage("...star edge %d: %d->%d \n", e, graph->tail[e], graph->head[e]);
+
+      extdata->tree_deg[graph->tail[e]]++;
+      extdata->extstack_data[i + 1] = e;
+   }
+
+   assert(extdata->tree_deg[starcenter] >= 2);
+   assert(extdata->tree_deg[centerhead] >= 2);
+
+   extInnerNodeAdd(graph, starcenter, extdata);
+   extInnerNodeAdd(graph, centerhead, extdata);
 
 #ifdef SCIP_DEBUG
    printf(" \n");
@@ -1485,12 +1604,15 @@ void extPreprocessInitialComponent(
    const int ncompedges = extcomp->ncompedges;
    const int comproot = extcomp->comproot;
    const SCIP_Bool compIsEdge = (ncompedges == 1);
+   const SCIP_Bool compIsGenStar = extInitialCompIsGenStar(extdata);
 
    assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
    assert(comproot >= 0 && comproot < graph->knots);
 
    if( compIsEdge )
       extPreprocessInitialEdge(scip, graph, extcomp, extdata);
+   else if( compIsGenStar )
+      extPreprocessInitialGenStar(scip, graph, extcomp, extdata);
    else
       extPreprocessInitialStar(scip, graph, extcomp, extdata);
 
@@ -1506,6 +1628,12 @@ void extPreprocessInitialComponent(
    extdata->tree_parentNode[comproot] = -1;
    extdata->tree_redcostSwap[comproot] = 0.0;
    extdata->tree_parentEdgeCost[comproot] = -1.0;
+
+   if( compIsGenStar )
+   {
+      /* center edge is also included... */
+      extdata->extstack_start[1]++;
+   }
 
    assert(extdata->tree_leaves[0] == comproot);
    assert(extdata->tree_deg[comproot] == 0);
@@ -1569,13 +1697,14 @@ void extProcessInitialComponent(
 
    if( conflict )
    {
-      assert(extInitialCompIsStar(extdata));
+      assert(extInitialCompIsStar(extdata) || extInitialCompIsGenStar(extdata));
       *ruledOut = TRUE;
       return;
    }
 
    assert(extdata->tree_deg[extdata->tree_root] == 1);
-   assert(extdata->tree_deg[graph->head[extdata->extstack_data[0]]] == extcomp->ncompedges);
+   assert(extdata->tree_deg[graph->head[extdata->extstack_data[0]]] == extcomp->ncompedges
+         || extInitialCompIsGenStar(extdata));
 
    /* NOTE: anyway necessary to keep the MST graph up-to-date! */
    if( extTreeRuleOutPeriph(scip, graph, extdata) )
@@ -1757,6 +1886,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata,
          .sdeq_resetStack = NULL, .sdeq_edgesIsForbidden = sdeq_edgesIsForbidden, .sdeq_hasForbiddenEdges = FALSE,
+         .genstar_centeredge = extcomp->genstar_centeredge,
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
          .tree_maxdepth = extpermanent->tree_maxdepth,
          .tree_maxnleaves = extpermanent->tree_maxnleaves,
