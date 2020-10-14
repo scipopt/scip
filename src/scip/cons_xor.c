@@ -2712,7 +2712,8 @@ SCIP_RETCODE checkSystemGF2(
                   consdata = SCIPconsGetData(conss[i]);
                   assert(consdata != NULL);
 
-                  if ( xoractive[i] && consdata->intvar != NULL )
+                  /* only try for active constraints and integral variable; hope for the best if they are not active */
+                  if ( xoractive[i] && consdata->intvar != NULL && SCIPvarIsActive(consdata->intvar) )
                   {
                      SCIP_Real val;
                      int nones = 0;
@@ -3133,8 +3134,8 @@ SCIP_RETCODE propagateCons(
 
       (*nfixedvars)++;
 
-      /* fix integral variable if present */
-      if ( consdata->intvar != NULL && !consdata->deleteintvar )
+      /* fix integral variable if present and not multi-aggregated */
+      if ( consdata->intvar != NULL && !consdata->deleteintvar && SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
       {
          int fixval;
 
