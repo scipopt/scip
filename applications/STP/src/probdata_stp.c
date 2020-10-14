@@ -70,6 +70,7 @@
 #define CYC_CONS_LIMIT 10000         /**< maximum number of symmetry inequalities for PCSPG */
 
 #define CUT_MINREDUCTION_RATIO 0.95
+#define HEUR_MINREDUCTION_RATIO 0.95
 #define CUT_MAXNTERMINALS 500
 #define CUT_MAXNEDGES     10000
 #define CUT_MAXTOTNEDGES  50000
@@ -1897,14 +1898,8 @@ SCIP_RETCODE setParams(
       SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", zerhalf_nrounds));
    }
 
-   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
-
    SCIP_CALL(SCIPsetIntParam(scip, "separating/clique/freq", -1));
-
-   if( pc )
-   {
-      SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/presoltiming", 4));
-   }
+   SCIP_CALL( SCIPsetCharParam(scip, "lp/resolvealgorithm", 'd') );
 
    if( graph->stp_type == STP_DHCSTP )
    {
@@ -1915,11 +1910,18 @@ SCIP_RETCODE setParams(
       SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
    }
 
+   if( graph_typeIsSpgLike(graph) && getEdgeReductionRatio(probdata, graph) < HEUR_MINREDUCTION_RATIO )
+   {
+      SCIP_CALL(SCIPsetIntParam(scip, "heuristics/rounding/freq", -1));
+   }
+
    probdata->usesymcons = FALSE;
    probdata->usecyclecons = FALSE;
 
    if( pc || mw )
    {
+	  SCIP_CALL(SCIPsetIntParam(scip, "constraints/logicor/presoltiming", 4));
+
       if( cyclecons == STP_CONS_ALWAYS || (cyclecons == STP_CONS_AUTOMATIC && graph->edges <= CYC_CONS_LIMIT) )
          probdata->usecyclecons = TRUE;
 
