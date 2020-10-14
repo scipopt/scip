@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
          * @todo exip could this be done differently somewhere else? */
