@@ -3229,16 +3229,19 @@ SCIP_RETCODE SCIPlpPsdataCreate(
 
    projshiftdata = lp->projshiftdata;
 
+   projshiftdata->lpiexact = NULL;
+   projshiftdata->dvarmap = NULL;
+   projshiftdata->ndvarmap = 0;
    projshiftdata->interiorpoint = NULL;
    projshiftdata->interiorray = NULL;
    projshiftdata->violation = NULL;
+   projshiftdata->correction = NULL;
    projshiftdata->commonslack = NULL;
    projshiftdata->includedrows = NULL;
    projshiftdata->projshiftbasis = NULL;
 #ifdef SCIP_WITH_GMP
    projshiftdata->rectfactor = (qsnum_factor_work*) NULL;
 #endif
-   projshiftdata->commonslack = NULL;
 
    projshiftdata->nextendedrows = 0;
    projshiftdata->projshiftbasisdim = 0;
@@ -3255,9 +3258,32 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    return SCIP_OKAY;
 }
 
+/** frees the exact LPI in project-and-shift */
+static
+SCIP_RETCODE SCIPlpExactProjectShiftFreeLPIExact(
+   SCIP_LPIEXACT**       lpiexact            /**< pointer to LPI object */
+   )
+{
+   int nlpirows;
+   int nlpicols;
+
+   assert(lpiexact != NULL);
+   assert(*lpiexact != NULL);
+
+   /** @todo exip This should all happen automatically when calling SCIPlpiExactFree() */
+   SCIP_CALL( SCIPlpiExactGetNRows(*lpiexact, &nlpirows) );
+   SCIP_CALL( SCIPlpiExactDelRows(*lpiexact, 0, nlpirows - 1) );
+
+   SCIP_CALL( SCIPlpiExactGetNCols(*lpiexact, &nlpicols) );
+   SCIP_CALL( SCIPlpiExactDelCols(*lpiexact, 0, nlpicols - 1) );
+
+   SCIP_CALL( SCIPlpiExactClear(*lpiexact) );
+   SCIP_CALL( SCIPlpiExactFree(lpiexact) );
+}
+
 /** frees the data needed for project and shift bounding method */
 static
-SCIP_RETCODE SCIPlpPsdataFree(
+SCIP_RETCODE SCIPlpExactProjectShiftFree(
    SCIP_LPEXACT*         lp,                 /**< pointer to LP data object */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory buffers */
@@ -3270,24 +3296,34 @@ SCIP_RETCODE SCIPlpPsdataFree(
    assert(blkmem != NULL);
 
    projshiftdata = lp->projshiftdata;
-   if( projshiftdata->projshiftdatacon )
-   {
-      if( projshiftdata->interiorpoint != NULL )
-         RatFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
-      if( projshiftdata->interiorray != NULL )
-         RatFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
-      RatFreeBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
-      RatFreeBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
 
+   if( projshiftdata->lpiexact != NULL )
+   {
+      SCIP_CALL( SCIPlpExactProjectShiftFreeLPIExact(&projshiftdata->lpiexact) );
+   }
+   assert(projshiftdata->lpiexact == NULL);
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->dvarmap, projshiftdata->ndvarmap);
+
+   if( projshiftdata->interiorpoint != NULL )
+      RatFreeBlockArray(blkmem, &projshiftdata->interiorpoint, projshiftdata->nextendedrows);
+   if( projshiftdata->interiorray != NULL )
+      RatFreeBlockArray(blkmem, &projshiftdata->interiorray, projshiftdata->nextendedrows);
+   if( projshiftdata->violation != NULL )
+      RatFreeBlockArray(blkmem, &projshiftdata->violation, projshiftdata->violationsize);
+   if( projshiftdata->correction != NULL )
+      RatFreeBlockArray(blkmem, &projshiftdata->correction, projshiftdata->nextendedrows);
+   if( projshiftdata->commonslack != NULL )
       RatFreeBlock(blkmem, &projshiftdata->commonslack);
 
-      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
-      BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
+   BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->includedrows, projshiftdata->nextendedrows);
+   BMSfreeBlockMemoryArrayNull(blkmem, &projshiftdata->projshiftbasis, projshiftdata->nextendedrows);
+
 #ifdef SCIP_WITH_GMP
-      if( projshiftdata->rectfactor != NULL )
-         RECTLUfreeFactorization(projshiftdata->rectfactor);
+   if( projshiftdata->rectfactor != NULL )
+      RECTLUfreeFactorization(projshiftdata->rectfactor);
 #endif
-   }
+
    assert(projshiftdata->interiorpoint == NULL);
    assert(projshiftdata->interiorray == NULL);
    assert(projshiftdata->includedrows == NULL);
@@ -3456,7 +3492,7 @@ SCIP_RETCODE SCIPlpExactFree(
    assert(lp != NULL);
    assert(*lp != NULL);
 
-   SCIP_CALL( SCIPlpPsdataFree(*lp, set, blkmem) );
+   SCIP_CALL( SCIPlpExactProjectShiftFree(*lp, set, blkmem) );
    SCIP_CALL( SCIPlpExactClear(*lp, blkmem, set, eventqueue, eventfilter) );
 
    //freeDiveChgSideArrays(*lp);
