@@ -1322,12 +1322,14 @@ void RatPrint(
       std::cout << rational->val << "\n";
 }
 
-
+/* print SCIP_Rational to output stream */
 std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    if( r.isinf )
       os << r.val.sign() << "inf";
    else
       os << r.val;
+
+   return os;
 }
 
 /* convert va_arg format string into std:string */
