@@ -981,7 +981,10 @@ SCIP_RETCODE nodeCreate(
    (*node)->reprop = FALSE;
    (*node)->repropsubtreemark = 0;
    if( set->exact_enabled )
+   {
       RatCreateBlock(blkmem, &(*node)->lowerboundexact);
+      RatSetString((*node)->lowerboundexact, "-inf");
+   }
 
    return SCIP_OKAY;
 }
@@ -2394,6 +2397,8 @@ void SCIPnodeUpdateLowerbound(
       oldbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
+      if( set->exact_enabled && RatIsLTReal(node->lowerboundexact, newbound) )
+         RatSetReal(node->lowerboundexact, newbound);
 
       if( node->depth == 0 )
       {
