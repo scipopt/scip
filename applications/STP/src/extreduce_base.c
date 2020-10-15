@@ -383,7 +383,7 @@ SCIP_RETCODE generalStarCheck(
    assert(graph_edge_isInRange(graph, edge));
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("checking edge ");
+   SCIPdebugMessage("checking GENERAL STAR edge ");
    graph_edge_printInfo(graph, edge);
 #endif
 
@@ -506,12 +506,11 @@ void generalStarSetUp(
             {
                const SCIP_Real sd = extreduce_distDataGetSdDoubleForbiddenSingle(scip, graph, edge, node_j, node_k, distdata);
 
-               printf("%d->%d sd=%f pathcost=%f \n", node_j, node_k, sd, pathcost);
+               SCIPdebugMessage("%d->%d sd=%f pathcost=%f \n", node_j, node_k, sd, pathcost);
 
                if( sd < -0.5 || GT(sd, pathcost) )
                {
-                  printf("FAIL \n");
-                  printf("%d->%d %f<=%f? \n", node_j, node_k, sd, pathcost);
+                  SCIPdebugMessage("...not promising, skip edge \n");
 
                   *isPromising = FALSE;
                   break;
@@ -530,11 +529,12 @@ SCIP_RETCODE generalStarDeleteEdges(
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
    EXTPERMA*             extpermanent,       /**< extension data */
    GRAPH*                graph,              /**< graph data structure */
-   DISTDATA*             distdata            /**< distance data */
+   DISTDATA*             distdata,           /**< distance data */
+   int*                  nelims              /**< number of eliminations (out) */
 )
 {
    GENSTAR genstar = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1 };
-   int nelims = 0;
+   *nelims = 0;
 
    SCIPdebugMessage("General-star deletion starts \n");
 
@@ -562,7 +562,7 @@ SCIP_RETCODE generalStarDeleteEdges(
             if( isDeletable )
             {
                extreduce_edgeRemove(scip, i, graph, distdata, extpermanent);
-               nelims++;
+               (*nelims)++;
             }
          }
       }
@@ -581,7 +581,7 @@ SCIP_RETCODE generalStarDeleteEdges(
 #endif
    SCIPfreeCleanBufferArray(scip,  &(genstar.nodes_mark));
 
-   printf("nelims=%d \n", nelims);
+   printf("number of general star eliminations=%d \n", *nelims);
 
    return SCIP_OKAY;
 }
@@ -1220,7 +1220,7 @@ SCIP_RETCODE extreduce_deleteEdges(
       }
    }
 
-  // printf("extelimsedges=%d \n", *nelims);
+  // printf("number of extended edge eliminations=%d \n", *nelims);
 
   // SCIP_CALL( generalStarDeletEdges(scip, redcostdata, &extpermanent, graph, &distdata) );
 
@@ -1292,7 +1292,7 @@ SCIP_RETCODE extreduce_deleteGeneralStars(
       SCIP_CALL( reduce_sdRepairSetUp(scip, graph, distdata.sdistdata) );
    }
 
-   SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, &extpermanent, graph, &distdata) );
+   SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, &extpermanent, graph, &distdata, nelims) );
 
    extFree(scip, graph, &distdata, &extpermanent);
 
