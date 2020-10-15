@@ -1099,6 +1099,14 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
             componentends[componentends[crit]] = componentends[critinv];
             componentends[componentends[critinv]] = componentends[crit];
          }
+
+         /* Early termination criterion. helperobj is upper bound to tmpobj for every next iteration,
+          * so if helperobj <= maxsoluval then we can terminate earlier.
+          */
+         if (SCIPisGE(scip, *maxsoluval, helperobj))
+         {
+            break;
+         }
       }
    }
 
