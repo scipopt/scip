@@ -377,8 +377,6 @@ extern void          graph_dijkLimited_free(SCIP*, DIJK**);
  */
 extern void   graph_mark(GRAPH*);
 extern void   graph_show(const GRAPH*);
-extern void   graph_printInfo(const GRAPH*);
-extern void   graph_printInfoReduced(const GRAPH*);
 extern void   graph_uncover(GRAPH*);
 extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
 extern void   graph_free_history(SCIP*, GRAPH*);
@@ -396,22 +394,11 @@ extern void   graph_edge_delFull(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_delBlocked(SCIP*, GRAPH*, const SCIP_Bool*, SCIP_Bool);
 extern void   graph_edge_delHistory(SCIP*, GRAPH*, int);
 extern void   graph_edge_hide(GRAPH*, int);
-extern void   graph_edge_printInfo(const GRAPH*, int);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
-extern SCIP_Bool graph_edge_isBlocked(const GRAPH*, int);
-extern SCIP_Bool graph_edge_isDeleted(const GRAPH*, int);
-extern SCIP_Bool graph_edge_isInRange(const GRAPH*, int);
-extern void   graph_knot_printInfo(const GRAPH*, int);
-extern int    graph_get_nNodes(const GRAPH*);
-extern int    graph_get_nEdges(const GRAPH*);
-extern int    graph_get_nTerms(const GRAPH*);
-extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
+extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
 extern void   graph_get_edgeRevCosts(const GRAPH*, SCIP_Real* RESTRICT);
-extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
-extern SCIP_Real graph_get_avgDeg(const GRAPH*);
-
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copy_pseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
@@ -440,6 +427,22 @@ extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);
 extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
 extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
+
+
+/* graph_stats.c
+ */
+extern void   graph_edge_printInfo(const GRAPH*, int);
+extern SCIP_Bool graph_edge_isBlocked(const GRAPH*, int);
+extern SCIP_Bool graph_edge_isDeleted(const GRAPH*, int);
+extern SCIP_Bool graph_edge_isInRange(const GRAPH*, int);
+extern void   graph_knot_printInfo(const GRAPH*, int);
+extern void   graph_printInfo(const GRAPH*);
+extern void   graph_printInfoReduced(const GRAPH*);
+extern int    graph_get_nNodes(const GRAPH*);
+extern int    graph_get_nEdges(const GRAPH*);
+extern int    graph_get_nTerms(const GRAPH*);
+extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
+extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 
 
 /* graph_trans.c
