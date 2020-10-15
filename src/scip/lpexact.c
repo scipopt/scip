@@ -7358,7 +7358,8 @@ SCIP_Bool SCIPlpExactDiving(
    SCIP_LPEXACT*         lpexact             /**< current exact LP data */
    )
 {
-   assert(lpexact != NULL);
+   if( lpexact == NULL )
+      return FALSE;
 
    return lpexact->diving;
 }

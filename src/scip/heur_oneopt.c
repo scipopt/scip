@@ -846,6 +846,14 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
+
+            /* in exact mode we have to end diving prior to trying the solution */
+            if( SCIPisExactSolve(scip) )
+            {
+               SCIPunlinkSol(scip, worksol);
+               SCIPendDive(scip);
+            }
+
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
             /* check solution for feasibility */
@@ -858,7 +866,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* terminate the diving */
-         SCIP_CALL( SCIPendDive(scip) );
+         if( SCIPinDive(scip) )
+         {
+            SCIP_CALL( SCIPendDive(scip) );
+         }
       }
    }
 

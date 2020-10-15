@@ -389,6 +389,7 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->dualchecked = lp->dualchecked;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->lpissolved = lp->solved;
+   storedsolvals->hasprovedbound = lp->hasprovedbound;
 
    return SCIP_OKAY;
 }
@@ -420,6 +421,7 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->dualfeasible = storedsolvals->dualfeasible;
       lp->dualchecked = storedsolvals->dualchecked;
       lp->solisbasic = storedsolvals->solisbasic;
+      lp->hasprovedbound = storedsolvals->hasprovedbound;
 
       /* solution values are stored only for LPs solved without error */
       assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
@@ -16352,7 +16354,7 @@ SCIP_RETCODE SCIPlpEndDive(
     * restoring an unbounded ray after solve does not seem to work currently (bug 631), so we resolve also in this case
     */
    assert(lp->storedsolvals != NULL);
-   if( lp->storedsolvals->lpissolved
+   if( lp->storedsolvals->lpissolved && !set->exact_enabled
       && (set->lp_resolverestore || lp->storedsolvals->lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || lp->divenolddomchgs < stat->domchgcount) )
    {
       SCIP_Bool lperror;
@@ -16398,7 +16400,7 @@ SCIP_RETCODE SCIPlpEndDive(
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp but when we
        * are in exact diving mode, we don't want to increase it since we want to use the exact diving solution added
        * by ConsExactSol */
-      if( ! lp->lpexact->diving)
+      if( !SCIPlpExactDiving(lp->lpexact) )
          SCIPstatIncrement(stat, set, lpcount);
 
       /* restore LP solution values in lp data, columns and rows */

@@ -6532,6 +6532,9 @@ SCIP_RETCODE SCIPtreeStartProbing(
    lp->divingobjchg = FALSE;
    tree->probingsumchgdobjs = 0;
    tree->sbprobing = strongbranching;
+   tree->porbinglphadsafebound = lp->hasprovedbound;
+   if( set->exact_enabled && lp->solved )
+      tree->probinglpobjval = SCIPlpGetObjval(lp, set, transprob);
 
    /* remember the LP state in order to restore the LP solution quickly after probing */
    /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
@@ -7007,6 +7010,13 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
          /* resolve LP to reset solution */
          SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+
+         if( set->exact_enabled )
+         {
+            lp->lpobjval = tree->probinglpobjval;
+            lp->hasprovedbound = tree->porbinglphadsafebound;
+         }
+
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
