@@ -448,7 +448,7 @@ void extreduce_redcostAddEdge(
 
       if( head == extdata->tree_starcenter )
       {
-         assert(extIsAtInitialStar(extdata));
+         assert(extIsAtInitialStar(extdata) || extIsAtInitialGenStar(extdata));
          *noReversedTree = TRUE;
       }
    }
