@@ -3602,6 +3602,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_Real lptimelimit;
    char algo;
    SCIP_LP* lp;
+   SCIP_LPISTATE* lpistate;
 
    assert(lpexact != NULL);
    assert(lpexact->fplp != NULL);
@@ -3640,8 +3641,11 @@ SCIP_RETCODE lpExactFlushAndSolve(
       return SCIP_OKAY;
    }
 
+   /* get lpi state to check whether basis exists */
+   SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, &lpistate) );
+
    /* set the correct basis information for warmstart */
-   if( !fromscratch )
+   if( !fromscratch && SCIPlpiHasStateBasis(lp->lpi, lpistate) )
    {
       SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, lpexact->nlpicols) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, lpexact->nlpirows) );
