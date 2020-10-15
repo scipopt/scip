@@ -147,7 +147,8 @@ void generalStarCheckInit(
    const int ntails = StpVecGetSize(genstar->edges_tail);
    const int nheads = StpVecGetSize(genstar->edges_head);
 
-   assert(ntails >= 2 && nheads >= 2);
+   assert(ntails >= 1 && nheads >= 1);
+   assert(ntails + nheads >= 3);
 
    StpVecClear(genstar->edges_all);
 
@@ -387,7 +388,7 @@ SCIP_RETCODE generalStarCheck(
    graph_edge_printInfo(graph, edge);
 #endif
 
-   if( graph->grad[graph->tail[edge]] < 3 || graph->grad[graph->head[edge]] < 3 )
+   if( graph->grad[graph->tail[edge]] < 3 && graph->grad[graph->head[edge]] < 3 )
    {
       SCIPdebugMessage("general-star early rule-out! \n");
       return SCIP_OKAY;
@@ -1041,6 +1042,15 @@ void removeEdge(
    {
       SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
    }
+
+   /*
+   static int cc = 0;
+   char name[1000];
+   sprintf(name, "outprev%d.stp", cc);
+   graph_writeStpByName(scip, graph, name, 0.0);
+      graph_edge_printInfo(graph, edge);
+
+   */
 
    graph_edge_delFull(scip, graph, edge, TRUE);
    extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
