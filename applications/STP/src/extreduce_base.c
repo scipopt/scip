@@ -1238,7 +1238,13 @@ SCIP_RETCODE extreduce_deleteEdges(
 
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
-  // SCIP_CALL( generalStarDeletEdges(scip, redcostdata, &extpermanent, graph, &distdata) );
+   /*
+   {
+      int ngenstarelims = 0;
+      SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, &extpermanent, graph, &distdata, &ngenstarelims) );
+      *nelims += ngenstarelims;
+   }
+*/
 
    extFree(scip, graph, &distdata, &extpermanent);
 
