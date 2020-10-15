@@ -29,7 +29,7 @@
 #include "scip/pub_var.h"
 #include "scip/rational.h"
 //#include "scip/struct_rational.h"
-#include "scip/scip_cons.h"
+#include "scip/cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"
@@ -190,12 +190,20 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    /* check if solution is floating point feasible */
-   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
+   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
-      SCIP_Bool violated = FALSE;
-      SCIP_CALL( SCIPcheckCons(scip, conss[c], sol, FALSE, checklprows, printreason, &violated) );
+      SCIP_Real activity;
+      SCIP_ROW* row;
 
-      if( violated )
+      /* get row corresponding to constraint */
+      row = SCIPconsGetRow(scip, conss[c]);
+      assert(row != NULL);
+
+      /* get row activity */
+      activity = SCIPgetRowSolActivity(scip, row, sol);
+
+      /* check if the constraint is violated */
+      if( SCIPisFeasLT(scip, activity, SCIProwGetLhs(row)) || SCIPisFeasGT(scip, activity, SCIProwGetRhs(row)) )
          *result = SCIP_INFEASIBLE;
    }
 
