@@ -2555,10 +2555,9 @@ SCIP_RETCODE reduce_da(
             int extfixed;
             redcostIncreaseOnDeletedArcs(graph, arcsdeleted, &redcostdata);
 
-            //SCIP_CALL( extreduce_deleteGeneralStars(scip, &redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
-
             SCIP_CALL( extreduce_deleteEdges(scip, &redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
             ndeletions_run += extfixed;
+
 //#define EXT_WRITE
          //   graph_printInfo(graph);
           //  printf("newly fixedSECOND =%d \n", extfixed);

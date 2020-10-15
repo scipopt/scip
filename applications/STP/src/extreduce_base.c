@@ -55,6 +55,8 @@ typedef struct general_star
    int* tmp_compedges;
    int* tmp_extleaves;
    int edge;
+   int replacedge_tail;
+   int replacedge_head;
 } GENSTAR;
 
 
@@ -446,6 +448,8 @@ void generalStarSetUp(
    StpVecClear(genstar->edges_tail);
    StpVecClear(genstar->edges_head);
    genstar->edge = edge;
+   genstar->replacedge_tail = -1;
+   genstar->replacedge_head = -1;
 
    *isPromising = FALSE;
 
@@ -455,6 +459,7 @@ void generalStarSetUp(
       const SCIP_Real maxsdcost = reduce_sdgraphGetMaxCost(distdata->sdistdata->sdgraph);
       const STP_Bool* halfedges_isInSdMst = reduce_sdgraphGetMstHalfMark(distdata->sdistdata->sdgraph);
       int ntails;
+      int nfails;
       int nheads;
       const STP_Vectype(int) edges_tail;
       const STP_Vectype(int) edges_head;
@@ -496,6 +501,8 @@ void generalStarSetUp(
       edges_head = genstar->edges_head;
       assert(ntails + nheads <= 6);
 
+      nfails = 0;
+
       for( int j = 0; j < ntails && *isPromising; j++ )
       {
          for( int k = 0; k < nheads; k++ )
@@ -519,13 +526,62 @@ void generalStarSetUp(
                {
                   SCIPdebugMessage("...not promising, skip edge \n");
 
-                  *isPromising = FALSE;
-                  break;
+                  if( nfails++ > 1 )
+                  {
+                     *isPromising = FALSE;
+                     break;
+                  }
+
+                  genstar->replacedge_tail = edges_tail[j];
+                  genstar->replacedge_head = edges_head[k];
                }
             }
          }
       }
    }
+}
+
+
+
+/** initializes */
+static
+SCIP_RETCODE generalStarInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   GENSTAR*              genstar             /**< general star */
+)
+{
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(genstar->nodes_mark), graph->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(genstar->tmp_compedges), STP_GENSTAR_MAXDEG) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(genstar->tmp_extleaves), STP_GENSTAR_MAXDEG - 1) );
+   StpVecReserve(scip, genstar->edges_tail, STP_GENSTAR_MAXENDDEG);
+   StpVecReserve(scip, genstar->edges_head, STP_GENSTAR_MAXENDDEG);
+   StpVecReserve(scip, genstar->edges_all, STP_GENSTAR_MAXDEG);
+   SCIP_CALL( reduce_starInit(scip, STP_GENSTAR_MAXDEG, &(genstar->star)) );
+
+   return SCIP_OKAY;
+}
+
+
+/** exits */
+static
+void generalStarExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   GENSTAR*              genstar             /**< general star */
+)
+{
+   StpVecFree(scip, genstar->edges_tail);
+   StpVecFree(scip, genstar->edges_head);
+   StpVecFree(scip, genstar->edges_all);
+   reduce_starFree(scip, &(genstar->star));
+   SCIPfreeBufferArray(scip, &(genstar->tmp_compedges));
+   SCIPfreeBufferArray(scip, &(genstar->tmp_extleaves));
+#ifndef NEBDUG
+   for( int i = 0; i < graph->knots; i++ )
+      assert(genstar->nodes_mark[i] == 0);
+#endif
+   SCIPfreeCleanBufferArray(scip,  &(genstar->nodes_mark));
 }
 
 
@@ -540,59 +596,50 @@ SCIP_RETCODE generalStarDeleteEdges(
    int*                  nelims              /**< number of eliminations (out) */
 )
 {
-   GENSTAR genstar = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1 };
+   GENSTAR genstar = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1, -1, -1 };
    *nelims = 0;
-
+int ncands = 0;
+int npseudoelims = 0;
    SCIPdebugMessage("General-star deletion starts \n");
 
-   //todo extra method
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(genstar.nodes_mark), graph->knots) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(genstar.tmp_compedges), STP_GENSTAR_MAXDEG) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(genstar.tmp_extleaves), STP_GENSTAR_MAXDEG - 1) );
-   StpVecReserve(scip, genstar.edges_tail, STP_GENSTAR_MAXENDDEG);
-   StpVecReserve(scip, genstar.edges_head, STP_GENSTAR_MAXENDDEG);
-   StpVecReserve(scip, genstar.edges_all, STP_GENSTAR_MAXDEG);
-   SCIP_CALL( reduce_starInit(scip, STP_GENSTAR_MAXDEG, &(genstar.star)) );
+   SCIP_CALL( generalStarInit(scip, graph, &genstar) );
 
    for( int i = 0; i < graph->edges; i += 2 )
    {
-      if( !graph_edge_isDeleted(graph, i) )
+      SCIP_Bool isPromising;
+
+      if( graph_edge_isDeleted(graph, i) )
+         continue;
+
+      generalStarSetUp(scip, graph, i, &genstar, &isPromising, distdata);
+
+      if( isPromising )
       {
-         SCIP_Bool isPromising;
-         generalStarSetUp(scip, graph, i, &genstar, &isPromising, distdata);
-
-         if( isPromising )
+         SCIP_Bool isDeletable;
+         SCIP_CALL( generalStarCheck(scip, graph, redcostdata, &genstar, extpermanent, distdata, &isDeletable ) );
+         ncands++;
+         if( isDeletable )
          {
-            SCIP_Bool isDeletable;
-            SCIP_CALL( generalStarCheck(scip, graph, redcostdata, &genstar, extpermanent, distdata, &isDeletable ) );
-
-            if( isDeletable )
+            if( genstar.replacedge_head != -1 )
             {
-               extreduce_edgeRemove(scip, i, graph, distdata, extpermanent);
-               (*nelims)++;
+               npseudoelims++;
+               continue;
             }
+
+            extreduce_edgeRemove(scip, i, graph, distdata, extpermanent);
+            (*nelims)++;
          }
       }
    }
 
-   //todo extra method
-   StpVecFree(scip, genstar.edges_tail);
-   StpVecFree(scip, genstar.edges_head);
-   StpVecFree(scip, genstar.edges_all);
-   reduce_starFree(scip, &(genstar.star));
-   SCIPfreeBufferArray(scip, &(genstar.tmp_compedges));
-   SCIPfreeBufferArray(scip, &(genstar.tmp_extleaves));
-#ifndef NEBDUG
-   for( int i = 0; i < graph->knots; i++ )
-      assert(genstar.nodes_mark[i] == 0);
-#endif
-   SCIPfreeCleanBufferArray(scip,  &(genstar.nodes_mark));
+   generalStarExit(scip, graph, &genstar);
+
+   printf("ncands=%d \n", ncands);
+   printf("npseudoelims=%d \n", npseudoelims);
 
    printf("number of general star eliminations=%d \n", *nelims);
-
    return SCIP_OKAY;
 }
-
 
 /** initializes */
 static inline
@@ -1239,12 +1286,14 @@ SCIP_RETCODE extreduce_deleteEdges(
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
    /*
+   if( 1 )
    {
       int ngenstarelims = 0;
       SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, &extpermanent, graph, &distdata, &ngenstarelims) );
       *nelims += ngenstarelims;
    }
-*/
+   */
+
 
    extFree(scip, graph, &distdata, &extpermanent);
 
