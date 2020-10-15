@@ -1239,11 +1239,12 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
 }
 
 
+#ifndef NDEBUG
 /** Verify if solution is maximal.
  *
  */
 static
-SCIP_Bool validateSolution(
+void debugCheckSolutionVectorWithObjective(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   nvars,              /**< Number of variables in symresack */
    SCIP_Real*            objective,          /**< The objective vector */
@@ -1265,8 +1266,8 @@ SCIP_Bool validateSolution(
       }
    }
    assert(SCIPisEQ(scip, obj, checkobjval));
-   return SCIPisEQ(scip, obj, checkobjval);
 }
+#endif
 
 
 /** separate symresack cover inequalities
@@ -1320,9 +1321,7 @@ SCIP_RETCODE separateSymresackCovers(
    for( i = 0; i < nvars; ++i )
    {
       if( i < perm[i] )
-      {
          sepaobjective[i] = - vals[i];
-      }
       else
       {
          sepaobjective[i] = 1.0 - vals[i];
@@ -1350,7 +1349,10 @@ SCIP_RETCODE separateSymresackCovers(
    assert( maxcrit >= 0 );
    SCIPdebugMsg( scip, "Critical row: %i\n", maxcrit );
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
-   assert( validateSolution(scip, nvars, sepaobjective, maxsolu, maxsoluobj) );
+#ifndef NDEBUG
+   /* Check if objective of solution vector is same as predicted objective */
+   debugCheckSolutionVectorWithObjective(scip, nvars, sepaobjective, maxsolu, maxsoluobj);
+#endif
 
    /* Add constant to maxsoluobj to get the real objective */
    maxsoluobj += constobjective;
@@ -1360,27 +1362,27 @@ SCIP_RETCODE separateSymresackCovers(
    {
       /* Now add the cut. Recycle array maxsolu as coefficient vector for the constraint. */
       SCIP_Real rhs = -1.0;
+#ifndef NDEBUG
       SCIP_Real lhs = 0.0;
+#endif
 
       for( i = 0; i < nvars; ++i )
       {
          if( i < perm[i] )
-         {
             maxsolu[i] = -maxsolu[i];
-            lhs += vals[i] * maxsolu[i];
-         }
          else
          {
             if( maxsolu[i] == 0 )
-            {
                rhs += 1.0;
-            }
             maxsolu[i] = 1 - maxsolu[i];
-            lhs += vals[i] * maxsolu[i];
          }
       }
 
+#ifndef NDEBUG
+      for( i = 0; i < nvars; ++i )
+         lhs += vals[i] * maxsolu[i];
       assert( SCIPisGT(scip, lhs, rhs) );
+#endif
 
       /* add cover inequality */
       SCIP_CALL( addSymresackInequality(scip, cons, nvars, consdata->vars, maxsolu, rhs, infeasible) );
