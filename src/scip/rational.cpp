@@ -59,47 +59,6 @@ static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are cons
 /*
  * Creation methods
  */
-#ifdef SCIP_WITH_BOOST
-static
-SCIP_Longint Rnumerator(
-   SCIP_Rational*        rational
-   )
-{
-   long result;
-
-   result = (boost::multiprecision::numerator(rational->val)).convert_to<long>();
-
-   return result;
-}
-
-static
-SCIP_Longint Rdenominator(
-   SCIP_Rational*        rational
-   )
-{
-   long result;
-
-    result = (boost::multiprecision::denominator(rational->val)).convert_to<long>();
-
-   return result;
-}
-#else
-static
-SCIP_Longint Rnumerator(
-   SCIP_Rational*        rational
-   )
-{
-   return rational->val.val;
-}
-
-static
-SCIP_Longint Rdenominator(
-   SCIP_Rational*        rational
-   )
-{
-   return 1.0;
-}
-#endif
 
 /** allocate and create a rational from nominator and denominator */
 SCIP_RETCODE RatCreate(
@@ -1497,6 +1456,67 @@ void RatPrintf(const char *format, ...)
    va_end(arguments);
 }
 
+/** @todo exip take care of long overflow */
+#ifdef SCIP_WITH_BOOST
+/** returns the numerator of a rational as a long */
+SCIP_Longint RatNumerator(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   long result;
+   Integer numerator;
+
+   numerator = boost::multiprecision::numerator(rational->val);
+   result = numerator.convert_to<SCIP_Longint>();
+
+   if( result != numerator )
+      result = numerator > 0 ? SCIP_LONGINT_MAX : SCIP_LONGINT_MIN;
+
+   return result;
+}
+
+/** returns the denominator of a rational as a long */
+SCIP_Longint RatDenominator(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   long result;
+   Integer denominator;
+
+   denominator = boost::multiprecision::denominator(rational->val);
+   result = denominator.convert_to<SCIP_Longint>();
+
+   if( result != denominator )
+      result = denominator > 0 ? SCIP_LONGINT_MAX : SCIP_LONGINT_MIN;
+
+   return result;
+}
+
+#else
+/** returns the numerator of a rational as a long */
+SCIP_Longint Rnumerator(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   return rational->val.val;
+}
+
+/** returns the denominator of a rational as a long */
+SCIP_Longint Rdenominator(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   return 1.0;
+}
+#endif
+
+/** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
+int RatGetSign(
+   SCIP_Rational*        rational            /**< the rational */
+   )
+{
+   return rational->val.sign();
+}
 
 /** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
 /** @todo exip: we might have to worry about incorrect results when huge coefficients occur */
@@ -1516,7 +1536,7 @@ SCIP_Real RatRoundReal(
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_ROUND_NEAREST )
       return RatApproxReal(rational);
 
-#ifdef FALSE
+#if 1
    {
       mpfr_t valmpfr;
       mpq_t* val;
@@ -1625,7 +1645,8 @@ void RatRound(
 #endif
 }
 
-/** round rational to next integer in direction of roundmode, return FALSE 
+/** round rational to next integer in direction of roundmode, return FALSEc
+ *
  * if rational outside of long-range
  */
 SCIP_Bool RatRoundInteger(

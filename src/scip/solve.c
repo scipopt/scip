@@ -2886,8 +2886,27 @@ SCIP_RETCODE applyBounding(
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
             || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
-         if( set->exact_enabled && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) )
-            return SCIP_OKAY;
+         if( set->exact_enabled && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
+         {
+            /* if the pseudoobjval is cutting of the node with tolerances, but not exactly, we use the exact pseudo objval */
+            if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(focusnode), pseudoobjval) )
+            {
+               SCIP_Rational* pseudoobjvalrational;
+               SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjvalrational) );
+
+               SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lp->lpexact, eventqueue) );
+               SCIPlpExactGetPseudoObjval(lp->lpexact, set, transprob, pseudoobjvalrational);
+
+               SCIPnodeUpdateExactLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjvalrational);
+
+               RatFreeBuffer(set->buffer, &pseudoobjvalrational);
+
+               if( RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) )
+                  return SCIP_OKAY;
+            }
+            else
+               return SCIP_OKAY;
+         }
 
          SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
             SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
@@ -4215,6 +4234,12 @@ SCIP_RETCODE solveNode(
          /* update lower bound with the pseudo objective value, and cut off node by bounding */
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
                conflict, cliquetable, cutoff) );
+
+         if( *cutoff && set->exact_enabled )
+         {
+            SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
+                        transprob, SCIPsetInfinity(set)) );
+         }
 
          /* propagate domains before lp solving and solve relaxation and lp */
          SCIPsetDebugMsg(set, " -> node solving loop: call propagators that are applicable before%s LP is solved\n",

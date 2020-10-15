@@ -324,6 +324,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->nboundvals = 0;
    (*certificate)->nodedatahash = NULL;
    (*certificate)->rootbound = NULL;
+   (*certificate)->finalbound = NULL;
    (*certificate)->derindex_root = -1;
    (*certificate)->rootinfeas = FALSE;
    (*certificate)->objintegral = FALSE;
@@ -545,6 +546,7 @@ SCIP_RETCODE SCIPcertificateInit(
    }
 
    SCIP_CALL( RatCreateBlock(blkmem, &certificate->rootbound) );
+   SCIP_CALL( RatCreateBlock(blkmem, &certificate->finalbound) );
    certificate->valssize = SCIPgetNVars(scip) + SCIPgetNConss(scip);
    SCIP_CALL( RatCreateBlockArray(SCIPblkmem(scip), &(certificate->vals), certificate->valssize) );
 
@@ -630,6 +632,7 @@ void SCIPcertificateExit(
       }
 
    RatFreeBlock(certificate->blkmem, &certificate->rootbound);
+   RatFreeBlock(certificate->blkmem, &certificate->finalbound);
    RatFreeBlockArray(certificate->blkmem, &certificate->vals, certificate->valssize);
    }
 }
@@ -785,7 +788,10 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       if( SCIPisPrimalboundSol(scip) )
       {
          bestsol = SCIPgetBestSol(scip);
-         RatSetReal(primalbound, SCIPsolGetObj(bestsol, set, scip->transprob, scip->origprob));
+         if( SCIPsolIsExact(bestsol) )
+            RatSet(primalbound, SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob));
+         else
+            RatSetReal(primalbound, SCIPsolGetObj(bestsol, set, scip->transprob, scip->origprob));
       }
       else
       {
@@ -793,21 +799,30 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          RatSetString(primalbound, "inf");
       }
 
-      /** @todo exip: can't call SCIPgetLowerbound(scip) in stage exitsolve, what to do here? */
-      // RatSetReal(dualbound, SCIPgetLowerbound(scip));
-
-      //SCIPcertificatePrintRtpRange(certificate,
-      //   RatIsAbsInfinity(dualbound) ? NULL : dualbound,
-      //   RatIsAbsInfinity(primalbound) ? NULL : primalbound);
-      if( bestsol != NULL )
-      {
-         SCIP_CALL( SCIPcertificatePrintSol(scip, certificate, bestsol) );
-      }
+      SCIPcertificatePrintRtpRange(certificate, certificate->finalbound, primalbound);
+      SCIP_CALL( SCIPcertificatePrintSol(scip, certificate, bestsol) );
    }
    SCIPcertificatePrintDerHeader(certificate);
 
    RatFreeBuffer(set->buffer, &dualbound);
    RatFreeBuffer(set->buffer, &primalbound);
+
+   return SCIP_OKAY;
+}
+
+/** prints the last part of the certificate header (RTP range/sol, ...) */
+SCIP_RETCODE SCIPcertificateSaveFinalbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   )
+{
+   assert(scip != NULL);
+
+   if( certificate->file == NULL)
+      return SCIP_OKAY;
+
+   SCIPgetDualboundExact(scip, certificate->finalbound);
 
    return SCIP_OKAY;
 }
@@ -1444,7 +1459,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             psval               /**< the pseudo obj value */
+   SCIP_Real             psval               /**< the pseudo obj value (or inf to use exact lp value) */
    )
 {
    SCIP_VAR** vars;
@@ -1472,7 +1487,11 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    nvars = SCIPprobGetNVars(prob);
    SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjval) );
 
-   RatSetReal(pseudoobjval, psval);
+   /* infinity means we use the exact lp value */
+   if( SCIPsetIsInfinity(set, psval) )
+      SCIPlpExactGetPseudoObjval(lpexact, set, prob, pseudoobjval);
+   else
+      RatSetReal(pseudoobjval, psval);
    duallen = SCIPprobGetNObjVars(prob, set);
    SCIP_CALL( RatCreateBufferArray(set->buffer, &bounds, duallen) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualind, duallen) );
@@ -1492,7 +1511,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
          /* retrieve the line in the certificate of the bound */
          RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
          certificate->workbound->varindex = SCIPvarGetCertificateIndex(vars[i]);
-         certificate->workbound->isupper = !RatIsEqual(certificate->workbound->boundval, SCIPvarGetLbLocalExact(vars[i]));
+         certificate->workbound->isupper = RatIsNegative(obj);
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
 
@@ -1789,7 +1808,7 @@ int SCIPcertificatePrintUnsplitting(
    else
    {
       SCIPdebugMessage("Node %lld is a leaf! \n", SCIPnodeGetNumber(node));
-      /* if a leaf has an inher  d bound, we need to print a bound for it and update the parent data
+      /* if a leaf has an inherited bound, we need to print a bound for it and update the parent data
          don't do it if we interrupted the solve, e.g. due to timeout */
       if( nodedata->inheritedbound && nodedata->assumptionindex_self != - 1 )
       {
@@ -1862,55 +1881,3 @@ void SCIPcertificatePrintRtpInfeas(
 
    SCIPcertificatePrintProblemMessage(certificate, "RTP infeas\n");
  }
-
-/** prints SOL header and exact solution to certificate file */
-void SCIPcertificatePrintSolExact(
-   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal CIP solution, may be NULL */
-   )
-{
-   SCIP_VAR** vars;
-   SCIP_Rational* solval;
-   int nvars;
-   int nnonz;
-   int i;
-
-   /* check if certificate output should be created */
-   if( certificate->file == NULL )
-      return;
-
-   assert(scip != NULL);
-
-   if( sol == NULL )
-   {
-      SCIPcertificatePrintProblemMessage(certificate, "SOL 0\n");
-      updateFilesize(certificate, 6.0);
-      return;
-   }
-
-   SCIP_CALL_ABORT( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-
-   RatCreateBuffer(SCIPbuffer(scip), &solval);
-   nnonz = 0;
-   for( i = 0; i < nvars; i ++)
-   {
-      SCIPsolGetValExact(solval, sol, scip->set, scip->stat, vars[i]);
-      if( !RatIsZero(solval) )
-         nnonz++;
-   }
-
-   SCIPcertificatePrintProblemMessage(certificate, "SOL 1\nbest %d", nnonz);
-
-   for( i = 0; i < nvars; i ++)
-   {
-      SCIPsolGetValExact(solval, sol, scip->set, scip->stat, vars[i]);
-      if( !RatIsZero(solval) )
-      {
-         SCIPcertificatePrintProblemMessage(certificate, " %d ", i);
-         SCIPcertificatePrintProblemRational(certificate, solval, 10);
-      }
-   }
-
-   SCIPcertificatePrintProblemMessage(certificate, "\n");
-}

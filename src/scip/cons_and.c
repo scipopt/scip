@@ -2816,7 +2816,7 @@ SCIP_RETCODE cliquePresolve(
 	       ++(*nfixedvars);
 
 	    /* create clique constraint which lead to the last fixing */
-	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq", SCIPconsGetName(cons), v2);
+	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%d", SCIPconsGetName(cons), v2);
 
 	    if( value1 )
 	       consvars[0] = var1;

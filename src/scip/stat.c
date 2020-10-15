@@ -313,10 +313,14 @@ void SCIPstatReset(
    stat->nfailboundshift = 0;
    stat->nboundshiftinf = 0;
    stat->nfailboundshiftinf = 0;
+   stat->nboundshiftobjlim = 0;
+   stat->nboundshiftobjlimfail = 0;
    stat->nprojshift = 0;
    stat->nfailprojshift = 0;
    stat->nprojshiftinf = 0;
    stat->nfailprojshiftinf = 0;
+   stat->nprojshiftobjlim = 0;
+   stat->nprojshiftobjlimfail = 0;
    stat->niterationsexlp = 0;
    stat->niterationsexlpinf = 0;
    stat->nexlpinf = 0;
@@ -878,15 +882,27 @@ void SCIPstatPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   const char* filename;
    va_list ap;
 
    assert( sourcefile != NULL );
    assert( stat != NULL );
 
-   if ( stat->subscipdepth > 0 )
-      printf("%d: [%s:%d] debug: ", stat->subscipdepth, sourcefile, sourceline);
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\');
+#else
+   filename = strrchr(sourcefile, '/');
+#endif
+   if ( filename == NULL )
+      filename = sourcefile;
    else
-      printf("[%s:%d] debug: ", sourcefile, sourceline);
+      ++filename;
+
+   if ( stat->subscipdepth > 0 )
+      printf("%d: [%s:%d] debug: ", stat->subscipdepth, filename, sourceline);
+   else
+      printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    printf(formatstr, ap);
