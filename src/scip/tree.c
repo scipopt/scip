@@ -7097,7 +7097,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp) )
          {
-            if( set->exact_enabled && lp->hasprovedbound )
+            if( !set->exact_enabled || lp->hasprovedbound )
                SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
       }
