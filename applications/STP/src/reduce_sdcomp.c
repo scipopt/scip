@@ -36,8 +36,8 @@
 #include "portab.h"
 
 #define STP_BDK_WITH_EDGEREPLACINGS FALSE
-#define STP_BDKIMP_MAXDEGREE 7
-#define STP_BDKIMP_MAXNEDGES 21
+#define STP_BDKIMP_MAXDEGREE 6
+#define STP_BDKIMP_MAXNEDGES 15
 
 
 /** BD_k storage */
