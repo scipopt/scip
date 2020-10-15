@@ -982,7 +982,7 @@ SCIP_RETCODE nodeCreate(
    (*node)->repropsubtreemark = 0;
    if( set->exact_enabled )
    {
-      RatCreateBlock(blkmem, &(*node)->lowerboundexact);
+      SCIP_CALL( RatCreateBlock(blkmem, &(*node)->lowerboundexact) );
       RatSetString((*node)->lowerboundexact, "-inf");
    }
 
@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
          * @todo exip could this be done differently somewhere else? */
@@ -2422,14 +2422,60 @@ void SCIPnodeUpdateLowerbound(
    }
 }
 
+/** if given value is larger than the node's exact lower bound, sets the node's lower bound and exact lower bound to the new value */
+void SCIPnodeUpdateExactLowerbound(
+   SCIP_NODE*            node,               /**< node to update lower bound for */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Rational*        newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   )
+{
+   assert(node != NULL);
+   assert(stat != NULL);
+
+   if( RatIsGT(newbound, node->lowerboundexact) )
+   {
+      SCIP_Real oldbound;
+
+      oldbound = node->lowerbound;
+      RatSet(node->lowerboundexact, newbound);
+      node->lowerbound = RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS);
+      node->estimate = MAX(node->estimate, node->lowerbound);
+
+      if( node->depth == 0 )
+      {
+         stat->rootlowerbound = node->lowerbound;
+         if( set->misc_calcintegral )
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), node->lowerbound);
+         SCIPvisualLowerbound(stat->visual, set, stat, node->lowerbound);
+      }
+      else if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+      {
+         SCIP_Real lowerbound;
+
+         lowerbound = SCIPtreeGetLowerbound(tree, set);
+         assert(node->lowerbound >= lowerbound);
+         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
+
+         /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
+         if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) && lowerbound > stat->lastlowerbound )
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+      }
+   }
+}
+
 /** updates exact lower bound of node using lower bound of exact LP */
 SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_LP  *            lp                  /**< LP data */
+   SCIP_LP*              lp                  /**< LP data */
    )
 {
    SCIP_Rational* lpobjval;
@@ -2452,7 +2498,7 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
    RatCreateBuffer(set->buffer, &lpobjval);
 
    SCIPlpExactGetObjval(lp->lpexact, set, transprob, lpobjval);
-   RatSet(node->lowerboundexact, lpobjval);
+   SCIPnodeUpdateExactLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
    RatFreeBuffer(set->buffer, &lpobjval);
 
@@ -2487,11 +2533,11 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( set->exact_enabled && lpobjval > SCIPnodeGetLowerbound(node) )
+   if( set->exact_enabled && (lpobjval > SCIPnodeGetLowerbound(node) || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node))) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
-      SCIPnodeUpdateExactLowerboundLP(node, set, stat, transprob, origprob, lp);
+      SCIPnodeUpdateExactLowerboundLP(node, set, stat, tree, transprob, origprob, lp);
       SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, node, transprob, usefarkas) );
    }
 
@@ -5227,6 +5273,9 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->siblings[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
+         if( set->exact_enabled && node->lowerbound < cutoffbound )
+            continue;
+
          SCIPsetDebugMsg(set, "cut off sibling #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
 
@@ -5250,6 +5299,9 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->children[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
+         if( set->exact_enabled && node->lowerbound < cutoffbound )
+            continue;
+
          SCIPsetDebugMsg(set, "cut off child #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
 

@@ -1821,6 +1821,17 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
    SCIP_Bool*            success             /**< stores whether returned value is valid */
    );
 
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcIntegralScalarExact(
+   BMS_BUFMEM*           buffer,
+   SCIP_Rational**       vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_Rational*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   );
+
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -2220,6 +2231,14 @@ void SCIPstrCopySection(
    int                   size,               /**< size of the token char array */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_EXPORT
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+);
 
 /**@} */
 

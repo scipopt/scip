@@ -72,6 +72,7 @@ void SCIPcertificateExit(
 
 /** returns whether the certificate output is activated? */
 SCIP_Bool SCIPcertificateIsActive(
+   SCIP_SET*             set,                /**< SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
@@ -269,6 +270,12 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
+/** prints the last part of the certificate header (RTP range/sol, ...) */
+SCIP_RETCODE SCIPcertificateSaveFinalbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   );
 
 /** prints RTP section for infeasibility */
 void SCIPcertificatePrintRtpInfeas(

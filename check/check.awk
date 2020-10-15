@@ -783,7 +783,7 @@ BEGIN {
 #
 # vipr check
 #
-/^Successfully verified/           {
+/^(Successfully verified|Infeasibility verified.)/           {
    certified = 1;
 }
 #

@@ -15,7 +15,7 @@ OPTS=(dbg)
 echo "Running all tests on examples."
 
 # parse command line
-MAKEARGS=""
+MAKEARGS="TIME=10"
 QUIET=0
 LIBTYPE="static"
 LIBEXT="a"

@@ -499,8 +499,6 @@
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION  1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
-#define SCIP_DEFAULT_EXACT_PSINTPOINTSELECTION 1 /**< method to select interior point (0: arbitrary interior point, 1: optimized interior point
-                                                 *   2: Arbitrary interior point in dual form, 3: two stage optimized interior point) */
 #define SCIP_DEFAULT_EXACT_LPINFO          FALSE/**< should the exact LP solver display status messages? */
 
 /* certificate output */
@@ -1626,7 +1624,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_MEM_NOLIMIT,
+         &(*set)->limit_memory, FALSE, (SCIP_Real)SCIP_DEFAULT_LIMIT_MEMORY, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
@@ -2670,11 +2668,6 @@ SCIP_RETCODE SCIPsetCreate(
          "exact/psdualcolselection",
          "strategy to select which dual columns to use for lp to compute interior point (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP)",
          &(*set)->exact_psdualcolselection, TRUE, SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION, 0, 2, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "exact/psintpointselection",
-         "method to select interior point (0: arbitrary interior point, 1: optimized interior point, 2: Arbitrary interior point in dual form, 3: two stage optimized interior point)",
-         &(*set)->exact_psintpointselection, TRUE, SCIP_DEFAULT_EXACT_PSINTPOINTSELECTION, 0, 3, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip,
          "exact/interleavedbfreq",
          "frequency at which safe dual bounding method is interleaved with exact LP solve (-1: never, 0: automatic, n > 0: every n-th node)",
@@ -7103,6 +7096,7 @@ void SCIPsetPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   const char* filename;
    int subscipdepth = 0;
    SCIP* scip;
    va_list ap;
@@ -7113,13 +7107,24 @@ void SCIPsetPrintDebugMessage(
    scip = set->scip;
    assert( scip != NULL );
 
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\');
+#else
+   filename = strrchr(sourcefile, '/');
+#endif
+   if ( filename == NULL )
+      filename = sourcefile;
+   else
+      ++filename;
+
    if ( scip->stat != NULL )
       subscipdepth = scip->stat->subscipdepth;
 
    if ( subscipdepth > 0 )
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, filename, sourceline);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);

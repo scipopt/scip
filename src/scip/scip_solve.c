@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      if( scip->set->limit_memory < SCIP_MEM_NOLIMIT )
+      if( scip->set->limit_memory < (SCIP_Real)SCIP_MEM_NOLIMIT )
       {
          SCIP_Longint memused = SCIPgetMemUsed(scip);
 
@@ -1754,9 +1754,6 @@ SCIP_RETCODE freeSolve(
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
-   /* Print last part of certificate file */
-   SCIP_CALL( SCIPcertificatePrintResult(scip, scip->set, SCIPgetCertificate(scip)) );
-
    /* cleanup the conflict storage */
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->reopt) );
 
@@ -1789,6 +1786,9 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue, scip->lp) );
 
    SCIPexitSolveDecompstore(scip);
+
+   /* Print last part of certificate file */
+   SCIP_CALL( SCIPcertificatePrintResult(scip, scip->set, SCIPgetCertificate(scip)) );
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );
@@ -2824,6 +2824,9 @@ SCIP_RETCODE SCIPsolve(
       /* display most relevant statistics */
       SCIP_CALL( displayRelevantStats(scip) );
    }
+
+   /* we can't call SCIPgetDualbound after exitsolve, so we save the final dual bound here */
+   SCIP_CALL( SCIPcertificateSaveFinalbound(scip, scip->set, SCIPgetCertificate(scip)) );
 
    return SCIP_OKAY;
 }

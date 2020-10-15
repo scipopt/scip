@@ -297,11 +297,23 @@ void SCIPnodeUpdateLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
+/** if given value is larger than the node's exact lower bound, sets the node's lower bound and exact lower bound to the new value */
+void SCIPnodeUpdateExactLowerbound(
+   SCIP_NODE*            node,               /**< node to update lower bound for */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_Rational*        newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
 /** updates exact lower bound of node using lower bound of exact LP */
 SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp                  /**< LP data */
