@@ -394,6 +394,12 @@ SCIP_RETCODE generalStarCheck(
       return SCIP_OKAY;
    }
 
+   if( graph->grad[graph->tail[edge]] == 1 || graph->grad[graph->head[edge]] == 1 )
+   {
+      SCIPdebugMessage("general-star early rule-out! \n");
+      return SCIP_OKAY;
+   }
+
    generalStarCheckInit(scip, graph, genstar);
 
    /* check all general stars of degree >= 3, as long as they can be ruled-out */
