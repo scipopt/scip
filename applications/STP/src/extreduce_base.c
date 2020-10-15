@@ -455,16 +455,23 @@ void generalStarSetUp(
 
    if( (graph->grad[tail] + graph->grad[head]) <= (STP_GENSTAR_MAXDEG + 2) && !Is_term(graph->term[tail]) && !Is_term(graph->term[head]) )
    {
+      PSEUDOANS* const pseudoancestors = graph->pseudoancestors;
       const SCIP_Real edgecost = graph->cost[edge];
       const SCIP_Real maxsdcost = reduce_sdgraphGetMaxCost(distdata->sdistdata->sdgraph);
       const STP_Bool* halfedges_isInSdMst = reduce_sdgraphGetMstHalfMark(distdata->sdistdata->sdgraph);
+      int* hasharr;
       int ntails;
       int nfails;
       int nheads;
+      const int hashsize = graph_pseudoAncestorsGetHashArraySize(pseudoancestors);
       const STP_Vectype(int) edges_tail;
       const STP_Vectype(int) edges_head;
 
+      assert(hashsize > 0);
+
       *isPromising = TRUE;
+
+      SCIP_CALL_ABORT( SCIPallocCleanBufferArray(scip, &hasharr, hashsize) );
 
 #if 0
       printf("next: \n");
@@ -503,18 +510,35 @@ void generalStarSetUp(
 
       nfails = 0;
 
+      graph_pseudoAncestors_hashEdge(pseudoancestors, edge, hasharr);
+
       for( int j = 0; j < ntails && *isPromising; j++ )
       {
+         SCIP_Bool conflict;
+         const int edge_j = edges_tail[j];
+         const int node_j = graph->head[edge_j];
+         graph_pseudoAncestors_hashEdgeDirty(pseudoancestors, edge_j, TRUE, &conflict, hasharr);
+
+         if( conflict )
+            continue;
+
          for( int k = 0; k < nheads; k++ )
          {
-            const SCIP_Real pathcost = graph->cost[edges_tail[j]] + graph->cost[edges_head[k]] + edgecost;
-            const int node_j = graph->head[edges_tail[j]];
+            const int edge_k = edges_head[k];
+            const SCIP_Real pathcost = graph->cost[edge_j] + graph->cost[edge_k] + edgecost;
             const int node_k = graph->head[edges_head[k]];
 
             assert(*isPromising);
 
             if( node_j == node_k )
                continue;
+
+            graph_pseudoAncestors_hashEdgeDirty(pseudoancestors, edge_k, TRUE, &conflict, hasharr);
+
+            if( conflict )
+               continue;
+
+            graph_pseudoAncestors_unhashEdge(pseudoancestors, edge_k, hasharr);
 
             if( GE(maxsdcost, pathcost) || halfedges_isInSdMst[edge / 2] )
             {
@@ -532,12 +556,24 @@ void generalStarSetUp(
                      break;
                   }
 
-                  genstar->replacedge_tail = edges_tail[j];
-                  genstar->replacedge_head = edges_head[k];
+                  genstar->replacedge_tail = edge_j;
+                  genstar->replacedge_head = edge_k;
                }
             }
          }
+
+         graph_pseudoAncestors_unhashEdge(pseudoancestors, edge_j, hasharr);
       }
+
+      graph_pseudoAncestors_unhashEdge(pseudoancestors, edge, hasharr);
+
+
+      for( int i = 0; i < hashsize; i++ )
+      {
+         assert(hasharr[i] == 0);
+      }
+      SCIPfreeCleanBufferArray(scip, &hasharr);
+
    }
 }
 
@@ -1285,14 +1321,14 @@ SCIP_RETCODE extreduce_deleteEdges(
 
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
-   /*
+/*
    if( 1 )
    {
       int ngenstarelims = 0;
       SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, &extpermanent, graph, &distdata, &ngenstarelims) );
       *nelims += ngenstarelims;
    }
-   */
+*/
 
 
    extFree(scip, graph, &distdata, &extpermanent);
