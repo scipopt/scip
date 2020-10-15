@@ -1578,9 +1578,9 @@ SCIP_Bool mstEqComp3RuleOut(
 
    assert(3 == extdata->tree_nleaves);
 
-   /* NOTE: initial component non-edge should be ok, because in this case we don't
+   /* NOTE: initial component star should be ok, because in this case we don't
     * use simple paths for equality rule-outs */
-   if( !extInitialCompIsEdge(extdata) || !extdata->sdeq_hasForbiddenEdges )
+   if( extInitialCompIsStar(extdata) || !extdata->sdeq_hasForbiddenEdges )
       return TRUE;
 
    sds[0] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
@@ -1806,7 +1806,7 @@ void mstCompLeafGetSDs(
    if( *leafRuledOut )
    {
       /* NOTE: does not need to hold in case of equality rule out! */
-      assert(extInitialCompIsEdge(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, TRUE, edge2leaf, extdata));
+      assert(!extInitialCompIsGenStar(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, TRUE, edge2leaf, extdata));
       return;
    }
 
@@ -1816,7 +1816,7 @@ void mstCompLeafGetSDs(
    if( *leafRuledOut )
    {
       /* NOTE: does the following not need to hold in case of equality rule out! */
-      assert(extInitialCompIsEdge(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata));
+      assert(!extInitialCompIsGenStar(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata));
       return;
    }
 

@@ -1680,7 +1680,7 @@ SCIP_Real extreduce_distDataGetSdDoubleForbidden(
    assert(scip && g && distdata);
 
    /* NOTE: does not work for pseudo-elimination, because paths might get destroyed */
-   if( extInitialCompIsEdge(extdata) )
+   if( extInitialCompIsEdge(extdata) || extInitialCompIsGenStar(extdata) )
    {
       const SCIP_Bool* const edges_isForbidden = extdata->sdeq_edgesIsForbidden;
       dist = distDataGetNormalDistForbidden(scip, g, EDGE_FORBIDDEN_NONE, edges_isForbidden, vertex1, vertex2, distdata);
@@ -1735,7 +1735,7 @@ SCIP_Real extreduce_distDataGetSdDoubleForbiddenEq(
    assert(graph_edge_isInRange(g, edge_forbidden));
 
    /* NOTE: does not work for pseudo-elimination, because paths might get destroyed */
-   if( extInitialCompIsEdge(extdata) )
+   if( extInitialCompIsEdge(extdata) || extInitialCompIsGenStar(extdata) )
    {
       const SCIP_Bool* const edges_isForbidden = extdata->sdeq_edgesIsForbidden;
       dist = distDataGetNormalDistForbiddenEq(scip, g, dist_eq, edge_forbidden, edges_isForbidden, vertex1, vertex2, distdata);
