@@ -29,6 +29,7 @@
 #include "scip/pub_var.h"
 #include "scip/rational.h"
 //#include "scip/struct_rational.h"
+#include "scip/scip_cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"
@@ -43,7 +44,7 @@
 #define CONSHDLR_NAME          "exactsol"
 #define CONSHDLR_DESC          "constraint to ensure that primal solutions report back exact solutions"
 #define CONSHDLR_ENFOPRIORITY  -9999999 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY -9999999 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_CHECKPRIORITY  -999999 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -148,6 +149,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    int nintvars;
    int nvars;
    int i;
+   int c;
 #ifdef NDEBUG
    SCIP_RETCODE retstat;
 #endif
@@ -172,8 +174,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpExactDiving(scip->lpexact) )
       return SCIP_OKAY;
 
-   *result = SCIP_FEASIBLE;
-
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
@@ -188,6 +188,21 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    if( SCIPisExactSol(scip, sol) )
       return SCIP_OKAY;
+
+   /* check if solution is floating point feasible */
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
+   {
+      SCIP_Bool violated = FALSE;
+      SCIP_CALL( SCIPcheckCons(scip, conss[c], sol, FALSE, checklprows, printreason, &violated) );
+
+      if( violated )
+         *result = SCIP_INFEASIBLE;
+   }
+
+   if( *result == SCIP_INFEASIBLE )
+      return SCIP_OKAY;
+
+   *result = SCIP_INFEASIBLE;
 
    /* start exact diving */
    SCIP_CALL( SCIPstartExactDive(scip) );
