@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
+      if( !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
          * @todo exip could this be done differently somewhere else? */
@@ -2533,7 +2533,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( set->exact_enabled && lpobjval > SCIPnodeGetLowerbound(node) )
+   if( !SCIPtreeProbing(tree) && set->exact_enabled && lpobjval > SCIPnodeGetLowerbound(node) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
