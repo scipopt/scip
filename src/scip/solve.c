@@ -4712,7 +4712,7 @@ SCIP_RETCODE solveNode(
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
 
       /** @todo exip: these ifs are temporary */
-      if( !lp->solved )
+      if( !(lp->solved && lp->flushed) )
       {
          SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
       }

@@ -1564,7 +1564,6 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    /* get the current node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, node);
-   SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
    infeas = FALSE;
    if( nodedata->inheritedbound && nodedata->assumptionindex_self != - 1 )
    {
