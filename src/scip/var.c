@@ -7146,6 +7146,7 @@ SCIP_RETCODE SCIPvarTryAggregateVarsExact(
          scalary = scalarx;
          scalarx = scalar;
          easyaggr = TRUE;
+         RatInvert(quotyx, quotyx);
       }
       else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
       {
@@ -8710,9 +8711,8 @@ SCIP_RETCODE SCIPvarAddObjExact(
             assert(set->stage == SCIP_STAGE_PROBLEM);
 
          RatAdd(var->exactdata->obj, var->exactdata->obj, addobj);
-         var->obj += RatApproxReal(addobj);
-         var->unchangedobj += RatApproxReal(addobj);
-         assert(SCIPsetIsEQ(set, var->obj, var->unchangedobj));
+         var->obj = RatApproxReal(var->exactdata->obj);
+         var->unchangedobj = var->obj;
 
          break;
 
@@ -8721,13 +8721,12 @@ SCIP_RETCODE SCIPvarAddObjExact(
          RatSet(oldobj, var->exactdata->obj);
          oldobjreal = var->obj;
          RatAdd(var->exactdata->obj, var->exactdata->obj, addobj);
-         var->obj += addobjreal;
+         var->obj = RatApproxReal(var->exactdata->obj);
 
          /* update unchanged objective value of variable */
          if( !lp->divingobjchg )
          {
-            var->unchangedobj += addobjreal;
-            assert(SCIPsetIsEQ(set, var->obj, var->unchangedobj));
+            var->unchangedobj = var->obj;
          }
 
          /* update the number of variables with non-zero objective coefficient;

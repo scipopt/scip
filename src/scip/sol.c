@@ -1944,9 +1944,9 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
-      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enabled && RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enabled && RatIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enabled && RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
