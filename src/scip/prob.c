@@ -1684,7 +1684,6 @@ SCIP_RETCODE probScaleObjExact(
             for( v = 0; v < nints; ++v )
             {
                RatDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
-               SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, RatApproxReal(objvals[v])) );
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
             transprob->objoffset *= RatApproxReal(intscalar);
