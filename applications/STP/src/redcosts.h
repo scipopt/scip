@@ -16,7 +16,9 @@
 /**@file   redcosts.h
  * @brief  Reduced cost based routines for Steiner problems
  * @author Daniel Rehfeldt
- * *
+ *
+ * Reduced costs are stored level-wise
+ *
  */
 
 
@@ -49,6 +51,54 @@ typedef struct reduce_costs_data
 } REDCOST;
 
 
+/** returns top level reduced costs */
+EXTERN
+SCIP_Real* redcosts_getEdgeCostsTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns root to node distances */
+EXTERN
+SCIP_Real* redcosts_getRootToNodeDistTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns paths from nodes to closes terms */
+EXTERN
+PATH* redcosts_getNodeToTermsPathsTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns closest terms to nodes */
+EXTERN
+int* redcosts_getNodeToTermsBasesTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns cutoff */
+EXTERN
+SCIP_Real redcosts_getCutoffTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns dual-bound */
+EXTERN
+SCIP_Real redcosts_getDualBound(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns root used for reduced cost computation */
+EXTERN
+int redcosts_getRootTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
 
 /** initializes reduced costs data structure */
 EXTERN
@@ -58,7 +108,7 @@ SCIP_RETCODE redcosts_init(
    int                   nedges,             /**< number of edges */
    SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
    int                   redCostRoot,        /**< graph root for reduced cost calculation */
-   REDCOST**             redcostdata         /**< data to initialize */
+   REDCOST**             redcostdata         /**< reduced costs data */
    );
 
 

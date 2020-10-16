@@ -1865,69 +1865,6 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 }
 
 
-#if 0
-/** tests that node can be deleted */
-static
-SCIP_RETCODE testPcNode3NotPseudoDeletedBySd1(
-   SCIP*                 scip                /**< SCIP data structure */
-)
-{
-   REDCOST* redcostdata;
-   GRAPH* graph;
-   const int nnodes = 6;
-   const int nedges = 14;
-   const int root = 0;
-   SCIP_Real cutoff = 100.0;
-   STP_Bool* edgedeleted = NULL;
-   int testnode = 0;
-   SCIP_Bool deletable;
-
-   assert(scip);
-
-   SCIP_CALL( redcosts_init(scip, 3 * nnodes, 4 * nedges, cutoff, root, &redcostdata) );
-   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
-
-   /* build tree */
-   graph_knot_add(graph, STP_TERM);       /* node 0 */
-   graph_knot_add(graph, STP_TERM);       /* node 1 */
-   graph_knot_add(graph, STP_TERM);       /* node 2 */
-   graph_knot_add(graph, STP_TERM);       /* node 3 */
-   graph_knot_add(graph, STP_TERM);       /* node 4 */
-   graph_knot_add(graph, STP_TERM);       /* node 5 */
-
-   graph->source = 1;
-
-   graph_edge_addBi(scip, graph, 0, 1, 0.9);
-   graph_edge_addBi(scip, graph, 0, 2, 1.0);
-   graph_edge_addBi(scip, graph, 0, 3, 1.0);
-   graph_edge_addBi(scip, graph, 1, 4, 1.0);
-   graph_edge_addBi(scip, graph, 2, 4, 1.0);
-   graph_edge_addBi(scip, graph, 2, 5, 1.0);
-   graph_edge_addBi(scip, graph, 3, 5, 1.0);
-
-   SCIP_CALL( graph_pc_initPrizes(scip, graph, nnodes) );
-
-   for( int i = 0; i < nnodes; i++ )
-      graph->prize[i] = 100.0;
-
-   graph->prize[0] = 1.0;
-   graph->prize[2] = 1.1;
-
-   SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
-
-   extInitRedCostArraysPc(graph, &redcostdata);
-
-   SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
-
-   STPTEST_ASSERT_MSG(!deletable, "node was marked as deleteable! \n");
-
-   stptest_extreduceTearDown(scip, graph, &redcostdata);
-
-   return SCIP_OKAY;
-}
-#endif
-
-
 /** frees, etc. */
 void stptest_extreduceTearDown(
    SCIP*                 scip,               /**< SCIP data structure */

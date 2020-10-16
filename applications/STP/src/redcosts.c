@@ -44,6 +44,86 @@
  */
 
 
+/** returns top level reduced costs */
+SCIP_Real* redcosts_getEdgeCostsTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(redcostdata->redEdgeCost);
+
+   return redcostdata->redEdgeCost;
+}
+
+
+/** returns root to node distances */
+SCIP_Real* redcosts_getRootToNodeDistTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(redcostdata->rootToNodeDist);
+
+   return redcostdata->rootToNodeDist;
+}
+
+
+/** returns paths from nodes to closes terms */
+PATH* redcosts_getNodeToTermsPathsTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(redcostdata->nodeTo3TermsPaths);
+
+   return redcostdata->nodeTo3TermsPaths;
+}
+
+
+/** returns closest terms to nodes */
+int* redcosts_getNodeToTermsBasesTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(redcostdata->nodeTo3TermsBases);
+
+   return redcostdata->nodeTo3TermsBases;
+}
+
+
+/** returns cutoff */
+SCIP_Real redcosts_getCutoffTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+
+   return redcostdata->cutoff;
+}
+
+
+/** returns dual-bound */
+SCIP_Real redcosts_getDualBound(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+
+   return redcostdata->dualBound;
+}
+
+
+/** returns root used for reduced cost computation */
+int redcosts_getRootTop(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+
+   return redcostdata->redCostRoot;
+}
+
 
 /* initialize distances from reduced costs */
 SCIP_RETCODE redcosts_initializeDistances(
