@@ -1536,7 +1536,7 @@ void extreduce_distDataDeleteEdge(
 
    assert(scip && distdata && distdata->pathroot_blocks);
    assert(edge >= 0);
-   assert(g->oeat[edge] == EAT_FREE && g->ieat[edge] == EAT_FREE);
+ //  assert(g->oeat[edge] == EAT_FREE && g->ieat[edge] == EAT_FREE);
 
    for( int k = 0; k < npathroots; k++ )
    {

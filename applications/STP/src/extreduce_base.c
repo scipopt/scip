@@ -99,6 +99,156 @@ SCIP_Bool graphmarkIsClean(
 }
 #endif
 
+
+/** replaces edge by a path */
+static inline
+SCIP_RETCODE replaceEdgeByPath(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to replace */
+   const GENSTAR*        genstar,            /**< star */
+   GRAPH*                graph,              /**< graph data structure (in/out) */
+   REDCOST*              redcostdata,        /**< reduced cost data structures */
+   DISTDATA*             distdata,           /**< distance data (in/out) */
+   EXTPERMA*             extpermanent        /**< (in/out) */
+)
+{
+   const int tail = graph->tail[edge];
+   const int head = graph->head[edge];
+   const int path_edgein = flipedge(genstar->replacedge_tail);
+   const int path_edgeout = genstar->replacedge_head;
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("replacing edge ");
+   graph_edge_printInfo(graph, edge);
+#endif
+
+   printf("replace edge \n");
+
+   graph_edge_printInfo(graph, path_edgein);
+   graph_edge_printInfo(graph, edge);
+   graph_edge_printInfo(graph, path_edgeout);
+
+
+   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
+
+   if( distdata->sdistdata )
+   {
+      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
+   }
+
+   SCIP_CALL( graph_edge_delPseudoPath(scip, graph, edge, path_edgein, path_edgeout, redcostdata->redEdgeCost) );
+   extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
+
+   if( extpermanent )
+   {
+      const int path_tail = graph->tail[path_edgein];
+      const int path_head = graph->head[path_edgeout];
+
+      reduce_impliedNodesRepair(scip, graph, path_tail, path_head, extpermanent->nodes_implications);
+      reduce_impliedNodesRepair(scip, graph, tail, head, extpermanent->nodes_implications);
+      assert(reduce_impliedNodesIsValid(graph, (const STP_Vectype(int)*) extpermanent->nodes_implications));
+   }
+
+   if( graph->grad[tail] == 0 )
+   {
+      if( Is_term(graph->term[tail])  )
+      {
+         assert(graph_pc_isPcMw(graph) || tail == graph->source);
+      }
+      else
+      {
+         graph->mark[tail] = FALSE;
+      }
+   }
+
+   if( graph->grad[head] == 0 )
+   {
+      if( Is_term(graph->term[head]) || head == graph->source )
+      {
+         assert(graph_pc_isPcMw(graph));
+      }
+      else
+      {
+         graph->mark[head] = FALSE;
+      }
+   }
+
+   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
+
+
+   return SCIP_OKAY;
+}
+
+/** deletes an edge and makes corresponding adaptations */
+static inline
+void removeEdge(
+   SCIP*                 scip,               /**< SCIP */
+   int                   edge,               /**< edge to delete */
+   GRAPH*                graph,              /**< graph data structure (in/out) */
+   DISTDATA*             distdata,           /**< distance data (in/out) */
+   EXTPERMA*             extpermanent        /**< (in/out) */
+)
+{
+   const int tail = graph->tail[edge];
+   const int head = graph->head[edge];
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("removing edge ");
+   graph_edge_printInfo(graph, edge);
+#endif
+
+   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
+
+   if( distdata->sdistdata )
+   {
+      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
+   }
+
+   /*
+   static int cc = 0;
+   char name[1000];
+   sprintf(name, "outprev%d.stp", cc);
+   graph_writeStpByName(scip, graph, name, 0.0);
+      graph_edge_printInfo(graph, edge);
+
+   */
+
+   graph_edge_delFull(scip, graph, edge, TRUE);
+   extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
+
+   if( extpermanent )
+   {
+      reduce_impliedNodesRepair(scip, graph, tail, head, extpermanent->nodes_implications);
+      assert(reduce_impliedNodesIsValid(graph, (const STP_Vectype(int)*) extpermanent->nodes_implications));
+   }
+
+   if( graph->grad[tail] == 0 )
+   {
+      if( Is_term(graph->term[tail])  )
+      {
+         assert(graph_pc_isPcMw(graph) || tail == graph->source);
+      }
+      else
+      {
+         graph->mark[tail] = FALSE;
+      }
+   }
+
+   if( graph->grad[head] == 0 )
+   {
+      if( Is_term(graph->term[head]) || head == graph->source )
+      {
+         assert(graph_pc_isPcMw(graph));
+      }
+      else
+      {
+         graph->mark[head] = FALSE;
+      }
+   }
+
+   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
+}
+
 /** initialize */
 static inline
 SCIP_RETCODE extInit(
@@ -625,7 +775,7 @@ void generalStarExit(
 static
 SCIP_RETCODE generalStarDeleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data structures */
+   REDCOST*              redcostdata,        /**< reduced cost data structures */
    EXTPERMA*             extpermanent,       /**< extension data */
    GRAPH*                graph,              /**< graph data structure */
    DISTDATA*             distdata,           /**< distance data */
@@ -633,9 +783,11 @@ SCIP_RETCODE generalStarDeleteEdges(
 )
 {
    GENSTAR genstar = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1, -1, -1 };
+   int ncands = 0;
+   int npseudoelims = 0;
+
    *nelims = 0;
-int ncands = 0;
-int npseudoelims = 0;
+
    SCIPdebugMessage("General-star deletion starts \n");
 
    SCIP_CALL( generalStarInit(scip, graph, &genstar) );
@@ -659,10 +811,12 @@ int npseudoelims = 0;
             if( genstar.replacedge_head != -1 )
             {
                npseudoelims++;
+               SCIP_CALL( replaceEdgeByPath(scip, i, &genstar, graph, redcostdata, distdata, extpermanent) );
+
                continue;
             }
 
-            extreduce_edgeRemove(scip, i, graph, distdata, extpermanent);
+            removeEdge(scip, i, graph, distdata, extpermanent);
             (*nelims)++;
          }
       }
@@ -1107,77 +1261,6 @@ SCIP_RETCODE pseudodeleteExecute(
 }
 
 
-/** deletes an edge and makes corresponding adaptations */
-static inline
-void removeEdge(
-   SCIP*                 scip,               /**< SCIP */
-   int                   edge,               /**< edge to delete */
-   GRAPH*                graph,              /**< graph data structure (in/out) */
-   DISTDATA*             distdata,           /**< distance data (in/out) */
-   EXTPERMA*             extpermanent        /**< (in/out) */
-)
-{
-   const int tail = graph->tail[edge];
-   const int head = graph->head[edge];
-
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("removing edge ");
-   graph_edge_printInfo(graph, edge);
-#endif
-
-   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
-
-   if( distdata->sdistdata )
-   {
-      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
-   }
-
-   /*
-   static int cc = 0;
-   char name[1000];
-   sprintf(name, "outprev%d.stp", cc);
-   graph_writeStpByName(scip, graph, name, 0.0);
-      graph_edge_printInfo(graph, edge);
-
-   */
-
-   graph_edge_delFull(scip, graph, edge, TRUE);
-   extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
-
-   if( extpermanent )
-   {
-      reduce_impliedNodesRepair(scip, graph, tail, head, extpermanent->nodes_implications);
-      assert(reduce_impliedNodesIsValid(graph, (const STP_Vectype(int)*) extpermanent->nodes_implications));
-   }
-
-   if( graph->grad[tail] == 0 )
-   {
-      if( Is_term(graph->term[tail])  )
-      {
-         assert(graph_pc_isPcMw(graph) || tail == graph->source);
-      }
-      else
-      {
-         graph->mark[tail] = FALSE;
-      }
-   }
-
-   if( graph->grad[head] == 0 )
-   {
-      if( Is_term(graph->term[head]) || head == graph->source )
-      {
-         assert(graph_pc_isPcMw(graph));
-      }
-      else
-      {
-         graph->mark[head] = FALSE;
-      }
-   }
-
-   assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
-}
-
-
 /** Extended reduction test for arcs.
  * This method will also set edgedeletable[a] to TRUE if arc 'a' can be deleted, but its anti-parallel arc not. */
 SCIP_RETCODE extreduce_deleteArcs(
@@ -1265,7 +1348,7 @@ SCIP_RETCODE extreduce_deleteArcs(
 /** extended reduction test for edges */
 SCIP_RETCODE extreduce_deleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data */
+   REDCOST*              redcostdata,        /**< reduced cost data */
    const int*            result,             /**< solution array or NULL */
    GRAPH*                graph,              /**< graph data structure (in/out) */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed (in/out) */
@@ -1372,7 +1455,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 /** deletes center edges of general stars */
 SCIP_RETCODE extreduce_deleteGeneralStars(
    SCIP*                 scip,               /**< SCIP data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data */
+   REDCOST*              redcostdata,        /**< reduced cost data */
    const int*            result,             /**< solution array or NULL */
    GRAPH*                graph,              /**< graph data structure (in/out) */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed (in/out) */
