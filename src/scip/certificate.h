@@ -227,6 +227,12 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_Real             psval               /**< the pseudo obj value */
    );
 
+SCIP_RETCODE SCIPcertificatePrintInheritedBound(
+   SCIP_SET*             set,                /**< general SCIP settings */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_NODE*            node                /**< node data */
+   );
+
 /** update the parent certificate node data when branching, print branching into certificate if not already present */
 SCIP_RETCODE SCIPcertificatePrintBranching(
    SCIP_SET*             set,                /**< general SCIP settings */
