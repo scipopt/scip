@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPbranchExecLPexact(
 
    /* it does not  make sense to call the normal branching rules, due to assumed very small fractionalities,
       SCIP is not designed to branch on such values. So we simply branch on the first possible variable */
-   for( i = 0; i < branchcand->nlpcands; i++ )
+   for( i = 0; i < branchcand->nlpcands && *result != SCIP_BRANCHED; i++ )
    {
       SCIP_VAR* branchvar;
       SCIP_Rational* tmp;
@@ -588,6 +588,8 @@ SCIP_RETCODE SCIPbranchExecLPexact(
             branchcand, eventqueue, branchvar, NULL, NULL, NULL) );
       *result = SCIP_BRANCHED;
    }
+   /* reset the validlpcandslp to recalculate the branchcands for normal branching */
+   branchcand->validlpcandslp = -1;
 
    return SCIP_OKAY;
 }
