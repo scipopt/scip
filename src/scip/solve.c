@@ -4235,7 +4235,7 @@ SCIP_RETCODE solveNode(
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
                conflict, cliquetable, cutoff) );
 
-         if( *cutoff && set->exact_enabled )
+         if( *cutoff && set->exact_enabled && !SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)) )
          {
             SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
                         transprob, SCIPsetInfinity(set)) );

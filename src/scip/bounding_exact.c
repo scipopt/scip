@@ -1287,7 +1287,7 @@ SCIP_RETCODE projectShift(
    /* flush exact lp */
    /* set up the exact lpi for the current node */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, eventqueue) );
-   //SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
+   SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = projshiftdata->nextendedrows;
    nrows = lpexact->nrows;
