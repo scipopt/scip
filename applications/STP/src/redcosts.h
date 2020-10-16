@@ -32,22 +32,6 @@
 extern "C" {
 #endif
 
-/** reduced costs available? */
-EXTERN
-SCIP_Bool redcosts_forLPareAvailable(
-   SCIP*                 scip                /**< SCIP structure */
-   );
-
-/** initialize reduced costs */
-EXTERN
-void redcosts_forLPget(
-   SCIP*                 scip,               /**< SCIP structure */
-   SCIP_VAR**            vars,               /**< variables */
-   const GRAPH*          graph,              /**< graph data */
-   SCIP_Real*            redcosts            /**< reduced costs */
-   );
-
-
 /** reduced cost result data */
 typedef struct reduce_costs_data
 {
@@ -63,6 +47,53 @@ typedef struct reduce_costs_data
    int                   nedges;             /**< number of edges */
 #endif
 } REDCOST;
+
+
+
+/** initializes reduced costs data structure */
+EXTERN
+SCIP_RETCODE redcosts_init(
+   SCIP*                 scip,               /**< SCIP */
+   int                   nnodes,             /**< number of nodes */
+   int                   nedges,             /**< number of edges */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
+   int                   redCostRoot,        /**< graph root for reduced cost calculation */
+   REDCOST**             redcostdata         /**< data to initialize */
+   );
+
+
+/** frees */
+EXTERN
+void redcosts_free(
+   SCIP*                 scip,               /**< SCIP */
+   REDCOST**             redcostdata         /**< data to free */
+);
+
+
+/* initialize distances from reduced costs */
+EXTERN
+SCIP_RETCODE redcosts_initializeDistances(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph data structure */
+   REDCOST*              redcostdata         /**< reduced cost data */
+   );
+
+
+/** reduced costs available? */
+EXTERN
+SCIP_Bool redcosts_forLPareAvailable(
+   SCIP*                 scip                /**< SCIP structure */
+   );
+
+/** initialize reduced costs */
+EXTERN
+void redcosts_forLPget(
+   SCIP*                 scip,               /**< SCIP structure */
+   SCIP_VAR**            vars,               /**< variables */
+   const GRAPH*          graph,              /**< graph data */
+   SCIP_Real*            redcosts            /**< reduced costs */
+   );
+
 
 
 #ifdef __cplusplus

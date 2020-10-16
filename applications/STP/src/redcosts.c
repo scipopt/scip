@@ -44,6 +44,163 @@
  */
 
 
+
+/* initialize distances from reduced costs */
+SCIP_RETCODE redcosts_initializeDistances(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph data structure */
+   REDCOST*              redcostdata         /**< reduced cost data */
+   )
+{
+   int* pathedge;
+   const int daroot = redcostdata->redCostRoot;
+   const SCIP_Real* const redcosts = redcostdata->redEdgeCost;
+   PATH* const vnoi = redcostdata->nodeTo3TermsPaths;
+   SCIP_Real* const pathdist = redcostdata->rootToNodeDist;
+   int* const vbase = redcostdata->nodeTo3TermsBases;
+   SCIP_Real* costrev = NULL;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
+   const SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_NWSPG);
+   int* state;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes + 1) );
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, g, daroot, redcosts, pathdist, pathedge);
+
+   for( int e = 0; e < nedges; e++ )
+      costrev[e] = redcosts[flipedge(e)];
+
+   /* no paths should go back to the root */
+   for( int e = g->outbeg[daroot]; e != EAT_LAST; e = g->oeat[e] )
+      costrev[e] = FARAWAY;
+
+   if( isRpcmw )
+   {
+      if( !g->extended )
+         graph_pc_2trans(scip, g);
+      else
+         graph_mark(g);
+   }
+
+   assert(graph_isMarked(g));
+
+   /* build Voronoi diagram */
+   if( directed )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
+
+      assert(!isRpcmw);
+      graph_add1stTermPaths(g, costrev, vnoi, vbase, state);
+   }
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
+
+      graph_get3nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
+
+#ifndef NDEBUG
+      {
+         for( int i = 0; i < nnodes; i++ )
+         {
+            if( !g->mark[i] )
+               continue;
+
+            if( !Is_term(g->term[i]) )
+            {
+               assert(vbase[i] != daroot || vnoi[i].dist >= FARAWAY);
+               assert(vbase[i + nnodes] != daroot || vnoi[i + nnodes].dist >= FARAWAY);
+            }
+            else
+               assert(vbase[i] == i);
+         }
+      }
+#endif
+   }
+
+   if( isRpcmw )
+      graph_pc_2org(scip, g);
+
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &pathedge);
+   SCIPfreeBufferArray(scip, &costrev);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** initializes reduced costs data structure */
+SCIP_RETCODE redcosts_init(
+   SCIP*                 scip,               /**< SCIP */
+   int                   nnodes,             /**< number of nodes */
+   int                   nedges,             /**< number of edges */
+   SCIP_Real             cutoff,             /**< reduced cost cutoff value or -1.0 if not used */
+   int                   redCostRoot,        /**< graph root for reduced cost calculation */
+   REDCOST**             redcostdata         /**< data to initialize */
+)
+{
+   REDCOST* reddata;
+   SCIP_Real* redEdgeCost;
+   SCIP_Real* rootToNodeDist;
+   PATH* nodeTo3TermsPaths;
+   int* nodeTo3TermsBases;
+
+   assert(scip);
+   assert(nnodes >= 0);
+   assert(nedges >= 0);
+   assert(nedges % 2 == 0);
+   assert(redCostRoot >= 0 || redCostRoot == UNKNOWN);
+   assert(GE(cutoff, 0.0) || EQ(cutoff, -1.0));
+
+   SCIP_CALL( SCIPallocMemory(scip, redcostdata) );
+   reddata = *redcostdata;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &redEdgeCost, nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &rootToNodeDist, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nodeTo3TermsPaths, 3 * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &nodeTo3TermsBases, 3 * nnodes) );
+
+   reddata->redEdgeCost = redEdgeCost;
+   reddata->rootToNodeDist = rootToNodeDist;
+   reddata->nodeTo3TermsPaths = nodeTo3TermsPaths;
+   reddata->nodeTo3TermsBases = nodeTo3TermsBases;
+   reddata->cutoff = cutoff;
+   reddata->redCostRoot = redCostRoot;
+
+#ifndef NDEBUG
+   reddata->nnodes = nnodes;
+   reddata->nedges = nedges;
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+void redcosts_free(
+   SCIP*                 scip,               /**< SCIP */
+   REDCOST**             redcostdata         /**< data */
+)
+{
+   REDCOST* reddata;
+
+   assert(scip && redcostdata);
+
+   reddata = *redcostdata;
+
+   SCIPfreeMemoryArray(scip, &(reddata->nodeTo3TermsBases));
+   SCIPfreeMemoryArray(scip, &(reddata->nodeTo3TermsPaths));
+   SCIPfreeMemoryArray(scip, &(reddata->rootToNodeDist));
+   SCIPfreeMemoryArray(scip, &(reddata->redEdgeCost));
+
+   SCIPfreeMemory(scip, redcostdata);
+}
+
+
 /** reduced costs available? */
 SCIP_Bool redcosts_forLPareAvailable(
    SCIP*                 scip                /**< SCIP structure */

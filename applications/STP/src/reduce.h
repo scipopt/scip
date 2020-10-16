@@ -329,8 +329,6 @@ extern void            reduce_starCurrentSetRuledOut(STAR*);
 extern void            reduce_starCurrentSetFailed(STAR*);
 extern SCIP_Bool       reduce_starHasPromisingEdges(const STAR*);
 extern SCIP_Bool       reduce_starAllAreChecked(const STAR*);
-extern SCIP_RETCODE    reduce_redcostdataInit(SCIP*, int, int, SCIP_Real, int, REDCOST*);
-extern void            reduce_redcostdataFreeMembers(SCIP*, REDCOST*);
 
 
 /* reduce_sdutil.c

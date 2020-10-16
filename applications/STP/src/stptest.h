@@ -92,7 +92,7 @@ extern SCIP_RETCODE    stptest_tpaths(SCIP*);
 /* stptest_extreduce.c
  */
 extern SCIP_RETCODE    stptest_extreduce(SCIP*);
-extern void            stptest_extreduceTearDown(SCIP*, GRAPH*, REDCOST*);
+extern void            stptest_extreduceTearDown(SCIP*, GRAPH*, REDCOST**);
 
 /* stptest_extutils.c
  */
