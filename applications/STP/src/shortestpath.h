@@ -28,6 +28,10 @@
 
 #include "graph.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** information needed for prize-collecting problems */
 typedef
 struct stortest_path_prizecollecting
@@ -67,5 +71,8 @@ void shortestpath_computeSteinerTreePcMw(const GRAPH*, int, const SCIP_Real*, SC
 void shortestpath_computeSteinerTreeRpcMw(const GRAPH*, int, const SCIP_Real*, SPATHSPC*, SPATHS*);
 void shortestpath_computeSteinerTreePcMwFull(const GRAPH*, int, SPATHS*);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* APPLICATIONS_STP_SRC_SHORTESTPATH_H_ */

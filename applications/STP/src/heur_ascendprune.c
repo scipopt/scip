@@ -40,7 +40,7 @@
 #include "reduce.h"
 #include "heur_tm.h"
 #include "solstp.h"
-#include "prop_stp.h"
+#include "redcosts.h"
 #include "cons_stp.h"
 #include "probdata_stp.h"
 
@@ -638,7 +638,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( !SCIPStpRedcostAvailable(scip) )
+   if( !redcosts_forLPareAvailable(scip) )
       return SCIP_OKAY;
 
    nedges = graph->edges;
@@ -671,7 +671,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    SCIP_CALL( SCIPallocBufferArray(scip, &redcosts, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
 
-   SCIPStpGetRedcosts(scip, vars, graph, redcosts);
+   redcosts_forLPget(scip, vars, graph, redcosts);
 
    /* perform ascent and prune */
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, heur, graph, redcosts, edgearrint, graph->source, &solAdded, TRUE) );

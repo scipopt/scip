@@ -49,6 +49,7 @@ add_executable(scipstp
     src/prop_stp.c
     src/reader_stp.c
     src/reader_gr.c
+    src/redcosts.c
     src/reduce_alt.c
     src/reduce_base.c
     src/reduce_bnd.c

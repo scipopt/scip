@@ -30,6 +30,7 @@
 #include "graph.h"
 #include "reduce.h"
 #include "solstp.h"
+#include "redcosts.h"
 #include "extreduce.h"
 #include "cons_stp.h"
 #include "branch_stp.h"
@@ -1294,7 +1295,7 @@ SCIP_RETCODE fixVarsDualcost(
 
    graph_mark(graph);
 
-   SCIPStpGetRedcosts(scip, vars, graph, redcost);
+   redcosts_forLPget(scip, vars, graph, redcost);
    SCIP_CALL( getRedCostDistances(scip, redcost, graph, vnoi, pathdist, vbase, state) );
 
    for( int k = 0; k < nnodes; k++ )
@@ -1380,7 +1381,7 @@ SCIP_RETCODE fixVarsExtendedRed(
 
    mark0FixedArcs(graph, vars, arcdeleted);
 
-   SCIPStpGetRedcosts(scip, vars, graph, redcost);
+   redcosts_forLPget(scip, vars, graph, redcost);
    SCIP_CALL( getRedCostDistances(scip, redcost, propgraph, vnoi, pathdist, vbase, state) );
 
    if( pcmw )
@@ -1654,7 +1655,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   if( !SCIPStpRedcostAvailable(scip) )
+   if( !redcosts_forLPareAvailable(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */
@@ -1815,110 +1816,6 @@ SCIP_DECL_PROPEXITSOL(propExitsolStp)
  *
  * @{
  */
-
-
-
-/** reduced costs available? */
-SCIP_Bool SCIPStpRedcostAvailable(
-   SCIP*                 scip                /**< SCIP structure */
-)
-{
-   /* only execute if current node has an LP */
-   if( !SCIPhasCurrentNodeLP(scip) )
-      return FALSE;
-
-   /* only execute dualcostVarfixing if optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return FALSE;
-
-   /* only execute if current LP is valid relaxation */
-   if( !SCIPisLPRelax(scip) )
-      return FALSE;
-
-   /* we cannot apply reduced cost strengthening if no simplex basis is available */
-   if( !SCIPisLPSolBasic(scip) )
-      return FALSE;
-
-   /* reduced cost strengthening can only be applied if cutoff is finite */
-   if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
-      return FALSE;
-
-   return TRUE;
-}
-
-
-/** initialize reduced costs*/
-void SCIPStpGetRedcosts(
-   SCIP*                 scip,               /**< SCIP structure */
-   SCIP_VAR**            vars,               /**< variables (in) */
-   const GRAPH*          graph,              /**< graph data */
-   SCIP_Real*            redcosts            /**< reduced costs (out) */
-   )
-{
-   const int nedges = graph_get_nEdges(graph);
-
-   assert(nedges >= 0);
-   assert(vars && redcosts && scip);
-
-   for( int e = 0; e < nedges; e++ )
-   {
-      assert(SCIPvarIsBinary(vars[e]));
-
-      /* variable is already fixed, we must not trust the reduced cost */
-      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
-      {
-         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
-            redcosts[e] = 0.0;
-         else
-         {
-            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
-            redcosts[e] = FARAWAY;
-         }
-      }
-      else
-      {
-         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
-         {
-            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
-            redcosts[e] = SCIPgetVarRedcost(scip, vars[e]);
-         }
-         else
-         {
-            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
-            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
-            redcosts[e] = 0.0;
-         }
-      }
-
-      if( redcosts[e] < 0.0 )
-         redcosts[e] = 0.0;
-   }
-#if 0
-   if( graph_pc_isPcMw(graph) )
-   {
-      /* we do some clean-up */
-      const int nnodes = graph_get_nNodes(graph);
-      const int root = graph->source;
-
-      assert(graph->term2edge);
-
-      for( int i = 0; i < nnodes; i++ )
-      {
-         if( graph_pc_knotIsDummyTerm(graph, i) && i != root )
-         {
-            const int edge2dummy = flipedge(graph->term2edge[i]);
-
-            assert(edge2dummy >= 0 && graph->head[edge2dummy] == i);
-            assert(EQ(graph->cost[edge2dummy], 0.0));
-            assert(EQ(redcosts[edge2dummy], 0.0) || EQ(redcosts[edge2dummy], FARAWAY));
-
-            if( EQ(redcosts[edge2dummy], 0.0) )
-               redcosts[edge2dummy] = 0.0;
-         }
-      }
-   }
-#endif
-}
 
 
 /** fix a variable (corresponding to an edge) to zero */

@@ -28,6 +28,7 @@
 #include "scip/scip.h"
 #include "graph.h"
 #include "stpvector.h"
+#include "redcosts.h"
 
 #define STP_REDUCTION_NONE      0
 #define STP_REDUCTION_BASIC     1
@@ -71,24 +72,6 @@ struct special_distance_implied_profit
    int* RESTRICT         nodes_biassource;   /**< source terminal per node */
    int* RESTRICT         nodes_biassource2;  /**< second source terminal per node */
 };
-
-
-/** reduced cost result data */
-typedef struct reduce_costs_data
-{
-   SCIP_Real*            redEdgeCost;        /**< reduced costs */
-   SCIP_Real*            rootToNodeDist;     /**< shortest path distances from root  */
-   PATH*                 nodeTo3TermsPaths;  /**< paths to three nearest terminals */
-   int*                  nodeTo3TermsBases;  /**< three nearest terminals */
-   SCIP_Real             cutoff;             /**< reduced cost cutoff value or -1.0 if not used */
-   SCIP_Real             dualBound;          /**< dual bound or -1.0 if not used */
-   int                   redCostRoot;        /**< graph root for reduced cost calculation */
-#ifndef NDEBUG
-   int                   nnodes;             /**< number of nodes */
-   int                   nedges;             /**< number of edges */
-#endif
-} REDCOST;
-
 
 
 /** reduction parameters */

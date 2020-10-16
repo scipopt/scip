@@ -99,6 +99,7 @@ CMAINOBJ	=	cmain.o \
 			dialog_stp.o \
 			reader_stp.o \
 			reader_gr.o \
+			redcosts.o \
 			pricer_stp.o \
 			reduce_base.o \
 			reduce_alt.o \

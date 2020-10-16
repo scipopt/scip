@@ -57,20 +57,6 @@ int SCIPStpNfixedEdges(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** reduced costs available? */
-EXTERN
-SCIP_Bool SCIPStpRedcostAvailable(
-   SCIP*                 scip                /**< SCIP structure */
-   );
-
-/** initialize reduced costs */
-EXTERN
-void SCIPStpGetRedcosts(
-   SCIP*                 scip,               /**< SCIP structure */
-   SCIP_VAR**            vars,               /**< variables */
-   const GRAPH*          graph,              /**< graph data */
-   SCIP_Real*            redcosts            /**< reduced costs */
-   );
 
 /** gets propagator graph  */
 SCIP_EXPORT
