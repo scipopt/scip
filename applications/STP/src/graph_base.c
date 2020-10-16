@@ -1536,6 +1536,88 @@ void delPseudoFreeDataForCheck(
 }
 
 
+/** does the path replacement */
+static inline
+SCIP_RETCODE delPseudoPathCreatePseudoAncestorTuple(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   edge1,              /**< first edge */
+   int                   edge2               /**< second edge */
+   )
+{
+   int pseudoancestor;
+
+   assert(edge1 / 2 != edge2 / 2);
+   assert(graph_edge_isInRange(g, edge1));
+   assert(graph_edge_isInRange(g, edge2));
+
+   graph_addPseudoAncestor(g, &pseudoancestor);
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, edge1, pseudoancestor, g) );
+   SCIP_CALL( graph_pseudoAncestors_addToEdge(scip, edge2, pseudoancestor, g) );
+
+   return SCIP_OKAY;
+}
+
+/** does the path replacement */
+static
+SCIP_RETCODE delPseudoPath(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   edge,               /**< the edge to be replaced, mind the orientation! */
+   int                   edge_pathtail,      /**< tail edge of path */
+   int                   edge_pathhead,      /**< head edge of path */
+   SCIP_Real*            edgecosts_adapt     /**< costs to adapt or NULL */
+   )
+{
+   const int old_tail = g->tail[edge];
+   const int old_head = g->head[edge];
+   const SCIP_Real edgecost_adapt
+      = edgecosts_adapt ? (edgecosts_adapt[edge] + edgecosts_adapt[edge_pathtail] + edgecosts_adapt[edge_pathhead]) : -1.0;
+   const SCIP_Real path_cost = g->cost[edge] + g->cost[edge_pathtail] + g->cost[edge_pathhead];
+   const int path_tail = g->tail[edge_pathtail];
+   const int path_head = g->head[edge_pathhead];
+   const int newedge = graph_edge_redirect(scip, g, edge, path_tail, path_head, path_cost, FALSE, TRUE);
+
+   /* is there a new edge? */
+   if( newedge >= 0 )
+   {
+      SCIP_Bool conflict = FALSE;
+
+#ifdef SCIP_DEBUG
+      printf("have path replace edge: \n");
+      graph_edge_printInfo(g, newedge);
+#endif
+
+      if( edgecost_adapt )
+         edgecosts_adapt[newedge] = edgecost_adapt;
+
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), g->ancestors[edge_pathtail], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[newedge]), g->ancestors[edge_pathhead], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(newedge)]), g->ancestors[flipedge(edge_pathtail)], NULL) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[flipedge(newedge)]), g->ancestors[flipedge(edge_pathhead)], NULL) );
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopyEdge(scip, newedge, edge_pathtail, FALSE, g, &conflict) );
+      assert(!conflict);
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopyEdge(scip, newedge, edge_pathhead, FALSE, g, &conflict) );
+      assert(!conflict);
+
+      /* create new ancestor relations */
+      for( int e = g->outbeg[old_tail]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         SCIP_CALL( delPseudoPathCreatePseudoAncestorTuple(scip, g, e, newedge) );
+      }
+
+      for( int e = g->outbeg[old_head]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         SCIP_CALL( delPseudoPathCreatePseudoAncestorTuple(scip, g, e, newedge) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * global functions
  */
@@ -2757,6 +2839,32 @@ SCIP_RETCODE graph_edge_delPseudo(
 
    return SCIP_OKAY;
 }
+
+
+/** Path replacement of edge; path is given by three oriented edges:
+ *  edge_pathtail -> edge -> edge_pathhead.
+ *  Middle edges is replaced. */
+SCIP_RETCODE graph_edge_delPseudoPath(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int                   edge,               /**< the edge to be replaced, mind the orientation! */
+   int                   edge_pathtail,      /**< tail edge of path */
+   int                   edge_pathhead,      /**< head edge of path */
+   SCIP_Real*            edgecosts_adapt     /**< costs to adapt or NULL */
+   )
+{
+   assert(scip && g);
+   assert(graph_edge_isInRange(g, edge));
+   assert(graph_edge_isInRange(g, edge_pathtail));
+   assert(graph_edge_isInRange(g, edge_pathhead));
+   assert(g->head[edge_pathtail] == g->tail[edge]);
+   assert(g->head[edge] == g->tail[edge_pathhead]);
+
+   SCIP_CALL( delPseudoPath(scip, g, edge, edge_pathtail, edge_pathhead, edgecosts_adapt) );
+
+   return SCIP_OKAY;
+}
+
 
 /** hide edge */
 void graph_edge_hide(

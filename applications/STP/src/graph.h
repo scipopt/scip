@@ -415,6 +415,7 @@ extern SCIP_RETCODE   graph_knot_delPseudoCheckIfPossible(SCIP*, const GRAPH*, c
 extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, GRAPH*, int*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, int, SINGLETONANS*, SINGLETONANS*, int*, SCIP_Bool*);
 extern SCIP_RETCODE   graph_edge_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, SCIP_Real*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_edge_delPseudoPath(SCIP*, GRAPH*, int, int, int, SCIP_Real*);
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
