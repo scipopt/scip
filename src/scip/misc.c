@@ -39,6 +39,7 @@
 #include "scip/misc.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
+#include "scip/rational.h"
 
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
@@ -9657,6 +9658,141 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
 
       SCIPdebugMessage(" -> smallest value to achieve integrality is %g \n", bestscalar);
    }
+
+   return SCIP_OKAY;
+}
+
+/** tries to find a value, such that all given values, if scaled with this value become integral */
+SCIP_RETCODE SCIPcalcIntegralScalarExact(
+   BMS_BUFMEM*           buffer,
+   SCIP_Rational**       vals,               /**< values to scale */
+   int                   nvals,              /**< number of values to scale */
+   SCIP_Real             maxscale,           /**< maximal allowed scalar */
+   SCIP_Rational*        intscalar,          /**< pointer to store scalar that would make the coefficients integral */
+   SCIP_Bool*            success             /**< stores whether returned value is valid */
+   )
+{
+   SCIP_Longint gcd;
+   SCIP_Longint scm;
+   SCIP_Longint numerator;
+   SCIP_Longint denominator;
+   SCIP_Longint updatemultiplier;
+   char numberstr[SCIP_MAXSTRLEN];
+   SCIP_Rational* ratupdate;
+   SCIP_Rational* ratscm;
+   SCIP_Bool scalable;
+   int c;
+
+   assert(vals != NULL);
+   assert(nvals >= 0);
+   assert(success != NULL);
+
+   SCIPdebugMessage("trying to find rational representation for given rational values\n");
+
+   *success = FALSE;
+
+   /** @todo exiptodo: extension
+    *  - we could also compute scm and gcd via mpz_scm() and mpz_gcd(), respectively. check which version is faster
+    *  - if we stay with the SCIP_Longint conversion, we could use the other way to check the correctness of our result
+    */
+
+   /* calculate the greatest common divisor of the numerators and the smallest common multiple of the denominators */
+   gcd = 1;
+   scm = 1;
+   scalable = TRUE;
+
+   SCIP_CALL( RatCreateBuffer(buffer, &ratupdate) );
+   SCIP_CALL( RatCreateBuffer(buffer, &ratscm) );
+
+   /* first value (to initialize gcd) */
+   for( c = 0; c < nvals && scalable; ++c )
+   {
+      if( RatIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+         continue;
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      numerator = RatNumerator(vals[c]);
+      if( numerator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      denominator = RatDenominator(vals[c]);
+      if( denominator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      assert(denominator > 0);
+      gcd = ABS(numerator);
+      scm = denominator;
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+      break;
+   }
+
+   /* remaining values */
+   for( ++c; c < nvals && scalable; ++c )
+   {
+      if( RatIsZero(vals[c]) ) /* zeros are allowed in the vals array */
+         continue;
+
+      /* get numerator and check whether it fits into SCIP_Longint */
+      numerator = RatNumerator(vals[c]);
+      if( numerator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      /* get denom and check whether it fits into SCIP_Longint */
+      denominator = RatDenominator(vals[c]);
+      if( denominator == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      assert(denominator > 0);
+
+      gcd = SCIPcalcGreComDiv(gcd, ABS(numerator));
+
+      /* update scm via newscm = scm * denominator / gcd(scm, denominator) and check whether it fits into SCIP_Longint */
+      updatemultiplier = denominator / SCIPcalcGreComDiv(scm, denominator);
+      RatSetInt(ratupdate, updatemultiplier, 1);
+      RatSetInt(ratscm, scm, 1);
+      RatMult(ratscm, ratscm, ratupdate);
+      RatCanonicalize(ratscm);
+
+      scm= RatNumerator(ratscm);
+
+      if( scm == SCIP_LONGINT_MAX )
+      {
+         scalable = FALSE;
+         break;
+      }
+
+      scalable = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+   }
+
+   if( scalable )
+   {
+      /* make values integral by multiplying them with the smallest common multiple of the denominators */
+      assert((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
+
+      RatSetInt(intscalar, scm, gcd);
+      RatCanonicalize(intscalar);
+
+      *success = TRUE;
+
+   }
+
+   RatFreeBuffer(buffer, &ratscm);
+   RatFreeBuffer(buffer, &ratupdate);
 
    return SCIP_OKAY;
 }

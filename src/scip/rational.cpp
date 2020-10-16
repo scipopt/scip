@@ -1467,12 +1467,14 @@ void RatPrint(
       std::cout << rational->val << std::flush;
 }
 
-
+/* print SCIP_Rational to output stream */
 std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    if( r.isinf )
       os << r.val.sign() << "inf";
    else
       os << r.val;
+
+   return os;
 }
 
 /* convert va_arg format string into std:string */
@@ -1609,8 +1611,13 @@ SCIP_Longint RatNumerator(
    )
 {
    long result;
+   Integer numerator;
 
-   result = (boost::multiprecision::numerator(rational->val)).convert_to<long>();
+   numerator = boost::multiprecision::numerator(rational->val);
+   result = numerator.convert_to<SCIP_Longint>();
+
+   if( result != numerator )
+      result = numerator > 0 ? SCIP_LONGINT_MAX : SCIP_LONGINT_MIN;
 
    return result;
 }
@@ -1621,11 +1628,17 @@ SCIP_Longint RatDenominator(
    )
 {
    long result;
+   Integer denominator;
 
-   result = (boost::multiprecision::denominator(rational->val)).convert_to<long>();
+   denominator = boost::multiprecision::denominator(rational->val);
+   result = denominator.convert_to<SCIP_Longint>();
+
+   if( result != denominator )
+      result = denominator > 0 ? SCIP_LONGINT_MAX : SCIP_LONGINT_MIN;
 
    return result;
 }
+
 #else
 /** returns the numerator of a rational as a long */
 SCIP_Longint Rnumerator(

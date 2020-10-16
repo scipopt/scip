@@ -100,7 +100,6 @@ SCIP_Bool certificateIsLeftNode(
    SCIP_CERTNODEDATA* nodedata;
    SCIP_CERTNODEDATA* nodedataparent;
 
-   assert(SCIPcertificateIsActive(certificate));
    assert(node != NULL);
    assert(SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE);
 
@@ -639,10 +638,11 @@ void SCIPcertificateExit(
 
 /** returns whether the certificate output is activated? */
 SCIP_Bool SCIPcertificateIsActive(
+   SCIP_SET*             set,                /**< SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   return (certificate != NULL && certificate->file != NULL);
+   return (certificate != NULL && (certificate->file != NULL || strcmp(set->certificate_filename, "-")) );
 }
 
 /** returns current certificate file size in MB */
@@ -1477,7 +1477,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    assert(set != NULL);
 
    /* only print if not -infinity and certificate is active */
-   if( !set->exact_enabled || !SCIPcertificateIsActive(certificate) || SCIPsetIsInfinity(set, -psval) )
+   if( !set->exact_enabled || !SCIPcertificateIsActive(set, certificate) || SCIPsetIsInfinity(set, -psval) )
       return SCIP_OKAY;
 
    if( psval < SCIPnodeGetLowerbound(node) )
@@ -1511,7 +1511,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
          /* retrieve the line in the certificate of the bound */
          RatSet(certificate->workbound->boundval, SCIPvarGetBestBoundLocalExact(vars[i]));
          certificate->workbound->varindex = SCIPvarGetCertificateIndex(vars[i]);
-         certificate->workbound->isupper = !RatIsEqual(certificate->workbound->boundval, SCIPvarGetLbLocalExact(vars[i]));
+         certificate->workbound->isupper = RatIsNegative(obj);
 
          image = SCIPhashtableRetrieve(certificate->varboundtable, (void*)certificate->workbound);
 

@@ -11014,7 +11014,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled )
+   if( set->exact_enabled && RatIsLTReal(var->exactdata->locdom.lb, var->locdom.lb) )
       RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11184,7 +11184,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled )
+   if( set->exact_enabled && RatIsGTReal(var->exactdata->locdom.ub, var->locdom.ub) )
       RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only

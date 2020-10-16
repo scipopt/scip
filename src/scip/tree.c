@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
          * @todo exip could this be done differently somewhere else? */
@@ -2342,7 +2342,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
 
       /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(stat->certificate) )
+      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate */
          /** @todo exip could this be done differently somewhere else? */
@@ -2859,7 +2859,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( set->exact_enabled && lpobjval > SCIPnodeGetLowerbound(node) )
+   if( set->exact_enabled && (lpobjval > SCIPnodeGetLowerbound(node) || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node))) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);

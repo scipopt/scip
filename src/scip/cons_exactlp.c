@@ -15491,7 +15491,7 @@ SCIP_RETCODE printCertificateConsLinear(
    assert(cons != NULL);
 
    /* print constraint into certificate output */
-   if( SCIPcertificateIsActive(SCIPgetCertificate(scip)) )
+   if( SCIPcertificateIsActive(scip->set, SCIPgetCertificate(scip)) )
    {
       certificate = SCIPgetCertificate(scip);
       consdata = SCIPconsGetData(cons);
