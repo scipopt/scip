@@ -180,6 +180,47 @@ SCIP_RETCODE redcosts_init(
 }
 
 
+
+/** sets cutoff */
+void redcosts_setCutoff(
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata,        /**< reduced cost data */
+  SCIP_Real*            cutoffbound         /**< cutoff */
+)
+{
+
+   *cutoffbound = upperbound - redcostdata->dualBound;
+
+   assert(GE_FEAS_EPS(*cutoffbound, 0.0, EPSILON));
+
+   if( *cutoffbound < 0.0 )
+      *cutoffbound = 0.0;
+
+   redcostdata->cutoff = *cutoffbound;
+}
+
+
+/** increases reduced cost for deleted arcs */
+void redcosts_increaseOnDeletedArcs(
+   const GRAPH*          graph,              /**< graph */
+   const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
+   REDCOST*              redcostdata         /**< reduced cost data */
+)
+{
+   SCIP_Real* redEdgeCost = redcostdata->redEdgeCost;
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Real offset = 2.0 * redcostdata->cutoff + 1.0;
+
+   assert(GE(offset, 1.0));
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      if( arcsdeleted[i] )
+         redEdgeCost[i] += offset;
+   }
+}
+
+
 /** frees */
 void redcosts_free(
    SCIP*                 scip,               /**< SCIP */

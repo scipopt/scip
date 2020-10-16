@@ -70,6 +70,24 @@ void redcosts_free(
 );
 
 
+/** sets cutoff */
+EXTERN
+void redcosts_setCutoff(
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata,        /**< reduced cost data */
+  SCIP_Real*            cutoffbound         /**< cutoff */
+);
+
+
+/** increases reduced cost for deleted arcs */
+EXTERN
+void redcosts_increaseOnDeletedArcs(
+   const GRAPH*          graph,              /**< graph */
+   const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
+   REDCOST*              redcostdata         /**< reduced cost data */
+);
+
+
 /* initialize distances from reduced costs */
 EXTERN
 SCIP_RETCODE redcosts_initializeDistances(

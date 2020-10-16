@@ -76,47 +76,6 @@ SCIP_Real getSolObj(
    return obj;
 }
 
-/** sets cutoff */
-static
-void setCutoff(
-  SCIP_Real             upperbound,         /**< bound */
-  REDCOST*              redcostdata,        /**< reduced cost data */
-  SCIP_Real*            cutoffbound         /**< cutoff */
-)
-{
-
-   *cutoffbound = upperbound - redcostdata->dualBound;
-
-   assert(GE_FEAS_EPS(*cutoffbound, 0.0, EPSILON));
-
-   if( *cutoffbound < 0.0 )
-      *cutoffbound = 0.0;
-
-   redcostdata->cutoff = *cutoffbound;
-}
-
-
-/** increases reduced cost for deleted arcs */
-static
-void redcostIncreaseOnDeletedArcs(
-   const GRAPH*          graph,              /**< graph */
-   const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
-   REDCOST*              redcostdata         /**< reduced cost data */
-)
-{
-   SCIP_Real* redEdgeCost = redcostdata->redEdgeCost;
-   const int nedges = graph_get_nEdges(graph);
-   const SCIP_Real offset = 2.0 * redcostdata->cutoff + 1.0;
-
-   assert(GE(offset, 1.0));
-
-   for( int i = 0; i < nedges; i++ )
-   {
-      if( arcsdeleted[i] )
-         redEdgeCost[i] += offset;
-   }
-}
-
 
 /** returns maximum allowed deviation for dual-ascent */
 static
@@ -2440,7 +2399,7 @@ SCIP_RETCODE reduce_da(
                         userec, pool, result, &havenewsol, &upperbound) );
          }
 
-         setCutoff(upperbound, redcostdata, &cutoffbound);
+         redcosts_setCutoff(upperbound, redcostdata, &cutoffbound);
          SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata->dualBound, run, 0);
 
          if( isRpcmw )
@@ -2467,7 +2426,7 @@ SCIP_RETCODE reduce_da(
          if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) && run == nruns - 1 )
          {
             int extfixed;
-            redcostIncreaseOnDeletedArcs(graph, arcsdeleted, redcostdata);
+            redcosts_increaseOnDeletedArcs(graph, arcsdeleted, redcostdata);
 
             SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
             ndeletions_run += extfixed;
@@ -3185,25 +3144,6 @@ SCIP_RETCODE reduce_daPcMw(
 
       nfixed += reduceWithEdgeFixingBounds(scip, graph, transgraph, edgefixingbounds, NULL, upperbound);
       nfixed += reduceWithNodeFixingBounds(scip, graph, transgraph, nodefixingbounds, upperbound);
-
-      // todo test again once the extended reductions are more mature
-#if 0
-      if( paramsda->useExtRed && !SCIPisZero(scip, minpathcost) )
-      {
-         int extfixed;
-
-         REDCOST redcostdata = { .redEdgeCost = cost, .rootToNodeDist = pathdist,
-                  .nodeTo3TermsPaths = vnoi, .nodeTo3TermsBases = vbase,
-                  .cutoff = minpathcost, dualBound = -1.0, .redCostRoot = graph->source };
-
-         havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
-
-         SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, (havenewsol ? result : NULL), graph, marked, &extfixed) );
-         nfixed += extfixed;
-
-         printf("extfixed=%d \n", extfixed);
-      }
-#endif
 
       if( userec )
          SCIPdebugMessage("eliminations after sol based run2 with best dual sol %d bestlb %f newlb %f\n", nfixed, bestlpobjval, lpobjval);
