@@ -6944,13 +6944,23 @@ SCIP_RETCODE colExactStoreSolVals(
    if( colexact->storedsolvals == NULL )
    {
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &colexact->storedsolvals) );
-   }
-   storedsolvals = colexact->storedsolvals;
 
-   /* store values */
-   storedsolvals->primsol = colexact->primsol;
-   storedsolvals->redcost = colexact->redcost;
-   storedsolvals->basisstatus = colexact->basisstatus; /*lint !e641 !e732*/
+      storedsolvals = colexact->storedsolvals;
+
+      /* store values */
+      SCIP_CALL( RatCopy(blkmem, &(storedsolvals->primsol), colexact->primsol) );
+      SCIP_CALL( RatCopy(blkmem, &(storedsolvals->redcost), colexact->redcost) );
+      storedsolvals->basisstatus = colexact->basisstatus; /*lint !e641 !e732*/
+   }
+   else
+   {
+      storedsolvals = colexact->storedsolvals;
+
+      /* store values */
+      RatSet(storedsolvals->primsol, colexact->primsol);
+      RatSet(storedsolvals->redcost, colexact->redcost);
+      storedsolvals->basisstatus = colexact->basisstatus; /*lint !e641 !e732*/
+   }
 
    return SCIP_OKAY;
 }
@@ -6973,8 +6983,8 @@ SCIP_RETCODE colExactRestoreSolVals(
    storedsolvals = colexact->storedsolvals;
    if( storedsolvals != NULL )
    {
-      colexact->primsol = storedsolvals->primsol;
-      colexact->redcost = storedsolvals->redcost;
+      RatSet(colexact->primsol, storedsolvals->primsol);
+      RatSet(colexact->redcost, storedsolvals->redcost);
       colexact->validredcostlp = validlp;
       colexact->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
 
@@ -7019,21 +7029,40 @@ SCIP_RETCODE rowExactStoreSolVals(
    if( rowexact->storedsolvals == NULL )
    {
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &rowexact->storedsolvals) );
-   }
-   storedsolvals = rowexact->storedsolvals;
 
-   /* store values */
-   if( infeasible )
-   {
-      RatSetReal(storedsolvals->activity, SCIP_INVALID);
-      storedsolvals->dualsol = rowexact->dualfarkas;
-      storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
+      storedsolvals = rowexact->storedsolvals;
+
+      /* store values */
+      if( infeasible )
+      {
+         SCIP_CALL( RatCopy(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
+         RatSetReal(storedsolvals->activity, SCIP_INVALID);
+         storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
+      }
+      else
+      {
+         SCIP_CALL( RatCopy(blkmem, &(storedsolvals->dualsol), rowexact->dualsol) );
+         SCIP_CALL( RatCopy(blkmem, &(storedsolvals->activity), rowexact->activity) );
+         storedsolvals->basisstatus = rowexact->basisstatus; /*lint !e641 !e732*/
+      }
    }
    else
    {
-      storedsolvals->dualsol = rowexact->dualsol;
-      storedsolvals->activity = rowexact->activity;
-      storedsolvals->basisstatus = rowexact->basisstatus; /*lint !e641 !e732*/
+      storedsolvals = rowexact->storedsolvals;
+
+      /* store values */
+      if( infeasible )
+      {
+         RatSet(storedsolvals->dualsol, rowexact->dualfarkas);
+         RatSetReal(storedsolvals->activity, SCIP_INVALID);
+         storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
+      }
+      else
+      {
+         RatSet(storedsolvals->dualsol, rowexact->dualsol);
+         RatSet(storedsolvals->activity, rowexact->activity);
+         storedsolvals->basisstatus = rowexact->basisstatus; /*lint !e641 !e732*/
+      }
    }
 
    return SCIP_OKAY;
@@ -7059,10 +7088,10 @@ SCIP_RETCODE rowExactRestoreSolVals(
    if( storedsolvals != NULL )
    {
       if( infeasible )
-         rowexact->dualfarkas = storedsolvals->dualsol;
+         RatSet(rowexact->dualfarkas, storedsolvals->dualsol);
       else
-         rowexact->dualsol = storedsolvals->dualsol;
-      rowexact->activity = storedsolvals->activity;
+         RatSet(rowexact->dualsol, storedsolvals->dualsol);
+      RatSet(rowexact->activity, storedsolvals->activity);
       rowexact->validactivitylp = validlp;
       rowexact->basisstatus = storedsolvals->basisstatus; /*lint !e641 !e732*/
    }
@@ -7106,18 +7135,33 @@ SCIP_RETCODE lpExactStoreSolVals(
    if( lpexact->storedsolvals == NULL )
    {
       SCIP_ALLOC( BMSallocMemory(&lpexact->storedsolvals) );
-   }
-   storedsolvals = lpexact->storedsolvals;
 
-   /* store values */
-   storedsolvals->lpsolstat = lpexact->lpsolstat;
-   storedsolvals->lpobjval = lpexact->lpobjval;
-   storedsolvals->primalfeasible = lpexact->primalfeasible;
-   storedsolvals->primalchecked = lpexact->primalchecked;
-   storedsolvals->dualfeasible = lpexact->dualfeasible;
-   storedsolvals->dualchecked = lpexact->dualchecked;
-   storedsolvals->solisbasic = lpexact->solisbasic;
-   storedsolvals->lpissolved = lpexact->solved;
+      storedsolvals = lpexact->storedsolvals;
+
+      /* store values */
+      SCIP_CALL( RatCopy(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval));
+      storedsolvals->lpsolstat = lpexact->lpsolstat;
+      storedsolvals->primalfeasible = lpexact->primalfeasible;
+      storedsolvals->primalchecked = lpexact->primalchecked;
+      storedsolvals->dualfeasible = lpexact->dualfeasible;
+      storedsolvals->dualchecked = lpexact->dualchecked;
+      storedsolvals->solisbasic = lpexact->solisbasic;
+      storedsolvals->lpissolved = lpexact->solved;
+   }
+   else
+   {
+      storedsolvals = lpexact->storedsolvals;
+
+      /* store values */
+      RatSet(storedsolvals->lpobjval, lpexact->lpobjval);
+      storedsolvals->lpsolstat = lpexact->lpsolstat;
+      storedsolvals->primalfeasible = lpexact->primalfeasible;
+      storedsolvals->primalchecked = lpexact->primalchecked;
+      storedsolvals->dualfeasible = lpexact->dualfeasible;
+      storedsolvals->dualchecked = lpexact->dualchecked;
+      storedsolvals->solisbasic = lpexact->solisbasic;
+      storedsolvals->lpissolved = lpexact->solved;
+   }
 
    return SCIP_OKAY;
 }
@@ -7141,9 +7185,8 @@ SCIP_RETCODE lpExactRestoreSolVals(
    {
       lpexact->solved = storedsolvals->lpissolved;
       //lpexact->validsollp = validlp;
-
+      RatSet(storedsolvals->lpobjval, lpexact->lpobjval);
       lpexact->lpsolstat = storedsolvals->lpsolstat;
-      lpexact->lpobjval = storedsolvals->lpobjval;
       lpexact->primalfeasible = storedsolvals->primalfeasible;
       lpexact->primalchecked = storedsolvals->primalchecked;
       lpexact->dualfeasible = storedsolvals->dualfeasible;
