@@ -2195,10 +2195,8 @@ SCIP_RETCODE computeStrengthenedIntercut(
    if( ! *success )
       goto CLEANUP;
 
-   /* keep track of the number of attempted strengthenings */
+   /* keep track of the number of attempted strengthenings and average cutcoef */
    counter = 0;
-
-   /* keep track of average cutcoef */
    avecutcoef = 0.0;
 
    /* go through all intersection points that are equal to infinity -> these correspond to the rays which are in the
@@ -2212,23 +2210,22 @@ SCIP_RETCODE computeStrengthenedIntercut(
       if( !SCIPisInfinity(scip, interpoints[i]) )
          continue;
 
-      counter += 1;
-
       /* if we reached the limit of strengthenings, we stop */
-      if( counter > nlhdlrdata->nstrengthlimit )
-         goto CLEANUP;
+      if( counter >= nlhdlrdata->nstrengthlimit )
+         break;
 
       /* compute the smallest rho */
       SCIP_CALL( findRho(scip, nlhdlrdata, nlhdlrexprdata, rays, i, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
                interpoints, &rho, success));
 
-      if( ! *success )
-         goto CLEANUP;
-
       /* compute cut coef */
-      cutcoef = SCIPisInfinity(scip, -rho) ? 0.0 : 1.0 / rho;
+      if( ! *success  || SCIPisInfinity(scip, -rho) )
+         cutcoef = 0.0;
+      else
+         cutcoef = 1.0 / rho;
 
       /* track average cut coef */
+      counter += 1;
       avecutcoef += cutcoef;
 
       if( ! SCIPisZero(scip, cutcoef) )
@@ -2248,7 +2245,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
          if( ! *success )
          {
-            INTERLOG(printf("Bad numeric: now not nonbasic enough\n");)
+            INTERLOG(printf("Bad numeric: row not nonbasic enough\n");)
             nlhdlrdata->nbadnonbasic++;
             return SCIP_OKAY;
          }
@@ -2262,9 +2259,11 @@ SCIP_RETCODE computeStrengthenedIntercut(
       }
    }
 
+   if( counter > 0 )
+      nlhdlrdata->cutcoefsum += avecutcoef / counter;
+
 CLEANUP:
    SCIPfreeBufferArray(scip, &interpoints);
-   nlhdlrdata->cutcoefsum += avecutcoef / counter;
 
    return SCIP_OKAY;
 }
