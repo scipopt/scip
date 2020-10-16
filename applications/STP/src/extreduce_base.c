@@ -120,14 +120,12 @@ SCIP_RETCODE replaceEdgeByPath(
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("replacing edge ");
    graph_edge_printInfo(graph, edge);
-#endif
 
-   printf("replace edge \n");
-
+   SCIPdebugMessage("by path \n");
    graph_edge_printInfo(graph, path_edgein);
    graph_edge_printInfo(graph, edge);
    graph_edge_printInfo(graph, path_edgeout);
-
+#endif
 
    assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
 
@@ -135,6 +133,13 @@ SCIP_RETCODE replaceEdgeByPath(
    {
       SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
    }
+
+   {
+       const int csredge = graph->dcsr_storage->id2csredge[edge];
+       assert(graph_valid_dcsr(graph, FALSE));
+       graph_dcsr_deleteEdgeBi(scip, graph->dcsr_storage, csredge);
+       assert(graph_valid_dcsr(graph, FALSE));
+    }
 
    SCIP_CALL( graph_edge_delPseudoPath(scip, graph, edge, path_edgein, path_edgeout, redcostdata->redEdgeCost) );
    extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
@@ -1412,7 +1417,6 @@ SCIP_RETCODE extreduce_deleteEdges(
       *nelims += ngenstarelims;
    }
 */
-
 
    extFree(scip, graph, &distdata, &extpermanent);
 
