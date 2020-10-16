@@ -125,6 +125,33 @@ int redcosts_getRootTop(
 }
 
 
+
+/** sets cutoff */
+void redcosts_setCutoffTop(
+   SCIP_Real           cutoff,             /**< the value */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(GE(cutoff, 0.0));
+
+   redcostdata->cutoff = cutoff;
+}
+
+
+/** sets dual-bound */
+EXTERN
+void redcosts_setDualBoundTop(
+   SCIP_Real           dualbound,          /**< the value */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+
+   redcostdata->dualBound = dualbound;
+}
+
+
 /* initialize distances from reduced costs */
 SCIP_RETCODE redcosts_initializeDistances(
    SCIP*                 scip,               /**< SCIP */
@@ -262,12 +289,13 @@ SCIP_RETCODE redcosts_init(
 
 
 /** sets cutoff */
-void redcosts_setCutoff(
+void redcosts_setAndReturnCutoffFromBound(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata,        /**< reduced cost data */
   SCIP_Real*            cutoffbound         /**< cutoff */
 )
 {
+   assert(redcostdata && cutoffbound);
 
    *cutoffbound = upperbound - redcostdata->dualBound;
 
@@ -280,6 +308,23 @@ void redcosts_setCutoff(
 }
 
 
+/** sets cutoff */
+void redcosts_setCutoffFromBound(
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata         /**< reduced cost data */
+)
+{
+   assert(redcostdata);
+
+   redcostdata->cutoff = upperbound - redcostdata->dualBound;
+
+   assert(GE_FEAS_EPS(redcostdata->cutoff, 0.0, EPSILON));
+
+   if( redcostdata->cutoff < 0.0 )
+      redcostdata->cutoff = 0.0;
+}
+
+
 /** increases reduced cost for deleted arcs */
 void redcosts_increaseOnDeletedArcs(
    const GRAPH*          graph,              /**< graph */
@@ -287,9 +332,9 @@ void redcosts_increaseOnDeletedArcs(
    REDCOST*              redcostdata         /**< reduced cost data */
 )
 {
-   SCIP_Real* redEdgeCost = redcostdata->redEdgeCost;
+   SCIP_Real* redEdgeCost = redcosts_getEdgeCostsTop(redcostdata);
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Real offset = 2.0 * redcostdata->cutoff + 1.0;
+   const SCIP_Real offset = 2.0 * redcosts_getCutoffTop(redcostdata) + 1.0;
 
    assert(GE(offset, 1.0));
 

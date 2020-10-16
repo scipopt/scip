@@ -1878,7 +1878,7 @@ SCIP_RETCODE extreduce_checkComponent(
       const SCIP_Real* redcost = redcostdata->redEdgeCost;
       const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
       const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
-      const SCIP_Real cutoff = redcostdata->cutoff;
+      const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
 
       PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
          .pcSdStart = -1, .tree_innerPrize = 0.0 };

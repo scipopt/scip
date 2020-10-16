@@ -1802,7 +1802,7 @@ SCIP_RETCODE reduceRootedProb(
    const PATH *vnoi = redcostdata->nodeTo3TermsPaths;
    const SCIP_Real *cost = redcostdata->redEdgeCost;
    const SCIP_Real *pathdist = redcostdata->rootToNodeDist;
-   const SCIP_Real cutoffbound = redcostdata->cutoff;
+   const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
    int* incidents = NULL;
    STP_Bool* nodearrchar = NULL;
    const int nnodes = graph->knots;
@@ -2167,7 +2167,7 @@ SCIP_RETCODE dapathsFixPotTerms(
 {
    int* fixlist;
    const SCIP_Real* const redEdgeCost = redcostdata->redEdgeCost;
-   const SCIP_Real cutoff = redcostdata->cutoff;
+   const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
    int nfixes = 0;
    const int root = g->source;
 
@@ -2244,8 +2244,7 @@ SCIP_RETCODE reduce_dapaths(
    SCIP_CALL( redcosts_initializeDistances(scip, g, redcostdata) );
    assert(graph_isMarked(g));
 
-   redcostdata->cutoff = objbound_upper - redcostdata->dualBound;
-
+   redcosts_setCutoffFromBound(objbound_upper, redcostdata);
    SCIP_CALL( dapathsDeleteEdges(scip, redcostdata, result, g, nelims) );
 
    if( *nelims > 0 && solstp_isUnreduced(scip, g, result) )
@@ -2255,7 +2254,7 @@ SCIP_RETCODE reduce_dapaths(
 
       SCIP_CALL( SCIPStpHeurLocalRun(scip, g, result) );
       objbound_upper = solstp_getObj(g, result, 0.0);
-      redcostdata->cutoff = objbound_upper - redcostdata->dualBound;
+      redcosts_setCutoffFromBound(objbound_upper, redcostdata);
 
       if( isRpcmw )
          graph_pc_2org(scip, g);
@@ -2399,7 +2398,7 @@ SCIP_RETCODE reduce_da(
                         userec, pool, result, &havenewsol, &upperbound) );
          }
 
-         redcosts_setCutoff(upperbound, redcostdata, &cutoffbound);
+         redcosts_setAndReturnCutoffFromBound(upperbound, redcostdata, &cutoffbound);
          SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcostdata->dualBound, run, 0);
 
          if( isRpcmw )

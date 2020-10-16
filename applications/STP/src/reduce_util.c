@@ -1054,7 +1054,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
    const PATH* nodeTo3TermsPaths = redcostdata->nodeTo3TermsPaths;
    const SCIP_Real* rootToNodeDist = redcostdata->rootToNodeDist;
    SCIP_Real* redcost = redcostdata->redEdgeCost;
-   const SCIP_Real cutoffbound = redcostdata->cutoff;
+   const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
    const int nnodes = graph_get_nNodes(graph);
    SCIP_Bool success;
    const SCIP_Bool isPc = graph_pc_isPc(graph);

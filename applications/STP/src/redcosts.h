@@ -100,6 +100,22 @@ int redcosts_getRootTop(
    );
 
 
+/** sets cutoff */
+EXTERN
+void redcosts_setCutoffTop(
+   SCIP_Real           cutoff,             /**< the value */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   );
+
+
+/** sets dual-bound */
+EXTERN
+void redcosts_setDualBoundTop(
+   SCIP_Real           dualbound,          /**< the value */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   );
+
+
 /** initializes reduced costs data structure */
 EXTERN
 SCIP_RETCODE redcosts_init(
@@ -122,12 +138,18 @@ void redcosts_free(
 
 /** sets cutoff */
 EXTERN
-void redcosts_setCutoff(
+void redcosts_setAndReturnCutoffFromBound(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata,        /**< reduced cost data */
   SCIP_Real*            cutoffbound         /**< cutoff */
 );
 
+
+/** sets cutoff */
+void redcosts_setCutoffFromBound(
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata         /**< reduced cost data */
+);
 
 /** increases reduced cost for deleted arcs */
 EXTERN

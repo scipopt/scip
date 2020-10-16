@@ -1286,7 +1286,7 @@ SCIP_RETCODE extreduce_deleteArcs(
 
    *nelims = 0;
 
-   if( SCIPisZero(scip, redcostdata->cutoff) )
+   if( SCIPisZero(scip, redcosts_getCutoffTop(redcostdata)) )
       return SCIP_OKAY;
 
    SCIP_CALL( extInit(scip, FALSE, graph, NULL, &distdata, &extpermanent) );
@@ -1371,7 +1371,7 @@ SCIP_RETCODE extreduce_deleteEdges(
 
    *nelims = 0;
 
-   if( SCIPisZero(scip, redcostdata->cutoff) )
+   if( SCIPisZero(scip, redcosts_getCutoffTop(redcostdata)) )
       return SCIP_OKAY;
 
    SCIP_CALL( extInit(scip, useSd, graph, edgedeletable, &distdata, &extpermanent) );
@@ -1439,7 +1439,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    assert(scip && redcostdata && graph && nelims);
 
-   if( SCIPisZero(scip, redcostdata->cutoff) )
+   if( SCIPisZero(scip, redcosts_getCutoffTop(redcostdata)) )
       return SCIP_OKAY;
 
    isExtendedOrg = graph->extended;
@@ -1475,7 +1475,7 @@ SCIP_RETCODE extreduce_deleteGeneralStars(
 
    *nelims = 0;
 
-   if( SCIPisZero(scip, redcostdata->cutoff) )
+   if( SCIPisZero(scip, redcosts_getCutoffTop(redcostdata)) )
       return SCIP_OKAY;
 
    SCIP_CALL( extInit(scip, useSd, graph, edgedeletable, &distdata, &extpermanent) );
@@ -1513,7 +1513,7 @@ SCIP_RETCODE extreduce_checkArc(
    const SCIP_Real* redcost = redcostdata->redEdgeCost;
    const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
    const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
-   const SCIP_Real cutoff = redcostdata->cutoff;
+   const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
    const SCIP_Real edgebound = redcost[edge] + rootdist[tail] + nodeToTermpaths[head].dist;
