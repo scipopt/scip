@@ -10,7 +10,7 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
-- In benchmark mode the memory limit is ignored to avoid different solving paths depending on memory.
+- With benchmark emphasis the memory limit is largely ignored to avoid different solving paths depending on memory.
 
 Performance improvements
 ------------------------
@@ -80,7 +80,7 @@ Interface changes
 - new parameter "propagating/symmetry/sstaddcuts" to control whether SST cuts are added
 - new parameter "propagating/symmetry/sstmixedcomponents" to control whether SST cuts are added
   if a symmetry component contains variables of different types
-- new parameter "misc/benchmarkmode" to run in benchmark mode (do not try to avoid running into memory limit)
+- new parameter "misc/avoidmemlimit" to try to avoid running into memory limit
 
 
 

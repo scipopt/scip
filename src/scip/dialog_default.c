@@ -3182,6 +3182,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set emphasis benchmark command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisBenchmark)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for problems to run in benchmark mode */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_BENCHMARK, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -5733,6 +5749,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisNumerics, NULL, NULL,
             "numerics", "predefined parameter settings for increased numerical stability", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "benchmark" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "benchmark") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisBenchmark, NULL, NULL,
+            "benchmark", "predefined parameter settings for running in benchmark mode", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

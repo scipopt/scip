@@ -113,7 +113,7 @@ echo set lp advanced threads $THREADS  >> $TMPFILE
 echo set timing clocktype 1            >> $TMPFILE
 echo set display freq $DISPFREQ        >> $TMPFILE
 # avoid switching to dfs - better abort with memory error
-echo set misc benchmarkmode true       >> $TMPFILE
+echo set emphasis benchmark            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
 
 if test "$VISUALIZE" = true
