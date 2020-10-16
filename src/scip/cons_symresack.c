@@ -981,17 +981,16 @@ SCIP_RETCODE addSymresackInequality(
 
 /** Maximize a linear function on a "strict" symresack,
  *  that is a symresack where we do not allow the solution x = gamma(x).
- *
  */
 static
 SCIP_RETCODE maximizeObjectiveSymresackStrict(
    SCIP*                scip,                /**< SCIP pointer */
-   int                  nvars,               /**< Number of variables in symresack */
-   SCIP_Real*           objective,           /**< The objective vector */
-   int*                 perm,                /**< The permutation (without fixed points) as an array */
-   int*                 invperm,             /**< The inverse permutation as an array */
+   int                  nvars,               /**< number of variables in symresack */
+   SCIP_Real*           objective,           /**< the objective vector */
+   int*                 perm,                /**< the permutation (without fixed points) as an array */
+   int*                 invperm,             /**< the inverse permutation as an array */
    int*                 maxcrit,             /**< pointer to the critical entry where optimality is found at */
-   SCIP_Real*           maxsoluval           /**< pointer to the optimal objective */
+   SCIP_Real*           maxsoluval           /**< pointer to store the optimal objective value */
 )
 {
    /* The maximal objective in every iteration. */
@@ -1009,17 +1008,17 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
    int* componentends;
    SCIP_Real* componentobj;
 
-   assert(scip != NULL);
-   assert(nvars > 0);
-   assert(objective != NULL);
-   assert(perm != NULL);
-   assert(invperm != NULL);
-   assert(maxcrit != NULL);
-   assert(maxsoluval != NULL);
+   assert( scip != NULL );
+   assert( nvars > 0 );
+   assert( objective != NULL );
+   assert( perm != NULL );
+   assert( invperm != NULL );
+   assert( maxcrit != NULL );
+   assert( maxsoluval != NULL );
 
    /* The current best known critical entry and objective */
    *maxcrit = -1;
-   *maxsoluval = -INFINITY;
+   *maxsoluval = -SCIP_DEFAULT_INFINITY;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &componentends, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &componentobj, nvars) );
@@ -1027,95 +1026,75 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
    /* Initialization: Every entry is a component in the graph,
     * having the corresponding objective
     */
-   for( i = 0; i < nvars; ++i )
+   for (i = 0; i < nvars; ++i)
    {
       componentends[i] = i;
       componentobj[i] = objective[i];
-      if( SCIPisEfficacious(scip, objective[i]) ) {
+      if( SCIPisGT(scip, objective[i], 0.0) )
          helperobj += objective[i];
-      }
    }
 
-   /* Iterate over all critical rows, and of the graph
-    * maintain the components on the vertices of degree < 2.
-    */
-   for( crit = 0; crit < nvars; ++crit )
+   /* Iterate over all critical rows, and of the graph maintain the components on the vertices of degree < 2. */
+   for (crit = 0; crit < nvars; ++crit)
    {
       critinv = invperm[crit];
 
       /* Do not allow fixed points. */
-      assert(crit != critinv);
+      assert( crit != critinv );
 
-      /* If the other end of the component of crit is critinv,
-       * then crit cannot be a critical entry.
-       */
-      if( componentends[crit] != critinv )
+      /* If the other end of the component of crit is critinv, then crit cannot be a critical entry. */
+      if( componentends[crit] == critinv )
+         continue;
+
+      /* Compute objective for crit as critical entry. Update if it is better than the best found objective */
+      tmpobj = helperobj;
+      if( SCIPisLT(scip, componentobj[crit], 0.0) )
+         tmpobj += componentobj[crit];
+      if( SCIPisGT(scip, componentobj[critinv], 0.0) )
+         tmpobj -= componentobj[critinv];
+      if( SCIPisGT(scip, tmpobj, *maxsoluval) )
       {
-         /* Compute objective for crit as critical entry.
-          * Update if it is better than the best found objective
-          */
-         tmpobj = helperobj;
-         if( SCIPisLT(scip, componentobj[crit], 0.0) )
-         {
-            tmpobj += componentobj[crit];
-         }
-         if( SCIPisGT(scip, componentobj[critinv], 0.0) )
-         {
-            tmpobj -= componentobj[critinv];
-         }
-         if( SCIPisGT(scip, tmpobj, *maxsoluval) )
-         {
-            *maxsoluval = tmpobj;
-            *maxcrit = crit;
-         }
-
-         /* Update helperobj after imposing that crit and critinv
-          * (and thus the components thereof) get the same value. */
-         tmpnewcompobj = componentobj[crit] + componentobj[critinv];
-         if( SCIPisGT(scip, componentobj[crit], 0.0) )
-         {
-            helperobj -= componentobj[crit];
-         }
-         if( SCIPisGT(scip, componentobj[critinv], 0.0) )
-         {
-            helperobj -= componentobj[critinv];
-         }
-         if( SCIPisGT(scip, tmpnewcompobj, 0.0) )
-         {
-            helperobj += tmpnewcompobj;
-         }
-
-         /* Update the objective of a component */
-         componentobj[componentends[crit]] = tmpnewcompobj;
-         componentobj[componentends[critinv]] = tmpnewcompobj;
-
-         /* Connect the endpoints of the newly created path */
-         if( componentends[crit] == crit )
-         {
-            componentends[crit] = componentends[critinv];
-            componentends[componentends[critinv]] = crit;
-         }
-         else
-         {
-            componentends[componentends[crit]] = componentends[critinv];
-            componentends[componentends[critinv]] = componentends[crit];
-         }
-
-         /* Early termination criterion. helperobj is upper bound to tmpobj for every next iteration,
-          * so if helperobj <= maxsoluval then we can terminate earlier.
-          */
-         if( SCIPisGE(scip, *maxsoluval, helperobj) )
-         {
-            break;
-         }
+         *maxsoluval = tmpobj;
+         *maxcrit = crit;
       }
+
+      /* Update helperobj */
+      tmpnewcompobj = componentobj[crit] + componentobj[critinv];
+      if( SCIPisGT(scip, componentobj[crit], 0.0) )
+         helperobj -= componentobj[crit];
+      if( SCIPisGT(scip, componentobj[critinv], 0.0) )
+         helperobj -= componentobj[critinv];
+      if( SCIPisGT(scip, tmpnewcompobj, 0.0) )
+         helperobj += tmpnewcompobj;
+
+      /* Update the objective of a component */
+      componentobj[componentends[crit]] = tmpnewcompobj;
+      componentobj[componentends[critinv]] = tmpnewcompobj;
+
+      /* Connect the endpoints of the newly created path */
+      if( componentends[crit] == crit )
+      {
+         componentends[crit] = componentends[critinv];
+         componentends[componentends[critinv]] = crit;
+      }
+      else
+      {
+         componentends[componentends[crit]] = componentends[critinv];
+         componentends[componentends[critinv]] = componentends[crit];
+      }
+
+      /* Early termination criterion. helperobj is upper bound to tmpobj for every next iteration,
+         * so if helperobj <= maxsoluval then we can terminate earlier.
+         */
+      if( SCIPisGE(scip, *maxsoluval, helperobj) )
+         break;
    }
 
    /* It is always possible to make the first entry critical. */
-   assert(*maxcrit >= 0);
+   assert( *maxcrit >= 0 );
 
-   SCIPfreeBufferArray(scip, &componentends);
    SCIPfreeBufferArray(scip, &componentobj);
+   SCIPfreeBufferArray(scip, &componentends);
 
    return SCIP_OKAY;
 }
@@ -1123,50 +1102,48 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
 
 /** For a symresack, determine a maximizer for optimizing linear function
  *  over a symresack, where the critical entry is fixed.
- *
  */
 static
 SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
    SCIP*                scip,                /**< SCIP pointer */
-   int                  nvars,               /**< Number of variables in symresack */
-   SCIP_Real*           objective,           /**< The objective vector */
-   int*                 perm,                /**< The permutation (without fixed points) as an array */
-   int*                 invperm,             /**< The inverse permutation as an array */
-   int                  crit,                /**< pointer to the critical entry where optimality is found at */
+   int                  nvars,               /**< number of variables in symresack */
+   SCIP_Real*           objective,           /**< the objective vector */
+   int*                 perm,                /**< the permutation (without fixed points) as an array */
+   int*                 invperm,             /**< the inverse permutation as an array */
+   int                  crit,                /**< critical entry where optimality is found at */
    int*                 maxsolu              /**< pointer to the optimal objective array */
 )
 {
    /* Compute to which components all entries belong. */
    int* entrycomponent;
-   double* componentobjective;
+   SCIP_Real* componentobjective;
 
    int i;
    int c;
 
-   assert(scip != NULL);
-   assert(nvars > 0);
-   assert(objective != NULL);
-   assert(perm != NULL);
-   assert(invperm != NULL);
-   assert(maxsolu != NULL);
+   assert( scip != NULL );
+   assert( nvars > 0 );
+   assert( objective != NULL );
+   assert( perm != NULL );
+   assert( invperm != NULL );
+   assert( maxsolu != NULL );
+   assert( crit >= 0 );
+   assert( crit <= nvars );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &entrycomponent, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &componentobjective, nvars) );
 
    /* Initially: Everything forms its own component */
-   for( i = 0; i < nvars; ++i )
+   for (i = 0; i < nvars; ++i)
    {
       entrycomponent[i] = i;
       componentobjective[i] = objective[i];
    }
-   for( i = 0; i < crit; ++i )
+   for (i = 0; i < crit; ++i)
    {
-      /* The graph with arcs {i, invperm[i]} if i < c is a
-       * collection of paths, cycles and singletons.
-       * Label the vertices to the lowest entry in the component.
-       * And store the value of that in this component.
-       * Every inner while-loop labels one new vertex per iteration,
-       * and a vertex is relabeled exactly once.
+      /* The graph with arcs {i, invperm[i]} if i < c is a collection of paths, cycles and singletons.
+       * Label the vertices to the lowest entry in the component,  and store the value of that in this component.
+       * Every inner while-loop labels one new vertex per iteration, and a vertex is relabeled exactly once.
        */
       if( entrycomponent[i] < i )
       {
@@ -1180,11 +1157,11 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
       {
          /* c < crit, so edge {c, invperm[c]} exists. Label invperm[c] as part of component of i */
          c = invperm[c];
+
+         /* Stop if we find a cycle. */
          if( entrycomponent[c] != c )
-         {
-            /* We found a cycle! */
             break;
-         }
+
          entrycomponent[c] = i;
          componentobjective[i] += objective[c];
       }
@@ -1194,11 +1171,11 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
       while( c < crit )
       {
          /* c < crit, so edge {c, invperm[c]} exists. Label c as part of component of i */
+
+         /* Stop if we find a cycle. */
          if( entrycomponent[c] != c )
-         {
-            /* We found a cycle! */
             break;
-         }
+
          entrycomponent[c] = i;
          componentobjective[i] += objective[c];
          /* For next iteration: We do another step back */
@@ -1212,62 +1189,23 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
     * For the other components, set the value to 1 if the objective sum is positive.
     * Otherwise to 0.
     */
-   for( i = 0; i < nvars; ++i )
+   for (i = 0; i < nvars; ++i)
    {
       if( entrycomponent[i] == entrycomponent[crit] )
-      {
          maxsolu[i] = 1;
-      }
       else if( entrycomponent[i] == entrycomponent[invperm[crit]] )
-      {
          maxsolu[i] = 0;
-      }
       else if( SCIPisGT(scip, componentobjective[entrycomponent[i]], 0.0) )
-      {
          maxsolu[i] = 1;
-      }
       else
-      {
          maxsolu[i] = 0;
-      }
    }
 
-   SCIPfreeBufferArray(scip, &entrycomponent);
    SCIPfreeBufferArray(scip, &componentobjective);
+   SCIPfreeBufferArray(scip, &entrycomponent);
 
    return SCIP_OKAY;
 }
-
-
-#ifndef NDEBUG
-/** Verify if solution is maximal.
- *
- */
-static
-void debugCheckSolutionVectorWithObjective(
-   SCIP*                 scip,               /**< SCIP pointer */
-   int                   nvars,              /**< Number of variables in symresack */
-   SCIP_Real*            objective,          /**< The objective vector */
-   int*                  maxsolu,            /**< pointer to the optimal objective array */
-   double                checkobjval         /**< the objective to check against */
-)
-{
-   SCIP_Real obj = 0.0;
-   int i;
-   for( i = 0; i < nvars; ++i )
-   {
-      if( maxsolu[i] == 1 )
-      {
-         obj += objective[i];
-      }
-      else
-      {
-         assert(maxsolu[i] == 0);
-      }
-   }
-   assert(SCIPisEQ(scip, obj, checkobjval));
-}
-#endif
 
 
 /** separate symresack cover inequalities
@@ -1293,6 +1231,9 @@ SCIP_RETCODE separateSymresackCovers(
    int nvars;
    int maxcrit;
    int i;
+#ifndef NDEBUG
+   SCIP_Real tmpcheckobj;
+#endif
 
    *infeasible = FALSE;
    *ngen = 0;
@@ -1318,7 +1259,7 @@ SCIP_RETCODE separateSymresackCovers(
    SCIP_CALL( SCIPallocBufferArray(scip, &sepaobjective, nvars) );
 
    constobjective = 1.0; /* constant part of separation objective */
-   for( i = 0; i < nvars; ++i )
+   for (i = 0; i < nvars; ++i)
    {
       if( i < perm[i] )
          sepaobjective[i] = - vals[i];
@@ -1347,11 +1288,20 @@ SCIP_RETCODE separateSymresackCovers(
    /* start separation procedure by iterating over critical rows */
    SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert( maxcrit >= 0 );
-   SCIPdebugMsg( scip, "Critical row: %i\n", maxcrit );
+   SCIPdebugMsg(scip, "Critical row: %i\n", maxcrit);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
+
 #ifndef NDEBUG
    /* Check if objective of solution vector is same as predicted objective */
-   debugCheckSolutionVectorWithObjective(scip, nvars, sepaobjective, maxsolu, maxsoluobj);
+   tmpcheckobj = 0.0;
+   for (i = 0; i < nvars; ++i)
+   {
+      if( maxsolu[i] == 1 )
+         tmpcheckobj += sepaobjective[i];
+      else
+         assert( maxsolu[i] == 0 );
+   }
+   assert( SCIPisEQ(scip, tmpcheckobj, maxsoluobj) );
 #endif
 
    /* Add constant to maxsoluobj to get the real objective */
@@ -1366,7 +1316,7 @@ SCIP_RETCODE separateSymresackCovers(
       SCIP_Real lhs = 0.0;
 #endif
 
-      for( i = 0; i < nvars; ++i )
+      for (i = 0; i < nvars; ++i)
       {
          if( i < perm[i] )
             maxsolu[i] = -maxsolu[i];
@@ -1379,7 +1329,7 @@ SCIP_RETCODE separateSymresackCovers(
       }
 
 #ifndef NDEBUG
-      for( i = 0; i < nvars; ++i )
+      for (i = 0; i < nvars; ++i)
          lhs += vals[i] * maxsolu[i];
       assert( SCIPisGT(scip, lhs, rhs) );
 #endif
