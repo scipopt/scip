@@ -7598,7 +7598,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
       SCIP_ROWEXACT* row;
 
       lpexact->ndivechgsides--;
-      oldside = lpexact->divechgsides[lpexact->ndivechgsides];
+      RatSet(oldside, lpexact->divechgsides[lpexact->ndivechgsides]);
       sidetype = lpexact->divechgsidetypes[lpexact->ndivechgsides];
       row = lpexact->divechgrows[lpexact->ndivechgsides];
 
