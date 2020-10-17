@@ -1051,9 +1051,9 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
    int adjvert[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real cutoffs[STP_DELPSEUDO_MAXNEDGES];
    SCIP_Real cutoffsrev[STP_DELPSEUDO_MAXNEDGES];
-   const PATH* nodeTo3TermsPaths = redcostdata->nodeTo3TermsPaths;
-   const SCIP_Real* rootToNodeDist = redcostdata->rootToNodeDist;
-   SCIP_Real* redcost = redcostdata->redEdgeCost;
+   const PATH* nodeTo3TermsPaths = redcosts_getNodeToTermsPathsTop(redcostdata);
+   const SCIP_Real* rootToNodeDist = redcosts_getRootToNodeDistTop(redcostdata);
+   SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
    const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
    const int nnodes = graph_get_nNodes(graph);
    SCIP_Bool success;

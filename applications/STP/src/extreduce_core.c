@@ -1874,10 +1874,10 @@ SCIP_RETCODE extreduce_checkComponent(
 
    {
       const SCIP_Bool* isterm = extpermanent->isterm;
-      const int root = redcostdata->redCostRoot;
-      const SCIP_Real* redcost = redcostdata->redEdgeCost;
-      const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
-      const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
+      const int root = redcosts_getRootTop(redcostdata);
+      const SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
+      const SCIP_Real* rootdist = redcosts_getRootToNodeDistTop(redcostdata);
+      const PATH* nodeToTermpaths = redcosts_getNodeToTermsPathsTop(redcostdata);
       const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
 
       PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
@@ -1886,7 +1886,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .msts_levelbase = extpermanent->msts_levelbase,
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
          .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
-         .nodeTo3TermsBases = redcostdata->nodeTo3TermsBases, .edgedeleted = extpermanent->edgedeleted,
+         .nodeTo3TermsBases = redcosts_getNodeToTermsBasesTop(redcostdata), .edgedeleted = extpermanent->edgedeleted,
          .pseudoancestor_mark = pseudoancestor_mark, .nodes_implications = extpermanent->nodes_implications,
          .cutoff = cutoff, .equality = extpermanent->redcostEqualAllow,
          .redCostRoot = root };

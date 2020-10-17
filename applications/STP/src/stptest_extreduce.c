@@ -156,10 +156,10 @@ void extInitRedCostArrays(
 {
    const int nnodes = graph->knots;
    const int nedges = graph->edges;
-   SCIP_Real* const rootdist = redcostdata->rootToNodeDist;
-   SCIP_Real* const redcost = redcostdata->redEdgeCost;
-   PATH* const termpaths3 = redcostdata->nodeTo3TermsPaths;
-   int* const vbase3 = redcostdata->nodeTo3TermsBases;
+   SCIP_Real* const rootdist = redcosts_getRootToNodeDistTop(redcostdata);
+   SCIP_Real* const redcost = redcosts_getEdgeCostsTop(redcostdata);
+   PATH* const termpaths3 = redcosts_getNodeToTermsPathsTop(redcostdata);
+   int* const vbase3 = redcosts_getNodeToTermsBasesTop(redcostdata);
 
    assert(redcostdata->nnodes >= nnodes);
    assert(redcostdata->nedges >= nedges);
@@ -187,7 +187,7 @@ void extInitRedCostArraysPc(
 )
 {
    const int nnodes = graph->knots;
-   int* const vbase3 = redcostdata->nodeTo3TermsBases;
+   int* const vbase3 = redcosts_getNodeToTermsBasesTop(redcostdata);
 
    assert(graph_pc_isPc(graph));
 
@@ -208,7 +208,7 @@ void extInitRedCostArraysPcWithBase(
 )
 {
    const int nnodes = graph->knots;
-   int* const vbase3 = redcostdata->nodeTo3TermsBases;
+   int* const vbase3 = redcosts_getNodeToTermsBasesTop(redcostdata);
 
    assert(graph_pc_isPc(graph));
 
@@ -277,7 +277,7 @@ SCIP_RETCODE testEdgeDeletion5_deprecated(
    extInitRedCostArrays(graph, redcostdata);
 
    for( int i = 0; i < nedges; i++ )
-      redcostdata->redEdgeCost[i] = 1.0;
+      redcosts_getEdgeCostsTop(redcostdata)[i] = 1.0;
 
    testedge = 0;
 
@@ -362,7 +362,7 @@ SCIP_RETCODE testEdgeDeletion4_deprecated(
    extInitRedCostArrays(graph, redcostdata);
 
    for( int i = 0; i < nedges; i++ )
-      redcostdata->redEdgeCost[i] = 1.0;
+      redcosts_getEdgeCostsTop(redcostdata)[i] = 1.0;
 
    edge = 0;
 
@@ -462,15 +462,15 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
 
    extInitRedCostArrays(graph, redcostdata);
 
-   redcostdata->nodeTo3TermsBases[5] = nnodes - 1;
-   redcostdata->nodeTo3TermsBases[6] = nnodes - 1;
-   redcostdata->nodeTo3TermsPaths[5].dist = 3.0;
-   redcostdata->nodeTo3TermsPaths[6].dist = 3.0;
-   redcostdata->nodeTo3TermsPaths[5 + nnodes].dist = 3.0;
-   redcostdata->nodeTo3TermsPaths[6 + nnodes].dist = 3.0;
+   redcosts_getNodeToTermsBasesTop(redcostdata)[5] = nnodes - 1;
+   redcosts_getNodeToTermsBasesTop(redcostdata)[6] = nnodes - 1;
+   redcosts_getNodeToTermsPathsTop(redcostdata)[5].dist = 3.0;
+   redcosts_getNodeToTermsPathsTop(redcostdata)[6].dist = 3.0;
+   redcosts_getNodeToTermsPathsTop(redcostdata)[5 + nnodes].dist = 3.0;
+   redcosts_getNodeToTermsPathsTop(redcostdata)[6 + nnodes].dist = 3.0;
 
    for( int i = 0; i < nedges; i++ )
-      redcostdata->redEdgeCost[i] = 1.0;
+      redcosts_getEdgeCostsTop(redcostdata)[i] = 1.0;
 
    edge = 0;
 
@@ -741,10 +741,10 @@ SCIP_RETCODE testEdgeDeletedByCommonRedCostsTargets(
    extInitRedCostArrays(graph, redcostdata);
 
    /* put 5 as first target for both nodes 3 and 4 and set the distance to the second target too high */
-   redcostdata->nodeTo3TermsBases[3] = 5;
-   redcostdata->nodeTo3TermsBases[4] = 5;
-   redcostdata->nodeTo3TermsPaths[3 + nnodes].dist = cutoff + 0.1;
-   redcostdata->nodeTo3TermsPaths[4 + nnodes].dist = cutoff + 0.1;
+   redcosts_getNodeToTermsBasesTop(redcostdata)[3] = 5;
+   redcosts_getNodeToTermsBasesTop(redcostdata)[4] = 5;
+   redcosts_getNodeToTermsPathsTop(redcostdata)[3 + nnodes].dist = cutoff + 0.1;
+   redcosts_getNodeToTermsPathsTop(redcostdata)[4 + nnodes].dist = cutoff + 0.1;
 
    SCIP_CALL(extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE));
 
@@ -1078,7 +1078,7 @@ SCIP_RETCODE testNode3PseudoDeletedByRedCosts1(
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
    extInitRedCostArrays(graph, redcostdata);
 
-   redEdgeCosts = redcostdata->redEdgeCost;
+   redEdgeCosts = redcosts_getEdgeCostsTop(redcostdata);
 
    redEdgeCosts[2] = 3.0;
    redEdgeCosts[3] = 3.0;

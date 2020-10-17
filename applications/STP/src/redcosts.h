@@ -34,22 +34,8 @@
 extern "C" {
 #endif
 
-/** reduced cost result data */
-typedef struct reduce_costs_data
-{
-   SCIP_Real*            redEdgeCost;        /**< reduced costs */
-   SCIP_Real*            rootToNodeDist;     /**< shortest path distances from root  */
-   PATH*                 nodeTo3TermsPaths;  /**< paths to three nearest terminals */
-   int*                  nodeTo3TermsBases;  /**< three nearest terminals */
-   SCIP_Real             cutoff;             /**< reduced cost cutoff value or -1.0 if not used */
-   SCIP_Real             dualBound;          /**< dual bound or -1.0 if not used */
-   int                   redCostRoot;        /**< graph root for reduced cost calculation */
-#ifndef NDEBUG
-   int                   nnodes;             /**< number of nodes */
-   int                   nedges;             /**< number of edges */
-#endif
-} REDCOST;
-
+/** reduced cost data */
+typedef struct reduce_costs_data REDCOST;
 
 /** returns top level reduced costs */
 EXTERN
@@ -88,7 +74,7 @@ SCIP_Real redcosts_getCutoffTop(
 
 /** returns dual-bound */
 EXTERN
-SCIP_Real redcosts_getDualBound(
+SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
@@ -113,6 +99,14 @@ EXTERN
 void redcosts_setDualBoundTop(
    SCIP_Real           dualbound,          /**< the value */
    REDCOST*            redcostdata         /**< reduced costs data */
+   );
+
+
+/** sets root used for reduced cost computation */
+EXTERN
+void redcosts_setRootTop(
+   int                   root,               /**< the root */
+   REDCOST*              redcostdata         /**< reduced costs data */
    );
 
 

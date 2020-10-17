@@ -82,10 +82,13 @@ SCIP_Bool graphmarkIsClean(
 )
 {
    const int nnodes = graph_get_nNodes(graph);
+   const int redcostroot = redcosts_getRootTop(redcostdata);
+
+   assert(graph_knot_isInRange(redcostroot));
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( graph->grad[k] == 0 && k != redcostdata->redCostRoot && !Is_term(graph->term[k]) )
+      if( graph->grad[k] == 0 && k != redcostroot && !Is_term(graph->term[k]) )
       {
          if( graph->mark[k] )
          {
@@ -141,7 +144,7 @@ SCIP_RETCODE replaceEdgeByPath(
        assert(graph_valid_dcsr(graph, FALSE));
     }
 
-   SCIP_CALL( graph_edge_delPseudoPath(scip, graph, edge, path_edgein, path_edgeout, redcostdata->redEdgeCost) );
+   SCIP_CALL( graph_edge_delPseudoPath(scip, graph, edge, path_edgein, path_edgeout, redcosts_getEdgeCostsTop(redcostdata)) );
    extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
 
    if( extpermanent )
@@ -1112,7 +1115,7 @@ SCIP_RETCODE pseudodeleteDeleteNode(
 {
    const SCIP_Real* cutoffs = extpseudo->cutoffs;
    int* const nodestouches = extpseudo->nodestouches;
-   SCIP_Real* redcost = redcostdata->redEdgeCost;
+   SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
    SCIP_Real prize = -1.0;
    SCIP_Bool rpc3term = FALSE;
    SCIP_Bool success;
@@ -1214,7 +1217,7 @@ SCIP_RETCODE pseudodeleteExecute(
    EXTPERMA extpermanent;
    EXTPSEUDO extpseudo;
 
-   assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
+   assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
    assert(graph_isMarked(graph));
 
    extpermanent.redcostEqualAllow = FALSE;
@@ -1367,7 +1370,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    SCIP_Bool withSol = (result != NULL);
 
    assert(scip && redcostdata);
-   assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
+   assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
 
    *nelims = 0;
 
@@ -1471,7 +1474,7 @@ SCIP_RETCODE extreduce_deleteGeneralStars(
    EXTPERMA extpermanent;
 
    assert(scip && redcostdata);
-   assert(redcostdata->redCostRoot >= 0 && redcostdata->redCostRoot < graph->knots);
+   assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
 
    *nelims = 0;
 
@@ -1509,10 +1512,10 @@ SCIP_RETCODE extreduce_checkArc(
 )
 {
    const SCIP_Bool* isterm = extpermanent->isterm;
-   const int root = redcostdata->redCostRoot;
-   const SCIP_Real* redcost = redcostdata->redEdgeCost;
-   const SCIP_Real* rootdist = redcostdata->rootToNodeDist;
-   const PATH* nodeToTermpaths = redcostdata->nodeTo3TermsPaths;
+   const int root = redcosts_getRootTop(redcostdata);
+   const SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
+   const SCIP_Real* rootdist = redcosts_getRootToNodeDistTop(redcostdata);
+   const PATH* nodeToTermpaths = redcosts_getNodeToTermsPathsTop(redcostdata);
    const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
@@ -1689,7 +1692,7 @@ SCIP_Bool extreduce_edgeIsValid(
       assert(!graph_pc_knotIsDummyTerm(graph, head));
    }
 
-   if( EQ(0.0, redcostdata->redEdgeCost[e]) && EQ(0.0, redcostdata->redEdgeCost[flipedge(e)]) )
+   if( EQ(0.0, redcosts_getEdgeCostsTop(redcostdata)[e]) && EQ(0.0, redcosts_getEdgeCostsTop(redcostdata)[flipedge(e)]) )
    {
       return FALSE;
    }

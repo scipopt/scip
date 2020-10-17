@@ -29,6 +29,22 @@
 #include "portab.h"
 
 
+/** reduced cost result data */
+struct reduce_costs_data
+{
+   SCIP_Real*            redEdgeCost;        /**< reduced costs */
+   SCIP_Real*            rootToNodeDist;     /**< shortest path distances from root  */
+   PATH*                 nodeTo3TermsPaths;  /**< paths to three nearest terminals */
+   int*                  nodeTo3TermsBases;  /**< three nearest terminals */
+   SCIP_Real             cutoff;             /**< reduced cost cutoff value or -1.0 if not used */
+   SCIP_Real             dualBound;          /**< dual bound or -1.0 if not used */
+   int                   redCostRoot;        /**< graph root for reduced cost calculation */
+#ifndef NDEBUG
+   int                   nnodes;             /**< number of nodes */
+   int                   nedges;             /**< number of edges */
+#endif
+};
+
 /**@name Local methods
  *
  * @{
@@ -104,7 +120,7 @@ SCIP_Real redcosts_getCutoffTop(
 
 
 /** returns dual-bound */
-SCIP_Real redcosts_getDualBound(
+SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
@@ -140,7 +156,6 @@ void redcosts_setCutoffTop(
 
 
 /** sets dual-bound */
-EXTERN
 void redcosts_setDualBoundTop(
    SCIP_Real           dualbound,          /**< the value */
    REDCOST*            redcostdata         /**< reduced costs data */
@@ -152,6 +167,22 @@ void redcosts_setDualBoundTop(
 }
 
 
+
+/** sets root used for reduced cost computation */
+void redcosts_setRootTop(
+   int                   root,               /**< the root */
+   REDCOST*              redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(root >= 0);
+
+
+   redcostdata->redCostRoot = root;
+}
+
+
+
 /* initialize distances from reduced costs */
 SCIP_RETCODE redcosts_initializeDistances(
    SCIP*                 scip,               /**< SCIP */
@@ -161,9 +192,9 @@ SCIP_RETCODE redcosts_initializeDistances(
 {
    int* pathedge;
    const int daroot = redcostdata->redCostRoot;
-   const SCIP_Real* const redcosts = redcostdata->redEdgeCost;
-   PATH* const vnoi = redcostdata->nodeTo3TermsPaths;
-   SCIP_Real* const pathdist = redcostdata->rootToNodeDist;
+   const SCIP_Real* const redcosts = redcosts_getEdgeCostsTop(redcostdata);
+   PATH* const vnoi = redcosts_getNodeToTermsPathsTop(redcostdata);
+   SCIP_Real* const pathdist = redcosts_getRootToNodeDistTop(redcostdata);
    int* const vbase = redcostdata->nodeTo3TermsBases;
    SCIP_Real* costrev = NULL;
    const int nnodes = graph_get_nNodes(g);
@@ -297,7 +328,7 @@ void redcosts_setAndReturnCutoffFromBound(
 {
    assert(redcostdata && cutoffbound);
 
-   *cutoffbound = upperbound - redcostdata->dualBound;
+   *cutoffbound = upperbound - redcosts_getDualBoundTop(redcostdata);
 
    assert(GE_FEAS_EPS(*cutoffbound, 0.0, EPSILON));
 
@@ -316,7 +347,7 @@ void redcosts_setCutoffFromBound(
 {
    assert(redcostdata);
 
-   redcostdata->cutoff = upperbound - redcostdata->dualBound;
+   redcostdata->cutoff = upperbound - redcosts_getDualBoundTop(redcostdata);
 
    assert(GE_FEAS_EPS(redcostdata->cutoff, 0.0, EPSILON));
 
