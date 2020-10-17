@@ -114,7 +114,7 @@ SCIP_RETCODE computeDualSolutionGuided(
 {
    const int daroot = redcosts_getRootTop(redcostdata);
    SCIP_Real* const redcost = redcosts_getEdgeCostsTop(redcostdata);
-   SCIP_Real dualobjval = redcosts_getDualBoundTop(redcostdata);
+   SCIP_Real dualobjval = -1.0;
    DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = daroot,
          .is_pseudoroot = FALSE, .damaxdeviation = damaxdeviation };
 
@@ -156,7 +156,7 @@ SCIP_RETCODE computeDualSolution(
 {
    const int daroot = redcosts_getRootTop(redcostdata);
    SCIP_Real* const redcost = redcosts_getEdgeCostsTop(redcostdata);
-   SCIP_Real dualobjval = redcosts_getDualBoundTop(redcostdata);
+   SCIP_Real dualobjval = -1.0;
    DAPARAMS daparams = { .addcuts = FALSE, .ascendandprune = FALSE, .root = daroot,
          .is_pseudoroot = FALSE, .damaxdeviation = damaxdeviation };
 
@@ -2231,7 +2231,7 @@ SCIP_RETCODE reduce_dapaths(
    int* RESTRICT result;
    SCIP_Real objbound_upper = FARAWAY;
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
-   SCIP_Real dualobjval = redcosts_getDualBoundTop(redcostdata);
+   SCIP_Real dualobjval = -1.0;
 
    assert(scip && offsetp && nelims);
 

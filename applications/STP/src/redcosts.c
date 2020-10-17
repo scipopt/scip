@@ -330,6 +330,7 @@ SCIP_RETCODE redcosts_init(
    reddata->nodeTo3TermsBases = nodeTo3TermsBases;
    reddata->cutoff = cutoff;
    reddata->redCostRoot = redCostRoot;
+   reddata->dualBound = -1.0;
 
    reddata->nnodes = nnodes;
    reddata->nedges = nedges;
@@ -347,6 +348,7 @@ void redcosts_setAndReturnCutoffFromBound(
 )
 {
    assert(redcostdata && cutoffbound);
+   assert(GE(redcosts_getDualBoundTop(redcostdata), 0.0));
 
    *cutoffbound = upperbound - redcosts_getDualBoundTop(redcostdata);
 
@@ -366,6 +368,7 @@ void redcosts_setCutoffFromBound(
 )
 {
    assert(redcostdata);
+   assert(GE(redcosts_getDualBoundTop(redcostdata), 0.0));
 
    redcostdata->cutoff = upperbound - redcosts_getDualBoundTop(redcostdata);
 
