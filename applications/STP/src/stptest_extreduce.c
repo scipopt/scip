@@ -161,8 +161,8 @@ void extInitRedCostArrays(
    PATH* const termpaths3 = redcosts_getNodeToTermsPathsTop(redcostdata);
    int* const vbase3 = redcosts_getNodeToTermsBasesTop(redcostdata);
 
-   assert(redcostdata->nnodes >= nnodes);
-   assert(redcostdata->nedges >= nedges);
+   assert(redcosts_getNnodes(redcostdata) >= nnodes);
+   assert(redcosts_getNedges(redcostdata) >= nedges);
 
    for( int i = 0; i < nnodes; i++ )
       rootdist[i] = 0.0;

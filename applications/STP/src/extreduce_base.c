@@ -84,7 +84,7 @@ SCIP_Bool graphmarkIsClean(
    const int nnodes = graph_get_nNodes(graph);
    const int redcostroot = redcosts_getRootTop(redcostdata);
 
-   assert(graph_knot_isInRange(redcostroot));
+   assert(graph_knot_isInRange(graph, redcostroot));
 
    for( int k = 0; k < nnodes; k++ )
    {

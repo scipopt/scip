@@ -37,6 +37,21 @@ extern "C" {
 /** reduced cost data */
 typedef struct reduce_costs_data REDCOST;
 
+
+/** returns number of nodes for which reduced costs are stored */
+EXTERN
+int redcosts_getNnodes(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
+/** returns number of edges for which reduced costs are stored */
+EXTERN
+int redcosts_getNedges(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
 /** returns top level reduced costs */
 EXTERN
 SCIP_Real* redcosts_getEdgeCostsTop(

@@ -39,10 +39,8 @@ struct reduce_costs_data
    SCIP_Real             cutoff;             /**< reduced cost cutoff value or -1.0 if not used */
    SCIP_Real             dualBound;          /**< dual bound or -1.0 if not used */
    int                   redCostRoot;        /**< graph root for reduced cost calculation */
-#ifndef NDEBUG
    int                   nnodes;             /**< number of nodes */
    int                   nedges;             /**< number of edges */
-#endif
 };
 
 /**@name Local methods
@@ -58,6 +56,30 @@ struct reduce_costs_data
  *
  * @{
  */
+
+
+
+/** returns number of nodes for which reduced costs are stored */
+int redcosts_getNnodes(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+
+   return redcostdata->nnodes;
+}
+
+
+/** returns number of edges for which reduced costs are stored */
+int redcosts_getNedges(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+
+   return redcostdata->nedges;
+}
+
 
 
 /** returns top level reduced costs */
@@ -309,10 +331,8 @@ SCIP_RETCODE redcosts_init(
    reddata->cutoff = cutoff;
    reddata->redCostRoot = redCostRoot;
 
-#ifndef NDEBUG
    reddata->nnodes = nnodes;
    reddata->nedges = nedges;
-#endif
 
    return SCIP_OKAY;
 }
