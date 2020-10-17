@@ -52,7 +52,7 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "quadratic"
 #define NLHDLR_DESC               "handler for quadratic expressions"
-#define NLHDLR_DETECTPRIORITY     100
+#define NLHDLR_DETECTPRIORITY       1
 #define NLHDLR_ENFOPRIORITY       100
 
 /* properties of the quadratic nlhdlr statistics table */
