@@ -1335,9 +1335,27 @@ SCIP_RETCODE SCIPlpiCreate(
    /* To be thread safe, we need a new environment for each new instaniation; note that this involves additional work and
     * uses a new license for each new instantiation. */
    CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&(*lpi)->grbenv, NULL) );
+
+   /* turn off output for all models */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+   /* turn on that basis information for infeasible and unbounded models is available */
+   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
+
 #else
+
    /* If we do not have to be thread safe, each problem will get a copy of the original environment. Thus, grbenv is only needed once. */
-   CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&globalgrbenv, NULL) );
+   if ( globalgrbenv == NULL )
+   {
+      assert( numlp == 0 );
+      CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&globalgrbenv, NULL) );
+
+      /* turn off output for all models */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(globalgrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+      /* turn on that basis information for infeasible and unbounded models is available */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(globalgrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
+   }
    (*lpi)->grbenv = globalgrbenv;
    ++numlp;
 
@@ -1345,12 +1363,6 @@ SCIP_RETCODE SCIPlpiCreate(
    /* (*lpi)->grbenv = GRBgetenv((*lpi)->grbmodel); */
 #endif
    assert( (*lpi)->grbenv != NULL );
-
-   /* turn off output for all models */
-   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
-
-   /* turn on that basis information for infeasible and unbounded models is available */
-   CHECK_ZERO_STAR( messagehdlr, GRBsetintparam((*lpi)->grbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
 
    /* create empty model */
    CHECK_ZERO_STAR( messagehdlr, GRBnewmodel((*lpi)->grbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
