@@ -663,7 +663,8 @@
  * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
  * NOBLKBUFMEM          | on, off                        | NOBLKBUFMEM=[true,false] |                                          |
  * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
- * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
+ * PARASCIP             | on, off                        | PARASCIP=[true,false]  | compile for ParaSCIP                       |
+ * THREADSAFE           | on, off                        | THREADSAFE=[true,false] | thread safe compilation                   |
  * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
  * TPI                  | tny, omp, none                 | TPI=[tny,omp,none]     | enable task processing interface required for concurrent solver |
  *

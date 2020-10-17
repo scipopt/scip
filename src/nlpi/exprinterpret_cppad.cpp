@@ -94,7 +94,7 @@ using CppAD::SCIPInterval;
  * This allocator requires to know the number of threads and a thread number for each thread.
  * To implement this, we follow the team_pthread example of CppAD, which uses pthread's thread-specific data management.
  */
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
 
 #include <atomic>
 
@@ -156,7 +156,7 @@ char SCIPexprintCppADInitParallel(void)
 static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
 
-#endif // NPARASCIP
+#endif // SCIP_THREADSAFE
 
 /** definition of CondExpOp for SCIPInterval (required by CppAD) */ /*lint -e715*/
 inline

@@ -73,7 +73,8 @@ option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
-option(PARASCIP "should scip be compiled thread safe" OFF)
+option(PARASCIP "should scip be compiled for ParaSCIP" OFF)
+option(THREADSAFE "should scip be compiled thread safe" OFF)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
@@ -151,9 +152,9 @@ else()
     message(FATAL_ERROR "EXPRINT option has wrong value")
 endif()
 
-#if tpi is not none force parascip to on
+# if tpi is not none force THREADSAFE to on
 if(NOT (TPI STREQUAL "none"))
-   set(PARASCIP ON FORCE)
+   set(THREADSAFE ON FORCE)
 endif()
 
 #set sources files, libraries and defines for tpi
@@ -177,9 +178,15 @@ else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
 
-#set nparascip define if parascip is off
-if(NOT PARASCIP)
-    set(NPARASCIP on)
+# couple PARASCIP and THREADSAFE and add SCIP_PARASCIP define
+if(PARASCIP)
+  set(THREADSAFE ON FORCE)
+  set(NPARASCIP on)
+endif()
+
+#set SCIP_THREADSAFE define if parascip is off
+if(THREADSAFE)
+    set(SCIP_THREADSAFE on)
 endif()
 
 set(NEWLINE "\\\\n")
