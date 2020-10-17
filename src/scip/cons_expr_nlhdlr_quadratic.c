@@ -115,6 +115,7 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   ncutslimitroot;     /**< limit for number of cuts generated at root node */
    int                   maxrank;            /**< maximal rank a slackvar can have */
    SCIP_Real             mincutviolation;    /**< minimal cut violation the generated cuts must fulfill to be added to the LP */
+   SCIP_Real             minviolation;       /**< minimal violation the constraint must fulfill such that a cut can be generated */
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
    SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
@@ -3027,7 +3028,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       violation = MAX( SCIPgetLhsConsExpr(scip, nlhdlrexprdata->cons) - auxvalue, auxvalue - SCIPgetRhsConsExpr(scip,
                nlhdlrexprdata->cons) ); /*lint !e666*/
 
-   if( violation < INTERCUTS_MINVIOL )
+   if( violation < nlhdlrdata->minviolation )
    {
       INTERLOG(printf("Violation %g is just too small\n", violation); )
       return SCIP_OKAY;
@@ -3980,6 +3981,10 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mincutviolation",
          "minimal cut violation the generated cuts must fulfill to be added to the LP",
+         &nlhdlrdata->mincutviolation, FALSE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/minviolation",
+         "minimal violation the constraint must fulfill such that a cut is generated",
          &nlhdlrdata->mincutviolation, FALSE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/atwhichnodes",
