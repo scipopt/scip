@@ -696,12 +696,13 @@ SCIP_RETCODE separatePoint(
 
       if( SCIPisFeasPositive(scip, det) )
       {
-         SCIP_CALL( separateDeterminant() );
          printf("separate xik xjl - xil xjk <= 0; det is %g\n", det);
+         SCIP_CALL( separateDeterminant(scip, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, basicvarpos2tableaurow, binvrow, binvarow, tableau) );
       }
       else if( SCIPisFeasNegative(scip, det) )
       {
          printf("separate xil xjk - xik xjl <= 0; det is %g\n", det);
+         SCIP_CALL( separateDeterminant(scip, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, basicvarpos2tableaurow, binvrow, binvarow, tableau) );
       }
       else
          continue;
