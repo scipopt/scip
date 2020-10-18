@@ -1447,7 +1447,7 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->valarray);
 
    /* free environment */
-#if SCIP_THREADSAFE
+#ifdef SCIP_THREADSAFE
    /* free local environment */
    GRBfreeenv((*lpi)->grbenv);
 #else
