@@ -1030,7 +1030,7 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
    {
       componentends[i] = i;
       componentobj[i] = objective[i];
-      if( SCIPisGT(scip, objective[i], 0.0) )
+      if ( SCIPisGT(scip, objective[i], 0.0) )
          helperobj += objective[i];
    }
 
@@ -1043,16 +1043,16 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
       assert( crit != critinv );
 
       /* If the other end of the component of crit is critinv, then crit cannot be a critical entry. */
-      if( componentends[crit] == critinv )
+      if ( componentends[crit] == critinv )
          continue;
 
       /* Compute objective for crit as critical entry. Update if it is better than the best found objective */
       tmpobj = helperobj;
-      if( SCIPisLT(scip, componentobj[crit], 0.0) )
+      if ( SCIPisLT(scip, componentobj[crit], 0.0) )
          tmpobj += componentobj[crit];
-      if( SCIPisGT(scip, componentobj[critinv], 0.0) )
+      if ( SCIPisGT(scip, componentobj[critinv], 0.0) )
          tmpobj -= componentobj[critinv];
-      if( SCIPisGT(scip, tmpobj, *maxsoluval) )
+      if ( SCIPisGT(scip, tmpobj, *maxsoluval) )
       {
          *maxsoluval = tmpobj;
          *maxcrit = crit;
@@ -1060,11 +1060,11 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
 
       /* Update helperobj */
       tmpnewcompobj = componentobj[crit] + componentobj[critinv];
-      if( SCIPisGT(scip, componentobj[crit], 0.0) )
+      if ( SCIPisGT(scip, componentobj[crit], 0.0) )
          helperobj -= componentobj[crit];
-      if( SCIPisGT(scip, componentobj[critinv], 0.0) )
+      if ( SCIPisGT(scip, componentobj[critinv], 0.0) )
          helperobj -= componentobj[critinv];
-      if( SCIPisGT(scip, tmpnewcompobj, 0.0) )
+      if ( SCIPisGT(scip, tmpnewcompobj, 0.0) )
          helperobj += tmpnewcompobj;
 
       /* Update the objective of a component */
@@ -1072,7 +1072,7 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
       componentobj[componentends[critinv]] = tmpnewcompobj;
 
       /* Connect the endpoints of the newly created path */
-      if( componentends[crit] == crit )
+      if ( componentends[crit] == crit )
       {
          componentends[crit] = componentends[critinv];
          componentends[componentends[critinv]] = crit;
@@ -1086,7 +1086,7 @@ SCIP_RETCODE maximizeObjectiveSymresackStrict(
       /* Early termination criterion. helperobj is upper bound to tmpobj for every next iteration,
          * so if helperobj <= maxsoluval then we can terminate earlier.
          */
-      if( SCIPisGE(scip, *maxsoluval, helperobj) )
+      if ( SCIPisGE(scip, *maxsoluval, helperobj) )
          break;
    }
 
@@ -1145,7 +1145,7 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
        * Label the vertices to the lowest entry in the component,  and store the value of that in this component.
        * Every inner while-loop labels one new vertex per iteration, and a vertex is relabeled exactly once.
        */
-      if( entrycomponent[i] < i )
+      if ( entrycomponent[i] < i )
       {
          /* This entry is already included in a component. */
          continue;
@@ -1159,7 +1159,7 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
          c = invperm[c];
 
          /* Stop if we find a cycle. */
-         if( entrycomponent[c] != c )
+         if ( entrycomponent[c] != c )
             break;
 
          entrycomponent[c] = i;
@@ -1173,7 +1173,7 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
          /* c < crit, so edge {c, invperm[c]} exists. Label c as part of component of i */
 
          /* Stop if we find a cycle. */
-         if( entrycomponent[c] != c )
+         if ( entrycomponent[c] != c )
             break;
 
          entrycomponent[c] = i;
@@ -1191,11 +1191,11 @@ SCIP_RETCODE maximizeObjectiveSymresackCriticalEntry(
     */
    for (i = 0; i < nvars; ++i)
    {
-      if( entrycomponent[i] == entrycomponent[crit] )
+      if ( entrycomponent[i] == entrycomponent[crit] )
          maxsolu[i] = 1;
-      else if( entrycomponent[i] == entrycomponent[invperm[crit]] )
+      else if ( entrycomponent[i] == entrycomponent[invperm[crit]] )
          maxsolu[i] = 0;
-      else if( SCIPisGT(scip, componentobjective[entrycomponent[i]], 0.0) )
+      else if ( SCIPisGT(scip, componentobjective[entrycomponent[i]], 0.0) )
          maxsolu[i] = 1;
       else
          maxsolu[i] = 0;
@@ -1261,7 +1261,7 @@ SCIP_RETCODE separateSymresackCovers(
    constobjective = 1.0; /* constant part of separation objective */
    for (i = 0; i < nvars; ++i)
    {
-      if( i < perm[i] )
+      if ( i < perm[i] )
          sepaobjective[i] = - vals[i];
       else
       {
@@ -1273,22 +1273,10 @@ SCIP_RETCODE separateSymresackCovers(
    /* allocate memory for temporary and global solution */
    SCIP_CALL( SCIPallocBufferArray(scip, &maxsolu, nvars) );
 
-   /* Debugging information: The objective vector and permutation */
-#ifdef SCIP_DEBUG
-   for (i = 0; i < nvars; ++i)
-   {
-      SCIPdebugMsg(scip, "Objective vector: %i: %f\n", i, sepaobjective[i]);
-   }
-   for (i = 0; i < nvars; ++i)
-   {
-      SCIPdebugMsg(scip, "invperm: %i: %i\n", i, invperm[i]);
-   }
-#endif
-
-   /* start separation procedure by iterating over critical rows */
+   /* Find critical row of a maximally violated cover */
    SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert( maxcrit >= 0 );
-   SCIPdebugMsg(scip, "Critical row: %i\n", maxcrit);
+   SCIPdebugMsg(scip, "Critical row %i found; Computing maximally violated cover.\n", maxcrit);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
 
 #ifndef NDEBUG
@@ -1296,7 +1284,7 @@ SCIP_RETCODE separateSymresackCovers(
    tmpcheckobj = 0.0;
    for (i = 0; i < nvars; ++i)
    {
-      if( maxsolu[i] == 1 )
+      if ( maxsolu[i] == 1 )
          tmpcheckobj += sepaobjective[i];
       else
          assert( maxsolu[i] == 0 );
@@ -1308,9 +1296,9 @@ SCIP_RETCODE separateSymresackCovers(
    maxsoluobj += constobjective;
 
    /* Check whether the separation objective is positive, i.e., a violated cover was found. */
-   if( SCIPisEfficacious(scip, maxsoluobj) )
+   if ( SCIPisEfficacious(scip, maxsoluobj) )
    {
-      /* Now add the cut. Recycle array maxsolu as coefficient vector for the constraint. */
+      /* Now add the cut. Reuse array maxsolu as coefficient vector for the constraint. */
       SCIP_Real rhs = -1.0;
 #ifndef NDEBUG
       SCIP_Real lhs = 0.0;
@@ -1318,11 +1306,11 @@ SCIP_RETCODE separateSymresackCovers(
 
       for (i = 0; i < nvars; ++i)
       {
-         if( i < perm[i] )
+         if ( i < perm[i] )
             maxsolu[i] = -maxsolu[i];
          else
          {
-            if( maxsolu[i] == 0 )
+            if ( maxsolu[i] == 0 )
                rhs += 1.0;
             maxsolu[i] = 1 - maxsolu[i];
          }
