@@ -2784,6 +2784,20 @@ SCIP_RETCODE SCIProundSol(
    return SCIP_OKAY;
 }
 
+/** copy the fp values to the exact arrays of the solution */
+SCIP_RETCODE SCIPmakeSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   assert(!SCIPsolIsExact(sol));
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
+
+   return SCIP_OKAY;
+}
+
 /** retransforms solution to original problem space
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

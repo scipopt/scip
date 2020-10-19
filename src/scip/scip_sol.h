@@ -1168,6 +1168,13 @@ SCIP_RETCODE SCIProundSol(
    SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
+/** copy the fp values to the exact arrays of the solution */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmakeSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
 /** retransforms solution to original problem space
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

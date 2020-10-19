@@ -241,14 +241,17 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       return SCIP_OKAY;
 
    assert(scip != NULL);
-   assert(sol == NULL || SCIPisExactSol(scip, sol));
-
 
    if( sol == NULL )
    {
       SCIPcertificatePrintProblemMessage(certificate, "SOL 0\n");
       return SCIP_OKAY;
    }
+   else if( !SCIPsolIsExact(sol) )
+   {
+      SCIP_CALL( SCIPmakeSolExact(scip, sol) );
+   }
+
    /* get variables and number of the transformed problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 

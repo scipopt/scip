@@ -2627,6 +2627,39 @@ SCIP_RETCODE SCIPsolRound(
    return SCIP_OKAY;
 }
 
+/** copy the fp values to the exact arrays of the solution */
+SCIP_RETCODE SCIPsolMakeExact(
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   int v;
+   SCIP_Rational* tmp;
+   assert(!SCIPsolIsExact(sol));
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact ) );
+   SCIP_CALL( SCIPrationalarrayCreate(&sol->valsexact->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&sol->valsexact->valid, blkmem) );
+   SCIP_CALL( RatCreateBlock(blkmem, &sol->valsexact->obj) );
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+
+   SCIPsolUnlink(sol, set, prob);
+
+   for( v = 0; v < prob->nvars; v++ )
+   {
+      RatSetReal(tmp, solGetArrayVal(sol, prob->vars[v]));
+      solSetArrayValExact(sol, set, prob->vars[v], tmp);
+   }
+
+   RatFreeBuffer(set->buffer, &tmp);
+
+   return SCIP_OKAY;
+}
+
 /** updates the solution value sums in variables by adding the value in the given solution */
 void SCIPsolUpdateVarsum(
    SCIP_SOL*             sol,                /**< primal CIP solution */
