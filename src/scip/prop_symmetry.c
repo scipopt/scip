@@ -4030,6 +4030,8 @@ SCIP_RETCODE adaptSymmetryDataSST(
  */
 static
 int getNOrbitopesInComp(
+   SCIP_VAR**            permvars,           /**< array of variables affected by symmetry */
+   int*                  graphcomponents,    /**< array of graph components */
    int*                  graphcompbegins,    /**< array indicating starting position of graph components */
    int*                  compcolorbegins,    /**< array indicating starting positions of potential orbitopes */
    int                   ncompcolors,        /**< number of components encoded in compcolorbegins */
@@ -4050,6 +4052,8 @@ int getNOrbitopesInComp(
    {
       int k;
       int largestcompsize = 0;
+      int nbinrows= 0;
+      SCIP_VAR* firstvar;
 
       /* skip trivial components */
       if ( graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]] < 2 )
@@ -4072,26 +4076,31 @@ int getNOrbitopesInComp(
          }
          else if ( compsize != largestcompsize )
             break;
+
+         firstvar = permvars[graphcomponents[graphcompbegins[k]]];
+
+         /* count number of binary orbits (comps) */
+         if ( SCIPvarIsBinary(firstvar) )
+            ++nbinrows;
+
       }
 
       /* we have found an orbitope */
       if ( k == compcolorbegins[j+1] )
       {
-         int nrows;
          int ncols;
          SCIP_Real threshold;
 
          ++norbitopes;
-         nrows = compcolorbegins[j+1] - compcolorbegins[j];
          ncols = graphcompbegins[compcolorbegins[j] + 1] - graphcompbegins[compcolorbegins[j]];
 
          threshold = (SCIP_Real) symcompsize;
          threshold = 0.7 * threshold;
 
          /* check whether criteria for adding orbitopes are satisfied */
-         if ( nrows <= 2 * ncols || (nrows <= 8 * ncols && nrows < 100) )
+         if ( nbinrows <= 2 * ncols || (nbinrows <= 8 * ncols && nbinrows < 100) )
             multorbitopecriterion = TRUE;
-         else if ( nrows <= 3 * ncols || (SCIP_Real) nrows * ncols >= threshold )
+         else if ( nbinrows <= 3 * ncols || (SCIP_Real) nbinrows * ncols >= threshold )
             oneorbitopecriterion = TRUE;
       }
    }
@@ -4296,7 +4305,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercolor, ncompcolors) );
       }
 
-      norbitopesincomp = getNOrbitopesInComp(graphcompbegins, compcolorbegins, ncompcolors, nvarsincomponent[i]);
+      norbitopesincomp = getNOrbitopesInComp(propdata->permvars, graphcomponents, graphcompbegins, compcolorbegins,
+         ncompcolors, nvarsincomponent[i]);
 
       /* if no usable orbitope could be found, do not handle suborbitopes */
       if ( norbitopesincomp == 0 )
