@@ -1260,18 +1260,30 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    if( certificateIsLeftNode(certificate, node) )
    {
       nodedataparent->leftfilled = TRUE;
-      nodedataparent->derindex_left = fileindex;
-      RatMAX(nodedataparent->derbound_left, nodedataparent->derbound_left, newbound);
+      if( RatIsGT(newbound, nodedataparent->derbound_left) )
+      {
+         nodedataparent->derindex_left = fileindex;
+         RatSet(nodedataparent->derbound_left, newbound);
+      }
       if( RatIsNegInfinity(newbound) )
+      {
+         nodedataparent->derindex_right = fileindex;
          nodedataparent->leftinfeas = TRUE;
+      }
    }
    else
    {
       nodedataparent->rightfilled = TRUE;
-      nodedataparent->derindex_right = fileindex;
-      RatMAX(nodedataparent->derbound_right, nodedataparent->derbound_right, newbound);
+      if( RatIsGT(newbound, nodedataparent->derbound_right) )
+      {
+         nodedataparent->derindex_right = fileindex;
+         RatSet(nodedataparent->derbound_right, newbound);
+      }
       if( RatIsNegInfinity(newbound) )
+      {
          nodedataparent->rightinfeas = TRUE;
+         nodedataparent->derindex_right = fileindex;
+      }
    }
 
    return SCIP_OKAY;
