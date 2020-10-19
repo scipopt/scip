@@ -2649,6 +2649,8 @@ SCIP_RETCODE SCIPsolMakeExact(
 
    SCIPsolUnlink(sol, set, prob);
 
+   RatSetReal(sol->valsexact->obj, sol->obj);
+
    for( v = 0; v < prob->nvars; v++ )
    {
       RatSetReal(tmp, solGetArrayVal(sol, prob->vars[v]));
