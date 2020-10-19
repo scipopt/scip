@@ -2247,7 +2247,7 @@ SCIP_RETCODE reduce_dapaths(
    SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
    SCIP_CALL( dualascent_paths(scip, g, redcosts_getEdgeCostsTop(redcostdata), &dualobjval, result) );
    redcosts_setDualBoundTop(dualobjval, redcostdata);
-   SCIP_CALL( redcosts_initializeDistances(scip, g, redcostdata) );
+   SCIP_CALL( redcosts_initializeDistancesTop(scip, g, redcostdata) );
 
    assert(graph_isMarked(g));
 
@@ -2373,7 +2373,7 @@ SCIP_RETCODE reduce_da(
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, TRUE, randnumgen) );
 
    {
-	  const int nruns = daGetNruns(paramsda, nFixedTerms);
+	   const int nruns = daGetNruns(paramsda, nFixedTerms);
 
       SCIP_Real cutoffbound = -1.0;
       SCIP_Bool havenewsol = FALSE;
@@ -2416,7 +2416,7 @@ SCIP_RETCODE reduce_da(
          for( int e = 0; e < nedges; e++ )
             arcsdeleted[e] = FALSE;
 
-         SCIP_CALL( redcosts_initializeDistances(scip, graph, redcostdata) );
+         SCIP_CALL( redcosts_initializeDistancesTop(scip, graph, redcostdata) );
          updateNodeFixingBounds(nodefixingbounds, graph, redcosts_getRootToNodeDistTop(redcostdata),
                redcosts_getNodeToTermsPathsTop(redcostdata), redcosts_getDualBoundTop(redcostdata), (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, redcosts_getEdgeCostsTop(redcostdata),

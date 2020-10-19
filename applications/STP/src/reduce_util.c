@@ -1051,7 +1051,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
    int adjvert[STP_DELPSEUDO_MAXGRAD];
    SCIP_Real cutoffs[STP_DELPSEUDO_MAXNEDGES];
    SCIP_Real cutoffsrev[STP_DELPSEUDO_MAXNEDGES];
-   const PATH* nodeTo3TermsPaths = redcosts_getNodeToTermsPathsTop(redcostdata);
+   const PATH* nodeToTermsPaths = redcosts_getNodeToTermsPathsTop(redcostdata);
    const SCIP_Real* rootToNodeDist = redcosts_getRootToNodeDistTop(redcostdata);
    SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
    const SCIP_Real cutoffbound = redcosts_getCutoffTop(redcostdata);
@@ -1069,7 +1069,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
 #endif
 
    assert(GE(cutoffbound, 0.0));
-   assert(nodeTo3TermsPaths && rootToNodeDist && redcost);
+   assert(nodeToTermsPaths && rootToNodeDist && redcost);
 
 
    if( isPc )
@@ -1133,8 +1133,8 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
                /* NOTE: the new arc vert->ver2 is cut off if its (combined) reduced cost
                 * is greater than cutoffs[edgecount].
                 * Analogously for the reverse arc.  */
-               cutoffs[edgecount] = cutoffbound - (rootToNodeDist[vert] + nodeTo3TermsPaths[vert2].dist);
-               cutoffsrev[edgecount] = cutoffbound - (rootToNodeDist[vert2] + nodeTo3TermsPaths[vert].dist);
+               cutoffs[edgecount] = cutoffbound - (rootToNodeDist[vert] + nodeToTermsPaths[vert2].dist);
+               cutoffsrev[edgecount] = cutoffbound - (rootToNodeDist[vert2] + nodeToTermsPaths[vert].dist);
 
                edgecount++;
             }

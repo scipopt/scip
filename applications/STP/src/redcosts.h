@@ -38,6 +38,19 @@ extern "C" {
 typedef struct reduce_costs_data REDCOST;
 
 
+/** parameters */
+typedef struct reduced_costs_parameters
+{
+   SCIP_Real             cutoff;             /**< FOR FIRST LEVEL: reduced cost cutoff value or -1.0 if not used */
+   int                   nLevels;            /**< number of of levels */
+   int                   nCloseTerms;        /**< number of close terminals: 1, 2, or 3 */
+   int                   nnodes;             /**< number of nodes */
+   int                   nedges;             /**< number of edges */
+   int                   redCostRoot;        /**< FOR FIRST LEVEL: graph root for reduced cost calculation */
+} RCPARAMS;
+
+
+
 /** returns number of nodes for which reduced costs are stored */
 EXTERN
 int redcosts_getNnodes(
@@ -101,6 +114,13 @@ int redcosts_getRootTop(
    );
 
 
+/** returns current level */
+EXTERN
+int redcosts_getLevel(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+
 /** sets cutoff */
 EXTERN
 void redcosts_setCutoffTop(
@@ -125,7 +145,23 @@ void redcosts_setRootTop(
    );
 
 
-/** initializes reduced costs data structure */
+/** adds a new level */
+EXTERN
+void redcosts_addLevel(
+   REDCOST*              redcostdata         /**< reduced costs data */
+   );
+
+
+/** initializes reduced costs data structure from given parameter struct */
+EXTERN
+SCIP_RETCODE redcosts_initFromParams(
+   SCIP*                 scip,               /**< SCIP */
+   const RCPARAMS*       parameters,         /**< parameters for initialization */
+   REDCOST**             redcostdata         /**< data to initialize */
+);
+
+/** initializes reduced costs data structure.
+ *  DEPRECATED! Use redcosts_initFromParams */
 EXTERN
 SCIP_RETCODE redcosts_init(
    SCIP*                 scip,               /**< SCIP */
@@ -171,7 +207,7 @@ void redcosts_increaseOnDeletedArcs(
 
 /* initialize distances from reduced costs */
 EXTERN
-SCIP_RETCODE redcosts_initializeDistances(
+SCIP_RETCODE redcosts_initializeDistancesTop(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph data structure */
    REDCOST*              redcostdata         /**< reduced cost data */

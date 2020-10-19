@@ -32,13 +32,16 @@
 /** reduced cost result data */
 struct reduce_costs_data
 {
-   SCIP_Real*            redEdgeCost;        /**< reduced costs */
-   SCIP_Real*            rootToNodeDist;     /**< shortest path distances from root  */
-   PATH*                 nodeTo3TermsPaths;  /**< paths to three nearest terminals */
-   int*                  nodeTo3TermsBases;  /**< three nearest terminals */
-   SCIP_Real             cutoff;             /**< reduced cost cutoff value or -1.0 if not used */
-   SCIP_Real             dualBound;          /**< dual bound or -1.0 if not used */
-   int                   redCostRoot;        /**< graph root for reduced cost calculation */
+   SCIP_Real*            lvl_redEdgeCost;        /**< for all levels: reduced costs */
+   SCIP_Real*            lvl_rootToNodeDist;     /**< for all levels: shortest path distances from root  */
+   PATH*                 lvl_nodeToTermsPaths;   /**< for all levels: paths to nCloseTerms nearest terminals */
+   int*                  lvl_nodeToTermsBases;   /**< for all levels: nCloseTerms nearest terminals */
+   SCIP_Real*            lvl_cutoff;             /**< for all levels: reduced cost cutoff value or -1.0 if not used */
+   SCIP_Real*            lvl_dualBound;          /**< for all levels: dual bound or -1.0 if not used */
+   int*                  lvl_redCostRoot;        /**< for all levels: graph root for reduced cost calculation */
+   int                   nCloseTerms;        /**< number of close terminals: 1,2, or 3 */
+   int                   toplevel;           /**< current top level; 0 <= toplevel <  nLevelsMax     */
+   int                   nLevelsMax;         /**< maximum number of levels; >= 1*/
    int                   nnodes;             /**< number of nodes */
    int                   nedges;             /**< number of edges */
 };
@@ -48,6 +51,87 @@ struct reduce_costs_data
  * @{
  */
 
+
+/** initializes reduced costs data structure from given parameter struct */
+static
+SCIP_RETCODE initFromParams(
+   SCIP*                 scip,               /**< SCIP */
+   const RCPARAMS*       parameters,         /**< parameters for initialization */
+   REDCOST**             redcostdata         /**< data to initialize */
+)
+{
+   REDCOST* rc;
+   const int nnodes = parameters->nnodes;
+   const int nedges = parameters->nedges;
+   const int nCloseTerms = parameters->nCloseTerms;
+   const int nLevels = parameters->nLevels;
+   const int redCostRoot = parameters->redCostRoot;
+   const SCIP_Real cutoff = parameters->cutoff;
+
+   assert(nnodes >= 1 && nedges >= 1);
+   assert(nedges % 2 == 0);
+   assert(redCostRoot >= 0 || redCostRoot == UNKNOWN);
+   assert(GE(cutoff, 0.0) || EQ(cutoff, -1.0));
+   assert(nLevels >= 1);
+   assert(nCloseTerms == 1 || nCloseTerms == 2 || nCloseTerms == 3);
+
+   SCIP_CALL( SCIPallocMemory(scip, redcostdata) );
+   rc = *redcostdata;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_redEdgeCost ), nLevels * nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_rootToNodeDist), nLevels * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_nodeToTermsPaths), nLevels * nCloseTerms * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_nodeToTermsBases), nLevels * nCloseTerms * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_cutoff), nLevels) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_redCostRoot), nLevels) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(rc->lvl_dualBound), nLevels) );
+
+
+   rc->toplevel = 0;
+   rc->nLevelsMax = nLevels;
+   rc->nCloseTerms = nCloseTerms;
+   rc->nnodes = nnodes;
+   rc->nedges = nedges;
+
+   for( int i = 0; i < nLevels; i++ )
+   {
+      rc->lvl_cutoff[i] = -1.0;
+      rc->lvl_dualBound[i] = -1.0;
+      rc->lvl_redCostRoot[i] = -1;
+   }
+
+   rc->lvl_cutoff[0] = cutoff;
+   rc->lvl_redCostRoot[0] = redCostRoot;
+
+   return SCIP_OKAY;
+}
+
+
+/** returns start position of current level for lvl_nodeToTermsPaths and lvl_nodeToTermsBases */
+static inline
+int getLevel(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(0 <= redcostdata->toplevel && redcostdata->toplevel < redcostdata->nLevelsMax);
+
+   return redcostdata->toplevel;
+}
+
+
+/** returns start position of current level for lvl_nodeToTermsPaths and lvl_nodeToTermsBases */
+static
+int getStartPositionCloseTerms(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   const int toplevel = getLevel(redcostdata);
+   const int nnodes = redcostdata->nnodes;
+   const int nCloseTerms = redcostdata->nCloseTerms;
+
+   return nnodes * nCloseTerms * toplevel;
+}
 
 
 /**@} */
@@ -87,10 +171,12 @@ SCIP_Real* redcosts_getEdgeCostsTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
-   assert(redcostdata->redEdgeCost);
+   const int toplevel = getLevel(redcostdata);
+   const int nedges = redcostdata->nedges;
 
-   return redcostdata->redEdgeCost;
+   assert(redcostdata->lvl_redEdgeCost);
+
+   return &(redcostdata->lvl_redEdgeCost[nedges * toplevel]);
 }
 
 
@@ -99,10 +185,12 @@ SCIP_Real* redcosts_getRootToNodeDistTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
-   assert(redcostdata->rootToNodeDist);
+   const int toplevel = getLevel(redcostdata);
+   const int nnodes = redcostdata->nnodes;
 
-   return redcostdata->rootToNodeDist;
+   assert(redcostdata->lvl_rootToNodeDist);
+
+   return &(redcostdata->lvl_rootToNodeDist[toplevel * nnodes]);
 }
 
 
@@ -112,9 +200,9 @@ PATH* redcosts_getNodeToTermsPathsTop(
    )
 {
    assert(redcostdata);
-   assert(redcostdata->nodeTo3TermsPaths);
+   assert(redcostdata->lvl_nodeToTermsPaths);
 
-   return redcostdata->nodeTo3TermsPaths;
+   return &(redcostdata->lvl_nodeToTermsPaths[getStartPositionCloseTerms(redcostdata)]);
 }
 
 
@@ -124,9 +212,9 @@ int* redcosts_getNodeToTermsBasesTop(
    )
 {
    assert(redcostdata);
-   assert(redcostdata->nodeTo3TermsBases);
+   assert(redcostdata->lvl_nodeToTermsBases);
 
-   return redcostdata->nodeTo3TermsBases;
+   return &(redcostdata->lvl_nodeToTermsBases[getStartPositionCloseTerms(redcostdata)]);
 }
 
 
@@ -135,9 +223,9 @@ SCIP_Real redcosts_getCutoffTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
+   const int toplevel = getLevel(redcostdata);
 
-   return redcostdata->cutoff;
+   return redcostdata->lvl_cutoff[toplevel];
 }
 
 
@@ -146,9 +234,9 @@ SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
+   const int toplevel = getLevel(redcostdata);
 
-   return redcostdata->dualBound;
+   return redcostdata->lvl_dualBound[toplevel];
 }
 
 
@@ -157,11 +245,21 @@ int redcosts_getRootTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
+   const int toplevel = getLevel(redcostdata);
 
-   return redcostdata->redCostRoot;
+   return redcostdata->lvl_redCostRoot[toplevel];
 }
 
+
+/** returns current level*/
+int redcosts_getLevel(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   const int toplevel = getLevel(redcostdata);
+
+   return toplevel;
+}
 
 
 /** sets cutoff */
@@ -170,10 +268,10 @@ void redcosts_setCutoffTop(
    REDCOST*            redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
+   const int toplevel = getLevel(redcostdata);
    assert(GE(cutoff, 0.0));
 
-   redcostdata->cutoff = cutoff;
+   redcostdata->lvl_cutoff[toplevel] = cutoff;
 }
 
 
@@ -183,11 +281,11 @@ void redcosts_setDualBoundTop(
    REDCOST*            redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
+   const int toplevel = getLevel(redcostdata);
+   assert(GE(dualbound, 0.0));
 
-   redcostdata->dualBound = dualbound;
+   redcostdata->lvl_dualBound[toplevel] = dualbound;
 }
-
 
 
 /** sets root used for reduced cost computation */
@@ -196,28 +294,38 @@ void redcosts_setRootTop(
    REDCOST*              redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
+   const int toplevel = getLevel(redcostdata);
    assert(root >= 0);
 
-
-   redcostdata->redCostRoot = root;
+   redcostdata->lvl_redCostRoot[toplevel] = root;
 }
 
 
+/** adds a new level */
+void redcosts_addLevel(
+   REDCOST*              redcostdata         /**< reduced costs data */
+   )
+{
+   assert(redcostdata);
+   assert(0 <= redcostdata->toplevel && redcostdata->toplevel < redcostdata->nLevelsMax - 1);
+
+   redcostdata->toplevel++;
+}
+
 
 /* initialize distances from reduced costs */
-SCIP_RETCODE redcosts_initializeDistances(
+SCIP_RETCODE redcosts_initializeDistancesTop(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph data structure */
    REDCOST*              redcostdata         /**< reduced cost data */
    )
 {
    int* pathedge;
-   const int daroot = redcostdata->redCostRoot;
+   const int daroot = redcosts_getRootTop(redcostdata);
    const SCIP_Real* const redcosts = redcosts_getEdgeCostsTop(redcostdata);
    PATH* const vnoi = redcosts_getNodeToTermsPathsTop(redcostdata);
    SCIP_Real* const pathdist = redcosts_getRootToNodeDistTop(redcostdata);
-   int* const vbase = redcostdata->nodeTo3TermsBases;
+   int* const vbase = redcosts_getNodeToTermsBasesTop(redcostdata);
    SCIP_Real* costrev = NULL;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
@@ -248,7 +356,8 @@ SCIP_RETCODE redcosts_initializeDistances(
 
    assert(graph_isMarked(g));
 
-   /* build Voronoi diagram */
+   /* build Voronoi diagram
+    * todo very hacky, should be done properly by the calling method */
    if( directed )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
@@ -292,6 +401,19 @@ SCIP_RETCODE redcosts_initializeDistances(
 }
 
 
+/** initializes reduced costs data structure from given parameter struct */
+SCIP_RETCODE redcosts_initFromParams(
+   SCIP*                 scip,               /**< SCIP */
+   const RCPARAMS*       parameters,         /**< parameters for initialization */
+   REDCOST**             redcostdata         /**< data to initialize */
+)
+{
+   assert(scip && parameters && redcostdata);
+
+   SCIP_CALL( initFromParams(scip, parameters, redcostdata) );
+
+   return SCIP_OKAY;
+}
 
 /** initializes reduced costs data structure */
 SCIP_RETCODE redcosts_init(
@@ -303,37 +425,10 @@ SCIP_RETCODE redcosts_init(
    REDCOST**             redcostdata         /**< data to initialize */
 )
 {
-   REDCOST* reddata;
-   SCIP_Real* redEdgeCost;
-   SCIP_Real* rootToNodeDist;
-   PATH* nodeTo3TermsPaths;
-   int* nodeTo3TermsBases;
+   RCPARAMS params = { .cutoff = cutoff, .nLevels = 1, .nCloseTerms = 3, .nnodes = nnodes,
+                       .nedges = nedges, .redCostRoot = redCostRoot };
 
-   assert(scip);
-   assert(nnodes >= 0);
-   assert(nedges >= 0);
-   assert(nedges % 2 == 0);
-   assert(redCostRoot >= 0 || redCostRoot == UNKNOWN);
-   assert(GE(cutoff, 0.0) || EQ(cutoff, -1.0));
-
-   SCIP_CALL( SCIPallocMemory(scip, redcostdata) );
-   reddata = *redcostdata;
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &redEdgeCost, nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &rootToNodeDist, nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &nodeTo3TermsPaths, 3 * nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &nodeTo3TermsBases, 3 * nnodes) );
-
-   reddata->redEdgeCost = redEdgeCost;
-   reddata->rootToNodeDist = rootToNodeDist;
-   reddata->nodeTo3TermsPaths = nodeTo3TermsPaths;
-   reddata->nodeTo3TermsBases = nodeTo3TermsBases;
-   reddata->cutoff = cutoff;
-   reddata->redCostRoot = redCostRoot;
-   reddata->dualBound = -1.0;
-
-   reddata->nnodes = nnodes;
-   reddata->nedges = nedges;
+   SCIP_CALL( redcosts_initFromParams(scip, &params, redcostdata) );
 
    return SCIP_OKAY;
 }
@@ -357,7 +452,7 @@ void redcosts_setAndReturnCutoffFromBound(
    if( *cutoffbound < 0.0 )
       *cutoffbound = 0.0;
 
-   redcostdata->cutoff = *cutoffbound;
+   redcosts_setCutoffTop(*cutoffbound, redcostdata);
 }
 
 
@@ -367,15 +462,19 @@ void redcosts_setCutoffFromBound(
   REDCOST*              redcostdata         /**< reduced cost data */
 )
 {
+   SCIP_Real cutoff;
+
    assert(redcostdata);
    assert(GE(redcosts_getDualBoundTop(redcostdata), 0.0));
 
-   redcostdata->cutoff = upperbound - redcosts_getDualBoundTop(redcostdata);
+   cutoff = upperbound - redcosts_getDualBoundTop(redcostdata);
 
-   assert(GE_FEAS_EPS(redcostdata->cutoff, 0.0, EPSILON));
+   assert(GE_FEAS_EPS(cutoff, 0.0, EPSILON));
 
-   if( redcostdata->cutoff < 0.0 )
-      redcostdata->cutoff = 0.0;
+   if( cutoff < 0.0 )
+      cutoff = 0.0;
+
+   redcosts_setCutoffTop(cutoff, redcostdata);
 }
 
 
@@ -412,10 +511,13 @@ void redcosts_free(
 
    reddata = *redcostdata;
 
-   SCIPfreeMemoryArray(scip, &(reddata->nodeTo3TermsBases));
-   SCIPfreeMemoryArray(scip, &(reddata->nodeTo3TermsPaths));
-   SCIPfreeMemoryArray(scip, &(reddata->rootToNodeDist));
-   SCIPfreeMemoryArray(scip, &(reddata->redEdgeCost));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_dualBound));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_redCostRoot));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_cutoff));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_nodeToTermsBases));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_nodeToTermsPaths));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_rootToNodeDist));
+   SCIPfreeMemoryArray(scip, &(reddata->lvl_redEdgeCost));
 
    SCIPfreeMemory(scip, redcostdata);
 }
