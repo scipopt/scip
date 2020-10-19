@@ -7036,7 +7036,7 @@ SCIP_RETCODE rowExactStoreSolVals(
       if( infeasible )
       {
          SCIP_CALL( RatCopy(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
-         RatSetReal(storedsolvals->activity, SCIP_INVALID);
+         RatSetString(storedsolvals->activity, "inf");
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }
       else
@@ -7054,7 +7054,7 @@ SCIP_RETCODE rowExactStoreSolVals(
       if( infeasible )
       {
          RatSet(storedsolvals->dualsol, rowexact->dualfarkas);
-         RatSetReal(storedsolvals->activity, SCIP_INVALID);
+         RatSetString(storedsolvals->activity, "inf");
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }
       else
@@ -7185,7 +7185,7 @@ SCIP_RETCODE lpExactRestoreSolVals(
    {
       lpexact->solved = storedsolvals->lpissolved;
       //lpexact->validsollp = validlp;
-      RatSet(storedsolvals->lpobjval, lpexact->lpobjval);
+      RatSet(lpexact->lpobjval, storedsolvals->lpobjval);
       lpexact->lpsolstat = storedsolvals->lpsolstat;
       lpexact->primalfeasible = storedsolvals->primalfeasible;
       lpexact->primalchecked = storedsolvals->primalchecked;
@@ -7209,7 +7209,7 @@ SCIP_RETCODE lpExactRestoreSolVals(
       lpexact->solved = FALSE;
       //lpexact->validsollp = -1;
 
-      RatSetReal(lpexact->lpobjval, SCIP_INVALID);
+      RatSetString(lpexact->lpobjval, "inf");
       lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
       lpexact->primalfeasible = FALSE;
       lpexact->primalchecked = FALSE;
@@ -7670,7 +7670,13 @@ SCIP_RETCODE SCIPlpExactEndDive(
       }
    }
    else
+   {
+      /* we still need to copy the exact lp objval back because the safe bounding result is saved there */
+      if( lpexact->storedsolvals != NULL )
+         RatSet(lpexact->lpobjval, lpexact->storedsolvals->lpobjval);
+
       lpexact->solved = FALSE;
+   }
 
 #ifdef SCIP_MORE_DEBUG
    {
