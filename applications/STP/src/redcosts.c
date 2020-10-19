@@ -485,11 +485,12 @@ void redcosts_increaseOnDeletedArcs(
    REDCOST*              redcostdata         /**< reduced cost data */
 )
 {
-   SCIP_Real* redEdgeCost = redcosts_getEdgeCostsTop(redcostdata);
+   SCIP_Real* const redEdgeCost = redcosts_getEdgeCostsTop(redcostdata);
    const int nedges = graph_get_nEdges(graph);
    const SCIP_Real offset = 2.0 * redcosts_getCutoffTop(redcostdata) + 1.0;
 
    assert(GE(offset, 1.0));
+   assert(nedges == redcostdata->nedges);
 
    for( int i = 0; i < nedges; i++ )
    {
