@@ -1582,20 +1582,31 @@ SCIP_RETCODE daOrderRoots(
 }
 
 
-
 /** initializes reduced costs data */
 static
 SCIP_RETCODE daRedcostsInit(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
+   int                   nLevels,            /**< number of levels for extended reductions */
    REDCOST**             redcostdata         /**< reduced cost data */
 )
 {
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
+   RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = 1, .nCloseTerms = 3,
+                         .nnodes = nnodes, .nedges = nedges, .redCostRoot = UNKNOWN };
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, -1.0, UNKNOWN, redcostdata) );
+   if( paramsda->useExtRed && !graph_pc_isMw(graph) )
+   {
+      // todo change number of levels nLevels
+
+      // rcparams.nLevels = nLevels
+   }
+
+
+   SCIP_CALL( redcosts_initFromParams(scip, &rcparams, redcostdata) );
+
 
    return SCIP_OKAY;
 }
@@ -2402,7 +2413,7 @@ SCIP_RETCODE reduce_da(
       SCIP_Real cutoffbound = -1.0;
       SCIP_Bool havenewsol = FALSE;
 
-      SCIP_CALL( daRedcostsInit(scip, graph, paramsda, &redcostdata) );
+      SCIP_CALL( daRedcostsInit(scip, graph, paramsda, nruns, &redcostdata) );
 
       /* main reduction loop */
       for( int run = 0; run < nruns && graph->grad[graph->source] > 0; run++ )
@@ -2411,6 +2422,12 @@ SCIP_RETCODE reduce_da(
          const SCIP_Real damaxdeviation = daGetMaxDeviation(paramsda, randnumgen);
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
          havenewsol = FALSE;
+
+         /*
+         if( extended &&  !graph_pc_isMw(graph) )
+            redcosts_addLevel(redcostdata);
+            */
+
          redcosts_setRootTop(terms[run], redcostdata);
 
      //   if( rpc ) {      // int todo; // check for more terminals to be added    }

@@ -367,9 +367,22 @@ SCIP_RETCODE redcosts_initializeDistancesTop(
    }
    else
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
+      const int nCloseTerms = redcostdata->nCloseTerms;
+      SCIP_CALL( SCIPallocBufferArray(scip, &state, nCloseTerms * nnodes) );
 
-      graph_get3nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
+      // todo deleteme
+      assert(nCloseTerms == 3);
+
+      if( nCloseTerms == 2 )
+      {
+         graph_get2nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
+      }
+      else
+      {
+         // todo cover case == 1?
+         assert(nCloseTerms == 3);
+         graph_get3nextTermPaths(g, costrev, costrev, vnoi, vbase, state);
+      }
 
 #ifndef NDEBUG
       {
