@@ -950,8 +950,8 @@ SCIP_RETCODE consdataCreate(
 
    (*consdata)->eventdata = NULL;
 
-   lhsrel = RatApproxReal(lhs);
-   rhsrel = RatApproxReal(rhs);
+   lhsrel = RatRoundReal(lhs, SCIP_ROUND_DOWNWARDS);
+   rhsrel = RatRoundReal(rhs, SCIP_ROUND_UPWARDS);
 
    /* due to compressed copying, we may have fixed variables contributing to the left and right hand side */
    if( !RatIsZero(constant) )

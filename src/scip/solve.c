@@ -4235,7 +4235,7 @@ SCIP_RETCODE solveNode(
          SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue,
                conflict, cliquetable, cutoff) );
 
-         if( *cutoff && set->exact_enabled )
+         if( *cutoff && set->exact_enabled && !SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set, transprob)) )
          {
             SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set,
                         transprob, SCIPsetInfinity(set)) );
@@ -4712,7 +4712,11 @@ SCIP_RETCODE solveNode(
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
 
       /** @todo exip: these ifs are temporary */
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && focusnodehaslp )
+      if( !(lp->solved && lp->flushed) )
+      {
+         SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
+      }
+      else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && focusnodehaslp )
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
       else if( focusnodehaslp )
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
