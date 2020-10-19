@@ -769,7 +769,10 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    {
       bestsol = SCIPgetBestSol(scip);
 
-      assert(SCIPisExactSol(scip, bestsol));
+      if( !SCIPisExactSol(scip, bestsol) )
+      {
+         SCIP_CALL( SCIPmakeSolExact(scip, bestsol) );
+      }
 
       RatSet(primalbound, SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob));
       assert(!RatIsAbsInfinity(primalbound));
