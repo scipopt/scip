@@ -51,6 +51,8 @@
 #define DEFAULT_MAXROUNDS            10 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_IGNOREPACKINGCONSS TRUE /**< default for ignoring circle packing constraints during minor detection */
+#define BINSEARCH_MAXITERS          120 /**< default iteration limit for binary search */
+#define INTERCUTS_MINVIOL          1e-4 /**< minimal violation the cut needs to have to be added */
 
 /*
  * Data structures
@@ -505,28 +507,356 @@ SCIP_RETCODE constructBasicVars2TableauRowMap(
    return SCIP_OKAY;
 }
 
-/** separates cuts for stored principal minors */
-/* TODO: Antonia, please, could you split this function into smaller functions */
+/** The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
+ * SQRT(A t^2 + B t + C) - (D t + E).
+ * This function computes the coefficients A, B, C, D, E for the given ray.
+ */
 static
-SCIP_RETCODE separateDeterminant(
+void computeRestrictionToRay(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             xik,                /**< variable X_ik = x_i * x_k */
-   SCIP_VAR*             xil,                /**< variable X_il = x_i * x_l */
-   SCIP_VAR*             xjk,                /**< variable X_jk = x_j * x_k */
-   SCIP_VAR*             xjl,                /**< variable X_jl = x_j * x_l */
-   int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
-   SCIP_Real*            binvrow,            /**< buffer to store row of Binv */
-   SCIP_Real*            binvarow,           /**< buffer to store row of Binv A */
-   SCIP_HASHMAP*         tableau             /**< map between var an its tableau row */
+   SCIP_Real*            ray,                /**< coefficients of ray */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real*            coefs               /**< buffer to store A, B, C, D, and E */
    )
 {
-   SCIP_VAR* vars[4] = {xik, xil, xjk, xjl};
-   SCIP_Real* tableaurows[4];
+   SCIP_Real eigenvectors[16] = {1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0};
+   SCIP_Real eigenvalues[4] = {0.5, 0.5, -0.5, -0.5};
+   SCIP_Real coefeigenvector = 0.70710678118;
+   SCIP_Real* a;
+   SCIP_Real* b;
+   SCIP_Real* c;
+   SCIP_Real* d;
+   SCIP_Real* e;
    int i;
+
+   /* set all coefficients to zero */
+   memset(coefs, 0, 5 * sizeof(SCIP_Real));
+
+   a = coefs;
+   b = coefs + 1;
+   c = coefs + 2;
+   d = coefs + 3;
+   e = coefs + 4;
+
+   for( i = 0; i < 4; ++i )
+   {
+      int j;
+      SCIP_Real vzlp;
+      SCIP_Real vdotray;
+
+      vzlp = 0;
+      vdotray = 0;
+
+      /* compute eigenvec * ray and eigenvec * solution */
+      for( j = 0; j < 4; ++j )
+      {
+         vdotray += coefeigenvector * eigenvectors[4 * i + j] * ray[j];
+         vzlp += coefeigenvector * eigenvectors[4 * i + j] * SCIPvarGetLPSol(vars[j]);
+      }
+
+      if( eigenvalues[i] > 0 )
+      {
+         /* positive eigenvalue: compute D and E */
+         *d += eigenvalues[i] * vzlp * vdotray;
+         *e += eigenvalues[i] * SQR( vzlp );
+      }
+      else
+      {
+         /* negative eigenvalue: compute A, B, and C */
+         *a -= eigenvalues[i] * SQR( vdotray );
+         *b -= 2.0 * eigenvalues[i] * vzlp * vdotray;
+         *c -= eigenvalues[i] * SQR( vzlp );
+      }
+   }
+
+   /* finish computation of D and E */
+   assert(*e > 0);
+   *e = SQRT( *e );
+   *d /= *e;
+
+   /* some sanity checks */
+   assert(*c >= 0); /* radicand at zero */
+   assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
+   assert(*a >= 0); /* the function inside the root is convex */
+
+#ifdef  DEBUG_INTERSECTIONCUT
+   SCIPinfoMessage(scip, NULL, "Restriction yields: a,b,c,d,e %g %g %g %g %g\n", coefs[0], coefs[1], coefs[2], coefs[3], coefs[4]);
+#endif
+}
+
+/** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
+static
+SCIP_Real evalPhiAtRay(
+   SCIP_Real             t,                  /**< argument of phi restricted to ray */
+   SCIP_Real             a,                  /**< value of A */
+   SCIP_Real             b,                  /**< value of B */
+   SCIP_Real             c,                  /**< value of C */
+   SCIP_Real             d,                  /**< value of D */
+   SCIP_Real             e                   /**< value of E */
+   )
+{
+#ifdef INTERCUTS_DBLDBL
+   SCIP_Real QUAD(lin);
+   SCIP_Real QUAD(disc);
+   SCIP_Real QUAD(tmp);
+   SCIP_Real QUAD(root);
+
+   /* d * t + e */
+   SCIPquadprecProdDD(lin, d, t);
+   SCIPquadprecSumQD(lin, lin, e);
+
+   /* a * t * t */
+   SCIPquadprecSquareD(disc, t);
+   SCIPquadprecProdQD(disc, disc, a);
+
+   /* b * t */
+   SCIPquadprecProdDD(tmp, b, t);
+
+   /* a * t * t + b * t */
+   SCIPquadprecSumQQ(disc, disc, tmp);
+
+   /* a * t * t + b * t + c */
+   SCIPquadprecSumQD(disc, disc, c);
+
+   /* sqrt(above): can't take sqrt of 0! */
+   if( QUAD_TO_DBL(disc) == 0 )
+   {
+      QUAD_ASSIGN(root, 0.0);
+   }
+   else
+   {
+      SCIPquadprecSqrtQ(root, disc);
+   }
+
+   /* final result */
+   QUAD_SCALE(lin, -1.0);
+   SCIPquadprecSumQQ(tmp, root, lin);
+
+   assert(t != 1e20 || QUAD_TO_DBL(tmp) <= 0);
+
+   return  QUAD_TO_DBL(tmp);
+#else
+   return SQRT( a * t * t + b * t + c ) - ( d * t + e );
+#endif
+}
+
+/** helper function of computeRoot: we want phi to be <= 0 */
+static
+void doBinarySearch(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             a,                  /**< value of A */
+   SCIP_Real             b,                  /**< value of B */
+   SCIP_Real             c,                  /**< value of C */
+   SCIP_Real             d,                  /**< value of D */
+   SCIP_Real             e,                  /**< value of E */
+   SCIP_Real*            sol                 /**< buffer to store solution; also gives initial point */
+   )
+{
+   SCIP_Real lb = 0.0;
+   SCIP_Real ub = *sol;
+   SCIP_Real curr;
+   int i;
+
+   for( i = 0; i < BINSEARCH_MAXITERS; ++i )
+   {
+      SCIP_Real phival;
+
+      curr = (lb + ub) / 2.0;
+      phival = evalPhiAtRay(curr, a, b, c, d, e);
+#ifdef INTERCUT_MOREDEBUG
+      printf("%d: lb,ub %.10f, %.10f. curr = %g -> phi at curr %g -> phi at lb %g \n", i, lb, ub, curr, phival, evalPhiAtRay(lb, a, b, c, d, e));
+#endif
+
+      if( phival <= 0.0 )
+      {
+         lb = curr;
+         if( SCIPisFeasZero(scip, phival) || SCIPisFeasEQ(scip, ub, lb) )
+            break;
+      }
+      else
+         ub = curr;
+   }
+
+   *sol = lb;
+
+}
+
+/**  finds smallest positive root phi by finding the smallest positive root of
+ * (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) = 0
+ * However, we are conservative and want a solution such that phi is negative, but close to 0;
+ * thus we correct the result with a binary search
+ */
+static
+SCIP_Real computeRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            coefs               /**< value of A */
+   )
+{
+   SCIP_Real sol;
+   SCIP_INTERVAL bounds;
+   SCIP_INTERVAL result;
+   SCIP_Real a = coefs[0];
+   SCIP_Real b = coefs[1];
+   SCIP_Real c = coefs[2];
+   SCIP_Real d = coefs[3];
+   SCIP_Real e = coefs[4];
+
+   /* there is an intersection point if and only if SQRT(A) > D: here we are beliving in math, this might cause
+    * numerical issues
+    */
+   if( SQRT( a ) <= d )
+   {
+      sol = SCIPinfinity(scip);
+
+      /* if SQRT(a) <= d, but a > d * d --> numerics are weird and phi might not evalate negative at infinity */
+      //assert(a > d * d || evalPhiAtRay(sol, a, b, c, d, e) <= 0);
+      return sol;
+   }
+
+   SCIPintervalSetBounds(&bounds, 0.0, SCIPinfinity(scip));
+
+   /* SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar finds all x such that a x^2 + b x >= c and x in bounds.
+    * it is known that if tsol is the root we are looking for, then gamma(zlp + t * ray) <= 0 between 0 and tsol, thus
+    * tsol is the smallest t such that (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) >= 0
+    */
+   SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a - d * d, b - 2.0 * d *
+         e, -(c - e * e), bounds);
+
+   /* it can still be empty because of our infinity, I guess... */
+   sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
+
+   /* check that solution is acceptable, ideally it should be <= 0, however when it is positive, we trigger a binary
+    * search to make it negative. This binary search might return a solution point that is not at accurately 0 as the
+    * one obtained from the function above. Thus, it might fail to satisfy the condition of case 4b in some cases, e.g.,
+    * ex8_3_1, bchoco05, etc
+    */
+   if( evalPhiAtRay(sol, a, b, c, d, e) <= 1e-10 )
+   {
+#ifdef INTERCUT_MOREDEBUG
+      printf("interval solution returned %g -> phival = %g, believe it\n", sol, evalPhiAtRay(sol, a, b, c, d, e));
+      printf("don't do bin search\n");
+#endif
+
+      return sol;
+   }
+   else
+   {
+      /* perform a binary search to make it negative: this might correct a wrong infinity (e.g. crudeoil_lee1_05) */
+#ifdef INTERCUT_MOREDEBUG
+      printf("do bin search because phival is %g\n", evalPhiAtRay(sol, a, b, c, d, e));
+#endif
+      doBinarySearch(scip, a, b, c, d, e, &sol);
+   }
+
+   return sol;
+}
+
+/** adds cutcoef * (col - col*) to rowprep */
+static
+SCIP_RETCODE addColToCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to store intersection cut */
+   SCIP_Real             cutcoef,            /**< cut coefficient */
+   SCIP_COL*             col                 /**< column to add to rowprep */
+   )
+{
+   assert(col != NULL);
+
+#ifdef DEBUG_INTERCUTS_NUMERICS
+   SCIPinfoMessage(scip, NULL, "adding col %s to cut. %g <= col <= %g\n", SCIPvarGetName(SCIPcolGetVar(col)),
+      SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)));
+   SCIPinfoMessage(scip, NULL, "col is active at %s. Value %.15f\n", SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_LOWER ? "lower bound" :
+      "upper bound" , SCIPcolGetPrimsol(col));
+#endif
+
+   SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPcolGetVar(col), cutcoef) );
+   SCIPaddRowprepConstant(rowprep, -cutcoef * SCIPcolGetPrimsol(col) );
+
+   return SCIP_OKAY;
+}
+
+/** adds cutcoef * (slack - slack*) to rowprep
+  * row is lhs <= <coefs, vars> + constant <= rhs, thus slack is defined by
+  * slack + <coefs.vars> + constant = side
+  * If row (slack) is at upper, it means that <coefs,vars*> + constant = rhs, and so
+  * slack* = side - rhs --> slack - slack* = rhs - <coefs, vars> - constant.
+  * If row (slack) is at lower, then <coefs,vars*> + constant = lhs, and so
+  * slack* = side - lhs --> slack - slack* = lhs - <coefs, vars> - constant.
+  */
+static
+SCIP_RETCODE addRowToCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to store intersection cut */
+   SCIP_Real             cutcoef,            /**< cut coefficient */
+   SCIP_ROW*             row,                /**< row, whose slack we are ading to rowprep */
+   SCIP_Bool*            success             /**< if the row is nonbasic enough */
+   )
+{
+   int i;
+   SCIP_COL** rowcols;
+   SCIP_Real* rowcoefs;
+   int nnonz;
+
+   assert(row != NULL);
+
+   rowcols = SCIProwGetCols(row);
+   rowcoefs = SCIProwGetVals(row);
+   nnonz = SCIProwGetNLPNonz(row);
+
+#ifdef DEBUG_INTERCUTS_NUMERICS
+   SCIPinfoMessage(scip, NULL, "adding slack var row_%d to cut. %g <= row <= %g\n", SCIProwGetLPPos(row), SCIProwGetLhs(row), SCIProwGetRhs(row));
+   SCIPinfoMessage(scip, NULL, "row is active at %s = %.15f Activity %.15f\n", SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER ? "lhs" :
+   "rhs" , SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER ? SCIProwGetLhs(row) : SCIProwGetRhs(row),
+   SCIPgetRowActivity(scip, row));
+#endif
+
+   if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
+   {
+      assert(!SCIPisInfinity(scip, -SCIProwGetLhs(row)));
+      if( ! SCIPisFeasEQ(scip, SCIProwGetLhs(row), SCIPgetRowActivity(scip, row)) )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      SCIPaddRowprepConstant(rowprep, SCIProwGetLhs(row) * cutcoef);
+   }
+   else
+   {
+      assert(!SCIPisInfinity(scip, SCIProwGetRhs(row)));
+      if( ! SCIPisFeasEQ(scip, SCIProwGetRhs(row), SCIPgetRowActivity(scip, row)) )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      SCIPaddRowprepConstant(rowprep, SCIProwGetRhs(row) * cutcoef);
+   }
+
+   for( i = 0; i < nnonz; i++ )
+   {
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPcolGetVar(rowcols[i]), -rowcoefs[i] * cutcoef) );
+   }
+
+   SCIPaddRowprepConstant(rowprep, -SCIProwGetConstant(row) * cutcoef);
+
+   return SCIP_OKAY;
+}
+
+
+/** get the tableau rows of the variables in vars */
+static
+SCIP_RETCODE getTableauRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables in the minor */
+   int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
+   SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
+   SCIP_Real**           tableaurows         /**< buffer to store tableau row */
+   )
+{
    int v;
    int nrows;
    int ncols;
-   SCIP_COL** cols;
 
    nrows = SCIPgetNLPRows(scip);
    ncols = SCIPgetNLPCols(scip);
@@ -551,7 +881,6 @@ SCIP_RETCODE separateDeterminant(
             lppos = SCIPcolGetLPPos(col);
             SCIP_CALL( SCIPallocBufferArray(scip, &densetableaurow, ncols + nrows) );
 
-
             SCIP_CALL( SCIPgetLPBInvRow(scip, basicvarpos2tableaurow[lppos], &densetableaurow[ncols], NULL, NULL) );
             SCIP_CALL( SCIPgetLPBInvARow(scip, basicvarpos2tableaurow[lppos], &densetableaurow[ncols], densetableaurow, NULL, NULL) );
 
@@ -574,17 +903,40 @@ SCIP_RETCODE separateDeterminant(
       /* get tableau row of var */
       tableaurows[v] = (SCIP_Real *)SCIPhashmapGetImage(tableau, (void*)vars[v]);
    }
+   return SCIP_OKAY;
+}
 
-   /* loop over each non-basic var; get the ray; compute cut coefficient */
+/** computes the cut coefs of the  non-basic (non-slack) variables (correspond to cols) and adds them to the
+ * intersection cut
+ */
+static
+SCIP_RETCODE addCols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real**           tableaurows,        /**< tableau rows corresponding to the variables in vars */
+   SCIP_ROWPREP*         rowprep,            /**< store cut */
+   SCIP_Bool*            success             /**< pointer to store whether the generation of cutcoefs was successful */
+   )
+{
+   int i;
+   int ncols;
+   SCIP_COL** cols;
+
+   *success = TRUE;
 
    /* loop over non-basic (non-slack) variables */
    cols = SCIPgetLPCols(scip);
+   ncols = SCIPgetNLPCols(scip);
    for( i = 0; i < ncols; ++i )
    {
       SCIP_COL* col;
       SCIP_Real ray[4];
+      SCIP_Real coefs[5];
       SCIP_Real factor;
       SCIP_Bool israynonzero;
+      SCIP_Real cutcoef;
+      SCIP_Real interpoint;
+      int v;
 
       col = cols[i];
 
@@ -594,7 +946,10 @@ SCIP_RETCODE separateDeterminant(
       else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_UPPER )
          factor = 1.0;
       else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
-         return SCIP_OKAY; /* don't even bother */
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
       else
          continue;
 
@@ -624,8 +979,183 @@ SCIP_RETCODE separateDeterminant(
          continue;
 
       /* compute the cut */
+      computeRestrictionToRay(scip, ray, vars, coefs);
+
+      /* compute intersection point */
+      interpoint = computeRoot(scip, coefs);
+
+      /* compute cut coef */
+      cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+
+      /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
+      assert(SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_LOWER);
+      SCIP_CALL( addColToCut(scip, rowprep, SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_UPPER ? -cutcoef :
+            cutcoef, col) );
    }
 
+   return SCIP_OKAY;
+}
+
+/** computes the cut coefs of the non-basic slack variables (correspond to rows) and adds them to the
+ * intersection cut
+ */
+static
+SCIP_RETCODE addRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real**           tableaurows,        /**< tableau rows corresponding to the variables in vars */
+   SCIP_ROWPREP*         rowprep,            /**< store cut */
+   SCIP_Bool*            success             /**< pointer to store whether the generation of cutcoefs was successful */
+   )
+{
+   int i;
+   int nrows;
+   int ncols;
+   SCIP_ROW** rows;
+
+   nrows = SCIPgetNLPRows(scip);
+   ncols = SCIPgetNLPCols(scip);
+
+   *success = TRUE;
+
+   /* loop over non-basic slack variables */
+   rows = SCIPgetLPRows(scip);
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIP_ROW* row;
+      SCIP_Real ray[4];
+      SCIP_Real coefs[5];
+      SCIP_Real factor;
+      SCIP_Bool israynonzero;
+      SCIP_Real cutcoef;
+      SCIP_Real interpoint;
+      int v;
+
+      row = rows[i];
+
+      /* set factor to store entries of ray as = [BinvL, -BinvU] */
+      if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
+         factor = 1.0;
+      else if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER )
+         factor = -1.0;
+      else if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_ZERO )
+      {
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      else
+         continue;
+
+      /* build the ray */
+      israynonzero = FALSE;
+      for( v = 0; v < 4; ++v )
+      {
+         int index;
+
+         index = ncols + i;
+
+         if( tableaurows[v] != NULL )
+            ray[v] = factor * (SCIPisZero(scip, tableaurows[v][index]) ? 0.0 : tableaurows[v][index]);
+         else
+         {
+            /* TODO: We assume that slack variables can never occure in the minor. This is correct, right? */
+            ray[v] = 0.0;
+         }
+
+         israynonzero = israynonzero || (ray[v] != 0.0);
+      }
+
+      /* do nothing if ray is 0 */
+      if( ! israynonzero )
+         continue;
+
+      /* compute the cut */
+      computeRestrictionToRay(scip, ray, vars, coefs);
+
+      /* compute intersection point */
+      interpoint = computeRoot(scip, coefs);
+
+      /* compute cut coef */
+      cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+
+      /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
+      assert(SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER || SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER);
+
+      SCIP_CALL( addRowToCut(scip, rowprep, SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER ? cutcoef :
+            -cutcoef, row, success) ); /* rows have flipper base status! */
+   }
+
+   return SCIP_OKAY;
+}
+
+/** separates cuts for stored principal minors */
+static
+SCIP_RETCODE separateDeterminant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_VAR*             xik,                /**< variable X_ik = x_i * x_k */
+   SCIP_VAR*             xil,                /**< variable X_il = x_i * x_l */
+   SCIP_VAR*             xjk,                /**< variable X_jk = x_j * x_k */
+   SCIP_VAR*             xjl,                /**< variable X_jl = x_j * x_l */
+   int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
+   SCIP_Real*            binvrow,            /**< buffer to store row of Binv */
+   SCIP_Real*            binvarow,           /**< buffer to store row of Binv A */
+   SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
+   SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
+   )
+{
+   SCIP_ROWPREP* rowprep;
+   SCIP_VAR* vars[4] = {xik, xil, xjk, xjl};
+   SCIP_Real* tableaurows[4];
+   SCIP_Bool success;
+
+   /* cut (in the nonbasic space) is of the form alpha^T x >= 1 */
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
+
+   /* check if we have the tableau row of the variable and if not compute it */
+   SCIP_CALL( getTableauRows(scip, vars, basicvarpos2tableaurow, tableau, tableaurows) );
+
+   /* loop over each non-basic var; get the ray; compute cut coefficient */
+   SCIP_CALL( addCols(scip, vars, tableaurows, rowprep, &success) );
+
+   if( ! success )
+      goto CLEANUP;
+
+   /* loop over non-basic slack variables */
+   SCIP_CALL( addRows(scip, vars, tableaurows, rowprep, &success) );
+
+   if( ! success )
+      goto CLEANUP;
+
+   /* merge coefficients that belong to same variable */
+   SCIPmergeRowprepTerms(scip, rowprep);
+
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, INTERCUTS_MINVIOL, NULL, &success) );
+
+   /* if cleanup was successfull, create row out of rowprep and add it */
+   if( success )
+   {
+      SCIP_ROW* row;
+      SCIP_Bool infeasible;
+
+      /* create row */
+      SCIP_CALL( SCIPgetRowprepRowSepa(scip, &row, rowprep, sepa) );
+
+      assert(SCIPgetCutEfficacy(scip, NULL, row) > 0.0);
+
+      /* add row */
+      SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
+
+      if( infeasible )
+         *result = SCIP_CUTOFF;
+      else
+         *result = SCIP_SEPARATED;
+
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+
+CLEANUP:
+   SCIPfreeRowprep(scip, &rowprep);
    return SCIP_OKAY;
 }
 
@@ -641,6 +1171,7 @@ SCIP_RETCODE separatePoint(
    SCIP_SEPADATA* sepadata;
    SCIP_Real* binvarow;
    SCIP_Real* binvrow;
+   SCIP_HASHMAP* tableau;
    int* basicvarpos2tableaurow; /* map between basic var and its tableau row */
    int nrows;
    int ncols;
@@ -663,9 +1194,11 @@ SCIP_RETCODE separatePoint(
    nrows = SCIPgetNLPRows(scip);
    ncols = SCIPgetNLPCols(scip);
 
+   /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvarow, ncols) );
+   SCIP_CALL( SCIPhashmapCreate(&tableau, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* construct basicvar to tableau row map */
    SCIP_CALL( constructBasicVars2TableauRowMap(scip, basicvarpos2tableaurow) );
@@ -697,17 +1230,17 @@ SCIP_RETCODE separatePoint(
       if( SCIPisFeasPositive(scip, det) )
       {
          printf("separate xik xjl - xil xjk <= 0; det is %g\n", det);
-         SCIP_CALL( separateDeterminant(scip, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, basicvarpos2tableaurow, binvrow, binvarow, tableau) );
+         SCIP_CALL( separateDeterminant(scip, sepa, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, basicvarpos2tableaurow,
+                  binvrow, binvarow, tableau, result) );
       }
       else if( SCIPisFeasNegative(scip, det) )
       {
          printf("separate xil xjk - xik xjl <= 0; det is %g\n", det);
-         SCIP_CALL( separateDeterminant(scip, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, basicvarpos2tableaurow, binvrow, binvarow, tableau) );
+         SCIP_CALL( separateDeterminant(scip, sepa, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, basicvarpos2tableaurow,
+                  binvrow, binvarow, tableau, result) );
       }
       else
          continue;
-
-      /* try to generate intersection cut if violated */
    }
 
    return SCIP_OKAY;
