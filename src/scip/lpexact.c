@@ -3707,6 +3707,8 @@ SCIP_RETCODE lpExactFlushAndSolve(
    else
       SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
 
+   SCIP_CALL( SCIPlpiFreeState(lp->lpi, blkmem, &lpistate) );
+
    /* solve with given settings (usually fast but imprecise) */
    if( SCIPsetIsInfinity(set, lpexact->cutoffbound) )
    {
@@ -7684,7 +7686,6 @@ SCIP_RETCODE SCIPlpExactEndDive(
       }
       else
       {
-         printf("%d       %d \n", lpexact->lpsolstat, lpexact->storedsolvals->lpsolstat);
          SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem, -1LL) );
       }
    }
