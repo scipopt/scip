@@ -1261,7 +1261,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
       }
       if( RatIsNegInfinity(newbound) )
       {
-         nodedataparent->derindex_right = fileindex;
+         nodedataparent->derindex_left = fileindex;
          nodedataparent->leftinfeas = TRUE;
       }
    }
