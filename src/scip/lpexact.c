@@ -2686,6 +2686,13 @@ SCIP_RETCODE SCIPcolExactFree(
    else
       assert((*col)->vals == NULL);
 
+   if( (*col)->storedsolvals != NULL )
+   {
+      RatFreeBlock(blkmem, &(*col)->storedsolvals->primsol);
+      RatFreeBlock(blkmem, &(*col)->storedsolvals->redcost);
+      BMSfreeBlockMemoryNull(blkmem, &(*col)->storedsolvals);
+   }
+
    RatFreeBlock(blkmem, &(*col)->obj);
    RatFreeBlock(blkmem, &(*col)->lb);
    RatFreeBlock(blkmem, &(*col)->ub);
@@ -3513,6 +3520,11 @@ SCIP_RETCODE SCIPlpExactFree(
    RatFreeBlock(blkmem, &(*lp)->glbpseudoobjval);
    RatFreeBlock(blkmem, &(*lp)->looseobjval);
 
+   if( (*lp)->storedsolvals != NULL )
+   {
+      RatFreeBlock(blkmem, &(*lp)->storedsolvals->lpobjval);
+      BMSfreeMemoryNull(&(*lp)->storedsolvals);
+   }
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
    BMSfreeMemoryArrayNull(&(*lp)->lpirows);
    BMSfreeMemoryArrayNull(&(*lp)->chgcols);
@@ -4836,6 +4848,13 @@ SCIP_RETCODE SCIProwExactFree(
 
    /* remove column indices from corresponding rows */
    SCIP_CALL( rowExactUnlink(*row, set, lp) );
+
+   if( (*row)->storedsolvals != NULL )
+   {
+      RatFreeBlock(blkmem, &(*row)->storedsolvals->activity);
+      RatFreeBlock(blkmem, &(*row)->storedsolvals->dualsol);
+      BMSfreeBlockMemoryNull(blkmem, &(*row)->storedsolvals);
+   }
 
    RatFreeBlock(blkmem, &(*row)->constant);
    RatFreeBlock(blkmem, &(*row)->lhs);
