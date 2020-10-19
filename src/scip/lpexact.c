@@ -7684,7 +7684,6 @@ SCIP_RETCODE SCIPlpExactEndDive(
       }
       else
       {
-         printf("%d       %d \n", lpexact->lpsolstat, lpexact->storedsolvals->lpsolstat);
          SCIP_CALL( lpExactRestoreSolVals(lpexact, blkmem, -1LL) );
       }
    }
