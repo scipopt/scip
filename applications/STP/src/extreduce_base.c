@@ -1714,9 +1714,7 @@ void extreduce_treeRecompCosts(
    REDDATA* const reddata = extdata->reddata;
    const STP_Bool* const edgedeleted = reddata->edgedeleted;
    SCIP_Real tree_cost = 0.0;
-   SCIP_Real tree_redcost = 0.0;
    const SCIP_Real* const cost = graph->cost;
-   const SCIP_Real* const redcost = redcosts_getEdgeCostsTop(extdata->redcostdata); // todo outsource
    const int* const tree_edges = extdata->tree_edges;
    const int tree_nedges = extdata->tree_nedges;
    const SCIP_Bool isPc = (graph->prize != NULL);
@@ -1735,23 +1733,18 @@ void extreduce_treeRecompCosts(
 
       tree_cost += cost[edge];
 
-      if( !edgeIsDeleted )
-      {
-         tree_redcost += redcost[edge];
-         assert(LT(tree_redcost, FARAWAY));
-      }
-      else
+      if( edgeIsDeleted )
       {
          extdata->tree_nDelUpArcs++;
       }
    }
 
    assert(SCIPisEQ(scip, tree_cost, extdata->tree_cost));
-   assert(SCIPisEQ(scip, tree_redcost, extdata->tree_redcost));
    assert(tree_nDelUpArcs == extdata->tree_nDelUpArcs);
 
+   extreduce_redcostTreeRecompute(scip, graph, extdata);
+
    extdata->tree_cost = tree_cost;
-   extdata->tree_redcost = tree_redcost;
 
    if( isPc )
    {

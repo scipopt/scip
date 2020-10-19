@@ -161,8 +161,8 @@ void extInitRedCostArrays(
    PATH* const termpaths3 = redcosts_getNodeToTermsPathsTop(redcostdata);
    int* const vbase3 = redcosts_getNodeToTermsBasesTop(redcostdata);
 
-   assert(redcosts_getNnodes(redcostdata) >= nnodes);
-   assert(redcosts_getNedges(redcostdata) >= nedges);
+   assert(redcosts_getNnodes(redcostdata) == nnodes);
+   assert(redcosts_getNedges(redcostdata) == nedges);
 
    for( int i = 0; i < nnodes; i++ )
       rootdist[i] = 0.0;
@@ -239,8 +239,6 @@ SCIP_RETCODE testEdgeDeletion5_deprecated(
 
    assert(variant == 1 || variant == 2);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    graph_knot_add(graph, STP_TERM);
@@ -274,9 +272,10 @@ SCIP_RETCODE testEdgeDeletion5_deprecated(
 
    graph_edge_addBi(scip, graph, 0, 10, 0.9);
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
-   for( int i = 0; i < nedges; i++ )
+   for( int i = 0; i < graph->edges; i++ )
       redcosts_getEdgeCostsTop(redcostdata)[i] = 1.0;
 
    testedge = 0;
@@ -331,8 +330,6 @@ SCIP_RETCODE testEdgeDeletion4_deprecated(
    assert(scip);
    assert(variant == 1 || variant == 2 || variant == 3);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    graph_knot_add(graph, 0);
@@ -359,9 +356,10 @@ SCIP_RETCODE testEdgeDeletion4_deprecated(
 
    graph_mark(graph);
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
-   for( int i = 0; i < nedges; i++ )
+   for( int i = 0; i < graph->edges; i++ )
       redcosts_getEdgeCostsTop(redcostdata)[i] = 1.0;
 
    edge = 0;
@@ -431,8 +429,6 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build graph */
@@ -460,6 +456,7 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
    graph_knot_chg(graph, nnodes - 1, 0); /* dummy node */
    graph_mark(graph);
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    redcosts_getNodeToTermsBasesTop(redcostdata)[5] = nnodes - 1;
@@ -469,7 +466,7 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
    redcosts_getNodeToTermsPathsTop(redcostdata)[5 + nnodes].dist = 3.0;
    redcosts_getNodeToTermsPathsTop(redcostdata)[6 + nnodes].dist = 3.0;
 
-   for( int i = 0; i < nedges; i++ )
+   for( int i = 0; i < graph->edges; i++ )
       redcosts_getEdgeCostsTop(redcostdata)[i] = 1.0;
 
    edge = 0;
@@ -556,8 +553,6 @@ SCIP_RETCODE testEdgeDeletion2_deprecated(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    graph_knot_add(graph, 0);
@@ -585,6 +580,7 @@ SCIP_RETCODE testEdgeDeletion2_deprecated(
 
    graph_mark(graph);
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    edge = 0;
@@ -637,8 +633,6 @@ SCIP_RETCODE testEdgeDeletion1_deprecated(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    graph_knot_add(graph, 0);
@@ -665,6 +659,7 @@ SCIP_RETCODE testEdgeDeletion1_deprecated(
 
    graph_mark(graph);
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    edge = 0;
@@ -699,8 +694,6 @@ SCIP_RETCODE testEdgeDeletedByCommonRedCostsTargets(
    const int firstdummynode = 6;
 
    assert(scip);
-
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -738,6 +731,7 @@ SCIP_RETCODE testEdgeDeletedByCommonRedCostsTargets(
    }
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    /* put 5 as first target for both nodes 3 and 4 and set the distance to the second target too high */
@@ -774,8 +768,6 @@ SCIP_RETCODE testEdgeDeletedByMst1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -799,6 +791,7 @@ SCIP_RETCODE testEdgeDeletedByMst1(
    graph_edge_addBi(scip, graph, 2, 3, 1.1);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL(extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE));
@@ -829,7 +822,6 @@ SCIP_RETCODE testEdgeDeletedByMst2(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -859,6 +851,7 @@ SCIP_RETCODE testEdgeDeletedByMst2(
    graph_edge_addBi(scip, graph, 4, 5, 1.1);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE) );
@@ -890,7 +883,6 @@ SCIP_RETCODE testEdgeDeletedByEqBottleneck(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -911,6 +903,7 @@ SCIP_RETCODE testEdgeDeletedByEqBottleneck(
    graph_edge_addBi(scip, graph, 2, 3, 1.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL(extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE));
@@ -1001,7 +994,6 @@ SCIP_RETCODE testEdgeDeletedByEqBottleneck2(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1023,6 +1015,7 @@ SCIP_RETCODE testEdgeDeletedByEqBottleneck2(
 
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE) );
@@ -1054,7 +1047,6 @@ SCIP_RETCODE testNode3PseudoDeletedByRedCosts1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1076,6 +1068,7 @@ SCIP_RETCODE testNode3PseudoDeletedByRedCosts1(
    graph_edge_addBi(scip, graph, 3, 5, 2.2); /* 12 */
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    redEdgeCosts = redcosts_getEdgeCostsTop(redcostdata);
@@ -1113,7 +1106,6 @@ SCIP_RETCODE testNode3PseudoDeletedBySd1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1135,6 +1127,7 @@ SCIP_RETCODE testNode3PseudoDeletedBySd1(
    graph_edge_addBi(scip, graph, 3, 5, 1.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1166,7 +1159,6 @@ SCIP_RETCODE testNode3PseudoDeletedBySd2(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1188,6 +1180,7 @@ SCIP_RETCODE testNode3PseudoDeletedBySd2(
    graph_edge_addBi(scip, graph, 3, 4, 1.5);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1217,7 +1210,6 @@ SCIP_RETCODE testNode3PseudoDeletedBySd3(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1244,6 +1236,7 @@ SCIP_RETCODE testNode3PseudoDeletedBySd3(
    graph_edge_addBi(scip, graph, 4, 5, 1.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1275,7 +1268,6 @@ SCIP_RETCODE testNode4PseudoDeletedBySd1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1300,6 +1292,7 @@ SCIP_RETCODE testNode4PseudoDeletedBySd1(
    graph_edge_addBi(scip, graph, 6, 3, 1.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1332,7 +1325,6 @@ SCIP_RETCODE testNode4PseudoNotDeletedBySd1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1356,6 +1348,7 @@ SCIP_RETCODE testNode4PseudoNotDeletedBySd1(
    graph_edge_addBi(scip, graph, 6, 3, 1.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1384,7 +1377,6 @@ SCIP_RETCODE testGeneralStarDeletedEdge1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1414,6 +1406,7 @@ SCIP_RETCODE testGeneralStarDeletedEdge1(
    graph_edge_addBi(scip, graph, 2, 5, 2.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    /* actual test */
@@ -1443,7 +1436,6 @@ SCIP_RETCODE testGeneralStarDeletedEdge2(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, nnodes, nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1472,6 +1464,7 @@ SCIP_RETCODE testGeneralStarDeletedEdge2(
    graph_edge_addBi(scip, graph, 5, 2, 3.0);
 
    SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArrays(graph, redcostdata);
 
    /* actual test */
@@ -1568,9 +1561,6 @@ SCIP_RETCODE testPcEdgeDeletedByMst1(
 
    assert(scip);
 
-   /* we need to leave some spare space */
-   SCIP_CALL( redcosts_init(scip, nnodes * 3, nedges * 3, cutoff, root, &redcostdata) );
-
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1602,6 +1592,7 @@ SCIP_RETCODE testPcEdgeDeletedByMst1(
 
    SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArraysPc(graph, redcostdata);
 
    SCIP_CALL(extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE));
@@ -1632,9 +1623,6 @@ SCIP_RETCODE testPcEdgeNotDeleted(
    SCIP_Bool deletable;
 
    assert(scip);
-
-   /* we need to leave some spare space */
-   SCIP_CALL( redcosts_init(scip, nnodes * 3, nedges * 3, cutoff, root, &redcostdata) );
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -1667,6 +1655,7 @@ SCIP_RETCODE testPcEdgeNotDeleted(
 
    SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArraysPc(graph, redcostdata);
 
    SCIP_CALL(extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE));
@@ -1697,7 +1686,6 @@ SCIP_RETCODE testPcNode3PseudoDeletedBySd1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, 3 * nnodes, 4 * nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1728,6 +1716,7 @@ SCIP_RETCODE testPcNode3PseudoDeletedBySd1(
 
    SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArraysPc(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1758,7 +1747,6 @@ SCIP_RETCODE testPcNode4PseudoDeletedBySd1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, 3 * nnodes, 4 * nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1793,6 +1781,7 @@ SCIP_RETCODE testPcNode4PseudoDeletedBySd1(
 
    SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArraysPc(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
@@ -1821,7 +1810,6 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 
    assert(scip);
 
-   SCIP_CALL( redcosts_init(scip, 3 * nnodes, 4 * nedges, cutoff, root, &redcostdata) );
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
    /* build tree */
@@ -1852,6 +1840,7 @@ SCIP_RETCODE testPcNodesPseudoDeletedBySd1(
 
    SCIP_CALL( stptest_graphSetUpRpcOrg(scip, graph, NULL, NULL) );
 
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
    extInitRedCostArraysPcWithBase(graph, nnodes - 2, redcostdata);
 
    SCIP_CALL( extreduce_pseudoDeleteNodes(scip, NULL, redcostdata, graph, &offset, &nelims) );

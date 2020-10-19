@@ -118,7 +118,10 @@ typedef struct reduction_data
    const STP_Bool* const edgedeleted;
    int* const pseudoancestor_mark;
    STP_Vectype(int)* nodes_implications;
-   const SCIP_Bool allowRedCostEquality;
+   SCIP_Real* const redcost_treecosts; /* for each level */
+   SCIP_Real* const redcost_treenodeswaps; /* for each level and each node */
+   const int redcost_nlevels;
+   const SCIP_Bool redcost_allowEquality;
 } REDDATA;
 
 
@@ -156,7 +159,6 @@ typedef struct extension_data
    SCIP_Bool* const sdeq_edgesIsForbidden;
    STP_Vectype(int) sdeq_resetStack;
    SCIP_Bool sdeq_hasForbiddenEdges;
-   SCIP_Real tree_redcost;
    SCIP_Real tree_cost;
    int tree_nDelUpArcs;
    int tree_root;

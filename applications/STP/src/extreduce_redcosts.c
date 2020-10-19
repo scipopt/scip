@@ -230,8 +230,8 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    const int* const next3Terms = redcosts_getNodeToTermsBases(redcostdata, redcostlevel);
    const SCIP_Bool* const isterm = extdata->node_isterm;
    const int* tree_deg = extdata->tree_deg;
-
-   SCIP_Real redcost_directed = extdata->tree_redcost + rootToNodeDist[root] + swapcost;
+   const SCIP_Real tree_redcost = extdata->reddata->redcost_treecosts[redcostlevel];
+   SCIP_Real redcost_directed = tree_redcost + rootToNodeDist[root] + swapcost;
    const int nnodes = graph->knots;
    int leavescount = 0;
 
@@ -245,6 +245,7 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    }
 
    assert(LT(redcost_directed, FARAWAY));
+   assert(GE(tree_redcost, 0.0));
 #endif
 
    for( int j = 0; j < nleaves; j++ )
@@ -382,7 +383,7 @@ SCIP_Bool extTreeRedcostCutoff(
    const int* const tree_leaves = extdata->tree_leaves;
    const SCIP_Real cutoff = redcosts_getCutoff(extdata->redcostdata, redcostlevel);
    const int nleaves = extdata->tree_nleaves;
-   const SCIP_Bool allowEquality = reddata->allowRedCostEquality;
+   const SCIP_Bool allowEquality = reddata->redcost_allowEquality;
 
 #ifdef SCIP_DEBUG
    SCIP_Real tree_redcost = FARAWAY;
@@ -417,6 +418,60 @@ SCIP_Bool extTreeRedcostCutoff(
 
    return TRUE;
 }
+
+
+/** recomputes reduced cost tree information */
+void extreduce_redcostTreeRecompute(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+
+   REDDATA* const reddata = extdata->reddata;
+   const STP_Bool* const edgedeleted = reddata->edgedeleted;
+   SCIP_Real* lvl_redcostsbuffer;
+   const SCIP_Real* const lvl_redcosts = redcosts_getEdgeCosts(extdata->redcostdata, 0);
+   const int* const tree_edges = extdata->tree_edges;
+   SCIP_Real* const redcost_treecosts = extdata->reddata->redcost_treecosts;
+   const int tree_nedges = extdata->tree_nedges;
+   const int nlevels = reddata->redcost_nlevels;
+   const int nedges = graph->edges;
+
+   assert(!extreduce_treeIsFlawed(scip, graph, extdata));
+   assert(nedges == redcosts_getNedges(extdata->redcostdata));
+
+   SCIP_CALL_ABORT( SCIPallocBlockMemoryArray(scip, &lvl_redcostsbuffer, nlevels) );
+
+   for( int i = 0; i < nlevels; i++ )
+      lvl_redcostsbuffer[i] = 0.0;
+
+   for( int i = 0; i < tree_nedges; i++ )
+   {
+      const int edge = tree_edges[i];
+      const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
+      assert(graph_edge_isInRange(graph, edge));
+
+      if( !edgeIsDeleted )
+      {
+         /* NOTE: not clean, but better for better performance */
+         for( int j = 0; j < nlevels; j++ )
+         {
+            lvl_redcostsbuffer[j] += lvl_redcosts[j * nedges + edge];
+            assert(LT(lvl_redcostsbuffer[j], FARAWAY));
+         }
+      }
+   }
+
+   for( int i = 0; i < nlevels; i++ )
+   {
+      assert(SCIPisEQ(scip, redcost_treecosts[i], lvl_redcostsbuffer[i]));
+      redcost_treecosts[i] = lvl_redcostsbuffer[i];
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &lvl_redcostsbuffer, nlevels);
+}
+
 
 
 /** no reversed tree possible? */
@@ -475,8 +530,11 @@ void extreduce_redcostAddEdge(
 
    if( !edgeIsDeleted )
    {
-      extdata->tree_redcost += redcost[edge];
-      assert(LT(extdata->tree_redcost, FARAWAY));
+      // todo
+      SCIP_Real* const redcost_treecosts = extdata->reddata->redcost_treecosts;
+
+      redcost_treecosts[0] += redcost[edge];
+      assert(LT(redcost_treecosts[0], FARAWAY));
    }
    else
    {
@@ -499,8 +557,12 @@ void extreduce_redcostRemoveEdge(
 
    if( !edgeIsDeleted )
    {
-      extdata->tree_redcost -= redcost[edge];
-      assert(LT(extdata->tree_redcost, FARAWAY));
+      // todo
+      SCIP_Real* const redcost_treecosts = extdata->reddata->redcost_treecosts;
+
+
+      redcost_treecosts[0] -= redcost[edge];
+      assert(LT(redcost_treecosts[0], FARAWAY));
    }
    else
    {

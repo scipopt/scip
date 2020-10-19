@@ -158,12 +158,11 @@ int redcosts_getRootTop(
    );
 
 
-/** returns current level */
+/** returns current (top) level; 0-indexed */
 EXTERN
 int redcosts_getLevel(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
-
 
 
 /** sets cutoff */

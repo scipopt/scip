@@ -349,7 +349,6 @@ void extreduce_extdataClean(
    extdata->tree_depth = 0;
    extdata->tree_root = -1;
    extdata->tree_starcenter = -1;
-   extdata->tree_redcost = 0.0;
    extdata->tree_cost = 0.0;
    extdata->ncostupdatestalls = 0;
 }
@@ -360,7 +359,15 @@ void extreduce_reddataClean(
    REDDATA*              reddata             /**< reduction data */
 )
 {
-   assert(reddata);
+   const int redcost_nlevels = reddata->redcost_nlevels;
+   SCIP_Real* const redcost_treecosts = reddata->redcost_treecosts;
+
+   assert(redcost_nlevels >= 1);
+
+   for( int i = 0; i < redcost_nlevels; i++ )
+   {
+      redcost_treecosts[i] = 0.0;
+   }
 }
 
 
@@ -393,12 +400,6 @@ SCIP_Bool extreduce_extdataIsClean(
    if( extdata->tree_nDelUpArcs != 0 )
    {
       printf("extdata->tree_nDelUpArcs %d \n", extdata->tree_nDelUpArcs);
-      return FALSE;
-   }
-
-   if( !EQ(extdata->tree_redcost, 0.0) )
-   {
-      printf("extdata->tree_redcost %f \n", extdata->tree_redcost);
       return FALSE;
    }
 
@@ -485,14 +486,25 @@ SCIP_Bool extreduce_reddataIsClean(
 )
 {
    const int nancestors = graph_pseudoAncestorsGetHashArraySize(graph->pseudoancestors);
+   const int redcost_nlevels = reddata->redcost_nlevels;
+   const SCIP_Real* const redcost_treecosts = reddata->redcost_treecosts;
 
-   assert(reddata);
+   assert(redcost_nlevels >= 1);
 
    for( int i = 0; i < nancestors; i++ )
    {
       if( reddata->pseudoancestor_mark[i] != 0 )
       {
          printf("%d pseudoancestor_mark %d \n", i, reddata->pseudoancestor_mark[i]);
+         return FALSE;
+      }
+   }
+
+   for( int i = 0; i < redcost_nlevels; i++ )
+   {
+      if( !EQ(redcost_treecosts[i], 0.0) )
+      {
+         printf("FAIL: tree redcost %f for level %d \n", redcost_treecosts[i], i);
          return FALSE;
       }
    }

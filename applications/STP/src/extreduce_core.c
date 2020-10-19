@@ -1812,15 +1812,18 @@ SCIP_RETCODE extreduce_checkComponent(
    int* tree_parentNode;
    int* pcSdCands = NULL;
    SCIP_Real* tree_parentEdgeCost;
-   SCIP_Real* tree_redcostSwap;
+   SCIP_Real* redcost_treenodeswaps;
+   SCIP_Real* redcost_treecosts;
    int* pseudoancestor_mark = NULL;
    SCIP_Bool* sdeq_edgesIsForbidden;
    const int nnodes = graph->knots;
+   const int redcosts_nlevels = redcosts_getLevel(redcostdata) + 1;
    const int maxstacksize = extreduce_getMaxStackSize();
    const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
 
    assert(!(*compIsDeletable));
    assert(extreduce_extCompFullIsPromising(graph, extpermanent, extcomp) || (extcomp->ncompedges > 1));
+   assert(redcosts_nlevels > 0 && maxstacksize > 0 && maxncomponents > 0 && nnodes > 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_data, maxstacksize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &extstack_start, maxncomponents + 1) );
@@ -1830,7 +1833,8 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_innerNodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentNode, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentEdgeCost, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tree_redcostSwap, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost_treenodeswaps, nnodes * redcosts_nlevels) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost_treecosts, redcosts_nlevels) );
 
    if( graph_pc_isPc(graph) )
    {
@@ -1852,13 +1856,15 @@ SCIP_RETCODE extreduce_checkComponent(
          .msts_levelbase = extpermanent->msts_levelbase,
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
          .edgedeleted = extpermanent->edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,
-         .nodes_implications = extpermanent->nodes_implications, .allowRedCostEquality = extpermanent->redcostEqualAllow };
+         .nodes_implications = extpermanent->nodes_implications,
+         .redcost_treenodeswaps = redcost_treenodeswaps, .redcost_treecosts = redcost_treecosts,
+         .redcost_nlevels = redcosts_nlevels, .redcost_allowEquality = extpermanent->redcostEqualAllow };
       EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
          .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
          .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
          .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
-         .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = tree_redcostSwap,
-         .tree_cost = 0.0, .tree_redcost = 0.0, .ncostupdatestalls = 0,
+         .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = redcost_treenodeswaps,
+         .tree_cost = 0.0, .ncostupdatestalls = 0,
          .tree_nDelUpArcs = 0, .tree_root = -1, .tree_starcenter = -1, .tree_nedges = 0, .tree_depth = 0,
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata, .redcostdata = redcostdata,
@@ -1872,6 +1878,8 @@ SCIP_RETCODE extreduce_checkComponent(
 #ifdef STP_DEBUG_EXT
       extreduce_extdataCleanArraysDbg(graph, &extdata);
 #endif
+
+      extreduce_reddataClean(&reddata);
 
       if( extreduce_extCompIsPromising(graph, extpermanent, extcomp) )
          extProcessComponent(scip, graph, extcomp, &extdata, compIsDeletable);
@@ -1893,8 +1901,11 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIPfreeCleanBufferArray(scip, &sdeq_edgesIsForbidden);
    if( pseudoancestor_mark )
       SCIPfreeCleanBufferArray(scip, &pseudoancestor_mark);
+
    SCIPfreeBufferArrayNull(scip, &pcSdCands);
-   SCIPfreeBufferArray(scip, &tree_redcostSwap);
+
+   SCIPfreeBufferArray(scip, &redcost_treecosts);
+   SCIPfreeBufferArray(scip, &redcost_treenodeswaps);
    SCIPfreeBufferArray(scip, &tree_parentEdgeCost);
    SCIPfreeBufferArray(scip, &tree_parentNode);
    SCIPfreeBufferArray(scip, &tree_innerNodes);

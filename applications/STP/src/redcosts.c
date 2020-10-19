@@ -340,7 +340,7 @@ int redcosts_getRootTop(
 }
 
 
-/** returns current level*/
+/** returns current (top) level; 0-indexed */
 int redcosts_getLevel(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
