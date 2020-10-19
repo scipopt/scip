@@ -40,13 +40,15 @@
 static
 SCIP_Real getTreeRedcosts_dbg(
    const GRAPH*          graph,              /**< graph data structure */
+   int                   redcostlevel,       /**< the reduced costs level */
    const EXTDATA*        extdata,            /**< extension data */
    int                   root                /**< the root for the orientation */
 )
 {
-   const REDDATA* const reddata = extdata->reddata;
-   const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
-   const SCIP_Real* const redcost = reddata->redCosts;
+   const REDCOST* const redcostdata = extdata->redcostdata;
+   const PATH* const nodeTo3TermsPaths = redcosts_getNodeToTermsPaths(redcostdata, redcostlevel);
+   const SCIP_Real* const rootToNodeDist = redcosts_getRootToNodeDist(redcostdata, redcostlevel);
+   const SCIP_Real* const redcost = redcosts_getEdgeCosts(redcostdata, redcostlevel);
    const int* const tree_edges = extdata->tree_edges;
    const int* const tree_leaves = extdata->tree_leaves;
    const int tree_nedges = extdata->tree_nedges;
@@ -54,7 +56,7 @@ SCIP_Real getTreeRedcosts_dbg(
    const int tree_root = extdata->tree_root;
    SCIP_Real tree_redcost;
 
-   tree_redcost = reddata->rootToNodeDist[root];
+   tree_redcost = rootToNodeDist[root];
 
    for( int i = 0; i < nleaves; i++ )
    {
@@ -211,6 +213,7 @@ SCIP_Real getMinDistCombination(
 static inline
 SCIP_Real extTreeGetDirectedRedcostProper(
    const GRAPH*          graph,              /**< graph data structure */
+   int                   redcostlevel,       /**< the reduced costs level */
    const EXTDATA*        extdata,            /**< extension data */
    int                   root                /**< the root for the orientation */
 )
@@ -221,13 +224,14 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    const int* const tree_leaves = extdata->tree_leaves;
    const int nleaves = extdata->tree_nleaves;
    const SCIP_Real swapcost = extdata->tree_redcostSwap[root];
-   const REDDATA* const reddata = extdata->reddata;
-   const PATH* const nodeTo3TermsPaths = reddata->nodeTo3TermsPaths;
-   const int* const next3Terms = reddata->nodeTo3TermsBases;
+   const REDCOST* const redcostdata = extdata->redcostdata;
+   const PATH* const nodeTo3TermsPaths = redcosts_getNodeToTermsPaths(redcostdata, redcostlevel);
+   const SCIP_Real* const rootToNodeDist = redcosts_getRootToNodeDist(redcostdata, redcostlevel);
+   const int* const next3Terms = redcosts_getNodeToTermsBases(redcostdata, redcostlevel);
    const SCIP_Bool* const isterm = extdata->node_isterm;
    const int* tree_deg = extdata->tree_deg;
 
-   SCIP_Real redcost_directed = extdata->tree_redcost + reddata->rootToNodeDist[root] + swapcost;
+   SCIP_Real redcost_directed = extdata->tree_redcost + rootToNodeDist[root] + swapcost;
    const int nnodes = graph->knots;
    int leavescount = 0;
 
@@ -339,6 +343,7 @@ SCIP_Real extTreeGetDirectedRedcostProper(
 static inline
 SCIP_Real extTreeGetDirectedRedcost(
    const GRAPH*          graph,              /**< graph data structure */
+   int                   redcostlevel,       /**< the reduced costs level */
    const EXTDATA*        extdata,            /**< extension data */
    int                   root                /**< the root for the orientation */
 )
@@ -358,7 +363,7 @@ SCIP_Real extTreeGetDirectedRedcost(
    /* is the rooting possible? */
    if( LT(tree_redcostSwap[root], FARAWAY) )
    {
-      return extTreeGetDirectedRedcostProper(graph, extdata, root);
+      return extTreeGetDirectedRedcostProper(graph, redcostlevel, extdata, root);
    }
 
    return FARAWAY;
@@ -372,11 +377,12 @@ SCIP_Bool extTreeRedcostCutoff(
    const EXTDATA*        extdata             /**< extension data */
 )
 {
+   const int redcostlevel = 0; //  todo
    REDDATA* const reddata = extdata->reddata;
    const int* const tree_leaves = extdata->tree_leaves;
-   const SCIP_Real cutoff = reddata->cutoff;
+   const SCIP_Real cutoff = redcosts_getCutoff(extdata->redcostdata, redcostlevel);
    const int nleaves = extdata->tree_nleaves;
-   const SCIP_Bool allowEquality = reddata->equality;
+   const SCIP_Bool allowEquality = reddata->allowRedCostEquality;
 
 #ifdef SCIP_DEBUG
    SCIP_Real tree_redcost = FARAWAY;
@@ -386,10 +392,11 @@ SCIP_Bool extTreeRedcostCutoff(
    for( int i = 0; i < nleaves; i++ )
    {
       const int leaf = tree_leaves[i];
-      const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(graph, extdata, leaf);
+      const SCIP_Real tree_redcost_new = extTreeGetDirectedRedcost(graph, redcostlevel, extdata, leaf);
 
      // printf("%f  >= %f \n", tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf));
-      assert(GE(tree_redcost_new, getTreeRedcosts_dbg(graph, extdata, leaf)));
+      // todo change 0
+      assert(GE(tree_redcost_new, getTreeRedcosts_dbg(graph, redcostlevel, extdata, leaf)));
 
       if( allowEquality ? LT(tree_redcost_new, cutoff) : LE(tree_redcost_new, cutoff) )
       {
@@ -418,10 +425,11 @@ SCIP_Bool extreduce_redcostReverseTreeRuledOut(
    const EXTDATA*        extdata             /**< extension data */
 )
 {
-   const REDDATA* const reddata = extdata->reddata;
    const int comproot = extStackGetTopRoot(graph, extdata);
 
-   return (reddata->redCostRoot == extdata->tree_root || GE(extdata->tree_redcostSwap[comproot], FARAWAY));
+   int todo = redcosts_getRoot(extdata->redcostdata, 0);
+
+   return (todo == extdata->tree_root || GE(extdata->tree_redcostSwap[comproot], FARAWAY));
 }
 
 
@@ -434,7 +442,8 @@ void extreduce_redcostAddEdge(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const SCIP_Real* const redcost = reddata->redCosts;
+   int todo; // call internal method that handles all levels!
+   const SCIP_Real* const redcost = redcosts_getEdgeCostsTop(extdata->redcostdata);
    SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
    const STP_Bool* const edgedeleted = reddata->edgedeleted;
    const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
@@ -483,7 +492,8 @@ void extreduce_redcostRemoveEdge(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   const SCIP_Real* const redcost = reddata->redCosts;
+   int todo; // call internal method that handles all levels!
+   const SCIP_Real* const redcost = redcosts_getEdgeCostsTop(extdata->redcostdata);
    const STP_Bool* const edgedeleted = reddata->edgedeleted;
    const SCIP_Bool edgeIsDeleted = (edgedeleted && edgedeleted[edge]);
 

@@ -65,6 +65,13 @@ int redcosts_getNedges(
    );
 
 
+/** returns reduced costs */
+EXTERN
+SCIP_Real* redcosts_getEdgeCosts(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get reduced costs for */
+   );
+
 /** returns top level reduced costs */
 EXTERN
 SCIP_Real* redcosts_getEdgeCostsTop(
@@ -74,6 +81,13 @@ SCIP_Real* redcosts_getEdgeCostsTop(
 
 /** returns root to node distances */
 EXTERN
+SCIP_Real* redcosts_getRootToNodeDist(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get distances for */
+   );
+
+/** returns root to node distances for top level */
+EXTERN
 SCIP_Real* redcosts_getRootToNodeDistTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
@@ -81,12 +95,27 @@ SCIP_Real* redcosts_getRootToNodeDistTop(
 
 /** returns paths from nodes to closes terms */
 EXTERN
+PATH* redcosts_getNodeToTermsPaths(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get reduced costs for */
+   );
+
+
+/** returns paths from nodes to closes terms for top level */
+EXTERN
 PATH* redcosts_getNodeToTermsPathsTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
 
 
-/** returns closest terms to nodes */
+/** returns closest terminals to nodes */
+int* redcosts_getNodeToTermsBases(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get terminals for */
+   );
+
+
+/** returns closest terms to nodes for top level */
 EXTERN
 int* redcosts_getNodeToTermsBasesTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
@@ -94,6 +123,14 @@ int* redcosts_getNodeToTermsBasesTop(
 
 
 /** returns cutoff */
+EXTERN
+SCIP_Real redcosts_getCutoff(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get cutoff for */
+   );
+
+
+/** returns cutoff for top level */
 EXTERN
 SCIP_Real redcosts_getCutoffTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
@@ -108,6 +145,13 @@ SCIP_Real redcosts_getDualBoundTop(
 
 
 /** returns root used for reduced cost computation */
+int redcosts_getRoot(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get root for */
+   );
+
+
+/** returns root used for reduced cost computation for top level */
 EXTERN
 int redcosts_getRootTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
@@ -121,7 +165,17 @@ int redcosts_getLevel(
    );
 
 
+
 /** sets cutoff */
+EXTERN
+void redcosts_setCutoff(
+   int                 level,               /**< level to set cutoff for */
+   SCIP_Real           cutoff,             /**< the value */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   );
+
+
+/** sets cutoff for top level */
 EXTERN
 void redcosts_setCutoffTop(
    SCIP_Real           cutoff,             /**< the value */

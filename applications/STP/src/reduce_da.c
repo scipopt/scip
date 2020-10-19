@@ -2481,6 +2481,7 @@ SCIP_RETCODE reduce_da(
 
          if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) && run == nruns - 1 )
          {
+            // todo extra method and call redcosts_setCutOff for all levels with best upper bound!
             int extfixed;
             SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
             ndeletions_run += extfixed;

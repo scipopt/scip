@@ -635,7 +635,7 @@ SCIP_Bool extTreeRuleOutEdgeSimple(
 }
 
 
-#if 0
+#ifdef SCIP_DISABLED
 /** can any extension via edge except for only the edge itself be ruled out? */
 static
 SCIP_Bool extRuleOutEdgeCombinations(
@@ -644,35 +644,6 @@ SCIP_Bool extRuleOutEdgeCombinations(
    int                   extedge             /**< edge to be tested */
 )
 {
-   REDDATA* const reddata = extdata->reddata;
-   const SCIP_Real tree_redcost = extTreeGetRedcostBound(scip, graph, extdata);
-   const SCIP_Real cutoff = reddata->cutoff;
-   const int base = graph->tail[extedge];
-   const int extvert = graph->head[extedge];
-   const SCIP_Real* const redcost = reddata->redCosts;
-
-   assert(extedge >= 0 && extedge < graph->edges);
-   assert(extdata->tree_deg[base] == 1 && base != extdata->reddata->redCostRoot);
-
-   // add to leaves?
-
-#ifdef SCIP_DEBUG
-        printf("edge combinations ruled out: ");
-        graph_edge_printInfo(graph, e);
-#endif
-
-   if( extvert == extdata->reddata->redCostRoot )
-   {
-      assert(Is_term(graph->term[extvert]));
-
-      tree_redcost = FARAWAY;
-   }
-   else
-      tree_redcost += redcost[extedge] + nodeTo3TermsPaths[extvert].dist - nodeTo3TermsPaths[base].dist;
-
-   if( reddata->edgedeleted != NULL && reddata->edgedeleted[flipedge(extedge)] )
-      checkReverseTrees = FALSE;
-
 }
 #endif
 
@@ -1874,22 +1845,14 @@ SCIP_RETCODE extreduce_checkComponent(
 
    {
       const SCIP_Bool* isterm = extpermanent->isterm;
-      const int root = redcosts_getRootTop(redcostdata);
-      const SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
-      const SCIP_Real* rootdist = redcosts_getRootToNodeDistTop(redcostdata);
-      const PATH* nodeToTermpaths = redcosts_getNodeToTermsPathsTop(redcostdata);
-      const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
 
       PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
          .pcSdStart = -1, .tree_innerPrize = 0.0 };
       REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
          .msts_levelbase = extpermanent->msts_levelbase,
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
-         .redCosts = redcost, .rootToNodeDist = rootdist, .nodeTo3TermsPaths = nodeToTermpaths,
-         .nodeTo3TermsBases = redcosts_getNodeToTermsBasesTop(redcostdata), .edgedeleted = extpermanent->edgedeleted,
-         .pseudoancestor_mark = pseudoancestor_mark, .nodes_implications = extpermanent->nodes_implications,
-         .cutoff = cutoff, .equality = extpermanent->redcostEqualAllow,
-         .redCostRoot = root };
+         .edgedeleted = extpermanent->edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,
+         .nodes_implications = extpermanent->nodes_implications, .allowRedCostEquality = extpermanent->redcostEqualAllow };
       EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
          .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
          .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
@@ -1898,7 +1861,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_cost = 0.0, .tree_redcost = 0.0, .ncostupdatestalls = 0,
          .tree_nDelUpArcs = 0, .tree_root = -1, .tree_starcenter = -1, .tree_nedges = 0, .tree_depth = 0,
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
-         .pcdata = &pcdata,
+         .pcdata = &pcdata, .redcostdata = redcostdata,
          .sdeq_resetStack = NULL, .sdeq_edgesIsForbidden = sdeq_edgesIsForbidden, .sdeq_hasForbiddenEdges = FALSE,
          .genstar_centeredge = extcomp->genstar_centeredge,
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,

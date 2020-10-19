@@ -115,16 +115,10 @@ typedef struct reduction_data
    CSRDEPO* const msts_levelbase;
    MLDISTS* const sds_horizontal;
    MLDISTS* const sds_vertical;
-   const SCIP_Real* const redCosts;
-   const SCIP_Real* const rootToNodeDist;
-   const PATH* const nodeTo3TermsPaths;
-   const int* const nodeTo3TermsBases;
    const STP_Bool* const edgedeleted;
    int* const pseudoancestor_mark;
    STP_Vectype(int)* nodes_implications;
-   const SCIP_Real cutoff;
-   const SCIP_Bool equality;
-   const int redCostRoot;
+   const SCIP_Bool allowRedCostEquality;
 } REDDATA;
 
 
@@ -157,6 +151,7 @@ typedef struct extension_data
    const SCIP_Bool* const node_isterm;          /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;
+   const REDCOST* const redcostdata;
    PCDATA* const pcdata;
    SCIP_Bool* const sdeq_edgesIsForbidden;
    STP_Vectype(int) sdeq_resetStack;

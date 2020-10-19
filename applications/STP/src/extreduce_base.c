@@ -1716,7 +1716,7 @@ void extreduce_treeRecompCosts(
    SCIP_Real tree_cost = 0.0;
    SCIP_Real tree_redcost = 0.0;
    const SCIP_Real* const cost = graph->cost;
-   const SCIP_Real* const redcost = reddata->redCosts;
+   const SCIP_Real* const redcost = redcosts_getEdgeCostsTop(extdata->redcostdata); // todo outsource
    const int* const tree_edges = extdata->tree_edges;
    const int tree_nedges = extdata->tree_nedges;
    const SCIP_Bool isPc = (graph->prize != NULL);

@@ -107,9 +107,9 @@ SCIP_RETCODE initFromParams(
 }
 
 
-/** returns start position of current level for lvl_nodeToTermsPaths and lvl_nodeToTermsBases */
+/** returns top level*/
 static inline
-int getLevel(
+int getTopLevel(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
@@ -120,17 +120,34 @@ int getLevel(
 }
 
 
-/** returns start position of current level for lvl_nodeToTermsPaths and lvl_nodeToTermsBases */
+#ifndef NDEBUG
 static
-int getStartPositionCloseTerms(
-   const REDCOST*        redcostdata         /**< reduced costs data */
+SCIP_Bool levelIsValid(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< the level */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
+
+   return (0 <= level && level <= toplevel);
+}
+#endif
+
+
+/** returns start position of given level for lvl_nodeToTermsPaths and lvl_nodeToTermsBases */
+static
+int getStartPositionCloseTerms(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< the level */
+   )
+{
    const int nnodes = redcostdata->nnodes;
    const int nCloseTerms = redcostdata->nCloseTerms;
 
-   return nnodes * nCloseTerms * toplevel;
+   assert(nnodes >= 1 && nCloseTerms >= 1);
+   assert(levelIsValid(redcostdata, level));
+
+   return (nnodes * nCloseTerms * level);
 }
 
 
@@ -165,67 +182,127 @@ int redcosts_getNedges(
 }
 
 
+/** returns reduced costs */
+SCIP_Real* redcosts_getEdgeCosts(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get reduced costs for */
+   )
+{
+   const int nedges = redcostdata->nedges;
+
+   assert(levelIsValid(redcostdata, level));
+   assert(redcostdata->lvl_redEdgeCost);
+
+   return &(redcostdata->lvl_redEdgeCost[nedges * level]);
+}
+
 
 /** returns top level reduced costs */
 SCIP_Real* redcosts_getEdgeCostsTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
-   const int nedges = redcostdata->nedges;
+   const int toplevel = getTopLevel(redcostdata);
 
-   assert(redcostdata->lvl_redEdgeCost);
-
-   return &(redcostdata->lvl_redEdgeCost[nedges * toplevel]);
+   return redcosts_getEdgeCosts(redcostdata, toplevel);
 }
 
 
 /** returns root to node distances */
+SCIP_Real* redcosts_getRootToNodeDist(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get distances for */
+   )
+{
+   const int nnodes = redcostdata->nnodes;
+
+   assert(levelIsValid(redcostdata, level));
+   assert(redcostdata->lvl_rootToNodeDist);
+
+   return &(redcostdata->lvl_rootToNodeDist[level * nnodes]);
+}
+
+
+/** returns root to node distances for top level */
 SCIP_Real* redcosts_getRootToNodeDistTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
-   const int nnodes = redcostdata->nnodes;
+   const int toplevel = getTopLevel(redcostdata);
 
-   assert(redcostdata->lvl_rootToNodeDist);
-
-   return &(redcostdata->lvl_rootToNodeDist[toplevel * nnodes]);
+   return redcosts_getRootToNodeDist(redcostdata, toplevel);
 }
 
 
+
 /** returns paths from nodes to closes terms */
+PATH* redcosts_getNodeToTermsPaths(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get reduced costs for */
+   )
+{
+   const int position = getStartPositionCloseTerms(redcostdata, level);
+   assert(redcostdata->lvl_nodeToTermsPaths);
+
+   return &(redcostdata->lvl_nodeToTermsPaths[position]);
+}
+
+
+/** returns paths from nodes to closes terms for top level */
 PATH* redcosts_getNodeToTermsPathsTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
-   assert(redcostdata->lvl_nodeToTermsPaths);
+   const int toplevel = getTopLevel(redcostdata);
 
-   return &(redcostdata->lvl_nodeToTermsPaths[getStartPositionCloseTerms(redcostdata)]);
+   return redcosts_getNodeToTermsPaths(redcostdata, toplevel);
 }
 
 
-/** returns closest terms to nodes */
+/** returns closest terminals to nodes */
+int* redcosts_getNodeToTermsBases(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to terminals for */
+   )
+{
+   const int position = getStartPositionCloseTerms(redcostdata, level);
+   assert(redcostdata->lvl_nodeToTermsBases);
+
+   return &(redcostdata->lvl_nodeToTermsBases[position]);
+}
+
+
+/** returns closest terms to nodes for top level */
 int* redcosts_getNodeToTermsBasesTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   assert(redcostdata);
-   assert(redcostdata->lvl_nodeToTermsBases);
+   const int toplevel = getTopLevel(redcostdata);
 
-   return &(redcostdata->lvl_nodeToTermsBases[getStartPositionCloseTerms(redcostdata)]);
+   return redcosts_getNodeToTermsBases(redcostdata, toplevel);
 }
 
 
 /** returns cutoff */
+SCIP_Real redcosts_getCutoff(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get cutoff for */
+   )
+{
+   assert(levelIsValid(redcostdata, level));
+
+   return redcostdata->lvl_cutoff[level];
+}
+
+
+/** returns cutoff for top level */
 SCIP_Real redcosts_getCutoffTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
 
-   return redcostdata->lvl_cutoff[toplevel];
+   return redcosts_getCutoff(redcostdata, toplevel);
 }
 
 
@@ -234,20 +311,32 @@ SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
 
    return redcostdata->lvl_dualBound[toplevel];
 }
 
 
 /** returns root used for reduced cost computation */
+int redcosts_getRoot(
+   const REDCOST*        redcostdata,        /**< reduced costs data */
+   int                   level               /**< level to get root for */
+   )
+{
+   assert(levelIsValid(redcostdata, level));
+
+   return redcostdata->lvl_redCostRoot[level];
+}
+
+
+/** returns root used for reduced cost computation for to level */
 int redcosts_getRootTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
 
-   return redcostdata->lvl_redCostRoot[toplevel];
+   return redcosts_getRoot(redcostdata, toplevel);
 }
 
 
@@ -256,22 +345,35 @@ int redcosts_getLevel(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
 
    return toplevel;
 }
 
 
 /** sets cutoff */
+void redcosts_setCutoff(
+   int                 level,               /**< level to set cutoff for */
+   SCIP_Real           cutoff,             /**< the value */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   )
+{
+   assert(levelIsValid(redcostdata, level));
+   assert(GE(cutoff, 0.0));
+
+   redcostdata->lvl_cutoff[level] = cutoff;
+}
+
+
+/** sets cutoff for top level */
 void redcosts_setCutoffTop(
    SCIP_Real           cutoff,             /**< the value */
    REDCOST*            redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
-   assert(GE(cutoff, 0.0));
+   const int toplevel = getTopLevel(redcostdata);
 
-   redcostdata->lvl_cutoff[toplevel] = cutoff;
+   redcosts_setCutoff(toplevel, cutoff, redcostdata);
 }
 
 
@@ -281,7 +383,7 @@ void redcosts_setDualBoundTop(
    REDCOST*            redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
    assert(GE(dualbound, 0.0));
 
    redcostdata->lvl_dualBound[toplevel] = dualbound;
@@ -294,7 +396,7 @@ void redcosts_setRootTop(
    REDCOST*              redcostdata         /**< reduced costs data */
    )
 {
-   const int toplevel = getLevel(redcostdata);
+   const int toplevel = getTopLevel(redcostdata);
    assert(root >= 0);
 
    redcostdata->lvl_redCostRoot[toplevel] = root;
