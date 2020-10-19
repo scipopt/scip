@@ -642,7 +642,7 @@ SCIP_Bool SCIPcertificateIsActive(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   return (certificate != NULL && (certificate->file != NULL || strcmp(set->certificate_filename, "-")) );
+   return (set->exact_enabled && certificate != NULL && (certificate->file != NULL || strcmp(set->certificate_filename, "-")) );
 }
 
 /** returns current certificate file size in MB */
