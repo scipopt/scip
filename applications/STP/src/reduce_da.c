@@ -785,44 +785,6 @@ int reduceWithNodeFixingBounds(
 }
 
 
-/* marks nodes that can be pseudo-eliminated */
-static
-void markPseudoDeletablesFromBounds(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph data structure */
-   const SCIP_Real*      replacebounds,      /**< replacement bounds */
-   SCIP_Real             upperbound,         /**< best upper bound */
-   SCIP_Bool*            pseudoDelNodes      /**< pseudo deletable nodes */
-)
-{
-   const int nnodes = graph->knots;
-   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
-
-   for( int k = 0; k < nnodes; k++ )
-      pseudoDelNodes[k] = FALSE;
-
-   /* main loop */
-   for( int degree = 3; degree <= STP_DABD_MAXDEGREE; degree++ )
-   {
-      for( int k = 0; k < nnodes; k++ )
-      {
-         if( rpc && degree == 3 && graph_pc_knotIsNonLeafTerm(graph, k) && graph->grad[k] == 3 )
-         {
-            SCIPdebugMessage("found rpc deg3 candidate %d \n", k);
-         }
-         else if( (degree != graph->grad[k] || Is_anyTerm(graph->term[k])) )
-         {
-            continue;
-         }
-
-         if( SCIPisLT(scip, upperbound, replacebounds[k]))
-         {
-            pseudoDelNodes[k] = TRUE;
-         }
-      }
-   }
-}
-
 /** eliminate edges by using fixing-bounds and reduced costs */
 static
 int reduceWithEdgeFixingBounds(
@@ -884,6 +846,91 @@ int reduceWithEdgeFixingBounds(
    }
 
    return nfixed;
+}
+
+
+
+/** eliminate edges with extended reductions */
+static
+SCIP_RETCODE reduceWithEdgeExtReds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            result,             /**< solution */
+   SCIP_Real             upperbound,         /**< best upperbound */
+   REDCOST*              redcostdata,        /**< reduced costs */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  nextdeleted         /**< newly deleted edges */
+)
+{
+   const int nlevels = redcosts_getNlevels(redcostdata);
+
+   for( int i = 0; i < nlevels; i++ )
+   {
+      redcosts_setCutoffFromBound(i, upperbound, redcostdata);
+
+      if( 0 )
+      {
+         const SCIP_Real cutoff = redcosts_getCutoff(redcostdata, i);
+
+         printf("Edge ext. reds., cutoff for level %d: %f \n", i, cutoff);
+      }
+   }
+
+   SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, result, graph, NULL, nextdeleted) );
+
+//#define EXT_WRITE
+//   graph_printInfo(graph);  printf("newly fixedSECOND =%d \n", *nextdeleted);
+#ifdef EXT_WRITE
+      FILE *fp;
+      //char filename[SCIP_MAXSTRLEN];
+      //(void) SCIPsnprintf(filename, SCIP_MAXSTRLEN,"/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/x%d_pred.stp", node);
+      fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/STATS/stpall_hash.txt", "a+");
+      fprintf(fp, "%s %d \n", SCIPgetProbName(scip), extfixed);
+      fclose(fp);
+      exit(1);
+#endif
+
+    return SCIP_OKAY;
+}
+
+
+
+
+/* marks nodes that can be pseudo-eliminated */
+static
+void markPseudoDeletablesFromBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const SCIP_Real*      replacebounds,      /**< replacement bounds */
+   SCIP_Real             upperbound,         /**< best upper bound */
+   SCIP_Bool*            pseudoDelNodes      /**< pseudo deletable nodes */
+)
+{
+   const int nnodes = graph->knots;
+   const SCIP_Bool rpc = (graph->stp_type == STP_RPCSPG);
+
+   for( int k = 0; k < nnodes; k++ )
+      pseudoDelNodes[k] = FALSE;
+
+   /* main loop */
+   for( int degree = 3; degree <= STP_DABD_MAXDEGREE; degree++ )
+   {
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( rpc && degree == 3 && graph_pc_knotIsNonLeafTerm(graph, k) && graph->grad[k] == 3 )
+         {
+            SCIPdebugMessage("found rpc deg3 candidate %d \n", k);
+         }
+         else if( (degree != graph->grad[k] || Is_anyTerm(graph->term[k])) )
+         {
+            continue;
+         }
+
+         if( SCIPisLT(scip, upperbound, replacebounds[k]))
+         {
+            pseudoDelNodes[k] = TRUE;
+         }
+      }
+   }
 }
 
 
@@ -2294,7 +2341,7 @@ SCIP_RETCODE reduce_dapaths(
 
    assert(graph_isMarked(g));
 
-   redcosts_setCutoffFromBound(objbound_upper, redcostdata);
+   redcosts_setCutoffFromBoundTop(objbound_upper, redcostdata);
    SCIP_CALL( dapathsDeleteEdges(scip, redcostdata, result, g, nelims) );
 
    if( *nelims > 0 && solstp_isUnreduced(scip, g, result) )
@@ -2304,7 +2351,7 @@ SCIP_RETCODE reduce_dapaths(
 
       SCIP_CALL( SCIPStpHeurLocalRun(scip, g, result) );
       objbound_upper = solstp_getObj(g, result, 0.0);
-      redcosts_setCutoffFromBound(objbound_upper, redcostdata);
+      redcosts_setCutoffFromBoundTop(objbound_upper, redcostdata);
 
       if( isRpcmw )
          graph_pc_2org(scip, g);
@@ -2360,13 +2407,14 @@ SCIP_RETCODE reduce_da(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    STP_Bool* arcsdeleted;
-   const SCIP_Bool extended = paramsda->useExtRed;
+   SCIP_Bool useExtRed = paramsda->useExtRed;
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
 
    assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
    assert(!isRpcmw || !graph->extended);
+   assert(!(useExtRed && graph_pc_isMw(graph)));
 
    if( graph->terms <= 2 )
       return SCIP_OKAY;
@@ -2423,10 +2471,9 @@ SCIP_RETCODE reduce_da(
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
          havenewsol = FALSE;
 
-         /*
-         if( extended &&  !graph_pc_isMw(graph) )
+         // todo!
+         if( useExtRed && 0 )
             redcosts_addLevel(redcostdata);
-            */
 
          redcosts_setRootTop(terms[run], redcostdata);
 
@@ -2448,8 +2495,10 @@ SCIP_RETCODE reduce_da(
                         userec, pool, result, &havenewsol, &upperbound) );
          }
 
-         redcosts_setAndReturnCutoffFromBound(upperbound, redcostdata, &cutoffbound);
+         redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, &cutoffbound);
          SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, 0);
+         if( SCIPisZero(scip, cutoffbound) )
+            useExtRed = FALSE;
 
          if( isRpcmw )
             graph_pc_2org(scip, graph);
@@ -2476,27 +2525,14 @@ SCIP_RETCODE reduce_da(
             ndeletions_run += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
          }
 
-         if( extended && !graph_pc_isMw(graph) )
+         if( useExtRed )
             redcosts_increaseOnDeletedArcs(graph, arcsdeleted, redcostdata);
 
-         if( extended && !SCIPisZero(scip, cutoffbound) && !graph_pc_isMw(graph) && run == nruns - 1 )
+         if( useExtRed && run == nruns - 1 )
          {
-            // todo extra method and call redcosts_setCutOff for all levels with best upper bound!
-            int extfixed;
-            SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, (havenewsol ? result : NULL), graph, NULL, &extfixed) );
-            ndeletions_run += extfixed;
-
-//#define EXT_WRITE
-         //   graph_printInfo(graph);  printf("newly fixedSECOND =%d \n", extfixed);
-#ifdef EXT_WRITE
-               FILE *fp;
-               //char filename[SCIP_MAXSTRLEN];
-               //(void) SCIPsnprintf(filename, SCIP_MAXSTRLEN,"/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/x%d_pred.stp", node);
-               fp = fopen("/nfs/optimi/kombadon/bzfrehfe/projects/scip/applications/STP/STATS/stpall_hash.txt", "a+");
-               fprintf(fp, "%s %d \n", SCIPgetProbName(scip), extfixed);
-               fclose(fp);
-               exit(1);
-#endif
+            int nextfixed = 0;
+            SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, redcostdata, graph, &nextfixed) );
+            ndeletions_run += nextfixed;
          }
 
          if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
@@ -2525,7 +2561,7 @@ SCIP_RETCODE reduce_da(
 
          markPseudoDeletablesFromBounds(scip, graph, nodereplacebounds, upperbound, pseudoDelNodes);
 
-         if( extended )
+         if( useExtRed )
          {
             SCIP_CALL( extreduce_pseudoDeleteNodes(scip, pseudoDelNodes, redcostdata, graph, offsetp, &nreplacings) );
          }
