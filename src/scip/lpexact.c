@@ -7452,15 +7452,98 @@ SCIP_RETCODE SCIProwExactChgRhs(
    return SCIP_OKAY;
 }
 
-/** returns whether the exact LP is in exact diving mode */
-SCIP_Bool SCIPlpExactDiving(
-   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
+/** gets solution status of current exact LP */
+SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
+   SCIP_LPEXACT*         lpexact              /**< current LP data */
    )
 {
-   if( lpexact == NULL )
-      return FALSE;
+   assert(lpexact != NULL);
+   assert(lpexact->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
 
-   return lpexact->diving;
+   return (lpexact->flushed ? lpexact->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
+}
+
+/** stores exact LP state (like basis information) into LP state object */
+SCIP_RETCODE SCIPlpExactGetState(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(lpexact != NULL);
+   assert(lpexact->flushed);
+   assert(lpexact->solved);
+   assert(blkmem != NULL);
+   assert(lpistate != NULL);
+
+   /* check whether there is no lp */
+   if( lpexact->nlpicols == 0 && lpexact->nlpirows == 0 )
+      *lpistate = NULL;
+   else
+   {
+      SCIP_CALL( SCIPlpiExactGetState(lpexact->lpiexact, blkmem, lpistate) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** loads exact LP state (like basis information) into solver */
+SCIP_RETCODE SCIPlpExactSetState(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
+   SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
+   SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
+   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
+   )
+{
+   assert(lpexact != NULL);
+   assert(blkmem != NULL);
+
+   /* flush changes to the LP solver */
+   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
+   assert(lpexact->flushed);
+
+   if( lpexact->solved && lpexact->solisbasic )
+      return SCIP_OKAY;
+
+   /* set LPI state in the LP solver */
+   if( lpistate == NULL )
+      lpexact->solisbasic = FALSE;
+   else
+   {
+      SCIP_CALL( SCIPlpiExactSetState(lpexact->lpiexact, blkmem, lpistate) );
+      lpexact->solisbasic = SCIPlpiExactHasStateBasis(lpexact->lpiexact, lpistate);
+   }
+   /* @todo: setting feasibility to TRUE might be wrong because in probing mode, the state is even saved when the LP was
+    *        flushed and solved, also, e.g., when we hit the iteration limit
+    */
+   lpexact->primalfeasible = wasprimfeas;
+   lpexact->primalchecked = wasprimchecked;
+   lpexact->dualfeasible = wasdualfeas;
+   lpexact->dualchecked = wasdualchecked;
+
+   return SCIP_OKAY;
+}
+
+/** frees exact LP state information */
+SCIP_RETCODE SCIPlpExactFreeState(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   assert(lpexact != NULL);
+
+   if( *lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiExactFreeState(lpexact->lpiexact, blkmem, lpistate) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** initiates exact LP diving */
@@ -7715,96 +7798,13 @@ SCIP_RETCODE SCIPlpExactEndDive(
    return SCIP_OKAY;
 }
 
-/** gets solution status of current exact LP */
-SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
-   SCIP_LPEXACT*         lpexact              /**< current LP data */
+/** returns whether the exact LP is in exact diving mode */
+SCIP_Bool SCIPlpExactDiving(
+   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
    )
 {
-   assert(lpexact != NULL);
-   assert(lpexact->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
+   if( lpexact == NULL )
+      return FALSE;
 
-   return (lpexact->flushed ? lpexact->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
-}
-
-/** stores exact LP state (like basis information) into LP state object */
-SCIP_RETCODE SCIPlpExactGetState(
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
-   )
-{
-   assert(lpexact != NULL);
-   assert(lpexact->flushed);
-   assert(lpexact->solved);
-   assert(blkmem != NULL);
-   assert(lpistate != NULL);
-
-   /* check whether there is no lp */
-   if( lpexact->nlpicols == 0 && lpexact->nlpirows == 0 )
-      *lpistate = NULL;
-   else
-   {
-      SCIP_CALL( SCIPlpiExactGetState(lpexact->lpiexact, blkmem, lpistate) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** loads exact LP state (like basis information) into solver */
-SCIP_RETCODE SCIPlpExactSetState(
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
-   SCIP_Bool             wasprimfeas,        /**< primal feasibility when LP state information was stored */
-   SCIP_Bool             wasprimchecked,     /**< true if the LP solution has passed the primal feasibility check */
-   SCIP_Bool             wasdualfeas,        /**< dual feasibility when LP state information was stored */
-   SCIP_Bool             wasdualchecked      /**< true if the LP solution has passed the dual feasibility check */
-   )
-{
-   assert(lpexact != NULL);
-   assert(blkmem != NULL);
-
-   /* flush changes to the LP solver */
-   SCIP_CALL( SCIPlpExactFlush(lpexact, blkmem, set, eventqueue) );
-   assert(lpexact->flushed);
-
-   if( lpexact->solved && lpexact->solisbasic )
-      return SCIP_OKAY;
-
-   /* set LPI state in the LP solver */
-   if( lpistate == NULL )
-      lpexact->solisbasic = FALSE;
-   else
-   {
-      SCIP_CALL( SCIPlpiExactSetState(lpexact->lpiexact, blkmem, lpistate) );
-      lpexact->solisbasic = SCIPlpiExactHasStateBasis(lpexact->lpiexact, lpistate);
-   }
-   /* @todo: setting feasibility to TRUE might be wrong because in probing mode, the state is even saved when the LP was
-    *        flushed and solved, also, e.g., when we hit the iteration limit
-    */
-   lpexact->primalfeasible = wasprimfeas;
-   lpexact->primalchecked = wasprimchecked;
-   lpexact->dualfeasible = wasdualfeas;
-   lpexact->dualchecked = wasdualchecked;
-
-   return SCIP_OKAY;
-}
-
-/** frees exact LP state information */
-SCIP_RETCODE SCIPlpExactFreeState(
-   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
-   )
-{
-   assert(lpexact != NULL);
-
-   if( *lpistate != NULL )
-   {
-      SCIP_CALL( SCIPlpiExactFreeState(lpexact->lpiexact, blkmem, lpistate) );
-   }
-
-   return SCIP_OKAY;
+   return lpexact->diving;
 }

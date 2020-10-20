@@ -480,12 +480,9 @@ SCIP_Rational* SCIPcolExactGetMaxPrimsol(
    SCIP_COLEXACT*        col                 /**< LP column */
    );
 
-
 /*
  * lp update methods
  */
-
-
 
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
 SCIP_RETCODE SCIPlpExactUpdateVarObj(
@@ -693,11 +690,6 @@ void SCIPlpExactForceExactSolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** returns whether the exact LP is in diving mode */
-SCIP_EXPORT
-SCIP_Bool SCIPlpExactDiving(
-   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
-   );
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
@@ -773,6 +765,12 @@ SCIP_RETCODE SCIPlpExactEndDive(
     SCIP_VAR**            vars,               /**< array with all active variables */
     int                   nvars               /**< number of active variables */
     );
+
+/** returns whether the exact LP is in diving mode */
+SCIP_EXPORT
+SCIP_Bool SCIPlpExactDiving(
+   SCIP_LPEXACT*         lpexact             /**< current exact LP data */
+   );
 
 #ifdef __cplusplus
 }
