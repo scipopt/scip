@@ -867,12 +867,12 @@ SCIP_RETCODE reduceWithEdgeExtReds(
    {
       redcosts_setCutoffFromBound(i, upperbound, redcostdata);
 
-      if( 1 )
+#ifdef SCIP_DEBUG
       {
          const SCIP_Real cutoff = redcosts_getCutoff(redcostdata, i);
-
          printf("Edge ext. reds., cutoff for level %d: %f \n", i, cutoff);
       }
+#endif
    }
 
    SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, result, graph, NULL, nextdeleted) );
@@ -1646,12 +1646,10 @@ SCIP_RETCODE daRedcostsInit(
 
    if( paramsda->useExtRed )
    {
-      //rcparams.nLevels = nLevels;
+      rcparams.nLevels = nLevels;
    }
 
-
    SCIP_CALL( redcosts_initFromParams(scip, &rcparams, redcostdata) );
-
 
    return SCIP_OKAY;
 }
@@ -2469,7 +2467,7 @@ SCIP_RETCODE reduce_da(
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
          havenewsol = FALSE;
 
-         if( useExtRed && run > 0 && 0 )
+         if( useExtRed && run > 0 )
             redcosts_addLevel(redcostdata);
 
          redcosts_setRootTop(terms[run], redcostdata);
