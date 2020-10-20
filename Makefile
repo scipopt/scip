@@ -441,14 +441,14 @@ PARASCIPDEP	:=	$(SRCDIR)/depend.parascip
 PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
 
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
-# Gurobi and Mosek LPIs have to be made threadsafe
-ifeq ($(LPI),grb)
-	THREADSAFEDEP += $(SRCDIR)/nlpi/lpi_grb.c
-endif
-ifeq ($(LPI),msk)
-	THREADSAFEDEP += $(SRCDIR)/nlpi/lpi_msk.c
-endif
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
+# Gurobi and Mosek LPIs have to be made threadsafe
+ifeq ($(LPS),grb)
+	THREADSAFESRC += $(SRCDIR)/lpi/lpi_grb.c
+endif
+ifeq ($(LPS),msk)
+	THREADSAFESRC += $(SRCDIR)/lpi/lpi_msk.c
+endif
 
 ifeq ($(ZIMPL),true)
 ifeq ($(GMP),false)
