@@ -307,13 +307,26 @@ SCIP_Real redcosts_getCutoffTop(
 
 
 /** returns dual-bound */
+SCIP_Real redcosts_getDualBound(
+   int                   level,              /**< level */
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   )
+{
+   assert(levelIsValid(redcostdata, level));
+   assert(redcostdata->lvl_dualBound);
+
+   return redcostdata->lvl_dualBound[level];
+}
+
+
+/** returns dual-bound for top level */
 SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    )
 {
    const int toplevel = getTopLevel(redcostdata);
 
-   return redcostdata->lvl_dualBound[toplevel];
+   return redcosts_getDualBound(toplevel, redcostdata);
 }
 
 
@@ -562,7 +575,7 @@ SCIP_RETCODE redcosts_init(
 
 
 /** sets cutoff */
-void redcosts_setAndReturnCutoffFromBound(
+void redcosts_setAndReturnCutoffFromBoundTop(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata,        /**< reduced cost data */
   SCIP_Real*            cutoffbound         /**< cutoff */
@@ -584,6 +597,7 @@ void redcosts_setAndReturnCutoffFromBound(
 
 /** sets cutoff */
 void redcosts_setCutoffFromBound(
+  int                   level,              /**< level */
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata         /**< reduced cost data */
 )
@@ -591,16 +605,30 @@ void redcosts_setCutoffFromBound(
    SCIP_Real cutoff;
 
    assert(redcostdata);
-   assert(GE(redcosts_getDualBoundTop(redcostdata), 0.0));
+   assert(levelIsValid(redcostdata, level));
+   assert(GE(redcosts_getDualBound(level, redcostdata), 0.0));
+   assert(GE(upperbound, 0.0));
 
-   cutoff = upperbound - redcosts_getDualBoundTop(redcostdata);
+   cutoff = upperbound - redcosts_getDualBound(level, redcostdata);
 
    assert(GE_FEAS_EPS(cutoff, 0.0, EPSILON));
 
    if( cutoff < 0.0 )
       cutoff = 0.0;
 
-   redcosts_setCutoffTop(cutoff, redcostdata);
+   redcosts_setCutoff(level, cutoff, redcostdata);
+}
+
+
+/** sets cutoff for top level */
+void redcosts_setCutoffFromBoundTop(
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata         /**< reduced cost data */
+)
+{
+   const int toplevel = getTopLevel(redcostdata);
+
+   redcosts_setCutoffFromBound(toplevel, upperbound, redcostdata);
 }
 
 

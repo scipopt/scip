@@ -139,6 +139,13 @@ SCIP_Real redcosts_getCutoffTop(
 
 /** returns dual-bound */
 EXTERN
+SCIP_Real redcosts_getDualBound(
+   int                   level,              /**< level */
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
+/** returns dual-bound for top level*/
+EXTERN
 SCIP_Real redcosts_getDualBoundTop(
    const REDCOST*        redcostdata         /**< reduced costs data */
    );
@@ -239,9 +246,9 @@ void redcosts_free(
 );
 
 
-/** sets cutoff */
+/** sets cutoff for top level */
 EXTERN
-void redcosts_setAndReturnCutoffFromBound(
+void redcosts_setAndReturnCutoffFromBoundTop(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata,        /**< reduced cost data */
   SCIP_Real*            cutoffbound         /**< cutoff */
@@ -249,7 +256,17 @@ void redcosts_setAndReturnCutoffFromBound(
 
 
 /** sets cutoff */
+EXTERN
 void redcosts_setCutoffFromBound(
+  int                   level,              /**< level */
+  SCIP_Real             upperbound,         /**< bound */
+  REDCOST*              redcostdata         /**< reduced cost data */
+);
+
+
+/** sets cutoff for top level */
+EXTERN
+void redcosts_setCutoffFromBoundTop(
   SCIP_Real             upperbound,         /**< bound */
   REDCOST*              redcostdata         /**< reduced cost data */
 );
