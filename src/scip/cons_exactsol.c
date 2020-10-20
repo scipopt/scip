@@ -178,6 +178,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpDiving(scip->lp) )
       return SCIP_OKAY;
 
+   /** @todo exip: include all STAGE >= PRESOLVING */
+
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
@@ -270,6 +272,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 #else
    SCIP_CALL( SCIPsolveExactDiveLP(scip, -1, &lperror, NULL) );
 #endif
+
+   /** @todo exip handle the ray case to be included */
 
    /* check if this is a feasible solution */
    if( !lperror && SCIPgetLPExactSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
