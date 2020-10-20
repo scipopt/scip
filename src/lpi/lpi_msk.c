@@ -38,6 +38,7 @@
 #include "scip/bitencode.h"
 #include "scip/pub_message.h"
 #include <string.h>
+#include "tinycthread/tinycthread.h"
 
 /* do defines for windows directly here to make the lpi more independent */
 #if defined(_WIN32) || defined(_WIN64)
@@ -81,10 +82,18 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 #define IS_POSINF(x) ((x) >= MSK_INFINITY)
 #define IS_NEGINF(x) ((x) <= -MSK_INFINITY)
 
-#ifndef SCIP_THREADSAFE
-/* Global Mosek environment in order to not create a new environment for each new LP. This is not thread safe. */
-static MSKenv_t globalMosekEnv =     NULL;
-static int numlp         =           0;
+#ifdef SCIP_THREADSAFE
+   #if ! defined(APPLE)
+      /* Use thread local environment in order to not create a new environment for each new LP. */
+      _Thread_local MSKenv_t reusemosekenv =     NULL;
+      _Thread_local int numlp         =           0;
+      #define SCIP_REUSEENV
+   #endif
+#else
+   /* Global Mosek environment in order to not create a new environment for each new LP. This is not thread safe. */
+   static MSKenv_t reusemosekenv =     NULL;
+   static int numlp         =           0;
+   #define SCIP_REUSEENV
 #endif
 
 #if MSK_VERSION_MAJOR >= 9
@@ -818,24 +827,26 @@ SCIP_RETCODE SCIPlpiCreate(
 
    SCIP_ALLOC( BMSallocMemory(lpi) );
 
-#ifdef SCIP_THREADSAFE
+#ifdef SCIP_REUSEENV
+   if ( reusemosekenv == NULL )
+   {
+      assert(numlp == 0);
+      MOSEK_CALL( MSK_makeenv(&reusemosekenv, NULL) );
+      MOSEK_CALL( MSK_linkfunctoenvstream(reusemosekenv, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
+#if MSK_VERSION_MAJOR < 8
+      MOSEK_CALL( MSK_initenv(reusemosekenv) );
+#endif
+   }
+   (*lpi)->mosekenv = reusemosekenv;
+   (*lpi)->lpid = numlp++;
+
+#else
+
    MOSEK_CALL( MSK_makeenv(&(*lpi)->mosekenv, NULL) );
    MOSEK_CALL( MSK_linkfunctoenvstream((*lpi)->mosekenv, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
 #if MSK_VERSION_MAJOR < 8
    MOSEK_CALL( MSK_initenv((*lpi)->mosekenv) );
 #endif
-#else
-   if ( globalMosekEnv == NULL )
-   {
-      assert(numlp == 0);
-      MOSEK_CALL( MSK_makeenv(&globalMosekEnv, NULL) );
-      MOSEK_CALL( MSK_linkfunctoenvstream(globalMosekEnv, MSK_STREAM_LOG, (MSKuserhandle_t) messagehdlr, printstr) );
-#if MSK_VERSION_MAJOR < 8
-      MOSEK_CALL( MSK_initenv(globalMosekEnv) );
-#endif
-   }
-   (*lpi)->mosekenv = globalMosekEnv;
-   (*lpi)->lpid = numlp++;
 #endif
 
    MOSEK_CALL( MSK_makeemptytask((*lpi)->mosekenv, &((*lpi)->task)) );
@@ -907,16 +918,16 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->skx);
    BMSfreeMemoryArrayNull(&(*lpi)->skc);
 
-#ifdef SCIP_THREADSAFE
-   MOSEK_CALL( MSK_deleteenv(&(*lpi)->mosekenv) );
-#else
+#ifdef SCIP_REUSEENV
    assert(numlp > 0);
    numlp--;
    if ( numlp == 0 )
    {
-      MOSEK_CALL( MSK_deleteenv(&globalMosekEnv) );
-      globalMosekEnv = NULL;
+      MOSEK_CALL( MSK_deleteenv(&reusemosekenv) );
+      reusemosekenv = NULL;
    }
+#else
+   MOSEK_CALL( MSK_deleteenv(&(*lpi)->mosekenv) );
 #endif
 
    BMSfreeMemory(lpi);

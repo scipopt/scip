@@ -34,6 +34,7 @@
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc_sort.h"
+#include "tinycthread/tinycthread.h"
 
 #ifdef _WIN32
 #define snprintf _snprintf
@@ -189,10 +190,18 @@ struct SCIP_LPiNorms
 };
 
 
-#ifndef SCIP_THREADSAFE
-/* Global Gurobi environment in order to not create a new environment for each new LP. This is not thread safe. */
-static GRBenv*           globalgrbenv = NULL;/**< global Gurobi environment */
-static int               numlp = 0;          /**< number of open LP objects */
+#ifdef SCIP_THREADSAFE
+   #if ! defined(APPLE)
+      /* Use thread local environment in order to not create a new environment for each new LP. */
+      _Thread_local GRBenv*    reusegrbenv = NULL; /**< thread local Gurobi environment */
+      _Thread_local int        numlp = 0;          /**< number of open LP objects */
+      #define SCIP_REUSEENV
+   #endif
+#else
+   /* Global Gurobi environment in order to not create a new environment for each new LP. This is not thread safe. */
+   static GRBenv*           reusegrbenv = NULL; /**< global Gurobi environment */
+   static int               numlp = 0;          /**< number of open LP objects */
+   #define SCIP_REUSEENV
 #endif
 
 
@@ -1321,7 +1330,7 @@ SCIP_RETCODE SCIPlpiCreate(
    assert(sizeof(SCIP_Bool) == sizeof(int));    /* Gurobi only works with ints as bools */
    assert(lpi != NULL);
    assert(name != NULL);
-#ifndef SCIP_THREADSAFE
+#ifdef SCIP_REUSEENV
    assert(numlp >= 0);
 #endif
 
@@ -1331,8 +1340,35 @@ SCIP_RETCODE SCIPlpiCreate(
    SCIP_ALLOC( BMSallocMemory(lpi) );
 
    /* create environment */
-#ifdef SCIP_THREADSAFE
-   /* To be thread safe, we need a new environment for each new instaniation; note that this involves additional work and
+#ifdef SCIP_REUSEENV
+   /* Try to reuse Gurobi environment (either thread local or not being thread safe). */
+   if ( reusegrbenv == NULL )
+   {
+      assert( numlp == 0 );
+
+      /* temporarily set environment for error messages */
+      (*lpi)->grbenv = reusegrbenv;
+
+      /* create evironment */
+      CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&reusegrbenv, NULL) );
+
+      /* turn off output for all models */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
+
+      /* turn on that basis information for infeasible and unbounded models is available */
+      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
+   }
+
+   /* create empty model */
+   CHECK_ZERO_STAR( messagehdlr, GRBnewmodel(reusegrbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
+
+   /* replace by local copy of environment */
+   (*lpi)->grbenv = GRBgetenv((*lpi)->grbmodel);
+   ++numlp;
+
+#else
+
+   /* Create new environment for each new instaniation; note that this involves additional work and
     * uses a new license for each new instantiation. */
    CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&(*lpi)->grbenv, NULL) );
 
@@ -1345,32 +1381,6 @@ SCIP_RETCODE SCIPlpiCreate(
    /* create empty model */
    CHECK_ZERO_STAR( messagehdlr, GRBnewmodel((*lpi)->grbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
 
-#else
-
-   /* If we do not have to be thread safe, each problem will get a copy of the original environment. Thus, grbenv is only needed once. */
-   if ( globalgrbenv == NULL )
-   {
-      assert( numlp == 0 );
-
-      /* temporarily set environment for error messages */
-      (*lpi)->grbenv = globalgrbenv;
-
-      /* create evironment */
-      CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&globalgrbenv, NULL) );
-
-      /* turn off output for all models */
-      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(globalgrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
-
-      /* turn on that basis information for infeasible and unbounded models is available */
-      CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(globalgrbenv, GRB_INT_PAR_INFUNBDINFO, 1) );
-   }
-
-   /* create empty model */
-   CHECK_ZERO_STAR( messagehdlr, GRBnewmodel(globalgrbenv, &(*lpi)->grbmodel, name, 0, NULL, NULL, NULL, NULL, NULL) );
-
-   /* replace by local copy of environment */
-   (*lpi)->grbenv = GRBgetenv((*lpi)->grbmodel);
-   ++numlp;
 #endif
    assert( (*lpi)->grbenv != NULL );
 
@@ -1447,17 +1457,17 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->valarray);
 
    /* free environment */
-#ifdef SCIP_THREADSAFE
-   /* free local environment */
-   GRBfreeenv((*lpi)->grbenv);
-#else
+#ifdef SCIP_REUSEENV
    --numlp;
    if( numlp == 0 )
    {
-      /* free global environment */
-      GRBfreeenv(globalgrbenv);
-      globalgrbenv = NULL;
+      /* free reused environment */
+      GRBfreeenv(reusegrbenv);
+      reusegrbenv = NULL;
    }
+#else
+   /* free local environment */
+   GRBfreeenv((*lpi)->grbenv);
 #endif
 
    BMSfreeMemory(lpi);
