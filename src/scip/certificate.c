@@ -1731,14 +1731,6 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
       }
    }
 
-   /** @todo exip: disable and do this somewheere else set the lowerbound of node according to parent lowerbound */ 
-   //SCIP_CALL( SCIPcertificateNodeBound(set, certificate, stat, node) );
-
-   /* Whenever a branching is performed, SCIP computes the pseudo solution of the new node with bound change.
-    * The certificate also computes and print this bound in the certificate
-    */
-   //SCIP_CALL( SCIPcertificatePseudoSolProof(set, certificate, prob, tree, lp, branchvar, &branchbound, &branchtype) );
-
    RatFreeBuffer(set->buffer, &branchbound);
 
    return SCIP_OKAY;

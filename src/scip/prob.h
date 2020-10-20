@@ -653,7 +653,7 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobEnableConsCompression(prob)  ((prob)->conscompression = TRUE)
 #endif
 
-/** exact methods @todo exip move these to a different file */
+/** exact methods */
 
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known
