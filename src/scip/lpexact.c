@@ -3676,8 +3676,6 @@ SCIP_RETCODE lpExactFlushAndSolve(
    else
       SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
 
-   SCIP_CALL( SCIPlpiFreeState(lp->lpi, blkmem, &lpistate) );
-
    /* solve with given settings (usually fast but imprecise) */
    if( SCIPsetIsInfinity(set, lpexact->cutoffbound) )
    {
