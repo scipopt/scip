@@ -120,7 +120,7 @@ endif
 PARASCIP	=	false
 
 # Should the code be thread safe? Necessary for dbg-builds and cppad.
-THREADSAFE	=	false
+THREADSAFE	=	true
 
 # enable debug-solution mechanism
 DEBUGSOL =  false

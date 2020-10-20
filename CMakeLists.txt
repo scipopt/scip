@@ -75,7 +75,7 @@ option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
 # for backward compability
 option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
-option(THREADSAFE "should scip be compiled thread safe" OFF)
+option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
