@@ -83,7 +83,7 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 #define IS_NEGINF(x) ((x) <= -MSK_INFINITY)
 
 #ifdef SCIP_THREADSAFE
-   #if ! defined(APPLE)
+   #if defined(_Thread_local)
       /* Use thread local environment in order to not create a new environment for each new LP. */
       _Thread_local MSKenv_t reusemosekenv =     NULL;
       _Thread_local int numlp         =           0;
