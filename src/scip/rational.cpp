@@ -185,7 +185,6 @@ SCIP_RETCODE RatCreateBufferArray(
    return SCIP_OKAY;
 }
 
-
 /** copy an array of rationals */
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
