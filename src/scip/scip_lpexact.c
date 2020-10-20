@@ -571,19 +571,22 @@ SCIP_RETCODE SCIPsolveExactDiveLP(
    SCIP_CALL( SCIPlpExactSolveAndEval(scip->lpexact, scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
          scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, lperror, FALSE) );
 
-   SCIP_CALL( RatCreateBuffer(scip->set->buffer, &objval) );
-   SCIPgetLPExactObjval(scip, objval);
-
-   /* the LP is infeasible or the objective limit was reached */
-   if( SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OBJLIMIT
-      || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
-         RatIsGE(objval, SCIPgetCutoffboundExact(scip))) )
+   if( !(*lperror) )
    {
-      if( cutoff != NULL )
-         *cutoff = TRUE;
-   }
+      SCIP_CALL( RatCreateBuffer(scip->set->buffer, &objval) );
+      SCIPgetLPExactObjval(scip, objval);
 
-   RatFreeBuffer(scip->set->buffer, &objval);
+      /* the LP is infeasible or the objective limit was reached */
+      if( SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OBJLIMIT
+         || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
+            RatIsGE(objval, SCIPgetCutoffboundExact(scip))) )
+      {
+         if( cutoff != NULL )
+            *cutoff = TRUE;
+      }
+
+      RatFreeBuffer(scip->set->buffer, &objval);
+   }
 
    return SCIP_OKAY;
 }
