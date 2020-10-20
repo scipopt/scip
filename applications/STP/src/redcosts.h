@@ -165,6 +165,11 @@ int redcosts_getLevel(
    );
 
 
+/** returns current number of levels */
+int redcosts_getNlevels(
+   const REDCOST*        redcostdata         /**< reduced costs data */
+   );
+
 /** sets cutoff */
 EXTERN
 void redcosts_setCutoff(

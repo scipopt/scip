@@ -1824,7 +1824,7 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_Bool* redcost_noReversedTree;
    SCIP_Bool* sdeq_edgesIsForbidden;
    const int nnodes = graph->knots;
-   const int redcosts_nlevels = redcosts_getLevel(redcostdata) + 1;
+   const int redcosts_nlevels = redcosts_getNlevels(redcostdata);
    const int maxstacksize = extreduce_getMaxStackSize();
    const int maxncomponents = extreduce_getMaxStackNcomponents(graph);
 

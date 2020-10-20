@@ -1370,6 +1370,7 @@ SCIP_RETCODE extreduce_deleteEdges(
    SCIP_Bool withSol = (result != NULL);
 
    assert(scip && redcostdata);
+   assert(!graph_pc_isMw(graph) && "not supported yet");
    assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
 
    *nelims = 0;
