@@ -174,6 +174,10 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpExactDiving(scip->lpexact) )
       return SCIP_OKAY;
 
+   /* we also don't want to execute the handler, if we are in "normal" diving mode */
+   if( SCIPlpDiving(scip->lp) )
+      return SCIP_OKAY;
+
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
