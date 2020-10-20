@@ -37,6 +37,7 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
+   SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_reduceBiconnected(scip) );
    SCIP_CALL( stptest_reduceSdGetter(scip) );
    SCIP_CALL( stptest_reduceSdBiased(scip) );
@@ -55,7 +56,6 @@ SCIP_RETCODE stptest_testAll(
    SCIP_CALL( stptest_completegraph(scip) );
    SCIP_CALL( stptest_testHeurLocal(scip) );
    SCIP_CALL( stptest_pseudoDel(scip) );
-   SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_extmldists(scip) );
    SCIP_CALL( stptest_dheap(scip) );
    SCIP_CALL( stptest_pcreduce(scip) );

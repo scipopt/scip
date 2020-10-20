@@ -25,8 +25,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-// #define SCIP_DEBUG
-// #define STP_DEBUG_EXT
+ //#define SCIP_DEBUG
+ // #define STP_DEBUG_EXT
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -250,11 +250,20 @@ SCIP_Real extTreeGetDirectedRedcostProper(
    assert(graph_knot_isInRange(graph, root));
 #endif
 
+#ifdef STP_DEBUG_EXT
+   SCIPdebugMessage("...reduced costs without leaves: %f (treecost=%f + rootdist=%f + swap=%f) \n",
+         redcost_directed, tree_redcost, rootToNodeDist[root], swapcost);
+#endif
+
    for( int j = 0; j < nleaves; j++ )
    {
       int i;
       int term;
       const int leaf = tree_leaves[j];
+
+#ifdef STP_DEBUG_EXT
+      SCIPdebugMessage("...checking leaf: %d \n", leaf);
+#endif
 
       if( leaf == root || isterm[leaf] )
       {
@@ -289,6 +298,9 @@ SCIP_Real extTreeGetDirectedRedcostProper(
       /* no terminal reachable? */
       if( term == UNKNOWN )
       {
+#ifdef STP_DEBUG_EXT
+         SCIPdebugMessage("...no terminal reachable from leaf %d \n", leaf);
+#endif
          assert(i < 3 && GE(nodeTo3TermsPaths[leaf + i * nnodes].dist, FARAWAY));
          return FARAWAY;
       }
@@ -304,8 +316,11 @@ SCIP_Real extTreeGetDirectedRedcostProper(
       assert(LE(nodeTo3TermsPaths[leaf].dist, firstTermDist[leavescount]));
       assert(LE(firstTermDist[leavescount], secondTermDist[leavescount]));
 
-      //   printf("i %d \n", i);
- // printf("term=%d, first=%f second=%f def=%f \n", term, firstTermDist[leavescount], secondTermDist[leavescount], nodeTo3TermsPaths[leaf].dist);
+#ifdef STP_DEBUG_EXT
+      SCIPdebugMessage("...closeterm=%d, dist1=%f dist2=%f distdef=%f \n", term,
+            firstTermDist[leavescount], secondTermDist[leavescount], nodeTo3TermsPaths[leaf].dist);
+#endif
+
       leavescount++;
 
 #ifndef NDEBUG
@@ -334,6 +349,11 @@ SCIP_Real extTreeGetDirectedRedcostProper(
       redcost_directed += getMinDistCombination(firstTermDist + first, secondTermDist + first, leavescount - first);
    }
 
+
+#ifdef STP_DEBUG_EXT
+   SCIPdebugMessage("...reduced costs with leaves: %f \n", redcost_directed);
+#endif
+
  //  printf("redcost_directed=%f redcost_debug=%f  \n", redcost_directed, redcost_debug );
 
    assert(GE(redcost_directed, redcost_debug));
@@ -356,7 +376,11 @@ SCIP_Real extTreeGetDirectedRedcost(
 
    assert(extdata->tree_nleaves > 1 && extdata->tree_nleaves < STP_EXTTREE_MAXNLEAVES_GUARD);
    assert(extdata->tree_leaves[0] == extdata->tree_root);
-   assert(root >= 0 && root < graph->knots);
+   assert(graph_knot_isInRange(graph, root));
+
+#ifdef STP_DEBUG_EXT
+   SCIPdebugMessage("Check directed tree rooted at %d \n", root);
+#endif
 
    /* are there any deleted arcs in the directed tree? */
    if( extdata->tree_nDelUpArcs > 0 && root == extdata->tree_root )
@@ -369,6 +393,10 @@ SCIP_Real extTreeGetDirectedRedcost(
    {
       return extTreeGetDirectedRedcostProper(graph, redcostlevel, extdata, root);
    }
+
+#ifdef STP_DEBUG_EXT
+   SCIPdebugMessage("Directed tree directly ruled-out \n");
+#endif
 
    return FARAWAY;
 }
@@ -392,6 +420,10 @@ SCIP_Bool extTreeRedcostCutoff(
    SCIP_Real tree_redcost = FARAWAY;
 #endif
 
+#ifdef STP_DEBUG_EXT
+   SCIPdebugMessage("---Redcosts checking LEVEL %d--- \n", redcostlevel);
+#endif
+
    /* take each leaf as root of the tree and check whether cutoff condition is violated */
    for( int i = 0; i < nleaves; i++ )
    {
@@ -403,9 +435,7 @@ SCIP_Bool extTreeRedcostCutoff(
 
       if( allowEquality ? LT(tree_redcost_new, cutoff) : LE(tree_redcost_new, cutoff) )
       {
-#ifdef SCIP_DEBUG
          SCIPdebugMessage("NO rule-out periph (red.cost<=%f from root=%d and cutoff=%f) \n", tree_redcost_new, leaf, cutoff);
-#endif
          return FALSE;
       }
 
@@ -415,7 +445,7 @@ SCIP_Bool extTreeRedcostCutoff(
    }
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("Rule-out periph (with red.cost=%f and cutoff=%f) \n", tree_redcost, cutoff);
+   SCIPdebugMessage("Rule-out periph (with red.cost=%f and cutoff=%f, level=%d) \n", tree_redcost, cutoff, redcostlevel);
 #endif
 
    return TRUE;

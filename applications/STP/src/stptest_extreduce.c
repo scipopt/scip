@@ -737,6 +737,100 @@ SCIP_RETCODE testEdgeDeletedByCommonRedCostsTargets(
 }
 
 
+
+
+/** tests that edge can be deleted by exploiting multi-level reduced costs */
+static
+SCIP_RETCODE testEdgeDeletedByMultiRedCosts(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST* redcostdata;
+   GRAPH* graph;
+   const int nnodes = 15;
+   const int nedges = 80; /* just some upper bound */
+   SCIP_Real* redcosts = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+   const int firstdummynode = 7;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 3 */
+   graph_knot_add(graph, STP_TERM);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+
+   for( int i = firstdummynode; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph->source = 6;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); /* 0 */
+   graph_edge_addBi(scip, graph, 1, 2, 1.0); /* 2 */
+   graph_edge_addBi(scip, graph, 1, 3, 1.0); /* 4 */
+   graph_edge_addBi(scip, graph, 2, 4, 2.0); /* 6 */
+   graph_edge_addBi(scip, graph, 3, 5, 2.0); /* 8 */
+
+   graph_edge_addBi(scip, graph, 0, 4, 1.0); /* 10 */
+   graph_edge_addBi(scip, graph, 0, 6, 1.0); /* 12 */
+
+
+   /* add shortcut edges */
+   graph_edge_addBi(scip, graph, 0, 2, 1.9);
+   graph_edge_addBi(scip, graph, 0, 3, 1.9);
+
+   /* also add dummy edges to avoid extension */
+   for( int i = firstdummynode; i < nnodes; i++ )
+   {
+      graph_edge_addBi(scip, graph, 0, i, 3.0);
+      graph_edge_addBi(scip, graph, 2, i, 3.0);
+      graph_edge_addBi(scip, graph, 3, i, 3.0);
+   }
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   {
+       RCPARAMS rcparams = { .cutoff = 7.0, .nLevels = 2, .nCloseTerms = 3,
+                             .nnodes = graph->knots, .nedges = graph->edges, .redCostRoot = graph->source };
+       SCIP_CALL( redcosts_initFromParams(scip, &rcparams, &redcostdata) );
+   }
+
+   /* 1st level */
+   redcosts = redcosts_getEdgeCostsTop(redcostdata);
+   for( int i = 0; i < graph->edges; i++ )
+      redcosts[i] = graph->cost[i];
+
+   redcosts[0] = 0;
+
+   SCIP_CALL( redcosts_initializeDistancesTop(scip, graph, redcostdata) );
+
+   /* 2nd level */
+   redcosts_addLevel(redcostdata);
+   redcosts = redcosts_getEdgeCostsTop(redcostdata);
+   for( int i = 0; i < graph->edges; i++ )
+      redcosts[i] = graph->cost[i];
+
+   redcosts_setCutoffTop(6.5, redcostdata);
+   redcosts_setRootTop(4, redcostdata);
+   SCIP_CALL( redcosts_initializeDistancesTop(scip, graph, redcostdata) );
+
+   /* call actual reduction method */
+   SCIP_CALL(extCheckEdge(scip, graph, redcostdata, NULL, testedge, &deletable, FALSE));
+
+   STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
 /** tests that edge can be deleted by using SD MST argument */
 static
 SCIP_RETCODE testEdgeDeletedByMst1(
@@ -1864,11 +1958,14 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
-   SCIP_CALL( testGeneralStarDeletedEdge3(scip) );
+
+
+   SCIP_CALL( testEdgeDeletedByMultiRedCosts(scip) );
 
 
    SCIP_CALL( testGeneralStarDeletedEdge1(scip) );
    SCIP_CALL( testGeneralStarDeletedEdge2(scip) );
+   SCIP_CALL( testGeneralStarDeletedEdge3(scip) );
 
    SCIP_CALL( testEdgeDeletedByEqBottleneck2(scip) );
    SCIP_CALL( testEdgeDeletedByEqBottleneck(scip) );
