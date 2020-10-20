@@ -1417,7 +1417,7 @@ SCIP_RETCODE projectShift(
       else
       {
          if( i < nrows )
-            RatDiff(tmp, val, lpexact->rows[i]->constant);\
+            RatDiff(tmp, val, lpexact->rows[i]->constant);
          else
             RatSet(tmp, val);
          RatMult(tmp, dualsol[i], tmp);
