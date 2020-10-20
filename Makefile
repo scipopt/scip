@@ -85,7 +85,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		NOBUFMEM=$(NOBUFMEM)\\n\
 		OPT=$(OPT)\\n\
 		OSTYPE=$(OSTYPE)\\n\
-		PARASCIP=$(PARASCIP)\\n\
 		THREADSAFE=$(THREADSAFE)\\n\
 		PAPILO=$(PAPILO)\\n\
 		READLINE=$(READLINE)\\n\
@@ -442,6 +441,13 @@ PARASCIPDEP	:=	$(SRCDIR)/depend.parascip
 PARASCIPSRC	:=	$(shell cat $(PARASCIPDEP))
 
 THREADSAFEDEP	:=	$(SRCDIR)/depend.threadsafe
+# Gurobi and Mosek LPIs have to be made threadsafe
+ifeq ($(LPI),grb)
+	THREADSAFEDEP += $(SRCDIR)/nlpi/lpi_grb.c
+endif
+ifeq ($(LPI),msk)
+	THREADSAFEDEP += $(SRCDIR)/nlpi/lpi_msk.c
+endif
 THREADSAFESRC	:=	$(shell cat $(THREADSAFEDEP))
 
 ifeq ($(ZIMPL),true)
@@ -1203,7 +1209,11 @@ depend:
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
+<<<<<<< 287d85bb0e461d50d10d545edc31b7b5311f4bfd
 		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
+=======
+		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
+>>>>>>> make PARASCIP deprecated
 		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC)` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
@@ -1348,7 +1358,11 @@ else
 endif
 
 .PHONY: touchexternal
+<<<<<<< 287d85bb0e461d50d10d545edc31b7b5311f4bfd
 touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) $(PARASCIPDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
+=======
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(GAMSDEP) $(LPSCHECKDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
+>>>>>>> make PARASCIP deprecated
 ifeq ($(TOUCHLINKS),true)
 		@-touch $(ZLIBSRC)
 		@-touch $(GMPSRC)
@@ -1392,12 +1406,6 @@ ifneq ($(SYM),$(LAST_SYM))
 endif
 ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
 		@-touch $(LPSCHECKSRC)
-endif
-ifneq ($(PARASCIP),$(LAST_PARASCIP))
-		@-touch $(PARASCIPSRC)
-endif
-ifneq ($(PARASCIP),$(LAST_PARASCIP))
-		@-touch $(PARASCIPSRC)
 endif
 ifneq ($(THREADSAFE),$(LAST_THREADSAFE))
 		@-touch $(THREADSAFESRC)
@@ -1451,7 +1459,6 @@ endif
 		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
 		@echo "LAST_WORHP=$(WORHP)" >> $(LASTSETTINGS)
 		@echo "LAST_SYM=$(SYM)" >> $(LASTSETTINGS)
-		@echo "LAST_PARASCIP=$(PARASCIP)" >> $(LASTSETTINGS)
 		@echo "LAST_THREADSAFE=$(THREADSAFE)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 		@echo "LAST_USRFLAGS=$(USRFLAGS)" >> $(LASTSETTINGS)
@@ -1580,11 +1587,6 @@ ifneq ($(ZLIB),false)
 		$(error invalid ZLIB flag selected: ZLIB=$(ZLIB). Possible options are: true false)
 endif
 endif
-ifneq ($(PARASCIP),true)
-ifneq ($(PARASCIP),false)
-		$(error invalid PARASCIP flag selected: PARASCIP=$(PARASCIP). Possible options are: true false)
-endif
-endif
 ifneq ($(THREADSAFE),true)
 ifneq ($(THREADSAFE),false)
 		$(error invalid THREADSAFE flag selected: THREADSAFE=$(THREADSAFE). Possible options are: true false)
@@ -1656,7 +1658,7 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
 		@echo "  - SYM=<none|bliss>: To choose type of symmetry handling."
-		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP."
+		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
 		@echo "  - NOBUFMEM=<true|false>>: Turn off buffer memory or on (default)."

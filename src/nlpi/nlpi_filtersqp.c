@@ -30,7 +30,12 @@
 #include <sys/time.h>
 #endif
 
-#ifndef NPARASCIP
+/* fallback to non-thread version for windows, because pthread does not exist */
+#if defined(_MSC_VER)
+#undef SCIP_THREADSAFE
+#endif
+
+#ifdef SCIP_THREADSAFE
 #include <pthread.h>
 #endif
 
@@ -252,7 +257,7 @@ extern struct
 } F77_FUNC(scalec,SCALEC);
 /*lint -esym(754,phe) */
 
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
 static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -1914,7 +1919,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
     */
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
    pthread_mutex_lock(&filtersqpmutex);
 #endif
 
@@ -2038,7 +2043,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       assert(success);
    }
 
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
    pthread_mutex_unlock(&filtersqpmutex);
 #endif
 

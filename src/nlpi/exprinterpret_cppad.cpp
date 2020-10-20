@@ -70,7 +70,7 @@ using CppAD::SCIPInterval;
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
  */
 #ifndef CPPAD_MAX_NUM_THREADS
-#ifndef NPARASCIP
+#ifdef SCIP_THREADSAFE
 #define CPPAD_MAX_NUM_THREADS 64
 #else
 #define CPPAD_MAX_NUM_THREADS 1

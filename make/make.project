@@ -116,7 +116,7 @@ ifeq ($(DEBUGTOOL),auto)
    endif
 endif
 
-# Should SCIP be compiled for ParaSCIP?
+# for backward compability
 PARASCIP	=	false
 
 # Should the code be thread safe? Necessary for dbg-builds and cppad.
@@ -322,20 +322,18 @@ else
 endif
 
 #-----------------------------------------------------------------------------
-# PARASCIP/THREADSAFE
+# THREADSAFE
 #-----------------------------------------------------------------------------
 
-ifeq ($(PARASCIP),false)
-   FLAGS	+=	-DNPARASCIP
-else
+ifeq ($(PARASCIP),true)
    override THREADSAFE = true
-   ifeq ($(FILTERSQP),true)
-      LDFLAGS 	+=	-lpthread
-   endif
 endif
 
 ifeq ($(THREADSAFE),true)
-     FLAGS	+=	-DSCIP_THREADSAFE
+   FLAGS	+=	-DSCIP_THREADSAFE
+   ifeq ($(FILTERSQP),true)
+      LDFLAGS 	+=	-lpthread
+   endif
 endif
 
 #-----------------------------------------------------------------------------
