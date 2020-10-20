@@ -240,11 +240,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             RatSetReal(newbound, solval);
             RatRound(newbound, newbound, SCIP_ROUND_NEAREST);
 
-            //printf("solval = %f \n",solval );
-            //printf("fp = <%f>, exact = <%f> ---> %d \n", SCIPsetRound(scip->set, solval), RatApproxReal(newbound), RatIsApproxEqualReal(scip->set, newbound, SCIPsetRound(scip->set, solval)));
-
-            SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPsetRound(scip->set, solval)) );
-            SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPsetRound(scip->set, solval)) );
+            SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPround(scip, solval)) );
+            SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPround(scip, solval)) );
 
             SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], newbound) );
             SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], newbound) );
@@ -283,12 +280,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       SCIPsolSetHeur(exactsol, SCIPsolGetHeur(sol));
       SCIP_CALL( SCIPtrySolFreeExact(scip, &exactsol, FALSE, FALSE, FALSE, FALSE, TRUE, &foundsol) );
-
-      /* check solution for feasibility, and add it to solution store if possible
-       * neither integrality nor feasibility of LP rows has to be checked, because this is already
-       * done in the intshifting heuristic itself and due to the LP resolve
-       */
-      //SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
       if( foundsol )
       {

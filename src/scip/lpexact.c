@@ -7215,7 +7215,6 @@ SCIP_RETCODE lpExactRestoreSolVals(
       lpexact->solisbasic = storedsolvals->solisbasic;
 
       /* solution values are stored only for LPs solved without error */
-      //printf("%d       %d \n", lpexact->lpsolstat, lpexact->storedsolvals->lpsolstat);
       assert(lpexact->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||
          lpexact->lpsolstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY ||
          lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
@@ -7603,7 +7602,6 @@ SCIP_RETCODE SCIPlpExactEndDive(
          SCIP_CALL( SCIPcolExactChgObj(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetObjExact(var)) );
          SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetLbLocalExact(var)) );
          SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lpexact, SCIPvarGetUbLocalExact(var)) );
-         //printf("lb = %f, ub = %f of var %s \n", RatApproxReal(SCIPvarGetLbLocalExact(var)), RatApproxReal(SCIPvarGetUbLocalExact(var)), SCIPvarGetName(var));
       }
    }
 
