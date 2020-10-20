@@ -2149,7 +2149,7 @@ SCIP_RETCODE boundShift(
          fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
       }
       productcoldualval[j].inf = 0.0;
-      SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &productcoldualval[j], col->nlprows, lpcolvals, fpdualcolwise);
+      SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &productcoldualval[j], colexact->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
       for( i = colexact->nlprows; i < col->len; ++i )
@@ -2196,7 +2196,7 @@ SCIP_RETCODE boundShift(
          fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
       }
       productcoldualval[j].sup = 0.0;
-      SCIPintervalScalprodScalarsSup(SCIPsetInfinity(set), &productcoldualval[j], col->nlprows, lpcolvals, fpdualcolwise);
+      SCIPintervalScalprodScalarsSup(SCIPsetInfinity(set), &productcoldualval[j], colexact->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
       for( i = col->nlprows; i < col->len; ++i )
