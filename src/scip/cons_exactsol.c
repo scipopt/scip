@@ -276,8 +276,11 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_SOL* exactsol;
       SCIP_Bool foundsol;
 
+      /** @todo exip: replace these 2 methods with proper wrapped ones from scip_sol.h */
       SCIP_CALL( SCIPsolCreateLPSolExact(&exactsol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
           scip->tree, scip->lpexact, NULL) );
+      SCIP_CALL( SCIPsolOverwriteFPSolWithExact(exactsol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
+
       SCIPsolSetHeur(exactsol, SCIPsolGetHeur(sol));
       SCIP_CALL( SCIPtrySolFreeExact(scip, &exactsol, FALSE, FALSE, FALSE, FALSE, TRUE, &foundsol) );
 
