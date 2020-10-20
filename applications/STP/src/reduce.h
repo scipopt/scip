@@ -295,7 +295,7 @@ extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
 extern void            reduce_impliedNodesGet(SCIP*, const GRAPH*, STP_Vectype(int)*);
 extern void            reduce_impliedNodesRepair(SCIP*, const GRAPH*, int, int, STP_Vectype(int)*);
 extern SCIP_Bool       reduce_impliedNodesIsValid(const GRAPH*, const STP_Vectype(int)*);
-extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const REDCOST*, const SCIP_Bool*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_applyPseudoDeletions(SCIP*, const SCIP_Bool*, REDCOST*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_blctreeInit(SCIP*, GRAPH*, BLCTREE**);
 extern void            reduce_blctreeFree(SCIP*, BLCTREE**);
 extern int             reduce_blctreeGetMstNedges(const BLCTREE*);

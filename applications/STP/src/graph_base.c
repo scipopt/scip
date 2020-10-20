@@ -791,7 +791,7 @@ static
 SCIP_RETCODE delPseudoInit(
    SCIP*                 scip,               /**< SCIP data */
    const SCIP_Real*      edgecosts,          /**< edge costs for cutoff */
-   const SCIP_Real*      edgecosts_adapt,    /**< edge costs that should be adapted */
+   const REDCOST*        redcostdata,        /**< reduced cost data for adaptation or NULL */
    int                   vertex,             /**< the vertex */
    GRAPH*                g,                  /**< graph */
    DELPSEUDO*            delpseudo           /**< data */
@@ -806,6 +806,7 @@ SCIP_RETCODE delPseudoInit(
    int* RESTRICT adjvert;
    int* RESTRICT neigbedge;
    int edgecount = 0;
+   const int redcost_nlevels = redcostdata ? redcosts_getNlevels(redcostdata) : -1;
 
    if( Is_term(g->term[vertex]) )
    {
@@ -840,10 +841,10 @@ SCIP_RETCODE delPseudoInit(
       }
    }
 
-   if( edgecosts_adapt )
+   if( redcostdata )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecostadapt), STP_DELPSEUDO_MAXGRAD) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecostadaptrev), STP_DELPSEUDO_MAXGRAD) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(ecostadapt), redcost_nlevels * STP_DELPSEUDO_MAXGRAD) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(ecostadaptrev), redcost_nlevels * STP_DELPSEUDO_MAXGRAD) );
    }
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(ecost), STP_DELPSEUDO_MAXGRAD) );
@@ -859,10 +860,15 @@ SCIP_RETCODE delPseudoInit(
       const int e_rev = flipedge(e);
       assert(e >= 0);
 
-      if( edgecosts_adapt )
+      if( redcostdata )
       {
-         ecostadapt[edgecount] = edgecosts_adapt[e];
-         ecostadaptrev[edgecount] = edgecosts_adapt[e_rev];
+         for( int i = 0; i < redcost_nlevels; i++ )
+         {
+            const SCIP_Real* const redcosts = redcosts_getEdgeCosts(redcostdata, i);
+            const int position = i * STP_DELPSEUDO_MAXGRAD + edgecount;
+            ecostadapt[position] = redcosts[e];
+            ecostadaptrev[position] = redcosts[e_rev];
+         }
       }
 
       incedge[edgecount] = e;
@@ -977,7 +983,7 @@ SCIP_RETCODE delPseudoDeleteVertex(
    SCIP*                 scip,               /**< SCIP data */
    int                   vertex,             /**< the vertex */
    GRAPH*                g,                  /**< graph */
-   SCIP_Real*            edgecosts_adapt,    /**< edge costs that should be adapted */
+   REDCOST*              redcostdata,        /**< reduced cost data for adaptation or NULL */
    DELPSEUDO*            delpseudo           /**< data */
 )
 {
@@ -1031,15 +1037,23 @@ SCIP_RETCODE delPseudoDeleteVertex(
             /* has a new edge been inserted (or the existing one been updated)? */
             if( newijedge >= 0 )
             {
+
                assert(g->tail[newijedge] == adjvert[i]);
                assert(g->head[newijedge] == adjvert[j]);
 
-               if( edgecosts_adapt)
+               if( redcostdata)
                {
+                  const int redcost_nlevels = redcosts_getNlevels(redcostdata);
                   assert(ecost_adapt && ecost_adaptrev);
-                  edgecosts_adapt[newijedge] = ecost_adaptrev[i] + ecost_adapt[j];
-                  edgecosts_adapt[flipedge(newijedge)] =  ecost_adaptrev[j] + ecost_adapt[i];
 
+                  for( int level = 0; level < redcost_nlevels; level++ )
+                  {
+                     SCIP_Real* const redcosts = redcosts_getEdgeCosts(redcostdata, level);
+                     const int offset = level * STP_DELPSEUDO_MAXGRAD;
+
+                     redcosts[newijedge] = ecost_adaptrev[offset + i] + ecost_adapt[offset + j];
+                     redcosts[flipedge(newijedge)] =  ecost_adaptrev[offset + j] + ecost_adapt[offset + i];
+                  }
                //    graph_edge_printInfo(g, newijedge);
                //   printf("...with costs %f, %f \n", edgecosts_adapt[newijedge],  edgecosts_adapt[flipedge(newijedge)] );
                }
@@ -1278,7 +1292,10 @@ SCIP_RETCODE delPseudoEdgeInit(
    const int head = g->head[edge];
    assert(delPseudoIsEdgeDeletionMode(delpseudo));
 
-   SCIP_CALL( delPseudoInit(scip, edgecosts, edgecosts_adapt, head, g, delpseudo) );
+   /* would need to change for REDCOST */
+   assert(!edgecosts_adapt && "currently not supported!");
+
+   SCIP_CALL( delPseudoInit(scip, edgecosts, NULL, head, g, delpseudo) );
 
    return SCIP_OKAY;
 }
@@ -1513,8 +1530,8 @@ void delPseudoFreeData(
    if( delpseudo->ecost_adapt )
    {
       assert(delpseudo->ecost_adaptrev);
-      SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecost_adaptrev), STP_DELPSEUDO_MAXGRAD);
-      SCIPfreeBlockMemoryArray(scip, &(delpseudo->ecost_adapt), STP_DELPSEUDO_MAXGRAD);
+      SCIPfreeBufferArray(scip, &(delpseudo->ecost_adaptrev) );
+      SCIPfreeBufferArray(scip, &(delpseudo->ecost_adapt) );
    }
 }
 
@@ -2126,7 +2143,7 @@ SCIP_RETCODE graph_knot_delPseudo(
    const SCIP_Real*      cutoffs,            /**< cutoff values for each incident edge (or NULL) */
    const SCIP_Real*      cutoffsrev,         /**< reverse edge cutoff values (or NULL if undirected or non-existent) */
    int                   vertex,             /**< the vertex */
-   SCIP_Real*            edgecosts_adapt,    /**< costs to adapt or NULL */
+   REDCOST*              redcostdata,        /**< reduced cost data for adaptation or NULL */
    SCIP_Bool*            success             /**< has node been pseudo-eliminated? */
    )
 {
@@ -2151,13 +2168,13 @@ SCIP_RETCODE graph_knot_delPseudo(
    if( g->grad[vertex] <= 1 )
       return SCIP_OKAY;
 
-   SCIP_CALL( delPseudoInit(scip, cutoffcosts, edgecosts_adapt, vertex, g, &delpseudo) );
+   SCIP_CALL( delPseudoInit(scip, cutoffcosts, redcostdata, vertex, g, &delpseudo) );
    SCIP_CALL( delPseudoGetReplaceEdges(scip, g, cutoffs, cutoffsrev, &delpseudo, success) );
 
    /* enough spare edges? */
    if( (*success) )
    {
-      SCIP_CALL( delPseudoDeleteVertex(scip, vertex, g, edgecosts_adapt, &delpseudo) );
+      SCIP_CALL( delPseudoDeleteVertex(scip, vertex, g, redcostdata, &delpseudo) );
    }
 
    delPseudoFreeData(scip, &delpseudo);

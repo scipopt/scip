@@ -26,6 +26,7 @@
 
 //#define SCIP_DEBUG
 #include "redcosts.h"
+#include "graph.h"
 #include "portab.h"
 
 

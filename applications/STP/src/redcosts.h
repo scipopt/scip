@@ -28,7 +28,7 @@
 #define APPLICATIONS_STP_SRC_REDCOSTS_H_
 
 #include "scip/scip.h"
-#include "graph.h"
+#include "graphdefs.h"
 
 #ifdef __cplusplus
 extern "C" {

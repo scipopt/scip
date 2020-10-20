@@ -2218,7 +2218,7 @@ SCIP_RETCODE dapathsDeleteEdges(
 static
 SCIP_RETCODE dapathsReplaceNodes(
    SCIP*                 scip,               /**< SCIP data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data */
+   REDCOST*              redcostdata,        /**< reduced cost data */
    const int*            result,             /**< solution */
    SCIP_Real             objbound_upper,     /**< objective */
    GRAPH*                g,                  /**< graph data structure */
@@ -2235,7 +2235,7 @@ SCIP_RETCODE dapathsReplaceNodes(
 
    SCIP_CALL( updateNodeReplaceBounds(scip, redcostdata, g, nodereplacebounds, objbound_upper, TRUE, FALSE));
    markPseudoDeletablesFromBounds(scip, g, nodereplacebounds, objbound_upper, pseudoDelNodes);
-   SCIP_CALL( reduce_applyPseudoDeletions(scip, redcostdata, pseudoDelNodes, g, offsetp, &nreplacings) );
+   SCIP_CALL( reduce_applyPseudoDeletions(scip, pseudoDelNodes, redcostdata, g, offsetp, &nreplacings) );
 
    SCIPfreeBufferArray(scip, &pseudoDelNodes);
    SCIPfreeBufferArray(scip, &nodereplacebounds);
@@ -2564,7 +2564,7 @@ SCIP_RETCODE reduce_da(
          }
          else
          {
-            SCIP_CALL( reduce_applyPseudoDeletions(scip, redcostdata, pseudoDelNodes, graph, offsetp, &nreplacings) );
+            SCIP_CALL( reduce_applyPseudoDeletions(scip, pseudoDelNodes, redcostdata, graph, offsetp, &nreplacings) );
          }
          *nelims += nreplacings;
 

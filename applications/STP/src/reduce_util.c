@@ -1041,8 +1041,8 @@ SCIP_Bool reduce_impliedNodesIsValid(
 /** apply pseudo eliminations provided */
 SCIP_RETCODE reduce_applyPseudoDeletions(
    SCIP*                 scip,               /**< SCIP data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data */
    const SCIP_Bool*      pseudoDelNodes,     /**< node with pseudo deletable nodes */
+   REDCOST*              redcostdata,        /**< reduced cost data */
    GRAPH*                graph,              /**< graph data structure */
    SCIP_Real*            offsetp,            /**< offset pointer (for PC) */
    int*                  nelims              /**< number of eliminations */
@@ -1148,7 +1148,7 @@ SCIP_RETCODE reduce_applyPseudoDeletions(
 #endif
 
          /* now try to eliminate */
-         SCIP_CALL( graph_knot_delPseudo(scip, graph, redcost, cutoffs, cutoffsrev, k, redcost, &success) );
+         SCIP_CALL( graph_knot_delPseudo(scip, graph, redcost, cutoffs, cutoffsrev, k, redcostdata, &success) );
 
          if( success )
          {

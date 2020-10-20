@@ -1115,13 +1115,12 @@ SCIP_RETCODE pseudodeleteDeleteNode(
 {
    const SCIP_Real* cutoffs = extpseudo->cutoffs;
    int* const nodestouches = extpseudo->nodestouches;
-   SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
    SCIP_Real prize = -1.0;
    SCIP_Bool rpc3term = FALSE;
    SCIP_Bool success;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
 
-   assert(redcost);
+   assert(redcostdata);
    assert(node == extpseudo->node);
 
    if( !extpseudo->cutoffIsComputed )
@@ -1139,7 +1138,7 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       nodestouches[graph->head[e]]++;
 
    /* now try to eliminate... */
-   SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, node, redcost, &success) );
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, node, redcostdata, &success) );
 
    if( success )
    {
