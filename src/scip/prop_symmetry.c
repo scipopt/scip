@@ -7363,7 +7363,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/usedynamicprop",
-         "maximum number of constraints up to which subgroup structures are detected",
+         "whether dynamic propagation should be used for full orbitopes",
          &propdata->usedynamicprop, TRUE, DEFAULT_USEDYNAMICPROP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
