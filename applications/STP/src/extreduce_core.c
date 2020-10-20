@@ -487,13 +487,13 @@ void extTreeStackTopAdd(
    int* const pseudoancestor_mark = reddata->pseudoancestor_mark;
    const int stackpos = extStackGetPosition(extdata);
    int conflictIteration = -1;
-   SCIP_Bool noReversedRedCostTree = extreduce_redcostReverseTreeRuledOut(graph, extdata);
 
    assert(!(*conflict));
    assert(stackpos >= 0);
    assert(extstack_start[stackpos + 1] - extstack_start[stackpos] > 0);
    assert(extdata->extstack_state[stackpos] == EXT_STATE_EXPANDED);
 
+   extreduce_redcostInitExpansion(graph, extdata);
    extTreeStackTopRootRemove(graph, extdata);
 
    /* add top expanded component to tree data */
@@ -504,7 +504,7 @@ void extTreeStackTopAdd(
       assert(extdata->tree_nedges < extdata->extstack_maxsize);
       assert(edge >= 0 && edge < graph->edges);
 
-      extreduce_redcostAddEdge(graph, edge, reddata, &noReversedRedCostTree, extdata);
+      extreduce_redcostAddEdge(graph, edge, reddata, extdata);
       extTreeAddEdge(graph, edge, extdata);
 
       /* no conflict found yet? */
@@ -1572,13 +1572,17 @@ void extPreprocessInitialComponent(
    EXTDATA*              extdata             /**< extension data */
 )
 {
+   SCIP_Real* redcost_treenodeswap = extdata->reddata->redcost_treenodeswaps;
    const int ncompedges = extcomp->ncompedges;
    const int comproot = extcomp->comproot;
    const SCIP_Bool compIsEdge = (ncompedges == 1);
    const SCIP_Bool compIsGenStar = extInitialCompIsGenStar(extdata);
+   const int redcost_nlevels = extdata->reddata->redcost_nlevels;
+   const int nnodes = graph->knots;
 
    assert(ncompedges >= 1 && ncompedges < STP_EXT_MAXGRAD);
    assert(comproot >= 0 && comproot < graph->knots);
+   assert(redcost_nlevels >= 1);
 
    if( compIsEdge )
       extPreprocessInitialEdge(scip, graph, extcomp, extdata);
@@ -1597,8 +1601,10 @@ void extPreprocessInitialComponent(
    extdata->extstack_start[0] = 0;
    extdata->extstack_start[1] = ncompedges;
    extdata->tree_parentNode[comproot] = -1;
-   extdata->tree_redcostSwap[comproot] = 0.0;
    extdata->tree_parentEdgeCost[comproot] = -1.0;
+
+   for( int i = 0; i < redcost_nlevels; i++ )
+      redcost_treenodeswap[comproot + i * nnodes] = 0.0;
 
    if( compIsGenStar )
    {
@@ -1815,6 +1821,7 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_Real* redcost_treenodeswaps;
    SCIP_Real* redcost_treecosts;
    int* pseudoancestor_mark = NULL;
+   SCIP_Bool* redcost_noReversedTree;
    SCIP_Bool* sdeq_edgesIsForbidden;
    const int nnodes = graph->knots;
    const int redcosts_nlevels = redcosts_getLevel(redcostdata) + 1;
@@ -1835,6 +1842,7 @@ SCIP_RETCODE extreduce_checkComponent(
    SCIP_CALL( SCIPallocBufferArray(scip, &tree_parentEdgeCost, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcost_treenodeswaps, nnodes * redcosts_nlevels) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcost_treecosts, redcosts_nlevels) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost_noReversedTree, redcosts_nlevels) );
 
    if( graph_pc_isPc(graph) )
    {
@@ -1858,13 +1866,13 @@ SCIP_RETCODE extreduce_checkComponent(
          .edgedeleted = extpermanent->edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,
          .nodes_implications = extpermanent->nodes_implications,
          .redcost_treenodeswaps = redcost_treenodeswaps, .redcost_treecosts = redcost_treecosts,
+         .redcost_noReversedTree = redcost_noReversedTree,
          .redcost_nlevels = redcosts_nlevels, .redcost_allowEquality = extpermanent->redcostEqualAllow };
       EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
          .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
          .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
          .tree_bottleneckDistNode = extpermanent->bottleneckDistNode, .tree_parentNode = tree_parentNode,
-         .tree_parentEdgeCost = tree_parentEdgeCost, .tree_redcostSwap = redcost_treenodeswaps,
-         .tree_cost = 0.0, .ncostupdatestalls = 0,
+         .tree_parentEdgeCost = tree_parentEdgeCost, .tree_cost = 0.0, .ncostupdatestalls = 0,
          .tree_nDelUpArcs = 0, .tree_root = -1, .tree_starcenter = -1, .tree_nedges = 0, .tree_depth = 0,
          .extstack_maxsize = maxstacksize, .extstack_maxncomponents = maxncomponents,
          .pcdata = &pcdata, .redcostdata = redcostdata,
@@ -1904,6 +1912,7 @@ SCIP_RETCODE extreduce_checkComponent(
 
    SCIPfreeBufferArrayNull(scip, &pcSdCands);
 
+   SCIPfreeBufferArray(scip, &redcost_noReversedTree);
    SCIPfreeBufferArray(scip, &redcost_treecosts);
    SCIPfreeBufferArray(scip, &redcost_treenodeswaps);
    SCIPfreeBufferArray(scip, &tree_parentEdgeCost);

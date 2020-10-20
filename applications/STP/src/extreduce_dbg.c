@@ -894,7 +894,8 @@ void extreduce_extdataCleanArraysDbg(
    int* const tree_innerNodes = extdata->tree_innerNodes;
    int* const tree_parentNode = extdata->tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost = extdata->tree_parentEdgeCost;
-   SCIP_Real* const tree_redcostSwap = extdata->tree_redcostSwap;
+   SCIP_Real* const redcost_treenodeswaps = extdata->reddata->redcost_treenodeswaps;
+   const int redcost_nlevels = extdata->reddata->redcost_nlevels;
 
    for( int i = 0; i < maxstacksize; ++i )
    {
@@ -925,7 +926,11 @@ void extreduce_extdataCleanArraysDbg(
    for( int i = 0; i < nnodes; ++i )
    {
       tree_parentEdgeCost[i] = -FARAWAY;
-      tree_redcostSwap[i] = -FARAWAY;
+   }
+
+   for( int i = 0; i < nnodes * redcost_nlevels; i++ )
+   {
+      redcost_treenodeswaps[i] = -FARAWAY;
    }
 }
 

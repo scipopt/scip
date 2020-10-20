@@ -119,6 +119,7 @@ typedef struct reduction_data
    int* const pseudoancestor_mark;
    STP_Vectype(int)* nodes_implications;
    SCIP_Real* const redcost_treecosts; /* for each level */
+   SCIP_Bool* const redcost_noReversedTree; /* for each level */
    SCIP_Real* const redcost_treenodeswaps; /* for each level and each node */
    const int redcost_nlevels;
    const SCIP_Bool redcost_allowEquality;
@@ -150,7 +151,6 @@ typedef struct extension_data
    SCIP_Real* const tree_bottleneckDistNode;    /**< needs to be set to -1.0 (for all nodes) */
    int* const tree_parentNode;
    SCIP_Real* const tree_parentEdgeCost;        /**< of size nnodes */
-   SCIP_Real* const tree_redcostSwap;           /**< of size nnodes */
    const SCIP_Bool* const node_isterm;          /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;

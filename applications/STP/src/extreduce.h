@@ -123,10 +123,10 @@ extern SCIP_Bool  extreduce_mstRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_recosts.c
  */
-extern void            extreduce_redcostAddEdge(const GRAPH*, int, const REDDATA*, SCIP_Bool*, EXTDATA*);
+extern void            extreduce_redcostAddEdge(const GRAPH*, int, REDDATA*, EXTDATA*);
 extern void            extreduce_redcostRemoveEdge(int, const REDDATA*, EXTDATA*);
 extern void            extreduce_redcostTreeRecompute(SCIP*, const GRAPH*, EXTDATA*);
-extern SCIP_Bool       extreduce_redcostReverseTreeRuledOut(const GRAPH*, const EXTDATA*);
+extern void            extreduce_redcostInitExpansion(const GRAPH*, EXTDATA*);
 extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
 
 

@@ -414,7 +414,7 @@ SCIP_RETCODE testEdgeDeletion4_deprecated(
 static
 SCIP_RETCODE testEdgeDeletion3_deprecated(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   variant             /**< 1,2,3,4,5 */
+   int                   variant             /**< 1,2,3,4 */
 )
 {
    GRAPH* graph;
@@ -513,19 +513,6 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
 
       SCIP_CALL(extCheckArc(scip, graph, redcostdata, edgedeleted, edge, edgedelete, nnodes, &deletable, TRUE));
       assert(!deletable);
-   }
-   else
-   {
-      const int edgedelete = graph->edges;
-
-      graph_edge_addBi(scip, graph, 7, 0, 0.1);
-      assert(graph->tail[edgedelete] == 7 && graph->head[edgedelete] == 0);
-
-      SCIP_CALL( graph_init_history(scip, graph) );
-      SCIP_CALL( graph_path_init(scip, graph) );
-
-      SCIP_CALL(extCheckArc(scip, graph, redcostdata, edgedeleted, edge, edgedelete, nnodes, &deletable, TRUE));
-      assert(deletable);
    }
 
    stptest_extreduceTearDown(scip, graph, &redcostdata);
@@ -1917,7 +1904,6 @@ SCIP_RETCODE stptest_extreduce(
    SCIP_CALL( testEdgeDeletion3_deprecated(scip, 2) );
    SCIP_CALL( testEdgeDeletion3_deprecated(scip, 3) );
    SCIP_CALL( testEdgeDeletion3_deprecated(scip, 4) );
-   SCIP_CALL( testEdgeDeletion3_deprecated(scip, 5) );
    SCIP_CALL( testEdgeDeletion2_deprecated(scip, 1) );
    SCIP_CALL( testEdgeDeletion1_deprecated(scip) );
 
