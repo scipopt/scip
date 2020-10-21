@@ -565,7 +565,7 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
    SCIP_CALL( SCIPallocBufferArray(scip, &nrelated_vars, SCIPgetNVars(scip)) );
 
    /* create separator data - this will also detect the products */
-   SCIP_CALL( createRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
+   SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
       nrelated_vars, &nvars_in_2rels, row_list) );
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
