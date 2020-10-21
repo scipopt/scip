@@ -112,10 +112,10 @@ Test(hess, hessian1, .init = setup, .fini = teardown)
    expr = SCIPgetExprConsExpr(scip, cons);
    SCIP_CALL( SCIPcomputeConsExprHessianDir(scip, conshdlr, cons, sol, dir, 0) );
 
-   expected = 2.0 + COS(xv * xv * yv) * (2 * xv + 2 * yv) - SIN(xv * xv * yv) * (4 * xv * xv * yv * yv + 2 * xv * xv * xv * yv);
+   expected = 2.0 + cos(xv * xv * yv) * (2 * xv + 2 * yv) - sin(xv * xv * yv) * (4 * xv * xv * yv * yv + 2 * xv * xv * xv * yv);
    EXPECTFEQ(SCIPgetConsExprExprPartialDiffGradientDir(scip, conshdlr, expr, tx), expected);
 
-   expected =  2 * xv * COS(xv * xv * yv) - SIN(xv * xv * yv) * ( xv * xv * xv * xv + 2 * xv * xv * xv * yv);
+   expected =  2 * xv * cos(xv * xv * yv) - sin(xv * xv * yv) * ( xv * xv * xv * xv + 2 * xv * xv * xv * yv);
    EXPECTFEQ(SCIPgetConsExprExprPartialDiffGradientDir(scip, conshdlr, expr, ty), expected);
 
 
