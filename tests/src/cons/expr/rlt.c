@@ -248,11 +248,11 @@ Test(rlt, separation)
     */
    SCIP_CALL( isAcceptableRow(sepadata, row1, x, &currentnunknown, &result) );
    cr_expect(result);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
-         TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
+         TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, bestunder, bestover, x, &success, TRUE, FALSE,
-         TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, FALSE,
+         TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
    cr_assert(cutlhs != NULL);
    cr_assert(cutrhs != NULL);
@@ -272,11 +272,11 @@ Test(rlt, separation)
    /*
     * cut for row1 and (2-x)
     */
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, bestunder, bestover, x, &success, FALSE,
-         TRUE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
+         TRUE, TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, bestunder, bestover, x, &success, FALSE,
-         FALSE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
+         FALSE, TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
    cr_assert(cutlhs != NULL);
    cr_assert(cutrhs != NULL);

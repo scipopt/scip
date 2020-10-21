@@ -15926,9 +15926,9 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
    SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
-   SCIP_Real             coefaux,            /**< coefficient of the auxiliary variable in the auxiliary expression */
    SCIP_Real             coefx,              /**< coefficient of x in the auxiliary expression */
    SCIP_Real             coefy,              /**< coefficient of y in the auxiliary expression */
+   SCIP_Real             coefaux,            /**< coefficient of the auxiliary variable in the auxiliary expression */
    SCIP_Real             cst,                /**< constant of the auxiliary expression */
    SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    )

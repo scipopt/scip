@@ -249,7 +249,7 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    /* check results */
 
    /* the projected cut should be: -72 <= x3 <= -57 */
-   cr_assert_eq(projrows[0].nNonz, 1, "\nExpected 1 non-zero in the projected row, got %d", projrows[0].nNonz);
+   cr_assert_eq(projrows[0].nnonz, 1, "\nExpected 1 non-zero in the projected row, got %d", projrows[0].nnonz);
    cr_assert_eq(projrows[0].coefs[0], 1.0, "\nExpected coef 0 in projected row 0 to be 1.0, got %f", projrows[0].coefs[0]);
    cr_assert_eq(projrows[0].vars[0], x3, "\nExpected var 0 in projected row 0 to be x3, got %s", SCIPvarGetName(projrows[0].vars[0]));
    cr_assert_eq(projrows[0].cst, 0.0, "\nExpected the const in projected row to be 0.0, got %f", projrows[0].cst);
@@ -270,19 +270,26 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIP_SOL* sol;
    SCIP_VAR** vars;
    SCIP_Real* vals;
-   RLT_SIMPLEROW* projrows;
+   RLT_SIMPLEROW projrow;
    SCIP_SEPADATA* sepadata;
    SCIP_ROW* cut;
+   SCIP_ROW* row;
    SCIP_Bool success;
    SCIP_Real cut_val;
+
+   /* create row: -10 <= x1 + 2x2 - x3 <= 20 */
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, "test_row", -10.0, 20.0, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, x1, 1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, x2, 2.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, row, x3, -1.0) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
 
-   /* specify solution (only x3 is not at bound) */
+   /* specify solution (none of the variables is at bound) */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    vars[0] = x1; vals[0] = 0.0;
-   vars[1] = x2; vals[1] = -1.0;
+   vars[1] = x2; vals[1] = -5.0;
    vars[2] = x3; vals[2] = 2.0;
    SCIP_CALL( SCIPsetSolVals(scip, sol, 3, vars, vals) );
 
@@ -293,33 +300,21 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    sepadata->maxusedvars = 4;
 
    /* create projected LP with row -10 <= x1 + 2x2 - x3 <= 20 */
-   SCIP_CALL( SCIPallocBufferArray(scip, &projrows, 1) );
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &(projrows[0].coefs), 3) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(projrows[0].vars), 3) );
-
-   projrows[0].nNonz = 3;
-   projrows[0].coefs[0] = 1.0;
-   projrows[0].coefs[1] = 2.0;
-   projrows[0].coefs[2] = -1.0;
-   projrows[0].vars[0] = x1;
-   projrows[0].vars[1] = x2;
-   projrows[0].vars[2] = x3;
-   projrows[0].cst = 0.0;
-   projrows[0].lhs = -10.0;
-   projrows[0].rhs = 20.0;
+   SCIP_CALL( createProjRow(scip, &(projrow), row, sol, FALSE) );
 
    /* compute a cut with x1, lb and lhs */
-   SCIP_CALL( computeProjRltCut(scip, sepa, sepadata, &cut, projrows, 0, sol, NULL, NULL, x1, &success, TRUE, TRUE,
-         FALSE, FALSE) );
+   SCIP_CALL( computeRltCut(scip, sepa, sepadata, &cut, NULL, &projrow, sol, NULL, NULL, x1, &success, TRUE, TRUE,
+         FALSE, FALSE, TRUE) );
+   assert(success);
 
    /* the cut should be -8 <= 8x1 */
    cut_val = 8.0;
    checkCut(cut, &x1, &cut_val, 1, -8.0, SCIPinfinity(scip));
 
    /* free memory */
+   SCIP_CALL( SCIPreleaseRow(scip, &row) );
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
-   freeProjRows(scip, &projrows, 1);
+   freeProjRow(scip, &projrow);
    SCIPfreeBuffer(scip, &sepadata);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIPfreeBufferArray(scip, &vals);
@@ -375,8 +370,9 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    SCIP_CALL( SCIPaddClique(scip, clique_vars, clique_vals, 2, FALSE, &infeasible, &nbdchgs) );
 
    /* compute a cut with b1, lb and lhs */
-   SCIP_CALL( computeRltCuts(scip, sepa, sepadata, &cut, rows[0], sol, NULL, NULL, b1, &success, TRUE, TRUE, FALSE,
-         FALSE) );
+   SCIP_CALL( computeRltCut(scip, sepa, sepadata, &cut, rows[0], NULL, sol, NULL, NULL, b1, &success, TRUE, TRUE,
+         FALSE, FALSE, FALSE) );
+   assert(success);
 
    /* the cut should be 1 <= 11b1 + b2 */
    cut_vars = (SCIP_VAR*[4]) {b2, b1};
