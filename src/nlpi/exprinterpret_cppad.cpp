@@ -49,6 +49,11 @@ using std::vector;
  */
 /* #define NO_CPPAD_USER_ATOMIC */
 
+/* fallback to non-thread-safe version if C++ is too old to have std::atomic */
+#if __cplusplus < 201103L && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
 /** sign of a value (-1 or +1)
  * 
  * 0.0 has sign +1
