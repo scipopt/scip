@@ -1347,10 +1347,17 @@ SCIP_RETCODE SCIPlpiCreate(
    /* Try to reuse Gurobi environment (either thread local or not being thread safe). */
    if ( reusegrbenv == NULL )
    {
+      int restat;
+
       assert( numlp == 0 );
 
       /* create evironment */
-      CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&reusegrbenv, NULL) );
+      restat = GRBloadenv(&reusegrbenv, NULL);
+      if ( restat != 0 )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the enivornment.\n", restat);
+         return SCIP_LPERROR;
+      }
 
       /* turn off output for all models */
       CHECK_ZERO_STAR( messagehdlr, GRBsetintparam(reusegrbenv, GRB_INT_PAR_OUTPUTFLAG, 0) );
