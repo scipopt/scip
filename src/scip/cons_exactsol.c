@@ -168,9 +168,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( !SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
-   /** if we're already in exact diving mode, we already computed an exact solution with this constraint handler and
-     * are checking if it's actually feasible
-     */
+   /* if we're already in exact diving mode, we already computed an exact solution with this constraint handler and
+    * are checking if it's actually feasible */
    if( SCIPlpExactDiving(scip->lpexact) )
       return SCIP_OKAY;
 
