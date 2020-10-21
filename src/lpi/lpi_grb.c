@@ -1347,7 +1347,8 @@ SCIP_RETCODE SCIPlpiCreate(
       assert( numlp == 0 );
 
       /* temporarily set environment for error messages */
-      (*lpi)->grbenv = reusegrbenv;
+      /* no environment yet */
+      (*lpi)->grbenv = NULL;
 
       /* create evironment */
       CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&reusegrbenv, NULL) );
