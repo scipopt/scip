@@ -389,7 +389,7 @@ SCIP_RETCODE solUnlinkVarExact(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
    /* if variable is already valid, nothing has to be done */
-   if( SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
+   if( SCIPboolarrayGetVal(sol->valsexact->valid, SCIPvarGetIndex(var)) )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
