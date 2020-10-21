@@ -11770,7 +11770,7 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrDiff(
    SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff)),  /**< forward derivative evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))/**< backward-forward derivative evaluation callback (can be NULL) */
 )
-{
+{  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->bwdiff = bwdiff;
