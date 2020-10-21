@@ -119,7 +119,7 @@ endif
 # for backward compability
 PARASCIP	=	false
 
-# Should the code be thread safe? Necessary for dbg-builds and cppad.
+# Should the code be thread safe?
 THREADSAFE	=	true
 
 # enable debug-solution mechanism
