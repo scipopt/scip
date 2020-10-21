@@ -514,6 +514,10 @@ SCIP_RETCODE SCIPendExactDive(
       return SCIP_INVALIDCALL;
    }
 
+   /** @todo exip: adress problem when user calls `SCIPendDive` in between */
+   /* end floating-point LP dive, see comment in SCIPstartExactDive() */
+   SCIP_CALL( SCIPendDive(scip) );
+
    /* unmark the diving flag in the exact LP and reset all variables' objective and bound values */
    SCIP_CALL( SCIPlpExactEndDive(scip->lpexact, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue, scip->eventfilter,
          scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
@@ -525,10 +529,6 @@ SCIP_RETCODE SCIPendExactDive(
    /* we have to set the exact diving flag temporarilly to TRUE since SCIPendDive() needs to know that this happend
     * in exact diving mode */
    scip->lpexact->diving = TRUE;
-
-   /** @todo exip: adress problem when user calls `SCIPendDive` in between */
-   /* end floating-point LP dive, see comment in SCIPstartExactDive() */
-   SCIP_CALL( SCIPendDive(scip) );
 
    scip->lpexact->diving = FALSE;
 
