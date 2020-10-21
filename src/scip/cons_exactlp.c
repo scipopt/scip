@@ -7143,25 +7143,22 @@ SCIP_RETCODE checkCons(
       consdataComputeSolActivityWithErrorbound(scip, consdata, sol, &activityfp, &mu);
       if( activityfp - mu > consdata->rhsreal || activityfp + mu < consdata->lhsreal )
       {
-         SCIP_Real absviolfp = MAX(activityfp - consdata->rhsreal, consdata->lhsreal - activityfp);
-         if( !SCIPisFeasPositive(scip, absviolfp) )
-         {
-            SCIPinfoMessage(scip, NULL, "New: discarding solution: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
-               activityfp, consdata->lhsreal, consdata->rhsreal, mu);
-            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-            SCIPinfoMessage(scip, NULL, "\n");
-         }
+         SCIPdebugMsg(scip, "discarding solution due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
          *violated = TRUE;
          return SCIP_OKAY;
       }
       else if( activityfp + mu < consdata->rhsreal && activityfp - mu >= consdata->lhsreal )
       {
-         SCIPinfoMessage(scip, NULL, "New: skipping exact check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+         SCIPdebugMsg(scip, "skipping exact check due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
             activityfp, consdata->lhsreal, consdata->rhsreal, mu);
-         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
          *violated = FALSE;
          return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "no decision due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
       }
    }
 
