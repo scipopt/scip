@@ -860,12 +860,28 @@ SCIP_RETCODE SCIPvarChgLbDive(
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
+/** changes lower bound of variable in current exact dive */
+SCIP_RETCODE SCIPvarChgLbExactDive(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   );
+
 /** changes upper bound of variable in current dive; if possible, adjusts bound to integral value */
 SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             newbound            /**< new bound for variable */
+   );
+
+/** changes upper bound of variable in current exact dive */
+SCIP_RETCODE SCIPvarChgUbExactDive(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        newbound            /**< new bound for variable */
    );
 
 /** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all aggregation variables

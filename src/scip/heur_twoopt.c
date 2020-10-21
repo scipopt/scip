@@ -31,6 +31,7 @@
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_sol.h"
 #include "scip/pub_var.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -1721,6 +1722,13 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
+         /* in exact mode we have to end diving prior to trying the solution */
+         if( SCIPisExactSolve(scip) )
+         {
+            SCIPunlinkSol(scip, worksol);
+            SCIPendDive(scip);
+         }
+
          /* check solution for feasibility */
 #ifndef NDEBUG
          SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
@@ -1743,7 +1751,10 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       }
 
       /* terminate the diving */
-      SCIP_CALL( SCIPendDive(scip) );
+      if( SCIPinDive(scip) )
+      {
+         SCIP_CALL( SCIPendDive(scip) );
+      }
    }
 
  TERMINATE:

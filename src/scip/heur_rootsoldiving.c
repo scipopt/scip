@@ -27,6 +27,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -334,7 +335,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
 
-      if( success )
+      if( success && !SCIPisExactSolve(scip) )
       {
          SCIPdebugMsg(scip, "rootsoldiving found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
@@ -549,6 +550,13 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIPdebugMsg(scip, "rootsoldiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
+      /* in exact mode we have to end diving prior to trying the solution */
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIPunlinkSol(scip, heurdata->sol);
+         SCIPendDive(scip);
+      }
+
       /* try to add solution to SCIP */
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
@@ -561,7 +569,10 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    }
 
    /* end diving */
-   SCIP_CALL( SCIPendDive(scip) );
+   if( SCIPinDive(scip) )
+   {
+      SCIP_CALL( SCIPendDive(scip) );
+   }
 
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;

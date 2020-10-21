@@ -389,7 +389,7 @@ SCIP_RETCODE solUnlinkVarExact(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
 
    /* if variable is already valid, nothing has to be done */
-   if( SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var)) )
+   if( SCIPboolarrayGetVal(sol->valsexact->valid, SCIPvarGetIndex(var)) )
       return SCIP_OKAY;
 
    SCIPsetDebugMsg(set, "unlinking solution value of variable <%s>\n", SCIPvarGetName(var));
@@ -2623,6 +2623,41 @@ SCIP_RETCODE SCIPsolRound(
 
    /* check, if rounding was successful */
    *success = (v == nvars);
+
+   return SCIP_OKAY;
+}
+
+/** copy the fp values to the exact arrays of the solution */
+SCIP_RETCODE SCIPsolMakeExact(
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   int v;
+   SCIP_Rational* tmp;
+   assert(!SCIPsolIsExact(sol));
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact ) );
+   SCIP_CALL( SCIPrationalarrayCreate(&sol->valsexact->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&sol->valsexact->valid, blkmem) );
+   SCIP_CALL( RatCreateBlock(blkmem, &sol->valsexact->obj) );
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+
+   SCIPsolUnlink(sol, set, prob);
+
+   RatSetReal(sol->valsexact->obj, sol->obj);
+
+   for( v = 0; v < prob->nvars; v++ )
+   {
+      RatSetReal(tmp, solGetArrayVal(sol, prob->vars[v]));
+      solSetArrayValExact(sol, set, prob->vars[v], tmp);
+   }
+
+   RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
