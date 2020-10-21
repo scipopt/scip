@@ -14333,7 +14333,7 @@ SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
 
    /* use variable to expressions mapping which is stored in the constraint handler data;
     * if this fails it means that we are asking for the var's component of H*u for a var
-    * that doesn't appear non-linearly, so maybe we can also just return 0.0
+    * that doesn't appear in any nonlinear constraint, so maybe we can also just return 0.0
     */
    assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
 
