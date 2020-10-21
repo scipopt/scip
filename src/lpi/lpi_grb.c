@@ -1355,7 +1355,7 @@ SCIP_RETCODE SCIPlpiCreate(
       restat = GRBloadenv(&reusegrbenv, NULL);
       if ( restat != 0 )
       {
-         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the enivornment.\n", restat);
+         SCIPmessagePrintWarning(messagehdlr, "Gurobi error %d: Something went wrong with creating the environment.\n", restat);
          return SCIP_LPERROR;
       }
 
