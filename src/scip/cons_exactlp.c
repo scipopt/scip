@@ -17572,6 +17572,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    return SCIP_OKAY;
 }
 
+/** @todo exip: since this is only used for subscips, it currently always creates linear constraints, needs to be extended in the future*/
 /** creates by copying and captures a linear constraint */
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
@@ -17654,7 +17655,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
 
-         //SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, requiredsize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
          assert(requiredsize <= nvars);
       }
    }

@@ -33,6 +33,7 @@
 #include "scip/scip_branch.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
 #include "scip/scip_lp.h"
@@ -1236,6 +1237,14 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       success = FALSE;
 
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
+
+      /* in exact mode we have to end diving prior to trying the solution */
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIPunlinkSol(scip, heurdata->sol);
+         SCIPendDive(scip);
+      }
+
       SCIPdebugMsg(scip, "feasibility pump found solution (%d fractional variables)\n", nfracs);
       SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       if( success )
@@ -1243,7 +1252,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
    /* end diving */
-   SCIP_CALL( SCIPendDive(scip) );
+   if( SCIPinDive(scip) )
+   {
+      SCIP_CALL( SCIPendDive(scip) );
+   }
 
    /* end probing in order to be able to apply stage 3 */
    if( heurdata->usefp20 )

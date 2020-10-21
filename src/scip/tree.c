@@ -2043,7 +2043,8 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPcertificateIsActive(set, stat->certificate) )
+      if( !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node)
+        && SCIPcertificateIsActive(set, stat->certificate) )
       {
          /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
          * @todo exip could this be done differently somewhere else? */
@@ -2725,6 +2726,8 @@ void SCIPnodeUpdateLowerbound(
       oldbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
+      if( set->exact_enabled && RatIsLTReal(node->lowerboundexact, newbound) )
+         RatSetReal(node->lowerboundexact, newbound);
 
       if( node->depth == 0 )
       {
@@ -2859,7 +2862,9 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    }
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-   if( set->exact_enabled && (lpobjval > SCIPnodeGetLowerbound(node) || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node))) )
+
+   if( !SCIPtreeProbing(tree) && set->exact_enabled
+     && (lpobjval > SCIPnodeGetLowerbound(node) || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node))) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
@@ -6915,6 +6920,9 @@ SCIP_RETCODE SCIPtreeStartProbing(
    lp->divingobjchg = FALSE;
    tree->probingsumchgdobjs = 0;
    tree->sbprobing = strongbranching;
+   tree->porbinglphadsafebound = lp->hasprovedbound;
+   if( set->exact_enabled && lp->solved )
+      tree->probinglpobjval = SCIPlpGetObjval(lp, set, transprob);
 
    /* remember the LP state in order to restore the LP solution quickly after probing */
    /**@todo could the lp state be worth storing if the LP is not flushed (and hence not solved)? */
@@ -7390,6 +7398,14 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
          /* resolve LP to reset solution */
          SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+
+         if( set->exact_enabled )
+         {
+            /* here we always set this, or the lpobjval would not longer be safe */
+            lp->lpobjval = tree->probinglpobjval;
+            lp->hasprovedbound = tree->porbinglphadsafebound;
+         }
+
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -7410,7 +7426,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp) )
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
+            if( !set->exact_enabled || lp->hasprovedbound )
+               SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
       }
    }

@@ -1268,7 +1268,14 @@ SCIP_RETCODE SCIPheurExec(
 
    delayed = FALSE;
    execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
-   execute = execute && (!set->exact_enabled || SCIPheurIsExact(heur));
+
+   //if( strcmp(SCIPheurGetName(heur),"locks") != 0 )
+   //{
+   //printf("looking at heuristic <%s> \n",SCIPheurGetName(heur) );
+   //   execute = execute && (!set->exact_enabled || SCIPheurIsExact(heur));
+   //}
+   //else
+   //   printf("looking at heuristic <%s> \n",SCIPheurGetName(heur) );
 
    if( delayed )
    {

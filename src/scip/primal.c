@@ -1028,7 +1028,8 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
+      /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)) || ! set->misc_improvingsols);
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
@@ -1054,7 +1055,8 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
-      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
+      /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
+      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)) || ! set->misc_improvingsols);
 
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
@@ -2101,6 +2103,80 @@ SCIP_RETCODE SCIPprimalTrySolFreeExact(
       *stored = FALSE;
    }
 
+   assert(*sol == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** adds iexact primal solution to solution storage by copying it and frees the solution afterwards */
+SCIP_RETCODE SCIPprimalAddSolFreeExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lp,                 /**< current exact LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            sol,                /**< primal CIP solution */
+   SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
+   )
+{
+   SCIP_Bool replace;
+   int insertpos;
+
+   assert(primal != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(messagehdlr != NULL);
+   assert(stat != NULL);
+   assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(tree != NULL);
+   assert(lp != NULL);
+   assert(eventqueue != NULL);
+   assert(eventfilter != NULL);
+   assert(*sol != NULL);
+   assert(stored != NULL);
+
+   insertpos = -1;
+
+   assert(!SCIPsolIsPartial(*sol));
+
+   if( solOfInterest(primal, set, stat, origprob, transprob, *sol, &insertpos, &replace) )
+   {
+      SCIP_SOL* solcopy;
+#ifdef SCIP_MORE_DEBUG
+      int i;
+#endif
+
+      assert(insertpos >= 0 && insertpos < set->limit_maxsol);
+
+      /* create a copy of the solution */
+      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, *sol) );
+
+      /* insert copied solution into solution storage */
+      SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+            tree, reopt, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
+//#ifdef SCIP_MORE_DEBUG
+//      for( i = 0; i < primal->nsols - 1; ++i )
+//      {
+//         assert(SCIPsetIsLE(set, SCIPsolGetObj(primal->sols[i], set, transprob, origprob), SCIPsolGetObj(primal->sols[i+1], set, transprob, origprob)));
+//      }
+//#endif
+      *stored = TRUE;
+   }
+   else
+   {
+      /* the solution is too bad -> free it immediately */
+      SCIP_CALL( SCIPsolFree(sol, blkmem, primal) );
+
+      *stored = FALSE;
+   }
    assert(*sol == NULL);
 
    return SCIP_OKAY;

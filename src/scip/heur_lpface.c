@@ -747,6 +747,7 @@ SCIP_RETCODE setupSubscipLpface(
 
    /* create the variable hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
    success = FALSE;
 
    if( heurdata->uselprows )

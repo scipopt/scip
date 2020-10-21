@@ -442,6 +442,15 @@ SCIP_RETCODE SCIPsolRound(
    SCIP_Bool*            success             /**< pointer to store whether rounding was successful */
    );
 
+/** copy the fp values to the exact arrays of the solution */
+SCIP_RETCODE SCIPsolMakeExact(
+   SCIP_SOL*             sol,                /**< primal solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   );
+
 /** updates the solution value sums in variables by adding the value in the given solution */
 void SCIPsolUpdateVarsum(
    SCIP_SOL*             sol,                /**< primal CIP solution */

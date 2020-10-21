@@ -383,6 +383,28 @@ SCIP_RETCODE SCIPprintRowex(
    return SCIP_OKAY;
 }
 
+/** gets objective value of current exact LP (which is the sum of column and loose objective value)
+ *
+ *  @return the objective value of current exact LP (which is the sum of column and loose objective value).
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This method returns the objective value of the current exact LP solution, which might be primal or dual infeasible
+ *        if a limit was hit during solving. It must not be used as a dual bound if the exact LP solution status returned by
+ *        SCIPgetLPExactSolstat() is SCIP_LPSOLSTAT_ITERLIMIT or SCIP_LPSOLSTAT_TIMELIMIT.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+void SCIPgetLPExactObjval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< result pointer */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactObjval", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPlpExactGetObjval(scip->lpexact, scip->set, scip->transprob, result);
+}
 
 /** returns whether the exact lp was solved */
 SCIP_Bool SCIPlpExactIsSolved(
@@ -393,4 +415,243 @@ SCIP_Bool SCIPlpExactIsSolved(
    assert(scip->lpexact != NULL);
 
    return scip->lpexact->solved && scip->lpexact->flushed;
+}
+
+/** gets solution status of current exact LP
+  *
+  *  @return the solution status of current exact LP.
+  *
+  *  @pre This method can be called if @p scip is in one of the following stages:
+  *       - \ref SCIP_STAGE_SOLVING
+  *
+  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+  */
+SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPExactSolstat", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* We can check the floating point flag here since the exact and floating point LP is constructed at the same
+    * time.
+    */
+   if( SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+       return SCIPlpExactGetSolstat(scip->lpexact);
+   else
+       return SCIP_LPSOLSTAT_NOTSOLVED;
+}
+
+/** initiates exact LP diving, making methods SCIPchgVarObjExactDive(), SCIPchgVarLbExactDive(), and SCIPchgVarUbExactDive() available
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
+ */
+SCIP_RETCODE SCIPstartExactDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPstartExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
+
+   if( SCIPlpExactDiving(scip->lpexact) )
+   {
+      SCIPerrorMessage("already in exact diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( SCIPlpDiving(scip->lp) )
+   {
+      SCIPerrorMessage("cannot start exact diving while being in diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("cannot start exact diving while being in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* We start the exact LP dive parallel to the floating-point LP dive. This is necessary because we need to work with
+    * several flags and counters of the floating-point LP.
+    */
+   SCIP_CALL( SCIPstartDive(scip) );
+
+   SCIP_CALL( SCIPlpExactStartDive(scip->lpexact, scip->mem->probmem, scip->set, scip->stat) );
+
+   return SCIP_OKAY;
+}
+
+/** quits exact LP diving and resets bounds and objective values of columns to the current node's values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPendExactDive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPendExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpExactDiving(scip->lpexact) )
+   {
+      SCIPerrorMessage("not in exact diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /** @todo exip: adress problem when user calls `SCIPendDive` in between */
+   /* end floating-point LP dive, see comment in SCIPstartExactDive() */
+   SCIP_CALL( SCIPendDive(scip) );
+
+   /* unmark the diving flag in the exact LP and reset all variables' objective and bound values */
+   SCIP_CALL( SCIPlpExactEndDive(scip->lpexact, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->eventqueue, scip->eventfilter,
+         scip->transprob, scip->transprob->vars, scip->transprob->nvars) );
+
+   /* reset the probably changed LP's cutoff bound */
+   SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, scip->primal->cutoffbound) );
+   assert(scip->lp->cutoffbound == scip->primal->cutoffbound); /*lint !e777*/
+
+   /* we have to set the exact diving flag temporarilly to TRUE since SCIPendDive() needs to know that this happend
+    * in exact diving mode */
+   scip->lpexact->diving = TRUE;
+
+   scip->lpexact->diving = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** solves the exact LP of the current dive; no separation or pricing is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPsolveExactDiveLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the diving LP was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
+   )
+{
+   SCIP_Rational* objval;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveExactDiveLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpExactDiving(scip->lpexact) )
+   {
+      SCIPerrorMessage("not in exact diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( cutoff != NULL )
+      *cutoff = FALSE;
+
+   /* solve diving LP */
+   SCIP_CALL( SCIPlpExactSolveAndEval(scip->lpexact, scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
+         scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, lperror, FALSE) );
+
+   if( !(*lperror) )
+   {
+      SCIP_CALL( RatCreateBuffer(scip->set->buffer, &objval) );
+      SCIPgetLPExactObjval(scip, objval);
+
+      /* the LP is infeasible or the objective limit was reached */
+      if( SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OBJLIMIT
+         || (SCIPlpExactGetSolstat(scip->lpexact) == SCIP_LPSOLSTAT_OPTIMAL &&
+            RatIsGE(objval, SCIPgetCutoffboundExact(scip))) )
+      {
+         if( cutoff != NULL )
+            *cutoff = TRUE;
+      }
+
+      RatFreeBuffer(scip->set->buffer, &objval);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's lower bound in current exact dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPchgVarLbExactDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarLbExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpExactDiving(scip->lpexact) )
+   {
+      SCIPerrorMessage("not in exact diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPvarChgLbExactDive(var, scip->set, scip->lpexact, newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** changes variable's upper bound in current exact dive
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPchgVarUbExactDive(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound            /**< new value for bound */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarUbExactDive", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPlpExactDiving(scip->lpexact) )
+   {
+      SCIPerrorMessage("not in exact diving mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPvarChgUbExactDive(var, scip->set, scip->lpexact, newbound) );
+
+   return SCIP_OKAY;
 }

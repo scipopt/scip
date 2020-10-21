@@ -11014,7 +11014,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->locdom.ub));
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatIsLTReal(var->exactdata->locdom.lb, var->locdom.lb) )
+   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.lb, SCIP_ROUND_DOWNWARDS) != var->locdom.lb )
       RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -11184,7 +11184,7 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->locdom.lb));
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
-   if( set->exact_enabled && RatIsGTReal(var->exactdata->locdom.ub, var->locdom.ub) )
+   if( set->exact_enabled && RatRoundReal(var->exactdata->locdom.ub, SCIP_ROUND_UPWARDS) != var->locdom.ub )
       RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
@@ -12238,6 +12238,63 @@ SCIP_RETCODE SCIPvarChgLbDive(
    return SCIP_OKAY;
 }
 
+/** changes lower bound of variable in current exact dive */
+SCIP_RETCODE SCIPvarChgLbExactDive(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(lpexact != NULL);
+   assert(SCIPlpExactDiving(lpexact));
+
+   RatDebugMessage("changing lower bound of <%s> to %q in current exact dive\n", var->name, newbound);
+
+   /* change bounds of attached variables */
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      SCIP_CALL( SCIPvarChgLbExactDive(var->data.original.transvar, set, lpexact, newbound) );
+      break;
+
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      SCIP_CALL( SCIPcolExactChgLb(var->exactdata->colexact, set, lpexact, newbound) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+      SCIPerrorMessage("cannot change variable's bounds in dive for LOOSE variables\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      SCIPerrorMessage("cannot change the bounds of an aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      SCIPerrorMessage("cannot change the bounds of a negated variable\n");
+      return SCIP_INVALIDDATA;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** changes upper bound of variable in current dive; if possible, adjusts bound to integral value */
 SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
@@ -12319,6 +12376,63 @@ SCIP_RETCODE SCIPvarChgUbDive(
       assert(var->negatedvar->negatedvar == var);
       SCIP_CALL( SCIPvarChgLbDive(var->negatedvar, set, lp, var->data.negate.constant - newbound) );
       break;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes upper bound of variable in current exact dive */
+SCIP_RETCODE SCIPvarChgUbExactDive(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   SCIP_Rational*        newbound            /**< new bound for variable */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(lpexact != NULL);
+   assert(SCIPlpExactDiving(lpexact));
+
+   RatDebugMessage("changing upper bound of <%s> to %d in current dive\n", var->name, newbound);
+
+   /* change bounds of attached variables */
+   switch( SCIPvarGetStatusExact(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      assert(var->data.original.transvar != NULL);
+      SCIP_CALL( SCIPvarChgUbExactDive(var->data.original.transvar, set, lpexact, newbound) );
+      break;
+
+   case SCIP_VARSTATUS_COLUMN:
+      assert(var->data.col != NULL);
+      SCIP_CALL( SCIPcolExactChgUb(var->exactdata->colexact, set, lpexact, newbound) );
+      break;
+
+   case SCIP_VARSTATUS_LOOSE:
+      SCIPerrorMessage("cannot change variable's bounds in dive for LOOSE variables\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot change the bounds of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
+      SCIPerrorMessage("cannot change the bounds of an aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
+      SCIPerrorMessage("cannot change the bounds of a negated variable\n");
+      return SCIP_INVALIDDATA;
 
    default:
       SCIPerrorMessage("unknown variable status\n");

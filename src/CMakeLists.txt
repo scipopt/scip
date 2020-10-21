@@ -57,6 +57,7 @@ set(scipsources
     scip/cons_cumulative.c
     scip/cons_disjunction.c
     scip/cons_exactlp.c
+    scip/cons_exactsol.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c

@@ -241,14 +241,17 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       return SCIP_OKAY;
 
    assert(scip != NULL);
-   assert(sol == NULL || SCIPisExactSol(scip, sol));
-
 
    if( sol == NULL )
    {
       SCIPcertificatePrintProblemMessage(certificate, "SOL 0\n");
       return SCIP_OKAY;
    }
+   else if( !SCIPsolIsExact(sol) )
+   {
+      SCIP_CALL( SCIPmakeSolExact(scip, sol) );
+   }
+
    /* get variables and number of the transformed problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -378,7 +381,7 @@ SCIP_RETCODE SCIPcertificateInit(
    assert(certificate->nodedatahash == NULL);
    assert(certificate->rowdatahash == NULL);
 
-   if( set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0' )
+   if( !(set->exact_enabled) || (set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0') )
       return SCIP_OKAY;
 
    filenamelen = strlen(set->certificate_filename);
@@ -642,7 +645,7 @@ SCIP_Bool SCIPcertificateIsActive(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   return (certificate != NULL && (certificate->file != NULL || strcmp(set->certificate_filename, "-")) );
+   return (set->exact_enabled && certificate != NULL && (certificate->file != NULL || strcmp(set->certificate_filename, "-")) );
 }
 
 /** returns current certificate file size in MB */
@@ -766,7 +769,10 @@ SCIP_RETCODE SCIPcertificatePrintResult(
    {
       bestsol = SCIPgetBestSol(scip);
 
-      assert(SCIPisExactSol(scip, bestsol));
+      if( !SCIPisExactSol(scip, bestsol) )
+      {
+         SCIP_CALL( SCIPmakeSolExact(scip, bestsol) );
+      }
 
       RatSet(primalbound, SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob));
       assert(!RatIsAbsInfinity(primalbound));
