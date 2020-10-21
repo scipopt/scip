@@ -375,11 +375,6 @@ SCIP_RETCODE evalAndDiffConsExprExpr(
    {
       switch( SCIPexpriteratorGetStageDFS(it) )
       {
-         case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
-         {
-            break;
-         }
-
          case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
          {
             SCIP_Real derivative;
