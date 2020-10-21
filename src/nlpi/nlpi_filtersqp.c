@@ -31,7 +31,7 @@
 #endif
 
 /* fallback to non-thread version for windows, because pthread does not exist */
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
 #undef SCIP_THREADSAFE
 #endif
 
