@@ -2125,13 +2125,17 @@ SCIP_RETCODE SCIPprintSolExact(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
 
-   /** @todo exip: convert to origobj, or extern objval respectively */
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objvalue) );
+
    if( SCIPsolIsOriginal(sol) )
-      objvalue = SCIPsolGetOrigObjExact(sol);
+      RatSet(objvalue, SCIPsolGetOrigObjExact(sol));
    else
-      objvalue = SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob);
+      SCIPprobExternObjvalExact(scip, scip->transprob, scip->set, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob), objvalue));
 
    RatMessage(scip->messagehdlr, file, objvalue);
+
+   RatFreeBuffer(SCIPbuffer(scip), &objvalue);
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
    SCIP_CALL( SCIPsolPrintExact(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,

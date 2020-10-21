@@ -9022,7 +9022,6 @@ SCIP_RETCODE SCIPfixVarExact(
    assert(fixed != NULL);
    assert(SCIPisExactSolve(scip));
    assert(var->exactdata != NULL);
-   /** @todo exip: unfotunate things could happen if the fixval is not fp-representable */
 
    if( !SCIPisExactSolve(scip) )
       return SCIP_OKAY;

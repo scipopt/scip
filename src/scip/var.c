@@ -4916,7 +4916,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
          nmultvars = var->data.multaggr.nvars;
          multvars = var->data.multaggr.vars;
          multscalars = var->exactdata->multaggr.scalars;
-         /** @todo exip: do we need the inexact scalars resized as well? */
          sortagain = TRUE;
 
          if( nmultvars + ntmpvars > tmpvarssize )
@@ -12037,7 +12036,6 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
       else
       {
          assert(set->stage == SCIP_STAGE_PROBLEM);
-         /** @todo exip: we prob need an exact version here */
          SCIP_CALL( varProcessChgUbLocalExact(var, blkmem, set, stat, lpexact, branchcand, eventqueue, newbound) );
       }
       break;
