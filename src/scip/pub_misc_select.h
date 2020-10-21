@@ -3063,20 +3063,6 @@ void SCIPselectDownIntIntPtr(
    );
 
 
-/** partial sort of three joint arrays of ints/ints/pointers/pointers, sorted by first array in non-increasing order around the \p k-th element,
- *  see \ref SelectionAlgorithms for more information.
- */
-SCIP_EXPORT
-void SCIPselectDownIntIntPtrPtr(
-   int*                  intarray1,          /**< int array to be sorted */
-   int*                  intarray2,          /**< second int array to be permuted in the same way */
-   void**                ptrarray1,          /**< pointer array to be permuted in the same way */
-   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
-   int                   k,                  /**< the index of the desired element, must be between 0 (search for maximum/minimum) and len - 1 */
-   int                   len                 /**< length of arrays */
-);
-
-
 /** partial sort of three joint arrays of ints/ints/pointers, sorted by first array in non-increasing order around the weighted median w.r.t. \p weights and capacity,
  *  see \ref SelectionAlgorithms for more information.
  */

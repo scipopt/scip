@@ -15910,7 +15910,7 @@ SCIP_RETCODE SCIPinsertBilinearTermExisting(
    assert(term->nauxexprs == 0); /* existing terms should be added before implicit terms */
    term->aux.var = auxvar;
 
-   /* capture auxuliary variable */
+   /* capture auxiliary variable */
    if( auxvar != NULL )
    {
       SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
@@ -16006,7 +16006,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
       SCIPfreeBlockMemory(scip, &auxexpr);
    }
    else if( auxvar != NULL )
-   { /* capture auxuliary variable */
+   { /* capture auxiliary variable */
       SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    }
 
