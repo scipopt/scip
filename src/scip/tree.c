@@ -7073,6 +7073,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
          if( set->exact_enabled )
          {
+            /* here we always set this, or the lpobjval would not longer be safe */
             lp->lpobjval = tree->probinglpobjval;
             lp->hasprovedbound = tree->porbinglphadsafebound;
          }

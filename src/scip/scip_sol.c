@@ -4051,7 +4051,6 @@ SCIP_RETCODE SCIPtrySolFreeExact(
          {
             if( bestsol != SCIPgetBestSol(scip) )
             {
-               /* TODO: maybe update exact statistics instead */
                SCIPstoreSolutionGap(scip);
             }
          }
@@ -4072,17 +4071,6 @@ SCIP_RETCODE SCIPtrySolFreeExact(
       {
          if( bestsol != SCIPgetBestSol(scip) )
          {
-//#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
-//            SCIP_Bool feasible;
-//            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-//
-//            if( ! feasible )
-//            {
-//               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
-//               SCIPABORT();
-//            }
-//#endif
-            /* TODO: maybe update exact statistics instead */
             SCIPstoreSolutionGap(scip);
          }
       }

@@ -228,8 +228,9 @@ SCIP_LPSOLSTAT SCIPgetLPExactSolstat(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_EXPORT
-SCIP_Rational* SCIPgetLPExactObjval(
-   SCIP*                 scip                /**< SCIP data structure */
+void SCIPgetLPExactObjval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        result              /**< result pointer */
    );
 
 /** changes variable's lower bound in current exact dive

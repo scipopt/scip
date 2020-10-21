@@ -49,54 +49,6 @@
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
-/* optional constraint handler properties */
-/* TODO: remove properties which are never used because the corresponding routines are not supported */
-//#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
-//#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
-//#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
-
-//#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
-//#define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-//#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
-
-//#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
-//#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-
-
-
-
-/* TODO: (optional) enable linear or nonlinear constraint upgrading */
-#if 0
-#include "scip/cons_linear.h"
-#include "scip/cons_nonlinear.h"
-#define LINCONSUPGD_PRIORITY          0 /**< priority of the constraint handler for upgrading of linear constraints */
-#define NONLINCONSUPGD_PRIORITY       0 /**< priority of the constraint handler for upgrading of nonlinear constraints */
-#endif
-
-
-/*
- * Data structures
- */
-
-/* TODO: fill in the necessary constraint data */
-
-/** constraint data for ExactSol constraints */
-//struct SCIP_ConsData
-//{
-//};
-
-/** constraint handler data */
-//struct SCIP_ConshdlrData
-//{
-//};
-
-
-/*
- * Local methods
- */
-
-/* put your local methods here, and declare them static */
-
 
 /*
  * Callback methods of constraint handler
@@ -328,124 +280,11 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
    conshdlr = NULL;
 
    /* include constraint handler */
-#if 0
-   /* use SCIPincludeConshdlr() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING, CONSHDLR_PRESOLTIMING,
-         conshdlrCopyExactSol,
-         consFreeExactSol, consInitExactSol, consExitExactSol,
-         consInitpreExactSol, consExitpreExactSol, consInitsolExactSol, consExitsolExactSol,
-         consDeleteExactSol, consTransExactSol, consInitlpExactSol,
-         consSepalpExactSol, consSepasolExactSol, consEnfolpExactSol, consEnforelaxExactSol, consEnfopsExactSol, consCheckExactSol,
-         consPropExactSol, consPresolExactSol, consRespropExactSol, consLockExactSol,
-         consActiveExactSol, consDeactiveExactSol,
-         consEnableExactSol, consDisableExactSol, consDelvarsExactSol,
-         consPrintExactSol, consCopyExactSol, consParseExactSol,
-         consGetVarsExactSol, consGetNVarsExactSol, consGetDiveBdChgsExactSol, conshdlrdata) );
-#else
-   /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpExactSol, consEnfopsExactSol, consCheckExactSol, consLockExactSol,
          conshdlrdata) );
    assert(conshdlr != NULL);
-
-   /* add ExactSol constraint handler parameters */
-   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
-#endif
-   return SCIP_OKAY;
-}
-
-/** creates and captures a ExactSol constraint
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-SCIP_RETCODE SCIPcreateConsExactSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs,                /**< right hand side of constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally?
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which
-                                              *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   )
-{
-   /* TODO: (optional) modify the definition of the SCIPcreateConsExactSol() call, if you don't need all the information */
-
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   SCIPerrorMessage("method of ExactSol constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527} --e{715}*/
-
-   /* find the ExactSol constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if( conshdlr == NULL )
-   {
-      SCIPerrorMessage("ExactSol constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a ExactSol constraint with all its constraint flags set to their
- *  default values
- *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- */
-SCIP_RETCODE SCIPcreateConsBasicExactSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
-   SCIP_Real             lhs,                /**< left hand side of constraint */
-   SCIP_Real             rhs                 /**< right hand side of constraint */
-   )
-{
-   SCIP_CALL( SCIPcreateConsExactSol(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
 }
