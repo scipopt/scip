@@ -28,16 +28,12 @@
 #include "scip/lpexact.h"
 #include "scip/pub_var.h"
 #include "scip/rational.h"
-//#include "scip/struct_rational.h"
 #include "scip/cons.h"
 #include "scip/scip_exact.h"
 #include "scip/scip_lpexact.h"
 #include "scip/scip_sol.h"
 #include "scip/set.h"
 #include "scip/sol.h"
-#include "scip/struct_scip.h"
-#include "scip/tree.h"
-
 
 
 /* fundamental constraint handler properties */
@@ -129,13 +125,16 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpDiving(scip->lp) )
       return SCIP_OKAY;
 
-   /** @todo exip: include all STAGE >= PRESOLVING */
-
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
-   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
-      return SCIP_OKAY;
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_Bool cutoff = FALSE;
+
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+      SCIP_CALL( SCIPflushLP(scip) );
+   }
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree))
       return SCIP_OKAY;
