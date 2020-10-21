@@ -346,7 +346,7 @@ typedef struct
  * Local methods
  */
 static
-SCIP_RETCODE evalAndDiffConsExprExpr(
+SCIP_RETCODE evalAndDiff(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
@@ -373,43 +373,24 @@ SCIP_RETCODE evalAndDiffConsExprExpr(
 
    for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
    {
-      switch( SCIPexpriteratorGetStageDFS(it) )
+      /* evaluate expression only if necessary */
+      if( soltag == 0 || expr->evaltag != soltag )
       {
-         case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
-         {
-            SCIP_Real derivative;
+         SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
 
-            /* evaluate expression only if necessary */
-            if( soltag == 0 || expr->evaltag != soltag )
-            {
-               SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
-
-               expr->evaltag = soltag;
-            }
-
-            if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
-               goto TERMINATE;
-
-            /* compute forward diff */
-            derivative = SCIP_INVALID;
-
-            SCIP_CALL( SCIPfwdiffConsExprExprHdlr(scip, expr, &derivative) );
-            expr->dot = derivative;
-
-            if( expr->dot == SCIP_INVALID ) /*lint !e777*/
-               goto TERMINATE;
-
-            break;
-         }
-
-         default :
-            /* we should never be here */
-            SCIPABORT();
-            break;
+         expr->evaltag = soltag;
       }
+
+      if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+         break;
+
+      /* compute forward diff */
+      SCIP_CALL( SCIPfwdiffConsExprExprHdlr(scip, expr, &expr->dot) );
+
+      if( expr->dot == SCIP_INVALID ) /*lint !e777*/
+         break;
    }
 
-TERMINATE:
    SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
@@ -14397,7 +14378,7 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    }
 
    /* evaluate expression and directional derivative */
-   SCIP_CALL( evalAndDiffConsExprExpr(scip, consexprhdlr, rootexpr, sol, soltag) );
+   SCIP_CALL( evalAndDiff(scip, consexprhdlr, rootexpr, sol, soltag) );
 
    difftag = ++(conshdlrdata->lastdifftag);
 
