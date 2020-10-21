@@ -725,6 +725,30 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
    return SCIP_OKAY;
 }
 
+/** expression forward derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffSum)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int c;
+
+   assert(expr != NULL);
+   assert(dot != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   *dot = 0.0;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      assert(SCIPgetConsExprExprDot(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID); /*lint !e777*/
+
+      *dot += exprdata->coefficients[c] * SCIPgetConsExprExprDot(SCIPgetConsExprExprChildren(expr)[c]);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression derivative evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSum)
@@ -736,6 +760,17 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSum)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(expr)[childidx])), "val") != 0);
 
    *val = SCIPgetConsExprExprSumCoefs(expr)[childidx];
+
+   return SCIP_OKAY;
+}
+
+/** expression backward forward derivative evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffSum)
+{  /*lint --e{715}*/
+   assert(bardot != NULL);
+
+   *bardot = 0.0;
 
    return SCIP_OKAY;
 }
@@ -1105,7 +1140,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSum, NULL, estimateSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffSum, fwdiffSum, bwfwdiffSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralitySum) );

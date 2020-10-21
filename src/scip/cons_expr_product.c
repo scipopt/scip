@@ -1483,6 +1483,117 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    return SCIP_OKAY;
 }
 
+/** derivative evaluation callback:
+ * computes <gradient, children.dot>
+ * if expr is Pi_i x_i, then computes
+ * sum_j Pi_(i != j) x_i  x^dot_j
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffProduct)
+{  /*lint --e{715}*/
+   int c;
+
+   assert(expr != NULL);
+   assert(dot != NULL);
+
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+
+   *dot = 0.0;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+
+      assert(SCIPgetConsExprExprValue(child) != SCIP_INVALID); /*lint !e777*/
+      assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+
+      if( SCIPgetConsExprExprDot(child) == 0.0 )
+         continue;
+
+      if( SCIPgetConsExprExprValue(child) != 0.0 )
+         *dot += SCIPgetConsExprExprValue(expr) / SCIPgetConsExprExprValue(child) * SCIPgetConsExprExprDot(child);
+      else
+      {
+         SCIP_Real partial;
+         int i;
+
+         partial = SCIPgetConsExprExprData(expr)->coefficient;
+         for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (partial != 0.0); ++i )
+         {
+            if( i == c )
+               continue;
+
+            partial *= SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[i]);
+         }
+         *dot += partial * SCIPgetConsExprExprDot(child);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression backward forward derivative evaluation callback
+ *
+ * computes partial/partial childidx ( <gradient, children.dot> )
+ * if expr is Pi_i x_i, and childidx is k then computes
+ * partial_k sum_j Pi_(i != j) x_i  x^dot_j
+ * = sum_(j != k) Pi_(i != j, k) x_i  x^dot_j
+ */
+static
+SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffProduct)
+{  /*lint --e{715}*/
+   SCIP_CONSEXPR_EXPR* partialchild;
+   int c;
+
+   assert(expr != NULL);
+   assert(bardot != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(childidx >= 0 && childidx < SCIPgetConsExprExprNChildren(expr));
+
+   partialchild = SCIPgetConsExprExprChildren(expr)[childidx];
+   assert(partialchild != NULL);
+   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(partialchild)), "val") != 0);
+   assert(SCIPgetConsExprExprValue(partialchild) != SCIP_INVALID); /*lint !e777*/
+
+   *bardot = 0.0;
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_CONSEXPR_EXPR* child;
+
+      if( c == childidx )
+         continue;
+
+      child = SCIPgetConsExprExprChildren(expr)[c];
+
+      assert(SCIPgetConsExprExprValue(child) != SCIP_INVALID); /*lint !e777*/
+      assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+
+      if( SCIPgetConsExprExprDot(child) == 0.0 )
+         continue;
+
+      if( SCIPgetConsExprExprValue(child) != 0.0 && SCIPgetConsExprExprValue(partialchild) != 0.0 )
+         *bardot += SCIPgetConsExprExprValue(expr) /(SCIPgetConsExprExprValue(child) * SCIPgetConsExprExprValue(partialchild)) * SCIPgetConsExprExprDot(child);
+      else
+      {
+         SCIP_Real partial;
+         int i;
+
+         partial = SCIPgetConsExprExprData(expr)->coefficient;
+         for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && (partial != 0.0); ++i )
+         {
+            if( i == c || i == childidx )
+               continue;
+
+            partial *= SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[i]);
+         }
+         *bardot += partial * SCIPgetConsExprExprDot(child);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** expression derivative evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffProduct)
@@ -2077,7 +2188,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaProduct, NULL, estimateProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrBwdiff(scip, consexprhdlr, exprhdlr, bwdiffProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffProduct, fwdiffProduct, bwfwdiffProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityProduct) );

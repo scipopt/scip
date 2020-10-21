@@ -133,13 +133,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    SCIP_DECL_CONSEXPR_EXPRCOMPARE((*compare))/**< compare callback (can be NULL) */
 );
 
-/** set the derivative evaluation callback of an expression handler */
+/** set derivative evaluation callbacks of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
+SCIP_RETCODE SCIPsetConsExprExprHdlrDiff(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff)),  /**< backward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff)),  /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))/**< backward-forward derivative evaluation callback (can be NULL) */
 );
 
 /** set the interval evaluation callback of an expression handler */
@@ -209,6 +211,12 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrVar(
 SCIP_EXPORT
 SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrValue(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprDot(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
 /** returns expression handler for sum expressions */
@@ -360,6 +368,24 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
    SCIP_Real*                 childrenvals, /**< values for children, or NULL if values stored in children should be used */
    SCIP_Real                  exprval       /**< value for expression, used only if childrenvals is not NULL */
 );
+
+/** calls the backward-forward differentiation callback of an expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPbwfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative    /**< buffer to store value of the backward-forward derivative */
+);
+
+/** calls the forward differentiation callback of an expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 derivative    /**< buffer to store value of the forward derivative */
+);
+
 
 /** calls the evaluation callback of an expression handler
  *
@@ -736,7 +762,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
    );
 
 /** @name Differentiation methods
- * Automatic differentiation Backward mode:
+ * Gradients (Automatic differentiation Backward mode)
  * Given a function, say, f(s(x,y),t(x,y)) there is a common mnemonic technique to compute its partial derivatives,
  * using a tree diagram. Suppose we want to compute the partial derivative of f w.r.t x. Write the function as a tree:
  * f
@@ -758,7 +784,7 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * Initially, we set root->derivative to 1.0.
  * Then, traversing the tree in Depth First (see SCIPexpriteratorInit), for every expr that *has* children,
  * we store in its i-th child
- * child[i]->derivative = the derivative of expr w.r.t that child evaluated at point * expr->derivative
+ * child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative
  * Example:
  * f->derivative = 1.0
  * s->derivative = d_s f * f->derivative = d_s f
@@ -775,6 +801,50 @@ unsigned int SCIPgetConsExprExprEvalTag(
  * y->derivative += d_t t * t->derivative = d_t t * d_t f
  *
  * At the end we have: x->derivative == d_x s * d_s f + d_x t * d_t f, y->derivative == d_t s * d_s f + d_t t * d_t f
+ *
+ * Note that, to compute this, we only need to know, for each expression, its partial derivatives w.r.t a given child
+ * at a point. This is what the callback SCIP_DECL_CONSEXPR_EXPRBWDIFF should return.
+ * Indeed, from child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative,
+ * note that at the moment of processing a child, we already know expr->derivative, so the only
+ * missing piece of information is 'the derivative of expr w.r.t child evaluated at point'.
+ *
+ * An equivalent way of interpreting the procedure is that expr->derivative stores the derivative of the root w.r.t expr.
+ * This way, x->derivative and y->derivative will contain the partial derivatives of root w.r.t to the variable,
+ * that is, the gradient. Note, however, that this analogy is only correct for leave expressions, since
+ * the derivative value of an intermediate expression gets overwritten.
+ *
+ *
+ * Hessian (Automatic differentiation Backward on Forward mode)
+ * Computing the Hessian is more complicated since it is the derivative of the gradient, which is a function with more than one output.
+ * We compute the Hessian by computing 'directions' of the Hessian, that is H*u for different 'u'
+ * This is easy in general, since it is the gradient of the *scalar* function `grad f^T u`, that is, the directional derivative of f
+ * in the direction u, D_u f.
+ * This is easily computed via the so called forward mode.
+ * Just as expr->derivative stores the partial derivative of the root w.r.t expr,
+ * expr->dot stores the directional derivative of expr in the direction 'u'.
+ * Then, by the chain rule, expr->dot = sum_(c : children) d_c expr * c->dot.
+ * Starting with x_i->dot = u_i, we can compute expr->dot for every expression at the same time we evaluate expr.
+ * Computing expr->dot is the purpose of the callback SCIP_DECL_CONSEXPR_EXPRFWDIFF.
+ * Obviously, when this callback is called, the dots of all children are known
+ * (just like evaluation, where the value of all children are known).
+ *
+ * Once we have this information, we compute the gradient of this function, following the same idea as before.
+ * We define expr->bardot to be the directional derivative in direction u of the partial derivative of the root w.r.t expr `grad f^T u` w.r.t expr,
+ * that is D_u (d_expr f) = D_u (expr->derivative).
+ *
+ * This way, x_i->bardot = D_u (d_(x_i) f) = e_i^T H_f u. Hence vars->bardot contain H_f u.
+ * By the chain rule, product rule, and definition we have
+ *
+ * expr->bardot = D_u (d_expr f) =
+ * D_u ( d_parent f * d_expr parent ) =
+ * D_u( parent->derivative * d_expr parent ) =
+ * d_expr parent * D_u (parent->derivative) + parent->derivative * D_u (d_expr parent) =
+ * parent->bardot * d_expr parent + parent->derivative * D_u (d_expr parent)
+ *
+ * Note that we have computed parent->bardot and parent->derivative at this point,
+ * while (d_expr parent) is the return of SCIP_DECL_CONSEXPR_EXPRBWDIFF.
+ * Hence the only information we need to compute is D_u (d_expr parent).
+ * This is the purpose of the callback SCIP_DECL_CONSEXPR_EXPRBWFWDIFF.
  *
  * @{
  */
@@ -805,6 +875,35 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   );
+
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeConsExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   );
+
+/** computes the hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetConsExprExprPartialDiffGradientDir()
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeConsExprHessianDir(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONS*              cons,             /**< constraint for which we will compute directional derivative */
+   SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   SCIP_SOL*               direction,        /**< direction */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */

@@ -65,7 +65,9 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPRINT((*print));        /**< print callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff));      /**< derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff));      /**< backward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff));      /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff));  /**< backward over forward derivative evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINITSEPA((*initsepa));  /**< separation initialization callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREXITSEPA((*exitsepa));  /**< separation deinitialization callback (can be NULL) */
@@ -122,6 +124,9 @@ struct SCIP_ConsExpr_Expr
    SCIP_Real               evalvalue;     /**< value of expression from last evaluation (corresponding to evaltag) */
    SCIP_Real               derivative;    /**< partial derivative of a "root path" w.r.t. this expression
                                             *  (see documentation of Differentiation methods in cons_expr.c) */
+   SCIP_Real               dot;           /**< directional derivative of this expr */
+   SCIP_Real               bardot;        /**< directional derivative of derivative of root (stricly speaking, a path) w.r.t this expr */
+
    unsigned int            difftag;       /**< when computing partial derivatives of an expression w.r.t. a variable,
                                             *  the tag allows us to decide whether the expression depends on the
                                             *  variable; the tag will be checked in SCIPgetConsExprExprPartialDiff() */

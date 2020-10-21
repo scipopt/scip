@@ -346,6 +346,57 @@ typedef struct
  * Local methods
  */
 
+static
+SCIP_RETCODE evalAndDiff(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_SOL*               sol,              /**< solution to be evaluated */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_CONSEXPR_ITERATOR* it;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   /* assume we'll get a domain error, so we don't have to get this expr back if we abort the iteration
+    * if there is no domain error, then we will overwrite the evalvalue in the last leaveexpr stage
+    */
+   expr->evalvalue = SCIP_INVALID;
+   expr->evaltag = soltag;
+   expr->dot = SCIP_INVALID;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_LEAVEEXPR);
+
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   {
+      /* evaluate expression only if necessary */
+      if( soltag == 0 || expr->evaltag != soltag )
+      {
+         SCIP_CALL( SCIPevalConsExprExprHdlr(scip, expr, &expr->evalvalue, NULL, sol) );
+
+         expr->evaltag = soltag;
+      }
+
+      if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+         break;
+
+      /* compute forward diff */
+      SCIP_CALL( SCIPfwdiffConsExprExprHdlr(scip, expr, &expr->dot) );
+
+      if( expr->dot == SCIP_INVALID ) /*lint !e777*/
+         break;
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /** creates an expression */
 static
 SCIP_RETCODE createExpr(
@@ -11711,17 +11762,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrCompare(
    return SCIP_OKAY;
 }
 
-/** set the derivative evaluation callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrBwdiff(
-            SCIP*                      scip,          /**< SCIP data structure */
-            SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-            SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-            SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff))  /**< derivative evaluation callback (can be NULL) */
-   )
+/** set derivative evaluation callbacks of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrDiff(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRBWDIFF((*bwdiff)),  /**< backward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFWDIFF((*fwdiff)),  /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRBWFWDIFF((*bwfwdiff))/**< backward-forward derivative evaluation callback (can be NULL) */
+)
 {  /*lint --e{715}*/
    assert(exprhdlr != NULL);
 
    exprhdlr->bwdiff = bwdiff;
+   exprhdlr->fwdiff = fwdiff;
+   exprhdlr->bwfwdiff = bwfwdiff;
 
    return SCIP_OKAY;
 }
@@ -12255,6 +12310,61 @@ SCIP_RETCODE SCIPbwdiffConsExprExprHdlr(
 
       expr->evalvalue = origexprval;   /*lint !e644*/
    }
+
+   return SCIP_OKAY;
+}
+
+/** calls the backward-forward differentiation callback of an expression handler */
+SCIP_RETCODE SCIPbwfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   int                        childidx,     /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*                 derivative    /**< buffer to store value of the backward-forward derivative */
+)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(derivative != NULL);
+
+   if( expr->exprhdlr->bwfwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( expr->exprhdlr->bwfwdiff(scip, expr, childidx, derivative, NULL) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** calls the forward differentiation callback of an expression handler */
+SCIP_RETCODE SCIPfwdiffConsExprExprHdlr(
+   SCIP*                      scip,         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*        expr,         /**< expression */
+   SCIP_Real*                 derivative    /**< buffer to store value of the forward derivative */
+)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(derivative != NULL);
+
+   if( expr->exprhdlr->fwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( expr->exprhdlr->fwdiff(scip, expr, derivative, NULL) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -13982,6 +14092,16 @@ SCIP_Real SCIPgetConsExprExprValue(
    return expr->evalvalue;
 }
 
+/** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
+SCIP_Real SCIPgetConsExprExprDot(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->dot;
+}
+
 /** sets the evaluation value */
 void SCIPsetConsExprExprEvalValue(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
@@ -14111,7 +14231,10 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    return SCIP_OKAY;
 }
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
 SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -14119,35 +14242,215 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_EXPR* varexpr;
-   SCIP_HASHMAP* var2expr;
 
    assert(scip != NULL);
    assert(consexprhdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
    assert(expr != NULL);
    assert(var != NULL);
-   assert(expr->exprhdlr != SCIPgetConsExprExprHdlrValue(consexprhdlr) || expr->derivative == 0.0);
 
    /* return 0.0 for value expression */
-   if( strcmp(expr->exprhdlr->name, "val") == 0 )
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrValue(consexprhdlr) )
+   {
+      assert(expr->derivative == 0.0);
       return 0.0;
+   }
 
    /* check if an error occurred during the last SCIPcomputeConsExprExprGradient() call */
    if( expr->derivative == SCIP_INVALID ) /*lint !e777*/
       return SCIP_INVALID;
 
-   /* use variable to expressions mapping which is stored in the constraint handler data */
-   var2expr = SCIPconshdlrGetData(consexprhdlr)->var2expr;
-   assert(var2expr != NULL);
-   assert(SCIPhashmapExists(var2expr, var));
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
 
-   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, var);
+   /* use variable to expressions mapping which is stored in the constraint handler data */
+   assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, var);
    assert(varexpr != NULL);
    assert(SCIPisConsExprExprVar(varexpr));
 
    /* use difftag to decide whether the variable belongs to the expression */
    return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->derivative;
+}
+
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
+SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeConsExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_EXPR* varexpr;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(consexprhdlr), CONSHDLR_NAME) == 0);
+   assert(expr != NULL);
+   assert(var != NULL);
+
+   /* return 0.0 for value expression */
+   if( expr->exprhdlr == SCIPgetConsExprExprHdlrValue(consexprhdlr) )
+      return 0.0;
+
+   /* check if an error occurred during the last SCIPcomputeConsExprHessianDir() call */
+   if( expr->bardot == SCIP_INVALID ) /*lint !e777*/
+      return SCIP_INVALID;
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   /* use variable to expressions mapping which is stored in the constraint handler data;
+    * if this fails it means that we are asking for the var's component of H*u for a var
+    * that doesn't appear in any nonlinear constraint, so maybe we can also just return 0.0
+    */
+   assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
+
+   varexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, var);
+   assert(varexpr != NULL);
+   assert(SCIPisConsExprExprVar(varexpr));
+
+   /* use difftag to decide whether the variable belongs to the expression */
+   return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->bardot;
+}
+
+/** computes the hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetConsExprExprPartialDiffGradientDir()
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPcomputeConsExprHessianDir(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONS*              cons,             /**< constraint for which we will compute directional derivative */
+   SCIP_SOL*               sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   SCIP_SOL*               direction,        /**< direction */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   /* TODO: handle tags
+    *       better way to handle direction?
+    */
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* child;
+   SCIP_Real derivative;
+   SCIP_Real hessiandir;
+   unsigned int difftag;
+   SCIP_CONSEXPR_EXPR* rootexpr;
+   SCIP_CONSDATA* consdata;
+   int v;
+
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(cons != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
+   assert(conshdlrdata != NULL);
+
+   rootexpr = SCIPgetExprConsExpr(scip, cons);
+   assert(rootexpr != NULL);
+
+   if( rootexpr->exprhdlr == conshdlrdata->exprvalhdlr )
+   {
+      rootexpr->dot = 0.0;
+      return SCIP_OKAY;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* set up direction */
+   for( v = 0; v < consdata->nvarexprs; ++v )
+   {
+      consdata->varexprs[v]->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v]));
+      consdata->varexprs[v]->bardot = 0.0;
+   }
+
+   /* evaluate expression and directional derivative */
+   SCIP_CALL( evalAndDiff(scip, consexprhdlr, rootexpr, sol, soltag) );
+
+   difftag = ++(conshdlrdata->lastdifftag);
+
+   rootexpr->derivative = 1.0;
+   rootexpr->difftag = difftag;
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_VISITINGCHILD);
+
+   /* compute reverse diff and bardots: i.e. hessian times direction */
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
+
+      if( expr->exprhdlr->bwdiff == NULL || expr->exprhdlr->bwfwdiff == NULL )
+      {
+         rootexpr->derivative = SCIP_INVALID;
+         rootexpr->bardot = SCIP_INVALID;
+         break;
+      }
+
+      child = SCIPexpriteratorGetChildExprDFS(it);
+      assert(child != NULL);
+
+      /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
+      if( child->difftag != difftag && SCIPisConsExprExprVar(child) )
+         child->derivative = 0.0;
+
+      /* update differentiation tag of the child */
+      child->difftag = difftag;
+
+      /* call backward and forward-backward differentiation callback */
+      if( child->exprhdlr == conshdlrdata->exprvalhdlr )
+      {
+         derivative = 0.0;
+         hessiandir = 0.0;
+      }
+      else
+      {
+         derivative = SCIP_INVALID;
+         hessiandir = SCIP_INVALID;
+         SCIP_CALL( SCIPbwdiffConsExprExprHdlr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative, NULL, SCIP_INVALID) );
+         SCIP_CALL( SCIPbwfwdiffConsExprExprHdlr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &hessiandir) );
+
+         if( derivative == SCIP_INVALID || hessiandir == SCIP_INVALID ) /*lint !e777*/
+         {
+            rootexpr->derivative = SCIP_INVALID;
+            rootexpr->bardot = SCIP_INVALID;
+            break;
+         }
+      }
+
+      /* update partial derivative and hessian stored in the child expression
+       * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
+       * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
+       */
+      if( !SCIPisConsExprExprVar(child) )
+      {
+         child->derivative = expr->derivative * derivative;
+         child->bardot = expr->bardot * derivative + expr->derivative * hessiandir;
+      }
+      else
+      {
+         child->derivative += expr->derivative * derivative;
+         child->bardot += expr->bardot * derivative + expr->derivative * hessiandir;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
 }
 
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
