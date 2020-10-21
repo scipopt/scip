@@ -1341,14 +1341,13 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* create environment */
 #ifdef SCIP_REUSEENV
+   /* temporarily set environment for error messages (might be NULL) */
+   (*lpi)->grbenv = reusegrbenv;
+
    /* Try to reuse Gurobi environment (either thread local or not being thread safe). */
    if ( reusegrbenv == NULL )
    {
       assert( numlp == 0 );
-
-      /* temporarily set environment for error messages */
-      /* no environment yet */
-      (*lpi)->grbenv = NULL;
 
       /* create evironment */
       CHECK_ZERO_STAR( messagehdlr, GRBloadenv(&reusegrbenv, NULL) );
@@ -1384,7 +1383,6 @@ SCIP_RETCODE SCIPlpiCreate(
 
 #endif
    assert( (*lpi)->grbenv != NULL );
-
 
    (*lpi)->senarray = NULL;
    (*lpi)->rhsarray = NULL;
