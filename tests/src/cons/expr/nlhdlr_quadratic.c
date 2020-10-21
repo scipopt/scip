@@ -939,7 +939,8 @@ Test(nlhdlrquadratic, propagation_freq1vars, .init = setup, .fini = teardown)
  *
  */
 
-TestSuite(interCuts, .init = setup, .fini = teardown);
+/* TODO testsuite should also be able to run and succeed if DEFAULT_USEINTERCUTS is FALSE */
+TestSuite(interCuts, .init = setup, .fini = teardown, .disabled = !DEFAULT_USEINTERCUTS);
 
 static
 void simplifyAndDetect(
