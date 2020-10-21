@@ -7135,7 +7135,6 @@ SCIP_RETCODE checkCons(
    violation = consdata->violation;
 
    /* only check exact constraint if fp cons is feasible enough */
-   if( consdata->row != NULL && sol != NULL)
    {
       SCIP_Real activityfp;
       SCIP_Real mu;
