@@ -9492,6 +9492,34 @@ SCIP_RETCODE ensureBilinTermSize(
    return SCIP_OKAY;
 }
 
+/** compare two auxiliary expressions
+ *
+ *  Compares auxiliary variables, followed by coefficients and then constants.
+ */
+static
+SCIP_DECL_SORTPTRCOMP(auxexprComp)
+{
+   SCIP_CONSEXPR_AUXEXPR* auxexpr1 = (SCIP_CONSEXPR_AUXEXPR*)elem1;
+   SCIP_CONSEXPR_AUXEXPR* auxexpr2 = (SCIP_CONSEXPR_AUXEXPR*)elem2;
+   int compvars;
+   int i;
+
+   /* compare the auxiliary variables */
+   compvars = SCIPvarCompare(auxexpr1->auxvar, auxexpr2->auxvar); /* TODO can one of these be NULL? */
+
+   if( compvars != 0 )
+      return compvars;
+
+   /* compare the coefficients and constants */
+   for( i = 0; i < 3; ++i )
+   {
+      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] ) /*lint !e777*/
+         return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
+   }
+
+   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1; /*lint !e777*/
+}
+
 /* add an auxiliary expression to a bilinear term */
 static
 SCIP_RETCODE bilinTermAddAuxExpr(
@@ -9516,7 +9544,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    }
    else
    {
-      found = SCIPsortedvecFindPtr((void**)term->aux.exprs, SCIPauxexprComp, auxexpr, term->nauxexprs, &pos);
+      found = SCIPsortedvecFindPtr((void**)term->aux.exprs, auxexprComp, auxexpr, term->nauxexprs, &pos);
    }
 
    if( !found )
@@ -15839,40 +15867,6 @@ SCIP_Real SCIPevalConsExprBilinAuxExpr(
 
    return auxexpr->cst + auxexpr->coefs[0] * SCIPgetSolVal(scip, sol, auxexpr->auxvar) +
           auxexpr->coefs[1] * SCIPgetSolVal(scip, sol, x) + auxexpr->coefs[2] * SCIPgetSolVal(scip, sol, y);
-}
-
-/** compare two auxiliary expressions
- *
- *  Compares auxiliary variables, followed by coefficients and then constants.
- */
-int auxexprCompare(
-   SCIP_CONSEXPR_AUXEXPR* auxexpr1,           /**< first auxiliary expression */
-   SCIP_CONSEXPR_AUXEXPR* auxexpr2            /**< second auxiliary expression */
-   )
-{
-   int compvars;
-   int i;
-
-   /* compare the auxiliary variables */
-   compvars = SCIPvarCompare(auxexpr1->auxvar, auxexpr2->auxvar); /* TODO can one of these be NULL? */
-
-   if( compvars != 0 )
-      return compvars;
-
-   /* compare the coefficients and constants */
-   for( i = 0; i < 3; ++i )
-   {
-      if( auxexpr1->coefs[i] != auxexpr2->coefs[i] ) /*lint !e777*/
-         return auxexpr1->coefs[i] < auxexpr2->coefs[i] ? -1 : 1;
-   }
-
-   return auxexpr1->cst < auxexpr2->cst ? -1 : auxexpr1->cst == auxexpr2->cst ? 0 : 1; /*lint !e777*/
-}
-
-/** comparison method for sorting variables by non-decreasing index */
-SCIP_DECL_SORTPTRCOMP(SCIPauxexprComp)
-{
-   return auxexprCompare((SCIP_CONSEXPR_AUXEXPR*)elem1, (SCIP_CONSEXPR_AUXEXPR*)elem2);
 }
 
 /** stores the variables of a bilinear term in the data of the constraint handler */
