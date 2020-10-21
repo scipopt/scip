@@ -63,7 +63,7 @@
 #define TABLE_EARLIEST_STAGE_QUADRATIC       SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 /* some default values */
-#define INTERCUTS_MINVIOL      1e-4
+/* #define INTERCUTS_MINVIOL      1e-4 */
 #define DEFAULT_USEINTERCUTS   FALSE
 #define DEFAULT_USESTRENGTH    TRUE
 #define BINSEARCH_MAXITERS     120
@@ -2143,7 +2143,7 @@ SCIP_RETCODE findRho(
             return SCIP_OKAY;
          }
          else
-            currentrho = (alpha - 1) * interpoints[i] / alpha;
+            currentrho = (alpha - 1) * interpoints[i] / alpha;  /*lint !e795*/
       }
 
       if( currentrho < *rho )
