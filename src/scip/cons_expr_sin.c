@@ -990,7 +990,7 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffSin)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
    assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
 
-   *dot = COS(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
+   *dot = cos(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
 
    return SCIP_OKAY;
 }
@@ -1014,7 +1014,7 @@ SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffSin)
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
    assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
 
-   *bardot = -SIN(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
+   *bardot = -sin(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
 
    return SCIP_OKAY;
 }
