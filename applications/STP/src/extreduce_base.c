@@ -1701,19 +1701,34 @@ SCIP_RETCODE extreduce_checkNodeWithSimpleSt(
          if( head == node )
             continue;
 
-         if( edgecount++ > 8 )
-            break;
+         if( head == n1 || head == n2 )
+            continue;
 
          if( isPc && Is_pseudoTerm(graph->term[head]) )
             continue;
 
-         c0 = graph->cost[e];
-         c1 = (head == n1) ? 0.0 : extreduce_distDataGetSdDouble(scip, graph, head, n1, distdata);
-         c2 = (head == n2) ? 0.0 : extreduce_distDataGetSdDouble(scip, graph, head, n2, distdata);
+         if( edgecount++ > 8 )
+            break;
 
-         if( isPc && (c1 < -0.5 || c2 < -0.5 ) )
+         c0 = graph->cost[e];
+         c1 = extreduce_distDataGetSdDouble(scip, graph, head, n1, distdata);
+
+         if( isPc && c1 < -0.5 )
          {
-            assert(EQ(c1, -1.0) || EQ(c2, -1.0));
+            assert(EQ(c1, -1.0));
+            continue;
+         }
+
+         if( GT(c0 + c1, starcost) )
+            continue;
+
+         c2 = extreduce_distDataGetSdDouble(scip, graph, head, n2, distdata);
+       //  c1 = (head == n1) ? 0.0 : extreduce_distDataGetSdDouble(scip, graph, head, n1, distdata);
+       //  c2 = (head == n2) ? 0.0 : extreduce_distDataGetSdDouble(scip, graph, head, n2, distdata);
+
+         if( isPc && c2 < -0.5 )
+         {
+            assert(EQ(c2, -1.0));
             continue;
          }
 
