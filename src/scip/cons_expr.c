@@ -15021,12 +15021,6 @@ int SCIPcompareConsExprExprs(
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
-/** comparison method for sorting expressions */
-SCIP_DECL_SORTPTRCOMP(SCIPexprsComp)
-{
-   return SCIPcompareConsExprExprs((SCIP_CONSEXPR_EXPR*)elem1, (SCIP_CONSEXPR_EXPR*)elem2);
-}
-
 /** simplifies an expression
  *
  * The given expression will be released and overwritten with the simplified expression.

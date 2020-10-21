@@ -969,9 +969,6 @@ int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
 
-SCIP_EXPORT
-SCIP_DECL_SORTPTRCOMP(SCIPexprsComp);
-
 /** simplifies an expression
  *
  * The given expression will be released and overwritten with the simplified expression.
