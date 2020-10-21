@@ -332,7 +332,7 @@ endif
 ifeq ($(THREADSAFE),true)
    FLAGS	+=	-DSCIP_THREADSAFE
    ifeq ($(FILTERSQP),true)
-      LDFLAGS 	+=	-lpthread
+      LDFLAGS 	+=	$(LINKCC_l)pthread$(LINKLIBSUFFIX)
    endif
 endif
 
