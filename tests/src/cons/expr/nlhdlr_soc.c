@@ -102,6 +102,8 @@ void setup(void)
 static
 void teardown(void)
 {
+   SCIP_CALL( SCIPclearCuts(scip) );
+
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &uexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
@@ -149,9 +151,24 @@ void checkData(
 
    for( i = 0; i < nvars; ++i )
    {
+      if( SCIPisConsExprExprVar(vars[i]) )
+      {
+         /* if varexpr, then it may be a variable expression not used in the conshdlr for which we check here
+          * so to be sure map var-expression from vars to the one used in conshdlr
+          * (it's called create, but usually the hashmap lookup succeeds first)
+          */
+         SCIP_CALL( createExprVar(scip, conshdlr, &vars[i], SCIPgetConsExprExprVarVar(vars[i])) );
+      }
+
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
       cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected expr %d to be %p, but got %p\n",
          i + 1, vars[i], nlhdlrexprdata->vars[i]);
+
+      if( SCIPisConsExprExprVar(vars[i]) )
+      {
+         /* release, since create will have captured */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &vars[i]));
+      }
    }
 
    /* FIXME the remaining tests assume a certain order and sign and thus are not invariant to
@@ -1034,6 +1051,8 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", rootexpr, -SCIPinfinity(scip), 2.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+   rootexpr = SCIPgetExprConsExpr(scip, cons);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -1118,7 +1137,6 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
 }
 
 /* separates simple norm function from different points */
@@ -1142,12 +1160,11 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "exp( ((<x> + 0.5)^2 + <y>^2)^0.5 )", NULL, &rootexpr) );
 
    SCIPsimplifyConsExprExpr(scip, conshdlr, rootexpr, &expr, &changed, &infeasible);
-
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
-   rootexpr = expr;
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", rootexpr, -SCIPinfinity(scip), 2.0) );
+   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 2.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -1201,7 +1218,6 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
 }
 
 /* separates simple function */
@@ -1224,6 +1240,8 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -1269,5 +1287,4 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }

@@ -404,7 +404,13 @@ SCIP_DECL_READERREAD(readerReadCnf)
    }
 
    /* create problem */
-   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   retcode = SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPerrorMessage("Error creating problem for filename <%s>\n", filename);
+      SCIPfclose(f);
+      return retcode;
+   }
 
    /* read cnf file */
    retcode = readCnf(scip, f);

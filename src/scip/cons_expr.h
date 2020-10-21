@@ -795,7 +795,10 @@ SCIP_RETCODE SCIPcomputeConsExprExprGradient(
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprPartialDiff(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -807,6 +810,15 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
 /** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
 SCIP_EXPORT
 SCIP_Real SCIPgetConsExprExprDerivative(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** returns the difftag stored in an expression
+ *
+ * can be used to check whether partial derivative value is valid
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprDiffTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
@@ -980,20 +992,6 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
    SCIP_CONSEXPR_EXPR**    simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
-   SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
-   );
-
-/** reformulate an expression; this functions works similar as SCIPsimplifyConsExprExpr() but instead of calling the
- *  simplify callback of an expression handler it iterates through all nonlinear handlers and uses the reformulation
- *  callback
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPreformulateConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*     rootexpr,         /**< expression to be simplified */
-   SCIP_CONSEXPR_EXPR**    refrootexpr,      /**< buffer to store reformulated expression */
    SCIP_Bool*              changed,          /**< buffer to store if rootexpr actually changed */
    SCIP_Bool*              infeasible        /**< buffer to store whether infeasibility has been detected */
    );
@@ -1255,6 +1253,20 @@ SCIP_EXPORT
 SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+   );
+
+/** notifies conshdlr that a variable expression is to be freed
+ *
+ * the conshdlr will then update its var2expr hashmap
+ *
+ * @note To be called only by var-exprhdlr.
+ * @note Temporary method that will be replaced by ownerdata-free
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
+   SCIP*                      scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR*        varexpr         /**< variable expression to be freed */
    );
 
 /** collects all bilinear terms for a given set of constraints
@@ -1747,14 +1759,6 @@ void SCIPsetConsExprNlhdlrInitExit(
    SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
 );
 
-/** set the reformulate callback of a nonlinear handler */
-SCIP_EXPORT
-void SCIPsetConsExprNlhdlrReformulate(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE((*reformulate)) /**< reformulation callback */
-   );
-
 /** set the propagation callbacks of a nonlinear handler */
 SCIP_EXPORT
 void SCIPsetConsExprNlhdlrProp(
@@ -1822,12 +1826,6 @@ SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprNlhdlrExprData(
    SCIP_CONSEXPR_EXPR*        expr           /**< expression */
 );
 
-/** returns whether nonlinear handler implements the reformulation callback */
-SCIP_EXPORT
-SCIP_Bool SCIPhasConsExprNlhdlrReformulate(
-   SCIP_CONSEXPR_NLHDLR* nlhdlr              /**< nonlinear handler */
-);
-
 /** returns whether nonlinear handler implements the interval evaluation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPhasConsExprNlhdlrInteval(
@@ -1867,10 +1865,6 @@ SCIP_Bool SCIPhasConsExprNlhdlrEstimate(
 /** call the detect callback of a nonlinear handler */
 SCIP_EXPORT
 SCIP_DECL_CONSEXPR_NLHDLRDETECT(SCIPdetectConsExprNlhdlr);
-
-/** calls the reformulation callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(SCIPreformulateConsExprNlhdlr);
 
 /** call the auxiliary evaluation callback of a nonlinear handler */
 SCIP_EXPORT

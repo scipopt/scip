@@ -1761,6 +1761,7 @@ SCIP_DECL_CONSPARSE(consParseSuperindicator)
    *success = FALSE;
 
    /* extract binary variable name and value which triggers slack constraint */
+   /* coverity[secure_coding] */
    nargs = sscanf(str, " <%1023[^>]>[B] = %d", binvarname, &zeroone);
 
    if( nargs != 2 || (zeroone != 0 && zeroone != 1) )

@@ -129,10 +129,6 @@ set(settings_MINLP
     "nlpdiving4"
     "separating_aggressive"
 )
-set(settings_Bivariate
-    "minlp"
-    "bivariate"
-)
 
 set(settings_Bilinrelax
     "minlp"
@@ -299,16 +295,12 @@ endif()
 #
 set(instances_MINLP
     "instances/MINLP/bip_cross_min.10.10.10.1.pip\;1"
-    "instances/MINLP/circle.cip\;4.57424778"
+    "instances/MINLP/circle.lp\;4.57424778"
     "instances/MINLP/ex1266.mps\;16.3"
     "instances/MINLP/m3.osil\;37.8"
     "instances/MINLP/parincQuadratic.osil\;49920.5564"
     "instances/MINLP/tltr.mps\;48.0666666667"
     )
-set(instances_Bivariate
-    "instances/Bivariate/st_qpk1.osil\;-3"
-    "instances/Bivariate/nvs01.osil\;12.4696688"
-   )
 set(instances_Bilinrelax
     "instances/Bilinrelax/pointpack04.osil\;1.00000024988836"
     "instances/Bilinrelax/pointpack06.osil\;0.361111675167215"
@@ -548,7 +540,6 @@ add_instancetests(instances_MIP settings_MIP "MIP")
 add_instancetests(instances_compHandlerTest settings_compHandlerTest "compHandlerTest")
 add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
-add_instancetests(instances_Bivariate settings_Bivariate "Bivariate")
 add_instancetests(instances_Bilinrelax settings_Bilinrelax "Bilinrelax")
 add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")

@@ -56,6 +56,7 @@ set(scipsources
     scip/cons_expr_abs.c
     scip/cons_expr_cos.c
     scip/cons_expr_entropy.c
+    scip/cons_expr_erf.c
     scip/cons_expr_exp.c
     scip/cons_expr_iterator.c
     scip/cons_expr_rowprep.c
@@ -508,6 +509,7 @@ set(scipheaders
     scip/cons_expr.h
     scip/cons_expr_abs.h
     scip/cons_expr_cos.h
+    scip/cons_expr_erf.h
     scip/cons_expr_exp.h
     scip/cons_expr_log.h
     scip/cons_expr_pow.h

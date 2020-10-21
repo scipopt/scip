@@ -81,7 +81,7 @@ SCIP_DECL_NEWTONEVAL(function1)
    assert(params != NULL);
    assert(nparams == 2);
 
-   return params[0]*point + params[1] - SIN(point);
+   return params[0]*point + params[1] - sin(point);
 }
 
 /** evaluates the derivative of a*x + b - sin(x) for some coefficient a and constant b at a given point p
@@ -93,7 +93,7 @@ SCIP_DECL_NEWTONEVAL(derivative1)
    assert(params != NULL);
    assert(nparams == 2);
 
-   return params[0] - COS(point);
+   return params[0] - cos(point);
 }
 
 /** evaluates the function sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
@@ -105,7 +105,7 @@ SCIP_DECL_NEWTONEVAL(function2)
    assert(params != NULL);
    assert(nparams == 1);
 
-   return SIN(point) + (params[0] - point) * COS(point) - SIN(params[0]);
+   return sin(point) + (params[0] - point) * cos(point) - sin(params[0]);
 }
 
 /** evaluates the derivative of sin(x) + (alpha - x)*cos(x) - sin(alpha) for some constant alpha at a given point p
@@ -117,7 +117,7 @@ SCIP_DECL_NEWTONEVAL(derivative2)
    assert(params != NULL);
    assert(nparams == 1);
 
-   return (point - params[0]) * SIN(point);
+   return (point - params[0]) * sin(point);
 }
 
 /** helper function to compute the secant if it is a valid underestimator
@@ -142,11 +142,11 @@ SCIP_Bool computeSecantSin(
       return FALSE;
 
    /* if bounds are not within positive bay, secant is not underestimating */
-   if( SIN(lb) < 0.0 || SIN(ub) < 0.0  || (SIN(lb) == 0.0 && COS(lb) < 0.0) )
+   if( sin(lb) < 0.0 || sin(ub) < 0.0  || (sin(lb) == 0.0 && cos(lb) < 0.0) )
       return FALSE;
 
-   *lincoef = (SIN(ub) - SIN(lb)) / (ub - lb);
-   *linconst = SIN(ub) - (*lincoef) * ub;
+   *lincoef = (sin(ub) - sin(lb)) / (ub - lb);
+   *linconst = sin(ub) - (*lincoef) * ub;
 
    return TRUE;
 }
@@ -170,11 +170,11 @@ SCIP_Bool computeLeftTangentSin(
       return FALSE;
 
    /* left tangent is only underestimating in [pi, 1.5*pi) *2kpi */
-   if( SIN(lb) > 0.0 || COS(lb) >= 0.0 )
+   if( sin(lb) > 0.0 || cos(lb) >= 0.0 )
       return FALSE;
 
-   *lincoef = COS(lb);
-   *linconst = SIN(lb) - (*lincoef) * lb;
+   *lincoef = cos(lb);
+   *linconst = sin(lb) - (*lincoef) * lb;
 
    return TRUE;
 }
@@ -198,11 +198,11 @@ SCIP_Bool computeRightTangentSin(
       return FALSE;
 
    /* left tangent is only underestimating in (1.5*pi, 2*pi] *2kpi */
-   if( SIN(ub) > 0.0 || COS(ub) <= 0.0 )
+   if( sin(ub) > 0.0 || cos(ub) <= 0.0 )
       return FALSE;
 
-   *lincoef = COS(ub);
-   *linconst = SIN(ub) - (*lincoef) * ub;
+   *lincoef = cos(ub);
+   *linconst = sin(ub) - (*lincoef) * ub;
 
    return TRUE;
 }
@@ -231,7 +231,7 @@ SCIP_Bool computeSolTangentSin(
    assert(linconst != NULL);
 
    /* tangent is only underestimating in negative bay */
-   if( SIN(solpoint) > 0.0 )
+   if( sin(solpoint) > 0.0 )
       return FALSE;
 
    /* compute solution point mod pi */
@@ -244,8 +244,8 @@ SCIP_Bool computeSolTangentSin(
       || SCIPisZero(scip, solpointmodpi) )
       return FALSE;
 
-   params[0] = COS(solpoint);
-   params[1] = SIN(solpoint) - params[0] * solpoint;
+   params[0] = cos(solpoint);
+   params[1] = sin(solpoint) - params[0] * solpoint;
 
    /* choose starting points for Newton procedure */
    if( SCIPisGT(scip, solpointmodpi, M_PI_2) )
@@ -314,10 +314,10 @@ SCIP_Bool computeLeftMidTangentSin(
       lbmodpi += M_PI;
 
    /* choose starting point for Newton procedure */
-   if( COS(lb) < 0.0 )
+   if( cos(lb) < 0.0 )
    {
       /* in [pi/2,pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
-      if( SCIPisLE(scip, SIN(lb), 0.0) )
+      if( SCIPisLE(scip, sin(lb), 0.0) )
          return FALSE;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -325,7 +325,7 @@ SCIP_Bool computeLeftMidTangentSin(
    else
    {
       /* in ascending area, take the midpoint of the possible area in descending part */
-      if( SCIPisLT(scip, SIN(lb), 0.0) )
+      if( SCIPisLT(scip, sin(lb), 0.0) )
          startingpoint = lb + 2.25*M_PI - lbmodpi;
       else
          startingpoint = lb + 1.25*M_PI - lbmodpi;
@@ -345,7 +345,7 @@ SCIP_Bool computeLeftMidTangentSin(
       tangentpoint = ub;
 
       /* check whether affine function is still underestimating */
-      if( SCIPisLE(scip, SIN(0.5 * (ub + lb)), SIN(lb) + 0.5*(SIN(ub) - SIN(lb))) )
+      if( SCIPisLE(scip, sin(0.5 * (ub + lb)), sin(lb) + 0.5*(sin(ub) - sin(lb))) )
          return FALSE;
 
       *issecant = TRUE;
@@ -355,11 +355,11 @@ SCIP_Bool computeLeftMidTangentSin(
       return FALSE;
 
    /* compute secant between lower bound and connection point */
-   *lincoef = (SIN(tangentpoint) - SIN(lb)) / (tangentpoint - lb);
-   *linconst = SIN(lb) - (*lincoef) * lb;
+   *lincoef = (sin(tangentpoint) - sin(lb)) / (tangentpoint - lb);
+   *linconst = sin(lb) - (*lincoef) * lb;
 
    /* if the bounds are to close to each other, it's possible that the underestimator is not valid */
-   if( *lincoef >= COS(lb) )
+   if( *lincoef >= cos(lb) )
       return FALSE;
 
    SCIPdebugMsg(scip, "leftmidtangent: %g + %g*x <= sin(x) on [%g,%g]\n", *linconst, *lincoef, lb, ub);
@@ -400,10 +400,10 @@ SCIP_Bool computeRightMidTangentSin(
       ubmodpi += M_PI;
 
    /* choose starting point for Newton procedure */
-   if( COS(ub) > 0.0 )
+   if( cos(ub) > 0.0 )
    {
       /* in [3*pi/2,2*pi] underestimating doesn't work; otherwise, take the midpoint of possible area */
-      if( SCIPisLE(scip, SIN(ub), 0.0) )
+      if( SCIPisLE(scip, sin(ub), 0.0) )
          return FALSE;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
@@ -411,7 +411,7 @@ SCIP_Bool computeRightMidTangentSin(
    else
    {
       /* in descending area, take the midpoint of the possible area in ascending part */
-      if( SCIPisLE(scip, SIN(ub), 0.0) )
+      if( SCIPisLE(scip, sin(ub), 0.0) )
          startingpoint = ub - 1.25*M_PI - ubmodpi;
       else
          startingpoint = ub - M_PI_4 - ubmodpi;
@@ -431,7 +431,7 @@ SCIP_Bool computeRightMidTangentSin(
       tangentpoint = lb;
 
       /* check whether affine function is still underestimating */
-      if( SCIPisLE(scip, SIN(0.5 * (ub + lb)), SIN(lb) + 0.5*(SIN(ub) - SIN(lb))) )
+      if( SCIPisLE(scip, sin(0.5 * (ub + lb)), sin(lb) + 0.5*(sin(ub) - sin(lb))) )
          return FALSE;
 
       *issecant = TRUE;
@@ -441,11 +441,11 @@ SCIP_Bool computeRightMidTangentSin(
       return FALSE;
 
    /* compute secant between lower bound and connection point */
-   *lincoef = (SIN(tangentpoint) - SIN(ub)) / (tangentpoint - ub);
-   *linconst = SIN(ub) - (*lincoef) * ub;
+   *lincoef = (sin(tangentpoint) - sin(ub)) / (tangentpoint - ub);
+   *linconst = sin(ub) - (*lincoef) * ub;
 
    /* if the bounds are to close to each other, it's possible that the underestimator is not valid */
-   if( *lincoef <= COS(lb) )
+   if( *lincoef <= cos(lb) )
       return FALSE;
 
    return TRUE;
@@ -519,9 +519,9 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
        * if sin(l(x)) < l(s), we are looking for k minimal s.t. a + 2k*pi > l(x) where a = asin(l(s))
        * then the new lower bound is a + 2k*pi
        */
-      if( SCIPisLT(scip, SIN(newinf), parentbounds.inf) )
+      if( SCIPisLT(scip, sin(newinf), parentbounds.inf) )
       {
-         SCIP_Real a = ASIN(parentbounds.inf);
+         SCIP_Real a = asin(parentbounds.inf);
          int k = (int) ceil((newinf - a) / (2.0*M_PI));
          newinf = a + 2.0*M_PI * k;
       }
@@ -529,16 +529,16 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
       /* if sin(l(x)) > u(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) where a = asin(u(s))
        * then the new lower bound is pi - a + 2k*pi
        */
-      else if( SCIPisGT(scip, SIN(newinf), parentbounds.sup) )
+      else if( SCIPisGT(scip, sin(newinf), parentbounds.sup) )
       {
-         SCIP_Real a = ASIN(parentbounds.sup);
+         SCIP_Real a = asin(parentbounds.sup);
          int k = (int) ceil((newinf + a) / (2.0*M_PI) - 0.5);
          newinf = M_PI * (2.0*k + 1.0) - a;
       }
 
       assert(newinf >= childbounds.inf);
-      assert(SCIPisFeasGE(scip, SIN(newinf), parentbounds.inf));
-      assert(SCIPisFeasLE(scip, SIN(newinf), parentbounds.sup));
+      assert(SCIPisFeasGE(scip, sin(newinf), parentbounds.inf));
+      assert(SCIPisFeasLE(scip, sin(newinf), parentbounds.sup));
    }
 
    if( !SCIPisInfinity(scip, newsup) )
@@ -546,9 +546,9 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
       /* if sin(u(x)) > u(s), we are looking for k minimal s.t. a + 2k*pi > u(x) - 2*pi where a = asin(u(s))
        * then the new upper bound is a + 2k*pi
        */
-      if ( SCIPisGT(scip, SIN(newsup), parentbounds.sup) )
+      if ( SCIPisGT(scip, sin(newsup), parentbounds.sup) )
       {
-         SCIP_Real a = ASIN(parentbounds.sup);
+         SCIP_Real a = asin(parentbounds.sup);
          int k = (int) ceil((newsup - a ) / (2.0*M_PI)) - 1;
          newsup = a + 2.0*M_PI * k;
       }
@@ -556,16 +556,16 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
       /* if sin(u(x)) < l(s), we are looking for k minimal s.t. pi - a + 2k*pi > l(x) - 2*pi where a = asin(l(s))
        * then the new upper bound is pi - a + 2k*pi
        */
-      if( SCIPisLT(scip, SIN(newsup), parentbounds.inf) )
+      if( SCIPisLT(scip, sin(newsup), parentbounds.inf) )
       {
-         SCIP_Real a = ASIN(parentbounds.inf);
+         SCIP_Real a = asin(parentbounds.inf);
          int k = (int) ceil((newsup + a) / (2.0*M_PI) - 0.5) - 1;
          newsup = M_PI * (2.0*k + 1.0) - a;
       }
 
       assert(newsup <= childbounds.sup);
-      assert(SCIPisFeasGE(scip, SIN(newsup), parentbounds.inf));
-      assert(SCIPisFeasLE(scip, SIN(newsup), parentbounds.sup));
+      assert(SCIPisFeasGE(scip, sin(newsup), parentbounds.inf));
+      assert(SCIPisFeasLE(scip, sin(newsup), parentbounds.sup));
    }
 
    /* if the new interval is invalid, the old one was already invalid */
@@ -825,10 +825,10 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
    SCIP_Real             ub                  /**< upper bound of child */
    )
 {
-   SCIP_Real lbsin = SIN(lb);
-   SCIP_Real ubsin = SIN(ub);
-   SCIP_Real lbcos = COS(lb);
-   SCIP_Real ubcos = COS(ub);
+   SCIP_Real lbsin = sin(lb);
+   SCIP_Real ubsin = sin(ub);
+   SCIP_Real lbcos = cos(lb);
+   SCIP_Real ubcos = cos(ub);
 
    /* curvature can only be determined if bounds lie within one bay*/
    if( (ub - lb <= M_PI) && (lbsin * ubsin >= 0.0) )
@@ -903,7 +903,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
    if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr,
-            SIN(SCIPgetConsExprExprValueValue(child))) );
+            sin(SCIPgetConsExprExprValueValue(child))) );
    }
    else
    {
@@ -948,7 +948,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   *val = SIN(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+   *val = sin(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
@@ -967,7 +967,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
 
-   *val = COS(SCIPgetConsExprExprValue(child));
+   *val = cos(SCIPgetConsExprExprValue(child));
 
    return SCIP_OKAY;
 }

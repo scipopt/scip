@@ -556,7 +556,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      if( scip->set->limit_memory < SCIP_MEM_NOLIMIT )
+      if( scip->set->limit_memory < (SCIP_Real)SCIP_MEM_NOLIMIT )
       {
          SCIP_Longint memused = SCIPgetMemUsed(scip);
 

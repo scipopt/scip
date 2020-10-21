@@ -131,7 +131,8 @@ Test(entropy, parse, .description = "Tests the expression parsing.")
 
    cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
-   cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[0]));
+   cr_expect(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(expr)[0]) == x);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -256,7 +257,11 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, entropyexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, entropyexpr, x), results[i]));
+      /* iff cannot be differentiated, then entropyexpr->derivative is SCIP_INVALID */
+      cr_expect((SCIPgetConsExprExprDerivative(entropyexpr) == SCIP_INVALID) == (results[i] == SCIP_INVALID));
+      /* if entropyexpr cannot be differentiated, then the equality may not hold since
+       * xexpr->derivative may not be SCIP_INVALID */
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprDerivative(xexpr), results[i]) || (results[i] == SCIP_INVALID));
    }
 
    /* random part */
@@ -266,10 +271,10 @@ Test(entropy, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
 
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, entropyexpr, sol, 0) );
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, entropyexpr, x), -1.0 - log(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprDerivative(xexpr), -1.0 - log(randnum)));
 
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, negprodexpr, sol, 0) );
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, negprodexpr, x), -1.0 - log(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprDerivative(xexpr), -1.0 - log(randnum)));
    }
 }
 
@@ -339,7 +344,8 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    expr2 = SCIPgetConsExprExprChildren(expr1)[0];
    cr_expect(SCIPgetConsExprExprHdlr(expr2) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr2) == 1);
-   cr_expect(SCIPgetConsExprExprChildren(expr2)[0] == xexpr);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr2)[0]));
+   cr_expect(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(expr2)[0]) == x);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 
@@ -354,7 +360,7 @@ Test(entropy, simplify, .description = "Tests the expression simplification.")
    cr_assert_not(infeasible);
    cr_expect(SCIPgetConsExprExprHdlr(expr1) == SCIPfindConsExprExprHdlr(conshdlr, "entropy"));
    cr_expect(SCIPgetConsExprExprNChildren(expr1) == 1);
-   cr_expect(SCIPgetConsExprExprChildren(expr1)[0] == xexpr);
+   cr_expect(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(expr1)[0]) == x);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr1) );
 }

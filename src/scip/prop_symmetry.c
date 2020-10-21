@@ -721,10 +721,13 @@ SCIP_RETCODE freeSymmetryData(
       SCIPfreeBlockMemoryArray(scip, &propdata->permvarsevents, propdata->npermvars);
    }
 
-   /* release variables if the leader type is not binary */
-   if ( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY )
+   /* release variables */
+   if ( propdata->nonbinpermvarcaptured != NULL )
    {
       int cnt;
+
+      /* memory should have been allocated only if the leader type is not binary */
+      assert( propdata->sstenabled && propdata->sstleadervartype != (int) SCIP_SSTTYPE_BINARY );
 
       for (i = propdata->nbinpermvars, cnt = 0; i < propdata->npermvars; ++i, ++cnt)
       {
@@ -2990,6 +2993,90 @@ SCIP_RETCODE determineSymmetry(
  */
 
 
+/** sorts orbitope vars matrix such that rows are sorted increasingly w.r.t. minimum variable index in row;
+ *  columns are sorted such that first row is sorted increasingly w.r.t. variable indices
+ */
+static
+SCIP_RETCODE SCIPsortOrbitope(
+   SCIP*                 scip,               /**< SCIP instance */
+   int**                 orbitopevaridx,     /**< variable index matrix of orbitope */
+   SCIP_VAR***           vars,               /**< variable matrix of orbitope */
+   int                   nrows,              /**< number of binary rows of orbitope */
+   int                   ncols               /**< number of columns of orbitope */
+   )
+{
+   SCIP_VAR** sortedrow;
+   int* colorder;
+   int* idcs;
+   int arrlen;
+   int minrowidx = INT_MAX;
+   int minrow = INT_MAX;
+   int i;
+   int j;
+
+   assert( scip != NULL );
+   assert( orbitopevaridx != NULL );
+   assert( vars != NULL );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
+
+   arrlen = MAX(nrows, ncols);
+   SCIP_CALL( SCIPallocBufferArray(scip, &idcs, arrlen) );
+
+   /* detect minimum index per row */
+   for (i = 0; i < nrows; ++i)
+   {
+      int idx;
+
+      idcs[i] = INT_MAX;
+
+      for (j = 0; j < ncols; ++j)
+      {
+         idx = orbitopevaridx[i][j];
+
+         if ( idx < idcs[i] )
+            idcs[i] = idx;
+
+         if ( idx < minrowidx )
+         {
+            minrowidx = idx;
+            minrow = i;
+         }
+      }
+   }
+
+   /* sort rows increasingly w.r.t. minimum variable indices */
+   SCIPsortIntPtr(idcs, (void**) vars, nrows);
+
+   /* sort columns increasingly w.r.t. variable indices of first row */
+   SCIP_CALL( SCIPallocBufferArray(scip, &colorder, ncols) );
+   for (j = 0; j < ncols; ++j)
+   {
+      idcs[j] = orbitopevaridx[minrow][j];
+      colorder[j] = j;
+   }
+
+   /* sort columns of first row and store new column order */
+   SCIPsortIntIntPtr(idcs, colorder, (void**) vars[0], ncols);
+
+   /* adapt rows 1, ..., nrows - 1 to new column order*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortedrow, ncols) );
+   for (i = 1; i < nrows; ++i)
+   {
+      for (j = 0; j < ncols; ++j)
+         sortedrow[j] = vars[i][colorder[j]];
+      for (j = 0; j < ncols; ++j)
+         vars[i][j] = sortedrow[j];
+   }
+
+   SCIPfreeBufferArray(scip, &sortedrow);
+   SCIPfreeBufferArray(scip, &colorder);
+   SCIPfreeBufferArray(scip, &idcs);
+
+   return SCIP_OKAY;
+}
+
+
 /** checks whether components of the symmetry group can be completely handled by orbitopes */
 static
 SCIP_RETCODE detectOrbitopes(
@@ -3252,6 +3339,9 @@ SCIP_RETCODE detectOrbitopes(
 
       if ( ! infeasibleorbitope )
       {
+         /* to ensure same orbitope is added if different sets of generators are found */
+         SCIP_CALL( SCIPsortOrbitope(scip, orbitopevaridx, vars, nbincyclescomp, npermsincomponent + 1) );
+
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, "orbitope", vars, SCIP_ORBITOPETYPE_FULL,
                nbincyclescomp, npermsincomponent + 1, TRUE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -3809,7 +3899,7 @@ SCIP_RETCODE addSymresackConss(
                SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name, perms[permidx], permvars, npermvars, FALSE,
                      conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             }
-
+            propdata->componentblocked[i] |= SYM_HANDLETYPE_SYMBREAK;
             SCIP_CALL( SCIPaddCons(scip, cons) );
 
             /* do not release constraint here - will be done later */
@@ -5236,6 +5326,21 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
 
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
    }
+   else if ( propdata->ofenabled && propdata->ofsymcomptiming == 0 )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
+
+      /* otherwise compute symmetry if timing requests it */
+      if ( propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
+   }
 
    return SCIP_OKAY;
 }
@@ -5262,6 +5367,20 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    if ( (propdata->symconsenabled || propdata->sstenabled) && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( tryAddSymmetryHandlingConss(scip, prop, NULL, NULL) );
+   }
+
+   /* if timing requests it, guarantee that symmetries are computed even if presolving is disabled */
+   if ( propdata->ofenabled && propdata->ofsymcomptiming <= 1 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
+   {
+      if ( propdata->symfixnonbinaryvars )
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );
+      }
+      else
+      {
+         SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_REAL, SYM_SPEC_INTEGER) );
+      }
+      assert( propdata->binvaraffected || ! propdata->ofenabled );
    }
 
    return SCIP_OKAY;
@@ -5370,7 +5489,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
       SCIP_Bool infeasible;
       int nprop;
 
-      /* if we did not tried to add symmetry handling constraints */
+      /* if we have not tried to add symmetry handling constraints */
       if ( *result == SCIP_DIDNOTRUN )
          *result = SCIP_DIDNOTFIND;
 
@@ -5392,7 +5511,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    }
    else if ( propdata->ofenabled && propdata->ofsymcomptiming == SYM_COMPUTETIMING_DURINGPRESOL )
    {
-      /* otherwise compute symmetry if timing requests it */
+      /* otherwise compute symmetry early if timing requests it */
       if ( ! propdata->islinearproblem || propdata->symfixnonbinaryvars )
       {
          SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY, SYM_SPEC_INTEGER | SYM_SPEC_REAL) );

@@ -1497,17 +1497,14 @@ SCIP_Real adjustedLb(
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
-   if( lb < 0 && SCIPsetIsInfinity(set, -lb) )
+   if( lb < 0.0 && SCIPsetIsInfinity(set, -lb) )
       return -SCIPsetInfinity(set);
-   else if( lb > 0 && SCIPsetIsInfinity(set, lb) )
+   else if( lb > 0.0 && SCIPsetIsInfinity(set, lb) )
       return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasCeil(set, lb);
-#ifdef SCIP_DISABLED_CODE
-   /* for numerically bad instances it might happen that variables have tiny bounds */
-   else if( SCIPsetIsZero(set, lb) )
+   else if( lb > 0.0 && lb < SCIPsetEpsilon(set) )
       return 0.0;
-#endif
    else
       return lb;
 }
@@ -1520,17 +1517,14 @@ SCIP_Real adjustedUb(
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
-   if( ub > 0 && SCIPsetIsInfinity(set, ub) )
+   if( ub > 0.0 && SCIPsetIsInfinity(set, ub) )
       return SCIPsetInfinity(set);
-   else if( ub < 0 && SCIPsetIsInfinity(set, -ub) )
+   else if( ub < 0.0 && SCIPsetIsInfinity(set, -ub) )
       return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasFloor(set, ub);
-#ifdef SCIP_DISABLED_CODE
-   /* for numerically bad instances it might happen that variables have tiny bounds */
-   else if( SCIPsetIsZero(set, ub) )
+   else if( ub < 0.0 && ub > -SCIPsetEpsilon(set) )
       return 0.0;
-#endif
    else
       return ub;
 }

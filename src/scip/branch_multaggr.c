@@ -49,7 +49,9 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_solvingstats.h"
+#include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
+#include "scip/scip_var.h"
 #include "scip/set.h"
 #include "scip/struct_scip.h"
 #include "scip/var.h"
@@ -711,11 +713,7 @@ SCIP_DECL_BRANCHEXIT(branchExitMultAggr)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
 
       /* free arrays */
-      if( branchruledata->ratioggain != NULL )
-      {
-         SCIPfreeMemoryArray(scip, &branchruledata->ratioggain);
-         branchruledata->ratioggain = NULL;
-      }
+      SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->ratioggain, branchruledata->size);
       SCIP_CALL( SCIPfreeClock(scip, &branchruledata->clckstrongbr) );
       SCIP_CALL( SCIPfreeClock(scip, &branchruledata->clckmultaggrbr) );
    )

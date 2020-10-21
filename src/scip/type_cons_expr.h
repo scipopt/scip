@@ -718,26 +718,6 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSEXPR_EXPRENFO_METHOD* participating, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
-/** nonlinear handler callback for reformulation
- *
- * The method is called for each expression during SCIP's presolving.
- * It shall reformulate a given expression by another one.
- * It shall store the reformulated expression in the refexpr pointer.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - nlhdlr : nonlinear handler
- *  - expr : expression to be reformulated
- * output:
- *  - refexpr : the reformulated expression (NULL if expr can not be reformulated)
- */
-#define SCIP_DECL_CONSEXPR_NLHDLRREFORMULATE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPR_EXPR** refexpr)
-
 /** auxiliary evaluation callback of nonlinear handler
  *
  * Evaluates the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any)
