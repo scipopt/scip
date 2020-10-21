@@ -6685,6 +6685,59 @@ SCIP_Real SCIProwGetSolActivity(
    return activity;
 }
 
+/** returns the activity of a row for a given solution plus a bound on the floating-point error */
+SCIP_Real SCIProwGetSolActivityWithErrorbound(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            errorbound          /**< bound on absolute floating-point error */
+   )
+{
+   SCIP_COL* col;
+   SCIP_Real inf;
+   SCIP_Real activity;
+   SCIP_Real solval;
+   SCIP_Real mu;
+   int i;
+
+   assert(row != NULL);
+   assert(errorbound != NULL);
+
+   *errorbound = SCIPsetInfinity(set);
+
+   activity = row->constant;
+   mu = 3.0 * REALABS(row->constant);
+   for( i = 0; i < row->len; ++i )
+   {
+      col = row->cols[i];
+      assert(col != NULL);
+      assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && col->lppos >= 0));
+      solval = SCIPsolGetVal(sol, set, stat, col->var);
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+      {
+         if( SCIPsetIsInfinity(set, -row->lhs) )
+            solval = (row->vals[i] >= 0.0 ? col->lb : col->ub);
+         else if( SCIPsetIsInfinity(set, row->rhs) )
+            solval = (row->vals[i] >= 0.0 ? col->ub : col->lb);
+         else
+            solval = (col->lb + col->ub)/2.0;
+      }
+      activity += row->vals[i] * solval;
+      mu += REALABS(activity);
+      mu += 3.0 * REALABS(row->vals[i] * solval);
+   }
+
+   inf = SCIPsetInfinity(set);
+   activity = MAX(activity, -inf);
+   activity = MIN(activity, +inf);
+
+   if( !SCIPsetIsInfinity(set, activity) && !SCIPsetIsInfinity(set, -activity) )
+      *errorbound = 2.0 * SCIP_REAL_UNITROUNDOFF * mu;
+
+   return activity;
+}
+
 /** returns the feasibility of a row for the given solution */
 SCIP_Real SCIProwGetSolFeasibility(
    SCIP_ROW*             row,                /**< LP row */

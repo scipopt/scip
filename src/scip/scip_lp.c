@@ -2097,6 +2097,28 @@ SCIP_Real SCIPgetRowSolActivity(
       return SCIProwGetPseudoActivity(row, scip->set, scip->stat);
 }
 
+/** returns the activity of a row for the given primal solution plus a bound on the floating-point error
+ *
+ *  @return the activity of a row for the given primal solution plus a bound on the floating-point error
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Real SCIPgetRowSolActivityWithErrorbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            errorbound          /**< bound on absolute floating-point error */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( sol == NULL )
+      return SCIP_INVALIDCALL;
+   else
+      return SCIProwGetSolActivityWithErrorbound(row, scip->set, scip->stat, sol, errorbound);
+}
+
 /** returns the feasibility of a row for the given primal solution
  *
  *  @return the feasibility of a row for the given primal solution

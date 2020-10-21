@@ -7068,7 +7068,6 @@ SCIP_RETCODE checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real activityfp;
-   SCIP_Real absviolfp;
    SCIP_Rational* activity;
    SCIP_Rational* violation;
 
@@ -7089,11 +7088,31 @@ SCIP_RETCODE checkCons(
    /* only check exact constraint if fp cons is feasible enough */
    if( consdata->row != NULL && sol != NULL)
    {
-      activityfp = SCIPgetRowSolActivity(scip, consdata->row, sol);
-      absviolfp = MAX(activityfp - consdata->rhsreal, consdata->lhsreal - activityfp);
-      if( SCIPisFeasPositive(scip, absviolfp) )
+      SCIP_Real mu;
+
+      activityfp = SCIPgetRowSolActivityWithErrorbound(scip, consdata->row, sol, &mu);
+      if( activityfp - mu > consdata->rhsreal || activityfp + mu < consdata->lhsreal )
       {
+         SCIP_Real absviolfp = MAX(activityfp - consdata->rhsreal, consdata->lhsreal - activityfp);
+         if( !SCIPisFeasPositive(scip, absviolfp) )
+         {
+            SCIPinfoMessage(scip, NULL, "New: discarding solution: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n  ",
+               activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+            SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) );
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+         }
          *violated = TRUE;
+         return SCIP_OKAY;
+      }
+      else if( activityfp + mu < consdata->rhsreal && activityfp - mu >= consdata->lhsreal )
+      {
+         SCIPinfoMessage(scip, NULL, "New: skipping exact check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n  ",
+            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+         SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) );
+         SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         *violated = FALSE;
          return SCIP_OKAY;
       }
    }
