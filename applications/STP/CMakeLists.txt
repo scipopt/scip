@@ -19,7 +19,9 @@ add_executable(scipstp
     src/extreduce_core.c
     src/extreduce_data.c
     src/extreduce_dbg.c
+    src/extreduce_dist.c
     src/extreduce_extmst.c
+    src/extreduce_mldists.c
     src/extreduce_redcosts.c
     src/extreduce_util.c
     src/graph_history.c

@@ -61,6 +61,9 @@ extern SCIP_RETCODE    extreduce_checkNodeWithSimpleSt(SCIP*, const GRAPH*, int,
 extern void               extreduce_extCompRevert(const GRAPH*, const EXTPERMA*, EXTCOMP*);
 extern SCIP_Bool          extreduce_extCompIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
 extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const EXTPERMA*, const EXTCOMP*);
+
+/* extreduce_dist.c
+ */
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
@@ -70,6 +73,9 @@ extern SCIP_Real          extreduce_distDataGetSdDoubleForbiddenEq(SCIP*, const 
 extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GRAPH*, int, int, EXTDATA*);
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
+
+/* extreduce_mldists.c
+ */
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);
 extern void               extreduce_mldistsFree(SCIP*, MLDISTS**);
 extern SCIP_Bool          extreduce_mldistsIsEmpty(const MLDISTS*);
