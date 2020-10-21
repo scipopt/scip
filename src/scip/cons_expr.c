@@ -345,6 +345,7 @@ typedef struct
 /*
  * Local methods
  */
+
 static
 SCIP_RETCODE evalAndDiff(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -13998,7 +13999,6 @@ SCIP_RETCODE SCIPparseConsExprExpr(
  * is passed, then subexpressions are always reevaluated.
  * The tag is stored together with the value and can be received via
  * SCIPgetConsExprExprEvalTag().
- *
  */
 SCIP_RETCODE SCIPevalConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -14324,12 +14324,9 @@ SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
 /** computes the hessian * v at a given point
  *
  * Evaluates children, if necessary.
- * Value can be received via XXX()
+ * Value can be received via SCIPgetConsExprExprPartialDiffGradientDir()
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
- *
- * TODO: handle tags
- *       better way to handle direction?
  */
 SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -14340,6 +14337,9 @@ SCIP_RETCODE SCIPcomputeConsExprHessianDir(
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
+   /* TODO: handle tags
+    *       better way to handle direction?
+    */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_CONSEXPR_EXPR* expr;

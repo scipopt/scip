@@ -892,10 +892,9 @@ SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
 /** computes the hessian * v at a given point
  *
  * Evaluates children, if necessary.
- * Value can be received via XXX()
+ * Value can be received via SCIPgetConsExprExprPartialDiffGradientDir()
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
- *
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeConsExprHessianDir(
