@@ -1596,6 +1596,7 @@ Test(interCuts, testRays6)
    SCIP_Real coefs4b[5];
    SCIP_Real coefscond[3];
    SCIP_Real root;
+   SCIP_Bool success;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[expr] <test>: <y>*<z> + <z>^2 + <x> + 2.0 <= 2.0");
 
@@ -1727,7 +1728,8 @@ Test(interCuts, testRays6)
       {
          SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, 1.0, TRUE, &myrays->rays[myrays->raysbegin[nray]],
                   &myrays->raysidx[myrays->raysbegin[nray]], myrays->raysbegin[nray + 1] - myrays->raysbegin[nray], vb, vzlp,
-                  wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond) );
+                  wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond, &success) );
+         cr_expect(success);
 
          /* check coefficients */
          for( int i = 0; i < 5; ++i )
@@ -1767,7 +1769,8 @@ Test(interCuts, testRays6)
       printf("testing ray with finite/infinte intersection\n");
 
       SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, 1.0, TRUE, testraycoef, testrayidx, testraynnonz,
-               vb, vzlp, wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond) );
+               vb, vzlp, wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond, &success) );
+      cr_expect(success);
       root = computeRoot(scip, coefs4a);
 
       cr_expect_float_eq(root, expectedroot4a, 1e-12, "case 4a: root for custom ray: got %g, exp %g\n", root,
@@ -1790,7 +1793,8 @@ Test(interCuts, testRays6)
 
       /* 4a */
       SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, 1.0, TRUE, testraycoef, testrayidx, testraynnonz,
-               vb, vzlp, wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond) );
+               vb, vzlp, wcoefs, wzlp, kappa, coefs4a, coefs4b, coefscond, &success) );
+      cr_expect(success);
       root = computeRoot(scip, coefs4a);
 
       printf("computing root with A, B, C, D, E = %.15f, %.15f, %.15f, %.15f, %.15f\n",coefs4a[0], coefs4a[1], coefs4a[2], coefs4a[3], coefs4a[4]);
