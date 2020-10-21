@@ -550,15 +550,6 @@ SCIP_Real SCIProwGetSolActivity(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** returns the activity of a row for a given solution plus a bound on the floating-point error */
-SCIP_Real SCIProwGetSolActivityWithErrorbound(
-   SCIP_ROW*             row,                /**< LP row */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Real*            errorbound          /**< bound on absolute floating-point error */
-   );
-
 /** returns the feasibility of a row for the given solution */
 SCIP_Real SCIProwGetSolFeasibility(
    SCIP_ROW*             row,                /**< LP row */

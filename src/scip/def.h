@@ -165,7 +165,7 @@ extern "C" {
 
 #define SCIP_REAL_MAX         (SCIP_Real)DBL_MAX
 #define SCIP_REAL_MIN        -(SCIP_Real)DBL_MAX
-#define SCIP_REAL_UNITROUNDOFF        2e-16
+#define SCIP_REAL_UNITROUNDOFF        (1.0 / 9007199254740992)
 #define SCIP_REAL_FORMAT               "lf"
 
 #define SCIP_DEFAULT_INFINITY         1e+20  /**< default value considered to be infinity */
