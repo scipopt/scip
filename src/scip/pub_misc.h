@@ -1793,6 +1793,22 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
+/** calculates hash for floating-point number by using Fibonacci hashing */
+SCIP_EXPORT
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< number to hash */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+
+#endif
+
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
@@ -1973,16 +1989,6 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/** returns a non-negative integer hash key for a given real number by using Fibonacci hashing */
-SCIP_EXPORT
-unsigned int SCIPcalcFibHash(
-   SCIP_Real             v                   /**< value to be hashed */
-   );
-
-#ifdef NDEBUG
-#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
-#endif
-
 /** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
  *  that are larger, equal, and smaller than the weighted median
  *
@@ -2009,7 +2015,6 @@ SCIP_RETCODE SCIPgetRandomSubset(
    int                   nsubelems,          /**< number of elements that should be drawn and stored */
    unsigned int          randseed            /**< seed value for random generator */
    );
-
 
 /**@} */
 
@@ -2120,7 +2125,11 @@ void SCIPpermuteArray(
  */
 
 
-/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
@@ -2133,7 +2142,20 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-/** computes pointer set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysIntersectionInt(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
 SCIP_EXPORT
 void SCIPcomputeArraysIntersectionPtr(
    void**                array1,             /**< first array (in ascending order) */
@@ -2147,9 +2169,26 @@ void SCIPcomputeArraysIntersectionPtr(
                                               *   (note: it is possible to use narray1 for this input argument) */
 );
 
-/** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysSetminusInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */

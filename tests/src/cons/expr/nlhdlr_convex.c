@@ -91,6 +91,8 @@ void teardown(void)
 {
    nlhdlrExitConvex(scip, nlhdlr);
 
+   SCIP_CALL( SCIPclearCuts(scip) );
+
    SCIP_CALL( SCIPreleaseVar(scip, &x_1) );
    SCIP_CALL( SCIPreleaseVar(scip, &x_2) );
    SCIP_CALL( SCIPreleaseVar(scip, &x_3) );
@@ -298,6 +300,8 @@ SCIP_RETCODE estimate(
    else
       expr = oexpr;
    SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   expr = SCIPgetExprConsExpr(scip, cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " at x1=%g x2=%g x3=%g\n",
@@ -359,7 +363,6 @@ SCIP_RETCODE estimate(
    cr_assert_not_null(nlhdlrexprdata);
    SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;

@@ -14616,7 +14616,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    SCIP_ROW** lpirows;
    SCIP_Real* primsol;
    SCIP_Real* activity;
-   SCIP_Bool activitycomputed; /* whether some meaningful values are stored in activity */
+   SCIP_Bool activityvalid = FALSE;  /* whether some meaningful values are stored in activity */
    SCIP_Real* ray;
    SCIP_Real rayobjval;
    SCIP_Real rayscale;
@@ -14756,7 +14756,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    if( r < nlpirows )
    {
       /* get primal feasible point */
+#ifdef SCIP_USE_LPSOLVER_ACTIVITY
+      SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, activity, NULL) );
+      activityvalid = TRUE;
+#else
       SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
+#endif
 
       /* determine feasibility status */
       if( primalfeasible != NULL )
@@ -14775,17 +14780,12 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
                && SCIPlpIsFeasLE(set, lp, primsol[c], lpicols[c]->ub);
          }
       }
-
-      /* remember that we still need to compute activity (we cannot trust the one from LP solver, see #2594)*/
-      activitycomputed = FALSE;
    }
    else
    {
+      activityvalid = TRUE; /* previous for() loop computed activity for all rows */
       if( primalfeasible != NULL )
          *primalfeasible = TRUE;
-
-      /* remember that we have decent values in the activity array */
-      activitycomputed = TRUE;
    }
 
    if( primalfeasible != NULL && !(*primalfeasible) )
@@ -14870,13 +14870,17 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    for( r = 0; r < nlpirows; ++r )
    {
       lpirows[r]->dualsol = SCIP_INVALID;
-      if( activitycomputed )
+      if( activityvalid )
       {
+         /* use activity as computed above or given by LP solver to set activity in row */
          lpirows[r]->activity = activity[r] + lpirows[r]->constant;
          lpirows[r]->validactivitylp = lpcount;
       }
-      else if( lpirows[r]->validactivitylp != stat->lpcount )
+      else if( lpirows[r]->validactivitylp != lpcount )
+      {
+         /* recalculate activity from row if not valid */
          SCIProwRecalcLPActivity(lpirows[r], stat);
+      }
 
       /* check for feasibility of the rows */
       if( primalfeasible != NULL )

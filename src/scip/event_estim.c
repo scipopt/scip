@@ -2986,7 +2986,10 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 /* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
+   {
       freeTreeData(scip, &eventhdlrdata->treedata);
+      SCIPfreeMemory(scip, &eventhdlrdata);
+   }
 
    return retcode;
 }

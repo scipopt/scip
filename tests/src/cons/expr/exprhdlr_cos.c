@@ -127,7 +127,8 @@ Test(cos, parse, .description = "Tests the expression parsing.")
 
    cr_assert(expr != NULL);
    cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
-   cr_expect(SCIPgetConsExprExprChildren(expr)[0] == xexpr);
+   cr_expect(SCIPisConsExprExprVar(SCIPgetConsExprExprChildren(expr)[0]));
+   cr_expect(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(expr)[0]) == x);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -156,7 +157,7 @@ Test(cos, eval, .description = "Tests the expression evaluation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(cosexpr), COS(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(cosexpr), cos(randnum)));
    }
 }
 
@@ -178,23 +179,23 @@ Test(cos, inteval, .description = "Tests the expression interval evaluation.")
    /* create 5 random cases within specific bounds that have non-trivial results */
    rndlb[0] = SCIPrandomGetReal(rndgen, -0.5 * M_PI, 0.0);
    rndub[0] = SCIPrandomGetReal(rndgen, 0.0, 0.5 * M_PI);
-   rndreslb[0] = MIN(COS(rndlb[0]), COS(rndub[0]));
+   rndreslb[0] = MIN(cos(rndlb[0]), cos(rndub[0]));
    rndresub[0] = 1.0;
 
    rndlb[1] = SCIPrandomGetReal(rndgen, -0.5 * M_PI, 0.0);
    rndub[1] = SCIPrandomGetReal(rndgen, 0.5 * M_PI, M_PI);
-   rndreslb[1] = COS(rndub[1]);
+   rndreslb[1] = cos(rndub[1]);
    rndresub[1] = 1.0;
 
    rndlb[2] = SCIPrandomGetReal(rndgen, 0.0, 0.5 * M_PI);
    rndub[2] = SCIPrandomGetReal(rndgen, 0.5 * M_PI, M_PI);
-   rndreslb[2] = COS(rndub[2]);
-   rndresub[2] = COS(rndlb[2]);
+   rndreslb[2] = cos(rndub[2]);
+   rndresub[2] = cos(rndlb[2]);
 
    rndlb[3] = SCIPrandomGetReal(rndgen, 0.5 * M_PI, M_PI);
    rndub[3] = SCIPrandomGetReal(rndgen, M_PI, 1.5 * M_PI);
    rndreslb[3] = -1.0;
-   rndresub[3] = MAX(COS(rndlb[3]), COS(rndub[3]));
+   rndresub[3] = MAX(cos(rndlb[3]), cos(rndub[3]));
 
    rndlb[4] = SCIPrandomGetReal(rndgen, -0.5 * M_PI, 0.0);
    rndub[4] = SCIPrandomGetReal(rndgen, M_PI, 1.5 * M_PI);
@@ -241,7 +242,7 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, testvalues[i]) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, cosexpr, x), results[i]));
+      cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprDerivative(xexpr), results[i]));
    }
 
    /* random part */
@@ -251,7 +252,7 @@ Test(cos, derivative, .description = "Tests the expression derivation.")
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, randnum) );
       SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, cosexpr, sol, 0) );
 
-      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprPartialDiff(scip, conshdlr, cosexpr, x), -SIN(randnum)));
+      cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprDerivative(xexpr), -sin(randnum)));
    }
 }
 
@@ -298,7 +299,7 @@ Test(cos, simplify, .description = "Tests the expression simplification.")
    SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, expr2, sol, 0) );
 
    cr_expect(SCIPgetConsExprExprHdlr(expr3) == SCIPgetConsExprExprHdlrValue(conshdlr));
-   cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), COS(5.0)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPgetConsExprExprValue(expr2), cos(5.0)));
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr3) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );

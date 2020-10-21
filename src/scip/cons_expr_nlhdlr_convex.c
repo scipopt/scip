@@ -1505,15 +1505,16 @@ SCIP_RETCODE estimateGradient(
       SCIP_Real deriv;
       SCIP_Real varval;
 
-      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
-      assert(var != NULL);
-
-      deriv = SCIPgetConsExprExprPartialDiff(scip, conshdlr, nlexpr, var);
+      assert(SCIPgetConsExprExprDiffTag(nlhdlrexprdata->leafexprs[i]) == SCIPgetConsExprExprDiffTag(nlexpr));
+      deriv = SCIPgetConsExprExprDerivative(nlhdlrexprdata->leafexprs[i]);
       if( deriv == SCIP_INVALID ) /*lint !e777*/
       {
          SCIPdebugMsg(scip, "gradient evaluation error for component %d of %p\n", i, (void*)nlexpr);
          return SCIP_OKAY;
       }
+
+      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->leafexprs[i]);
+      assert(var != NULL);
 
       varval = SCIPgetSolVal(scip, sol, var);
 

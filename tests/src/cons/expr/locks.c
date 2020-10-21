@@ -70,6 +70,11 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
+/* macro for doing a cr_expect and return FALSE if condition is FALSE
+ * note: x is evaluated twice
+ */
+#define EXPECTANDRETURN(x) do { cr_expect(x); if (!(x)) return FALSE; } while(FALSE)
+
 /* auxiliary function to check locks of variables and their corresponding expressions */
 static
 SCIP_Bool checkVarLocks(
@@ -79,14 +84,26 @@ SCIP_Bool checkVarLocks(
    int                  nylocksneg          /**< target number of negative locks */
    )
 {
-   return SCIPgetConsExprExprNLocksPos(xexpr) == nxlockspos
-            && SCIPgetConsExprExprNLocksNeg(xexpr) == nxlocksneg
-            && SCIPgetConsExprExprNLocksPos(yexpr) == nylockspos
-            && SCIPgetConsExprExprNLocksNeg(yexpr) == nylocksneg
-            && SCIPvarGetNLocksDown(x) == nxlocksneg
-            && SCIPvarGetNLocksUp(x) == nxlockspos
-            && SCIPvarGetNLocksDown(y) == nylocksneg
-            && SCIPvarGetNLocksUp(y) == nylockspos;
+   /* get expressions for x and y as used in conshdlr: these will have locks updated */
+   SCIP_HASHMAP* var2expr = (SCIP_HASHMAP*)SCIPgetConsExprVarHashmap(scip, conshdlr);
+   SCIP_CONSEXPR_EXPR* curxexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, x);
+   SCIP_CONSEXPR_EXPR* curyexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, y);
+
+   /* if no locks at all, then there may not even be an expression for the var */
+   EXPECTANDRETURN(nxlockspos != 0 || nxlocksneg != 0 || curxexpr == NULL || (SCIPgetConsExprExprNLocksPos(curxexpr) == 0 && SCIPgetConsExprExprNLocksNeg(curxexpr) == 0));
+   EXPECTANDRETURN((nxlockspos == 0 && nxlocksneg == 0) || SCIPgetConsExprExprNLocksPos(curxexpr) == nxlockspos);
+   EXPECTANDRETURN((nxlockspos == 0 && nxlocksneg == 0) || SCIPgetConsExprExprNLocksNeg(curxexpr) == nxlocksneg);
+
+   EXPECTANDRETURN(nylockspos != 0 || nylocksneg != 0 || curyexpr == NULL || (SCIPgetConsExprExprNLocksPos(curyexpr) == 0 && SCIPgetConsExprExprNLocksNeg(curyexpr) == 0));
+   EXPECTANDRETURN((nylockspos == 0 && nylocksneg == 0) || SCIPgetConsExprExprNLocksPos(curyexpr) == nylockspos);
+   EXPECTANDRETURN((nylockspos == 0 && nylocksneg == 0) || SCIPgetConsExprExprNLocksNeg(curyexpr) == nylocksneg);
+
+   EXPECTANDRETURN(SCIPvarGetNLocksDown(x) == nxlocksneg);
+   EXPECTANDRETURN(SCIPvarGetNLocksUp(x) == nxlockspos);
+   EXPECTANDRETURN(SCIPvarGetNLocksDown(y) == nylocksneg);
+   EXPECTANDRETURN(SCIPvarGetNLocksUp(y) == nylockspos);
+
+   return TRUE;
 }
 
 /* auxiliary function to set bounds of variables */

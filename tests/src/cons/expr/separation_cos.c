@@ -98,11 +98,11 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    cr_expect(lmidtangent == NULL);
 
    /* check ltangent */
-   checkCut(ltangent, x, SIN(-1) - COS(-1), SCIPinfinity(scip), -SIN(-1));
+   checkCut(ltangent, x, sin(-1) - cos(-1), SCIPinfinity(scip), -sin(-1));
 
    /* check rmidtangent */
    newtonpoint = 0.145902085052;
-   checkCut(rmidtangent, x, -5 * SIN(newtonpoint) - COS(5), SCIPinfinity(scip), -SIN(newtonpoint));
+   checkCut(rmidtangent, x, -5 * sin(newtonpoint) - cos(5), SCIPinfinity(scip), -sin(newtonpoint));
 
 
    /* release cuts */
@@ -123,11 +123,11 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
 
    /* check lmidtangent */
    newtonpoint = 2.740339007021;
-   checkCut(lmidtangent, x, -SCIPinfinity(scip), SIN(newtonpoint) - COS(-1), -SIN(newtonpoint));
+   checkCut(lmidtangent, x, -SCIPinfinity(scip), sin(newtonpoint) - cos(-1), -sin(newtonpoint));
 
    /* check rmidtangent */
    newtonpoint = 4.568732341350;
-   checkCut(rmidtangent, x, -SCIPinfinity(scip), -5 * SIN(newtonpoint) - COS(5), -SIN(newtonpoint));
+   checkCut(rmidtangent, x, -SCIPinfinity(scip), -5 * sin(newtonpoint) - cos(5), -sin(newtonpoint));
 
    /* release cuts */
    SCIPfreeRowprep(scip, &lmidtangent);
@@ -140,8 +140,8 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, &lincoef, &linconst,
       -0.5, childlb, childub, FALSE);
    cr_expect(success);
-   cr_expect_float_eq(linconst, -0.5 * SIN(-0.5) + COS(-0.5), 1e-12);
-   cr_expect_float_eq(lincoef, -SIN(-0.5), 1e-12);
+   cr_expect_float_eq(linconst, -0.5 * sin(-0.5) + cos(-0.5), 1e-12);
+   cr_expect_float_eq(lincoef, -sin(-0.5), 1e-12);
 
    /*
     * test underestimation
@@ -150,8 +150,8 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
    success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, &lincoef, &linconst,
       4.0, childlb, childub, TRUE);
    cr_expect(success);
-   cr_expect_float_eq(linconst, 4.0 * SIN(4.0) + COS(4.0), 1e-12);
-   cr_expect_float_eq(lincoef, -SIN(4.0), 1e-12);
+   cr_expect_float_eq(linconst, 4.0 * sin(4.0) + cos(4.0), 1e-12);
+   cr_expect_float_eq(lincoef, -sin(4.0), 1e-12);
 
    /*
     * test point where solution tangent is not overestimating
@@ -162,8 +162,8 @@ Test(separation, cosinus_x, .init = setup, .fini = teardown,
 
    /* check lmidtangent */
    newtonpoint = 2.740339007021;
-   cr_expect_float_eq(linconst, -SIN(newtonpoint) + COS(-1), 1e-12);
-   cr_expect_float_eq(lincoef, -SIN(newtonpoint), 1e-12);
+   cr_expect_float_eq(linconst, -sin(newtonpoint) + cos(-1), 1e-12);
+   cr_expect_float_eq(lincoef, -sin(newtonpoint), 1e-12);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -218,7 +218,7 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
 
    /* check rmidtangent */
    newtonpoint = -5.535897406992;
-   checkCut(rmidtangent, y, 3 * SIN(newtonpoint) - COS(-3), SCIPinfinity(scip), -SIN(newtonpoint));
+   checkCut(rmidtangent, y, 3 * sin(newtonpoint) - cos(-3), SCIPinfinity(scip), -sin(newtonpoint));
 
    /* release cuts */
    SCIPfreeRowprep(scip, &rmidtangent);
@@ -237,11 +237,11 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    cr_expect(rmidtangent == NULL);
 
    /* check rtangent */
-   checkCut(rtangent, y, -SCIPinfinity(scip), 3 * SIN(-3) - COS(-3), -SIN(-3));
+   checkCut(rtangent, y, -SCIPinfinity(scip), 3 * sin(-3) - cos(-3), -sin(-3));
 
    /* check lmidtangent */
    newtonpoint = -4.082240818442;
-   checkCut(lmidtangent, y, -SCIPinfinity(scip), 6 * SIN(newtonpoint) - COS(-6), -SIN(newtonpoint));
+   checkCut(lmidtangent, y, -SCIPinfinity(scip), 6 * sin(newtonpoint) - cos(-6), -sin(newtonpoint));
 
    /* release cuts */
    SCIPfreeRowprep(scip, &rtangent);
@@ -254,8 +254,8 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, &lincoef, &linconst,
       -5.7, childlb, childub, FALSE);
    cr_expect(success);
-   cr_expect_float_eq(linconst, -5.7 * SIN(-5.7) + COS(-5.7), 1e-12);
-   cr_expect_float_eq(lincoef, -SIN(-5.7), 1e-12);
+   cr_expect_float_eq(linconst, -5.7 * sin(-5.7) + cos(-5.7), 1e-12);
+   cr_expect_float_eq(lincoef, -sin(-5.7), 1e-12);
 
    /*
     * test underestimation
@@ -264,8 +264,8 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
    success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, &lincoef, &linconst,
       -3.5, childlb, childub, TRUE);
    cr_expect(success);
-   cr_expect_float_eq(linconst, -3.5 * SIN(-3.5) + COS(-3.5), 1e-12);
-   cr_expect_float_eq(lincoef, -SIN(-3.5), 1e-12);
+   cr_expect_float_eq(linconst, -3.5 * sin(-3.5) + cos(-3.5), 1e-12);
+   cr_expect_float_eq(lincoef, -sin(-3.5), 1e-12);
 
    /*
     * test point where solution tangent in not overestimating
@@ -275,8 +275,8 @@ Test(separation, cosinus_y, .init = setup, .fini = teardown,
       -4.8, childlb, childub, FALSE);
    cr_expect(success);
    newtonpoint = -5.535897406992;
-   cr_expect_float_eq(linconst, -3 * SIN(newtonpoint) + COS(-3), 1e-11);
-   cr_expect_float_eq(lincoef, -SIN(newtonpoint), 1e-12);
+   cr_expect_float_eq(linconst, -3 * sin(newtonpoint) + cos(-3), 1e-11);
+   cr_expect_float_eq(lincoef, -sin(newtonpoint), 1e-12);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -328,7 +328,7 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    cr_expect(rmidtangent == NULL);
 
    /* check secant */
-   checkCut(secant, w, COS(4) - 2 * COS(2), SCIPinfinity(scip), 0.5 * (COS(4) - COS(2)));
+   checkCut(secant, w, cos(4) - 2 * cos(2), SCIPinfinity(scip), 0.5 * (cos(4) - cos(2)));
 
    /* release cuts */
    SCIPfreeRowprep(scip, &secant);
@@ -346,10 +346,10 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    cr_expect(rmidtangent == NULL);
 
    /* check ltangent */
-   checkCut(ltangent, w, -SCIPinfinity(scip), -2 * SIN(2) - COS(2), -SIN(2));
+   checkCut(ltangent, w, -SCIPinfinity(scip), -2 * sin(2) - cos(2), -sin(2));
 
    /* check rtangent */
-   checkCut(rtangent, w, -SCIPinfinity(scip), -4 * SIN(4) - COS(4), -SIN(4));
+   checkCut(rtangent, w, -SCIPinfinity(scip), -4 * sin(4) - cos(4), -sin(4));
 
    /* release cuts */
    SCIPfreeRowprep(scip, &ltangent);
@@ -364,8 +364,8 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, &lincoef, &linconst,
       3.0, childlb, childub, TRUE);
    cr_expect(success);
-   cr_expect_float_eq(linconst, 3 * SIN(3) + COS(3), 1e-12);
-   cr_expect_float_eq(lincoef, -SIN(3), 1e-12);
+   cr_expect_float_eq(linconst, 3 * sin(3) + cos(3), 1e-12);
+   cr_expect_float_eq(lincoef, -sin(3), 1e-12);
 
    /*
     * test point where solution tangent is not overestimating
@@ -374,8 +374,8 @@ Test(separation, cosinus_w, .init = setup, .fini = teardown,
    success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, &lincoef, &linconst,
       3.0, childlb, childub, FALSE);
    cr_expect(success);
-   cr_expect_float_eq(linconst, -COS(4) + 2 * COS(2), 1e-12);
-   cr_expect_float_eq(lincoef, 0.5 * (COS(4) - COS(2)), 1e-12);
+   cr_expect_float_eq(linconst, -cos(4) + 2 * cos(2), 1e-12);
+   cr_expect_float_eq(lincoef, 0.5 * (cos(4) - cos(2)), 1e-12);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );

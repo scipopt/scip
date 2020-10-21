@@ -123,7 +123,7 @@ extern "C" {
 
 #define SCIP_VERSION                701 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               3 /**< SCIP sub version number */
-#define SCIP_APIVERSION              72 /**< SCIP API version number */
+#define SCIP_APIVERSION              73 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -234,22 +234,6 @@ extern "C" {
 #ifndef MAX3
 #define MAX3(x,y,z) ((x) >= (y) ? MAX(x,z) : MAX(y,z))  /**< returns maximum of x, y, and z */
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
-#endif
-
-#ifndef SIN
-#define SIN(x)       (sin((x)))
-#endif
-
-#ifndef COS
-#define COS(x)       (cos((x)))
-#endif
-
-#ifndef ASIN
-#define ASIN(x)      (asin((x)))
-#endif
-
-#ifndef ACOS
-#define ACOS(x)      (acos((x)))
 #endif
 
 #ifndef COPYSIGN

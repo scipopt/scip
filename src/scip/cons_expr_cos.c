@@ -84,7 +84,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyCos)
    if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
    {
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr,
-            COS(SCIPgetConsExprExprValueValue(child))) );
+            cos(SCIPgetConsExprExprValueValue(child))) );
    }
    else
    {
@@ -129,7 +129,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalCos)
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   *val = COS(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+   *val = cos(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
@@ -148,7 +148,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffCos)
    assert(child != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
 
-   *val = -SIN(SCIPgetConsExprExprValue(child));
+   *val = -sin(SCIPgetConsExprExprValue(child));
 
    return SCIP_OKAY;
 }
