@@ -1,6 +1,3 @@
-//#define DEBUG_INTERSECTIONCUT
-//#define INTERCUT_MOREDEBUG
-//#define INTERCUTS_VERBOSE
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -29,6 +26,10 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/* #define DEBUG_INTERSECTIONCUT */
+/* #define INTERCUT_MOREDEBUG */
+/* #define INTERCUTS_VERBOSE */
 
 #ifdef INTERCUTS_VERBOSE
 #define INTER_LOG
@@ -1405,7 +1406,7 @@ SCIP_RETCODE computeRestrictionToRay(
       assert(coefs4b[0] >= 0); /* the function inside the root is convex */
       assert(coefs4b[2] >= 0); /* radicand at zero */
    }
-   //assert(4.0 * (*a) * (*c) >= SQR( *b ) ); /* the function is defined everywhere, so minimum of radicand must be nonnegative */
+   /*assert(4.0 * (*a) * (*c) >= SQR( *b ) ); *//* the function is defined everywhere, so minimum of radicand must be nonnegative */
 
    return SCIP_OKAY;
 }
@@ -1552,7 +1553,7 @@ SCIP_Real computeRoot(
       sol = SCIPinfinity(scip);
 
       /* if SQRT(a) <= d, but a > d * d --> numerics are weird and phi might not evalate negative at infinity */
-      //assert(a > d * d || evalPhiAtRay(sol, a, b, c, d, e) <= 0);
+      /*assert(a > d * d || evalPhiAtRay(sol, a, b, c, d, e) <= 0); */
       return sol;
    }
 
@@ -1568,14 +1569,14 @@ SCIP_Real computeRoot(
    /* it can still be empty because of our infinity, I guess... */
    sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
 
-//#ifdef INTERCUT_MOREDEBUG
-//   {
-//      SCIP_Real binsol;
-//      binsol = SCIPinfinity(scip);
-//      doBinarySearch(scip, a, b, c, d, e, &binsol);
-//      printf("got root %g: with binsearch get %g\n", sol, binsol);
-//   }
-//#endif
+/*#ifdef INTERCUT_MOREDEBUG
+   {
+      SCIP_Real binsol;
+      binsol = SCIPinfinity(scip);
+      doBinarySearch(scip, a, b, c, d, e, &binsol);
+      printf("got root %g: with binsearch get %g\n", sol, binsol);
+   }
+#endif */
 
    /* check that solution is acceptable, ideally it should be <= 0, however when it is positive, we trigger a binary
     * search to make it negative. This binary search might return a solution point that is not at accurately 0 as the
@@ -1588,7 +1589,7 @@ SCIP_Real computeRoot(
       printf("interval solution returned %g -> phival = %g, believe it\n", sol, evalPhiAtRay(sol, a, b, c, d, e));
       printf("don't do bin search\n");
 #endif
-      //assert(SCIPisFeasZero(scip, evalPhiAtRay(sol, a, b, c, d, e) / sol));
+      /*assert(SCIPisFeasZero(scip, evalPhiAtRay(sol, a, b, c, d, e) / sol)); */
 
       return sol;
    }
@@ -1599,7 +1600,7 @@ SCIP_Real computeRoot(
       printf("do bin search because phival is %g\n", evalPhiAtRay(sol, a, b, c, d, e));
 #endif
       doBinarySearch(scip, a, b, c, d, e, &sol);
-      //assert(SCIPisFeasZero(scip, evalPhiAtRay(sol, a, b, c, d, e)));
+      /*assert(SCIPisFeasZero(scip, evalPhiAtRay(sol, a, b, c, d, e)));*/
    }
 
    return sol;
@@ -1740,7 +1741,7 @@ SCIP_RETCODE computeIntercut(
          return SCIP_OKAY;
 
       /* if restriction to ray is numerically nasty -> abort cut separation */
-      // TODO: put this in another function
+      /* TODO: put this in another function */
       {
          SCIP_Real max;
          SCIP_Real min;
@@ -1870,12 +1871,12 @@ void combineRays(
    idx2 = 0;
    *newraynnonz = 0;
 
-   //for( int i = 0; i < raynnonz1; ++i )
-   //   printf("ray1 (%f, %d) \n", raycoefs1[i], rayidx1[i]);
-   //for( int i = 0; i < raynnonz2; ++i )
-   //   printf("ray2 (%f, %d) \n", raycoefs2[i], rayidx2[i]);
+   /*for( int i = 0; i < raynnonz1; ++i )
+      printf("ray1 (%f, %d) \n", raycoefs1[i], rayidx1[i]);
+   for( int i = 0; i < raynnonz2; ++i )
+      printf("ray2 (%f, %d) \n", raycoefs2[i], rayidx2[i]);
 
-   //printf("alpha* = %f, rho = %f \n", coef1, coef2);
+   printf("alpha* = %f, rho = %f \n", coef1, coef2);*/
 
    while( idx1 < raynnonz1 || idx2 < raynnonz2 )
    {
@@ -1884,7 +1885,7 @@ void combineRays(
        */
       if( idx1 >= raynnonz1 || (idx2 < raynnonz2 && rayidx1[idx1] > rayidx2[idx2]) )
       {
-         //printf("case 1 \n");
+         /*printf("case 1 \n"); */
          newraycoefs[*newraynnonz] = - coef2 * raycoefs2[idx2];
          newrayidx[*newraynnonz] = rayidx2[idx2];
          ++(*newraynnonz);
@@ -1892,7 +1893,7 @@ void combineRays(
       }
       else if( idx2 >= raynnonz2 || rayidx1[idx1] < rayidx2[idx2] )
       {
-         //printf("case 2 \n");
+         /*printf("case 2 \n"); */
          newraycoefs[*newraynnonz] = coef1 * raycoefs1[idx1];
          newrayidx[*newraynnonz] = rayidx1[idx1];
          ++(*newraynnonz);
@@ -1901,7 +1902,7 @@ void combineRays(
       /* if both pointers look at the same variable, just compute the difference and move both pointers */
       else if( rayidx1[idx1] == rayidx2[idx2] )
       {
-         //printf("case 3 \n");
+         /*printf("case 3 \n"); */
          newraycoefs[*newraynnonz] = coef1 * raycoefs1[idx1] - coef2 * raycoefs2[idx2];
          newrayidx[*newraynnonz] = rayidx1[idx1];
          ++(*newraynnonz);
@@ -2894,6 +2895,11 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalAuxQuadratic)
       return SCIP_OKAY;
    }
 
+   /* TODO there was a
+     *auxvalue = SCIPevalConsExprQuadraticAux(scip, nlhdlrexprdata->quaddata, sol);
+     here; any reason why not using this anymore?
+   */
+
    quaddata = nlhdlrexprdata->quaddata;
    SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprs, NULL, NULL);
 
@@ -2977,9 +2983,10 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
    }
 
    /* TODO: do we have to handle reverse convex differently?  */
-   //if( (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) ||
-   //    ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) )
-   //   nlhdlrexprdata->usenormalcut = TRUE;
+   /*if( (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) ||
+       ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) )
+      nlhdlrexprdata->usenormalcut = TRUE;
+      */
 
    /* only separate at selected nodes */
    node = SCIPgetCurrentNode(scip);
@@ -2997,8 +3004,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       nlhdlrdata->lastnodenumber = nodenumber;
       nlhdlrdata->lastncuts = nlhdlrdata->ncutsadded;
    }
-   //else if( (depth > 0 && nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimit) || (depth == 0 &&
-   //         nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimitroot))
+   /*else if( (depth > 0 && nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimit) || (depth == 0 &&
+            nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimitroot)) */
    /* allow the addition of a certain number of cuts per quadratic */
    if( (depth > 0 && nlhdlrexprdata->ncutsadded >= nlhdlrdata->ncutslimit) || (depth == 0 &&
       nlhdlrexprdata->ncutsadded >= nlhdlrdata->ncutslimitroot) )
@@ -3108,15 +3115,15 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
-      //printf("## New cut\n");
-      //printf(" -> found maxquad-free cut <%s>: act=%f, lhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n\n",
-      //      SCIProwGetName(row), SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row), SCIProwGetNorm(row),
-      //      SCIPgetCutEfficacy(scip, NULL, row),
-      //      SCIPgetRowMinCoef(scip, row), SCIPgetRowMaxCoef(scip, row),
-      //      SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row));
+      /*printf("## New cut\n");
+      printf(" -> found maxquad-free cut <%s>: act=%f, lhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n\n",
+            SCIProwGetName(row), SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row), SCIProwGetNorm(row),
+            SCIPgetCutEfficacy(scip, NULL, row),
+            SCIPgetRowMinCoef(scip, row), SCIPgetRowMaxCoef(scip, row),
+            SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row)); */
 
       /* intersection cuts can be numerically nasty; we do some extra numerical checks here */
-      //printf("SCIP DEPTH %d got a cut with violation %g, efficacy %g and r/e %g\n", SCIPgetSubscipDepth(scip), violation, SCIPgetCutEfficacy(scip, NULL, row), SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row));
+      /*printf("SCIP DEPTH %d got a cut with violation %g, efficacy %g and r/e %g\n", SCIPgetSubscipDepth(scip), violation, SCIPgetCutEfficacy(scip, NULL, row), SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row)); */
       assert(SCIPgetCutEfficacy(scip, NULL, row) > 0.0);
       if( SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
       {
