@@ -2444,11 +2444,12 @@ SCIP_RETCODE reduce_da(
    if( isDirected )
       SCIP_CALL( computeSteinerTreeTM(scip, graph, result, &upperbound) );
 
+   collectFixedTerminals(graph, terms, &nFixedTerms);
+
    if( isRpcmw )
       graph_pc_2trans(scip, graph);
 
    /* select roots for dual ascent */
-   collectFixedTerminals(graph, terms, &nFixedTerms);
    SCIP_CALL( daOrderRoots(scip, graph, terms, nFixedTerms, TRUE, randnumgen) );
 
    {
