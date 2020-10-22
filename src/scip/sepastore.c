@@ -183,6 +183,10 @@ SCIP_Bool sepastoreIsCutRedundant(
    if( SCIProwIsModifiable(cut) )
       return FALSE;
 
+   /** @todo exip: make a safe version */
+   if( set->exact_enabled )
+      return FALSE;
+
    /* check for activity redundancy */
    lhs = SCIProwGetLhs(cut);
    rhs = SCIProwGetRhs(cut);
@@ -221,6 +225,10 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
    assert(infeasible != NULL);
 
    *infeasible = FALSE;
+
+   /** @todo exip: make a safe version */
+   if( set->exact_enabled )
+      return FALSE;
 
    /* modifiable cuts cannot be declared redundant or infeasible, since we don't know all coefficients */
    if( SCIProwIsModifiable(cut) )
