@@ -3286,6 +3286,8 @@ SCIP_RETCODE SCIPlpExactProjectShiftFreeLPIExact(
 
    SCIP_CALL( SCIPlpiExactClear(*lpiexact) );
    SCIP_CALL( SCIPlpiExactFree(lpiexact) );
+
+   return SCIP_OKAY;
 }
 
 /** frees the data needed for project and shift bounding method */
