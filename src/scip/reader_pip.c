@@ -1923,7 +1923,8 @@ SCIP_RETCODE printRow(
       int nlinexprs;
 
       /* get data from the quadratic expression */
-      SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms);
+      SCIPgetConsExprQuadraticData(quaddata, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprterms,
+            NULL, NULL);
 
       /* allocate memory to store active linear variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &activevars, nlinexprs) );

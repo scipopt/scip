@@ -179,6 +179,11 @@ struct SCIP_ConsExpr_QuadExpr
 
    SCIP_EXPRCURV                curvature;       /**< curvature of the quadratic representation of the expression */
    SCIP_Bool                    curvaturechecked;/**< whether curvature has been checked */
+   SCIP_Bool                    eigeninfostored; /**< whether the eigen information is stored */
+
+   /* eigen decomposition information */
+   SCIP_Real*                   eigenvalues;     /**< eigenvalues of the Q matrix: size of nquadexprs */
+   SCIP_Real*                   eigenvectors;    /**< eigenvalues of the Q matrix; size of nquadexprs^2 */
 };
 
 /** data structure to store a single term associated to a quadratic variable */
