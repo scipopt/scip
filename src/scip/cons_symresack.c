@@ -17,6 +17,7 @@
  * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for symresack constraints
  * @author Christopher Hojny
+ * @author Jasper van Doornmalen
  *
  * The type of constraints of this constraint handler is described in cons_symresack.h.
  *
@@ -34,12 +35,12 @@
  * Mathematical Programming 175, No. 1, 197-240, 2019
  *
  * This paper describes an almost linear time separation routine for so-called cover
- * inequalities of symresacks. In our implementation, however, we use a separation routine with
- * quadratic worst case running time.
+ * inequalities of symresacks. A slight modification of this algorithm allows for a linear
+ * running time, which is used in this implementation.
  *
  * Packing, Partitioning, and Covering Symresacks@n
  * Christopher Hojny,@n
- * (2017), preprint available at http://www.optimization-online.org/DB_HTML/2017/05/5990.html
+ * (2020), available at https://doi.org/10.1016/j.dam.2020.03.002
  *
  * This paper introduces linearly many inequalities with ternary coefficients that suffice to
  * characterize the binary points contained in a packing and partitioning symresack completely.

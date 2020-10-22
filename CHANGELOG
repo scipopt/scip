@@ -18,6 +18,7 @@ Performance improvements
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 - improved upgrade of orbisacks to packing/partitioning orbitopes
+- Improved running time of symresack cover separation.
 
 Examples and applications
 -------------------------
