@@ -1209,11 +1209,6 @@ depend:
 		@echo `grep -l "SCIP_WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "SCIP_WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "SCIP_WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
-<<<<<<< 287d85bb0e461d50d10d545edc31b7b5311f4bfd
-		@echo `grep -l "NPARASCIP" $(ALLSRC)` >$(PARASCIPDEP)
-=======
-		@echo `grep -l "WITH_GAMS" $(ALLSRC)` >$(GAMSDEP)
->>>>>>> make PARASCIP deprecated
 		@echo `grep -l "SCIP_THREADSAFE" $(ALLSRC)` >$(THREADSAFEDEP)
 
 # do not attempt to include .d files if there will definitely be any (empty DFLAGS), because it slows down the build on Windows considerably
