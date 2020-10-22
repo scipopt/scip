@@ -16034,6 +16034,7 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
 
    term = &conshdlrdata->bilinterms[idx];
    assert(term != NULL);
+   assert(SCIPvarCompare(term->x, term->y) < 1);
 
    if( term->existing && term->nauxexprs == 0 && term->aux.var != NULL )
    {
