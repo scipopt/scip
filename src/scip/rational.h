@@ -36,7 +36,6 @@
 #endif
 #ifdef SCIP_WITH_ZIMPL
 #include "zimpl/lint.h"
-#include "zimpl/numb.h"
 #endif
 #ifdef SCIP_WITH_MPFR
 #include <mpfr.h>
@@ -82,6 +81,7 @@ SCIP_RETCODE RatCreateBufferArray(
    );
 
 /** copies an array of rationals */
+SCIP_EXPORT
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      target,             /**< address to copy to */
@@ -89,10 +89,45 @@ SCIP_RETCODE RatCopyBlockArray(
    int                   len                 /**< size of src array */
    );
 
+/** copy an array of rationals */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_Rational**       src,                /**< src array */
+   int                   len                 /**< size of src array */
+   );
+
+/** realloc a rational buffer arrray */
+SCIP_EXPORT
+SCIP_RETCODE RatReallocBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   );
+
+/** realloc a rational block arrray */
+SCIP_EXPORT
+SCIP_RETCODE RatReallocBlockArray(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   );
+
 /** creates a copy of a rational */
 SCIP_EXPORT
 SCIP_RETCODE RatCopy(
    BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates a copy of a rational */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyBuffer(
+   BMS_BUFMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
    );
@@ -324,12 +359,28 @@ void RatAddProd(
    SCIP_Rational*        op2                 /**< second operand */
    );
 
+/* Computes res += op1 * op2 and saves the result in res */
+SCIP_EXPORT
+void RatAddProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
+   );
+
 /* Computes res -= op1 * op2 and saves the result in res */
 SCIP_EXPORT
 void RatDiffProd(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
    SCIP_Rational*        op2                 /**< second operand */
+   );
+
+/* Computes res -= op1 * op2 and saves the result in res */
+SCIP_EXPORT
+void RatDiffProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
    );
 
 /** set res to -op */

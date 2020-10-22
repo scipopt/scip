@@ -196,10 +196,74 @@ SCIP_RETCODE RatCopyBlockArray(
    int i;
 
    BMSduplicateBlockMemoryArray(mem, result, src, len);
- 
+
    for( i = 0; i < len; ++i )
    {
       SCIP_CALL( RatCopy(mem, &(*result)[i], src[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** copy an array of rationals */
+SCIP_RETCODE RatCopyBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_Rational**       src,                /**< src array */
+   int                   len                 /**< size of src array */
+   )
+{
+   int i;
+
+   BMSduplicateBufferMemoryArray(mem, result, src, len);
+
+   for( i = 0; i < len; ++i )
+   {
+      SCIP_CALL( RatCopyBuffer(mem, &(*result)[i], src[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** realloc a rational buffer arrray */
+SCIP_RETCODE RatReallocBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   )
+{
+   int i;
+
+   assert(newlen >= oldlen);
+
+   BMSreallocBufferMemoryArray(mem, result, newlen);
+
+   for( i = oldlen; i < newlen; ++i )
+   {
+      SCIP_CALL( RatCreateBuffer(mem, &(*result)[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** realloc a rational block arrray */
+SCIP_RETCODE RatReallocBlockArray(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   )
+{
+   int i;
+
+   assert(newlen >= oldlen);
+
+   BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
+
+   for( i = oldlen; i < newlen; ++i )
+   {
+      SCIP_CALL( RatCreateBlock(mem, &(*result)[i]) );
    }
 
    return SCIP_OKAY;
@@ -215,6 +279,20 @@ SCIP_RETCODE RatCopy(
    )
 {
    SCIP_CALL( RatCreateBlock(mem, result) );
+
+   RatSet(*result, src);
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a rational */
+SCIP_RETCODE RatCopyBuffer(
+   BMS_BUFMEM*           mem,                /**< block memory */
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   )
+{
+   SCIP_CALL( RatCreateBuffer(mem, result) );
 
    RatSet(*result, src);
 
@@ -765,6 +843,36 @@ void RatAddProd(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
+/* Computes res += op1 * op2 and saves the result in res */
+void RatAddProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
+   )
+{
+   assert(res != NULL && op1 != NULL);
+   assert(!res->isinf);
+
+   if( op1->isinf )
+   {
+      if( op2 == 0 )
+         return;
+      else
+      {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         res->val = op1->val.sign() * (op2 > 0);
+         res->isinf = TRUE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
+      }
+   }
+   else
+   {
+      res->isinf = FALSE;
+      res->val += op1->val * op2;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
 /* Computes res -= op1 * op2 and saves the result in res */
 void RatDiffProd(
    SCIP_Rational*        res,                /**< the result */
@@ -791,6 +899,36 @@ void RatDiffProd(
    {
       res->isinf = FALSE;
       res->val -= op1->val * op2->val;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+}
+
+/* Computes res += op1 * op2 and saves the result in res */
+void RatDiffProdReal(
+   SCIP_Rational*        res,                /**< the result */
+   SCIP_Rational*        op1,                /**< first operand */
+   SCIP_Real             op2                 /**< second operand */
+   )
+{
+   assert(res != NULL && op1 != NULL);
+   assert(!res->isinf);
+
+   if( op1->isinf )
+   {
+      if( op2 == 0 )
+         return;
+      else
+      {
+         SCIPerrorMessage("multiplying with infinity might produce undesired behavior \n");
+         res->val = op1->val.sign() * (op2 > 0);
+         res->isinf = TRUE;
+         res->isfprepresentable = SCIP_ISFPREPRESENTABLE_FALSE;
+      }
+   }
+   else
+   {
+      res->isinf = FALSE;
+      res->val -= op1->val * op2;
    }
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
@@ -1323,9 +1461,9 @@ void RatPrint(
 {
    assert(rational != NULL);
    if( rational->isinf )
-      std::cout << rational->val.sign() << "inf" << "\n";
+      std::cout << rational->val.sign() << "inf" << std::flush;
    else
-      std::cout << rational->val << "\n";
+      std::cout << rational->val << std::flush;
 }
 
 /* print SCIP_Rational to output stream */
@@ -1592,8 +1730,8 @@ SCIP_Real RatRoundReal(
       }
    }
 
-   nom = Rnumerator(rational);
-   denom = Rdenominator(rational);
+   nom = RatNumerator(rational);
+   denom = RatDenominator(rational);
 
    SCIPdebugMessage("computing %lld/%lld \n", nom, denom);
 

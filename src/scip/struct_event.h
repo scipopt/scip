@@ -73,6 +73,8 @@ struct SCIP_EventBdChg
 {
    SCIP_Real             oldbound;           /**< old bound before bound changed */
    SCIP_Real             newbound;           /**< new bound after bound changed */
+   SCIP_Rational*        oldboundexact;      /**< exact new variable bound (NULL if not an exact change) */
+   SCIP_Rational*        newboundexact;      /**< exact new variable bound (NULL if not an exact change) */
    SCIP_VAR*             var;                /**< variable whose bound changed */
 };
 

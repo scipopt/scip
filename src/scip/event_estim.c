@@ -2797,7 +2797,7 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
       if( eventhdlrdata->restarthitcounter >= eventhdlrdata->hitcounterlim )
       {
          /* safe that we triggered a restart at this run */
-         if( SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
+         if( !SCIPisExactSolve(scip) && SCIPgetNRuns(scip) > eventhdlrdata->lastrestartrun )
          {
             eventhdlrdata->nrestartsperformed++;
 

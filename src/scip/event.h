@@ -246,6 +246,14 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
    SCIP_Real             newbound            /**< new bound after bound changed */
    );
 
+/** adds the data for the exact changes to existing bound event */
+SCIP_RETCODE SCIPeventAddExactChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Rational*        oldbound,           /**< old bound before bound changed */
+   SCIP_Rational*        newbound            /**< new bound after bound changed */
+   );
+
 /** creates an event for an addition of a global domain hole to a variable */
 SCIP_RETCODE SCIPeventCreateGholeAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */

@@ -96,6 +96,12 @@ void SCIPpresolSetTiming(
    SCIP_PRESOLTIMING     timing              /**< timing mask of the presolver */
    );
 
+/** mark that the presolver is safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPpresolSetExact(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
 /** is presolver initialized? */
 SCIP_EXPORT
 SCIP_Bool SCIPpresolIsInitialized(

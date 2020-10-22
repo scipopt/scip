@@ -1684,7 +1684,6 @@ SCIP_RETCODE probScaleObjExact(
             for( v = 0; v < nints; ++v )
             {
                RatDebugMessage(" -> var <%s>: newobj = %q\n", SCIPvarGetName(transprob->vars[v]), objvals[v]);
-               SCIP_CALL( SCIPvarChgObj(transprob->vars[v], blkmem, set, transprob, primal, lp, eventqueue, RatApproxReal(objvals[v])) );
                SCIP_CALL( SCIPvarChgObjExact(transprob->vars[v], blkmem, set, transprob, primal, lp->lpexact, eventqueue, objvals[v]) );
             }
             transprob->objoffset *= RatApproxReal(intscalar);
@@ -2601,7 +2600,7 @@ void SCIPprobEnableConsCompression(
 
 #endif
 
-/** exact methods @todo exip move these to a different file */
+/** exact methods */
 
 /** sets integral objective value flag, if all variables with non-zero objective values are integral and have
  *  integral objective value and also updates the cutoff bound if primal solution is already known

@@ -1209,7 +1209,7 @@ SCIP_RETCODE SCIPlinkLPSolExact(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPsolLinkLPSolExact(sol, scip->lpexact) );
+   SCIP_CALL( SCIPsolLinkLPSolExact(sol, scip->set, scip->transprob, scip->lpexact) );
 
    return SCIP_OKAY;
 }
@@ -1588,7 +1588,7 @@ void SCIPgetSolValExact(
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolValExact(sol==NULL)", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-      RatSet(res, SCIPvarGetSolExact(var, SCIPtreeHasCurrentNodeLP(scip->tree)));
+      SCIPvarGetSolExact(var, res, SCIPtreeHasCurrentNodeLP(scip->tree));
    }
 }
 
@@ -2125,13 +2125,17 @@ SCIP_RETCODE SCIPprintSolExact(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
 
-   /** @todo exip: convert to origobj, or extern objval respectively */
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objvalue) );
+
    if( SCIPsolIsOriginal(sol) )
-      objvalue = SCIPsolGetOrigObjExact(sol);
+      RatSet(objvalue, SCIPsolGetOrigObjExact(sol));
    else
-      objvalue = SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob);
+      SCIPprobExternObjvalExact(scip, scip->transprob, scip->set, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob), objvalue));
 
    RatMessage(scip->messagehdlr, file, objvalue);
+
+   RatFreeBuffer(SCIPbuffer(scip), &objvalue);
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
    SCIP_CALL( SCIPsolPrintExact(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,

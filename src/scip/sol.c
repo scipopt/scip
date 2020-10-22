@@ -20,7 +20,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include "scip/clock.h"
 #include "scip/cons.h"
 #include "scip/lp.h"
@@ -293,7 +292,7 @@ void solGetArrayValExact(
          break;
 
       case SCIP_SOLORIGIN_LPSOL:
-         RatSet(res, SCIPvarGetLPSolExact(var));
+         SCIPvarGetLPSolExact(var, res);
          break;
 
       case SCIP_SOLORIGIN_PSEUDOSOL:
@@ -405,7 +404,10 @@ SCIP_RETCODE solUnlinkVarExact(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
-      SCIP_CALL( solSetArrayValExact(sol, set, var, SCIPvarGetLPSolExact(var) ) );
+      SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
+      SCIPvarGetLPSolExact(var, solval);
+      SCIP_CALL( solSetArrayValExact(sol, set, var, solval) );
+      RatFreeBuffer(set->buffer, &solval);
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
@@ -875,7 +877,7 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    assert(lp->solved);
 
    SCIP_CALL( SCIPsolCreateExact(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, lp) );
+   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, set, prob, lp) );
 
    return SCIP_OKAY;
 }
@@ -1205,6 +1207,8 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 /** copies current exact LP solution into exact CIP solution by linking */
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
@@ -1217,7 +1221,7 @@ SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_CALL( solClearArrays(sol) );
 
    /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-   RatSet(sol->valsexact->obj, lp->lpobjval);
+   SCIPlpExactGetObjval(lp, set, prob, sol->valsexact->obj);
    sol->obj = RatRoundReal(sol->valsexact->obj, SCIP_ROUND_UPWARDS);
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
 
@@ -1685,6 +1689,7 @@ SCIP_RETCODE SCIPsolSetValExact(
 {
    SCIP_Rational* oldval;
    SCIP_Rational* tmp;
+   SCIP_RETCODE retcode;
 
    assert(sol != NULL);
    assert(stat != NULL);
@@ -1751,12 +1756,27 @@ SCIP_RETCODE SCIPsolSetValExact(
       return SCIP_INVALIDDATA;
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /** @todo exip: presolving extension
-       *  - implement this if exact version of SCIP supports aggregated variables
-       */
-      SCIPerrorMessage("cannot set solution value for aggregated variable\n");
-      SCIPABORT();
-      return SCIP_INVALIDDATA;
+      assert(!RatIsZero(SCIPvarGetAggrScalarExact(var)));
+      assert(!RatIsAbsInfinity(SCIPvarGetAggrConstantExact(var)));
+      assert(!RatIsAbsInfinity(SCIPvarGetAggrScalarExact(var)));
+
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
+
+      if( RatIsAbsInfinity(val) )
+      {
+         if( !RatIsPositive(SCIPvarGetAggrScalarExact(var)) )
+            RatNegate(tmp, val);
+         retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var),  tmp);
+      }
+      else
+      {
+         RatDiff(tmp, val, SCIPvarGetAggrConstantExact(var));
+         RatDiv(tmp, tmp, SCIPvarGetAggrScalarExact(var));
+         retcode = SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetAggrVar(var), tmp);
+      }
+
+      RatFreeBuffer(set->buffer, &tmp);
+      return retcode;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
@@ -1924,9 +1944,9 @@ SCIP_Real SCIPsolGetVal(
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
-      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
-      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var) || (set->exact_enabled && RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var)))) ; /*lint !e777*/
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var) || (set->exact_enabled && RatIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var)))); /*lint !e777*/
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var) || (set->exact_enabled && RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var)))); /*lint !e777*/
       return SCIPvarGetLbGlobal(var);
 
    case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
@@ -1990,9 +2010,8 @@ void SCIPsolGetValExact(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real* scalars;
-   SCIP_Real solval;
-   SCIP_Real solvalsum;
+   SCIP_Rational** scalars;
+   SCIP_Rational* solval;
    int nvars;
    int i;
 
@@ -2068,23 +2087,49 @@ void SCIPsolGetValExact(
       assert(RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetUbGlobalExact(var))); /*lint !e777*/
       assert(RatIsEqual(SCIPvarGetLbLocalExact(var), SCIPvarGetUbLocalExact(var))); /*lint !e777*/
       assert(RatIsEqual(SCIPvarGetLbGlobalExact(var), SCIPvarGetLbLocalExact(var))); /*lint !e777*/
-      SCIPvarGetLbGlobalExact(var);
+      RatSet(res, SCIPvarGetLbGlobalExact(var));
       break;
 
     case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
-      /** @todo exip: presolving extension
-       *  - implement this if exact version of SCIP supports aggregated variables
-       */
-      SCIPerrorMessage("cannot get solution value of aggregated variable\n");
-      SCIPABORT();
+      SCIPsolGetValExact(res, sol, set, stat, SCIPvarGetAggrVar(var));
+      if( RatIsAbsInfinity(res) )
+      {
+         if( RatGetSign(res) * RatGetSign(SCIPvarGetAggrScalarExact(var)) > 0 )
+         {
+            RatSetString(res, "inf");
+            return;
+         }
+         if( RatGetSign(res) * RatGetSign(SCIPvarGetAggrScalarExact(var)) < 0 )
+         {
+            RatSetString(res, "-inf");
+            return;
+         }
+      }
+      RatMult(res, res, SCIPvarGetAggrScalarExact(var));
+      RatAdd(res, res, SCIPvarGetAggrConstantExact(var));
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
-      /** @todo exip: presolving extension
-       *  - implement this if exact version of SCIP supports multiaggregated variables
-       */
-      SCIPerrorMessage("cannot get solution value of multiaggregated variable\n");
-      SCIPABORT();
+      RatCreateBuffer(set->buffer, &solval);
+
+      nvars = SCIPvarGetMultaggrNVars(var);
+      vars = SCIPvarGetMultaggrVars(var);
+      scalars = SCIPvarGetMultaggrScalarsExact(var);
+      RatSet(res, SCIPvarGetMultaggrConstantExact(var));
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIPsolGetValExact(solval, sol, set, stat, vars[i]);
+         if( RatIsAbsInfinity(solval) )
+         {
+            if( RatGetSign(scalars[i]) == RatGetSign(solval) )
+               RatSetString(res, "inf");
+            if( RatGetSign(scalars[i]) != RatGetSign(solval) && !RatIsZero(scalars[i]) )
+               RatSetString(res, "-inf");
+            break;
+         }
+         RatAddProd(res, scalars[i], solval);
+      }
+      RatFreeBuffer(set->buffer, &solval);
       break;
 
    case SCIP_VARSTATUS_NEGATED:
@@ -2199,7 +2244,7 @@ SCIP_Rational* SCIPsolGetObjExact(
    assert(SCIPsolIsExact(sol));
 
    /* for original solutions, sol->obj contains the external objective value */
-   if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
+   if( SCIPsolIsOriginal(sol) )
    {
       /** @todo exip: heuristics extension
        *  - implement this if exact version of SCIP supports getting objective value of original solutions */
@@ -2321,7 +2366,7 @@ SCIP_RETCODE solCheckExact(
    assert(feasible != NULL);
 
    SCIPsetDebugMsg(set, "checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
-      RatApproxReal(sol->valsexact->obj), sol->nodenum, sol->solorigin);
+      sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
 
@@ -2367,7 +2412,7 @@ SCIP_RETCODE solCheckExact(
 #ifdef SCIP_DEBUG
                else
                {
-                  SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", RgetRealApprox(solval), SCIPvarGetName(var),
+                  RatDebugMessage("  -> solution value %q violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
                         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
                }
 #endif
@@ -2390,8 +2435,8 @@ SCIP_RETCODE solCheckExact(
 #ifdef SCIP_DEBUG
                   else
                   {
-                     SCIPsetDebugMsgPrint(set, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
-                        RgetRealApprox(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
+                     RatDebugMessage("infinite solution value %q for variable  <%s> with obj %g implies objective value +infinity\n",
+                        solval, SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #endif
                }
@@ -2725,8 +2770,6 @@ SCIP_RETCODE SCIPsolRetransform(
    *hasinfval = FALSE;
 
    /* transform exact values first (needs unchanged solorigin) */
-   /** @todo exip: presolving extension this works only now because we do not presolve, and so solvals do not change.
-    * might need to be more sophisticated later */
    if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPsolRetransformExact(sol, set, stat, origprob, transprob, hasinfval) );
@@ -2835,7 +2878,11 @@ SCIP_RETCODE SCIPsolRetransformExact(
 {
    SCIP_VAR** transvars;
    SCIP_VAR** vars;
+   SCIP_VAR** activevars;
+   SCIP_Rational** solvals;
+   SCIP_Rational** activevals;
    SCIP_Rational** transsolvals;
+   SCIP_Rational* constant;
    int requiredsize;
    int ntransvars;
    int nactivevars;
@@ -2868,7 +2915,12 @@ SCIP_RETCODE SCIPsolRetransformExact(
    /* allocate temporary memory for getting the active representation of the original variables, buffering the solution
     * values of all active variables and storing the original solution values
     */
-   SCIP_CALL( RatCreateBufferArray(set->buffer, &transsolvals, ntransvars) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &transsolvals, ntransvars + 1) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, ntransvars + 1) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &activevals, ntransvars + 1) );
+   SCIP_CALL( RatCreateBufferArray(set->buffer, &solvals, nvars) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &constant) );
+
    assert(transsolvals != NULL); /* for flexelint */
 
    /* get the solution values of all active variables */
@@ -2877,26 +2929,56 @@ SCIP_RETCODE SCIPsolRetransformExact(
       SCIPsolGetValExact(transsolvals[v], sol, set, stat, transvars[v]);
    }
 
-   /** @todo exip: presolving extension (once we have exact presolving, we need to do here what we do in the fp case */
+   /* get the solution in original problem variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      activevars[0] = vars[v];
+      RatSetReal(activevals[0], 1.0);
+      nactivevars = 1;
+      RatSetReal(constant, 0.0);
+
+      /* get active representation of the original variable */
+      SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, activevars, activevals, &nactivevars, ntransvars + 1, constant,
+            &requiredsize, TRUE) );
+      assert(requiredsize <= ntransvars);
+
+      /* compute solution value of the original variable */
+      RatSet(solvals[v], constant);
+      for( i = 0; i < nactivevars; ++i )
+      {
+         assert(0 <= SCIPvarGetProbindex(activevars[i]) && SCIPvarGetProbindex(activevars[i]) < ntransvars);
+         RatAddProd(solvals[v], activevals[i], transsolvals[SCIPvarGetProbindex(activevars[i])]);
+      }
+
+      if( RatIsAbsInfinity(solvals[v]) )
+         *hasinfval = TRUE;
+   }
 
    /* clear the solution and convert it into original space */
    SCIP_CALL( solClearArrays(sol) );
+   /** @todo exip exact obj offset? */
    RatSetReal(sol->valsexact->obj, origprob->objoffset);
+   sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
 
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !RatIsZero(transsolvals[v]) )
+      if( !RatIsZero(solvals[v]) )
       {
-         SCIP_CALL( solSetArrayValExact(sol, set, vars[v], transsolvals[v]) );
-         RatAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), transsolvals[v]);
+         SCIP_CALL( solSetArrayValExact(sol, set, vars[v], solvals[v]) );
+         /** @todo exip might need unchangedObjexact if probing mode becomes a thing */
+         RatAddProd(sol->valsexact->obj, SCIPvarGetObjExact(vars[v]), solvals[v]);
       }
    }
 
    /* free temporary memory */
-   RatFreeBufferArray(set->buffer, &transsolvals, ntransvars);
+   RatFreeBuffer(set->buffer, &constant);
+   RatFreeBufferArray(set->buffer, &solvals, nvars);
+   RatFreeBufferArray(set->buffer, &activevals, ntransvars + 1);
+   SCIPsetFreeBufferArray(set, &activevars);
+   RatFreeBufferArray(set->buffer, &transsolvals, ntransvars + 1);
 
    return SCIP_OKAY;
 }

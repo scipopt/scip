@@ -101,7 +101,9 @@ typedef struct SCIP_Holelist SCIP_HOLELIST;       /**< list of holes in a domain
 typedef struct SCIP_Dom SCIP_DOM;                 /**< datastructures for storing domains of variables */
 typedef struct SCIP_Original SCIP_ORIGINAL;       /**< original variable information */
 typedef struct SCIP_Aggregate SCIP_AGGREGATE;     /**< aggregation information */
+typedef struct SCIP_AggregateExact SCIP_AGGREGATEEXACT; /**< exact aggregation information */
 typedef struct SCIP_Multaggr SCIP_MULTAGGR;       /**< multiple aggregation information */
+typedef struct SCIP_MultaggrExact SCIP_MULTAGGREXACT; /**< exact multiple aggregation information */
 typedef struct SCIP_Negate SCIP_NEGATE;           /**< negation information */
 typedef struct SCIP_Var SCIP_VAR;                 /**< variable of the problem */
 typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */

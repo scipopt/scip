@@ -22,7 +22,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #ifndef __SCIP_BOUNDING_EXACT_C__
 #define __SCIP_BOUNDING_EXACT_C__
-
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -1270,11 +1269,15 @@ SCIP_RETCODE projectShift(
    /* decide if we should use ray or point to compute bound */
    if( !usefarkas && projshiftdata->projshiftuseintpoint && projshiftdata->projshifthaspoint )
       useinteriorpoint = TRUE;
+   else if( projshiftdata->projshifthasray )
+   {
+      useinteriorpoint = FALSE;
+   }
+   /* we either dont have a ray and want to prove infeasibility or we have neither point nor ray -> can't run */
    else
    {
-      /* in this case, since projshiftdatafail != TRUE, projshifthasray should be true -- use it */
-      assert(projshiftdata->projshifthasray);
-      useinteriorpoint = FALSE;
+      lp->hasprovedbound = FALSE;
+      return SCIP_OKAY;
    }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
@@ -1408,23 +1411,21 @@ SCIP_RETCODE projectShift(
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
-      printf("   i=%d: ", i);
-      RatPrint(dualsol[i]);
-      printf(" * ");
-      RatPrint(val)
-      printf("\n");
+      RatPrintf("   i=%d: %q * %q \n", i, dualsol[i], val);
       if( RatIsAbsInfinity(val) )
          assert(RatIsZero(dualsol[i]));
       else
       {
-         RatMult(tmp, dualsol[i], val);
+         if( i < nrows )
+            RatDiff(tmp, val, lpexact->rows[i]->constant);
+         else
+            RatSet(tmp, val);
+         RatMult(tmp, dualsol[i], tmp);
          RatAdd(dualbound, dualbound, tmp);
       }
    }
 
-   printf("   objective value=%.20f (", RgetRealApprox(dualbound));
-   RatPrint(dualbound);
-   printf(")\n");
+   RatPrintf("   objective value=%f (%q) \n", RatApproxReal(dualbound), dualbound);
 #endif
 
    /* calculate violation of equality constraints r=c-A^ty */
@@ -1696,9 +1697,7 @@ SCIP_RETCODE projectShift(
       printf("projected and shifted dual solution (should be an exact dual feasible solution)\n");
       for( i = 0; i < nrows+ncols; i++ )
       {
-         printf("   i=%d: ", i);
-         RatPrint(dualsol[i]);
-         printf("\n");
+         RatPrintf("   i=%d: %f.20 (%q) \n", i, RatApproxReal(dualsol[i]), dualsol[i]);
       }
 #endif
    }
@@ -1751,7 +1750,11 @@ SCIP_RETCODE projectShift(
       else
          val = i < nrows ? lpexact->rows[i]->rhs : lpexact->cols[i - nrows]->ub;
 
-      RatMult(tmp, dualsol[i], val);
+      if( i < nrows )
+         RatDiff(tmp, val, lpexact->rows[i]->constant);
+      else
+         RatSet(tmp, val);
+      RatMult(tmp, dualsol[i], tmp);
       RatAdd(dualbound, dualbound, tmp);
    }
 
@@ -1798,19 +1801,19 @@ SCIP_RETCODE projectShift(
    }
 
 #ifdef PS_OUT
-   printf("   common slack=%.20f (", RgetRealApprox(projshiftdata->commonslack));
+   printf("   common slack=%.20f (", RatApproxReal(projshiftdata->commonslack));
    RatPrint(projshiftdata->commonslack);
    printf(")\n");
 
-   printf("   max violation=%.20f (", RgetRealApprox(maxv));
+   printf("   max violation=%.20f (", RatApproxReal(maxv));
    RatPrint(maxv);
    printf(")\n");
 
-   printf("   lambda (use of interior point)=%.20f (", RgetRealApprox(lambda2));
+   printf("   lambda (use of interior point)=%.20f (", RatApproxReal(lambda2));
    RatPrint(lambda2);
    printf(")\n");
 
-   printf("   dual objective value=%.20f (", RgetRealApprox(dualbound));
+   printf("   dual objective value=%.20f (", RatApproxReal(dualbound));
    RatPrint(dualbound);
    printf(")\n");
 #endif
@@ -2417,6 +2420,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    char dualboundmethod;
    char lastboundmethod;
    SCIP_Bool abort;
+   SCIP_Real oldbound;
    int nattempts;
 
    /* if we are not in exact solving mode, just return */
@@ -2426,6 +2430,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    lastboundmethod = 'u';
    abort = FALSE;
    nattempts = 0;
+   oldbound = *safebound;
 
 #ifdef SCIP_WITH_BOOST
    assert(set->exact_enabled);

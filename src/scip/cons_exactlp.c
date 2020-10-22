@@ -7178,7 +7178,7 @@ SCIP_RETCODE createRows(
    /** create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->row, consdata->lhs, consdata->rhs) );
 
-   SCIP_CALL( SCIPaddVarsToRowEx(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
+   SCIP_CALL( SCIPaddVarsToRowExact(scip, consdata->rowexact, consdata->nvars, consdata->vars, consdata->vals) );
 
    return SCIP_OKAY;
 }
@@ -17572,6 +17572,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    return SCIP_OKAY;
 }
 
+/** @todo exip: since this is only used for subscips, it currently always creates linear constraints, needs to be extended in the future*/
 /** creates by copying and captures a linear constraint */
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
@@ -17654,7 +17655,7 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
 
-         //SCIP_CALL( SCIPgetProbvarLinearSumExact(sourcescip, vars, coefs, &nvars, requiredsize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
          assert(requiredsize <= nvars);
       }
    }

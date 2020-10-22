@@ -706,6 +706,8 @@ SCIP_RETCODE SCIPeventCreateGlbChanged(
    (*event)->data.eventbdchg.var = var;
    (*event)->data.eventbdchg.oldbound = oldbound;
    (*event)->data.eventbdchg.newbound = newbound;
+   (*event)->data.eventbdchg.oldboundexact = NULL;
+   (*event)->data.eventbdchg.newboundexact = NULL;
 
    return SCIP_OKAY;
 }
@@ -729,6 +731,8 @@ SCIP_RETCODE SCIPeventCreateGubChanged(
    (*event)->data.eventbdchg.var = var;
    (*event)->data.eventbdchg.oldbound = oldbound;
    (*event)->data.eventbdchg.newbound = newbound;
+   (*event)->data.eventbdchg.oldboundexact = NULL;
+   (*event)->data.eventbdchg.newboundexact = NULL;
 
    return SCIP_OKAY;
 }
@@ -755,6 +759,8 @@ SCIP_RETCODE SCIPeventCreateLbChanged(
    (*event)->data.eventbdchg.var = var;
    (*event)->data.eventbdchg.oldbound = oldbound;
    (*event)->data.eventbdchg.newbound = newbound;
+   (*event)->data.eventbdchg.oldboundexact = NULL;
+   (*event)->data.eventbdchg.newboundexact = NULL;
 
    return SCIP_OKAY;
 }
@@ -781,6 +787,26 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
    (*event)->data.eventbdchg.var = var;
    (*event)->data.eventbdchg.oldbound = oldbound;
    (*event)->data.eventbdchg.newbound = newbound;
+   (*event)->data.eventbdchg.oldboundexact = NULL;
+   (*event)->data.eventbdchg.newboundexact = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** adds the data for the exact changes to existing bound event */
+SCIP_RETCODE SCIPeventAddExactChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Rational*        oldbound,           /**< old bound before bound changed */
+   SCIP_Rational*        newbound            /**< new bound after bound changed */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(!RatIsEqual(oldbound, newbound));
+
+   SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
+   SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
 
    return SCIP_OKAY;
 }
@@ -1072,6 +1098,12 @@ SCIP_RETCODE SCIPeventFree(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
+
+   if( ((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) && (*event)->data.eventbdchg.newboundexact != NULL )
+   {
+      RatFreeBlock(blkmem, &(*event)->data.eventbdchg.newboundexact);
+      RatFreeBlock(blkmem, &(*event)->data.eventbdchg.oldboundexact);
+   }
 
    BMSfreeBlockMemory(blkmem, event);
 
@@ -1762,6 +1794,12 @@ SCIP_RETCODE SCIPeventProcess(
          assert(SCIPvarGetProbindex(var) >= 0);
          SCIP_CALL( SCIPlpUpdateVarLbGlobal(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
+
+         if( event->data.eventbdchg.newboundexact != NULL )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarLbGlobal(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
+                  event->data.eventbdchg.newboundexact) );
+         }
       }
 
       /* process variable's event filter */
@@ -1778,6 +1816,12 @@ SCIP_RETCODE SCIPeventProcess(
          assert(SCIPvarGetProbindex(var) >= 0);
          SCIP_CALL( SCIPlpUpdateVarUbGlobal(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
+
+         if( event->data.eventbdchg.newboundexact != NULL )
+         {
+            SCIP_CALL( SCIPlpExactUpdateVarUbGlobal(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
+                  event->data.eventbdchg.newboundexact) );
+         }
       }
 
       /* process variable's event filter */
@@ -1800,8 +1844,22 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
-         /* update exact bounds if in exact solving mode */
-         SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, FALSE, FALSE) );
+
+         if( event->data.eventbdchg.newboundexact != NULL )
+         {
+            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+            {
+               SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lp->lpexact, event->data.eventbdchg.newboundexact) );
+            }
+
+            SCIP_CALL( SCIPlpExactUpdateVarLb(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
+                  event->data.eventbdchg.newboundexact) );
+         }
+         else
+         {
+            SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, FALSE, FALSE) );
+         }
+
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 
@@ -1825,8 +1883,22 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
-         /* update exact bounds if in exact solving mode */
-         SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, TRUE, FALSE) );
+
+         if( event->data.eventbdchg.newboundexact != NULL )
+         {
+            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+            {
+               SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lp->lpexact, event->data.eventbdchg.newboundexact) );
+            }
+
+            SCIP_CALL( SCIPlpExactUpdateVarUb(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
+                  event->data.eventbdchg.newboundexact) );
+         }
+         else
+         {
+            SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, TRUE, FALSE) );
+         }
+
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
       }
 

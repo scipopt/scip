@@ -666,6 +666,15 @@ void SCIPpresolSetTiming(
    presol->timing = timing;
 }
 
+/** mark that the presolver is safe to use in exact solving mode */
+void SCIPpresolSetExact(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->isexact = TRUE;
+}
 
 /** is presolver initialized? */
 SCIP_Bool SCIPpresolIsInitialized(

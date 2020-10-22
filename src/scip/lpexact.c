@@ -4617,6 +4617,7 @@ SCIP_RETCODE SCIProwExactIncCoef(
    )
 {
    int pos;
+   SCIP_Rational* tmp;
 
    assert(row != NULL);
    assert(lp != NULL);
@@ -4625,6 +4626,8 @@ SCIP_RETCODE SCIProwExactIncCoef(
 
    if( RatIsZero(incval) )
       return SCIP_OKAY;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
    /* search the position of the column in the row's col vector */
    pos = rowExactSearchCoef(row, col);
@@ -4642,23 +4645,26 @@ SCIP_RETCODE SCIProwExactIncCoef(
       assert(row->cols[pos] == col);
       assert(row->cols_index[pos] == col->index);
 
+      RatAdd(tmp, incval, row->vals[pos]);
+
       /* if column knows of the row, change the corresponding coefficient in the column */
       if( row->linkpos[pos] >= 0 )
       {
          assert(col->rows[row->linkpos[pos]] == row);
          assert(RatIsEqual(col->vals[row->linkpos[pos]], row->vals[pos]));
-         RatAdd(incval, incval, row->vals[pos]);
-         SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], incval) );
+         SCIP_CALL( colExactChgCoefPos(col, set, lp, row->linkpos[pos], tmp) );
       }
 
       /* change the coefficient in the row */
-      SCIP_CALL( rowExactChgCoefPos(row, blkmem, set, eventqueue, lp, pos, incval) );
+      SCIP_CALL( rowExactChgCoefPos(row, blkmem, set, eventqueue, lp, pos, tmp) );
    }
 
    checkLinks(lp);
 
    /* invalid the activity */
    row->validactivitylp = -1;
+
+   RatFreeBuffer(set->buffer, &tmp);
 
    return SCIP_OKAY;
 }
@@ -4675,7 +4681,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
    )
 {
    assert(row != NULL);
-   assert(row->lhs <= row->rhs);
+   assert(RatIsLE(row->lhs, row->rhs));
    assert(!RatIsAbsInfinity(constant));
    assert(stat != NULL);
    assert(lp != NULL);
@@ -4689,6 +4695,8 @@ SCIP_RETCODE SCIProwExactChgConstant(
          RatAdd(row->pseudoactivity, row->pseudoactivity, constant);
          RatDiff(row->pseudoactivity, row->pseudoactivity, row->constant);
       }
+
+      RatSet(row->constant, constant);
    }
 
    return SCIP_OKAY;
@@ -4708,7 +4716,7 @@ SCIP_RETCODE SCIProwExactAddConstant(
    SCIP_Rational* tmp;
 
    assert(row != NULL);
-   assert(row->lhs <= row->rhs);
+   assert(RatIsLE(row->lhs, row->rhs));
    assert(!RatIsAbsInfinity(addval));
    assert(stat != NULL);
    assert(lp != NULL);
@@ -5212,7 +5220,7 @@ void getObjvalDeltaObjExact(
          if( !RatIsNegInfinity(lb) )
          {
             RatDiff(deltaval, newobj, oldobj);
-            RatMult(deltaval, lb, lb);
+            RatMult(deltaval, deltaval, lb);
          }
       }
       /* sign of objective did change, so the best bound does change */
@@ -5711,18 +5719,24 @@ SCIP_RETCODE SCIPlpExactUpdateDelVar(
    SCIP_VAR*             var                 /**< variable that will be deleted from the problem */
    )
 {
+   SCIP_Rational* ratzero;
+
    assert(lp != NULL);
    assert(SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetProbindex(var) >= 0);
 
+   SCIP_CALL( RatCreateBuffer(set->buffer, &ratzero) );
+
    /* subtract the variable from the loose objective value sum */
-   SCIP_CALL( SCIPlpExactUpdateVarObj(lp, set, var, SCIPvarGetObjExact(var), NULL) );
+   SCIP_CALL( SCIPlpExactUpdateVarObj(lp, set, var, SCIPvarGetObjExact(var), ratzero) );
 
    /* update the loose variables counter */
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE )
    {
       SCIPlpExactDecNLoosevars(lp);
    }
+
+   RatFreeBuffer(set->buffer, &ratzero);
 
    return SCIP_OKAY;
 }
@@ -5772,6 +5786,8 @@ SCIP_RETCODE SCIPlpExactUpdateVarColumn(
          lpExactUpdateObjval(lp, set, var, tmp, 0, FALSE, TRUE, FALSE);
       }
    }
+
+   SCIPlpExactDecNLoosevars(lp);
 
    assert(lp->looseobjvalinf >= 0);
 
@@ -6683,8 +6699,10 @@ void SCIPlpExactGetObjval(
 
    if( !lp->flushed || lp->looseobjvalinf > 0 )
       RatSetString(res, "-inf");
-   else
+   else if( RatIsAbsInfinity(lp->lpobjval) )
       RatSet(res, lp->lpobjval);
+   else
+      RatAdd(res, lp->lpobjval, lp->looseobjval);
 }
 
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the

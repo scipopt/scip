@@ -203,6 +203,16 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
    SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
    );
 
+/** transforms given variable, boundtype and exact bound to the corresponding active, fixed, or multi-aggregated variable
+ *  values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPvarGetProbvarBoundExact(
+   SCIP_VAR**            var,                /**< pointer to problem variable */
+   SCIP_Rational*        bound,              /**< pointer to bound value to transform */
+   SCIP_BOUNDTYPE*       boundtype           /**< pointer to type of bound: lower or upper bound */
+   );
+
 /** transforms given variable and domain hole to the corresponding active, fixed, or multi-aggregated variable
  *  values
  */
@@ -585,9 +595,21 @@ SCIP_Real SCIPvarGetAggrScalar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets aggregation scalar a of an aggregated variable x = a*y + c */
+SCIP_EXPORT
+SCIP_Rational* SCIPvarGetAggrScalarExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets aggregation constant c of an aggregated variable x = a*y + c */
 SCIP_EXPORT
 SCIP_Real SCIPvarGetAggrConstant(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets aggregation constant c of an aggregated variable x = a*y + c */
+SCIP_EXPORT
+SCIP_Rational* SCIPvarGetAggrConstantExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -609,9 +631,21 @@ SCIP_Real* SCIPvarGetMultaggrScalars(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets vector of exact aggregation scalars a of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+SCIP_EXPORT
+SCIP_Rational** SCIPvarGetMultaggrScalarsExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
 SCIP_EXPORT
 SCIP_Real SCIPvarGetMultaggrConstant(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets exact aggregation constant c of a multi aggregated variable x = a0*y0 + ... + a(n-1)*y(n-1) + c */
+SCIP_EXPORT
+SCIP_Rational* SCIPvarGetMultaggrConstantExact(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -972,8 +1006,9 @@ SCIP_Real SCIPvarGetLPSol(
 
 /** gets primal LP solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLPSolExact(
-   SCIP_VAR*             var                 /**< problem variable */
+void SCIPvarGetLPSolExact(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        res                 /**< store the resulting value */
    );
 
 /** gets primal NLP solution value of variable */
@@ -1154,8 +1189,9 @@ SCIP_Real SCIPvarGetLPSol_rec(
 
 /** gets primal LP solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetLPSolExact_rec(
-   SCIP_VAR*             var                 /**< problem variable */
+void SCIPvarGetLPSolExact_rec(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        res                 /**< store the resulting value */
    );
 
 /** gets primal NLP solution value of variable */
@@ -1185,8 +1221,9 @@ SCIP_Real SCIPvarGetSol(
 
 /** gets current LP or pseudo solution value of variable */
 SCIP_EXPORT
-SCIP_Rational* SCIPvarGetSolExact(
+void SCIPvarGetSolExact(
    SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        res,                /**< the resulting value */
    SCIP_Bool             getlpval            /**< should the LP solution value be returned? */
    );
 

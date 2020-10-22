@@ -789,7 +789,6 @@ void recomputeSafeLooseObjectiveValue(
    assert(lp != NULL);
    assert(set != NULL);
    assert(prob != NULL);
-   assert(!lp->looseobjvalid);
    assert(set->exact_enabled);
 
    vars = prob->vars;
@@ -1021,7 +1020,6 @@ void recomputeGlbPseudoObjectiveValue(
    lp->glbpseudoobjvalid = TRUE;
 }
 
-/** @todo exip: should these be made safe? */
 /** gets finite part of objective value of current LP that results from LOOSE variables only */
 static
 SCIP_Real getFiniteLooseObjval(
