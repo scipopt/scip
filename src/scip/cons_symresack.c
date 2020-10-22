@@ -1291,7 +1291,7 @@ SCIP_RETCODE separateSymresackCovers(
       else
          assert( maxsolu[i] == 0 );
    }
-   assert( SCIPisEQ(scip, tmpcheckobj, maxsoluobj) );
+   assert( SCIPisSumEQ(scip, tmpcheckobj, maxsoluobj) );
 #endif
 
    /* Add constant to maxsoluobj to get the real objective */
