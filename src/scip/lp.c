@@ -12674,7 +12674,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       }
 
       /* compute safe bound might change the solstat so we have to compute it before we evaluate the solution status */
-      if( lp->solved && set->exact_enabled && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      if( lp->solved && set->exact_enabled )
       {
          if( SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE )
             SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid);

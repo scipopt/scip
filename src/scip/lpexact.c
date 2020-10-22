@@ -7612,7 +7612,7 @@ SCIP_RETCODE SCIPlpExactStartDive(
    /* save current LP values dependent on the solution */
    SCIP_CALL( lpExactStoreSolVals(lpexact, stat, blkmem) );
    assert(lpexact->storedsolvals != NULL);
-   if( !set->lp_resolverestore && lpexact->solved )
+   if( !set->lp_resolverestore && lpexact->solved && lpexact->flushed )
    {
       SCIP_Bool store = TRUE;
 

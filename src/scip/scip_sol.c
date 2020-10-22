@@ -2130,7 +2130,7 @@ SCIP_RETCODE SCIPprintSolExact(
    if( SCIPsolIsOriginal(sol) )
       RatSet(objvalue, SCIPsolGetOrigObjExact(sol));
    else
-      SCIPprobExternObjvalExact(scip, scip->transprob, scip->set, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob), objvalue));
+      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob), objvalue);
 
    RatMessage(scip->messagehdlr, file, objvalue);
 
