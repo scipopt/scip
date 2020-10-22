@@ -1760,7 +1760,7 @@ SCIP_RETCODE computeIntercut(
          }
 
          /* maybe we want to avoid a large dynamism between A, B and C */
-         if( ! nlhdlrdata->ignorebadrayrestriction )
+         if( nlhdlrdata->ignorebadrayrestriction )
          {
             max = 0.0; min = SCIPinfinity(scip);
             for( j = 0; j < 3; ++j )
@@ -4002,11 +4002,11 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
          "should cut be generated even with bad numerics when restricting to ray?",
-         &nlhdlrdata->ignorebadrayrestriction, FALSE, FALSE, NULL, NULL) );
+         &nlhdlrdata->ignorebadrayrestriction, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorenhighre",
          "should cut be added even when range / efficacy is large?",
-         &nlhdlrdata->ignorenhighre, FALSE, FALSE, NULL, NULL) );
+         &nlhdlrdata->ignorenhighre, FALSE, TRUE, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
