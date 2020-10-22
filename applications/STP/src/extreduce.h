@@ -49,12 +49,10 @@ extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_core.c
  */
-
 extern SCIP_RETCODE    extreduce_checkComponent(SCIP*, const GRAPH*, const REDCOST*, EXTCOMP*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, STAR*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkNodeWithSimpleSt(SCIP*, const GRAPH*, int, DISTDATA*, SCIP_Bool*);
 
 /* extreduce_util.c
  */
@@ -65,6 +63,7 @@ extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const E
 /* extreduce_dist.c
  */
 extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA*);
+extern SCIP_Real          extreduce_distDataGetSp(SCIP*, const GRAPH*, int, int, int*, int*, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDoubleForbiddenSingle(SCIP*, const GRAPH*, int, int, int, DISTDATA*);
@@ -125,6 +124,12 @@ extern SCIP_Real  extreduce_extGetSdDouble(SCIP*, const GRAPH*, int, int, EXTDAT
 extern SCIP_Real  extreduce_extGetSdProper(SCIP*, const GRAPH*, int, int, EXTDATA*);
 extern SCIP_Real  extreduce_extGetSdProperDouble(SCIP*, const GRAPH*, int, int, EXTDATA*);
 extern SCIP_Bool  extreduce_mstRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
+
+
+/* extreduce_extspg.c
+ */
+extern SCIP_RETCODE    extreduce_spgCheckNodeSimple(SCIP*, const GRAPH*, int, DISTDATA*, SCIP_Bool*);
+extern SCIP_Bool       extreduce_spg3LeafTreeRuleOut(SCIP*, const GRAPH*, SCIP_Real, EXTDATA*);
 
 
 /* extreduce_recosts.c

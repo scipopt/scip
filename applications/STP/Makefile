@@ -71,6 +71,7 @@ CMAINOBJ	=	cmain.o \
 			extreduce_dbg.o \
 			extreduce_dist.o \
 			extreduce_extmst.o \
+			extreduce_extspg.o \
 			extreduce_mldists.o \
 			extreduce_redcosts.o \
 			extreduce_util.o \

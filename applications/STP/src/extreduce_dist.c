@@ -150,6 +150,68 @@ SCIP_Bool closeNodesPathIsForbidden(
 }
 
 
+/** gets distance and path nodes */
+static inline
+SCIP_Real getCloseNodePath(
+   const GRAPH*          g,                  /**< graph data structure */
+   const DISTDATA*       distdata,           /**< distance data */
+   int                   node,               /**< the node */
+   int                   closenode,          /**< the close node whose position is to be found */
+   int*                  pathnodes,          /**< inner nodes */
+   int*                  npathnodes         /**< number of inner nodes */
+)
+{
+   const int* const indices = distdata->closenodes_indices;
+   const RANGE* const range = distdata->closenodes_range;
+   const int start = range[node].start;
+   const int end = range[node].end;
+   const int size = end - start;
+   int position;
+   SCIP_Real dist = -1.0;
+   assert(size > 0);
+
+   *npathnodes = 0;
+
+   position = findEntryFromSorted(&indices[start], size, closenode);
+
+   if( position >= 0 )
+   {
+      const int* const prededges = distdata->closenodes_prededges;
+      int pred = closenode;
+      int pred_pos = position;
+
+      assert(indices[start + position] == closenode);
+      assert(distdata->closenodes_indices[position] == closenode);
+      assert(graph_edge_isInRange(g, prededges[pred_pos]));
+      assert(g->head[prededges[pred_pos]] == closenode);
+      assert(pred != node && closenode != node);
+
+      dist = distdata->closenodes_distances[start + position];
+
+      while( pred != node )
+      {
+         int pred_edge;
+
+         /* not in first iteration? */
+         if( pred != closenode )
+         {
+            pred_pos = start + findEntryFromSorted(&indices[start], size, pred);
+            pathnodes[(*npathnodes)++] = pred;
+         }
+
+         assert(pred_pos >= start);
+
+         pred_edge = prededges[pred_pos];
+         assert(graph_edge_isInRange(g, pred_edge));
+
+         pred = g->tail[pred_edge];
+      }
+   }
+
+   return dist;
+}
+
+
 /** returns distance of closenode from node, or -1.0 if this distance is not stored in close nodes list of node */
 static inline
 SCIP_Real getCloseNodeDistance(
@@ -936,6 +998,34 @@ void distDataRecomputeNormalDist(
    distdata->pathroot_isdirty[vertex1] = FALSE;
 }
 
+
+/** returns (normal) shortest path distance between vertex1 and vertex2
+ *  and provides inner shortest path vertices. Returns -1.0 if no shortest path was found */
+static inline
+SCIP_Real distDataGetSp(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   int*                  pathnodes,          /**< inner nodes */
+   int*                  npathnodes,         /**< number of inner nodes */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   /* neighbors list not valid anymore? */
+   if( distdata->pathroot_isdirty[vertex1] )
+   {
+      distDataRecomputeNormalDist(scip, g, vertex1, distdata);
+   }
+
+   dist = getCloseNodePath(g, distdata, vertex1, vertex2, pathnodes, npathnodes);
+
+   return dist;
+}
+
+
 /** Gets shortest v1->v2 (standard) distance.
  *  Returns -1.0 if the distance is not known. */
 static inline
@@ -1243,6 +1333,31 @@ void extreduce_distDataDeleteEdge(
 
    distdata->pathroot_blocksizes[halfedge] = 0;
    distdata->pathroot_blocksizesmax[halfedge] = 0;
+}
+
+
+/** returns (normal) shortest path distance between vertex1 and vertex2
+ *  and provides inner shortest path vertices. Returns -1.0 if no shortest path was found */
+SCIP_Real extreduce_distDataGetSp(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   int*                  pathnodes,          /**< inner nodes */
+   int*                  npathnodes,         /**< number of inner nodes */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Real dist;
+
+   assert(scip && g && distdata && pathnodes && npathnodes);
+   assert(graph_knot_isInRange(g, vertex1) && graph_knot_isInRange(g, vertex2));
+
+   dist = distDataGetSp(scip, g, vertex1, vertex2, pathnodes, npathnodes, distdata);
+
+   assert(EQ(dist, -1.0) || dist >= 0.0);
+
+   return dist;
 }
 
 

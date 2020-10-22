@@ -1564,44 +1564,6 @@ void mstAddRootLevelSDs(
 }
 
 
-/** can current 3-leaf tree be rule-out? */
-static inline
-SCIP_Bool spg3treeRuleOut(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          graph,              /**< graph data structure */
-   SCIP_Real             tree_cost,          /**< tree cost */
-   EXTDATA*              extdata             /**< extension data */
-)
-{
-   // todo
-   SCIP_Real sds[3];
-   const int* leaves = extdata->tree_leaves;
-
-   assert(3 == extdata->tree_nleaves);
-
-   sds[0] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
-         leaves[0], leaves[1], extdata);
-
-   sds[1] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
-         leaves[0], leaves[2], extdata);
-
-   if( LE(sds[0] + sds[1], tree_cost) )
-   {
-      return TRUE;
-   }
-
-   sds[2] = extreduce_distDataGetSdDoubleForbidden(scip, graph,
-         leaves[1], leaves[2], extdata);
-
-   if( LE(sds[0] + sds[2], tree_cost) || LE(sds[1] + sds[2], tree_cost) )
-   {
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-
 /** can current 3-leaf tree be rule-out in case of equality? */
 static inline
 SCIP_Bool mstEqComp3RuleOut(
@@ -1939,15 +1901,25 @@ SCIP_Bool mstCompRuleOut(
       // todo: probably also need to check for > 3! */
       if( extdata->tree_nleaves == 3 && EQ(mstweight, tree_cost) && !mstEqComp3RuleOut(scip, graph, tree_cost, extdata) )
       {
-         return FALSE;
+         ruledOut = FALSE;
       }
-
-      SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, tree_cost);
-
-      return TRUE;
    }
 
-   return FALSE;
+   if( !ruledOut )
+   {
+      // todo!
+
+      if( extdata->tree_nleaves == 3 && extInitialCompIsEdge(extdata) && 0 )
+      {
+         ruledOut = extreduce_spg3LeafTreeRuleOut(scip, graph, tree_cost, extdata);
+      }
+   }
+   else
+   {
+      SCIPdebugMessage("SD MST alternative found %f < %f \n", mstweight, tree_cost);
+   }
+
+   return ruledOut;
 }
 
 

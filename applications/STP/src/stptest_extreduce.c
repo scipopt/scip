@@ -1109,6 +1109,60 @@ SCIP_RETCODE testEdgeDeletedByEqBottleneck2(
 }
 
 
+
+/** tests that edge can be deleted by extended SPG rule-out */
+static
+SCIP_RETCODE testEdgeDeletedBy3LeafSpg(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST* redcostdata;
+   GRAPH* graph;
+   const int nnodes = 5;
+   const int nedges = 12;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   STP_Bool* edgedeleted = NULL;
+   int testedge = 0;
+   SCIP_Bool deletable;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM);       /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 1 */
+   graph_knot_add(graph, STP_TERM);  /* node 2 */
+   graph_knot_add(graph, STP_TERM);  /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 4 */
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.1);
+   graph_edge_addBi(scip, graph, 1, 2, 1.1);
+   graph_edge_addBi(scip, graph, 1, 3, 1.1);
+
+   graph_edge_addBi(scip, graph, 0, 4, 1.1);
+   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
+   extInitRedCostArrays(graph, redcostdata);
+
+   SCIP_CALL( extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE) );
+
+   // todo!
+  // STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+
 /** tests that edge can be deleted by reduced costs argument */
 static
 SCIP_RETCODE testNode3PseudoDeletedByRedCosts1(
@@ -1958,10 +2012,9 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
-
+   SCIP_CALL( testEdgeDeletedBy3LeafSpg(scip) );
 
    SCIP_CALL( testEdgeDeletedByMultiRedCosts(scip) );
-
 
    SCIP_CALL( testGeneralStarDeletedEdge1(scip) );
    SCIP_CALL( testGeneralStarDeletedEdge2(scip) );
