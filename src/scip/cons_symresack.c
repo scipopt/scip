@@ -41,6 +41,7 @@
  * Packing, Partitioning, and Covering Symresacks@n
  * Christopher Hojny,@n
  * (2020), available at https://doi.org/10.1016/j.dam.2020.03.002
+ * Discrete Applied Mathematics, volume 283, 689-717 (2020)
  *
  * This paper introduces linearly many inequalities with ternary coefficients that suffice to
  * characterize the binary points contained in a packing and partitioning symresack completely.
