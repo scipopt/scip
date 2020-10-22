@@ -1154,8 +1154,7 @@ SCIP_RETCODE testEdgeDeletedBy3LeafSpg(
 
    SCIP_CALL( extCheckEdge(scip, graph, redcostdata, edgedeleted, testedge, &deletable, FALSE) );
 
-   // todo!
-  // STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
+   STPTEST_ASSERT_MSG(deletable, "edge was not deleted \n");
 
    stptest_extreduceTearDown(scip, graph, &redcostdata);
 

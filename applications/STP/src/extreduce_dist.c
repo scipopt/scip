@@ -178,10 +178,9 @@ SCIP_Real getCloseNodePath(
    {
       const int* const prededges = distdata->closenodes_prededges;
       int pred = closenode;
-      int pred_pos = position;
+      int pred_pos = start + position;
 
-      assert(indices[start + position] == closenode);
-      assert(distdata->closenodes_indices[position] == closenode);
+      assert(indices[pred_pos] == closenode);
       assert(graph_edge_isInRange(g, prededges[pred_pos]));
       assert(g->head[prededges[pred_pos]] == closenode);
       assert(pred != node && closenode != node);

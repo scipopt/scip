@@ -1907,9 +1907,7 @@ SCIP_Bool mstCompRuleOut(
 
    if( !ruledOut )
    {
-      // todo!
-
-      if( extdata->tree_nleaves == 3 && extInitialCompIsEdge(extdata) && 0 )
+      if( extdata->tree_nleaves == 3 && extInitialCompIsEdge(extdata) )
       {
          ruledOut = extreduce_spg3LeafTreeRuleOut(scip, graph, tree_cost, extdata);
       }

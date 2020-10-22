@@ -93,8 +93,6 @@ SCIP_Bool spg4VerticesRuleOut(
       {
          SCIPdebugMessage("STEINER TREE 3-leaf tree rule-out with %f < %f \n", pathcost + dist2, tree_cost);
 
-         printf("STEINER TREE 3-leaf tree rule-out with %f < %f \n", pathcost + dist2, tree_cost);
-
          isRuledOut = TRUE;
          break;
       }
@@ -128,22 +126,25 @@ SCIP_Bool extreduce_spg3LeafTreeRuleOut(
    assert(extInitialCompIsEdge(extdata));
    assert(GE(tree_cost, 0.0));
 
-   printf("try 3-leaf reduction by SD SPG \n");
+   SCIPdebugMessage("try 3-leaf reduction by SD SPG \n");
 
    SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &pathnodes, graph->knots) );
 
    if( spg4VerticesRuleOut(scip, graph, leaves[0], leaves[1], leaves[2], tree_cost, pathnodes, extdata) )
    {
+      SCIPfreeBufferArray(scip, &pathnodes);
       return TRUE;
    }
 
    if( spg4VerticesRuleOut(scip, graph, leaves[0], leaves[2], leaves[1], tree_cost, pathnodes, extdata) )
    {
+      SCIPfreeBufferArray(scip, &pathnodes);
       return TRUE;
    }
 
    if( spg4VerticesRuleOut(scip, graph, leaves[1], leaves[2], leaves[0], tree_cost, pathnodes, extdata) )
    {
+      SCIPfreeBufferArray(scip, &pathnodes);
       return TRUE;
    }
 
