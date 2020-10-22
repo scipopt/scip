@@ -69,6 +69,14 @@ SCIP_Bool spg4VerticesRuleOut(
    assert(tree_deg[node_pathend] > 0);
    assert(tree_deg[node_other] > 0);
 
+   if( GE(pathcost, tree_cost) )
+   {
+      return FALSE;
+   }
+
+   SCIPdebugMessage("%d---%d and %d: number of path nodes: %d (pathcost=%f, tree_cost=%f)\n",
+         node_pathstart, node_pathend, node_other, npathnodes, pathcost, tree_cost);
+
    for( int i = 0; i < npathnodes; i++ )
    {
       SCIP_Real dist2;
