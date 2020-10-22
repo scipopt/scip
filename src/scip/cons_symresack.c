@@ -1233,9 +1233,6 @@ SCIP_RETCODE separateSymresackCovers(
    int nvars;
    int maxcrit;
    int i;
-#ifndef NDEBUG
-   SCIP_Real tmpcheckobj;
-#endif
 
    *infeasible = FALSE;
    *ngen = 0;
@@ -1281,24 +1278,6 @@ SCIP_RETCODE separateSymresackCovers(
    SCIPdebugMsg(scip, "Critical row %d found; Computing maximally violated cover.\n", maxcrit);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
 
-#ifndef NDEBUG
-   /* Check if objective of solution vector is same as predicted objective */
-   tmpcheckobj = 0.0;
-   for (i = 0; i < nvars; ++i)
-   {
-      if ( maxsolu[i] == 1 )
-         tmpcheckobj += sepaobjective[i];
-      else
-         assert( maxsolu[i] == 0 );
-   }
-
-   if ( ! SCIPisSumEQ(scip, tmpcheckobj, maxsoluobj) )
-   {
-      SCIPdebugMsg(scip, "SYMRESACK_DBG %.15f, %.15f, %.15f\n", tmpcheckobj, maxsoluobj, tmpcheckobj - maxsoluobj);
-   }
-   assert( SCIPisSumEQ(scip, tmpcheckobj, maxsoluobj) );
-#endif
-
    /* Add constant to maxsoluobj to get the real objective */
    maxsoluobj += constobjective;
 
@@ -1307,10 +1286,6 @@ SCIP_RETCODE separateSymresackCovers(
    {
       /* Now add the cut. Reuse array maxsolu as coefficient vector for the constraint. */
       SCIP_Real rhs = -1.0;
-#ifndef NDEBUG
-      SCIP_Real lhs = 0.0;
-#endif
-
       for (i = 0; i < nvars; ++i)
       {
          if ( i < perm[i] )
@@ -1322,12 +1297,6 @@ SCIP_RETCODE separateSymresackCovers(
             maxsolu[i] = 1 - maxsolu[i];
          }
       }
-
-#ifndef NDEBUG
-      for (i = 0; i < nvars; ++i)
-         lhs += vals[i] * maxsolu[i];
-      assert( SCIPisGT(scip, lhs, rhs) );
-#endif
 
       /* add cover inequality */
       SCIP_CALL( addSymresackInequality(scip, cons, nvars, consdata->vars, maxsolu, rhs, infeasible) );
