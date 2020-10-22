@@ -120,7 +120,7 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
    SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
    SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
-   SCIP_Bool             ignorenhighre;      /**< should cut be added even when range / efficacy is large? */
+   SCIP_Bool             ignorehighre;      /**< should cut be added even when range / efficacy is large? */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -3123,7 +3123,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* intersection cuts can be numerically nasty; we do some extra numerical checks here */
       //printf("SCIP DEPTH %d got a cut with violation %g, efficacy %g and r/e %g\n", SCIPgetSubscipDepth(scip), violation, SCIPgetCutEfficacy(scip, NULL, row), SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row));
       assert(SCIPgetCutEfficacy(scip, NULL, row) > 0.0);
-      if( ! nlhdlrdata->ignorenhighre || SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
+      if( ! nlhdlrdata->ignorehighre || SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "adding cut ");
@@ -4006,7 +4006,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorenhighre",
          "should cut be added even when range / efficacy is large?",
-         &nlhdlrdata->ignorenhighre, FALSE, TRUE, NULL, NULL) );
+         &nlhdlrdata->ignorehighre, FALSE, TRUE, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
