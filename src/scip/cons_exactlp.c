@@ -2326,6 +2326,56 @@ void consdataCalcActivities(
    RatSet(consdata->lastglbmaxactivity, consdata->glbmaxactivity);
 }
 
+/** computes the activity of a row for a given solution plus a bound on the floating-point error using running error analysis */
+static
+void consdataComputeSolActivityWithErrorbound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            activity,           /**< buffer to return floating-point activity */
+   SCIP_Real*            errorbound          /**< buffer to return bound on absolute floating-point error */
+   )
+{
+   SCIP_Real solval;
+   SCIP_Real sum;
+   SCIP_Real mu;
+   SCIP_Real inf;
+   int v;
+
+   assert(activity != NULL);
+   assert(errorbound != NULL);
+
+   inf = SCIPinfinity(scip);
+   *activity = SCIP_UNKNOWN;
+   *errorbound = inf;
+
+   sum = 0.0;
+   mu = 0.0;
+   for( v = 0; v < consdata->nvars; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+
+      if( solval == SCIP_UNKNOWN ) /*lint !e777*/
+         return;
+
+      sum += consdata->valsreal[v] * solval;
+      mu += REALABS(sum);
+      /* the factor 3 + eps is needed to account for rounding errors in valsreal[v]/solval */
+      mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(consdata->valsreal[v] * solval);
+   }
+
+   sum = MAX(sum, -inf);
+   sum = MIN(sum, +inf);
+   *activity = sum;
+
+   if( SCIPisInfinity(scip, sum) || SCIPisInfinity(scip, -sum) )
+      *errorbound = inf;
+   else
+      *errorbound = mu * 1.1 * SCIP_REAL_UNITROUNDOFF;
+
+   return;
+}
+
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
  *  and (if needed) delta to subtract from stored finite part of activity in case of a residual activity
  */
@@ -7067,7 +7117,6 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real activityfp;
    SCIP_Real absviolfp;
    SCIP_Rational* activity;
    SCIP_Rational* violation;
@@ -7087,14 +7136,29 @@ SCIP_RETCODE checkCons(
    violation = consdata->violation;
 
    /* only check exact constraint if fp cons is feasible enough */
-   if( consdata->row != NULL && sol != NULL)
    {
-      activityfp = SCIPgetRowSolActivity(scip, consdata->row, sol);
-      absviolfp = MAX(activityfp - consdata->rhsreal, consdata->lhsreal - activityfp);
-      if( SCIPisFeasPositive(scip, absviolfp) )
+      SCIP_Real activityfp;
+      SCIP_Real mu;
+
+      consdataComputeSolActivityWithErrorbound(scip, consdata, sol, &activityfp, &mu);
+      if( activityfp - mu > consdata->rhsreal || activityfp + mu < consdata->lhsreal )
       {
+         SCIPdebugMsg(scip, "discarding solution due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
          *violated = TRUE;
          return SCIP_OKAY;
+      }
+      else if( activityfp + mu < consdata->rhsreal && activityfp - mu >= consdata->lhsreal )
+      {
+         SCIPdebugMsg(scip, "skipping exact check due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+         *violated = FALSE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "no decision due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
       }
    }
 
