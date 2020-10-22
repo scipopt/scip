@@ -1278,7 +1278,7 @@ SCIP_RETCODE separateSymresackCovers(
    /* Find critical row of a maximally violated cover */
    SCIP_CALL( maximizeObjectiveSymresackStrict(scip, nvars, sepaobjective, perm, invperm, &maxcrit, &maxsoluobj) );
    assert( maxcrit >= 0 );
-   SCIPdebugMsg(scip, "Critical row %i found; Computing maximally violated cover.\n", maxcrit);
+   SCIPdebugMsg(scip, "Critical row %d found; Computing maximally violated cover.\n", maxcrit);
    SCIP_CALL( maximizeObjectiveSymresackCriticalEntry(scip, nvars, sepaobjective, perm, invperm, maxcrit, maxsolu) );
 
 #ifndef NDEBUG
@@ -1291,6 +1291,7 @@ SCIP_RETCODE separateSymresackCovers(
       else
          assert( maxsolu[i] == 0 );
    }
+   printf("SYMRESACK_DBG %.15f, %.15f, %.15f\n", tmpcheckobj, maxsoluobj, tmpcheckobj - maxsoluobj);
    assert( SCIPisSumEQ(scip, tmpcheckobj, maxsoluobj) );
 #endif
 
