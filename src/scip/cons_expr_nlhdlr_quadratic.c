@@ -119,6 +119,8 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
    SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
+   SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
+   SCIP_Bool             ignorenhighre;      /**< should cut be added even when range / efficacy is large? */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -1758,34 +1760,14 @@ SCIP_RETCODE computeIntercut(
          }
 
          /* maybe we want to avoid a large dynamism between A, B and C */
-         max = 0.0; min = SCIPinfinity(scip);
-         for( j = 0; j < 3; ++j )
-         {
-            SCIP_Real absval;
-
-            absval = ABS(coefs1234a[j]);
-            if( max < absval )
-               max = absval;
-            if( absval != 0.0 && absval < min )
-               min = absval;
-         }
-
-         if( SCIPisHugeValue(scip, max / min) )
-         {
-            INTERLOG(printf("Bad numerics 1 2 3 or 4a: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
-            *success = FALSE;
-            nlhdlrdata->nbadrayrestriction++;
-            return SCIP_OKAY;
-         }
-
-         if( iscase4 )
+         if( ! nlhdlrdata->ignorebadrayrestriction )
          {
             max = 0.0; min = SCIPinfinity(scip);
             for( j = 0; j < 3; ++j )
             {
                SCIP_Real absval;
 
-               absval = ABS(coefs4b[j]);
+               absval = ABS(coefs1234a[j]);
                if( max < absval )
                   max = absval;
                if( absval != 0.0 && absval < min )
@@ -1794,10 +1776,33 @@ SCIP_RETCODE computeIntercut(
 
             if( SCIPisHugeValue(scip, max / min) )
             {
-               INTERLOG(printf("Bad numeric 4b: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
+               INTERLOG(printf("Bad numerics 1 2 3 or 4a: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
                *success = FALSE;
                nlhdlrdata->nbadrayrestriction++;
                return SCIP_OKAY;
+            }
+
+            if( iscase4 )
+            {
+               max = 0.0; min = SCIPinfinity(scip);
+               for( j = 0; j < 3; ++j )
+               {
+                  SCIP_Real absval;
+
+                  absval = ABS(coefs4b[j]);
+                  if( max < absval )
+                     max = absval;
+                  if( absval != 0.0 && absval < min )
+                     min = absval;
+               }
+
+               if( SCIPisHugeValue(scip, max / min) )
+               {
+                  INTERLOG(printf("Bad numeric 4b: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
+                  *success = FALSE;
+                  nlhdlrdata->nbadrayrestriction++;
+                  return SCIP_OKAY;
+               }
             }
          }
       }
@@ -3118,7 +3123,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* intersection cuts can be numerically nasty; we do some extra numerical checks here */
       //printf("SCIP DEPTH %d got a cut with violation %g, efficacy %g and r/e %g\n", SCIPgetSubscipDepth(scip), violation, SCIPgetCutEfficacy(scip, NULL, row), SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row));
       assert(SCIPgetCutEfficacy(scip, NULL, row) > 0.0);
-      if( SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
+      if( ! nlhdlrdata->ignorenhighre || SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "adding cut ");
@@ -3994,6 +3999,14 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/nstrengthlimit",
          "limit for number of rays we do the strengthening for",
          &nlhdlrdata->nstrengthlimit, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
+         "should cut be generated even with bad numerics when restricting to ray?",
+         &nlhdlrdata->ignorebadrayrestriction, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorenhighre",
+         "should cut be added even when range / efficacy is large?",
+         &nlhdlrdata->ignorenhighre, FALSE, FALSE, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
