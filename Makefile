@@ -1358,11 +1358,7 @@ else
 endif
 
 .PHONY: touchexternal
-<<<<<<< 287d85bb0e461d50d10d545edc31b7b5311f4bfd
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) $(PARASCIPDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
-=======
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(GAMSDEP) $(LPSCHECKDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
->>>>>>> make PARASCIP deprecated
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(LPSCHECKDEP) $(THREADSAFEDEP) | $(LIBOBJDIR)
 ifeq ($(TOUCHLINKS),true)
 		@-touch $(ZLIBSRC)
 		@-touch $(GMPSRC)
