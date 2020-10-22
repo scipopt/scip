@@ -125,7 +125,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpDiving(scip->lp) )
       return SCIP_OKAY;
 
-   if( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
+   /** @todo exip: buffer solutions in this case instead */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
    if( !SCIPisLPConstructed(scip) )
