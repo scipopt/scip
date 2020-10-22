@@ -2326,7 +2326,7 @@ void consdataCalcActivities(
    RatSet(consdata->lastglbmaxactivity, consdata->glbmaxactivity);
 }
 
-/** computes the activity of a row for a given solution plus a bound on the floating-point error */
+/** computes the activity of a row for a given solution plus a bound on the floating-point error using running error analysis */
 static
 void consdataComputeSolActivityWithErrorbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2360,6 +2360,7 @@ void consdataComputeSolActivityWithErrorbound(
 
       sum += consdata->valsreal[v] * solval;
       mu += REALABS(sum);
+      /* the factor 3 + eps is needed to account for rounding errors in valsreal[v]/solval */
       mu += (3.0 + SCIP_REAL_UNITROUNDOFF) * REALABS(consdata->valsreal[v] * solval);
    }
 
