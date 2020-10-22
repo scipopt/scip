@@ -99,11 +99,11 @@ Build system
 ------------
 ### Cmake
 
-- replace target PARASCIP by THREADSAFE
-
+- replace flag PARASCIP by THREADSAFE
+	
 ### Makefile
-
-- replace target PARASCIP by THREADSAFE
+	
+- replace flag PARASCIP by THREADSAFE
 
 Fixed bugs
 ----------
