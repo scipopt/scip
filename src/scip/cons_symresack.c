@@ -1291,7 +1291,11 @@ SCIP_RETCODE separateSymresackCovers(
       else
          assert( maxsolu[i] == 0 );
    }
-   printf("SYMRESACK_DBG %.15f, %.15f, %.15f\n", tmpcheckobj, maxsoluobj, tmpcheckobj - maxsoluobj);
+
+   if ( ! SCIPisSumEQ(scip, tmpcheckobj, maxsoluobj) )
+   {
+      SCIPdebugMsg(scip, "SYMRESACK_DBG %.15f, %.15f, %.15f\n", tmpcheckobj, maxsoluobj, tmpcheckobj - maxsoluobj);
+   }
    assert( SCIPisSumEQ(scip, tmpcheckobj, maxsoluobj) );
 #endif
 
