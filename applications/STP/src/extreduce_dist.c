@@ -882,18 +882,6 @@ SCIP_RETCODE distDataComputeCloseNodesSD(
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
-   int* edgemark = NULL;
-
-#ifndef NDEBUG
-   SCIP_CALL( SCIPallocMemoryArray(scip, &edgemark, g->edges / 2) );
-    for( int e = 0; e < g->edges / 2; e++ )
-       edgemark[e] = FALSE;
-
-#endif
-
-   assert(0);
-
-
 
    return SCIP_OKAY;
 }
