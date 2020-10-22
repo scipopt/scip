@@ -10,6 +10,8 @@ Features
   are now deleted when during a restart.
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
+- The LPIs for Gurobi and Mosek are thread-safe now.
+- The complete code is now thread-safe by default.
 
 Performance improvements
 ------------------------
@@ -96,7 +98,12 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- replace flag PARASCIP by THREADSAFE
+	
 ### Makefile
+	
+- replace flag PARASCIP by THREADSAFE
 
 Fixed bugs
 ----------
@@ -110,6 +117,7 @@ Miscellaneous
 - Avoid redundant calls to LP solver when LP is already flushed and solved
 - In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
 - Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
+- The define NPARASCIP has been replaced by SCIP_THREADSAFE
 
 Known bugs
 ----------
