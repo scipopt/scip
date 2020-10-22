@@ -1370,8 +1370,8 @@ SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
 
 /** collects all bilinear terms for a given set of constraints
  *
- * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms()
- *       or SCIPgetConsExprBilinTerm().
+ * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms(),
+ *       SCIPgetConsExprBilinTerm() or SCIPgetConsExprBilinTermIdx().
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcollectConsExprBilinTerms(
@@ -1400,6 +1400,18 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
+/** returns the index of the bilinear term representing the product of the two given variables
+ *
+ * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
+ * @return The method returns -1 if the variables do not appear bilinearly.
+ */
+SCIP_EXPORT
+int SCIPgetConsExprBilinTermIdx(
+   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
+   SCIP_VAR*                  x,              /**< first variable */
+   SCIP_VAR*                  y               /**< second variable */
+   );
+
 /** returns the bilinear term that representing the product of two given variables
  *
  * @note The method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
@@ -1410,6 +1422,43 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_VAR*                  x,              /**< first variable */
    SCIP_VAR*                  y               /**< second variable */
+   );
+
+/** evaluates an auxiliary expression for a bilinear term */
+SCIP_EXPORT
+SCIP_Real SCIPevalConsExprBilinAuxExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             x,                  /**< first variable of the bilinear term */
+   SCIP_VAR*             y,                  /**< second variable of the bilinear term */
+   SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression */
+   SCIP_SOL*             sol                 /**< solution at which to evaluate (can be NULL) */
+   );
+
+/** stores the variables of a bilinear term in the data of the constraint handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPinsertBilinearTermExisting(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   int                   nlockspos,          /**< number of positive expression locks */
+   int                   nlocksneg           /**< number of negative expression locks */
+   );
+
+/** stores the variables of a bilinear term in the data of the constraint handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPinsertBilinearTermImplicit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_VAR*             x,                  /**< first variable */
+   SCIP_VAR*             y,                  /**< second variable */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable (might be NULL) */
+   SCIP_Real             coefx,              /**< coefficient of x in the auxiliary expression */
+   SCIP_Real             coefy,              /**< coefficient of y in the auxiliary expression */
+   SCIP_Real             coefaux,            /**< coefficient of auxvar in the auxiliary expression */
+   SCIP_Real             cst,                /**< constant of the auxiliary expression */
+   SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    );
 
 /** returns the number of enforcements for an expression */
@@ -1437,7 +1486,7 @@ void SCIPsetConsExprExprEnfoAuxValue(
    SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    int                   idx,                /**< position of enforcement in enfos array */
    SCIP_Real             auxvalue            /**< the new value of auxval */
-);
+   );
 
 /** upgrading method for expression constraints into more specific constraints
  *

@@ -78,12 +78,11 @@ Test(bilinhash, createInsertFree)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* create constraint handler data */
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    /* inserts two bilinear terms into the hash table */
-   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, x, y, NULL, 0, 0) );
-   SCIP_CALL( bilinearTermsInsert(scip, conshdlrdata, y, z, NULL, 0, 0) );
+   SCIP_CALL( SCIPinsertBilinearTermExisting(scip, conshdlr, x, y, NULL, 0, 0) );
+   SCIP_CALL( SCIPinsertBilinearTermExisting(scip, conshdlr, y, z, NULL, 0, 0) );
    cr_expect(conshdlrdata->nbilinterms == 2);
    cr_expect(conshdlrdata->bilinterms[0].x == x);
    cr_expect(conshdlrdata->bilinterms[0].y == y);
@@ -92,9 +91,6 @@ Test(bilinhash, createInsertFree)
 
    /* free hash table */
    SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
-
-   /* free constraint handler data */
-   SCIPfreeBlockMemory(scip, &conshdlrdata);
 }
 
 /* tests API methods for a simple problem containing two expression constraints */
@@ -139,9 +135,9 @@ Test(bilinhash, api_methods)
 
    bilinterms = SCIPgetConsExprBilinTerms(conshdlr);
    cr_assert(bilinterms != NULL);
-   cr_expect(bilinterms[0].x == tx && bilinterms[0].y == tx && bilinterms[0].auxvar == NULL);
-   cr_expect(bilinterms[1].x == tx && bilinterms[1].y == ty && bilinterms[1].auxvar == NULL);
-   cr_expect(bilinterms[2].x == ty && bilinterms[2].y == tz && bilinterms[2].auxvar == NULL);
+   cr_expect(bilinterms[0].x == tx && bilinterms[0].y == tx && bilinterms[0].aux.var == NULL);
+   cr_expect(bilinterms[1].x == tx && bilinterms[1].y == ty && bilinterms[1].aux.var == NULL);
+   cr_expect(bilinterms[2].x == ty && bilinterms[2].y == tz && bilinterms[2].aux.var == NULL);
 
    /* xx exists */
    cr_expect(SCIPgetConsExprBilinTerm(conshdlr, tx, tx) != NULL);

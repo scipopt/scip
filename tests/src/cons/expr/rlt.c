@@ -159,7 +159,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    int j;
 
    cr_assert(cut != NULL);
-   cr_expect_eq(SCIProwGetNNonz(cut), nvars);
+   cr_expect_eq(SCIProwGetNNonz(cut), nvars, "\nExpected %d nonz, got %d", nvars, SCIProwGetNNonz(cut));
    cr_expect(SCIPisEQ(scip, SCIProwGetLhs(cut), lhs));
    cr_expect(SCIPisEQ(scip, SCIProwGetRhs(cut), rhs));
 
@@ -183,44 +183,31 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
-/* helper method to check whether a bilinear term appears in the problem */
-static
-SCIP_VAR* getBilinVar(
-   SCIP_VAR*             x_,                 /**< first variable */
-   SCIP_VAR*             y_                  /**< second variable */
-   )
-{
-   SCIP_CONSEXPR_BILINTERM* bilinterm;
-
-   bilinterm = SCIPgetConsExprBilinTerm(conshdlr, x_, y_);
-
-   return bilinterm == NULL ? NULL : bilinterm->auxvar;
-}
-
 Test(rlt, collect)
 {
    /* check original variables */
-   cr_expect_eq(getBilinVar(x, x), xx);
-   cr_expect_eq(getBilinVar(x, y), xy);
-   cr_expect_eq(getBilinVar(x, z), xz);
-   cr_expect_eq(getBilinVar(y, x), xy);
-   cr_expect_eq(getBilinVar(z, x), xz);
-   cr_expect_eq(getBilinVar(y, z), NULL);
-   cr_expect_eq(getBilinVar(z, y), NULL);
-   cr_expect_eq(getBilinVar(y, y), NULL);
-   cr_expect_eq(getBilinVar(z, z), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->aux.var, xx);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, y)->aux.var, xy);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, z)->aux.var, xz);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, x)->aux.var, xy);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, x)->aux.var, xz);
+
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, z), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, y), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, y, y), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, z, z), NULL);
 
    /* check auxiliary variables for second constraint */
-   cr_expect_eq(getBilinVar(logvar, logvar), powvar);
-   cr_expect_eq(getBilinVar(absvar, powvar), prodvar);
-   cr_expect_eq(getBilinVar(prodvar, prodvar), NULL);
-   cr_expect_eq(getBilinVar(prodvar, absvar), NULL);
-   cr_expect_eq(getBilinVar(prodvar, powvar), NULL);
-   cr_expect_eq(getBilinVar(prodvar, logvar), NULL);
-   cr_expect_eq(getBilinVar(absvar, absvar), NULL);
-   cr_expect_eq(getBilinVar(absvar, logvar), NULL);
-   cr_expect_eq(getBilinVar(powvar, powvar), NULL);
-   cr_expect_eq(getBilinVar(powvar, logvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, logvar, logvar)->aux.var, powvar);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, powvar)->aux.var, prodvar);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, prodvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, absvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, powvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, prodvar, logvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, absvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, absvar, logvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, powvar), NULL);
+   cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, logvar), NULL);
 }
 
 Test(rlt, separation)
@@ -232,6 +219,19 @@ Test(rlt, separation)
    SCIP_Real* cutvals;
    SCIP_Bool result;
    SCIP_Bool success;
+   int currentnunknown;
+   int* bestunder;
+   int* bestover;
+   int i;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestunder, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestover, 3) );
+
+   for( i = 0; i < 3; ++i )
+   {
+      bestunder[i] = -1;
+      bestover[i] = -1;
+   }
 
    /* create test row1: -10 <= 4x - 7y + z <= 5 */
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row1, "test_row", -10.0, 5.0, FALSE, FALSE, FALSE) );
@@ -246,11 +246,13 @@ Test(rlt, separation)
    /*
     * cut for row1 and (x-0)
     */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, x, &result) );
+   SCIP_CALL( isAcceptableRow(sepadata, row1, x, &currentnunknown, &result) );
    cr_expect(result);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, x, &success, TRUE, TRUE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, TRUE,
+         TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, x, &success, TRUE, FALSE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, TRUE, FALSE,
+         TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
    cr_assert(cutlhs != NULL);
    cr_assert(cutrhs != NULL);
@@ -270,9 +272,11 @@ Test(rlt, separation)
    /*
     * cut for row1 and (2-x)
     */
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutlhs, row1, NULL, x, &success, FALSE, TRUE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutlhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
+         TRUE, TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
-   cr_expect_eq(computeRltCuts(scip, sepa, sepadata, &cutrhs, row1, NULL, x, &success, FALSE, FALSE, TRUE, FALSE), SCIP_OKAY);
+   cr_expect_eq(computeRltCut(scip, sepa, sepadata, &cutrhs, row1, NULL, NULL, bestunder, bestover, x, &success, FALSE,
+         FALSE, TRUE, FALSE, FALSE), SCIP_OKAY);
    cr_assert(success);
    cr_assert(cutlhs != NULL);
    cr_assert(cutrhs != NULL);
@@ -290,8 +294,10 @@ Test(rlt, separation)
    SCIP_CALL( SCIPreleaseRow(scip, &cutrhs) );
 
    /* check for not acceptable row */
-   SCIP_CALL( isAcceptableRow(scip, sepadata, row1, y, &result) );
+   SCIP_CALL( isAcceptableRow(sepadata, row1, y, &currentnunknown, &result) );
    cr_expect(!result);
    SCIP_CALL( SCIPreleaseRow(scip, &row1) );
 
+   SCIPfreeBufferArray(scip, &bestover);
+   SCIPfreeBufferArray(scip, &bestunder);
 }
