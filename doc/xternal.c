@@ -663,7 +663,7 @@
  * NOBUFMEM             | on, off                        | NOBUFMEM=[true,false]  |                                            |
  * NOBLKBUFMEM          | on, off                        | NOBLKBUFMEM=[true,false] |                                          |
  * MT                   | on, off                        |                        | use static runtime libraries for Visual Studio compiler on Windows |
- * PARASCIP             | on, off                        | PARASCIP=[true,false]  | thread safe compilation                    |
+ * THREADSAFE           | on, off                        | THREADSAFE=[true,false] | thread safe compilation                   |
  * SANITIZE_...         | on, off                        | --                     | enable sanitizer in debug mode if available |
  * TPI                  | tny, omp, none                 | TPI=[tny,omp,none]     | enable task processing interface required for concurrent solver |
  *
@@ -862,7 +862,7 @@
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
- * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or NPARASCIP in source files.
+ * - <code>depend</code> Updates dependencies files. This is only needed if you add checks for preprocessor-defines `WITH_*` or SCIP_THREADSAFE in source files.
  * - <code>check</code> or <code>test</code> Runs the check script, see \ref TEST.
  * - <code>lint</code> Statically checks the code via flexelint. The call produces the file <code>lint.out</code>
  *   which contains all the detected warnings.
