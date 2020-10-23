@@ -817,6 +817,9 @@ void SCIPsetEnableOrDisablePluginClocks(
    for( i = set->nnodesels - 1; i >= 0; --i )
       SCIPnodeselEnableOrDisableClocks(set->nodesels[i], enabled);
 
+   for ( i = set->ncutsels - 1; i >= 0; --i )
+      SCIPcutselEnableOrDisableClocks(set->cutsels[i], enabled);
+
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
 }
@@ -4174,7 +4177,7 @@ SCIP_RETCODE SCIPsetIncludeCutsel(
 {
    assert(set != NULL);
    assert(cutsel != NULL);
-   //assert(!SCIPsepaIsInitialized(sepa));
+   assert(!SCIPcutselIsInitialized(cutsel));
 
    if( set->ncutsels >= set->cutselssize )
    {
