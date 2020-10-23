@@ -1045,7 +1045,7 @@ SCIP_Real getRowFracActivity(
    return fracsum;
 }
 
-/** searches and adds c-MIR cuts that separate the given primal solution */
+/** searches for and adds c-MIR cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1256,9 +1256,9 @@ SCIP_RETCODE separateCuts(
       assert(SCIProwGetLPPos(rows[r]) == r);
 
       nnonz = SCIProwGetNLPNonz(rows[r]);
-      if( nnonz == 0 || (!allowlocal && SCIProwIsLocal(rows[r])) )
+      if( nnonz == 0 || SCIProwIsModifiable(rows[r]) || (!allowlocal && SCIProwIsLocal(rows[r])) )
       {
-         /* ignore empty rows and local rows if they are not allowed */
+         /* ignore empty rows, modifiable rows, and local rows if they are not allowed */
          rowlhsscores[r] = 0.0;
          rowrhsscores[r] = 0.0;
       }
