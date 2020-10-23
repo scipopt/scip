@@ -2328,7 +2328,7 @@ void consdataCalcActivities(
 
 /** computes the activity of a row for a given solution plus a bound on the floating-point error using running error analysis */
 static
-void consdataComputeSolActivityWithErrorbound(
+SCIP_Bool consdataComputeSolActivityWithErrorbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -2353,10 +2353,13 @@ void consdataComputeSolActivityWithErrorbound(
    mu = 0.0;
    for( v = 0; v < consdata->nvars; ++v )
    {
-      solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+      if( SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_LOOSE )
+         solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+      else
+         return FALSE;
 
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
-         return;
+         return FALSE;
 
       sum += consdata->valsreal[v] * solval;
       mu += REALABS(sum);
@@ -2373,7 +2376,7 @@ void consdataComputeSolActivityWithErrorbound(
    else
       *errorbound = mu * 1.1 * SCIP_REAL_UNITROUNDOFF;
 
-   return;
+   return TRUE;
 }
 
 /** gets minimal activity for constraint and given values of counters for infinite and huge contributions
@@ -7120,6 +7123,7 @@ SCIP_RETCODE checkCons(
    SCIP_Real absviolfp;
    SCIP_Rational* activity;
    SCIP_Rational* violation;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7140,25 +7144,29 @@ SCIP_RETCODE checkCons(
       SCIP_Real activityfp;
       SCIP_Real mu;
 
-      consdataComputeSolActivityWithErrorbound(scip, consdata, sol, &activityfp, &mu);
-      if( activityfp - mu > consdata->rhsreal || activityfp + mu < consdata->lhsreal )
+      success = consdataComputeSolActivityWithErrorbound(scip, consdata, sol, &activityfp, &mu);
+
+      if( success )
       {
-         SCIPdebugMsg(scip, "discarding solution due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
-            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
-         *violated = TRUE;
-         return SCIP_OKAY;
-      }
-      else if( activityfp + mu < consdata->rhsreal && activityfp - mu >= consdata->lhsreal )
-      {
-         SCIPdebugMsg(scip, "skipping exact check due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
-            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
-         *violated = FALSE;
-         return SCIP_OKAY;
-      }
-      else
-      {
-         SCIPdebugMsg(scip, "no decision due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
-            activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+         if( activityfp - mu > consdata->rhsreal || activityfp + mu < consdata->lhsreal )
+         {
+            SCIPdebugMsg(scip, "discarding solution due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+               activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+            *violated = TRUE;
+            return SCIP_OKAY;
+         }
+         else if( activityfp + mu < consdata->rhsreal && activityfp - mu >= consdata->lhsreal )
+         {
+            SCIPdebugMsg(scip, "skipping exact check due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+               activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+            *violated = FALSE;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "no decision due to fp check: activityfp=%g, lhsreal=%g, rhsreal=%g, mu=%g\n",
+               activityfp, consdata->lhsreal, consdata->rhsreal, mu);
+         }
       }
    }
 
