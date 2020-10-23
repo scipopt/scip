@@ -42,7 +42,7 @@
 #define SEPA_NAME              "rlt"
 #define SEPA_DESC              "reformulation-linearization-technique separator"
 #define SEPA_PRIORITY                10 /**< priority for separation */
-#define SEPA_FREQ                    -1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define SEPA_FREQ                     0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define SEPA_MAXBOUNDDIST           1.0 /**< maximal relative distance from the current node's dual bound to primal bound
 +                                        *   compared to best node's dual bound for applying separation.*/
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
@@ -1967,8 +1967,16 @@ SCIP_RETCODE addRltTerm(
 
    terms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
-   lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
-   ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   if( computeEqCut )
+   {
+      lbvar = 0.0;
+      ubvar = 0.0;
+   }
+   else
+   {
+      lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
+      ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
+   }
 
    refpointvar = MAX(lbvar, MIN(ubvar, SCIPgetSolVal(scip, sol, var))); /*lint !e666*/
 
@@ -2947,7 +2955,7 @@ SCIP_RETCODE separateRltCuts(
             /* if equality cuts are possible, lhs and rhs cuts are equal so skip rhs */
             if( buildeqcut )
             {
-               if( k % 2 == 1 )
+               if( k != 1 )
                   continue;
             }
             /* otherwise which cuts are generated depends on the marks */
