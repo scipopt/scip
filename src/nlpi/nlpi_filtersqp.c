@@ -258,7 +258,7 @@ extern struct
 /*lint -esym(754,phe) */
 
 #ifdef SCIP_THREADSAFE
-static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER; /*lint !e708*/
 #endif
 
 static
@@ -1920,7 +1920,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
     */
 #ifdef SCIP_THREADSAFE
-   pthread_mutex_lock(&filtersqpmutex);
+   (void) pthread_mutex_lock(&filtersqpmutex);
 #endif
 
    /* initialize global variables from filtersqp */
@@ -2044,7 +2044,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
 
 #ifdef SCIP_THREADSAFE
-   pthread_mutex_unlock(&filtersqpmutex);
+   (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
