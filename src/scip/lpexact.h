@@ -431,6 +431,17 @@ SCIP_Rational* SCIProwExactGetPseudoActivity(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
+/** enables delaying of row sorting */
+void SCIProwExactDelaySort(
+   SCIP_ROWEXACT*        rowexact            /**< LP rowexact */
+   );
+
+/** disables delaying of row sorting, sorts row and merges coefficients with equal columns */
+void SCIProwExactForceSort(
+   SCIP_ROWEXACT*        rowexact,           /**< LP rowexact */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** recalculates the current activity of a row */
 void SCIProwExactRecalcLPActivity(
    SCIP_ROWEXACT*        row,                /**< LP row */

@@ -145,97 +145,6 @@ SCIP_RETCODE SCIPreleaseRowExact(
    return SCIP_OKAY;
 }
 
-static
-void SCIProwExactForceSort(
-   SCIP_ROWEXACT*        row,                /**< LP row */
-   SCIP_SET*             set                 /**< SCIP settings */
-   )
-{
-   assert(row != NULL);
-   assert(row->nunlinked == row->len);
-   assert(row->nlpcols == 0);
-
-   SCIPsetDebugMsg(set, "merging row <%s>\n", row->fprow->name);
-
-   /* do nothing on empty rows; if row is sorted, nothing has to be done */
-   if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
-   {
-      SCIP_COLEXACT** cols;
-      int* cols_index;
-      SCIP_Rational** vals;
-      int s;
-      int t;
-
-      /* make sure, the row is sorted */
-      SCIProwExactSort(row);
-      assert(row->lpcolssorted);
-      assert(row->nonlpcolssorted);
-
-      /* merge equal columns, thereby recalculating whether the row's activity is always integral */
-      cols = row->cols;
-      cols_index = row->cols_index;
-      vals = row->vals;
-      assert(cols != NULL);
-      assert(cols_index != NULL);
-      assert(vals != NULL);
-
-      t = 0;
-      row->integral = TRUE;
-      assert(!RatIsZero(vals[0]));
-      assert(row->linkpos[0] == -1);
-
-      for( s = 1; s < row->len; ++s )
-      {
-         assert(!RatIsZero(vals[s]));
-         assert(row->linkpos[s] == -1);
-
-         if( cols[s] == cols[t] )
-         {
-            /* merge entries with equal column */
-            RatAdd(vals[t], vals[t], vals[s]);
-         }
-         else
-         {
-            /* go to the next entry, overwriting current entry if coefficient is zero */
-            if( !RatIsZero(vals[t]) )
-            {
-               row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RatIsIntegral(vals[t]);
-               t++;
-            }
-            cols[t] = cols[s];
-            cols_index[t] = cols_index[s];
-            RatSet(vals[t], vals[s]);
-         }
-      }
-      if( !RatIsZero(vals[t]) )
-      {
-         row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RatIsIntegral(vals[t]);
-         t++;
-      }
-      assert(s == row->len);
-      assert(t <= row->len);
-
-      row->len = t;
-      row->nunlinked = t;
-   }
-
-#ifndef NDEBUG
-   /* check for double entries */
-   {
-      int i;
-      int j;
-
-      for( i = 0; i < row->len; ++i )
-      {
-         assert(row->cols[i] != NULL);
-         assert(row->cols[i]->index == row->cols_index[i]);
-         for( j = i+1; j < row->len; ++j )
-            assert(row->cols[i] != row->cols[j]);
-      }
-   }
-#endif
-}
-
 /** resolves variables to columns and adds them with the coefficients to the row;
  *  this method caches the row extensions and flushes them afterwards to gain better performance
  *
@@ -265,6 +174,9 @@ SCIP_RETCODE SCIPaddVarsToRowExact(
 
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
    SCIP_CALL( SCIProwExactEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row->fprow) + nvars) );
+
+   /* delay the row sorting */
+   SCIProwExactDelaySort(row);
 
    /* add the variables to the row */
    for( v = 0; v < nvars; ++v )

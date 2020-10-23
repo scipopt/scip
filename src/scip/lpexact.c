@@ -4987,6 +4987,129 @@ SCIP_Rational* SCIProwExactGetPseudoActivity(
    return row->pseudoactivity;
 }
 
+/** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry; removes
+ *  zero entries from row
+ *  the row must not be linked to the columns; otherwise, we would need to update the columns as
+ *  well, which is too expensive
+ */
+static
+void rowExactMerge(
+   SCIP_ROWEXACT*        row,                /**< row to be sorted */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+   assert(!row->delaysort);
+   assert(row->nunlinked == row->len);
+   assert(row->nlpcols == 0);
+
+   SCIPsetDebugMsg(set, "merging row <%s>\n", row->fprow->name);
+
+   /* do nothing on empty rows; if row is sorted, nothing has to be done */
+   if( row->len > 0 && (!row->lpcolssorted || !row->nonlpcolssorted) )
+   {
+      SCIP_COLEXACT** cols;
+      int* cols_index;
+      SCIP_Rational** vals;
+      int s;
+      int t;
+
+      /* make sure, the row is sorted */
+      SCIProwExactSort(row);
+      assert(row->lpcolssorted);
+      assert(row->nonlpcolssorted);
+
+      /* merge equal columns, thereby recalculating whether the row's activity is always integral */
+      cols = row->cols;
+      cols_index = row->cols_index;
+      vals = row->vals;
+      assert(cols != NULL);
+      assert(cols_index != NULL);
+      assert(vals != NULL);
+
+      t = 0;
+      row->integral = TRUE;
+      assert(!RatIsZero(vals[0]));
+      assert(row->linkpos[0] == -1);
+
+      for( s = 1; s < row->len; ++s )
+      {
+         assert(!RatIsZero(vals[s]));
+         assert(row->linkpos[s] == -1);
+
+         if( cols[s] == cols[t] )
+         {
+            /* merge entries with equal column */
+            RatAdd(vals[t], vals[t], vals[s]);
+            SCIPintervalSetRational(&row->valsinterval[t], vals[t]);
+         }
+         else
+         {
+            /* go to the next entry, overwriting current entry if coefficient is zero */
+            if( !RatIsZero(vals[t]) )
+            {
+               row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RatIsIntegral(vals[t]);
+               t++;
+            }
+            cols[t] = cols[s];
+            cols_index[t] = cols_index[s];
+            RatSet(vals[t], vals[s]);
+            SCIPintervalSetRational(&row->valsinterval[t], vals[t]);
+         }
+      }
+      if( !RatIsZero(vals[t]) )
+      {
+         row->integral = row->integral && SCIPcolIsIntegral(cols[t]->fpcol) && RatIsIntegral(vals[t]);
+         t++;
+      }
+      assert(s == row->len);
+      assert(t <= row->len);
+
+      row->len = t;
+      row->nunlinked = t;
+   }
+
+#ifndef NDEBUG
+   /* check for double entries */
+   {
+      int i;
+      int j;
+
+      for( i = 0; i < row->len; ++i )
+      {
+         assert(row->cols[i] != NULL);
+         assert(row->cols[i]->index == row->cols_index[i]);
+         for( j = i+1; j < row->len; ++j )
+            assert(row->cols[i] != row->cols[j]);
+      }
+   }
+#endif
+}
+
+/** enables delaying of row sorting */
+void SCIProwExactDelaySort(
+   SCIP_ROWEXACT*        rowexact            /**< LP rowexact */
+   )
+{
+   assert(rowexact != NULL);
+   assert(!rowexact->delaysort);
+
+   rowexact->delaysort = TRUE;
+}
+
+/** disables delaying of row sorting, sorts row and merges coefficients with equal columns */
+void SCIProwExactForceSort(
+   SCIP_ROWEXACT*        rowexact,           /**< LP rowexact */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(rowexact != NULL);
+   assert(rowexact->delaysort);
+
+   rowexact->delaysort = FALSE;
+   rowExactMerge(rowexact, set);
+}
+
 /** recalculates the current activity of a row */
 void SCIProwExactRecalcLPActivity(
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
