@@ -557,7 +557,7 @@ SCIP_RETCODE SCIPtransformProb(
    if( scip->set->misc_estimexternmem )
    {
       /* the following formula was estimated empirically using linear regression */
-      scip->stat->externmemestim = (SCIP_Longint) (MAX(1, 8.5e-04 * SCIPgetNConss(scip) + 7.6e-04 * SCIPgetNVars(scip) + 3.5e-05 * scip->stat->nnz) * 1048576.0);
+      scip->stat->externmemestim = (SCIP_Longint) (MAX(1, 8.5e-04 * SCIPgetNConss(scip) + 7.6e-04 * SCIPgetNVars(scip) + 3.5e-05 * scip->stat->nnz) * 1048576.0); /*lint !e666*/
       SCIPdebugMsg(scip, "external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->stat->externmemestim);
    }
 
