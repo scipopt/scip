@@ -34,7 +34,6 @@
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/reopt.h"
-#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/cutsel.h"
 #include "scip/pub_message.h"
@@ -54,7 +53,7 @@ SCIP_DECL_PARAMCHGD(paramChgdCutselPriority)
    paramdata = SCIPparamGetData(param);
    assert(paramdata != NULL);
 
-   /* use SCIPsetCutselPriority() to mark the sepas unsorted */
+   /* use SCIPsetCutselPriority() to mark the cutsels unsorted */
    SCIP_CALL( SCIPsetCutselPriority(scip, (SCIP_CUTSEL*)paramdata, SCIPparamGetInt(param)) ); /*lint !e740*/
 
    return SCIP_OKAY;
@@ -108,7 +107,6 @@ SCIP_RETCODE doCutselCreate(
    SCIP_CALL( SCIPclockCreate(&(*cutsel)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*cutsel)->cutseltime, SCIP_CLOCKTYPE_DEFAULT) );
 
-   // TODO
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "cutselection/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of cut selection rule <%s>", name);
@@ -178,9 +176,7 @@ SCIP_RETCODE SCIPcutselsSelect(
    /* sort the cut selectors by priority */
    SCIPsetSortCutsels(set);
 
-   //printf("We have <%d> cut selectors! \n", set->ncutsels);
-
-   /* TODO: cutselect callback should select from nonforced ones */
+   /* Redefine maxnselectedcuts to be w.r.t the optional cuts. */
    maxnselectedcuts -= nforcedcuts;
 
    /* try all cut selectors until one succeeds */
@@ -208,7 +204,7 @@ SCIP_RETCODE SCIPcutselsSelect(
 /** gets description of cut selector */
 const char* SCIPcutselGetDesc(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-)
+   )
 {
    assert(cutsel != NULL);
 
@@ -263,7 +259,7 @@ SCIP_RETCODE SCIPcutselFree(
    return SCIP_OKAY;
 }
 
-/** initializes  cut selector */
+/** initializes cut selector */
 SCIP_RETCODE SCIPcutselInit(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -415,7 +411,7 @@ void SCIPcutselEnableOrDisableClocks(
 /** sets copy method of cut selector */
 void SCIPcutselSetCopy(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))     /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    assert(cutsel != NULL);
@@ -426,7 +422,7 @@ void SCIPcutselSetCopy(
 /** sets destructor method of cut selector */
 void SCIPcutselSetFree(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELFREE  ((*cutselfree))  /**< destructor of cut selector */
+   SCIP_DECL_CUTSELFREE  ((*cutselfree))     /**< destructor of cut selector */
    )
 {
    assert(cutsel != NULL);
@@ -437,7 +433,7 @@ void SCIPcutselSetFree(
 /** sets initialization method of cut selector */
 void SCIPcutselSetInit(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELINIT  ((*cutselinit))  /**< initialize cut selector */
+   SCIP_DECL_CUTSELINIT  ((*cutselinit))     /**< initialize cut selector */
    )
 {
    assert(cutsel != NULL);
@@ -490,7 +486,6 @@ void SCIPcutselSetPriority(
 
    cutsel->priority = priority;
    set->cutselssorted = FALSE;
-   //set->cutsel = NULL;
 }
 
 /** is node selector initialized? */
