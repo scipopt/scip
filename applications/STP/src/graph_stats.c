@@ -34,6 +34,11 @@
 #include "graph.h"
 
 
+#define STP_UNIFORM_MINRATIO 0.9
+#define STP_UNIFORM_RANGEMIN 0.9
+#define STP_UNIFORM_RANGEMAX 1.1
+
+
 
 /** is the edge blocked? */
 SCIP_Bool graph_edge_isBlocked(
@@ -119,6 +124,69 @@ void graph_knot_printInfo(
    if( k == g->source )
       printf("...%d is the root! \n", k);
 
+}
+
+
+
+/** has the graph almost uniform edge weights? */
+SCIP_Bool graph_isAlmostUniform(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   const int nedges = graph_get_nEdges(g);
+   SCIP_Real avg = 0.0;
+   SCIP_Real avg_lower;
+   SCIP_Real avg_upper;
+   int edgecount = 0;
+   int nrangeedges = 0;
+
+   for( int e = 0; e < nedges; e+= 2 )
+   {
+      SCIP_Real edgecost;
+      if( g->oeat[e] == EAT_FREE )
+         continue;
+
+      edgecost = g->cost[e];
+
+      if( EQ(edgecost, 0.0) || EQ(edgecost, FARAWAY) )
+         continue;
+
+      edgecount++;
+      avg += edgecost;
+   }
+
+   if( edgecount == 0 )
+      return TRUE;
+
+   avg /= (SCIP_Real) edgecount;
+
+   assert(STP_UNIFORM_RANGEMIN < 1.0);
+   assert(STP_UNIFORM_RANGEMAX > 1.0);
+
+   avg_lower = avg * STP_UNIFORM_RANGEMIN;
+   avg_upper = avg * STP_UNIFORM_RANGEMAX;
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      SCIP_Real edgecost;
+      if( g->oeat[e] == EAT_FREE )
+         continue;
+
+      edgecost = g->cost[e];
+
+      if( EQ(edgecost, 0.0) || EQ(edgecost, FARAWAY) )
+         continue;
+
+      if( edgecost < avg_lower || edgecost > avg_upper )
+         continue;
+
+      nrangeedges++;
+   }
+
+   SCIPdebugMessage("number of unreduced edges=%d \n", edgecount);
+   SCIPdebugMessage("number of in-range edges=%d \n", nrangeedges);
+
+   return (((SCIP_Real) nrangeedges / (SCIP_Real) edgecount) > STP_UNIFORM_MINRATIO);
 }
 
 

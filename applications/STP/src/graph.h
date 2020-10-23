@@ -217,6 +217,7 @@ extern void   graph_edge_printInfo(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isBlocked(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isDeleted(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isInRange(const GRAPH*, int);
+extern SCIP_Bool graph_isAlmostUniform(const GRAPH*);
 extern void   graph_knot_printInfo(const GRAPH*, int);
 extern void   graph_printInfo(const GRAPH*);
 extern void   graph_printInfoReduced(const GRAPH*);
