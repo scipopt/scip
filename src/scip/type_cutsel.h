@@ -100,13 +100,11 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
  */
 #define SCIP_DECL_CUTSELEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CUTSEL* cutsel)
 
-// TODO: decide on the inputs and update documentation
-
 /** cut selection method of cut selector
  *
  *  This method is called to select the cuts to be added to the LP.
- *  TODO: forcedcuts must not be changed
- *  TODO: cuts must be resorted and the first nselectedcuts are going to be chosen (on top of the forced ones)
+ *  Forcedcuts must not be changed, and cuts should only be resorted, with the first nselectedcuts of cuts being chosen.
+ *  These nselectededcuts are on top of the forcedcuts.
  *  (do not delete nor modify elements, simply resort)
  *
  *  input:

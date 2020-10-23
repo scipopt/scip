@@ -32,7 +32,6 @@
 #include "scip/cutsel_default.h"
 
 
-/* TODO: change name to something meaningful, unlike wsum */
 #define CUTSEL_NAME              "default"
 #define CUTSEL_DESC              "weighted sum of efficacy, dircutoffdist, objparal, and intsupport"
 #define CUTSEL_PRIORITY           8000
@@ -215,8 +214,8 @@ void selectBestCut(
    SCIPswapReals(&scores[bestpos], &scores[0]);
 }
 
-/** filters the given array of cuts to enforce a maximum parallelism constraints
- *  for the given cut; moves filtered cuts to the end of the array and returns number of selected cuts */
+/** filters the given array of cuts to enforce a maximum parallelism constraint
+ *  w.r.t the given cut; moves filtered cuts to the end of the array and returns number of selected cuts */
 static
 int filterWithParallelism(
    SCIP_ROW*             cut,                /**< cut to filter orthogonality with */

@@ -1,4 +1,3 @@
-//TODO remove every appearance of the word 'node'
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -148,7 +147,7 @@ SCIP_RETCODE SCIPsetCutselFree(
 SCIP_RETCODE SCIPsetCutselInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELINIT ((*cutselinit))     /**< initialize node selector */
+   SCIP_DECL_CUTSELINIT ((*cutselinit))     /**< initialize cut selector */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -211,7 +210,7 @@ SCIP_RETCODE SCIPsetCutselExitsol(
 /** returns the cut selector of the given name, or NULL if not existing */
 SCIP_CUTSEL* SCIPfindCutsel(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of node selector */
+   const char*           name                /**< name of cut selector */
    )
 {
    assert(scip != NULL);

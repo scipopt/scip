@@ -45,7 +45,14 @@ SCIP_RETCODE SCIPincludeCutselXyz(
  * @{
  */
 
-/* TODO place other public methods in this group to facilitate navigation through the documentation */
+SCIP_RETCODE SCIPselectCutsXyz(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_ROW**            forcedcuts,         /**< array with forced cuts */
+   int                   nforcedcuts,        /**< number of forced cuts */
+   int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts from cuts array */
+   );
 
 /** @} */
 

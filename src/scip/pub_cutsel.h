@@ -43,7 +43,7 @@ extern "C" {
 SCIP_EXPORT
 const char* SCIPcutselGetName(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   );
 
 /** gets user data of cut selector */
 SCIP_EXPORT
@@ -55,38 +55,38 @@ SCIP_CUTSELDATA* SCIPcutselGetData(
 SCIP_EXPORT
 const char* SCIPcutselGetDesc(
    SCIP_CUTSEL*          cutsel             /**< cut selector */
-);
+   );
 
 /** gets priority of cut selector */
 SCIP_EXPORT
 int SCIPcutselGetPriority(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   );
 
 /** sets user data of cut selector; user has to free old data in advance! */
 SCIP_EXPORT
 void SCIPcutselSetData(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_CUTSELDATA*      cutseldata          /**< new cut selector user data */
-);
+   );
 
 /** is cut selector initialized? */
 SCIP_EXPORT
 SCIP_Bool SCIPcutselIsInitialized(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   );
 
 /** gets time in seconds used in this cut selector for setting up for next stages */
 SCIP_EXPORT
 SCIP_Real SCIPcutselGetSetupTime(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   );
 
 /** gets time in seconds used in this cut selector */
 SCIP_EXPORT
 SCIP_Real SCIPcutselGetTime(
    SCIP_CUTSEL*          cutsel              /**< cut selector */
-);
+   );
 
 /** compares two cut selectors w. r. to their priority */
 SCIP_EXPORT
