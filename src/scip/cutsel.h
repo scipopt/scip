@@ -30,7 +30,6 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_set.h"
-#include "scip/type_stat.h"
 #include "scip/pub_cutsel.h"
 #include "scip/lp.h"
 
@@ -57,11 +56,6 @@ SCIP_RETCODE SCIPcutselCreate(
    SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
    );
 
-/** gets name of cut selector */
-const char* SCIPcutselGetName(
-   SCIP_CUTSEL*         cutsel             /**< cut selector */
-   );
-
 /** enables or disables all clocks of \p cutsel, depending on the value of the flag */
 void SCIPcutselEnableOrDisableClocks(
    SCIP_CUTSEL*          cutsel,             /**< the node selector for which all clocks should be enabled or disabled */
@@ -83,19 +77,19 @@ SCIP_RETCODE SCIPcutselsSelect(
 SCIP_RETCODE SCIPcutselCopyInclude(
         SCIP_CUTSEL*          cutsel,             /**< cut selector */
         SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
-);
+   );
 
 /** sets copy method of cut selector */
 void SCIPcutselSetCopy(
         SCIP_CUTSEL*          cutsel,             /**< cut selector */
         SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
-);
+   );
 
 /** initializes node selector */
 SCIP_RETCODE SCIPcutselInit(
         SCIP_CUTSEL*          cutsel,             /**< cut selector */
         SCIP_SET*             set                 /**< global SCIP settings */
-);
+   );
 
 /** deinitializes cut selector */
 SCIP_RETCODE SCIPcutselExit(
@@ -156,11 +150,6 @@ void SCIPcutselSetPriority(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the cut selector */
-   );
-
-/** gets priority of cut selector */
-int SCIPcutselGetPriority(
-   SCIP_CUTSEL*          cutsel              /**< cut selector */
    );
 
 #ifdef __cplusplus
