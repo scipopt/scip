@@ -7479,6 +7479,9 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );
 
+   if( set->exact_enabled )
+      lp->pseudoobjvalid = FALSE;
+
    /* reset all marked constraints for propagation */
    SCIP_CALL( SCIPconshdlrsResetPropagationStatus(set, blkmem, set->conshdlrs, set->nconshdlrs) );
 

@@ -945,7 +945,6 @@ void recomputePseudoObjectiveValue(
    assert(set != NULL);
    assert(prob != NULL);
    assert(!lp->pseudoobjvalid);
-   assert(!set->exact_enabled);
 
    vars = prob->vars;
    nvars = prob->nvars;
@@ -13539,7 +13538,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_Real obj;
 
    if( set->exact_enabled )
-      return SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+      return SCIPlpGetModifiedProvedPseudoObjval(lp, set, prob, var, oldbound, newbound, boundtype);
 
    pseudoobjval = getFinitePseudoObjval(lp, set, prob);
    pseudoobjvalinf = lp->pseudoobjvalinf;
@@ -13570,6 +13569,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
 SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
    SCIP_Real             newbound,           /**< new value for bound */
@@ -13580,9 +13580,7 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    int pseudoobjvalinf;
    SCIP_Real obj;
 
-   assert(lp->pseudoobjvalid);
-
-   pseudoobjval = lp->pseudoobjval;
+   pseudoobjval = getFinitePseudoObjval(lp, set, prob);
    pseudoobjvalinf = lp->pseudoobjvalinf;
    obj = SCIPvarGetObj(var);
    if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )

@@ -1145,6 +1145,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
 SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             oldbound,           /**< old value for bound */
    SCIP_Real             newbound,           /**< new value for bound */
