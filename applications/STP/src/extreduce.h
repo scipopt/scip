@@ -128,7 +128,8 @@ extern SCIP_Bool  extreduce_mstRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_extspg.c
  */
-extern SCIP_RETCODE    extreduce_spgCheckNodeSimple(SCIP*, const GRAPH*, int, DISTDATA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_spgCheck3ComponentSimple(SCIP*, const GRAPH*, int, const EXTCOMP*, SCIP_Bool, DISTDATA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_spgCheck3NodeSimple(SCIP*, const GRAPH*, int, DISTDATA*, SCIP_Bool*);
 extern SCIP_Bool       extreduce_spg3LeafTreeRuleOut(SCIP*, const GRAPH*, SCIP_Real, EXTDATA*);
 
 

@@ -37,6 +37,10 @@
 #include "extreduce.h"
 
 
+#define STP_EXTSPG_MAXNCHECKS_EQ 8
+#define STP_EXTSPG_MAXNCHECKS 4
+
+
 /**@name Local methods
  *
  * @{
@@ -110,6 +114,87 @@ SCIP_Bool spg4VerticesRuleOut(
 }
 
 
+
+/** Can we (peripherally) rule out simple star of degree 3?
+ *  Works by using simple Steiner tree  */
+static
+SCIP_Bool spg3StarNeighborRuleOut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             starcost,           /**< cost of the star */
+   int                   node,               /**< the node */
+   SCIP_Bool             allowEquality,      /**< allow equality? */
+   const int             neighbors[3],       /**< the neighbors */
+   DISTDATA*             distdata            /**< data for distance computations */
+)
+{
+   SCIP_Bool isPseudoDeletable = FALSE;
+   const SCIP_Bool isPc = graph_pc_isPc(graph);
+   const int maxnchecks = allowEquality ? STP_EXTSPG_MAXNCHECKS_EQ : STP_EXTSPG_MAXNCHECKS;
+
+   for( int i = 0; i < 3 && !isPseudoDeletable; i++ )
+   {
+      const int n0 = neighbors[i];
+      const int n1 = neighbors[(i + 1) % 3];
+      const int n2 = neighbors[(i + 2) % 3];
+      int edgecount = 0;
+
+      assert(n1 != n0 && n2 != n0);
+
+      for( int e = graph->outbeg[n0]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+         const int head = graph->head[e];
+         SCIP_Real c0;
+         SCIP_Real c1;
+         SCIP_Real c2;
+
+         if( head == node )
+            continue;
+
+         if( head == n1 || head == n2 )
+            continue;
+
+         if( isPc && Is_pseudoTerm(graph->term[head]) )
+            continue;
+
+         if( edgecount++ > maxnchecks )
+            break;
+
+         c0 = graph->cost[e];
+         c1 = extreduce_distDataGetSdDouble(scip, graph, head, n1, distdata);
+
+         if( isPc && c1 < -0.5 )
+         {
+            assert(EQ(c1, -1.0));
+            continue;
+         }
+
+         if( allowEquality ? GT(c0 + c1, starcost) : GE(c0 + c1, starcost) )
+            continue;
+
+         c2 = extreduce_distDataGetSdDouble(scip, graph, head, n2, distdata);
+
+         if( isPc && c2 < -0.5 )
+         {
+            assert(EQ(c2, -1.0));
+            continue;
+         }
+
+         assert(GE(c1, 0.0) && GE(c2, 0.0));
+
+         if( allowEquality ? LE(c0 + c1 + c2, starcost) : LT(c0 + c1 + c2, starcost) )
+         {
+            SCIPdebugMessage("STEINER TREE pseudo-delete %d with %f %f \n", node, c0 + c1 + c2, starcost);
+            isPseudoDeletable = TRUE;
+            break;
+         }
+      }
+   }
+
+   return isPseudoDeletable;
+}
+
+
 /**@} */
 
 /**@name Interface methods
@@ -162,8 +247,59 @@ SCIP_Bool extreduce_spg3LeafTreeRuleOut(
 }
 
 
-/** check node for possible pseudo-elimination by using simple Steiner tree  */
-SCIP_RETCODE extreduce_spgCheckNodeSimple(
+
+/** checks component for possible pseudo-elimination by using simple Steiner tree */
+SCIP_RETCODE extreduce_spgCheck3ComponentSimple(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   node,               /**< the node */
+   const EXTCOMP*        extcomp,            /**< component to be checked */
+   SCIP_Bool             allowEquality,      /**< allow equality? */
+   DISTDATA*             distdata,           /**< data for distance computations */
+   SCIP_Bool*            isPseudoDeletable   /**< is component pseudo-deletable? */
+)
+{
+   int neighbors[3];
+   SCIP_Real starcost = 0.0;
+
+   assert(scip && graph && distdata && isPseudoDeletable);
+   assert(*isPseudoDeletable == FALSE);
+   assert(graph_knot_isInRange(graph, node));
+   assert(!Is_term(graph->term[node]));
+   /* NOTE: because the component has been reverted... */
+   assert(extcomp->nextleaves == 1);
+   assert(extcomp->ncompedges == 3);
+   assert(graph->head[extcomp->compedges[0]] == node);
+   assert(graph->tail[extcomp->compedges[0]] == extcomp->comproot);
+
+   neighbors[0] = extcomp->comproot;
+   for( int i = 0; i < 2; i++ )
+   {
+      const int leaf = extcomp->extleaves[i];
+      assert(graph_knot_isInRange(graph, leaf));
+      assert(leaf != neighbors[0]);
+
+      neighbors[i + 1] = leaf;
+   }
+
+   for( int i = 0; i < 3; i++ )
+   {
+      const int edge = extcomp->compedges[i];
+      assert(graph_edge_isInRange(graph, edge));
+      assert(EQ(graph->cost[edge], graph->cost[flipedge(edge)]));
+
+      starcost += graph->cost[edge];
+   }
+
+   *isPseudoDeletable = spg3StarNeighborRuleOut(scip, graph, starcost, node, allowEquality, neighbors, distdata);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** checks node of degree 3 for possible pseudo-elimination by using simple Steiner tree  */
+SCIP_RETCODE extreduce_spgCheck3NodeSimple(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    int                   node,               /**< the node */
@@ -174,80 +310,24 @@ SCIP_RETCODE extreduce_spgCheckNodeSimple(
    int neighbors[3];
    int edgecount = 0;
    SCIP_Real starcost = 0.0;
-   const SCIP_Bool isPc = graph_pc_isPc(graph);
 
    assert(scip && graph && distdata && isPseudoDeletable);
    assert(*isPseudoDeletable == FALSE);
+   assert(graph_knot_isInRange(graph, node));
    assert(!Is_term(graph->term[node]));
+   assert(graph->grad[node] == 3);
 
    for( int e = graph->outbeg[node]; e != EAT_LAST; e = graph->oeat[e] )
    {
+      assert(EQ(graph->cost[e], graph->cost[flipedge(e)]));
+
       neighbors[edgecount++] = graph->head[e];
       starcost += graph->cost[e];
    }
 
    assert(edgecount == 3);
 
-   for( int i = 0; i < 3 && !(*isPseudoDeletable); i++ )
-   {
-      const int n0 = neighbors[i];
-      const int n1 = neighbors[(i + 1) % 3];
-      const int n2 = neighbors[(i + 2) % 3];
-      edgecount = 0;
-
-      assert(n1 != n0 && n2 != n0);
-
-      for( int e = graph->outbeg[n0]; e != EAT_LAST; e = graph->oeat[e] )
-      {
-         const int head = graph->head[e];
-         SCIP_Real c0;
-         SCIP_Real c1;
-         SCIP_Real c2;
-
-         if( head == node )
-            continue;
-
-         if( head == n1 || head == n2 )
-            continue;
-
-         if( isPc && Is_pseudoTerm(graph->term[head]) )
-            continue;
-
-         if( edgecount++ > 8 )
-            break;
-
-         c0 = graph->cost[e];
-         c1 = extreduce_distDataGetSdDouble(scip, graph, head, n1, distdata);
-
-         if( isPc && c1 < -0.5 )
-         {
-            assert(EQ(c1, -1.0));
-            continue;
-         }
-
-         if( GT(c0 + c1, starcost) )
-            continue;
-
-         c2 = extreduce_distDataGetSdDouble(scip, graph, head, n2, distdata);
-       //  c1 = (head == n1) ? 0.0 : extreduce_distDataGetSdDouble(scip, graph, head, n1, distdata);
-       //  c2 = (head == n2) ? 0.0 : extreduce_distDataGetSdDouble(scip, graph, head, n2, distdata);
-
-         if( isPc && c2 < -0.5 )
-         {
-            assert(EQ(c2, -1.0));
-            continue;
-         }
-
-         assert(GE(c1, 0.0) && GE(c2, 0.0));
-
-         if( LE(c0 + c1 + c2, starcost) )
-         {
-            SCIPdebugMessage("STEINER TREE pseudo-delete %d with %f %f \n", node, c0 + c1 + c2, starcost);
-            *isPseudoDeletable = TRUE;
-            break;
-         }
-      }
-   }
+   *isPseudoDeletable = spg3StarNeighborRuleOut(scip, graph, starcost, node, TRUE, neighbors, distdata);
 
    return SCIP_OKAY;
 }

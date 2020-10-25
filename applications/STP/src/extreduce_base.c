@@ -1244,11 +1244,6 @@ SCIP_RETCODE pseudodeleteExecute(
          if( extpseudo.cutoffIsPromising )
          {
             SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
-
-            if( !nodeisDeletable && graph->grad[i] == 3 )
-            {
-               SCIP_CALL( extreduce_spgCheckNodeSimple(scip, graph, i, &distdata, &nodeisDeletable) );
-            }
          }
       }
 
@@ -1643,6 +1638,12 @@ SCIP_RETCODE extreduce_checkNode(
 
       *isPseudoDeletable = FALSE;
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, isPseudoDeletable) );
+
+      if( !(*isPseudoDeletable) && extcomp.ncompedges == 3 && graph->grad[node] <= 4 )
+      {
+         const SCIP_Bool allowEquality = (graph->grad[node] == 3);
+         SCIP_CALL( extreduce_spgCheck3ComponentSimple(scip, graph, node, &extcomp, allowEquality, distdata, isPseudoDeletable) );
+      }
 
       if( pseudodeleteAllStarsChecked(stardata) )
          break;
