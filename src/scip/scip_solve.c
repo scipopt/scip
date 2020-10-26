@@ -1248,7 +1248,8 @@ static
 SCIP_RETCODE presolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
-   SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether presolving detected infeasibility */
+   SCIP_Bool*            solved              /**< pointer to store whether the problem was solved in presolving */
    )
 {
    SCIP_PRESOLTIMING presoltiming;
@@ -1425,6 +1426,15 @@ SCIP_RETCODE presolve(
          scip->stat->status = SCIP_STATUS_UNBOUNDED;
       else /* switch status to INFORUNBD */
          scip->stat->status = SCIP_STATUS_INFORUNBD;
+   } else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 ) {
+      SCIP_SOL* sol;
+      SCIP_Bool stored;
+
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+      SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+      scip->stat->status = SCIP_STATUS_OPTIMAL;
+
+      *solved = TRUE;
    }
 
    /* deinitialize presolving */
@@ -2369,6 +2379,7 @@ SCIP_RETCODE SCIPpresolve(
 {
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
+   SCIP_Bool solved;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -2395,10 +2406,10 @@ SCIP_RETCODE SCIPpresolve(
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
       /* presolve problem */
-      SCIP_CALL( presolve(scip, &unbounded, &infeasible) );
+      SCIP_CALL( presolve(scip, &unbounded, &infeasible, &solved) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-      if( infeasible || unbounded )
+      if( infeasible || unbounded || solved )
       {
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
