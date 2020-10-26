@@ -276,7 +276,7 @@
 #define SCIPdbldblSqrt(rhi, rlo, a) \
    do { \
       double __estim_dbldbl_sqrt = sqrt(a); \
-      if( __estim_dbldbl_sqrt2 != 0.0 ) \
+      if( __estim_dbldbl_sqrt != 0.0 ) \
       { \
          SCIPdbldblDiv(rhi, rlo, a, __estim_dbldbl_sqrt); \
          SCIPdbldblSum21(rhi, rlo, rhi, rlo, __estim_dbldbl_sqrt); \
