@@ -149,7 +149,7 @@ SCIP_RETCODE sepadataClear(
    SCIPdebugMsg(scip, "clear separation data\n");
 
    /* release captured variables */
-   for( i = 0; i < 5 * sepadata->nminors; ++i )
+   for( i = 0; i < 4 * sepadata->nminors; ++i )
    {
       assert(sepadata->minors[i] != NULL);
       SCIP_CALL( SCIPreleaseVar(scip, &sepadata->minors[i]) );
