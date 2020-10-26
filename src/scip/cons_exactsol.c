@@ -34,6 +34,7 @@
 #include "scip/scip_sol.h"
 #include "scip/set.h"
 #include "scip/sol.h"
+#include "scip/stat.h"
 
 
 /* fundamental constraint handler properties */
@@ -93,11 +94,15 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 {  /*lint --e{715}*/
 
    SCIP_VAR** vars;
+   SCIP_SOL* exactsol;
+   SCIP_Bool foundsol;
    SCIP_Bool lperror;
    int nintvars;
    int nvars;
    int i;
    int c;
+   SCIP_Real starttime;
+   SCIP_Real endtime;
 #ifdef NDEBUG
    SCIP_RETCODE retstat;
 #endif
@@ -107,6 +112,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
+   foundsol = FALSE;
 
    /* if the solution doesn't come from a heuristic, ignore it */
    if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
@@ -146,6 +152,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPisExactSol(scip, sol) )
       return SCIP_OKAY;
 
+   starttime = SCIPgetSolvingTime(scip);
+
    /* check if solution is floating point feasible */
    for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
    {
@@ -168,6 +176,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    *result = SCIP_INFEASIBLE;
+   scip->stat->ncallsexactsol++;
 
    /* start exact diving */
    SCIP_CALL( SCIPstartExactDive(scip) );
@@ -229,9 +238,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* check if this is a feasible solution */
    if( !lperror && SCIPgetLPExactSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIP_SOL* exactsol;
-      SCIP_Bool foundsol;
-
       /** @todo exip: replace these 2 methods with proper wrapped ones from scip_sol.h */
       SCIP_CALL( SCIPsolCreateLPSolExact(&exactsol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
           scip->tree, scip->lpexact, NULL) );
@@ -248,6 +254,15 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    /* terminate exact diving */
    SCIP_CALL( SCIPendExactDive(scip) );
+
+   endtime = SCIPgetSolvingTime(scip);
+   if( foundsol )
+   {
+      scip->stat->nfoundexactsol++;
+      scip->stat->timesuccessexactsol += (endtime - starttime);
+   }
+   else
+      scip->stat->timefailexactsol += (endtime - starttime);
 
    return SCIP_OKAY;
 }
@@ -275,8 +290,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
 
    /* create ExactSol constraint handler data */
    conshdlrdata = NULL;
-   /* TODO: (optional) create constraint handler specific data here */
-
    conshdlr = NULL;
 
    /* include constraint handler */

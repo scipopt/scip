@@ -3485,6 +3485,10 @@ void SCIPprintLPStatistics(
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
    }
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   TimeSucc   TimeFail      Calls      Found \n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "                     %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " \n",
+      scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);
 }
 
 /** outputs NLP statistics
