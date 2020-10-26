@@ -1275,6 +1275,7 @@ SCIP_RETCODE presolve(
    assert(infeasible != NULL);
 
    *unbounded = FALSE;
+   *solved = FALSE;
 
    /* GCG wants to perform presolving during the reading process of a file reader;
     * hence the number of used buffers does not need to be zero, however, it should
