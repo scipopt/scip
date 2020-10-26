@@ -178,7 +178,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*        varexpr         /**< variable expression to be freed */
+   SCIP_EXPR*        varexpr         /**< variable expression to be freed */
    );
 
 /** collects all bilinear terms for a given set of constraints
@@ -277,13 +277,13 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
 /** returns the number of enforcements for an expression */
 SCIP_EXPORT
 int SCIPgetConsExprExprNEnfos(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   SCIP_EXPR*   expr                /**< expression */
    );
 
 /** returns the data for one of the enforcements of an expression */
 SCIP_EXPORT
 void SCIPgetConsExprExprEnfoData(
-   SCIP_CONSEXPR_EXPR*   expr,                         /**< expression */
+   SCIP_EXPR*   expr,                         /**< expression */
    int                   idx,                          /**< position of enforcement in enfos array */
    SCIP_CONSEXPR_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
@@ -296,7 +296,7 @@ void SCIPgetConsExprExprEnfoData(
 /** sets the auxiliary value of expression for one of the enforcements of an expression */
 SCIP_EXPORT
 void SCIPsetConsExprExprEnfoAuxValue(
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*   expr,               /**< expression */
    int                   idx,                /**< position of enforcement in enfos array */
    SCIP_Real             auxvalue            /**< the new value of auxval */
    );
@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
+   SCIP_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -362,7 +362,7 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
+   SCIP_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
@@ -421,7 +421,7 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
 
 /** returns the expression of the given expression constraint */
 SCIP_EXPORT
-SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
+SCIP_EXPR* SCIPgetExprConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -439,14 +439,14 @@ SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
 /** returns representation of the expression of the given expression constraint as quadratic form, if possible
  *
  * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
- * That is, the expr in each SCIP_CONSEXPR_QUADEXPRTERM will be a variable expressions and
+ * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
  * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetQuadExprConsExpr(
    SCIP*                    scip,               /**< SCIP data structure */
    SCIP_CONS*               cons,               /**< constraint data */
-   SCIP_CONSEXPR_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   SCIP_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
    );
 
 /** gets the expr constraint as a nonlinear row representation. */
@@ -581,7 +581,7 @@ SCIP_RETCODE SCIPprocessConsExprRowprep(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
    SCIP_CONS*            cons,               /**< expression constraint */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*   expr,               /**< expression */
    SCIP_ROWPREP*         rowprep,            /**< cut to be added */
    SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
    SCIP_VAR*             auxvar,             /**< auxiliary variable */
@@ -602,8 +602,8 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsExprQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
+   SCIP_EXPR*   expr,               /**< expression */
+   SCIP_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
    );
 
 /** @} */

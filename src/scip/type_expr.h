@@ -24,19 +24,18 @@
 #ifndef SCIP_TYPE_EXPR_H_
 #define SCIP_TYPE_EXPR_H_
 
-typedef struct SCIP_ConsExpr_ExprData  SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
-typedef struct SCIP_ConsExpr_Expr      SCIP_CONSEXPR_EXPR;         /**< expression */
+typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */
+typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
 
-typedef struct SCIP_ConsExpr_QuadExpr      SCIP_CONSEXPR_QUADEXPR;      /**< representation of expression as quadratic */
+typedef struct SCIP_QuadExpr  SCIP_QUADEXPR;     /**< representation of expression as quadratic */
 
-/** monotonicity of an expression */
+/** monotonicity */
 typedef enum
 {
    SCIP_MONOTONE_UNKNOWN      = 0,          /**< unknown */
    SCIP_MONOTONE_INC          = 1,          /**< increasing */
    SCIP_MONOTONE_DEC          = 2,          /**< decreasing */
    SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
-
 } SCIP_MONOTONE;
 
 
@@ -51,13 +50,13 @@ typedef enum
  *  output:
  *  - returns an interval that contains the current variable bounds, but might be (slightly) larger
  */
-#define SCIP_DECL_CONSEXPR_INTEVALVAR(x) SCIP_INTERVAL x (\
+#define SCIP_DECL_EXPR_INTEVALVAR(x) SCIP_INTERVAL x (\
    SCIP* scip, \
    SCIP_VAR* var, \
    void* intevalvardata \
    )
 
-/** variable mapping callback for expression data callback
+/** variable mapping callback for expression copy callback
  *
  * The method maps a variable (in a source SCIP instance) to a variable
  * (in a target SCIP instance) and captures the target variable.
@@ -69,36 +68,35 @@ typedef enum
  *  - sourcevar          : variable to be mapped
  *  - mapvardata         : data of callback
  */
-#define SCIP_DECL_CONSEXPR_MAPVAR(x) SCIP_RETCODE x (\
-   SCIP* targetscip, \
+#define SCIP_DECL_EXPR_MAPVAR(x) SCIP_RETCODE x (\
+   SCIP*      targetscip, \
    SCIP_VAR** targetvar, \
-   SCIP* sourcescip, \
-   SCIP_VAR* sourcevar, \
-   void* mapvardata \
+   SCIP*      sourcescip, \
+   SCIP_VAR*  sourcevar, \
+   void*      mapvardata \
    )
 
 /**@name Expression Handler */
 /**@{ */
 
+typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_EXPRHDLR;     /**< expression handler */
+typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data */
+
 /** expression handler copy callback
  *
- * the method includes the expression handler into a expression constraint handler
+ * the method includes the expression handler into a SCIP instance
  *
- * This method is usually called when doing a copy of an expression constraint handler.
+ * This method is usually called when doing a copy of SCIP.
  *
  *  input:
  *  - scip              : target SCIP main data structure
- *  - consexprhdlr      : target expression constraint handler
- *  - sourceconsexprhdlr : expression constraint handler in source SCIP
  *  - sourceexprhdlr    : expression handler in source SCIP
  *  - valid             : to store indication whether the expression handler was copied
  */
-#define SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* consexprhdlr, \
-   SCIP_CONSHDLR* sourceconsexprhdlr, \
-   SCIP_CONSEXPR_EXPRHDLR* sourceexprhdlr, \
-   SCIP_Bool* valid)
+#define SCIP_DECL_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
+   SCIP*          scip, \
+   SCIP_EXPRHDLR* sourceexprhdlr, \
+   SCIP_Bool*     valid)
 
 /** expression handler free callback
  *
@@ -106,15 +104,13 @@ typedef enum
  *
  *  input:
  *  - scip          : SCIP main data structure
- *  - consexprhdlr  : expression constraint handler
  *  - exprhdlr      : expression handler
  *  - exprhdlrdata  : expression handler data to be freed
  */
-#define SCIP_DECL_CONSEXPR_EXPRFREEHDLR(x) SCIP_RETCODE x (\
+#define SCIP_DECL_EXPRFREEHDLR(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSHDLR* consexprhdlr, \
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr, \
-   SCIP_CONSEXPR_EXPRHDLRDATA** exprhdlrdata)
+   SCIP_EXPRHDLR* exprhdlr, \
+   SCIP_EXPRHDLRDATA** exprhdlrdata)
 
 /** expression data copy callback
  *
@@ -137,14 +133,14 @@ typedef enum
  *  - mapvar             : variable mapping callback for use by variable expression handler
  *  - mapvardata         : data of variable mapping callback
  */
-#define SCIP_DECL_CONSEXPR_EXPRCOPYDATA(x) SCIP_RETCODE x (\
-   SCIP* targetscip, \
-   SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr, \
-   SCIP_CONSEXPR_EXPRDATA** targetexprdata, \
-   SCIP* sourcescip, \
-   SCIP_CONSEXPR_EXPR* sourceexpr, \
-   SCIP_DECL_CONSEXPR_MAPVAR(mapvar), \
-   void* mapvardata)
+#define SCIP_DECL_EXPRCOPYDATA(x) SCIP_RETCODE x (\
+   SCIP*           targetscip, \
+   SCIP_EXPRHDLR*  targetexprhdlr, \
+   SCIP_EXPRDATA** targetexprdata, \
+   SCIP*           sourcescip, \
+   SCIP_EXPR*      sourceexpr, \
+   SCIP_DECL_EXPR_MAPVAR(mapvar), \
+   void*           mapvardata)
 
 /** expression data free callback
  *
@@ -157,9 +153,9 @@ typedef enum
  *  - scip          : SCIP main data structure
  *  - expr          : the expression which data to be freed
  */
-#define SCIP_DECL_CONSEXPR_EXPRFREEDATA(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr)
+#define SCIP_DECL_EXPRFREEDATA(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr)
 
 /** expression print callback
  *
@@ -169,18 +165,18 @@ typedef enum
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression which data is to be printed
- *  - stage: stage of expression graph iteration
+ *  - stage: stage of expression iteration
  *  - currentchild: index of current child if in stage visitingchild or visitedchild
  *  - parentprecedence: precedence of parent
  *  - file : the file to print to
  */
-#define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_CONSEXPRITERATOR_STAGE stage, \
-   int currentchild, \
-   unsigned int parentprecedence, \
-   FILE* file)
+#define SCIP_DECL_EXPRPRINT(x) SCIP_RETCODE x (\
+   SCIP*               scip, \
+   SCIP_EXPR*          expr, \
+   SCIP_EXPRITER_STAGE stage, \
+   int                 currentchild, \
+   unsigned int        parentprecedence, \
+   FILE*               file)
 
 /** expression parse callback
  *
@@ -189,7 +185,6 @@ typedef enum
  *
  * input:
  *  - scip         : SCIP main data structure
- *  - consexprhdlr : expression constraint handler
  *  - string       : string containing expression to be parse
  *
  *  output:
@@ -197,14 +192,13 @@ typedef enum
  *  - expr         : pointer to store the parsed expression
  *  - success      : pointer to store whether the parsing was successful or not
  */
-#define SCIP_DECL_CONSEXPR_EXPRPARSE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* consexprhdlr, \
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr, \
-   const char* string, \
-   const char** endstring, \
-   SCIP_CONSEXPR_EXPR** expr, \
-   SCIP_Bool* success)
+#define SCIP_DECL_EXPRPARSE(x) SCIP_RETCODE x (\
+   SCIP*          scip, \
+   SCIP_EXPRHDLR* exprhdlr, \
+   const char*    string, \
+   const char**   endstring, \
+   SCIP_EXPR**    expr, \
+   SCIP_Bool*     success)
 
 /** expression curvature detection callback
  *
@@ -221,19 +215,17 @@ typedef enum
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr : expression constraint handler
  *  - expr : expression to check the curvature for
  *  - exprcurvature : desired curvature of this expression
  *  - success: buffer to store whether the desired curvature be obtained
  *  - childcurv: array to store required curvature for each child
  */
-#define SCIP_DECL_CONSEXPR_EXPRCURVATURE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_EXPRCURV exprcurvature, \
-   SCIP_Bool* success, \
-   SCIP_EXPRCURV* childcurv )
+#define SCIP_DECL_EXPRCURVATURE(x) SCIP_RETCODE x (\
+   SCIP*          scip, \
+   SCIP_EXPR*     expr, \
+   SCIP_EXPRCURV  exprcurvature, \
+   SCIP_Bool*     success, \
+   SCIP_EXPRCURV* childcurv)
 
 /** expression monotonicity detection callback
  *
@@ -241,16 +233,15 @@ typedef enum
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr: cons_expr constraint handler
  *  - expr : expression to check the monotonicity for
  *  - childidx : index of the considered child expression
  *  - result : buffer to store the monotonicity
  */
-#define SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
-   SCIP* scip, \
+#define SCIP_DECL_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
+   SCIP*          scip, \
    SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   int childidx, \
+   SCIP_EXPR*     expr, \
+   int            childidx, \
    SCIP_MONOTONE* result)
 
 /** expression integrality detection callback
@@ -262,9 +253,9 @@ typedef enum
  *  - expr : expression to check the integrality for
  *  - isintegral : buffer to store whether expr is integral
  */
-#define SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
+#define SCIP_DECL_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
    SCIP_Bool* isintegral)
 
 /** expression hash callback
@@ -277,9 +268,9 @@ typedef enum
  *  - hashkey : pointer to store the hash value
  *  - childrenhashes : array with hash values of children
  */
-#define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
+#define SCIP_DECL_EXPRHASH(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    unsigned int* hashkey, \
    unsigned int* childrenhashes)
 
@@ -294,9 +285,9 @@ typedef enum
  *  - expr1 : first expression to compare
  *  - expr2 : second expression to compare
  */
-#define SCIP_DECL_CONSEXPR_EXPRCOMPARE(x) int x (\
-   SCIP_CONSEXPR_EXPR* expr1, \
-   SCIP_CONSEXPR_EXPR* expr2)
+#define SCIP_DECL_EXPRCOMPARE(x) int x (\
+   SCIP_EXPR* expr1, \
+   SCIP_EXPR* expr2)
 
 /** backward derivative evaluation callback
  *
@@ -312,10 +303,10 @@ typedef enum
  *  - childidx : index of the child
  *  - val : buffer to store the partial derivative w.r.t. the i-th children
  */
-#define SCIP_DECL_CONSEXPR_EXPRBWDIFF(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   int childidx, \
+#define SCIP_DECL_EXPRBWDIFF(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
+   int        childidx, \
    SCIP_Real* val)
 
 /** forward derivative evaluation callback
@@ -346,13 +337,13 @@ typedef enum
  *  to the var expressions in SCIPcomputeConsExprHessianDir and it is not used anywhere else.
  *  If we remove direction, update documentation accordingly
  */
-#define SCIP_DECL_CONSEXPR_EXPRFWDIFF(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
+#define SCIP_DECL_EXPRFWDIFF(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
    SCIP_Real* dot, \
-   SCIP_SOL* direction)
+   SCIP_SOL*  direction)
 
-/** derivative evaluation callback for hessian directions (backward over forward)
+/** derivative evaluation callback for Hessian directions (backward over forward)
  *
  * The method computes the total derivative, w.r.t its children, of the partial derivative of expr w.r.t childidx
  * Equivalently, it computes the partial derivative w.r.t childidx of the total derivative
@@ -385,12 +376,12 @@ typedef enum
  *  - bardot : buffer to store derivative value
  *  - direction : direction of the derivative (useful only for var expressions)
  */
-#define SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   int childidx, \
+#define SCIP_DECL_EXPRBWFWDIFF(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
+   int        childidx, \
    SCIP_Real* bardot, \
-   SCIP_SOL* direction)
+   SCIP_SOL*  direction)
 
 /** expression (point-) evaluation callback
  *
@@ -404,11 +395,11 @@ typedef enum
  *  - val : buffer where to store value
  *  - sol : solution that is evaluated (can be NULL)
  */
-#define SCIP_DECL_CONSEXPR_EXPREVAL(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
+#define SCIP_DECL_EXPREVAL(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
    SCIP_Real* val, \
-   SCIP_SOL* sol)
+   SCIP_SOL*  sol)
 
 /** expression (interval-) evaluation callback
  *
@@ -421,12 +412,12 @@ typedef enum
  *  - intevalvar : callback to be called when interval evaluating a variable
  *  - intevalvardata : data to be passed to intevalvar callback
  */
-#define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr, \
+#define SCIP_DECL_EXPRINTEVAL(x) SCIP_RETCODE x (\
+   SCIP*          scip, \
+   SCIP_EXPR*     expr, \
    SCIP_INTERVAL* interval, \
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
-   void* intevalvardata)
+   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), \
+   void*          intevalvardata)
 
 /** expression under/overestimation callback
  *
@@ -452,13 +443,12 @@ typedef enum
  *  - success : buffer to indicate whether an estimator could be computed
  *  - branchcand: array to indicate which children (not) to consider for branching
  */
-#define SCIP_DECL_CONSEXPR_EXPRESTIMATE(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_SOL* sol, \
-   SCIP_Bool overestimate, \
-   SCIP_Real targetvalue, \
+#define SCIP_DECL_EXPRESTIMATE(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
+   SCIP_SOL*  sol, \
+   SCIP_Bool  overestimate, \
+   SCIP_Real  targetvalue, \
    SCIP_Real* coefs, \
    SCIP_Real* constant, \
    SCIP_Bool* islocal, \
@@ -471,45 +461,39 @@ typedef enum
  *
  * input:
  *  - scip           : SCIP main data structure
- *  - consexprhdlr   : expression constraint handler
  *  - expr           : expression to simplify
  * output:
  *  - simplifiedexpr : the simplified expression
  */
-#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
-   SCIP*                 scip,               \
-   SCIP_CONSHDLR*        conshdlr,           \
-   SCIP_CONSEXPR_EXPR*   expr,               \
-   SCIP_CONSEXPR_EXPR**  simplifiedexpr)
+#define SCIP_DECL_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
+   SCIP*          scip,     \
+   SCIP_CONSHDLR* conshdlr, \
+   SCIP_EXPR*     expr,     \
+   SCIP_EXPR**    simplifiedexpr)
 
 /** expression callback for reverse propagation
  *
  * The method propagates given bounds over the children of an expression.
- * The tighter interval should be passed to the corresponding child expression by using
- * SCIPtightenConsExprExprInterval().
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr: expr constraint handler
  *  - expr : expression
  *  - bounds : the bounds on the expression that should be propagated
- *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
- *  - nreductions : buffer to store the number of interval reductions of all children
+ *  - infeasible: buffer to store whether a children bounds were propagated to an empty interval
+ *  - childrenbounds : array to store computed bounds for children, initialized with current activity
  */
-#define SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(x) SCIP_RETCODE x (\
-   SCIP* scip, \
-   SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
-   SCIP_INTERVAL bounds, \
-   SCIP_Bool* infeasible, \
-   int* nreductions )
+#define SCIP_DECL_EXPRREVERSEPROP(x) SCIP_RETCODE x (\
+   SCIP*          scip, \
+   SCIP_EXPR*     expr, \
+   SCIP_INTERVAL  bounds, \
+   SCIP_Bool*     infeasible, \
+   SCIP_INTERVAL* childrenbounds)
 
 /** separation initialization method of an expression handler (called during CONSINITLP)
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - conshdlr        : expression constraint handler
- *  - cons            : expression constraint
+ *  - cons            : nonlinear constraint for which the relaxation is initialized
  *  - expr            : expression
  *  - overestimate    : whether the expression needs to be overestimated
  *  - underestimate   : whether the expression needs to be underestimated
@@ -517,14 +501,13 @@ typedef enum
  *  output:
  *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
  */
-#define SCIP_DECL_CONSEXPR_EXPRINITSEPA(x) SCIP_RETCODE x (\
-      SCIP* scip, \
-      SCIP_CONSHDLR* conshdlr, \
-      SCIP_CONS* cons, \
-      SCIP_CONSEXPR_EXPR* expr, \
-      SCIP_Bool overestimate, \
-      SCIP_Bool underestimate, \
-      SCIP_Bool* infeasible)
+#define SCIP_DECL_EXPRINITSEPA(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_CONS* cons, \
+   SCIP_EXPR* expr, \
+   SCIP_Bool  overestimate, \
+   SCIP_Bool  underestimate, \
+   SCIP_Bool* infeasible)
 
 /** separation deinitialization method of an expression handler (called during CONSEXITSOL)
  *
@@ -532,12 +515,9 @@ typedef enum
  *  - scip            : SCIP main data structure
  *  - expr            : expression
  */
-#define SCIP_DECL_CONSEXPR_EXPREXITSEPA(x) SCIP_RETCODE x (\
-      SCIP* scip, \
-      SCIP_CONSEXPR_EXPR* expr)
-
-typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
-typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
+#define SCIP_DECL_EXPREXITSEPA(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr)
 
 /** @} */  /* expression handler */
 
@@ -551,38 +531,38 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expre
  *
  * How often an expression graph iteration can be started within an active iteration, plus one.
  */
-#define SCIP_CONSEXPRITERATOR_MAXNACTIVE 5
+#define SCIP_EXPRITER_MAXNACTIVE 5
 
 /** stages of expression DFS iteration */
-#define SCIP_CONSEXPRITERATOR_ENTEREXPR     1u /**< an expression is visited the first time (before any of its children are visited) */
-#define SCIP_CONSEXPRITERATOR_VISITINGCHILD 2u /**< a child of an expression is to be visited */
-#define SCIP_CONSEXPRITERATOR_VISITEDCHILD  4u /**< a child of an expression has been visited */
-#define SCIP_CONSEXPRITERATOR_LEAVEEXPR     8u /**< an expression is to be left (all of its children have been processed) */
-#define SCIP_CONSEXPRITERATOR_ALLSTAGES     (SCIP_CONSEXPRITERATOR_ENTEREXPR | SCIP_CONSEXPRITERATOR_VISITINGCHILD | SCIP_CONSEXPRITERATOR_VISITEDCHILD | SCIP_CONSEXPRITERATOR_LEAVEEXPR)
+#define SCIP_EXPRITER_ENTEREXPR     1u /**< an expression is visited the first time (before any of its children are visited) */
+#define SCIP_EXPRITER_VISITINGCHILD 2u /**< a child of an expression is to be visited */
+#define SCIP_EXPRITER_VISITEDCHILD  4u /**< a child of an expression has been visited */
+#define SCIP_EXPRITER_LEAVEEXPR     8u /**< an expression is to be left (all of its children have been processed) */
+#define SCIP_EXPRITER_ALLSTAGES     (SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR)
 
 /** type to represent stage of DFS iterator */
-typedef unsigned int SCIP_CONSEXPRITERATOR_STAGE;
+typedef unsigned int SCIP_EXPRITER_STAGE;
 
 /** user data storage type for expression iteration */
 typedef union
 {
-   SCIP_Real             realval;            /**< a floating-point value */
-   int                   intval;             /**< an integer value */
-   int                   intvals[2];         /**< two integer values */
-   unsigned int          uintval;            /**< an unsigned integer value */
-   void*                 ptrval;             /**< a pointer */
-} SCIP_CONSEXPRITERATOR_USERDATA;
+   SCIP_Real     realval;            /**< a floating-point value */
+   int           intval;             /**< an integer value */
+   int           intvals[2];         /**< two integer values */
+   unsigned int  uintval;            /**< an unsigned integer value */
+   void*         ptrval;             /**< a pointer */
+} SCIP_EXPRITER_USERDATA;
 
 /** mode for expression iterator */
 typedef enum
 {
-   SCIP_CONSEXPRITERATOR_RTOPOLOGIC,         /**< reverse topological order */
-   SCIP_CONSEXPRITERATOR_BFS,                /**< breadth-first search */
-   SCIP_CONSEXPRITERATOR_DFS                 /**< depth-first search */
-} SCIP_CONSEXPRITERATOR_TYPE;
+   SCIP_EXPRITER_RTOPOLOGIC,         /**< reverse topological order */
+   SCIP_EXPRITER_BFS,                /**< breadth-first search */
+   SCIP_EXPRITER_DFS                 /**< depth-first search */
+} SCIP_EXPRITER_TYPE;
 
-typedef struct SCIP_ConsExpr_Expr_IterData SCIP_CONSEXPR_EXPR_ITERDATA; /**< expression tree iterator data for a specific expression */
-typedef struct SCIP_ConsExpr_Iterator      SCIP_CONSEXPR_ITERATOR;      /**< expression tree iterator */
+typedef struct SCIP_ExprIterData SCIP_EXPRITERDATA;  /**< expression iterator data for a specific expression */
+typedef struct SCIP_ExprIter     SCIP_EXPRITER;      /**< expression iterator */
 
 /** @} */
 
@@ -590,21 +570,20 @@ typedef struct SCIP_ConsExpr_Iterator      SCIP_CONSEXPR_ITERATOR;      /**< exp
  * @{
  */
 
-#define SCIP_CONSEXPR_PRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
-#define SCIP_CONSEXPR_PRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
-#define SCIP_CONSEXPR_PRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
-#define SCIP_CONSEXPR_PRINTDOT_NLOCKS       0x8u /**< print number of locks */
-#define SCIP_CONSEXPR_PRINTDOT_EVALVALUE   0x10u /**< print evaluation value */
-#define SCIP_CONSEXPR_PRINTDOT_EVALTAG     0x30u /**< print evaluation value and tag */
-#define SCIP_CONSEXPR_PRINTDOT_ACTIVITY    0x40u /**< print activity value */
-#define SCIP_CONSEXPR_PRINTDOT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
+#define SCIP_EXPRPRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
+#define SCIP_EXPRPRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
+#define SCIP_EXPRPRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
+#define SCIP_EXPRPRINTDOT_NLOCKS       0x8u /**< print number of locks */
+#define SCIP_EXPRPRINTDOT_EVALVALUE   0x10u /**< print evaluation value */
+#define SCIP_EXPRPRINTDOT_EVALTAG     0x30u /**< print evaluation value and tag */
+#define SCIP_EXPRPRINTDOT_ACTIVITY    0x40u /**< print activity value */
+#define SCIP_EXPRPRINTDOT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
 
 /** print everything */
-#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_NLOCKS | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_ACTIVITYTAG
+#define SCIP_EXPRPRINTDOT_ALL SCIP_EXPRPRINTDOT_EXPRSTRING | SCIP_EXPRPRINTDOT_EXPRHDLR | SCIP_EXPRPRINTDOT_NUSES | SCIP_EXPRPRINTDOT_NLOCKS | SCIP_EXPRPRINTDOT_EVALTAG | SCIP_EXPRPRINTDOT_ACTIVITYTAG
 
-
-typedef unsigned int                      SCIP_CONSEXPR_PRINTDOT_WHAT; /**< type for printdot bitflags */
-typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA;  /**< printing a dot file data */
+typedef unsigned int                 SCIP_EXPRPRINTDOT_WHAT; /**< type for printdot bitflags */
+typedef struct SCIP_ExprPrintDotData SCIP_EXPRPRINTDOTDATA;  /**< printing a dot file data */
 
 /** @} */
 
