@@ -146,7 +146,7 @@ void compUpDistUpdateLeavesDists(
       {
          assert(sdvertical_ids[j] == extdata->tree_leaves[j]);
 
-         printf("top=%d leaf=%d, dist=%f \n", topleaf, extdata->tree_leaves[j], sdvertical_dists[j]);
+         SCIPdebugMessage("top=%d leaf=%d, dist=%f \n", topleaf, extdata->tree_leaves[j], sdvertical_dists[j]);
 
          compUpDistAddLeaf(j, sdvertical_dists[j], override, extdata, contraction);
       }
@@ -192,6 +192,7 @@ void compRootDistsUpdateLeavesDists(
    const SCIP_Real* const sdvertical_dists = extreduce_mldistsTargetDists(sds_vertical, level - 1, comproot);
    const SCIP_Real* const sdhorizontal_dists = extreduce_mldistsTargetDists(sds_horizontal, level - 1, comproot);
    const int* const sdhorizontal_ids = extreduce_mldistsTargetIds(sds_horizontal, level - 1, comproot);
+   const int sdhorizontal_ntargets = extreduce_mldistsLevelNTargets(sds_horizontal, level - 1);
 
 #ifndef NDEBUG
    const int* const sdvertical_ids = extreduce_mldistsTargetIds(sds_vertical, level - 1, comproot);
@@ -200,30 +201,37 @@ void compRootDistsUpdateLeavesDists(
    assert(level > 1);
    assert(leavesSame_end >= 1 && leavesSame_start >= 1);
    assert(extreduce_mldistsLevelNTargets(sds_vertical, level - 1) == leavesSame_start);
-   assert(extreduce_mldistsLevelNTargets(sds_horizontal, level - 1) >= (leavesSame_end - leavesSame_start));
+   assert(sdhorizontal_ntargets >= (leavesSame_end - leavesSame_start));
 
-   printf("horizontal root component distances: \n");
+   SCIPdebugMessage("horizontal root component distances: \n");
 
    /* update leafs on same level as root */
-   for( int i = leavesSame_start, j = 0; i < leavesSame_end; i++, j++ )
+   for( int i = leavesSame_start; i < leavesSame_end; i++ )
    {
-      // todo: might not be always true!
-      assert(sdhorizontal_ids[j] == extdata->tree_leaves[i]);
+      int j;
 
-      printf("comproot=%d leaf=%d, dist=%f \n", comproot, sdhorizontal_ids[j],
+      for( j = 0; j < sdhorizontal_ntargets; j++ )
+      {
+         if( sdhorizontal_ids[j] == extdata->tree_leaves[i] )
+            break;
+      }
+
+      assert(j != sdhorizontal_ntargets);
+
+      SCIPdebugMessage("comproot=%d leaf=%d, dist=%f \n", comproot, sdhorizontal_ids[j],
             sdhorizontal_dists[j]);
 
       compRootDistAddLeaf(i, sdhorizontal_dists[j], extdata, contraction);
    }
 
-   printf("vertical root component distances: \n");
+   SCIPdebugMessage("vertical root component distances: \n");
 
    /* update leafs below root */
    for( int i = 0; i < leavesSame_start; i++ )
    {
       assert(sdvertical_ids[i] == extdata->tree_leaves[i]);
 
-      printf("comproot=%d leaf=%d, dist=%f \n", comproot, extdata->tree_leaves[i],
+      SCIPdebugMessage("comproot=%d leaf=%d, dist=%f \n", comproot, extdata->tree_leaves[i],
             sdvertical_dists[i]);
 
       compRootDistAddLeaf(i, sdvertical_dists[i], extdata, contraction);
