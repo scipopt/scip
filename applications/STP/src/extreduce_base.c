@@ -989,6 +989,8 @@ SCIP_Bool pseudodeleteNodeIsPromising(
 
       if( Is_term(g->term[node]) && degree != 3 )
          return FALSE;
+
+      assert(degree == g->grad[node]); // otherwise the outside loop does not work..
    }
    else
    {
@@ -1183,14 +1185,17 @@ SCIP_RETCODE pseudodeleteDeleteMarkedNodes(
 
    assert(pseudoDelNodes);
 
-   for( int k = 0; k < nnodes; ++k )
+   for( int degree = 2; degree <= STP_DELPSEUDO_MAXGRAD; degree++ )
    {
-      if( pseudoDelNodes[k] && 2 <= graph->grad[k] && graph->grad[k] <= STP_DELPSEUDO_MAXGRAD )
+      for( int k = 0; k < nnodes; ++k )
       {
-         assert(!Is_term(graph->term[k]));
+        if( pseudoDelNodes[k] && graph->grad[k] == degree  )
+        {
+           assert(!Is_term(graph->term[k]));
 
-         SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, FALSE, FALSE, distdata, k, graph, extpseudo) );
-         SCIP_CALL( pseudodeleteDeleteNode(scip, k, redcostdata, distdata, graph, extpseudo) );
+           SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, FALSE, FALSE, distdata, k, graph, extpseudo) );
+           SCIP_CALL( pseudodeleteDeleteNode(scip, k, redcostdata, distdata, graph, extpseudo) );
+        }
       }
    }
 
@@ -1232,25 +1237,37 @@ SCIP_RETCODE pseudodeleteExecute(
 
    SCIP_CALL( reduce_starInit(scip, EXT_PSEUDO_DEGREE_MAX, &stardata) );
 
-   /* pseudo-elimination loop */
-   for( int i = 0; i < nnodes; ++i )
+   for( int degree = EXT_PSEUDO_DEGREE_MIN; degree <= EXT_PSEUDO_DEGREE_MAX; degree++  )
    {
-      SCIP_Bool nodeisDeletable = FALSE;
+	  /* pseudo-elimination loop */
+	  for( int i = 0; i < nnodes; ++i )
+	  {
+		 SCIP_Bool nodeisDeletable = FALSE;
 
-      if( pseudodeleteNodeIsPromising(graph, i) )
-      {
-         SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, TRUE, TRUE, &distdata, i, graph, &extpseudo) );
+		 if( graph->grad[i] == 1 && !Is_term(graph->term[i]) )
+		 {
+			 graph_knot_del(scip, graph, i, TRUE);
+			 continue;
+		 }
 
-         if( extpseudo.cutoffIsPromising )
-         {
-            SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
-         }
-      }
+	     if( graph->grad[i] != degree )
+		    continue;
 
-      if( !nodeisDeletable )
-         continue;
+		 if( pseudodeleteNodeIsPromising(graph, i) )
+		 {
+			SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, TRUE, TRUE, &distdata, i, graph, &extpseudo) );
 
-      SCIP_CALL( pseudodeleteDeleteNode(scip, i, redcostdata, &distdata, graph, &extpseudo) );
+			if( extpseudo.cutoffIsPromising )
+			{
+			   SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, &distdata, &extpermanent, &nodeisDeletable) );
+			}
+		 }
+
+		 if( !nodeisDeletable )
+			 continue;
+
+		 SCIP_CALL( pseudodeleteDeleteNode(scip, i, redcostdata, &distdata, graph, &extpseudo) );
+	  }
    }
 
    reduce_starFree(scip, &stardata);
@@ -1259,7 +1276,7 @@ SCIP_RETCODE pseudodeleteExecute(
 
    SCIPdebugMessage("number of eliminations after extended pseudo-elimination %d \n", *nelims);
 
-   /* todo in I015 we get isolated vertices...not sure whether this is a bug or normal behaviour */
+   /* todo in I015 we get isolated vertices...not sure whether this is a bug or normal behavior */
    SCIP_CALL( reduceLevel0(scip, graph));
 
    assert(graphmarkIsClean(redcostdata, graph));
