@@ -466,9 +466,12 @@ SCIP_RETCODE detectMinors(
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &perm);
+   SCIPfreeBufferArray(scip, &intersection);
+   SCIPfreeBufferArray(scip, &rowvars);
    SCIPfreeBufferArray(scip, &auxvars);
    SCIPfreeBufferArray(scip, &ys);
    SCIPfreeBufferArray(scip, &xs);
+   SCIPhashmapFree(&rowmap);
    SCIPhashmapFree(&quadmap);
    SCIPexpriteratorFree(&it);
 
@@ -1242,6 +1245,10 @@ SCIP_RETCODE separatePoint(
       else
          continue;
    }
+
+   /* free memory */
+   SCIPhashmapFree(&tableau);
+   SCIPfreeBufferArray(scip, &basicvarpos2tableaurow);
 
    return SCIP_OKAY;
 }
