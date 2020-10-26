@@ -200,7 +200,7 @@ void compRootDistsUpdateLeavesDists(
    assert(level > 1);
    assert(leavesSame_end >= 1 && leavesSame_start >= 1);
    assert(extreduce_mldistsLevelNTargets(sds_vertical, level - 1) == leavesSame_start);
-   assert(extreduce_mldistsLevelNTargets(sds_horizontal, level - 1) == (leavesSame_end - leavesSame_start));
+   assert(extreduce_mldistsLevelNTargets(sds_horizontal, level - 1) >= (leavesSame_end - leavesSame_start));
 
    printf("horizontal root component distances: \n");
 
