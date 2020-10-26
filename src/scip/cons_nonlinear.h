@@ -274,6 +274,15 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
    SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    );
 
+/** returns the variable used for linearizing a given expression (return value might be NULL)
+ *
+ * @note for variable expression it returns the corresponding variable
+ */
+SCIP_EXPORT
+SCIP_VAR* SCIPgetConsExprExprAuxVar(
+   SCIP_EXPR*   expr                /**< expression */
+   );
+
 /** returns the number of enforcements for an expression */
 SCIP_EXPORT
 int SCIPgetConsExprExprNEnfos(
@@ -301,6 +310,292 @@ void SCIPsetConsExprExprEnfoAuxValue(
    SCIP_Real             auxvalue            /**< the new value of auxval */
    );
 
+/** number of nonlinear handlers whose activity computation and propagation methods depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprNPropUsesActivity(
+   SCIP_EXPR*   expr                /**< expression */
+   );
+
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprNSepaUsesActivity(
+   SCIP_EXPR*   expr                /**< expression */
+   );
+
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) use auxiliary variable of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+SCIP_EXPORT
+unsigned int SCIPgetConsExprExprNAuxvarUses(
+   SCIP_EXPR*   expr                /**< expression */
+   );
+
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+ *
+ * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNPropUsesActivity
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNSepaUsesActivity
+ *   and also increments this count for all variables in the expression.
+ *
+ * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
+ * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
+ * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPregisterConsExprExprUsage(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
+   SCIP_EXPR*   expr,             /**< expression */
+   SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
+   SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             useactivityforsepabelow, /**< whether activity of expr will be used by underestimation */
+   SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
+   );
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. original variables
+ *
+ * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
+ * Assume that f(x) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(x) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(x) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(x).
+ *
+ * If necessary, f is evaluated in the given solution. If that fails (domain error),
+ * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_EXPR*   expr,               /**< expression */
+   SCIP_SOL*             sol,                /**< solution */
+   unsigned int          soltag,             /**< tag of solution */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(x) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(x) is violated, or NULL */
+   );
+
+/** computes absolute violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   );
+
+/** computes relative violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * Taking the absolute violation from SCIPgetConsExprExprAbsAuxViolation, this function returns
+ * the absolute violation divided by max(1,|f(w)|).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_EXPR*   expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   );
+
+/** returns whether we are ok to branch on auxiliary variables
+ *
+ * Currently returns whether depth of node in B&B tree is at least value of constraints/expr/branching/aux parameter.
+ * TODO make private function
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPgetConsExprBranchAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+);
+
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprPartialDiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_EXPR*   expr,               /**< expression */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   );
+
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a constraint
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   );
+
+/** computes the hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetConsExprExprPartialDiffGradientDir()
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeExprHessianDir(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONS*            cons,             /**< constraint for which we will compute directional derivative */
+   SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   SCIP_SOL*             direction,        /**< direction */
+   unsigned int          soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
+/** returns bounds on the expression
+ *
+ * This gives an intersection of bounds from
+ * - activity calculation (\ref SCIPexprGetActivity), if valid,
+ * - auxiliary variable, if present,
+ * - stored by \ref SCIPtightenConsExprExprInterval during domain propagation
+ *
+ * @note The returned interval can be empty!
+ */
+SCIP_EXPORT
+SCIP_INTERVAL SCIPgetConsExprExprBounds(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_EXPR*     expr              /**< expression */
+   );
+
+/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of
+ * corresponding (auxiliary) variable (if any)
+ *
+ * @attention this function should only be called during domain propagation in cons_expr
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtightenConsExprExprInterval(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_EXPR*     expr,             /**< expression to be tightened */
+   SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
+   );
+
+/** mark constraints that include this expression to be propagated again
+ *
+ * This can be used by, e.g., nlhdlrs, to trigger a new propagation of constraints without
+ * a change of variable bounds, e.g., because new information on the expression is available
+ * that could potentially lead to tighter expression activity values.
+ *
+ * Note, that this call marks also constraints for propagation which only share some variable
+ * with this expression.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPmarkConsExprExprPropagate(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPR*     expr              /**< expression to propagate again */
+   );
+
+
+/** increments the curboundstag and resets lastboundrelax in constraint handler data
+ *
+ * @note This method is not intended for normal use.
+ *   These tags are maintained by the event handler for variable bound change events.
+ *   This method is used by some unittests.
+ */
+SCIP_EXPORT
+void SCIPincrementConsExprCurBoundsTag(
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
+   );
+
+/** adds violation-branching score to an expression
+ *
+ * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
+ * The expression must either be a variable expression or have an aux-variable.
+ * In the latter case, branching on auxiliary variables must have been enabled.
+ * In case of doubt, use SCIPaddConsExprExprsViolScore(). Roughly, the difference between these functions is that the current
+ * function adds the violscore to the expression directly, while SCIPaddConsExprExprsViolScore() will split the
+ * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
+ * SCIPaddConsExprExprsViolScore() for more details.
+ */
+SCIP_EXPORT
+void SCIPaddConsExprExprViolScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_EXPR*     expr,             /**< expression where to add branching score */
+   SCIP_Real               violscore         /**< violation score to add to expression */
+   );
+
+/** adds violation-branching score to a set of expressions, distributing the score among all the expressions.
+ *
+ * Each expression must either be a variable expression or have an aux-variable.
+ * If branching on aux-variables is disabled, then the violation branching score will be distributed among all among the
+ * variables present in exprs
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddConsExprExprsViolScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_EXPR**    exprs,            /**< expressions where to add branching score */
+   int                     nexprs,           /**< number of expressions */
+   SCIP_Real               violscore,        /**< violation score to add to expression */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
+   );
+
+/** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
+SCIP_EXPORT
+SCIP_Real SCIPgetConsExprExprViolScore(
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_EXPR*     expr              /**< expression */
+   );
+
+/** returns the number of positive rounding locks of an expression */
+SCIP_EXPORT
+int SCIPgetConsExprExprNLocksPos(
+   SCIP_EXPR*   expr                /**< expression */
+   );
+
+/** returns the number of negative rounding locks of an expression */
+SCIP_EXPORT
+int SCIPgetConsExprExprNLocksNeg(
+   SCIP_EXPR*   expr                /**< expression */
+   );
 
 /** creates the handler for expr constraints and includes it in SCIP */
 SCIP_EXPORT
