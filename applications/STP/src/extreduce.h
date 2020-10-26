@@ -73,6 +73,14 @@ extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GR
 extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
 
+
+/* extreduce_contract.c
+ */
+extern SCIP_RETCODE       extreduce_contractionInit(SCIP*, int, int, CONTRACT**);
+extern void               extreduce_contractionFree(SCIP*, CONTRACT**);
+extern SCIP_Bool          extreduce_contractionRuleOutPeriph(SCIP*, const GRAPH*, EXTDATA*);
+
+
 /* extreduce_mldists.c
  */
 extern SCIP_RETCODE       extreduce_mldistsInit(SCIP*, int, int, int, int, SCIP_Bool, MLDISTS**);

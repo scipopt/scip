@@ -55,9 +55,13 @@
 /** structure for storing distances in the extension tree */
 typedef struct multi_level_distances_storage MLDISTS;
 
+/** structure for storing data for algorithms based on contraction of extension tree */
+typedef struct extension_tree_contraction CONTRACT;
+
 /** permanent extension data */
 typedef struct extension_data_permanent
 {
+   CONTRACT*             contration;         /**< contraction data */
    DCMST*                dcmst;              /**< dynamic MST */
    CSRDEPO*              msts_comp;          /**< storage for MSTs with extending node of the given level */
    CSRDEPO*              msts_levelbase;     /**< storage for MSTs without extending node of the level below */
@@ -110,6 +114,7 @@ typedef struct distance_data
  *  reduced costs, and pseudo-ancestor conflicts. */
 typedef struct reduction_data
 {
+   CONTRACT*             contration;         /**< contraction data */
    DCMST* const dcmst;
    CSRDEPO* const msts_comp;
    CSRDEPO* const msts_levelbase;

@@ -198,6 +198,9 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
          STP_EXT_MAXGRAD, 1, TRUE, &(extperm->sds_horizontal)) );
 
+   SCIP_CALL( extreduce_contractionInit(scip, STP_EXT_MAXDFSDEPTH,
+         STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->contration)) );
+
    extperm->nodes_implications = nodes_implied;
    extperm->edgedeleted = edgedeleted;
    extperm->isterm = isterm;
@@ -313,6 +316,7 @@ void extreduce_extPermaFreeMembers(
 {
    assert(scip && extperm);
 
+   extreduce_contractionFree(scip, &(extperm->contration));
    extreduce_mldistsFree(scip, &(extperm->sds_horizontal));
    extreduce_mldistsFree(scip, &(extperm->sds_vertical));
    graph_csrdepo_free(scip, &(extperm->msts_comp));
@@ -363,6 +367,7 @@ void extreduce_reddataClean(
    SCIP_Real* const redcost_treecosts = reddata->redcost_treecosts;
 
    assert(redcost_nlevels >= 1);
+   assert(reddata->contration);
 
    for( int i = 0; i < redcost_nlevels; i++ )
    {

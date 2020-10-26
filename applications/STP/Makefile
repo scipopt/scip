@@ -66,6 +66,7 @@ CMAINOBJ	=	cmain.o \
 			dualascent.o \
 			enumeration.o \
 			extreduce_base.o \
+			extreduce_contract.o \
 			extreduce_core.o \
 			extreduce_data.o \
 			extreduce_dbg.o \

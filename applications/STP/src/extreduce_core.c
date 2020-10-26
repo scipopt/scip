@@ -26,7 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-//#define SCIP_DEBUG
+// #define SCIP_DEBUG
 // #define STP_DEBUG_EXT
 
 #include <stdio.h>
@@ -658,6 +658,7 @@ SCIP_Bool extTreeRuleOutPeriph(
 )
 {
 #ifdef EXT_PRINT_STATS
+   static SCIP_Longint contracts = 0;
    static SCIP_Longint mst = 0;
    static SCIP_Longint red = 0;
 #endif
@@ -670,6 +671,7 @@ SCIP_Bool extTreeRuleOutPeriph(
       {
          printf("rule-out-red=%lld \n", red);
          printf("rule-out-mst=%lld \n", mst);
+         printf("rule-out-contracts=%lld \n", contracts);
       }
 #endif
 
@@ -684,11 +686,30 @@ SCIP_Bool extTreeRuleOutPeriph(
       {
          printf("rule-out-red=%lld \n", red);
          printf("rule-out-mst=%lld \n", mst);
+         printf("rule-out-contracts=%lld \n", contracts);
       }
 #endif
 
       return TRUE;
    }
+
+   // todo!
+   /*
+   if( extreduce_contractionRuleOutPeriph(scip, graph, extdata) )
+   {
+#ifdef EXT_PRINT_STATS
+      contracts++;
+      if( contracts % 10000 == 0 )
+      {
+         printf("rule-out-red=%lld \n", red);
+         printf("rule-out-mst=%lld \n", mst);
+         printf("rule-out-contracts=%lld \n", contracts);
+      }
+#endif
+
+      return TRUE;
+   }
+   */
 
    return FALSE;
 }
@@ -1860,7 +1881,8 @@ SCIP_RETCODE extreduce_checkComponent(
 
       PCDATA pcdata = { .pcSdToNode = extpermanent->pcSdToNode, .pcSdCands = pcSdCands, .nPcSdCands = -1,
          .pcSdStart = -1, .tree_innerPrize = 0.0 };
-      REDDATA reddata = { .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
+      REDDATA reddata = { .contration = extpermanent->contration,
+         .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
          .msts_levelbase = extpermanent->msts_levelbase,
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
          .edgedeleted = extpermanent->edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,
