@@ -24,6 +24,10 @@
 #ifndef SCIP_PUB_EXPR_H_
 #define SCIP_PUB_EXPR_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**@name Expression Handler Methods */
 /**@{ */
 
@@ -1451,5 +1455,9 @@ SCIP_RETCODE SCIPgetConsExprQuadraticCurvature(
    );
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SCIP_PUB_EXPR_H_ */
