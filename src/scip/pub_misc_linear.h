@@ -110,6 +110,7 @@ SCIP_ROW* SCIPconsGetRow(
  *  converted to an int. A warning is passed if the SCIP_Real is not an integer.
  *  TODO: Allow val to be a pointer.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsAddCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which row is queried */
