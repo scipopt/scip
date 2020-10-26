@@ -1427,7 +1427,9 @@ SCIP_RETCODE presolve(
          scip->stat->status = SCIP_STATUS_UNBOUNDED;
       else /* switch status to INFORUNBD */
          scip->stat->status = SCIP_STATUS_INFORUNBD;
-   } else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 ) {
+   }
+   else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 )
+   {
       SCIP_SOL* sol;
       SCIP_Bool stored;
 
