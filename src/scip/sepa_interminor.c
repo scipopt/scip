@@ -392,14 +392,15 @@ SCIP_RETCODE detectMinors(
    }
 
    /* store 2x2 minors */
-   for( i = 0; i < nrowvars; ++i )
+   /* TODO: we might store some minors twice since the matrix is symmetric. Handle that! (see unit test for example) */
+   for( i = 0; i < nrowvars - 1; ++i )
    {
       int j;
       struct myarray* rowi;
 
       rowi = (struct myarray*)SCIPhashmapGetImage(rowmap, (void *)SCIPgetVars(scip)[rowvars[i]]);
 
-      for( j = 0; j < nrowvars; ++j )
+      for( j = i + 1; j < nrowvars; ++j )
       {
          struct myarray* rowj;
          int ninter;
