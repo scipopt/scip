@@ -30,7 +30,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
- #define SCIP_DEBUG
+// #define SCIP_DEBUG
 //#define STP_DEBUG_EXT
 
 #include "extreduce.h"
@@ -453,7 +453,9 @@ SCIP_Bool ruledOut(
       CSR mst_parent;
       SCIP_Real mstweight;
       const SCIP_Real tree_cost = contraction->level_treecost[i];
+#ifdef SCIP_DEBUG
       const int leaves_end = contraction->leaves_start[i + 1];
+#endif
 
       graph_csrdepo_getCSR(msts_levelbase, i + 1, &mst_parent);
 
@@ -530,7 +532,7 @@ SCIP_RETCODE extreduce_contractionInit(
    SCIP_CALL( SCIPallocMemory(scip, contraction) );
    cont = *contraction;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(cont->leaves_start), maxnlevels) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(cont->leaves_start), maxnlevels + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(cont->leafToCompRootDists), maxnlevels * maxnleaves) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(cont->leafToCompUpDists), maxnlevels * maxnleaves) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(cont->level_treecost), maxnlevels) );
