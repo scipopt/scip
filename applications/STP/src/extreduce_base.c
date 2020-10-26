@@ -1247,6 +1247,7 @@ SCIP_RETCODE pseudodeleteExecute(
 		 if( graph->grad[i] == 1 && !Is_term(graph->term[i]) )
 		 {
 			 graph_knot_del(scip, graph, i, TRUE);
+			 graph->mark[i] = 0;
 			 continue;
 		 }
 
