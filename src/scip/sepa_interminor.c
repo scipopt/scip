@@ -1101,8 +1101,6 @@ SCIP_RETCODE separateDeterminant(
    SCIP_VAR*             xjk,                /**< variable X_jk = x_j * x_k */
    SCIP_VAR*             xjl,                /**< variable X_jl = x_j * x_l */
    int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
-   SCIP_Real*            binvrow,            /**< buffer to store row of Binv */
-   SCIP_Real*            binvarow,           /**< buffer to store row of Binv A */
    SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -1172,8 +1170,6 @@ SCIP_RETCODE separatePoint(
    )
 {
    SCIP_SEPADATA* sepadata;
-   SCIP_Real* binvarow;
-   SCIP_Real* binvrow;
    SCIP_HASHMAP* tableau;
    int* basicvarpos2tableaurow; /* map between basic var and its tableau row */
    int nrows;
@@ -1199,8 +1195,6 @@ SCIP_RETCODE separatePoint(
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &basicvarpos2tableaurow, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &binvarow, ncols) );
    SCIP_CALL( SCIPhashmapCreate(&tableau, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* construct basicvar to tableau row map */
@@ -1234,13 +1228,13 @@ SCIP_RETCODE separatePoint(
       {
          printf("separate xik xjl - xil xjk <= 0; det is %g\n", det);
          SCIP_CALL( separateDeterminant(scip, sepa, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, basicvarpos2tableaurow,
-                  binvrow, binvarow, tableau, result) );
+                  tableau, result) );
       }
       else if( SCIPisFeasNegative(scip, det) )
       {
          printf("separate xil xjk - xik xjl <= 0; det is %g\n", det);
          SCIP_CALL( separateDeterminant(scip, sepa, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, basicvarpos2tableaurow,
-                  binvrow, binvarow, tableau, result) );
+                  tableau, result) );
       }
       else
          continue;
