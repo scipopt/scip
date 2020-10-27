@@ -63,11 +63,11 @@
 
 /* some default values */
 #define INTERCUTS_MINVIOL      1e-4
-#define DEFAULT_USEINTERCUTS   TRUE
-#define DEFAULT_USESTRENGTH    TRUE
-#define BINSEARCH_MAXITERS     120
-#define DEFAULT_NCUTSROOT       20
-#define DEFAULT_NCUTS            2
+#define DEFAULT_USEINTERCUTS  FALSE
+#define DEFAULT_USESTRENGTH   FALSE
+#define BINSEARCH_MAXITERS      120
+#define DEFAULT_NCUTSROOT        20
+#define DEFAULT_NCUTS             2
 
 /*
  * Data structures
