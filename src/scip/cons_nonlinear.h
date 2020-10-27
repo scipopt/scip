@@ -16,7 +16,10 @@
 /**@file   cons_nonlinear.h
  * @ingroup CONSHDLRS
  * @brief  constraint handler for nonlinear constraints
- * @author Tobias Achterberg
+ * @author Ksenia Bestuzheva
+ * @author Benjamin Mueller
+ * @author Felipe Serrano
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -43,14 +46,13 @@ struct SCIP_ConsExpr_Auxexpr
 };
 typedef struct SCIP_ConsExpr_Auxexpr SCIP_CONSEXPR_AUXEXPR;
 
-
 /** bilinear term structure
  *
  * This can represent a product which
  * - explicitly exists in the problem and is under- and/or overestimated by a single auxiliary variable
- * stored as auxvar in the union (case nauxexprs == 0) or
+ *   stored as auxvar in the union (case nauxexprs == 0) or
  * - is involved in bilinear relations implicitly given by linear constraints with binary variables, and
- * is under- and/or overestimated by linear expression(s) stored as auxexprs in the union (case nauxexprs > 0).
+ *   is under- and/or overestimated by linear expression(s) stored as auxexprs in the union (case nauxexprs > 0).
  *
  * An explicitly existing product can also be involved in implicit relations, then it will be stored as in
  * the second case.
@@ -144,27 +146,26 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@name Expression Constraint Handler Methods */
+/**@name Nonlinear Constraint Handler Methods */
 /**@{ */
-
 
 /** gets tag indicating current local variable bounds */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprCurBoundsTag(
-   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+unsigned int SCIPgetCurBoundsTagNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
 /** gets the curboundstag at the last time where variable bounds were relaxed */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprLastBoundRelaxTag(
-   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+unsigned int SCIPgetLastBoundRelaxTagNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
 /** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
 SCIP_EXPORT
-SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
-   SCIP*                      scip,           /**< SCIP data structure */
-   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
+SCIP_HASHMAP* SCIPgetVarExprHashmapNonlinear(
+   SCIP*                 scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr        /**< nonlinear constraint handler */
    );
 
 /** notifies conshdlr that a variable expression is to be freed
@@ -175,7 +176,7 @@ SCIP_HASHMAP* SCIPgetConsExprVarHashmap(
  * @note Temporary method that will be replaced by ownerdata-free
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
+SCIP_RETCODE SCIPnotifyExprVarFreedNonlinear(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_EXPR*        varexpr         /**< variable expression to be freed */
@@ -183,11 +184,11 @@ SCIP_RETCODE SCIPnotifyConsExprExprVarFreed(
 
 /** collects all bilinear terms for a given set of constraints
  *
- * @note This method should only be used for unit tests that depend on SCIPgetConsExprBilinTerms(),
- *       SCIPgetConsExprBilinTerm() or SCIPgetConsExprBilinTermIdx().
+ * @note This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
+ *       SCIPgetBilinTermNonlinear() or SCIPgetBilinTermIdxNonlinear().
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcollectConsExprBilinTerms(
+SCIP_RETCODE SCIPcollectBilinTermsNonlinear(
    SCIP*                      scip,           /**< SCIP data structure */
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_CONS**                conss,          /**< expression constraints */
@@ -199,7 +200,7 @@ SCIP_RETCODE SCIPcollectConsExprBilinTerms(
  *  @note This method should only be used after auxiliary variables have been created, i.e., after CONSINITLP.
  */
 SCIP_EXPORT
-int SCIPgetConsExprNBilinTerms(
+int SCIPgetNBilinTermsNonlinear(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
@@ -209,7 +210,7 @@ int SCIPgetConsExprNBilinTerms(
  * @note The value of the auxiliary variable of a bilinear term might be NULL, which indicates that the term does not have an auxiliary variable.
  */
 SCIP_EXPORT
-SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
+SCIP_CONSEXPR_BILINTERM* SCIPgetBilinTermsNonlinear(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
    );
 
@@ -219,7 +220,7 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerms(
  * @return The method returns -1 if the variables do not appear bilinearly.
  */
 SCIP_EXPORT
-int SCIPgetConsExprBilinTermIdx(
+int SCIPgetBilinTermIdxNonlinear(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_VAR*                  x,              /**< first variable */
    SCIP_VAR*                  y               /**< second variable */
@@ -231,7 +232,7 @@ int SCIPgetConsExprBilinTermIdx(
  * @return The method returns NULL if the variables do not appear bilinearly.
  */
 SCIP_EXPORT
-SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
+SCIP_CONSEXPR_BILINTERM* SCIPgetBilinTermNonlinear(
    SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
    SCIP_VAR*                  x,              /**< first variable */
    SCIP_VAR*                  y               /**< second variable */
@@ -239,7 +240,7 @@ SCIP_CONSEXPR_BILINTERM* SCIPgetConsExprBilinTerm(
 
 /** evaluates an auxiliary expression for a bilinear term */
 SCIP_EXPORT
-SCIP_Real SCIPevalConsExprBilinAuxExpr(
+SCIP_Real SCIPevalBilinAuxExprNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             x,                  /**< first variable of the bilinear term */
    SCIP_VAR*             y,                  /**< second variable of the bilinear term */
@@ -249,7 +250,7 @@ SCIP_Real SCIPevalConsExprBilinAuxExpr(
 
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPinsertBilinearTermExisting(
+SCIP_RETCODE SCIPinsertBilinearTermExistingNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
@@ -261,7 +262,7 @@ SCIP_RETCODE SCIPinsertBilinearTermExisting(
 
 /** stores the variables of a bilinear term in the data of the constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPinsertBilinearTermImplicit(
+SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             x,                  /**< first variable */
@@ -279,19 +280,19 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicit(
  * @note for variable expression it returns the corresponding variable
  */
 SCIP_EXPORT
-SCIP_VAR* SCIPgetConsExprExprAuxVar(
+SCIP_VAR* SCIPgetExprAuxVarNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
 /** returns the number of enforcements for an expression */
 SCIP_EXPORT
-int SCIPgetConsExprExprNEnfos(
+int SCIPgetExprNEnfosNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
 /** returns the data for one of the enforcements of an expression */
 SCIP_EXPORT
-void SCIPgetConsExprExprEnfoData(
+void SCIPgetExprEnfoDataNonlinear(
    SCIP_EXPR*   expr,                         /**< expression */
    int                   idx,                          /**< position of enforcement in enfos array */
    SCIP_CONSEXPR_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
@@ -304,7 +305,7 @@ void SCIPgetConsExprExprEnfoData(
 
 /** sets the auxiliary value of expression for one of the enforcements of an expression */
 SCIP_EXPORT
-void SCIPsetConsExprExprEnfoAuxValue(
+void SCIPsetExprEnfoAuxValueNonlinear(
    SCIP_EXPR*   expr,               /**< expression */
    int                   idx,                /**< position of enforcement in enfos array */
    SCIP_Real             auxvalue            /**< the new value of auxval */
@@ -315,7 +316,7 @@ void SCIPsetConsExprExprEnfoAuxValue(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprExprNPropUsesActivity(
+unsigned int SCIPgetExprNPropUsesActivityNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
@@ -324,7 +325,7 @@ unsigned int SCIPgetConsExprExprNPropUsesActivity(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprExprNSepaUsesActivity(
+unsigned int SCIPgetExprNSepaUsesActivityNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
@@ -333,7 +334,7 @@ unsigned int SCIPgetConsExprExprNSepaUsesActivity(
  * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
  */
 SCIP_EXPORT
-unsigned int SCIPgetConsExprExprNAuxvarUses(
+unsigned int SCIPgetExprNAuxvarUsesNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
@@ -341,8 +342,8 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
  *
  * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
  * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
- * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetConsExprExprNPropUsesActivity
- * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetConsExprExprNSepaUsesActivity
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetExprNPropUsesActivityNonlinear
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetExprNSepaUsesActivityNonlinear
  *   and also increments this count for all variables in the expression.
  *
  * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
@@ -351,7 +352,7 @@ unsigned int SCIPgetConsExprExprNAuxvarUses(
  * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPregisterConsExprExprUsage(
+SCIP_RETCODE SCIPregisterExprUsageNonlinear(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,         /**< expression constraint handler */
    SCIP_EXPR*   expr,             /**< expression */
@@ -374,7 +375,7 @@ SCIP_RETCODE SCIPregisterConsExprExprUsage(
  * then viol is set to SCIPinfinity and both violover and violunder are set to TRUE.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
+SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_EXPR*   expr,               /**< expression */
@@ -398,7 +399,7 @@ SCIP_RETCODE SCIPgetConsExprExprAbsOrigViolation(
  * both violover and violunder are set to TRUE.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
+SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_EXPR*   expr,               /**< expression */
@@ -414,14 +415,14 @@ SCIP_RETCODE SCIPgetConsExprExprAbsAuxViolation(
  * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
  * Assume that f(w) is associated with auxiliary variable z.
  *
- * Taking the absolute violation from SCIPgetConsExprExprAbsAuxViolation, this function returns
+ * Taking the absolute violation from SCIPgetExprAbsAuxViolationNonlinear, this function returns
  * the absolute violation divided by max(1,|f(w)|).
  *
  * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
  * both violover and violunder are set to TRUE.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
+SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_EXPR*   expr,               /**< expression */
@@ -438,7 +439,7 @@ SCIP_RETCODE SCIPgetConsExprExprRelAuxViolation(
  * TODO make private function
  */
 SCIP_EXPORT
-SCIP_Bool SCIPgetConsExprBranchAux(
+SCIP_Bool SCIPgetBranchAuxNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
 );
@@ -448,7 +449,7 @@ SCIP_Bool SCIPgetConsExprBranchAux(
  * @note expression must belong to a constraint
  */
 SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprPartialDiff(
+SCIP_Real SCIPgetExprPartialDiffNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    SCIP_EXPR*   expr,               /**< expression */
@@ -460,22 +461,22 @@ SCIP_Real SCIPgetConsExprExprPartialDiff(
  * @note expression must belong to a constraint
  */
 SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprPartialDiffGradientDir(
+SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeExprHessianDir() call */
+   SCIP_EXPR*   expr,               /**< root expression of constraint used in the last SCIPcomputeHessianDirNonlinear() call */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
 /** computes the hessian * v at a given point
  *
  * Evaluates children, if necessary.
- * Value can be received via SCIPgetConsExprExprPartialDiffGradientDir()
+ * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear()
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeExprHessianDir(
+SCIP_RETCODE SCIPcomputeHessianDirNonlinear(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONS*            cons,             /**< constraint for which we will compute directional derivative */
@@ -491,7 +492,7 @@ SCIP_RETCODE SCIPcomputeExprHessianDir(
  * since last evaluation.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPevalExprActivity2(
+SCIP_RETCODE SCIPevalExprActivityNonlinear(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
    SCIP_EXPR*              expr,             /**< expression */
@@ -504,12 +505,12 @@ SCIP_RETCODE SCIPevalExprActivity2(
  * This gives an intersection of bounds from
  * - activity calculation (\ref SCIPexprGetActivity), if valid,
  * - auxiliary variable, if present,
- * - stored by \ref SCIPtightenConsExprExprInterval during domain propagation
+ * - stored by \ref SCIPtightenExprIntervalNonlinear during domain propagation
  *
  * @note The returned interval can be empty!
  */
 SCIP_EXPORT
-SCIP_INTERVAL SCIPgetConsExprExprBounds(
+SCIP_INTERVAL SCIPgetExprBoundsNonlinear(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_EXPR*     expr              /**< expression */
@@ -521,7 +522,7 @@ SCIP_INTERVAL SCIPgetConsExprExprBounds(
  * @attention this function should only be called during domain propagation in cons_expr
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPtightenConsExprExprInterval(
+SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_EXPR*     expr,             /**< expression to be tightened */
@@ -540,7 +541,7 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
  * with this expression.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPmarkConsExprExprPropagate(
+SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_EXPR*     expr              /**< expression to propagate again */
    );
@@ -553,7 +554,7 @@ SCIP_RETCODE SCIPmarkConsExprExprPropagate(
  *   This method is used by some unittests.
  */
 SCIP_EXPORT
-void SCIPincrementConsExprCurBoundsTag(
+void SCIPincrementExprCurBoundsTagNonlinear(
    SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
    SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
    );
@@ -563,13 +564,13 @@ void SCIPincrementConsExprCurBoundsTag(
  * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
  * The expression must either be a variable expression or have an aux-variable.
  * In the latter case, branching on auxiliary variables must have been enabled.
- * In case of doubt, use SCIPaddConsExprExprsViolScore(). Roughly, the difference between these functions is that the current
- * function adds the violscore to the expression directly, while SCIPaddConsExprExprsViolScore() will split the
+ * In case of doubt, use SCIPaddExprsViolScoreNonlinear(). Roughly, the difference between these functions is that the current
+ * function adds the violscore to the expression directly, while SCIPaddExprsViolScoreNonlinear() will split the
  * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
- * SCIPaddConsExprExprsViolScore() for more details.
+ * SCIPaddExprsViolScoreNonlinear() for more details.
  */
 SCIP_EXPORT
-void SCIPaddConsExprExprViolScore(
+void SCIPaddExprViolScoreNonlinear(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_EXPR*     expr,             /**< expression where to add branching score */
@@ -583,7 +584,7 @@ void SCIPaddConsExprExprViolScore(
  * variables present in exprs
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddConsExprExprsViolScore(
+SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
    SCIP_EXPR**    exprs,            /**< expressions where to add branching score */
@@ -595,20 +596,20 @@ SCIP_RETCODE SCIPaddConsExprExprsViolScore(
 
 /** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
 SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprViolScore(
+SCIP_Real SCIPgetExprViolScoreNonlinear(
    SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
    SCIP_EXPR*     expr              /**< expression */
    );
 
 /** returns the number of positive rounding locks of an expression */
 SCIP_EXPORT
-int SCIPgetConsExprExprNLocksPos(
+int SCIPgetExprNLocksPosNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
 /** returns the number of negative rounding locks of an expression */
 SCIP_EXPORT
-int SCIPgetConsExprExprNLocksNeg(
+int SCIPgetExprNLocksNegNonlinear(
    SCIP_EXPR*   expr                /**< expression */
    );
 
@@ -617,21 +618,16 @@ int SCIPgetConsExprExprNLocksNeg(
  * \note This requires that for every expr used in the quadratic data, an auxiliary variable is available (or the expression is a variable-expression).
  */
 SCIP_EXPORT
-SCIP_Real SCIPevalExprQuadraticAux(
+SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< quadratic expression */
    SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
    );
 
-/** creates the handler for expr constraints and includes it in SCIP */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConshdlrExpr(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** includes an expression constraint upgrade method into the expression constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeExprconsUpgrade(
+SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_EXPRCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading expression constraint, or NULL */
    int                   priority,           /**< priority of upgrading method */
@@ -644,7 +640,7 @@ SCIP_RETCODE SCIPincludeExprconsUpgrade(
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExpr(
+SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -679,7 +675,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprBasic(
+SCIP_RETCODE SCIPcreateConsBasicNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -690,7 +686,7 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
 
 /** creates and captures a quadratic expression constraint */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprQuadratic(
+SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -742,7 +738,7 @@ SCIP_RETCODE SCIPcreateConsExprQuadratic(
 
 /** returns the expression of the given expression constraint */
 SCIP_EXPORT
-SCIP_EXPR* SCIPgetExprConsExpr(
+SCIP_EXPR* SCIPgetExprConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -752,7 +748,7 @@ SCIP_EXPR* SCIPgetExprConsExpr(
  * @note The curvature information are computed during CONSINITSOL.
  */
 SCIP_EXPORT
-SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
+SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -764,7 +760,7 @@ SCIP_EXPRCURV SCIPgetCurvatureConsExpr(
  * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetQuadExprConsExpr(
+SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    SCIP*                    scip,               /**< SCIP data structure */
    SCIP_CONS*               cons,               /**< constraint data */
    SCIP_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
@@ -772,7 +768,7 @@ SCIP_RETCODE SCIPgetQuadExprConsExpr(
 
 /** gets the expr constraint as a nonlinear row representation. */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetNlRowConsExpr(
+SCIP_RETCODE SCIPgetNlRowConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
@@ -780,14 +776,14 @@ SCIP_RETCODE SCIPgetNlRowConsExpr(
 
 /** gets the left hand side of an expression constraint */
 SCIP_EXPORT
-SCIP_Real SCIPgetLhsConsExpr(
+SCIP_Real SCIPgetLhsConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the right hand side of an expression constraint */
 SCIP_EXPORT
-SCIP_Real SCIPgetRhsConsExpr(
+SCIP_Real SCIPgetRhsConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -797,7 +793,7 @@ SCIP_Real SCIPgetRhsConsExpr(
  * @attention This method can only be called in the problem stage.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddLinearTermConsExpr(
+SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_Real             coef,               /**< coefficient */
@@ -811,7 +807,7 @@ SCIP_RETCODE SCIPaddLinearTermConsExpr(
  * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetAbsViolationConsExpr(
+SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to check */
@@ -826,7 +822,7 @@ SCIP_RETCODE SCIPgetAbsViolationConsExpr(
  * depends on the setting of parameter constraints/expr/violscale.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetRelViolationConsExpr(
+SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to check */
@@ -841,7 +837,7 @@ SCIP_RETCODE SCIPgetRelViolationConsExpr(
  * Thus, it can be used to sort a set of expression constraints.
  */
 SCIP_EXPORT
-int SCIPgetConsExprIndex(
+int SCIPgetIndexConsNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
@@ -850,14 +846,14 @@ int SCIPgetConsExprIndex(
  * Usable as compare operator in array sort functions.
  */
 SCIP_EXPORT
-int SCIPcompareConsExprIndex(
+int SCIPcompareIndexConsNonlinear(
    void*                 cons1,
    void*                 cons2
    );
 
 /** returns an equivalent linear constraint if possible */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLinearConsExpr(
+SCIP_RETCODE SCIPgetLinearConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
@@ -865,7 +861,7 @@ SCIP_RETCODE SCIPgetLinearConsExpr(
 
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
+SCIP_RETCODE SCIPgetLinvarMayDecreaseNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS*            cons,               /**< expression constraint */
@@ -875,7 +871,7 @@ SCIP_RETCODE SCIPgetLinvarMayDecreaseExpr(
 
 /** returns a variable that appears linearly that may be increased without making any other constraint infeasible */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
+SCIP_RETCODE SCIPgetLinvarMayIncreaseNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_CONS*            cons,               /**< expression constraint */
@@ -883,21 +879,21 @@ SCIP_RETCODE SCIPgetLinvarMayIncreaseExpr(
    SCIP_Real*            coef                /**< pointer to store the coefficient */
    );
 
-/** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
- *
- *  @note this method is only used for testing purposes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
-   );
+///** detects nonlinear handlers that can handle the expressions and creates needed auxiliary variables
+// *
+// *  @note this method is only used for testing purposes
+// */
+//SCIP_EXPORT
+//SCIP_RETCODE SCIPdetectConsExprNlhdlrs(
+//   SCIP*                 scip,               /**< SCIP data structure */
+//   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+//   SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
+//   int                   nconss              /**< total number of constraints */
+//   );
 
 /** add the cut and maybe report branchscores */
 SCIP_EXPORT
-SCIP_RETCODE SCIPprocessConsExprRowprep(
+SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
@@ -912,19 +908,6 @@ SCIP_RETCODE SCIPprocessConsExprRowprep(
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_RESULT*          result              /**< pointer to store the result */
-   );
-
-/** checks whether an expression is quadratic and returns the corresponding coefficients
- *
- * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
- * or a sum of terms where at least one is a square or a product.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetConsExprQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_EXPR*   expr,               /**< expression */
-   SCIP_QUADEXPR** quaddata         /**< buffer to store pointer to quadratic representation of expression, if it is quadratic, otherwise stores NULL */
    );
 
 /** @} */

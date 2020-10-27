@@ -511,7 +511,7 @@ SCIP_RETCODE SCIPevalExpr(
 /** computes the gradient for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
- * Value can be received via SCIPgetConsExprExprPartialDiff().
+ * Value can be received via SCIPgetExprPartialDiffNonlinear().
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
@@ -646,6 +646,20 @@ unsigned int SCIPgetExprIteratorNewVisitedTag(
 
 /**@name Quadratic expression functions */
 /**@{ */
+
+/** checks whether an expression is quadratic
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ *
+ * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcheckExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool*            isquadratic         /**< buffer to store result */
+   );
 
 /** evaluates quadratic term in a solution
  *

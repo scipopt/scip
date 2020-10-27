@@ -333,7 +333,7 @@ SCIP_INTERVAL SCIPexprGetActivity(
 /** returns the tag associated with the activity of the expression
  *
  * TODO this is conshdlr specific:
- * Can be compared with SCIPgetConsExprCurBoundsTag() and SCIPgetConsExprLastBoundRelaxTag()
+ * Can be compared with SCIPgetCurBoundsTagNonlinear() and SCIPgetLastBoundRelaxTagNonlinear()
  * to check whether the activity currently stored in this expression is current and valid, respectively.
  */
 SCIP_EXPORT
