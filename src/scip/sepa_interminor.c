@@ -893,6 +893,9 @@ SCIP_RETCODE getTableauRows(
 
             /* insert tableau row in hashmap*/
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)densetableaurow) );
+
+            /* free memory */
+            SCIPfreeBufferArray(scip, &densetableaurow);
          }
          else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
          {
