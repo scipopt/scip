@@ -484,6 +484,21 @@ SCIP_RETCODE SCIPcomputeExprHessianDir(
    unsigned int          soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
+ * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
+ * since last evaluation.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPevalExprActivity2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
+   SCIP_EXPR*              expr,             /**< expression */
+   SCIP_INTERVAL*          activity,         /**< interval where to store expression */
+   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
+   );
+
 /** returns bounds on the expression
  *
  * This gives an intersection of bounds from

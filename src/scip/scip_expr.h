@@ -527,17 +527,13 @@ SCIP_RETCODE SCIPcomputeExprGradient(
 
 /** possibly reevaluates and then returns the activity of the expression
  *
- * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
- * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
- * since last evaluation.
+ * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprActivity(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler, or NULL */
-   SCIP_EXPR*     expr,             /**< expression */
-   SCIP_INTERVAL*          activity,         /**< interval where to store expression */
-   SCIP_Bool               validsufficient   /**< whether any valid activity is sufficient */
+   SCIP_EXPR*              expr,             /**< expression */
+   SCIP_INTERVAL*          activity          /**< interval where to store expression */
    );
 
 /** compute the hash value of an expression */
