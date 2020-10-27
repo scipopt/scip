@@ -39,7 +39,7 @@
 #define SEPA_NAME              "interminor"
 #define SEPA_DESC              "separator to ensure that 2x2 minors of X (= xx') have determinant 0"
 #define SEPA_PRIORITY                 0
-#define SEPA_FREQ                    10
+#define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
