@@ -64,7 +64,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** callback to be called in initialization
@@ -122,12 +122,12 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * initial value (SCIP_CONSEXPR_EXPRENFO_NONE).
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
- * @ref SCIPregisterConsExprExprUsage() for every subexpression that it will use and indicate whether
+ * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
  * - it will use an auxiliary variables,
  * - it will use activity for some subexpressions when computing estimators or cuts, and
  * - it will use activity for some subexpressions when for INTEVAL or REVERSEPROP.
  *
- * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterConsExprExprUsage().
+ * @note Auxiliary variables do not exist in subexpressions during detect and are not created by a call to @ref SCIPregisterExprUsageNonlinear().
  *   They will be available when the INITSEPA callback is called.
  *
  * - scip SCIP data structure
@@ -143,7 +143,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONS* cons, \
    SCIP_CONSEXPR_EXPRENFO_METHOD* enforcing, \
    SCIP_CONSEXPR_EXPRENFO_METHOD* participating, \
@@ -161,7 +161,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLREVALAUX(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_Real* auxvalue, \
    SCIP_SOL* sol)
@@ -182,17 +182,17 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_INTERVAL* interval, \
-   SCIP_DECL_CONSEXPR_INTEVALVAR((*intevalvar)), \
+   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), \
    void* intevalvardata)
 
 /** nonlinear handler callback for reverse propagation
  *
  * The method propagates the given bounds over the arguments of an expression.
  * The arguments of an expression are other expressions and the tighter intervals should be passed
- * to the corresponding argument (expression) via SCIPtightenConsExprExprInterval().
+ * to the corresponding argument (expression) via SCIPtightenExprIntervalNonlinear().
  *
  * input:
  *  - scip : SCIP main data structure
@@ -208,7 +208,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_INTERVAL bounds, \
    SCIP_Bool* infeasible, \
@@ -234,7 +234,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
       SCIP_CONSHDLR* conshdlr, \
       SCIP_CONS* cons, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-      SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
       SCIP_Bool overestimate, \
       SCIP_Bool underestimate, \
@@ -251,7 +251,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
 #define SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-      SCIP_CONSEXPR_EXPR* expr, \
+      SCIP_EXPR* expr, \
       SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata)
 
 /** nonlinear handler separation and enforcement callback
@@ -260,7 +260,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *   expr - auxvar <= 0 (if !overestimate)
  * or
  *   expr - auxvar >= 0 (if  overestimate),
- * where auxvar = SCIPgetConsExprExprAuxVar(expr).
+ * where auxvar = SCIPgetExprAuxVarNonlinear(expr).
  *
  * It can do so by
  * - separation, i.e., finding an affine hyperplane (a cut) that separates
@@ -308,7 +308,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONS* cons, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
@@ -349,7 +349,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_EXPR* expr, \
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \

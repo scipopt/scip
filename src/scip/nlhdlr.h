@@ -106,7 +106,7 @@ SCIP_CONSEXPR_NLHDLRDATA* SCIPgetConsExprNlhdlrData(
 SCIP_EXPORT
 SCIP_CONSEXPR_NLHDLREXPRDATA* SCIPgetConsExprNlhdlrExprData(
    SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*        expr           /**< expression */
+   SCIP_EXPR*        expr           /**< expression */
 );
 
 /** returns whether nonlinear handler implements the interval evaluation callback */
