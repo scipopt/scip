@@ -1,10 +1,31 @@
-/**
- * @file struct_nlhldr.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   struct_nlhdlr.h
+ * @brief  structure definitions related to nonlinear handlers of nonlinear constraints
+ * @author Ksenia Bestuzheva
+ * @author Benjamin Mueller
+ * @author Felipe Serrano
+ * @author Stefan Vigerske
  */
 
 #ifndef SCIP_STRUCT_NLHLDR_H_
 #define SCIP_STRUCT_NLHLDR_H_
 
+#include "scip/type_scip.h"
+#include "scip/type_nlhdlr.h"
 
 // MOVE rename to SCIP_Nlhdlr
 /** generic data and callback methods of an nonlinear handler */
