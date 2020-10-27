@@ -499,6 +499,13 @@ SCIP_Bool ruledOut(
          ruledOut = TRUE;
          break;
       }
+
+      if( mst_new->nnodes > 3 && EQ(mstweight, tree_cost) )
+      {
+         printf("ruled-out with equality %f <= %f, contraction-level=%d \n", mstweight, tree_cost, i);
+         ruledOut = TRUE;
+         break;
+      }
    }
 
    mst_new->nedges_max = mst_maxnedges;
