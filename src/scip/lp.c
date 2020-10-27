@@ -14389,7 +14389,7 @@ SCIP_RETCODE lpUpdateVarColumnProved(
          SCIPintervalSub(SCIPsetInfinity(set), &loose, loose, prod);  /* lp->looseobjval -= lb * obj; */
       }
    }
-   else if( SCIPsetIsNegative(set, obj) )
+   else if( obj < 0.0 )
    {
       ub = SCIPvarGetUbLocal(var);
       if( SCIPsetIsInfinity(set, ub) )

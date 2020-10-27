@@ -5296,6 +5296,9 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    {
       SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
          &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
+
+      var->data.multaggr.nvars = nmultvars;
+      var->data.multaggr.varssize = multvarssize;
       overwriteMultAggrWithExactData(set, var);
 
 
@@ -5307,6 +5310,10 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
          multvarssize = multrequiredsize;
          SCIP_CALL( SCIPvarGetActiveRepresentativesExact(set, var->data.multaggr.vars, var->exactdata->multaggr.scalars,
             &nmultvars, multvarssize, var->exactdata->multaggr.constant, &multrequiredsize, TRUE) );
+
+         var->data.multaggr.nvars = nmultvars;
+         var->data.multaggr.varssize = multvarssize;
+
          overwriteMultAggrWithExactData(set, var);
 
          assert( multrequiredsize <= multvarssize );
@@ -10937,7 +10944,7 @@ SCIP_RETCODE varEventUbChangedExact(
 
       SCIPsetDebugMsg(set, "issue UBCHANGED event for variable <%s>: %g -> %g\n", var->name, oldbound, newbound);
 
-      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_DOWNWARDS), RatRoundReal(newbound, SCIP_ROUND_DOWNWARDS)) );
+      SCIP_CALL( SCIPeventCreateUbChanged(&event, blkmem, var, RatRoundReal(oldbound, SCIP_ROUND_UPWARDS), RatRoundReal(newbound, SCIP_ROUND_UPWARDS)) );
       SCIP_CALL( SCIPeventAddExactChg(event, blkmem, oldbound, newbound) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, lp->fplp, branchcand, NULL, &event) );
    }

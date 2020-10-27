@@ -675,7 +675,7 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(oldobj != newobj); /*lint !e777*/
+   assert(oldobj != newobj || (var->exactdata != NULL)); /*lint !e777*/
 
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
@@ -698,7 +698,7 @@ SCIP_RETCODE SCIPeventCreateGlbChanged(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(oldbound != newbound); /*lint !e777*/
+   assert(oldbound != newbound  || (var->exactdata != NULL)); /*lint !e777*/
 
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
@@ -723,7 +723,7 @@ SCIP_RETCODE SCIPeventCreateGubChanged(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(oldbound != newbound); /*lint !e777*/
+   assert(oldbound != newbound || (var->exactdata != NULL)); /*lint !e777*/
 
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
@@ -748,7 +748,7 @@ SCIP_RETCODE SCIPeventCreateLbChanged(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(oldbound != newbound); /*lint !e777*/
+   assert(oldbound != newbound || (var->exactdata != NULL)); /*lint !e777*/
 
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
@@ -776,7 +776,7 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
 {
    assert(event != NULL);
    assert(blkmem != NULL);
-   assert(oldbound != newbound); /*lint !e777*/
+   assert(oldbound != newbound || (var->exactdata != NULL)); /*lint !e777*/
 
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );

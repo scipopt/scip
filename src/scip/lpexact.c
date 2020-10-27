@@ -174,6 +174,7 @@ SCIP_Bool colExactInSync(
    assert(colexact->var == fpcol->var);
    assert(colexact->lpipos == fpcol->lpipos);
    assert(colexact->index == fpcol->index);
+   assert(colexact->len >= fpcol->len);
 
    assert(RatIsApproxEqualReal(set, colexact->obj, fpcol->obj, SCIP_ROUND_NEAREST));
    assert(RatIsApproxEqualReal(set, colexact->flushedobj, fpcol->flushedobj, SCIP_ROUND_NEAREST));
@@ -203,6 +204,7 @@ SCIP_Bool rowExactInSync(
 
    assert(rowexact->lpipos == fprow->lpipos);
    assert(rowexact->lppos == fprow->lppos);
+   assert(rowexact->len >= fprow->len);
 
    synced = RatIsApproxEqualReal(set, rowexact->lhs, fprow->lhs, SCIP_ROUND_DOWNWARDS) || (RatIsNegInfinity(rowexact->lhs) && SCIPsetIsInfinity(set, -fprow->lhs));
    synced = synced && (RatIsApproxEqualReal(set, rowexact->rhs, fprow->rhs, SCIP_ROUND_UPWARDS) || (RatIsInfinity(rowexact->rhs) && SCIPsetIsInfinity(set, fprow->rhs)));
@@ -7601,7 +7603,7 @@ SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
    )
 {
    assert(lpexact != NULL);
-   assert(lpexact->solved || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
+   assert(lpexact->solved || !lpexact->flushed || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
 
    return (lpexact->flushed ? lpexact->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
 }
