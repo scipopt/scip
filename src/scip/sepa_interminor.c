@@ -1120,6 +1120,7 @@ SCIP_RETCODE separateDeterminant(
 
    /* cut (in the nonbasic space) is of the form alpha^T x >= 1 */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
+   SCIPaddRowprepSide(rowprep, 1.0);
 
    /* check if we have the tableau row of the variable and if not compute it */
    SCIP_CALL( getTableauRows(scip, vars, basicvarpos2tableaurow, tableau, tableaurows, &success) );
