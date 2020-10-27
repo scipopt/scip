@@ -1276,10 +1276,8 @@ SCIP_RETCODE testNode3PseudoDeletedByContraction(
    extInitRedCostArrays(graph, redcostdata);
 
    SCIP_CALL( extCheckNode(scip, graph, redcostdata, edgedeleted, testnode, &deletable, FALSE) );
-   {
-   int todo;
-   }
-//   STPTEST_ASSERT_MSG(deletable, "node was not marked as deleteable! \n");
+
+   STPTEST_ASSERT_MSG(deletable, "node was not marked as deleteable! \n");
 
    stptest_extreduceTearDown(scip, graph, &redcostdata);
 

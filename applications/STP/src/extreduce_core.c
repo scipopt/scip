@@ -657,6 +657,7 @@ SCIP_Bool extTreeRuleOutPeriph(
    EXTDATA*              extdata             /**< extension data */
 )
 {
+//#define EXT_PRINT_STATS
 #ifdef EXT_PRINT_STATS
    static SCIP_Longint contracts = 0;
    static SCIP_Longint mst = 0;
@@ -693,8 +694,7 @@ SCIP_Bool extTreeRuleOutPeriph(
       return TRUE;
    }
 
-   // todo!
-   /*
+
    if( extreduce_contractionRuleOutPeriph(scip, graph, extdata) )
    {
 #ifdef EXT_PRINT_STATS
@@ -709,7 +709,6 @@ SCIP_Bool extTreeRuleOutPeriph(
 
       return TRUE;
    }
-   */
 
    return FALSE;
 }
