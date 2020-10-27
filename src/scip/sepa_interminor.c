@@ -523,9 +523,9 @@ void computeRestrictionToRay(
    SCIP_Real*            coefs               /**< buffer to store A, B, C, D, and E */
    )
 {
-   SCIP_Real eigenvectors[16] = {1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0};
+   SCIP_Real eigenvectors[16] = {1.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0};
    SCIP_Real eigenvalues[4] = {0.5, 0.5, -0.5, -0.5};
-   SCIP_Real coefeigenvector = 0.70710678118;
+   SCIP_Real eigencoef = 0.7071067811865475244008443621048490;
    SCIP_Real* a;
    SCIP_Real* b;
    SCIP_Real* c;
@@ -554,8 +554,8 @@ void computeRestrictionToRay(
       /* compute eigenvec * ray and eigenvec * solution */
       for( j = 0; j < 4; ++j )
       {
-         vdotray += coefeigenvector * eigenvectors[4 * i + j] * ray[j];
-         vzlp += coefeigenvector * eigenvectors[4 * i + j] * SCIPvarGetLPSol(vars[j]);
+         vdotray += eigencoef * eigenvectors[4 * i + j] * ray[j];
+         vzlp += eigencoef * eigenvectors[4 * i + j] * SCIPvarGetLPSol(vars[j]);
       }
 
       if( eigenvalues[i] > 0 )
