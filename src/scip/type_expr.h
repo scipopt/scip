@@ -239,7 +239,6 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression han
  */
 #define SCIP_DECL_EXPRMONOTONICITY(x) SCIP_RETCODE x (\
    SCIP*          scip, \
-   SCIP_CONSHDLR* conshdlr, \
    SCIP_EXPR*     expr, \
    int            childidx, \
    SCIP_MONOTONE* result)
@@ -467,7 +466,6 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression han
  */
 #define SCIP_DECL_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
    SCIP*          scip,     \
-   SCIP_CONSHDLR* conshdlr, \
    SCIP_EXPR*     expr,     \
    SCIP_EXPR**    simplifiedexpr)
 
