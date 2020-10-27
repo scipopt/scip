@@ -81,7 +81,7 @@ struct SCIP_expr_userdata
    int                     nlocksneg;     /**< negative locks counter */
 
    /* enforcement of expr == auxvar (or expr <= auxvar, or expr >= auxvar) */
-   SCIP_CONSEXPR_EXPRENFO** enfos;        /**< enforcements */
+   SCIP_CONSNONLINEAR_EXPRENFO** enfos;        /**< enforcements */
    int                     nenfos;        /**< number of enforcements, or -1 if not initialized */
    unsigned int            lastenforced;  /**< last enforcement round where expression was enforced successfully */
    unsigned int            nactivityusesprop; /**< number of nonlinear handler whose activity computation (or domain propagation) depends on the activity of the expression */
@@ -105,9 +105,9 @@ struct SCIP_expr_userdata
 /** enforcement data of an expression */
 struct SCIP_ConsExpr_ExprEnfo
 {
-   SCIP_CONSEXPR_NLHDLR*         nlhdlr;          /**< nonlinear handler */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
-   SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
+   SCIP_NLHDLR*         nlhdlr;          /**< nonlinear handler */
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
+   SCIP_CONSNONLINEAR_EXPRENFO_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
    SCIP_Bool                     issepainit;      /**< was the initsepa callback of nlhdlr called */
    SCIP_Real                     auxvalue;        /**< auxiliary value of expression w.r.t. currently enforced solution */
    SCIP_Bool                     sepabelowusesactivity;/**< whether sepabelow uses activity of some expression */

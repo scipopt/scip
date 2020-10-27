@@ -106,6 +106,18 @@ struct SCIP_RowPrep
 };
 typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
+/** @name expression enforcement */
+/** @{ */
+#define SCIP_CONSNONLINEAR_EXPRENFO_NONE           0x0u /**< no enforcement */
+#define SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
+#define SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
+#define SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH       (SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW | SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
+#define SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY       0x4u /**< activity computation (interval evaluation) and propagation (reverse propagation) */
+#define SCIP_CONSNONLINEAR_EXPRENFO_ALL            (SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH | SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) /**< all enforcement methods */
+
+typedef unsigned int  SCIP_CONSNONLINEAR_EXPRENFO_METHOD; /**< exprenfo bitflags */
+//typedef struct SCIP_ExprEnfo SCIP_CONSNONLINEAR_EXPRENFO; /**< expression enforcement data */
+/** @} */
 
 /** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
  *
@@ -404,7 +416,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_ROWPREP*         rowprep,            /**< cut to be added */
@@ -693,9 +705,9 @@ SCIP_EXPORT
 void SCIPgetExprEnfoDataNonlinear(
    SCIP_EXPR*            expr,                         /**< expression */
    int                   idx,                          /**< position of enforcement in enfos array */
-   SCIP_CONSEXPR_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
-   SCIP_CONSEXPR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
    SCIP_Bool*            sepabelowusesactivity,        /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
    SCIP_Bool*            sepaaboveusesactivity,        /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
    SCIP_Real*            auxvalue                      /**< buffer to store current auxvalue, or NULL */
@@ -1010,14 +1022,14 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP*                  scip,              /**< SCIP data structure */
    SCIP_CONSHDLR*         conshdlr,          /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR** nlhdlr,            /**< buffer where to store nonlinear handler */
+   SCIP_NLHDLR** nlhdlr,            /**< buffer where to store nonlinear handler */
    const char*            name,              /**< name of nonlinear handler (must not be NULL) */
    const char*            desc,              /**< description of nonlinear handler (can be NULL) */
    int                    detectpriority,    /**< detection priority of nonlinear handler */
    int                    enfopriority,      /**< enforcement priority of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLRDETECT((*detect)),   /**< structure detection callback of nonlinear handler */
-   SCIP_DECL_CONSEXPR_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_CONSEXPR_NLHDLRDATA* data            /**< data of nonlinear handler (can be NULL) */
+   SCIP_DECL_NLHDLRDETECT((*detect)),   /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
+   SCIP_NLHDLRDATA* data            /**< data of nonlinear handler (can be NULL) */
    );
 
 /** @} */

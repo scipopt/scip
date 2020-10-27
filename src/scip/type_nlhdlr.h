@@ -25,42 +25,27 @@
 #define SCIP_TYPE_NLHDLR_H_
 
 
-/** @name expression enforcement */
-#define SCIP_CONSEXPR_EXPRENFO_NONE           0x0u /**< no enforcement */
-#define SCIP_CONSEXPR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
-#define SCIP_CONSEXPR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
-#define SCIP_CONSEXPR_EXPRENFO_SEPABOTH       (SCIP_CONSEXPR_EXPRENFO_SEPABELOW | SCIP_CONSEXPR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
-#define SCIP_CONSEXPR_EXPRENFO_ACTIVITY       0x4u /**< activity computation (interval evaluation) and propagation (reverse propagation) */
-#define SCIP_CONSEXPR_EXPRENFO_ALL            (SCIP_CONSEXPR_EXPRENFO_SEPABOTH | SCIP_CONSEXPR_EXPRENFO_ACTIVITY) /**< all enforcement methods */
-
-typedef unsigned int                  SCIP_CONSEXPR_EXPRENFO_METHOD; /**< exprenfo bitflags */
-typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expression enforcement data */
-
-/** @} */
-
-
-
 /** @name Nonlinear Handler
  * @{
  */
 
 /** nonlinear handler copy callback
  *
- * the method includes the nonlinear handler into a expression constraint handler
+ * the method includes the nonlinear handler into a nonlinear constraint handler
  *
- * This method is usually called when doing a copy of an expression constraint handler.
+ * This method is usually called when doing a copy of a nonlinear constraint handler.
  *
  *  input:
- *  - targetscip          : target SCIP main data structure
- *  - targetconsexprhdlr  : target expression constraint handler
- *  - sourceconsexprhdlr  : expression constraint handler in source SCIP
- *  - sourcenlhdlr        : nonlinear handler in source SCIP
+ *  - targetscip      : target SCIP main data structure
+ *  - targetconshdlr  : target nonlinear constraint handler
+ *  - sourceconshdlr  : nonlinear constraint handler in source SCIP
+ *  - sourcenlhdlr    : nonlinear handler in source SCIP
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
-   SCIP_CONSHDLR* targetconsexprhdlr, \
-   SCIP_CONSHDLR* sourceconsexprhdlr, \
-   SCIP_CONSEXPR_NLHDLR* sourcenlhdlr)
+   SCIP_CONSHDLR* targetconshdlr, \
+   SCIP_CONSHDLR* sourceconshdlr, \
+   SCIP_NLHDLR* sourcenlhdlr)
 
 /** callback to free data of handler
  *
@@ -68,10 +53,10 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - nlhdlr nonlinear handler
  * - nlhdlrdata nonlinear handler data to be freed
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRFREEHDLRDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
-   SCIP_CONSEXPR_NLHDLRDATA** nlhdlrdata)
+   SCIP_NLHDLR* nlhdlr, \
+   SCIP_NLHDLRDATA** nlhdlrdata)
 
 /** callback to free expression specific data
  *
@@ -80,29 +65,29 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - expr expression
  * - nlhdlrexprdata nonlinear handler expression data to be freed
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** callback to be called in initialization
  *
  * - scip SCIP data structure
  * - nlhdlr nonlinear handler
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRINIT(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRINIT(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr)
+   SCIP_NLHDLR* nlhdlr)
 
 /** callback to be called in deinitialization
  *
  * - scip SCIP data structure
  * - nlhdlr nonlinear handler
  */
-#define SCIP_DECL_CONSEXPR_NLHDLREXIT(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLREXIT(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr)
+   SCIP_NLHDLR* nlhdlr)
 
 /** callback to detect structure in expression tree
  *
@@ -111,9 +96,9 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * linear under- or overestimation, cut generation, and/or activity computation and propagation.
  *
  * We distinguish the following enforcement methods:
- * - SCIP_CONSEXPR_EXPRENFO_SEPABELOW: linear underestimation or cut generation for the relation expr <= auxvar (denoted as "below")
- * - SCIP_CONSEXPR_EXPRENFO_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
- * - SCIP_CONSEXPR_EXPRENFO_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
+ * - SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW: linear underestimation or cut generation for the relation expr <= auxvar (denoted as "below")
+ * - SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
+ * - SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
  *
  * On input, parameter 'enforcing' indicates for any of these methods, whether
  * - it is not necessary to have such a method, e.g., because no auxvar will exist for expr, or no one uses or set activities of this expression,
@@ -131,14 +116,14 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * cutting planes in some situations only.
  *
  * A nonlinear handler will be called only for those callbacks that it mentioned in participating, which is
- * - ENFO and/or ESTIMATE will be called with overestimate==FALSE if SCIP_CONSEXPR_EXPRENFO_SEPABELOW has been set
- * - ENFO and/or ESTIMATE will be called with overestimate==TRUE if SCIP_CONSEXPR_EXPRENFO_SEPAABOVE has been set
- * - INTEVAL and/or REVERSEPROP will be called if SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set
- * If SCIP_CONSEXPR_EXPRENFO_SEPABELOW or SCIP_CONSEXPR_EXPRENFO_SEPAABOVE has been set, then at least one of the
+ * - ENFO and/or ESTIMATE will be called with overestimate==FALSE if SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW has been set
+ * - ENFO and/or ESTIMATE will be called with overestimate==TRUE if SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE has been set
+ * - INTEVAL and/or REVERSEPROP will be called if SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY has been set
+ * If SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW or SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE has been set, then at least one of the
  * callbacks ENFO and ESTIMATE need to be implemented. Also EVALAUX will be called in this case.
- * If SCIP_CONSEXPR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP needs to be implemented.
+ * If SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP needs to be implemented.
  * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata and can leave participating at its
- * initial value (SCIP_CONSEXPR_EXPRENFO_NONE).
+ * initial value (SCIP_CONSNONLINEAR_EXPRENFO_NONE).
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
  * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
@@ -150,7 +135,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *   They will be available when the INITSEPA callback is called.
  *
  * - scip SCIP data structure
- * - conshdlr expr-constraint handler
+ * - conshdlr nonlinear constraint handler
  * - nlhdlr nonlinear handler
  * - expr expression to analyze
  * - cons the constraint that expression defines, or NULL when the expr does not define any constraint, that is, when it is not the root of an expression of a constraint
@@ -158,30 +143,30 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  * - participating enforcement methods that this nonlinear handler should be called for (to be set by detect callback)
  * - nlhdlrexprdata nlhdlr's expr data to be stored in expr, can only be set to non-NULL if success is set to TRUE
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRDETECT(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRDETECT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
    SCIP_CONS* cons, \
-   SCIP_CONSEXPR_EXPRENFO_METHOD* enforcing, \
-   SCIP_CONSEXPR_EXPRENFO_METHOD* participating, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* enforcing, \
+   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* participating, \
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** auxiliary evaluation callback of nonlinear handler
  *
- * Evaluates the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any)
+ * Evaluates the expression w.r.t. the auxiliary variables that were introduced by the nonlinear handler (if any).
  * The method is used to determine the violation of the relation that the nonlinear
  * handler attempts to enforce. During enforcement, this violation value is used to
  * decide whether separation or branching score callbacks should be called.
  *
  * It can be assumed that the expression itself has been evaluated in the given sol.
  */
-#define SCIP_DECL_CONSEXPR_NLHDLREVALAUX(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLREVALAUX(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_Real* auxvalue, \
    SCIP_SOL* sol)
 
@@ -198,11 +183,11 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - intevalvar : callback to be called when interval evaluating a variable
  *  - intevalvardata : data to be passed to intevalvar callback
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_INTERVAL* interval, \
    SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), \
    void* intevalvardata)
@@ -215,7 +200,7 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr: expr constraint handler
+ *  - conshdlr: nonlinear constraint handler
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
@@ -223,12 +208,12 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
  *  - nreductions : buffer to store the number of interval reductions of all children
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRREVERSEPROP(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_INTERVAL bounds, \
    SCIP_Bool* infeasible, \
    int* nreductions )
@@ -237,8 +222,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - conshdlr        : expression constraint handler
- *  - cons            : expression constraint
+ *  - conshdlr        : nonlinear constraint handler
+ *  - cons            : nonlinear constraint
  *  - nlhdlr          : nonlinear handler
  *  - nlhdlrexprdata  : exprdata of nonlinear handler
  *  - expr            : expression
@@ -248,13 +233,13 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  output:
  *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRINITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
       SCIP_CONSHDLR* conshdlr, \
       SCIP_CONS* cons, \
-      SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+      SCIP_NLHDLR* nlhdlr, \
       SCIP_EXPR* expr, \
-      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+      SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
       SCIP_Bool overestimate, \
       SCIP_Bool underestimate, \
       SCIP_Bool* infeasible)
@@ -267,11 +252,11 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - nlhdlrexprdata  : exprdata of nonlinear handler
  *  - expr            : expression
  */
-#define SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLREXITSEPA(x) SCIP_RETCODE x (\
       SCIP* scip, \
-      SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+      SCIP_NLHDLR* nlhdlr, \
       SCIP_EXPR* expr, \
-      SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata)
+      SCIP_NLHDLREXPRDATA* nlhdlrexprdata)
 
 /** nonlinear handler separation and enforcement callback
  *
@@ -309,8 +294,8 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *
  * input:
  *  - scip : SCIP main data structure
- *  - conshdlr : cons expr handler
- *  - cons : expression constraint
+ *  - conshdlr : cons nonlinear handler
+ *  - cons : nonlinear constraint
  *  - nlhdlr : nonlinear handler
  *  - expr : expression
  *  - nlhdlrexprdata : expression specific data of the nonlinear handler
@@ -322,13 +307,13 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - inenforcement: whether we are in enforcement, or only in separation
  *  - result : pointer to store the result
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRENFO(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRENFO(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
    SCIP_CONS* cons, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
@@ -364,12 +349,12 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
  *  - addbranchscores: indicates whether to register branching scores
  *  - addedbranchscores: buffer to store whether the branching score callback was successful
  */
-#define SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
+#define SCIP_DECL_NLHDLRESTIMATE(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* conshdlr, \
-   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, \
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata, \
    SCIP_SOL* sol, \
    SCIP_Real auxvalue, \
    SCIP_Bool overestimate, \
@@ -379,9 +364,9 @@ typedef struct SCIP_ConsExpr_ExprEnfo SCIP_CONSEXPR_EXPRENFO;        /**< expres
    SCIP_Bool addbranchscores, \
    SCIP_Bool* addedbranchscores)
 
-typedef struct SCIP_ConsExpr_Nlhdlr         SCIP_CONSEXPR_NLHDLR;          /**< nonlinear handler */
-typedef struct SCIP_ConsExpr_NlhdlrData     SCIP_CONSEXPR_NLHDLRDATA;      /**< nonlinear handler data */
-typedef struct SCIP_ConsExpr_NlhdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
+typedef struct SCIP_Nlhdlr         SCIP_NLHDLR;          /**< nonlinear handler */
+typedef struct SCIP_NlhdlrData     SCIP_NLHDLRDATA;      /**< nonlinear handler data */
+typedef struct SCIP_NlhdlrExprData SCIP_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
 
 /** @} */
 
