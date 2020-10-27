@@ -1022,15 +1022,64 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP*                  scip,              /**< SCIP data structure */
    SCIP_CONSHDLR*         conshdlr,          /**< expression constraint handler */
-   SCIP_NLHDLR** nlhdlr,            /**< buffer where to store nonlinear handler */
+   SCIP_NLHDLR**          nlhdlr,            /**< buffer where to store nonlinear handler */
    const char*            name,              /**< name of nonlinear handler (must not be NULL) */
    const char*            desc,              /**< description of nonlinear handler (can be NULL) */
    int                    detectpriority,    /**< detection priority of nonlinear handler */
    int                    enfopriority,      /**< enforcement priority of nonlinear handler */
-   SCIP_DECL_NLHDLRDETECT((*detect)),   /**< structure detection callback of nonlinear handler */
-   SCIP_DECL_NLHDLREVALAUX((*evalaux)), /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_NLHDLRDATA* data            /**< data of nonlinear handler (can be NULL) */
+   SCIP_DECL_NLHDLRDETECT((*detect)),        /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_NLHDLREVALAUX((*evalaux)),      /**< auxiliary evaluation callback of nonlinear handler */
+   SCIP_NLHDLRDATA*       data               /**< data of nonlinear handler (can be NULL) */
    );
+
+/** returns a nonlinear handler of a given name (or NULL if not found) */
+SCIP_EXPORT
+SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   const char*           name                /**< name of nonlinear handler */
+   );
+
+/** gives nonlinear handler expression data
+ *
+ * @return NULL if expr has not been detected by nlhdlr or nlhdlr did not store data
+ */
+SCIP_EXPORT
+SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_EXPR*            expr                /**< expression */
+);
+
+/** call the detect callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLRDETECT(SCIPcallNlhdlrDetectNonlinear);
+
+/** call the auxiliary evaluation callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLREVALAUX(SCIPcallNlhdlrEvalauxNonlinear);
+
+/** calls the interval evaluation callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLRINTEVAL(SCIPcallNlhdlrIntEvalNonlinear);
+
+/** calls the reverse propagation callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLRREVERSEPROP(SCIPcallNlhdlrReversePropNonlinear);
+
+/** calls the separation initialization callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLRINITSEPA(SCIPcallNlhdlrInitSepaNonlinear);
+
+/** calls the separation deinitialization callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLREXITSEPA(SCIPcallNlhdlrExitSepaNonlinear);
+
+/** calls the enforcement callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLRENFO(SCIPcallNlhdlrEnfoNonlinear);
+
+/** calls the estimator callback of a nonlinear handler */
+SCIP_EXPORT
+SCIP_DECL_NLHDLRESTIMATE(SCIPcallNlhdlrEstimateNonlinear);
 
 /** @} */
 
