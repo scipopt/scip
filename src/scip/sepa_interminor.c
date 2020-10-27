@@ -1111,7 +1111,7 @@ SCIP_RETCODE separateDeterminant(
    )
 {
    SCIP_ROWPREP* rowprep;
-   SCIP_VAR* vars[4] = {xik, xil, xjk, xjl};
+   SCIP_VAR* vars[4] = {xik, xjl, xil, xjk};
    SCIP_Real* tableaurows[4];
    SCIP_Bool success;
 
