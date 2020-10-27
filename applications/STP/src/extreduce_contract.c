@@ -599,6 +599,11 @@ SCIP_Bool extreduce_contractionRuleOutPeriph(
 
    addComponent(scip, graph, extdata);
 
+   if( extdata->tree_nleaves <= 2 )
+   {
+      return FALSE;
+   }
+
    if( ruledOut(scip, graph, extdata) )
    {
       SCIPdebugMessage("Rule-out periph (via contraction) \n");
