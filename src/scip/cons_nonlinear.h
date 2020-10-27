@@ -597,6 +597,17 @@ int SCIPgetConsExprExprNLocksNeg(
    SCIP_EXPR*   expr                /**< expression */
    );
 
+/** evaluates quadratic term in a solution w.r.t. auxiliary variables
+ *
+ * \note This requires that for every expr used in the quadratic data, an auxiliary variable is available (or the expression is a variable-expression).
+ */
+SCIP_EXPORT
+SCIP_Real SCIPevalExprQuadraticAux(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
+   );
+
 /** creates the handler for expr constraints and includes it in SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrExpr(

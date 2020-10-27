@@ -31,6 +31,9 @@ extern "C" {
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
 
+/**@name Expression Handler Methods */
+/**@{ */
+
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprHdlr(
@@ -110,7 +113,12 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrLogarithm(
    SCIP*                      scip           /**< SCIP data structure */
 );
 
+/** @} */
 
+
+
+/**@name Expression Methods */
+/**@{ */
 
 /** creates and captures an expression with given expression data and children */
 SCIP_EXPORT
@@ -530,6 +538,78 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    SCIP_EXPR**           varexprs,           /**< array to store all variable expressions */
    int*                  nvarexprs           /**< buffer to store the total number of variable expressions */
    );
+
+/** @} */
+
+
+/**@name Expression iterator */
+/**@{ */
+
+/** gets the index an expression iterator can use to store iterator specific data in an expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPactivateExprIterator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  iterindex           /**< buffer to store iteration index */
+   );
+
+/** returns the index that an expression iterator used to store iterator specific data in an expression */
+SCIP_EXPORT
+void SCIPdeactivateExprIterator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   iterindex           /**< iteration index that is not used anymore */
+   );
+
+/** get a new tag that can be used to mark an expression as visited */
+SCIP_EXPORT
+unsigned int SCIPgetExprIteratorNewVisitedTag(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** @} */
+
+
+
+/**@name Quadratic expression functions */
+/**@{ */
+
+/** evaluates quadratic term in a solution
+ *
+ * \note This requires that every expr used in the quadratic data is a variable expression.
+ */
+SCIP_EXPORT
+SCIP_Real SCIPevalExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
+   );
+
+/** prints quadratic expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprintExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< quadratic expression */
+   );
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ *
+ * If assumevarfixed is given and some entries of x correspond to variables present in
+ * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_EXPRCURV*        curv,               /**< pointer to store the curvature of quadratics */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
+   );
+
+/** @} */
 
 #ifdef __cplusplus
 }
