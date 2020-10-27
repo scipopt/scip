@@ -54,21 +54,20 @@ struct SCIP_Nlhdlr
    SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop));    /**< reverse propagation callback (can be NULL) */
 
    /* statistics */
-   SCIP_Longint          nenfocalls; /**< number of times, the enforcement or estimation callback was called */
-   SCIP_Longint          nintevalcalls; /**< number of times, the interval evaluation callback was called */
-   SCIP_Longint          npropcalls; /**< number of times, the propagation callback was called */
-   SCIP_Longint          nseparated; /**< number of times, the expression handler enforced by separation */
-   SCIP_Longint          ncutoffs;   /**< number of cutoffs found so far by this nonlinear handler */
-   SCIP_Longint          ndomreds;   /**< number of domain reductions found so far by this expression handler */
-   SCIP_Longint          ndetections;/**< number of detect calls in which structure was detected (success returned by detect call) (over all runs) */
-   SCIP_Longint          ndetectionslast;/**< number of detect calls in which structure was detected (success returned by detect call) (in last round) */
-   SCIP_Longint          nbranchscores; /**< number of times, branching scores were added by this nonlinear handler */
+   SCIP_Longint          nenfocalls;         /**< number of times, the enforcement or estimation callback was called */
+   SCIP_Longint          nintevalcalls;      /**< number of times, the interval evaluation callback was called */
+   SCIP_Longint          npropcalls;         /**< number of times, the propagation callback was called */
+   SCIP_Longint          nseparated;         /**< number of times, the expression handler enforced by separation */
+   SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this nonlinear handler */
+   SCIP_Longint          ndomreds;           /**< number of domain reductions found so far by this expression handler */
+   SCIP_Longint          ndetections;        /**< number of detect calls in which structure was detected (success returned by detect call) (over all runs) */
+   SCIP_Longint          ndetectionslast;    /**< number of detect calls in which structure was detected (success returned by detect call) (in last round) */
+   SCIP_Longint          nbranchscores;      /**< number of times, branching scores were added by this nonlinear handler */
 
-   SCIP_CLOCK*           detecttime; /**< time used for detection */
-   SCIP_CLOCK*           enfotime;   /**< time used for enforcement or estimation */
-   SCIP_CLOCK*           proptime;   /**< time used for reverse propagation */
-   SCIP_CLOCK*           intevaltime;/**< time used for interval evaluation */
+   SCIP_CLOCK*           detecttime;         /**< time used for detection */
+   SCIP_CLOCK*           enfotime;           /**< time used for enforcement or estimation */
+   SCIP_CLOCK*           proptime;           /**< time used for reverse propagation */
+   SCIP_CLOCK*           intevaltime;        /**< time used for interval evaluation */
 };
-
 
 #endif /* SCIP_STRUCT_NLHLDR_H_ */

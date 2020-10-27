@@ -26,53 +26,6 @@
 
 #include "scip/type_expr.h"
 
-/** an algebraic expression */
-struct SCIP_Expr
-{
-   SCIP_EXPRHDLR*        exprhdlr;           /**< expression type (as pointer to its handler) */
-   SCIP_EXPRDATA*        exprdata;           /**< expression data */
-
-   int                   nchildren;          /**< number of children */
-   int                   childrensize;       /**< length of children array */
-   SCIP_EXPR**           children;           /**< children expressions */
-
-   int                   nuses;              /**< reference counter */
-   SCIP_EXPRITERDATA     iterdata[SCIP_EXPRITER_MAXNACTIVE];  /**< data for expression iterators */
-
-   /* owner data */
-   SCIP_EXPR_OWNERDATA*  ownerdata;          /**< data stored by owner of expression */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*freeownerdata)); /**< callback for freeing ownerdata */
-
-   /* point-evaluation and differentiation*/
-   unsigned int          evaltag;            /**< tag of point for which the expression has been evaluated last, or 0 */
-   SCIP_Real             evalvalue;          /**< value of expression from last evaluation (corresponding to evaltag) */
-   SCIP_Real             derivative;         /**< partial derivative of a "root path" w.r.t. this expression
-                                               *  (see documentation of Differentiation methods) */
-   SCIP_Real             dot;                /**< directional derivative of this expr */
-   SCIP_Real             bardot;             /**< directional derivative of derivative of root (strictly speaking, a path) w.r.t this expr */
-   unsigned int          difftag;            /**< when computing partial derivatives of an expression w.r.t. a variable,
-                                               *  the tag allows us to decide whether the expression depends on the variable;
-                                               *  the tag will be checked in SCIPgetExprPartialDiff() */
-
-   /* interval-evaluation (activity) */
-   SCIP_INTERVAL         activity;           /**< activity of expression with respect to variable bounds */
-   unsigned int          activitytag;        /**< tag of variable bounds for which activity is valid */
-
-   /* curvature information */
-   SCIP_EXPRCURV         curvature;           /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
-
-   /* monotonicity information of each child */
-   SCIP_MONOTONE*        monotonicity;        /**< array containing monotonicity of expression w.r.t. each children */
-   int                   monotonicitysize;    /**< length of monotonicity array */
-
-   /* integrality information */
-   SCIP_Bool             isintegral;          /**< flag to store whether an expression is integral */
-
-   SCIP_QUADEXPR*        quaddata;            /**< representation of expression as a quadratic, if checked and being quadratic */
-   SCIP_Bool             quadchecked;         /**< whether we checked whether the expression is quadratic */
-};
-
-
 /** generic data and callback methods of an expression handler */
 struct SCIP_ExprHdlr
 {
@@ -121,64 +74,53 @@ struct SCIP_ExprHdlr
    SCIP_CLOCK*           simplifytime;       /**< time used for expression simplification */
 };
 
-
-typedef struct SCIP_QuadExpr_QuadTerm  SCIP_QUADEXPR_QUADTERM;  /**< a single term associated to a quadratic variable */
-typedef struct SCIP_QuadExpr_BilinTerm SCIP_QUADEXPR_BILINTERM; /**< a single bilinear term */
-
-/** data for representation of an expression as quadratic */
-struct SCIP_QuadExpr
+/** an algebraic expression */
+struct SCIP_Expr
 {
-   SCIP_Real                constant;        /**< a constant term */
+   SCIP_EXPRHDLR*        exprhdlr;           /**< expression type (as pointer to its handler) */
+   SCIP_EXPRDATA*        exprdata;           /**< expression data */
 
-   int                      nlinexprs;       /**< number of expressions that appear linearly */
-   SCIP_EXPR**              linexprs;        /**< expressions that appear linearly */
-   SCIP_Real*               lincoefs;        /**< coefficients of expressions that appear linearly */
+   int                   nchildren;          /**< number of children */
+   int                   childrensize;       /**< length of children array */
+   SCIP_EXPR**           children;           /**< children expressions */
 
-   int                      nquadexprs;      /**< number of expressions in quadratic terms */
-   SCIP_QUADEXPR_QUADTERM*  quadexprterms;   /**< array with quadratic expression terms */
+   int                   nuses;              /**< reference counter */
+   SCIP_EXPRITERDATA     iterdata[SCIP_EXPRITER_MAXNACTIVE];  /**< data for expression iterators */
 
-   int                      nbilinexprterms; /**< number of bilinear expressions terms */
-   SCIP_QUADEXPR_BILINTERM* bilinexprterms;  /**< bilinear expression terms array */
+   /* owner data */
+   SCIP_EXPR_OWNERDATA*  ownerdata;          /**< data stored by owner of expression */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*freeownerdata)); /**< callback for freeing ownerdata */
 
-   SCIP_Bool                allexprsarevars; /**< whether all arguments (linexprs, quadexprterms[.].expr) are variable expressions */
+   /* point-evaluation and differentiation*/
+   unsigned int          evaltag;            /**< tag of point for which the expression has been evaluated last, or 0 */
+   SCIP_Real             evalvalue;          /**< value of expression from last evaluation (corresponding to evaltag) */
+   SCIP_Real             derivative;         /**< partial derivative of a "root path" w.r.t. this expression
+                                               *  (see documentation of Differentiation methods) */
+   SCIP_Real             dot;                /**< directional derivative of this expr */
+   SCIP_Real             bardot;             /**< directional derivative of derivative of root (strictly speaking, a path) w.r.t this expr */
+   unsigned int          difftag;            /**< when computing partial derivatives of an expression w.r.t. a variable,
+                                               *  the tag allows us to decide whether the expression depends on the variable;
+                                               *  the tag will be checked in SCIPgetExprPartialDiff() */
 
-   SCIP_EXPRCURV            curvature;       /**< curvature of the quadratic representation of the expression */
-   SCIP_Bool                curvaturechecked;/**< whether curvature has been checked */
-   SCIP_Bool                eigeninfostored; /**< whether the eigen information is stored */
+   /* interval-evaluation (activity) */
+   SCIP_INTERVAL         activity;           /**< activity of expression with respect to variable bounds */
+   unsigned int          activitytag;        /**< tag of variable bounds for which activity is valid */
 
-   /* eigen decomposition information */
-   SCIP_Real*               eigenvalues;     /**< eigenvalues of the Q matrix: size of nquadexprs */
-   SCIP_Real*               eigenvectors;    /**< eigenvalues of the Q matrix; size of nquadexprs^2 */
+   /* curvature information */
+   SCIP_EXPRCURV         curvature;           /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
+
+   /* monotonicity information of each child */
+   SCIP_MONOTONE*        monotonicity;        /**< array containing monotonicity of expression w.r.t. each children */
+   int                   monotonicitysize;    /**< length of monotonicity array */
+
+   /* integrality information */
+   SCIP_Bool             isintegral;          /**< flag to store whether an expression is integral */
+
+   SCIP_QUADEXPR*        quaddata;            /**< representation of expression as a quadratic, if checked and being quadratic */
+   SCIP_Bool             quadchecked;         /**< whether we checked whether the expression is quadratic */
 };
 
-/** data structure to store a single term associated to a quadratic variable */
-struct SCIP_QuadExpr_QuadTerm
-{
-   SCIP_EXPR*            expr;               /**< quadratic expression */
-   SCIP_Real             lincoef;            /**< linear coefficient of variable */
-   SCIP_Real             sqrcoef;            /**< square coefficient of variable */
-
-   int                   nadjbilin;          /**< number of bilinear terms this variable is involved in */
-   int                   adjbilinsize;       /**< size of adjacent bilinear terms array */
-   int*                  adjbilin;           /**< indices of associated bilinear terms */
-
-   SCIP_EXPR*            sqrexpr;            /**< expression that was found to be the square of expr, or NULL if no square term (sqrcoef==0) */
-};
-
-/** data structure to store a single bilinear term coef * expr1 * expr2  (similar to SCIP_QUADELEM)
- * except for temporary reasons, we assume that the index of var1 is smaller than the index of var2
- */
-struct SCIP_QuadExpr_BilinTerm
-{
-   SCIP_EXPR*            expr1;              /**< first factor of bilinear term */
-   SCIP_EXPR*            expr2;              /**< second factor of bilinear term */
-   SCIP_Real             coef;               /**< coefficient of bilinear term */
-   int                   pos2;               /**< position of expr2's quadexprterm in quadexprterms */
-
-   SCIP_EXPR*            prodexpr;           /**< expression that was found to be the product of expr1 and expr2 */
-};
-
-/* expression iteration data */
+/* expression iteration data stored in an expression */
 struct SCIP_ExprIterData
 {
    SCIP_EXPR*             parent;            /**< parent expression in DFS iteration */
@@ -186,7 +128,6 @@ struct SCIP_ExprIterData
    unsigned int           visitedtag;        /**< tag to identify whether an expression has been visited already */
    SCIP_EXPRITER_USERDATA userdata;          /**< space for iterator user to store some (temporary) data */
 };
-
 
 /** expression iterator */
 struct SCIP_ExprIter

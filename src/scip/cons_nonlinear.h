@@ -116,7 +116,6 @@ typedef struct SCIP_RowPrep SCIP_ROWPREP;
 #define SCIP_CONSNONLINEAR_EXPRENFO_ALL            (SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH | SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) /**< all enforcement methods */
 
 typedef unsigned int  SCIP_CONSNONLINEAR_EXPRENFO_METHOD; /**< exprenfo bitflags */
-//typedef struct SCIP_ExprEnfo SCIP_CONSNONLINEAR_EXPRENFO; /**< expression enforcement data */
 /** @} */
 
 /** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes

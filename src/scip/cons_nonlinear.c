@@ -73,10 +73,9 @@
 
 /* TODO: fill in the necessary constraint data */
 
-// MOVE to cons_nonlinear
-struct SCIP_expr_userdata
+/** data stored by nonlinear constraint handler in an expression that belongs to a nonlinear constraint */
+struct SCIP_Expr_OwnerData
 {
-
    int                     nlockspos;     /**< positive locks counter */
    int                     nlocksneg;     /**< negative locks counter */
 
@@ -103,7 +102,7 @@ struct SCIP_expr_userdata
 };
 
 /** enforcement data of an expression */
-struct SCIP_ConsExpr_ExprEnfo
+struct SCIP_ExprEnfo
 {
    SCIP_NLHDLR*         nlhdlr;          /**< nonlinear handler */
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata;  /**< data of nonlinear handler */
@@ -113,6 +112,7 @@ struct SCIP_ConsExpr_ExprEnfo
    SCIP_Bool                     sepabelowusesactivity;/**< whether sepabelow uses activity of some expression */
    SCIP_Bool                     sepaaboveusesactivity;/**< whether sepaabove uses activity of some expression */
 };
+typedef struct SCIP_ExprEnfo SCIP_CONSNONLINEAR_EXPRENFO; /**< expression enforcement data */
 
 /** constraint data for nonlinear constraints */
 struct SCIP_ConsData

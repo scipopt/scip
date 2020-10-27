@@ -26,7 +26,7 @@
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
-
+typedef struct SCIP_Expr_OwnerData SCIP_EXPR_OWNERDATA; /**< data stored by expression owner in expression */
 typedef struct SCIP_QuadExpr  SCIP_QUADEXPR;     /**< representation of expression as quadratic */
 
 /** monotonicity */

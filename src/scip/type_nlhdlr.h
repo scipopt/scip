@@ -24,7 +24,6 @@
 #ifndef SCIP_TYPE_NLHDLR_H_
 #define SCIP_TYPE_NLHDLR_H_
 
-
 /** @name Nonlinear Handler
  * @{
  */
@@ -369,6 +368,5 @@ typedef struct SCIP_NlhdlrData     SCIP_NLHDLRDATA;      /**< nonlinear handler 
 typedef struct SCIP_NlhdlrExprData SCIP_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
 
 /** @} */
-
 
 #endif /* SCIP_TYPE_NLHDLR_H_ */
