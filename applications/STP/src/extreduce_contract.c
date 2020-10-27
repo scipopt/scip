@@ -502,7 +502,7 @@ SCIP_Bool ruledOut(
 
       if( mst_new->nnodes > 3 && EQ(mstweight, tree_cost) )
       {
-         printf("ruled-out with equality %f <= %f, contraction-level=%d \n", mstweight, tree_cost, i);
+         SCIPdebugMessage("ruled-out with equality %f <= %f, contraction-level=%d \n", mstweight, tree_cost, i);
          ruledOut = TRUE;
          break;
       }
