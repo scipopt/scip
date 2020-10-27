@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   nlhdlr.h
+/**@file   pub_nlhdlr.h
  * @brief  public functions of nonlinear handlers of nonlinear constraints
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
@@ -21,8 +21,8 @@
  * @author Stefan Vigerske
  */
 
-#ifndef SCIP_NLHDLR_H_
-#define SCIP_NLHDLR_H_
+#ifndef SCIP_PUB_NLHDLR_H_
+#define SCIP_PUB_NLHDLR_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -154,4 +154,4 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
 }
 #endif
 
-#endif /* SCIP_NLHDLR_H_ */
+#endif /* SCIP_PUB_NLHDLR_H_ */
