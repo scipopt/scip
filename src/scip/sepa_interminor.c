@@ -855,12 +855,15 @@ SCIP_RETCODE getTableauRows(
    SCIP_VAR**            vars,               /**< variables in the minor */
    int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
    SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
-   SCIP_Real**           tableaurows         /**< buffer to store tableau row */
+   SCIP_Real**           tableaurows,        /**< buffer to store tableau row */
+   SCIP_Bool*            success             /**< TRUE if no vatriable had basisstat = ZERO */
    )
 {
    int v;
    int nrows;
    int ncols;
+
+   *success = TRUE;
 
    nrows = SCIPgetNLPRows(scip);
    ncols = SCIPgetNLPCols(scip);
@@ -893,6 +896,7 @@ SCIP_RETCODE getTableauRows(
          }
          else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
          {
+            *success = FALSE;
             return SCIP_OKAY; /* don't even bother */
             /* TODO: please Antonia, could you be so nice to make sure that we are releasing all the memory that we allocated if any */
          }
@@ -1115,7 +1119,10 @@ SCIP_RETCODE separateDeterminant(
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
 
    /* check if we have the tableau row of the variable and if not compute it */
-   SCIP_CALL( getTableauRows(scip, vars, basicvarpos2tableaurow, tableau, tableaurows) );
+   SCIP_CALL( getTableauRows(scip, vars, basicvarpos2tableaurow, tableau, tableaurows, &success) );
+
+   if( ! success )
+      goto CLEANUP;
 
    /* loop over each non-basic var; get the ray; compute cut coefficient */
    SCIP_CALL( addCols(scip, vars, tableaurows, rowprep, &success) );
