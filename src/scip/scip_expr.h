@@ -113,6 +113,85 @@ SCIP_EXPRHDLR* SCIPgetExprHdlrLogarithm(
    SCIP*                      scip           /**< SCIP data structure */
 );
 
+/** calls the print callback of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRPRINT(SCIPcallExprhdlrPrint);
+
+/** calls the parse callback of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRPARSE(SCIPcallExprhdlrParse);
+
+/** calls the expression hash callback */
+SCIP_EXPORT
+SCIP_DECL_EXPRHASH(SCIPcallExprhdlrHash);
+
+/** calls the expression compare callback */
+SCIP_EXPORT
+SCIP_DECL_EXPRCOMPARE(SCIPcallExprhdlrCompare);
+
+/** calls the backward-differentiation callback of an expression handler
+ *
+ * further, allows to different w.r.t. given expression and children values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcallExprhdlrBwdiff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   childidx,           /**< index of child w.r.t. which to compute derivative */
+   SCIP_Real*            derivative,         /**< buffer to store value of derivative */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real             exprval             /**< value for expression, used only if childrenvals is not NULL */
+);
+
+/** calls the backward-forward differentiation callback of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRBWFWDIFF(SCIPcallExprhdlrBwfwdiff);
+
+/** calls the forward differentiation callback of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRFWDIFF(SCIPcallExprhdlrFwdiff);
+
+/** calls the evaluation callback of an expression handler
+ *
+ * further, allows to evaluate w.r.t. given children values
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcallExprhdlrEval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            val,                /**< buffer store value of expression */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*             sol                 /**< solution that is evaluated (used by the var-expression) */
+);
+
+/** calls the expression interval evaluation callback */
+SCIP_EXPORT
+SCIP_DECL_EXPRINTEVAL(SCIPcallExprhdlrIntEval);
+
+/** calls estimator method of expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRESTIMATE(SCIPcallExprhdlrEstimate);
+
+/** calls the simplification method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprhdlrSimplify);
+
+/** calls the curvature check method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRCURVATURE(SCIPcallExprhdlrCurvature);
+
+/** calls the expression callback for reverse propagation */
+SCIP_EXPORT
+SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprhdlrReverseProp);
+
+/** calls the separation initialization method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRINITSEPA(SCIPcallExprhdlrInitSepa);
+
+/** calls the separation deinitialization method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPREXITSEPA(SCIPcallExprhdlrExitSepa);
+
 /** @} */
 
 
