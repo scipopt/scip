@@ -45,7 +45,9 @@
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
+#define CONSHDLR_MAXSTALLS           10 /**< disable after this many unsuccessful calls in a row */
 
+static int ncurrentstalls = 0; /* number of times the exact lp was solved unsuccesfully in a row */
 
 /*
  * Callback methods of constraint handler
@@ -113,6 +115,10 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    *result = SCIP_FEASIBLE;
    foundsol = FALSE;
+
+   /* disable exact sol if we stalled too often in a row */
+   if( ncurrentstalls >= CONSHDLR_MAXSTALLS )
+      return SCIP_OKAY;
 
    /* if the solution doesn't come from a heuristic, ignore it */
    if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
@@ -258,11 +264,15 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    endtime = SCIPgetSolvingTime(scip);
    if( foundsol )
    {
+      ncurrentstalls = 0;
       scip->stat->nfoundexactsol++;
       scip->stat->timesuccessexactsol += (endtime - starttime);
    }
    else
+   {
+      ncurrentstalls++;
       scip->stat->timefailexactsol += (endtime - starttime);
+   }
 
    return SCIP_OKAY;
 }
