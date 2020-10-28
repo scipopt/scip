@@ -172,6 +172,10 @@ SCIP_DECL_EXPRINTEVAL(SCIPcallExprhdlrIntEval);
 SCIP_EXPORT
 SCIP_DECL_EXPRESTIMATE(SCIPcallExprhdlrEstimate);
 
+/** calls the intitial estimators method of an expression handler */
+SCIP_EXPORT
+SCIP_DECL_EXPRINITESTIMATES(SCIPcallExprhdlrInitEstimates);
+
 /** calls the simplification method of an expression handler */
 SCIP_EXPORT
 SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprhdlrSimplify);
@@ -183,14 +187,6 @@ SCIP_DECL_EXPRCURVATURE(SCIPcallExprhdlrCurvature);
 /** calls the expression callback for reverse propagation */
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprhdlrReverseProp);
-
-/** calls the separation initialization method of an expression handler */
-SCIP_EXPORT
-SCIP_DECL_EXPRINITSEPA(SCIPcallExprhdlrInitSepa);
-
-/** calls the separation deinitialization method of an expression handler */
-SCIP_EXPORT
-SCIP_DECL_EXPREXITSEPA(SCIPcallExprhdlrExitSepa);
 
 /** @} */
 

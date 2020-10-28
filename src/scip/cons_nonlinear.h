@@ -415,7 +415,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_NLHDLR* nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler which provided the estimator */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_ROWPREP*         rowprep,            /**< cut to be added */
@@ -532,7 +532,7 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
 /**@} */
 
 
-/**@name Expression Constraint Methods */
+/**@name Nonlinear Constraint Methods */
 /**@{ */
 
 /** returns the expression of the given nonlinear constraint */
@@ -540,14 +540,6 @@ SCIP_EXPORT
 SCIP_EXPR* SCIPgetExprConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
-   );
-
-/** gets the nonlinear constraint as a nonlinear row representation. */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetNlRowConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** gets the left hand side of a nonlinear constraint */
@@ -562,6 +554,14 @@ SCIP_EXPORT
 SCIP_Real SCIPgetRhsConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the nonlinear constraint as a nonlinear row representation. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetNlRowConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    );
 
 /** returns the root curvature of the given nonlinear constraint
@@ -704,8 +704,8 @@ SCIP_EXPORT
 void SCIPgetExprEnfoDataNonlinear(
    SCIP_EXPR*            expr,                         /**< expression */
    int                   idx,                          /**< position of enforcement in enfos array */
-   SCIP_NLHDLR** nlhdlr,                      /**< buffer to store nlhldr */
-   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,      /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_NLHDLR**         nlhdlr,                       /**< buffer to store nlhldr */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,               /**< buffer to store nlhdlr data for expression, or NULL */
    SCIP_CONSNONLINEAR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
    SCIP_Bool*            sepabelowusesactivity,        /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
    SCIP_Bool*            sepaaboveusesactivity,        /**< buffer to store whether sepaabove uses activity of some expression, or NULL */

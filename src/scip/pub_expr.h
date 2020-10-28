@@ -129,13 +129,12 @@ SCIP_RETCODE SCIPexprhdlrSetReverseProp(
    SCIP_DECL_EXPRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
-/** set the separation and estimation callbacks of an expression handler */
+/** set the and estimation callbacks of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetSepa(
-   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
-   SCIP_DECL_EXPRINITSEPA((*initsepa)),      /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_EXPREXITSEPA((*exitsepa)),      /**< separation deinitialization callback (can be NULL) */
-   SCIP_DECL_EXPRESTIMATE((*estimate))       /**< estimator callback (can be NULL) */
+SCIP_RETCODE SCIPexprhdlrSetEstimate(
+   SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
+   SCIP_DECL_EXPRINITESTIMATES((*initestimates)), /**< initial estimators callback (can be NULL) */
+   SCIP_DECL_EXPRESTIMATE((*estimate))            /**< estimator callback (can be NULL) */
 );
 
 /** gives the name of an expression handler */
@@ -186,6 +185,12 @@ SCIP_Bool SCIPexprhdlrHasEstimate(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
+/** returns whether expression handler implements the initial estimators callback */
+SCIP_EXPORT
+SCIP_Bool SCIPexprhdlrHasInitEstimates(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
 /** returns whether expression handler implements the simplification callback */
 SCIP_EXPORT
 SCIP_Bool SCIPexprhdlrHasSimplify(
@@ -201,18 +206,6 @@ SCIP_Bool SCIPexprhdlrHasCurvature(
 /** returns whether expression handler implements the reverse propagation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPexprhdlrHasReverseProp(
-   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-   );
-
-/** returns whether expression handler implements the initialization callback */
-SCIP_EXPORT
-SCIP_Bool SCIPexprhdlrHasInitSepa(
-   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
-   );
-
-/** returns whether expression handler implements the deinitialization callback */
-SCIP_EXPORT
-SCIP_Bool SCIPexprhdlrHasExitSepa(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
@@ -317,7 +310,7 @@ SCIP_Real SCIPexprGetDot(
  */
 SCIP_EXPORT
 unsigned int SCIPexprGetDiffTag(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    );
 
 /** returns the activity of the expression

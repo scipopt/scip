@@ -48,9 +48,8 @@ struct SCIP_ExprHdlr
    SCIP_DECL_EXPRFWDIFF((*fwdiff));          /**< forward derivative evaluation callback (can be NULL) */
    SCIP_DECL_EXPRBWFWDIFF((*bwfwdiff));      /**< backward over forward derivative evaluation callback (can be NULL) */
    SCIP_DECL_EXPRINTEVAL((*inteval));        /**< interval evaluation callback (can be NULL) */
-   SCIP_DECL_EXPRINITSEPA((*initsepa));      /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_EXPREXITSEPA((*exitsepa));      /**< separation deinitialization callback (can be NULL) */
    SCIP_DECL_EXPRESTIMATE((*estimate));      /**< estimation callback (can be NULL) */
+   SCIP_DECL_EXPRINITESTIMATES((*initestimates)); /**< initial estimators callback (can be NULL) */
    SCIP_DECL_EXPRREVERSEPROP((*reverseprop));/**< reverse propagation callback (can be NULL) */
    SCIP_DECL_EXPRHASH((*hash));              /**< hash callback (can be NULL) */
    SCIP_DECL_EXPRCURVATURE((*curvature));    /**< curvature detection callback (can be NULL) */

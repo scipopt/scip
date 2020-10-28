@@ -79,8 +79,8 @@ typedef enum
 /**@name Expression Handler */
 /**@{ */
 
-typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_EXPRHDLR;     /**< expression handler */
-typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data */
+typedef struct SCIP_ExprHdlr     SCIP_EXPRHDLR;     /**< expression handler */
+typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data */
 
 /** expression handler copy callback
  *
@@ -454,6 +454,37 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression han
    SCIP_Bool* success, \
    SCIP_Bool* branchcand)
 
+/** expression initial under/overestimation callback
+ *
+ * The method tries to compute a few linear under- or overestimator that approximate the
+ * behavior of the expression w.r.t. current activity on children. These estimators may
+ * be used to initialize a linear relaxation.
+ * The callback shall return the number of computed estimators in nreturned,
+ * store the coefficient of the i-th child for the j-th estimator in entry coefs[j][i],
+ * store the constant part for the j-th estimator in *constant[j], and
+ * indicate whether the estimator is valid w.r.t. children activity only in islocal[j].
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - expr            : expression
+ *  - overestimate    : whether the expression shall be overestimated or underestimated
+ *
+ *  output:
+ *  - coefs     : buffer to store coefficients of computed estimators
+ *  - constant  : buffer to store constant of computed estimators
+ *  - islocal   : buffer to return whether estimator validity depends on children activity
+ *  - nreturned : buffer to store number of estimators that have been computed
+ */
+#define SCIP_DECL_EXPRINITESTIMATES(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
+   SCIP_Bool  overestimate, \
+   SCIP_Real* coefs[10], \
+   SCIP_Real* constant[10], \
+   SCIP_Bool* islocal[10], \
+   int*       nreturned \
+   )
+
 /** expression simplify callback
  *
  * the method receives the expression to be simplified and a pointer to store the simplified expression
@@ -486,36 +517,6 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression han
    SCIP_INTERVAL  bounds, \
    SCIP_Bool*     infeasible, \
    SCIP_INTERVAL* childrenbounds)
-
-/** separation initialization method of an expression handler (called during CONSINITLP)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - cons            : nonlinear constraint for which the relaxation is initialized
- *  - expr            : expression
- *  - overestimate    : whether the expression needs to be overestimated
- *  - underestimate   : whether the expression needs to be underestimated
- *
- *  output:
- *  - infeasible      : pointer to store whether an infeasibility was detected while building the LP
- */
-#define SCIP_DECL_EXPRINITSEPA(x) SCIP_RETCODE x (\
-   SCIP*      scip, \
-   SCIP_CONS* cons, \
-   SCIP_EXPR* expr, \
-   SCIP_Bool  overestimate, \
-   SCIP_Bool  underestimate, \
-   SCIP_Bool* infeasible)
-
-/** separation deinitialization method of an expression handler (called during CONSEXITSOL)
- *
- *  input:
- *  - scip            : SCIP main data structure
- *  - expr            : expression
- */
-#define SCIP_DECL_EXPREXITSEPA(x) SCIP_RETCODE x (\
-   SCIP*      scip, \
-   SCIP_EXPR* expr)
 
 /** @} */  /* expression handler */
 
