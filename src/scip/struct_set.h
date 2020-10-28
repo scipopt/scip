@@ -51,6 +51,7 @@
 #include "nlpi/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
+#include "scip/type_expr.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -86,6 +87,7 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
+   SCIP_EXPRHDLR**       exprhdlrs;          /**< expression handler */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
@@ -127,6 +129,8 @@ struct SCIP_Set
    int                   tablessize;         /**< size of tables array */
    int                   ndialogs;           /**< number of dialogs */
    int                   dialogssize;        /**< size of dialogs array */
+   int                   nexprhdlrs;         /**< number of expression handlers */
+   int                   exprhdlrssize;      /**< size of expression handlers array */
    int                   nnlpis;             /**< number of NLPIs */
    int                   nlpissize;          /**< size of NLPIs array */
    int                   nconcsolvertypes;   /**< number of concurrent solver types */
@@ -160,6 +164,7 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
+   SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             benderssorted;      /**< are the Benders' algorithms sorted by activity and priority? */
    SCIP_Bool             bendersnamesorted;  /**< are the Benders' algorithms sorted by name? */

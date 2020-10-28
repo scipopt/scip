@@ -55,6 +55,7 @@
 #include "scip/table.h"
 #include "scip/prop.h"
 #include "scip/benders.h"
+#include "scip/expr.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
@@ -857,6 +858,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
+   SCIP_Bool             copyexprhdlrs,      /**< should the expression handlers be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
@@ -1031,6 +1033,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all expression handler */
+   if( copyexprhdlrs && sourceset->exprhdlrs != NULL )
+   {
+      for( p = sourceset->nexprhdlrs - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPexprhdlrCopyInclude(sourceset->exprhdlrs[p], targetset) );
+      }
+   }
+
    /* copy all NLP interfaces */
    if( copynlpis && sourceset->nlpis != NULL )
    {
@@ -1178,6 +1189,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->dialogs = NULL;
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
+   (*set)->exprhdlrs = NULL;
+   (*set)->nexprhdlrs = 0;
+   (*set)->exprhdlrssize = 0;
+   (*set)->exprhdlrssorted = FALSE;
    (*set)->nlpis = NULL;
    (*set)->nnlpis = 0;
    (*set)->nlpissize = 0;
@@ -2808,6 +2823,13 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free dialogs */
    BMSfreeMemoryArrayNull(&(*set)->dialogs);
+
+   /* free expression handler */
+   for( i = 0; i < (*set)->nexprhdlrs; ++i )
+   {
+      SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->nexprhdlrs);
 
    /* free NLPIs */
    for( i = 0; i < (*set)->nnlpis; ++i )
@@ -4896,6 +4918,61 @@ SCIP_Bool SCIPsetExistsDialog(
    }
 
    return FALSE;
+}
+
+/** inserts expression handler in expression handler list */
+SCIP_RETCODE SCIPsetIncludeExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(set != NULL);
+   assert(exprhdlr != NULL);
+
+   if( set->nexprhdlrs >= set->exprhdlrssize )
+   {
+      set->exprhdlrssize = SCIPsetCalcMemGrowSize(set, set->nexprhdlrs+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->nexprhdlrs, set->exprhdlrssize) );
+   }
+   assert(set->nexprhdlrs < set->exprhdlrssize);
+
+   set->exprhdlrs[set->nexprhdlrs] = exprhdlr;
+   set->nexprhdlrs++;
+   set->exprhdlrssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the expression handler of the given name, or NULL if not existing */
+SCIP_NLPI* SCIPsetFindExprhdlr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of expression handler */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nexprhdlrs; ++i )
+      if( strcmp(SCIPexprhdlrGetName(set->exprhdlrs[i]), name) == 0 )
+         return set->exprhdlrs[i];
+
+   return NULL;
+}
+
+/** sorts expression handlers by name */
+void SCIPsetSortExprhdlrs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exprhdlrssorted )
+   {
+      SCIPsortPtr((void**)set->exprhdlrs, SCIPexprhdlrsComp, set->nexprhdlrs);
+      set->exprhdlrssorted = TRUE;
+   }
 }
 
 /** inserts NLPI in NLPI list */
