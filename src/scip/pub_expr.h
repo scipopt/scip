@@ -216,6 +216,10 @@ SCIP_Bool SCIPexprhdlrHasExitSepa(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
+/** compares two expression handler w.r.t. their name */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp);
+
 /** increments the branching score count of an expression handler */
 SCIP_EXPORT
 void SCIPexprhdlrIncrementNBranchScore(

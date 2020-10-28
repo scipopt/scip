@@ -4970,7 +4970,7 @@ void SCIPsetSortExprhdlrs(
 
    if( !set->exprhdlrssorted )
    {
-      SCIPsortPtr((void**)set->exprhdlrs, SCIPexprhdlrsComp, set->nexprhdlrs);
+      SCIPsortPtr((void**)set->exprhdlrs, SCIPexprhdlrComp, set->nexprhdlrs);
       set->exprhdlrssorted = TRUE;
    }
 }

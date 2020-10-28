@@ -24,6 +24,6 @@
 #ifndef SCIP_EXPR_H_
 #define SCIP_EXPR_H_
 
-
+#include "scip/pub_expr.h"
 
 #endif /* SCIP_EXPR_H_ */
