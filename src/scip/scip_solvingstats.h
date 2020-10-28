@@ -324,6 +324,52 @@ SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets number of calls to exact lp solver
+ *
+ *  @return the number of branch and bound runs performed, including the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+int SCIPgetNExactLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of calls to exact repair heuristic
+ *
+ *  @return the number of branch and bound runs performed, including the current run
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+int SCIPgetNExactSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets total number of iterations used so far in primal and dual simplex and barrier algorithm
  *
  *  @return the total number of iterations used so far in primal and dual simplex and barrier algorithm
