@@ -862,25 +862,8 @@ SCIP_EXPORT
 SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPcomputeHessianDirNonlinear() call */
+   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPcomputeExprHessianDir() call */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
-   );
-
-/** computes the Hessian * v at a given point
- *
- * Evaluates children, if necessary.
- * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear()
- * If an error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeHessianDirNonlinear(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,         /**< nonlinear constraint handler */
-   SCIP_CONS*            cons,             /**< constraint for which we will compute directional derivative */
-   SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
-   SCIP_SOL*             direction,        /**< direction */
-   unsigned int          soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
 /** possibly reevaluates and then returns the activity of the expression

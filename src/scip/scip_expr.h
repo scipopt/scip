@@ -514,9 +514,25 @@ SCIP_RETCODE SCIPevalExpr(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
    unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
+/** computes the Hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcomputeExprHessianDir(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction         /**< direction */
    );
 
 /**@} */  /* end of differentiation methods */
