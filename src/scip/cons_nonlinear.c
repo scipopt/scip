@@ -15,7 +15,7 @@
 
 /**@file   cons_nonlinear.c
  * @ingroup DEFPLUGINS_CONS
- * @brief  constraint handler for nonlinear constraints specified by algebraic expressions
+ * @brief  constraint handler for nonlinear constraints  specified by algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano
@@ -24,48 +24,81 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#ifdef SCIP_DEBUG
+#define ENFO_LOGGING
+#endif
+
+/* enable to get log output for enforcement */
+/* #define ENFO_LOGGING */
+/* define to get enforcement logging into file */
+/* #define ENFOLOGFILE "consexpr_enfo.log" */
+
+/* define to get more debug output from domain propagation */
+/* #define DEBUG_PROP */
+
+/*lint -e528*/
+
 #include <assert.h>
 
 #include "scip/cons_nonlinear.h"
+#include "scip/cons_and.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/heur_subnlp.h"
+#include "scip/heur_trysol.h"
+#include "scip/debug.h"
 
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
 #define CONSHDLR_DESC          "handler for nonlinear constraints specified by algebraic expressions"
-#define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_ENFOPRIORITY       -60 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY -4000010 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 /* optional constraint handler properties */
-/* TODO: remove properties which are never used because the corresponding routines are not supported */
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
+#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
-#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
-/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
- * maybe should derive this from the current feastol (e.g., 10/feastol)
+/* properties of the nonlinear constraint handler statistics table */
+#define TABLE_NAME_EXPR                          "nonlinear"
+#define TABLE_DESC_EXPR                          "nonlinear constraint handler statistics"
+#define TABLE_POSITION_EXPR                      12500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_EXPR                SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+
+#define VERTEXPOLY_MAXPERTURBATION      1e-3 /**< maximum perturbation */
+#define VERTEXPOLY_USEDUALSIMPLEX       TRUE /**< use dual or primal simplex algorithm? */
+#define VERTEXPOLY_RANDNUMINITSEED  20181029 /**< seed for random number generator, which is used to move points away from the boundary */
+#define VERTEXPOLY_ADJUSTFACETFACTOR     1e1 /**< adjust resulting facets in checkRikun() up to a violation of this value times lpfeastol */
+
+#define BRANCH_RANDNUMINITSEED      20191229 /**< seed for random number generator, which is used to select from several similar good branching candidates */
+
+#define BILIN_MAXNAUXEXPRS                10 /**< maximal number of auxiliary expressions per bilinear term */
+
+/** translate from one value of infinity to another
+ *
+ *  if val is >= infty1, then give infty2, else give val
  */
-#define SCIP_CONSEXPR_CUTMAXRANGE 1.0e7
+#define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
+/** translates x to 2^x for non-negative integer x */
+#define POWEROFTWO(x) (0x1u << (x))
 
-
-/* TODO: (optional) enable linear or nonlinear constraint upgrading */
-#if SCIP_DISABLED_CODE
-#include "scip/cons_linear.h"
-#include "scip/cons_expr.h"
-#define LINCONSUPGD_PRIORITY          0 /**< priority of the constraint handler for upgrading of linear constraints */
-#define NONLINCONSUPGD_PRIORITY       0 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+#ifdef ENFO_LOGGING
+#define ENFOLOG(x) if( SCIPgetSubscipDepth(scip) == 0 && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL ) { x }
+FILE* enfologfile = NULL;
+#else
+#define ENFOLOG(x)
 #endif
-
 
 /*
  * Data structures

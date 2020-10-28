@@ -133,6 +133,11 @@ typedef unsigned int  SCIP_CONSNONLINEAR_EXPRENFO_METHOD; /**< exprenfo bitflags
 /** maximum dimension of vertex-polyhedral function for which we can try to compute a facet of its convex or concave envelope */
 #define SCIP_MAXVERTEXPOLYDIM 14
 
+/* maybe should make this a parameter (was cutmaxrange in other conshdlr)
+ * maybe should derive this from the current feastol (e.g., 10/feastol)
+ */
+#define SCIP_CONSNONLINEAR_CUTMAXRANGE 1.0e7
+
 /** upgrading method for nonlinear constraints into more specific constraints
  *
  * the method might upgrade an nonlinear constraint into a set of upgrade constraints

@@ -23,3 +23,4 @@
 
 #include "scip/scip_expr.h"
 #include "scip/expr.h"
+#include "nlpi/nlpi_ipopt.h" /* for LAPACK */
