@@ -199,6 +199,7 @@ Fixed bugs
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - Fixed bug with multi-aggregated integer variables in cons_xor.
+- Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 
 Miscellaneous
 -------------
