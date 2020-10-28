@@ -569,20 +569,20 @@ typedef struct SCIP_ExprIter     SCIP_EXPRITER;      /**< expression iterator */
  * @{
  */
 
-#define SCIP_EXPRPRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
-#define SCIP_EXPRPRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
-#define SCIP_EXPRPRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
-#define SCIP_EXPRPRINTDOT_NLOCKS       0x8u /**< print number of locks */
-#define SCIP_EXPRPRINTDOT_EVALVALUE   0x10u /**< print evaluation value */
-#define SCIP_EXPRPRINTDOT_EVALTAG     0x30u /**< print evaluation value and tag */
-#define SCIP_EXPRPRINTDOT_ACTIVITY    0x40u /**< print activity value */
-#define SCIP_EXPRPRINTDOT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
+#define SCIP_EXPRPRINT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
+#define SCIP_EXPRPRINT_EXPRHDLR     0x2u /**< print expression handler name */
+#define SCIP_EXPRPRINT_NUSES        0x4u /**< print number of uses (reference counting) */
+#define SCIP_EXPRPRINT_NLOCKS       0x8u /**< print number of locks */
+#define SCIP_EXPRPRINT_EVALVALUE   0x10u /**< print evaluation value */
+#define SCIP_EXPRPRINT_EVALTAG     0x30u /**< print evaluation value and tag */
+#define SCIP_EXPRPRINT_ACTIVITY    0x40u /**< print activity value */
+#define SCIP_EXPRPRINT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
 
 /** print everything */
-#define SCIP_EXPRPRINTDOT_ALL SCIP_EXPRPRINTDOT_EXPRSTRING | SCIP_EXPRPRINTDOT_EXPRHDLR | SCIP_EXPRPRINTDOT_NUSES | SCIP_EXPRPRINTDOT_NLOCKS | SCIP_EXPRPRINTDOT_EVALTAG | SCIP_EXPRPRINTDOT_ACTIVITYTAG
+#define SCIP_EXPRPRINT_ALL SCIP_EXPRPRINT_EXPRSTRING | SCIP_EXPRPRINT_EXPRHDLR | SCIP_EXPRPRINT_NUSES | SCIP_EXPRPRINT_NLOCKS | SCIP_EXPRPRINT_EVALTAG | SCIP_EXPRPRIN_ACTIVITYTAG
 
-typedef unsigned int                 SCIP_EXPRPRINTDOT_WHAT; /**< type for printdot bitflags */
-typedef struct SCIP_ExprPrintDotData SCIP_EXPRPRINTDOTDATA;  /**< printing a dot file data */
+typedef unsigned int              SCIP_EXPRPRINT_WHAT; /**< type for exprprint bitflags */
+typedef struct SCIP_ExprPrintData SCIP_EXPRPRINTDATA;  /**< printing a expression file data */
 
 /** @} */
 

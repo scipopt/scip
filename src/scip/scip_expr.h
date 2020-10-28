@@ -344,24 +344,24 @@ SCIP_RETCODE SCIPprintExpr(
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDOTDATA** dotdata,          /**< buffer to store dot printing data */
+   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
    FILE*                   file,             /**< file to print to, or NULL for stdout */
-   SCIP_EXPRPRINTDOT_WHAT  whattoprint       /**< info on what to print for each expression */
+   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
    );
 
 /** initializes printing of expressions in dot format to a file with given filename */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDotInit2(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDOTDATA** dotdata,          /**< buffer to store dot printing data */
+   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
    const char*             filename,         /**< name of file to print to */
-   SCIP_EXPRPRINTDOT_WHAT  whattoprint       /**< info on what to print for each expression */
+   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
    );
 
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDot(
    SCIP*                  scip,              /**< SCIP data structure */
-   SCIP_EXPRPRINTDOTDATA* dotdata,           /**< data as initialized by \ref SCIPprintExprDotInit() */
+   SCIP_EXPRPRINTDATA*    printdata,         /**< data as initialized by \ref SCIPprintExprDotInit() */
    SCIP_EXPR*             expr               /**< expression to be printed */
    );
 
@@ -369,7 +369,7 @@ SCIP_RETCODE SCIPprintExprDot(
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDotFinal(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDOTDATA** dotdata           /**< buffer where dot printing data has been stored */
+   SCIP_EXPRPRINTDATA**    printdata         /**< buffer where dot printing data has been stored */
    );
 
 /** shows a single expression by use of dot and gv
