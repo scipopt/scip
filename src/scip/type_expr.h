@@ -40,6 +40,8 @@ typedef enum
    SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant */
 } SCIP_MONOTONE;
 
+/** the maximal number of estimates an expression handler can return in the INITESTIMATES callback */
+#define SCIP_EXPR_MAXINITESTIMATES 10
 
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
@@ -481,9 +483,9 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    SCIP*      scip, \
    SCIP_EXPR* expr, \
    SCIP_Bool  overestimate, \
-   SCIP_Real* coefs[10], \
-   SCIP_Real* constant[10], \
-   SCIP_Bool* islocal[10], \
+   SCIP_Real* coefs[SCIP_EXPR_MAXINITESTIMATES], \
+   SCIP_Real* constant[SCIP_EXPR_MAXINITESTIMATES], \
+   SCIP_Bool* islocal[SCIP_EXPR_MAXINITESTIMATES], \
    int*       nreturned \
    )
 
