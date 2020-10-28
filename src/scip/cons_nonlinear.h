@@ -15,7 +15,7 @@
 
 /**@file   cons_nonlinear.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for nonlinear constraints
+ * @brief  constraint handler for nonlinear constraints specified by algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano

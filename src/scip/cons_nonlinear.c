@@ -15,7 +15,7 @@
 
 /**@file   cons_nonlinear.c
  * @ingroup DEFPLUGINS_CONS
- * @brief  constraint handler for nonlinear constraints
+ * @brief  constraint handler for nonlinear constraints specified by algebraic expressions
  * @author Ksenia Bestuzheva
  * @author Benjamin Mueller
  * @author Felipe Serrano
@@ -31,7 +31,7 @@
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
-#define CONSHDLR_DESC          "constraint handler template"
+#define CONSHDLR_DESC          "handler for nonlinear constraints specified by algebraic expressions"
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
