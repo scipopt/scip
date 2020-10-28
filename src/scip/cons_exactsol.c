@@ -101,6 +101,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_Bool lperror;
    int nintvars;
    int nvars;
+   int nfixedvars;
    int i;
    int c;
    SCIP_Real starttime;
@@ -181,7 +182,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( *result == SCIP_INFEASIBLE )
       return SCIP_OKAY;
 
-   *result = SCIP_INFEASIBLE;
    scip->stat->ncallsexactsol++;
 
    /* start exact diving */
@@ -191,6 +191,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   nfixedvars = 0;
 
    for( i = 0; i < nintvars; ++i )
    {
@@ -218,10 +219,25 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], newbound) );
             SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], newbound) );
 
+            nfixedvars++;
+
             RatFreeBuffer(SCIPbuffer(scip), &newbound);
          }
+         else
+            *result = SCIP_INFEASIBLE;
       }
    }
+
+   if( *result == SCIP_INFEASIBLE || nfixedvars == nvars )
+   {
+      /* terminate exact diving */
+      SCIP_CALL( SCIPendExactDive(scip) );
+      endtime = SCIPgetSolvingTime(scip);
+
+      return SCIP_OKAY;
+   }
+
+   *result = SCIP_INFEASIBLE;
 
    /* solve LP */
 
