@@ -70,10 +70,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
 /* properties of the nonlinear constraint handler statistics table */
-#define TABLE_NAME_EXPR                          "nonlinear"
-#define TABLE_DESC_EXPR                          "nonlinear constraint handler statistics"
-#define TABLE_POSITION_EXPR                      12500                  /**< the position of the statistics table */
-#define TABLE_EARLIEST_STAGE_EXPR                SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
+#define TABLE_NAME_NONLINEAR           "nonlinear"
+#define TABLE_DESC_NONLINEAR           "nonlinear constraint handler statistics"
+#define TABLE_POSITION_NONLINEAR       12500                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_NONLINEAR SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 #define VERTEXPOLY_MAXPERTURBATION      1e-3 /**< maximum perturbation */
 #define VERTEXPOLY_USEDUALSIMPLEX       TRUE /**< use dual or primal simplex algorithm? */
@@ -310,41 +310,6 @@ typedef struct
  */
 
 /* put your local methods here, and declare them static */
-
-
-/*
- * Linear constraint upgrading
- */
-
-#ifdef LINCONSUPGD_PRIORITY
-/** tries to upgrade a linear constraint into a nonlinear constraint */
-static
-SCIP_DECL_LINCONSUPGD(linconsUpgdNonlinear)
-{  /*lint --e{715}*/
-   SCIP_Bool upgrade;
-
-   assert(upgdcons != NULL);
-
-   /* check, if linear constraint can be upgraded to nonlinear constraint */
-   upgrade = FALSE;
-   /* TODO: put the constraint's properties here, in terms of the statistics given by nposbin, nnegbin, ... */
-
-   if( upgrade )
-   {
-      SCIPdebugMsg(scip, "upgrading constraint <%s> to nonlinear constraint\n", SCIPconsGetName(cons));
-
-      /* create the bin Nonlinear constraint (an automatically upgraded constraint is always unmodifiable) */
-      assert(!SCIPconsIsModifiable(cons));
-      SCIP_CALL( SCIPcreateConsNonlinear(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-            SCIPconsIsStickingAtNode(cons)) );
-   }
-
-   return SCIP_OKAY;
-}
-#endif
 
 
 /*
