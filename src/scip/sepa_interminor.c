@@ -975,7 +975,7 @@ SCIP_RETCODE addCols(
          else
          {
             if( col == SCIPvarGetCol(vars[v]) )
-               ray[v] = factor;
+               ray[v] = -factor;
             else
                ray[v] = 0.0;
          }
