@@ -123,6 +123,11 @@ SCIP_RETCODE checkSolOrig(
    if( !printreason )
       completely = FALSE;
 
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
+   }
+
    /* check bounds */
    if( checkbounds )
    {
@@ -261,12 +266,15 @@ SCIP_RETCODE checkSolOrigExact(
    assert(scip != NULL);
    assert(sol != NULL);
    assert(feasible != NULL);
+   assert(SCIPisExactSolve(scip));
 
    SCIP_CALL( SCIPcheckStage(scip, "checkSolOrigExact", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    *feasible = TRUE;
 
    SCIPsolResetViolations(sol);
+
+   SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
 
    if( !printreason )
       completely = FALSE;

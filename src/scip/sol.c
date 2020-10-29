@@ -2677,7 +2677,9 @@ SCIP_RETCODE SCIPsolMakeExact(
 {
    int v;
    SCIP_Rational* tmp;
-   assert(!SCIPsolIsExact(sol));
+
+   if( SCIPsolIsExact(sol) )
+      return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &sol->valsexact ) );
    SCIP_CALL( SCIPrationalarrayCreate(&sol->valsexact->vals, blkmem) );

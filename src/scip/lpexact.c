@@ -7603,7 +7603,6 @@ SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
    )
 {
    assert(lpexact != NULL);
-   assert(lpexact->solved || !lpexact->flushed || lpexact->lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED);
 
    return (lpexact->flushed ? lpexact->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
 }
