@@ -309,8 +309,6 @@ typedef struct
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
-
 /** callback that creates data that this conshdlr wants to store in an expression */
 static
 SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
@@ -344,6 +342,265 @@ SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
    assert((*ownerdata)->auxvar == NULL);
 
    SCIPfreeBlockMemory(scip, ownerdata);
+
+   return SCIP_OKAY;
+}
+
+/** frees auxiliary variables of expression, if any */
+static
+SCIP_RETCODE freeAuxVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression which auxvar to free, if any */
+   )
+{
+   SCIP_EXPR_OWNERDATA* mydata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   mydata = SCIPexprGetOwnerData(expr);
+   assert(mydata != NULL);
+
+   if( mydata->auxvar == NULL )
+      return SCIP_OKAY;
+
+   SCIPdebugMsg(scip, "remove auxiliary variable <%s> for expression %p\n", SCIPvarGetName(mydata->auxvar), (void*)expr);
+
+   /* remove variable locks
+    * as this is a relaxation-only variable, no other plugin should use it for deducing any type of reductions or cutting planes
+    */
+   SCIP_CALL( SCIPaddVarLocks(scip, mydata->auxvar, -1, -1) );
+
+   /* release auxiliary variable */
+   SCIP_CALL( SCIPreleaseVar(scip, &mydata->auxvar) );
+   assert(mydata->auxvar == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** frees data used for enforcement of expression, that is, nonlinear handlers
+ *
+ * can also clear indicators whether expr needs enforcement methods, that is,
+ * free an associated auxiliary variable and reset the activityusage counts
+ */
+static
+SCIP_RETCODE freeEnfoData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression whose enforcement data will be released */
+   SCIP_Bool             freeauxvar          /**< whether aux var should be released and activity usage counts be reset */
+   )
+{
+   SCIP_EXPR_OWNERDATA* mydata;
+   int e;
+
+   mydata = SCIPexprGetOwnerData(expr);
+   assert(mydata != NULL);
+
+   if( freeauxvar )
+   {
+      /* free auxiliary variable */
+      SCIP_CALL( freeAuxVar(scip, expr) );
+      assert(mydata->auxvar == NULL);
+
+      /* reset count on activity and auxvar usage */
+      mydata->nactivityusesprop = 0;
+      mydata->nactivityusessepa = 0;
+      mydata->nauxvaruses = 0;
+   }
+
+   /* free data stored by nonlinear handlers */
+   for( e = 0; e < mydata->nenfos; ++e )
+   {
+      SCIP_NLHDLR* nlhdlr;
+
+      assert(mydata->enfos[e] != NULL);
+
+      nlhdlr = mydata->enfos[e]->nlhdlr;
+      assert(nlhdlr != NULL);
+
+      if( mydata->enfos[e]->issepainit )
+      {
+         /* call the separation deinitialization callback of the nonlinear handler */
+         SCIP_CALL( SCIPcallNlhdlrExitSepaNonlinear(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
+         mydata->enfos[e]->issepainit = FALSE;
+      }
+
+      /* free nlhdlr exprdata, if there is any and there is a method to free this data */
+      if( mydata->enfos[e]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
+      {
+         SCIP_CALL( nlhdlr->freeexprdata(scip, nlhdlr, expr, &mydata->enfos[e]->nlhdlrexprdata) );
+         assert(mydata->enfos[e]->nlhdlrexprdata == NULL);
+      }
+
+      /* free enfo data */
+      SCIPfreeBlockMemory(scip, &mydata->enfos[e]);
+   }
+
+   /* free array with enfo data */
+   SCIPfreeBlockMemoryArrayNull(scip, &mydata->enfos, mydata->nenfos);
+
+   /* we need to look at this expression in detect again */
+   mydata->nenfos = -1;
+
+   return SCIP_OKAY;
+}
+
+/** creates a variable expression or retrieves from hashmap in conshdlr data */
+static
+SCIP_RETCODE createExprVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_VAR*             var                 /**< variable to be stored */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(var != NULL);
+
+   /* get variable expression representing the given variable if there is one already */
+   *expr = (SCIP_EXPR*) SCIPhashmapGetImage(SCIPconshdlrGetData(conshdlr)->var2expr, (void*) var);
+
+   if( *expr == NULL )
+   {
+      /* create a new variable expression; this also captures the expression */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, expr, var) );
+      assert(*expr != NULL);
+
+      /* create data of conshdlr for new expr */
+      SCIP_CALL( SCIPcreateExprOwnerData(scip, *expr, exprownerdataCreate, NULL, exprownerdataFree) );
+
+      /* store the variable expression in the hashmap */
+      SCIP_CALL( SCIPhashmapInsert(SCIPconshdlrGetData(conshdlr)->var2expr, (void*) var, (void*) *expr) );
+   }
+   else
+   {
+      /* only capture already existing expr to get a consistent uses-count */
+      SCIPcaptureExpr(*expr);
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_EXPR_MAPVAR(transformVar)
+{   /*lint --e{715}*/
+   assert(sourcevar != NULL);
+   assert(targetvar != NULL);
+   assert(sourcescip == targetscip);
+
+   /* transform variable (does not capture target variable) */
+   SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcevar, targetvar) );
+   assert(*targetvar != NULL);
+
+   /* caller assumes that target variable has been captured */
+   SCIP_CALL( SCIPcaptureVar(sourcescip, *targetvar) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
+{
+   SCIP_CONSHDLR* conshdlr = (SCIP_CONSHDLR*)mapexprdata;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+   assert(mapexprdata != NULL);
+
+   /* do not provide map if not variable */
+   if( !SCIPisExprVar(sourceexpr) )
+      return NULL;
+
+   SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPgetConsExprExprVarVar(sourceexpr)) );
+
+   return SCIP_OKAY;
+}
+
+
+
+/** creates and captures a nonlinear constraint
+ *
+ * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr
+ */
+static
+SCIP_RETCODE createCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   SCIP_EXPR*            expr,               /**< expression of constraint (must not be NULL) */
+   SCIP_Real             lhs,                /**< left hand side of constraint */
+   SCIP_Real             rhs,                /**< right hand side of constraint */
+   SCIP_Bool             copyexpr,           /**< whether to copy the expression or reuse the given expr (capture it) */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* TODO remove this once we allow for local expression constraints */
+   if( local && SCIPgetDepth(scip) != 0 )
+   {
+      SCIPerrorMessage("Locally valid expression constraints are not supported, yet.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* TODO remove this once we allow for non-initial expression constraints */
+   if( !initial )
+   {
+      SCIPerrorMessage("Non-initial expression constraints are not supported, yet.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* create constraint data */
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
+
+   if( copyexpr )
+   {
+      /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
+      SCIP_CALL( SCIPcopyExpr(scip, scip, expr, &consdata->expr, NULL, NULL, mapexprvar, conshdlr, exprownerdataCreate, NULL, exprownerdataFree) );
+   }
+   else
+   {
+      consdata->expr = expr;
+      SCIPcaptureExpr(consdata->expr);
+   }
+   consdata->lhs = lhs;
+   consdata->rhs = rhs;
+   consdata->consindex = conshdlrdata->lastconsindex++;
+   consdata->curv = SCIP_EXPRCURV_UNKNOWN;
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+         local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
 }

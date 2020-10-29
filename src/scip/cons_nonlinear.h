@@ -29,6 +29,7 @@
 
 
 #include "scip/scip.h"
+#include "scip/type_nlhdlr.h"
 
 #ifdef __cplusplus
 extern "C" {

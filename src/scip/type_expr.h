@@ -120,6 +120,26 @@ typedef enum
    void*      mapvardata \
    )
 
+/** expression mapping callback for expression copy callback
+ *
+ * The method maps an expression (in a source SCIP instance) to an expression
+ * (in a target SCIP instance) and captures the target expression.
+ *
+ *  input:
+ *  - targetscip         : target SCIP main data structure
+ *  - targetexpr         : pointer to store the mapped expression, or NULL if expression shall be copied
+ *  - sourcescip         : source SCIP main data structure
+ *  - sourceexpr         : expression to be mapped
+ *  - mapexprdata        : data of callback
+ */
+#define SCIP_DECL_EXPR_MAPEXPR(x) SCIP_RETCODE x (\
+   SCIP*       targetscip, \
+   SCIP_EXPR** targetexpr, \
+   SCIP*       sourcescip, \
+   SCIP_EXPR*  sourceexpr, \
+   void*       mapexprdata \
+   )
+
 /**@name Expression Handler */
 /**@{ */
 

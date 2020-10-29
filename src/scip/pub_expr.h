@@ -271,6 +271,12 @@ void SCIPexprSetData(
    SCIP_EXPRDATA*        exprdata            /**< expression data to be set (can be NULL) */
    );
 
+/** gets the data that the owner of an expression has stored in an expression */
+SCIP_EXPORT
+SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetEvalValue(
