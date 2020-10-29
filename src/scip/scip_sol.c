@@ -1748,7 +1748,7 @@ void SCIPgetSolTransObjExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    if( sol != NULL )
-      RatSet(res, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob));
+      SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, res);
    else
    {
       SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolTransObjExact(sol==NULL)", \
@@ -2099,6 +2099,7 @@ SCIP_RETCODE SCIPprintSolExact(
    )
 {
    SCIP_Rational* objvalue;
+   SCIP_Rational* tmp;
    SCIP_Bool currentsol;
    SCIP_Bool oldquiet = FALSE;
 
@@ -2130,7 +2131,12 @@ SCIP_RETCODE SCIPprintSolExact(
    if( SCIPsolIsOriginal(sol) )
       RatSet(objvalue, SCIPsolGetOrigObjExact(sol));
    else
-      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob), objvalue);
+   {
+      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+      SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
+      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, objvalue);
+      RatFreeBuffer(SCIPbuffer(scip), &tmp);
+   }
 
    RatMessage(scip->messagehdlr, file, objvalue);
 

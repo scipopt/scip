@@ -2233,28 +2233,22 @@ SCIP_Real SCIPsolGetObj(
 }
 
 /** gets objective value of exact primal CIP solution in transformed problem */
-SCIP_Rational* SCIPsolGetObjExact(
+void SCIPsolGetObjExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob            /**< original problem data */
-   )
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_Rational*        objval              /**< store the result here */
+    )
 {
    assert(sol != NULL);
    assert(SCIPsolIsExact(sol));
 
    /* for original solutions, sol->obj contains the external objective value */
    if( SCIPsolIsOriginal(sol) )
-   {
-      /** @todo exip: heuristics extension
-       *  - implement this if exact version of SCIP supports getting objective value of original solutions */
-      SCIPerrorMessage("cannot get objectiv value of original solution\n");
-      SCIPABORT();
-      return NULL;
-    //  return SCIPprobInternObjval(transprob, origprob, set, sol->obj);
-   }
+      SCIPprobInternObjvalExact(transprob, origprob, set, sol->valsexact->obj, objval);
    else
-      return sol->valsexact->obj;
+      RatSet(objval, sol->valsexact->obj);
 }
 
 /** updates primal solutions after a change in a variable's objective value */
@@ -3054,11 +3048,11 @@ SCIP_Bool solsAreEqualExact(
    else
    {
       if( SCIPsolIsExact(sol1) )
-         RatSet(tmp1, SCIPsolGetObjExact(sol1, set, transprob, origprob));
+         SCIPsolGetObjExact(sol1, set, transprob, origprob, tmp1);
       else
          RatSetReal(tmp1, SCIPsolGetObj(sol1, set, transprob, origprob));
       if( SCIPsolIsExact(sol2) )
-         RatSet(tmp2, SCIPsolGetObjExact(sol2, set, transprob, origprob));
+         SCIPsolGetObjExact(sol2, set, transprob, origprob, tmp2);
       else
          RatSetReal(tmp2, SCIPsolGetObj(sol2, set, transprob, origprob));
    }
@@ -3722,9 +3716,9 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
          RatRoundReal(solval, roundmode)) );
    }
 
-   obj = SCIPsolGetObjExact(sol, set, transprob, origprob);
+   SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
    /* hard-set the obj value of the solution  */
-   sol->obj = RatRoundReal(obj, SCIP_ROUND_UPWARDS);
+   sol->obj = RatRoundReal(solval, SCIP_ROUND_UPWARDS);
 
    RatFreeBuffer(set->buffer, &solval);
 

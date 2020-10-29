@@ -774,7 +774,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
          SCIP_CALL( SCIPmakeSolExact(scip, bestsol) );
       }
 
-      RatSet(primalbound, SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob));
+      SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob, primalbound);
       assert(!RatIsAbsInfinity(primalbound));
 
       /* print RTP range (same when optimal solution found) */
@@ -795,7 +795,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       {
          bestsol = SCIPgetBestSol(scip);
          if( SCIPsolIsExact(bestsol) )
-            RatSet(primalbound, SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob));
+            SCIPsolGetObjExact(bestsol, set, scip->transprob, scip->origprob, primalbound);
          else
             RatSetReal(primalbound, SCIPsolGetObj(bestsol, set, scip->transprob, scip->origprob));
       }

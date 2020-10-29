@@ -387,11 +387,12 @@ SCIP_Real SCIPsolGetObj(
    );
 
 /** gets objective value of primal CIP solution in transformed problem */
-SCIP_Rational* SCIPsolGetObjExact(
+void SCIPsolGetObjExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
-   SCIP_PROB*            origprob            /**< original problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_Rational*        objval              /**< store the result here */
    );
 
 /** updates primal solutions after a change in a variable's objective value */

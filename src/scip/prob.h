@@ -490,6 +490,15 @@ SCIP_Real SCIPprobInternObjval(
    SCIP_Real             objval              /**< external objective value */
    );
 
+/** returns the internal value of the given external objective value */
+void SCIPprobInternObjvalExact(
+   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Rational*        objval,             /**< internal objective value */
+   SCIP_Rational*        objvalint           /**< store internal objective value */
+   );
+
 /** returns variable of the problem with given name */
 SCIP_VAR* SCIPprobFindVar(
    SCIP_PROB*            prob,               /**< problem data */

@@ -2017,7 +2017,10 @@ SCIP_RETCODE primalAddSolExact(
 
    sol = *solptr;
    assert(sol != NULL);
-   obj = SCIPsolGetObjExact(sol, set, transprob, origprob);
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &obj) );
+
+   SCIPsolGetObjExact(sol, set, transprob, origprob, obj);
    fpobj = RatRoundReal(obj, SCIP_ROUND_UPWARDS);
 
    SCIPsetDebugMsg(set, "insert exact primal solution %p with obj %g at position %d (replace=%u):\n",
@@ -2030,13 +2033,15 @@ SCIP_RETCODE primalAddSolExact(
 
    SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, tree) );
 
-   RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, SCIPsolGetObjExact(sol, set, transprob, origprob) );
-   RatMIN(primal->upperboundexact, primal->upperboundexact, SCIPsolGetObjExact(sol, set, transprob, origprob) );
+   RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, obj);
+   RatMIN(primal->upperboundexact, primal->upperboundexact, obj);
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
             origprob, transprob, tree, reopt,
             lp->fplp, eventqueue, eventfilter, &sol, &stored) );
+
+   RatFreeBuffer(set->buffer, &obj);
 
    return SCIP_OKAY;
 }
