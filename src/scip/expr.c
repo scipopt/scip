@@ -148,6 +148,7 @@ SCIP_RETCODE freeExpr(
    assert(expr != NULL);
    assert(*expr != NULL);
    assert((*expr)->nuses == 1);
+   assert((*expr)->quaddata == NULL);
 
    /* call ownerdatafree callback, if given
     * we intentially call this also if ownerdata is NULL, so owner can be notified without storing data
@@ -390,371 +391,133 @@ SCIP_RETCODE copyExpr(
    return SCIP_OKAY;
 }
 
-/** returns an equivalent expression for a given expression if possible
+
+/*
+ * quadratic representation of expression
+ */
+
+/** frees data of quadratic representation of expression, if any */
+static
+void quadFree(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr                /**< expression whose quadratic data will be released */
+   )
+{
+   int i;
+   int n;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   expr->quadchecked = FALSE;
+
+   if( expr->quaddata == NULL )
+      return;
+
+   n = expr->quaddata->nquadexprs;
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->linexprs, expr->quaddata->nlinexprs);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);
+
+   for( i = 0; i < n; ++i )
+   {
+      BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->quadexprterms[i].adjbilin,
+         expr->quaddata->quadexprterms[i].adjbilinsize);
+   }
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->quadexprterms, n);
+
+   BMSfreeBlockMemory(blkmem, &expr->quaddata);
+}
+
+/** first time seen quadratically and
+ * seen before linearly --> --nlinterms; assign 2; ++nquadterms
+ * not seen before linearly --> assing 1; ++nquadterms
  *
- * it adds the expression to key2expr if the map does not contain the key
+ * seen before --> assign += 1
  */
 static
-SCIP_RETCODE findEqualExpr(
-//   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EXPR*            expr,               /**< expression to replace */
-   SCIP_MULTIHASH*       key2expr,           /**< mapping of hashes to expressions */
-   SCIP_EXPR**           newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
+SCIP_RETCODE quadDetectProcessExpr(
+   SCIP_EXPR*            expr,               /**< the expression */
+   SCIP_HASHMAP*         seenexpr,           /**< hash map */
+   int*                  nquadterms,         /**< number of quadratic terms */
+   int*                  nlinterms           /**< number of linear terms */
    )
-{  /*lint --e{438}*/
-   SCIP_MULTIHASHLIST* multihashlist;
-
-//   assert(set != NULL);
-   assert(expr != NULL);
-   assert(key2expr != NULL);
-   assert(newexpr != NULL);
-
-   *newexpr = NULL;
-   multihashlist = NULL;
-   do
+{
+   if( SCIPhashmapExists(seenexpr, (void*)expr) )
    {
-      /* search for an equivalent expression */
-      *newexpr = (SCIP_EXPR*)(SCIPmultihashRetrieveNext(key2expr, &multihashlist, (void*)expr));
+      int nseen = SCIPhashmapGetImageInt(seenexpr, (void*)expr);
 
-      if( *newexpr == NULL )
+      if( nseen < 0 )
       {
-         /* processed all expressions like expr from hash table, so insert expr */
-         SCIP_CALL( SCIPmultihashInsert(key2expr, (void*) expr) );
-         break;
-      }
-      else if( expr != *newexpr )
-      {
-         assert(SCIPexprCompare(expr, *newexpr) == 0);
-         break;
+         /* only seen linearly before */
+         assert(nseen == -1);
+
+         --*nlinterms;
+         ++*nquadterms;
+         SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void*)expr, 2) );
       }
       else
       {
-         /* can not replace expr since it is already contained in the hashtablelist */
-         assert(expr == *newexpr);
-         *newexpr = NULL;
-         break;
+         assert(nseen > 0);
+         SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void*)expr, nseen + 1) );
       }
    }
-   while( TRUE ); /*lint !e506*/
+   else
+   {
+      ++*nquadterms;
+      SCIP_CALL( SCIPhashmapInsertInt(seenexpr, (void*)expr, 1) );
+   }
 
    return SCIP_OKAY;
 }
 
-/** get key of hash element */
-static
-SCIP_DECL_HASHGETKEY(hashCommonSubexprGetKey)
-{
-   return elem;
-}  /*lint !e715*/
-
-/** checks if two expressions are structurally the same */
-static
-SCIP_DECL_HASHKEYEQ(hashCommonSubexprEq)
-{
-   SCIP_EXPR* expr1;
-   SCIP_EXPR* expr2;
-
-   expr1 = (SCIP_EXPR*)key1;
-   expr2 = (SCIP_EXPR*)key2;
-   assert(expr1 != NULL);
-   assert(expr2 != NULL);
-
-   return expr1 == expr2 || SCIPexprCompare(expr1, expr2) == 0;
-}  /*lint !e715*/
-
-/** get value of hash element when comparing with another expression */
-static
-SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
-{
-   SCIP_EXPR* expr;
-   SCIP_EXPRITER* hashiterator;
-
-   expr = (SCIP_EXPR*) key;
-   assert(expr != NULL);
-
-   hashiterator = (SCIP_EXPRITER*) userptr;
-   assert(hashiterator != NULL);
-
-   return SCIPexpriteratorGetExprUserData(hashiterator, expr).uintval;
-}  /*lint !e715*/
-
-/** hashes an expression using an already existing iterator
+/** returns a quadexprterm that contains the expr
  *
- * The iterator must by of type DFS with allowrevisit=FALSE and only the leaveexpr stage enabled.
- * The hashes of all visited expressions will be stored in the iterators expression data.
+ * it either finds one that already exists or creates a new one
  */
 static
-SCIP_RETCODE hashExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   BMS_BUFMEM*           bufmem,             /**< buffer memory */
-   SCIP_EXPR*            expr,               /**< expression to hash */
-   SCIP_EXPRITER*        hashiterator,       /**< iterator to use for hashing */
-   int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
+SCIP_RETCODE quadDetectGetQuadexprterm(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< the expression */
+   SCIP_HASHMAP*         expr2idx,           /**< map: expr to index in quadexpr->quadexprterms */
+   SCIP_HASHMAP*         seenexpr,           /**< map: expr to number of times it was seen */
+   SCIP_QUADEXPR*        quadexpr,           /**< data of quadratic representation of expression */
+   SCIP_QUADEXPR_QUADTERM** quadexprterm     /**< buffer to store quadexprterm */
    )
 {
-   SCIP_EXPRITER_USERDATA iterdata;
-   unsigned int* childrenhashes;
-   int childrenhashessize;
-   int i;
-
-   assert(set != NULL);
    assert(expr != NULL);
-   assert(hashiterator != NULL);
+   assert(expr2idx != NULL);
+   assert(quadexpr != NULL);
+   assert(quadexprterm != NULL);
 
-   childrenhashessize = 5;
-   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &childrenhashes, childrenhashessize) );
-
-   for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
+   if( SCIPhashmapExists(expr2idx, (void*)expr) )
    {
-      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_EXPRITER_LEAVEEXPR);
-
-      if( nvisitedexprs != NULL )
-         ++*nvisitedexprs;
-
-      /* collect hashes of children */
-      if( childrenhashessize < expr->nchildren )
-      {
-         childrenhashessize = SCIPsetCalcMemGrowSize(set, expr->nchildren);
-         SCIP_ALLOC( BMSreallocBufferMemoryArray(bufmem, &childrenhashes, childrenhashessize) );
-      }
-      for( i = 0; i < expr->nchildren; ++i )
-         childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
-
-      SCIP_CALL( SCIPcallExprhdlrHash(set->scip, expr, &iterdata.uintval, childrenhashes) );
-
-      SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
+      *quadexprterm = &quadexpr->quadexprterms[SCIPhashmapGetImageInt(expr2idx, (void*)expr)];
+      assert((*quadexprterm)->expr == expr);
    }
+   else
+   {
+      SCIP_CALL( SCIPhashmapInsertInt(expr2idx, expr, quadexpr->nquadexprs) );
+      *quadexprterm = &quadexpr->quadexprterms[quadexpr->nquadexprs];
+      ++quadexpr->nquadexprs;
 
-   BMSfreeBufferMemoryArray(bufmem, &childrenhashes);
+      (*quadexprterm)->expr = expr;
+      (*quadexprterm)->sqrcoef = 0.0;
+      (*quadexprterm)->sqrexpr = NULL;
+      (*quadexprterm)->lincoef = 0.0;
+      (*quadexprterm)->nadjbilin = 0;
+      (*quadexprterm)->adjbilinsize = SCIPhashmapGetImageInt(seenexpr, (void*)expr);
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*quadexprterm)->adjbilin, (*quadexprterm)->adjbilinsize) );
+   }
 
    return SCIP_OKAY;
 }
 
-/** replaces common sub-expressions in a given expression graph by using a hash key for each expression
- *
- *  The algorithm consists of two steps:
- *
- *  1. traverse through all given expressions and compute for each of them a (not necessarily unique) hash
- *
- *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a
- *     structural equivalent expression in the hash table; if yes we replace the expression by the expression inside the
- *     hash table, otherwise we add it to the hash table
- *
- *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
- *  (with the same hash) are structurally the same we use the function SCIPexprCompare()
- */
-static
-SCIP_RETCODE replaceCommonSubexpressions(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   BMS_BUFMEM*           bufmem,             /**< buffer memory */
-   SCIP_EXPR**           exprs,              /**< expressions (possibly replaced by equivalent on output) */
-   int                   nexprs,             /**< total number of expressions */
-   SCIP_Bool*            replacedroot        /**< buffer to store whether any root expression (expression in exprs) was replaced */
-   )
-{
-   SCIP_EXPRITER* hashiterator;
-   SCIP_EXPRITER* repliterator;
-   SCIP_MULTIHASH* key2expr;
-   SCIP_CONSDATA* consdata;
-   int i;
-   int nvisitedexprs = 0;
+/** @} */
 
-   assert(set != NULL);
-   assert(stat != NULL);
-   assert(exprs != NULL);
-   assert(nexprs >= 0);
-   assert(replacedroot != NULL);
-
-   if( nexprs == 0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPexpriteratorCreate(stat, blkmem, &hashiterator) );
-   SCIP_CALL( SCIPexpriteratorInit(hashiterator, NULL, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(hashiterator, SCIP_EXPRITER_LEAVEEXPR);
-
-   /* compute all hashes for each sub-expression */
-   for( i = 0; i < nexprs; ++i )
-   {
-      assert(exprs[i] != NULL);
-      SCIP_CALL( hashExpr(set, bufmem, exprs[i], hashiterator, &nvisitedexprs) );
-   }
-
-   /* replace equivalent sub-expressions */
-   SCIP_CALL( SCIPmultihashCreate(&key2expr, blkmem, nvisitedexprs,
-         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)hashiterator) );
-
-   SCIP_CALL( SCIPexpriteratorCreate(stat, blkmem, &repliterator) );
-
-   for( i = 0; i < nexprs; ++i )
-   {
-      SCIP_EXPR* newroot;
-      SCIP_EXPR* newchild;
-      SCIP_EXPR* child;
-
-      /* check the root for equivalence separately first */
-      SCIP_CALL( findEqualExpr(exprs[i], key2expr, &newroot) );
-
-      if( newroot != NULL )
-      {
-         assert(newroot != exprs[i]);
-         assert(SCIPexprCompare(exprs[i], newroot) == 0);
-
-         SCIPdebugMsg(scip, "replacing common root expression of %dth expr: %p -> %p\n", i, (void*)exprs[i], (void*)newroot);
-
-         SCIP_CALL( SCIPreleaseExpr(set->scip, &exprs[i]) );
-
-         exprs[i] = newroot;
-         SCIPcaptureExpr(newroot);
-
-         *replacedroot = TRUE;
-
-         continue;
-      }
-
-      /* replace equivalent sub-expressions in the tree */
-      SCIP_CALL( SCIPexpriteratorInit(repliterator, exprs[i], SCIP_EXPRITER_DFS, FALSE) );
-      SCIPexpriteratorSetStagesDFS(repliterator, SCIP_EXPRITER_VISITINGCHILD);
-
-      while( !SCIPexpriteratorIsEnd(repliterator) )
-      {
-         child = SCIPexpriteratorGetChildExprDFS(repliterator);
-         assert(child != NULL);
-
-         /* try to find an equivalent expression */
-         SCIP_CALL( findEqualExpr(child, key2expr, &newchild) );
-
-         /* replace child with newchild */
-         if( newchild != NULL )
-         {
-            assert(child != newchild);
-            assert(SCIPexprCompare(child, newchild) == 0);
-
-            SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
-
-            SCIP_CALL( SCIPreplaceExprChild(scip, SCIPexpriteratorGetCurrent(repliterator), SCIPexpriteratorGetChildIdxDFS(repliterator), newchild) );
-
-            (void) SCIPexpriteratorSkipDFS(repliterator);
-         }
-         else
-         {
-            (void) SCIPexpriteratorGetNext(repliterator);
-         }
-      }
-   }
-
-   /* free memory */
-   SCIPexpriteratorFree(&repliterator);
-   SCIPmultihashFree(&key2expr);
-   SCIPexpriteratorFree(&hashiterator);
-
-   return SCIP_OKAY;
-}
-
-/** helper function to simplify an expression and its subexpressions */
-static
-SCIP_RETCODE simplifyConsExprExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
-   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
-   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
-   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
-   )
-{
-   SCIP_EXPR* expr;
-   SCIP_EXPRITER* it;
-
-   assert(set != NULL);
-   assert(stat != NULL);
-   assert(blkmem != NULL);
-   assert(rootexpr != NULL);
-   assert(simplified != NULL);
-   assert(changed != NULL);
-   assert(infeasible != NULL);
-
-   /* simplify bottom up
-    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
-    * after the child was visited, it is replaced with the simplified expr
-    */
-   SCIP_CALL( SCIPexpriteratorCreate(stat, blkmem, &it) );
-   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR);
-
-   *changed = FALSE;
-   *infeasible = FALSE;
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
-   {
-      switch( SCIPexpriteratorGetStageDFS(it) )
-      {
-         case SCIP_EXPRITER_VISITEDCHILD:
-         {
-            SCIP_EXPR* newchild;
-            SCIP_EXPR* child;
-
-            newchild = (SCIP_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
-            child = SCIPexpriteratorGetChildExprDFS(it);
-            assert(newchild != NULL);
-
-            /* if child got simplified, replace it with the new child */
-            if( newchild != child )
-            {
-               SCIP_CALL( SCIPreplaceExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
-            }
-
-            /* we do not need to hold newchild anymore */
-            SCIP_CALL( SCIPreleaseExpr(scip, &newchild) );
-
-            break;
-         }
-
-         case SCIP_EXPRITER_LEAVEEXPR:
-         {
-            SCIP_EXPR* refexpr = NULL;
-            SCIP_EXPRITER_USERDATA iterdata;
-
-            /* TODO we should do constant folding (handle that all children are value-expressions) here in a generic way
-             * instead of reimplementing it in every handler
-             */
-
-            /* use simplification of expression handlers */
-            if( SCIPexprhdlrHasSimplify(expr->exprhdlr) )
-            {
-               SCIP_CALL( SCIPcallExprhdlrSimplify(scip, conshdlr, expr, &refexpr) );
-               if( expr != refexpr )
-                  *changed = TRUE;
-            }
-            else
-            {
-               /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
-                * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
-                */
-               refexpr = expr;
-               SCIPcaptureExpr(refexpr);
-            }
-            assert(refexpr != NULL);
-
-            iterdata.ptrval = (void*) refexpr;
-            SCIPexpriteratorSetCurrentUserData(it, iterdata);
-
-            break;
-         }
-
-         default:
-            SCIPABORT(); /* we should never be called in this stage */
-            break;
-      }
-   }
-
-   *simplified = (SCIP_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
-   assert(*simplified != NULL);
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
 
 /** @name Parsing methods
  * @{
@@ -1268,6 +1031,379 @@ SCIP_RETCODE parseExpr(
 
 /** @} */  /* end of parsing methods */
 
+
+/** @name Simplifying expressions (hashing, common subexpressions, simplify)
+ * @{
+
+/** returns an equivalent expression for a given expression if possible
+ *
+ * it adds the expression to key2expr if the map does not contain the key
+ */
+static
+SCIP_RETCODE findEqualExpr(
+//   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to replace */
+   SCIP_MULTIHASH*       key2expr,           /**< mapping of hashes to expressions */
+   SCIP_EXPR**           newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
+   )
+{  /*lint --e{438}*/
+   SCIP_MULTIHASHLIST* multihashlist;
+
+//   assert(set != NULL);
+   assert(expr != NULL);
+   assert(key2expr != NULL);
+   assert(newexpr != NULL);
+
+   *newexpr = NULL;
+   multihashlist = NULL;
+   do
+   {
+      /* search for an equivalent expression */
+      *newexpr = (SCIP_EXPR*)(SCIPmultihashRetrieveNext(key2expr, &multihashlist, (void*)expr));
+
+      if( *newexpr == NULL )
+      {
+         /* processed all expressions like expr from hash table, so insert expr */
+         SCIP_CALL( SCIPmultihashInsert(key2expr, (void*) expr) );
+         break;
+      }
+      else if( expr != *newexpr )
+      {
+         assert(SCIPexprCompare(expr, *newexpr) == 0);
+         break;
+      }
+      else
+      {
+         /* can not replace expr since it is already contained in the hashtablelist */
+         assert(expr == *newexpr);
+         *newexpr = NULL;
+         break;
+      }
+   }
+   while( TRUE ); /*lint !e506*/
+
+   return SCIP_OKAY;
+}
+
+/** get key of hash element */
+static
+SCIP_DECL_HASHGETKEY(hashCommonSubexprGetKey)
+{
+   return elem;
+}  /*lint !e715*/
+
+/** checks if two expressions are structurally the same */
+static
+SCIP_DECL_HASHKEYEQ(hashCommonSubexprEq)
+{
+   SCIP_EXPR* expr1;
+   SCIP_EXPR* expr2;
+
+   expr1 = (SCIP_EXPR*)key1;
+   expr2 = (SCIP_EXPR*)key2;
+   assert(expr1 != NULL);
+   assert(expr2 != NULL);
+
+   return expr1 == expr2 || SCIPexprCompare(expr1, expr2) == 0;
+}  /*lint !e715*/
+
+/** get value of hash element when comparing with another expression */
+static
+SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPRITER* hashiterator;
+
+   expr = (SCIP_EXPR*) key;
+   assert(expr != NULL);
+
+   hashiterator = (SCIP_EXPRITER*) userptr;
+   assert(hashiterator != NULL);
+
+   return SCIPexpriteratorGetExprUserData(hashiterator, expr).uintval;
+}  /*lint !e715*/
+
+/** hashes an expression using an already existing iterator
+ *
+ * The iterator must by of type DFS with allowrevisit=FALSE and only the leaveexpr stage enabled.
+ * The hashes of all visited expressions will be stored in the iterators expression data.
+ */
+static
+SCIP_RETCODE hashExpr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_EXPR*            expr,               /**< expression to hash */
+   SCIP_EXPRITER*        hashiterator,       /**< iterator to use for hashing */
+   int*                  nvisitedexprs       /**< counter to increment by the number of expressions visited, or NULL */
+   )
+{
+   SCIP_EXPRITER_USERDATA iterdata;
+   unsigned int* childrenhashes;
+   int childrenhashessize;
+   int i;
+
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(hashiterator != NULL);
+
+   childrenhashessize = 5;
+   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &childrenhashes, childrenhashessize) );
+
+   for( expr = SCIPexpriteratorRestartDFS(hashiterator, expr); !SCIPexpriteratorIsEnd(hashiterator); expr = SCIPexpriteratorGetNext(hashiterator) ) /*lint !e441*/
+   {
+      assert(SCIPexpriteratorGetStageDFS(hashiterator) == SCIP_EXPRITER_LEAVEEXPR);
+
+      if( nvisitedexprs != NULL )
+         ++*nvisitedexprs;
+
+      /* collect hashes of children */
+      if( childrenhashessize < expr->nchildren )
+      {
+         childrenhashessize = SCIPsetCalcMemGrowSize(set, expr->nchildren);
+         SCIP_ALLOC( BMSreallocBufferMemoryArray(bufmem, &childrenhashes, childrenhashessize) );
+      }
+      for( i = 0; i < expr->nchildren; ++i )
+         childrenhashes[i] = SCIPexpriteratorGetExprUserData(hashiterator, expr->children[i]).uintval;
+
+      SCIP_CALL( SCIPcallExprhdlrHash(set->scip, expr, &iterdata.uintval, childrenhashes) );
+
+      SCIPexpriteratorSetCurrentUserData(hashiterator, iterdata);
+   }
+
+   BMSfreeBufferMemoryArray(bufmem, &childrenhashes);
+
+   return SCIP_OKAY;
+}
+
+/** replaces common sub-expressions in a given expression graph by using a hash key for each expression
+ *
+ *  The algorithm consists of two steps:
+ *
+ *  1. traverse through all given expressions and compute for each of them a (not necessarily unique) hash
+ *
+ *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a
+ *     structural equivalent expression in the hash table; if yes we replace the expression by the expression inside the
+ *     hash table, otherwise we add it to the hash table
+ *
+ *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
+ *  (with the same hash) are structurally the same we use the function SCIPexprCompare()
+ */
+static
+SCIP_RETCODE replaceCommonSubexpressions(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_EXPR**           exprs,              /**< expressions (possibly replaced by equivalent on output) */
+   int                   nexprs,             /**< total number of expressions */
+   SCIP_Bool*            replacedroot        /**< buffer to store whether any root expression (expression in exprs) was replaced */
+   )
+{
+   SCIP_EXPRITER* hashiterator;
+   SCIP_EXPRITER* repliterator;
+   SCIP_MULTIHASH* key2expr;
+   SCIP_CONSDATA* consdata;
+   int i;
+   int nvisitedexprs = 0;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(exprs != NULL);
+   assert(nexprs >= 0);
+   assert(replacedroot != NULL);
+
+   if( nexprs == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPexpriteratorCreate(stat, blkmem, &hashiterator) );
+   SCIP_CALL( SCIPexpriteratorInit(hashiterator, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriteratorSetStagesDFS(hashiterator, SCIP_EXPRITER_LEAVEEXPR);
+
+   /* compute all hashes for each sub-expression */
+   for( i = 0; i < nexprs; ++i )
+   {
+      assert(exprs[i] != NULL);
+      SCIP_CALL( hashExpr(set, bufmem, exprs[i], hashiterator, &nvisitedexprs) );
+   }
+
+   /* replace equivalent sub-expressions */
+   SCIP_CALL( SCIPmultihashCreate(&key2expr, blkmem, nvisitedexprs,
+         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)hashiterator) );
+
+   SCIP_CALL( SCIPexpriteratorCreate(stat, blkmem, &repliterator) );
+
+   for( i = 0; i < nexprs; ++i )
+   {
+      SCIP_EXPR* newroot;
+      SCIP_EXPR* newchild;
+      SCIP_EXPR* child;
+
+      /* check the root for equivalence separately first */
+      SCIP_CALL( findEqualExpr(exprs[i], key2expr, &newroot) );
+
+      if( newroot != NULL )
+      {
+         assert(newroot != exprs[i]);
+         assert(SCIPexprCompare(exprs[i], newroot) == 0);
+
+         SCIPdebugMsg(scip, "replacing common root expression of %dth expr: %p -> %p\n", i, (void*)exprs[i], (void*)newroot);
+
+         SCIP_CALL( SCIPreleaseExpr(set->scip, &exprs[i]) );
+
+         exprs[i] = newroot;
+         SCIPcaptureExpr(newroot);
+
+         *replacedroot = TRUE;
+
+         continue;
+      }
+
+      /* replace equivalent sub-expressions in the tree */
+      SCIP_CALL( SCIPexpriteratorInit(repliterator, exprs[i], SCIP_EXPRITER_DFS, FALSE) );
+      SCIPexpriteratorSetStagesDFS(repliterator, SCIP_EXPRITER_VISITINGCHILD);
+
+      while( !SCIPexpriteratorIsEnd(repliterator) )
+      {
+         child = SCIPexpriteratorGetChildExprDFS(repliterator);
+         assert(child != NULL);
+
+         /* try to find an equivalent expression */
+         SCIP_CALL( findEqualExpr(child, key2expr, &newchild) );
+
+         /* replace child with newchild */
+         if( newchild != NULL )
+         {
+            assert(child != newchild);
+            assert(SCIPexprCompare(child, newchild) == 0);
+
+            SCIPdebugMsg(scip, "replacing common child expression %p -> %p\n", (void*)child, (void*)newchild);
+
+            SCIP_CALL( SCIPreplaceExprChild(scip, SCIPexpriteratorGetCurrent(repliterator), SCIPexpriteratorGetChildIdxDFS(repliterator), newchild) );
+
+            (void) SCIPexpriteratorSkipDFS(repliterator);
+         }
+         else
+         {
+            (void) SCIPexpriteratorGetNext(repliterator);
+         }
+      }
+   }
+
+   /* free memory */
+   SCIPexpriteratorFree(&repliterator);
+   SCIPmultihashFree(&key2expr);
+   SCIPexpriteratorFree(&hashiterator);
+
+   return SCIP_OKAY;
+}
+
+/** helper function to simplify an expression and its subexpressions */
+static
+SCIP_RETCODE simplifyConsExprExpr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
+   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
+   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
+   )
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPRITER* it;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(rootexpr != NULL);
+   assert(simplified != NULL);
+   assert(changed != NULL);
+   assert(infeasible != NULL);
+
+   /* simplify bottom up
+    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
+    * after the child was visited, it is replaced with the simplified expr
+    */
+   SCIP_CALL( SCIPexpriteratorCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
+   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   *changed = FALSE;
+   *infeasible = FALSE;
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITEDCHILD:
+         {
+            SCIP_EXPR* newchild;
+            SCIP_EXPR* child;
+
+            newchild = (SCIP_EXPR*)SCIPexpriteratorGetChildUserDataDFS(it).ptrval;
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            assert(newchild != NULL);
+
+            /* if child got simplified, replace it with the new child */
+            if( newchild != child )
+            {
+               SCIP_CALL( SCIPreplaceExprChild(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), newchild) );
+            }
+
+            /* we do not need to hold newchild anymore */
+            SCIP_CALL( SCIPreleaseExpr(scip, &newchild) );
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR:
+         {
+            SCIP_EXPR* refexpr = NULL;
+            SCIP_EXPRITER_USERDATA iterdata;
+
+            /* TODO we should do constant folding (handle that all children are value-expressions) here in a generic way
+             * instead of reimplementing it in every handler
+             */
+
+            /* use simplification of expression handlers */
+            if( SCIPexprhdlrHasSimplify(expr->exprhdlr) )
+            {
+               SCIP_CALL( SCIPcallExprhdlrSimplify(scip, conshdlr, expr, &refexpr) );
+               if( expr != refexpr )
+                  *changed = TRUE;
+            }
+            else
+            {
+               /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
+                * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
+                */
+               refexpr = expr;
+               SCIPcaptureExpr(refexpr);
+            }
+            assert(refexpr != NULL);
+
+            iterdata.ptrval = (void*) refexpr;
+            SCIPexpriteratorSetCurrentUserData(it, iterdata);
+
+            break;
+         }
+
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+   }
+
+   *simplified = (SCIP_EXPR*)SCIPexpriteratorGetExprUserData(it, rootexpr).ptrval;
+   assert(*simplified != NULL);
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** @} */  /* end of simplify methods */
+
+
 /** evaluate and forward-differentiate expression */
 static
 SCIP_RETCODE evalAndDiff(
@@ -1320,4 +1456,43 @@ SCIP_RETCODE evalAndDiff(
    SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
+}
+
+/** print statistics for expression handlers */
+static
+void printExprHdlrStatistics(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file                /**< file handle, or NULL for standard out */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+
+   SCIPmessageFPrintInfo(messagehdlr, file,
+      "Expression Handlers: %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n",
+      "SimplCalls", "Simplified", "EstimCalls", "#IntEval", "PropCalls", "Cuts", "Cutoffs", "DomReds", "BranchScor", "EstimTime", "PropTime", "IntEvalTi", "SimplifyTi");
+
+   for( i = 0; i < set->nexprhdlrs; ++i )
+   {
+      SCIP_EXPRHDLR* exprhdlr = set->exprhdlrs[i];
+      assert(exprhdlr != NULL);
+
+      SCIPmessageFPrintInfo(messagehdlr, file, "  %-17s:", exprhdlr->name);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nsimplifycalls);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nsimplified);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nestimatecalls);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nintevalcalls);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->npropcalls);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->ncutsfound);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->ncutoffs);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->ndomreds);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10lld", exprhdlr->nbranchscores);
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->estimatetime));
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->proptime));
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->intevaltime));
+      SCIPmessageFPrintInfo(messagehdlr, file, " %10.2f", SCIPclockGetTime(exprhdlr->simplifytime));
+      SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+   }
 }
