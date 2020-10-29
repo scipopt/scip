@@ -894,8 +894,6 @@ SCIP_RETCODE getTableauRows(
             /* insert tableau row in hashmap*/
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)densetableaurow) );
 
-            /* free memory */
-            SCIPfreeBufferArray(scip, &densetableaurow);
          }
          else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
          {
@@ -1253,6 +1251,19 @@ SCIP_RETCODE separatePoint(
    }
 
    /* free memory */
+
+   for( i = 0; i < SCIPgetNVars(scip); ++i )
+   {
+      if( SCIPhashmapExists(tableau, (void*)SCIPgetVars(scip)[i]) )
+      {
+         SCIP_Real* tableaurow;
+
+         tableaurow = (SCIP_Real *)SCIPhashmapGetImage(tableau, (void*)SCIPgetVars(scip)[i]);
+
+         if( tableaurow != NULL )
+            SCIPfreeBufferArray(scip, &tableaurow);
+      }
+   }
    SCIPhashmapFree(&tableau);
    SCIPfreeBufferArray(scip, &basicvarpos2tableaurow);
 
