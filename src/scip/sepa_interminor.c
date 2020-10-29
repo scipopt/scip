@@ -315,7 +315,7 @@ SCIP_RETCODE detectMinors(
    SCIP_CALL( SCIPallocBufferArray(scip, &intersection, SCIPgetNVars(scip)) );
 
    /* initialize iterator */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, TRUE) );
+   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
    SCIPexpriteratorSetStagesDFS(it, SCIP_CONSEXPRITERATOR_ENTEREXPR);
 
    for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
