@@ -87,7 +87,12 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
-   SCIP_EXPRHDLR**       exprhdlrs;          /**< expression handler */
+   SCIP_EXPRHDLR**       exprhdlrs;          /**< expression handlers */
+   SCIP_EXPRHDLR*        exprhdlrvar;        /**< expression handler for variables (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrval;        /**< expression handler for constant values (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrsum;        /**< expression handler for sums (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrproduct;    /**< expression handler for products (for quick access) */
+   SCIP_EXPRHDLR*        exprhdlrpow;        /**< expression handler for power (for quick access) */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */

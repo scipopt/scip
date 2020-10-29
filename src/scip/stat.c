@@ -296,6 +296,9 @@ void SCIPstatReset(
    stat->ninitconssadded = 0;
    stat->nactiveconssadded = 0;
    stat->externmemestim = 0;
+   stat->exprlastvisitedtag = 0;
+   stat->exprlastsoltag = 0;
+   stat->exprlastdifftag = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -311,6 +314,7 @@ void SCIPstatReset(
    stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
    stat->nclockskipsleft = 0;
+   stat->nactiveexpriter = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

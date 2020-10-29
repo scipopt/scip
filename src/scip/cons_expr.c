@@ -45,209 +45,6 @@
    } while( FALSE )
 
 /*
- * Data structures
- */
-
-/** expression constraint update method */
-struct SCIP_ExprConsUpgrade
-{
-   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd));  /**< method to call for upgrading expression constraint */
-   int                   priority;           /**< priority of upgrading method */
-   SCIP_Bool             active;             /**< is upgrading enabled */
-};
-typedef struct SCIP_ExprConsUpgrade SCIP_EXPRCONSUPGRADE;
-
-/** constraint data for expr constraints */
-struct SCIP_ConsData
-{
-   SCIP_EXPR*   expr;               /**< expression that represents this constraint */
-   SCIP_Real             lhs;                /**< left-hand side */
-   SCIP_Real             rhs;                /**< right-hand side */
-
-   SCIP_EXPR**  varexprs;           /**< array containing all variable expressions */
-   int                   nvarexprs;          /**< total number of variable expressions */
-   SCIP_Bool             catchedevents;      /**< do we catch events on variables? */
-
-   SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution (used temporarily inside constraint handler) */
-   SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
-   SCIP_Real             gradnorm;           /**< norm of gradient of constraint function in current solution (if evaluated) */
-   unsigned int          gradnormsoltag;     /**< tag of solution used that gradnorm corresponds to */
-
-   unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
-   unsigned int          issimplified:1;     /**< did we simplify the expression tree already? */
-
-   SCIP_EXPRCURV         curv;               /**< curvature of the root expression w.r.t. the original variables */
-
-   SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
-
-   int                   nlockspos;          /**< number of positive locks */
-   int                   nlocksneg;          /**< number of negative locks */
-
-   /* repair infeasible solutions */
-   SCIP_VAR*             linvardecr;         /**< variable that may be decreased without making any other constraint infeasible, or NULL if none */
-   SCIP_VAR*             linvarincr;         /**< variable that may be increased without making any other constraint infeasible, or NULL if none */
-   SCIP_Real             linvardecrcoef;     /**< linear coefficient of linvardecr */
-   SCIP_Real             linvarincrcoef;     /**< linear coefficient of linvarincr */
-
-   int                   consindex;          /**< an index of the constraint that is unique among all expr-constraints in this SCIP instance and is constant */
-};
-
-/** constraint handler data */
-struct SCIP_ConshdlrData
-{
-   /* expression handler */
-   SCIP_EXPRHDLR** exprhdlrs;       /**< expression handlers */
-   int                      nexprhdlrs;      /**< number of expression handlers */
-   int                      exprhdlrssize;   /**< size of exprhdlrs array */
-
-   SCIP_EXPRHDLR*  exprvarhdlr;     /**< variable expression handler */
-   SCIP_EXPRHDLR*  exprvalhdlr;     /**< value expression handler */
-   SCIP_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
-   SCIP_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
-   SCIP_EXPRHDLR*  exprpowhdlr;     /**< power expression handler */
-   SCIP_EXPRHDLR*  exprsignpowhdlr; /**< signed power expression handler */
-   SCIP_EXPRHDLR*  exprexphdlr;     /**< exponential expression handler */
-   SCIP_EXPRHDLR*  exprloghdlr;     /**< logarithm expression handler */
-
-   /* nonlinear handler */
-   SCIP_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
-   int                      nnlhdlrs;        /**< number of nonlinear handlers */
-   int                      nlhdlrssize;     /**< size of nlhdlrs array */
-   SCIP_Bool                indetect;        /**< whether we are currently in detectNlhdlr */
-   SCIP_Bool                registerusesactivitysepabelow; /**< a flag that is used only during \ref @detectNlhdlr() */
-   SCIP_Bool                registerusesactivitysepaabove; /**< a flag that is used only during \ref @detectNlhdlr() */
-
-   /* constraint upgrades */
-   SCIP_EXPRCONSUPGRADE**   exprconsupgrades;     /**< nonlinear constraint upgrade methods for specializing expression constraints */
-   int                      exprconsupgradessize; /**< size of exprconsupgrades array */
-   int                      nexprconsupgrades;    /**< number of expression constraint upgrade methods */
-
-   /* other plugins */
-   SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
-   SCIP_HEUR*               subnlpheur;      /**< a pointer to the subnlp heuristic, if available */
-   SCIP_HEUR*               trysolheur;      /**< a pointer to the trysol heuristic, if available */
-
-   /* expression iterator */
-   int                      nactiveiter;     /**< number of currently active iterators */
-   unsigned int             lastvisitedtag;  /**< last visited tag used by iterators */
-
-   /* tags and counters */
-   int                      auxvarid;        /**< unique id for the next auxiliary variable */
-
-   unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
-   unsigned int             curboundstag;    /**< tag indicating current variable bounds */
-   unsigned int             lastboundrelax;  /**< tag when bounds where most recently relaxed */
-   unsigned int             lastvaractivitymethodchange; /**< tag when method used to evaluate activity of variables changed last */
-   unsigned int             lastdifftag;     /**< last tag used for computing gradients */
-   unsigned int             enforound;       /**< total number of enforcement calls, including current one */
-
-   int                      lastconsindex;   /**< last used consindex, plus one */
-
-   /* activity intervals and domain propagation */
-   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)); /**< method currently used for activity calculation of variable expressions */
-   SCIP_Bool                globalbounds;    /**< whether global variable bounds should be used for activity calculation */
-   SCIP_QUEUE*              reversepropqueue;  /**< expression queue to be used in reverse propagation, filled by SCIPtightenExprIntervalNonlinear */
-   SCIP_Bool                forceboundtightening; /**< whether bound change passed to SCIPtightenExprIntervalNonlinear should be forced */
-   unsigned int             curpropboundstag; /**< tag indicating current propagation rounds, to match with expr->propboundstag */
-
-   /* parameters */
-   int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
-   SCIP_Bool                propauxvars;     /**< whether to check bounds of all auxiliary variable to seed reverse propagation */
-   char                     varboundrelax;   /**< strategy on how to relax variable bounds during bound tightening */
-   SCIP_Real                varboundrelaxamount; /**< by how much to relax variable bounds during bound tightening */
-   SCIP_Real                conssiderelaxamount; /**< by how much to relax constraint sides during bound tightening */
-   SCIP_Real                vp_maxperturb;   /**< maximal relative perturbation of reference point */
-   SCIP_Real                vp_adjfacetthreshold; /**< adjust computed facet up to a violation of this value times lpfeastol */
-   SCIP_Bool                vp_dualsimplex;  /**< whether to use dual simplex instead of primal simplex for facet computing LP */
-   SCIP_Bool                reformbinprods;  /**< whether to reformulate products of binary variables during presolving */
-   SCIP_Bool                reformbinprodsand;/**< whether to use the AND constraint handler for reformulating binary products */
-   int                      reformbinprodsfac; /**< minimum number of terms to reformulate bilinear binary products by factorizing variables (<= 1: disabled) */
-   SCIP_Bool                forbidmultaggrnlvar; /**< whether to forbid multiaggregation of variables that appear in a nonlinear term of a constraint */
-   SCIP_Bool                tightenlpfeastol;/**< whether to tighten LP feasibility tolerance during enforcement, if it seems useful */
-   SCIP_Bool                propinenforce;   /**< whether to (re)run propagation in enforcement */
-   SCIP_Real                weakcutthreshold;/**< threshold for when to regard a cut from an estimator as weak */
-   SCIP_Real                strongcutmaxcoef;/**< "strong" cuts will be scaled to have their maximal coef in [1/strongcutmaxcoef,strongcutmaxcoef] */
-   SCIP_Bool                strongcutefficacy;/**< consider efficacy requirement when deciding whether a cut is "strong" */
-   SCIP_Bool                forcestrongcut;  /**< whether to force "strong" cuts in enforcement */
-   SCIP_Real                enfoauxviolfactor;/**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
-   SCIP_Real                weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
-   char                     violscale;       /**< method how to scale violations to make them comparable (not used for feasibility check) */
-   char                     checkvarlocks;   /**< whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
-   int                      branchauxmindepth; /**< from which depth on to allow branching on auxiliary variables */
-   SCIP_Bool                branchexternal;  /**< whether to use external branching candidates for branching */
-   SCIP_Real                branchhighviolfactor; /**< consider a constraint highly violated if its violation is >= this factor * maximal violation among all constraints */
-   SCIP_Real                branchhighscorefactor; /**< consider a variable branching score high if its branching score >= this factor * maximal branching score among all variables */
-   SCIP_Real                branchviolweight;/**< weight by how much to consider the violation assigned to a variable for its branching score */
-   SCIP_Real                branchdualweight;/**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
-   SCIP_Real                branchpscostweight;/**< weight by how much to consider the pseudo cost of a variable for its branching score */
-   SCIP_Real                branchdomainweight; /**< weight by how much to consider the domain width in branching score */
-   SCIP_Real                branchvartypeweight;/**< weight by how much to consider variable type in branching score */
-   char                     branchscoreagg;  /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
-   char                     branchviolsplit; /**< method used to split violation in expression onto variables ('e'venly, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
-   SCIP_Real                branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
-
-   /* statistics */
-   SCIP_Longint             nweaksepa;       /**< number of times we used "weak" cuts for enforcement */
-   SCIP_Longint             ntightenlp;      /**< number of times we requested solving the LP with a smaller feasibility tolerance when enforcing */
-   SCIP_Longint             ndesperatetightenlp; /**< number of times we requested solving the LP with a smaller feasibility tolerance when enforcing because we didn't know anything better */
-   SCIP_Longint             ndesperatebranch;/**< number of times we branched on some variable because normal enforcement was not successful */
-   SCIP_Longint             ndesperatecutoff;/**< number of times we cut off a node in enforcement because no branching candidate could be found */
-   SCIP_Longint             nforcelp;        /**< number of times we forced solving the LP when enforcing a pseudo solution */
-   SCIP_CLOCK*              canonicalizetime;/**< time spend for canonicalization */
-   SCIP_Longint             ncanonicalizecalls; /**< number of times we called canonicalization */
-
-   /* facets of envelops of vertex-polyhedral functions */
-   SCIP_RANDNUMGEN*         vp_randnumgen;   /**< random number generator used to perturb reference point */
-   SCIP_LPI*                vp_lp[SCIP_MAXVERTEXPOLYDIM+1];  /**< LPs used to compute facets for functions of different dimension */
-
-   /* hashing of bilinear terms */
-   SCIP_HASHTABLE*          bilinhashtable;  /**< hash table for bilinear terms */
-   SCIP_CONSNONLINEAR_BILINTERM* bilinterms;      /**< bilinear terms */
-   int                      nbilinterms;     /**< total number of bilinear terms */
-   int                      bilintermssize;  /**< size of bilinterms array */
-   int                      bilinmaxnauxexprs; /**< maximal number of auxiliary expressions per bilinear term */
-
-   /* branching */
-   SCIP_RANDNUMGEN*         branchrandnumgen;/**< random number generated used in branching variable selection */
-   char                     branchpscostupdatestrategy; /**< value of parameter branching/lpgainnormalize */
-
-   /* misc */
-   SCIP_Bool                checkedvarlocks; /**< whether variables contained in a single constraint have been already considered */
-   SCIP_HASHMAP*            var2expr;        /**< hashmap to map SCIP variables to variable-expressions */
-};
-
-/** variable mapping data passed on during copying expressions when copying SCIP instances */
-typedef struct
-{
-   SCIP_HASHMAP*           varmap;           /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP */
-   SCIP_HASHMAP*           consmap;          /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP */
-   SCIP_Bool               global;           /**< should a global or a local copy be created */
-   SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
-} COPY_MAPVAR_DATA;
-
-/** printing to dot file data */
-struct SCIP_ConsExpr_PrintDotData
-{
-   FILE*                   file;             /**< file to print to */
-   SCIP_EXPRITER* iterator;         /**< iterator to use */
-   SCIP_Bool               closefile;        /**< whether file need to be closed when finished printing */
-   SCIP_HASHMAP*           leaveexprs;       /**< hashmap storing leave (no children) expressions */
-   SCIP_EXPRPRINT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
-};
-
-/** branching candidate with various scores */
-typedef struct
-{
-   SCIP_EXPR*     expr;             /**< expression that holds branching candidate */
-   SCIP_Real               auxviol;          /**< aux-violation score of candidate */
-   SCIP_Real               domain;           /**< domain score of candidate */
-   SCIP_Real               dual;             /**< dual score of candidate */
-   SCIP_Real               pscost;           /**< pseudo-cost score of candidate */
-   SCIP_Real               vartype;          /**< variable type score of candidate */
-   SCIP_Real               weighted;         /**< weighted sum of other scores, see scoreBranchingCandidates() */
-} BRANCHCAND;
-
-/*
  * Local methods
  */
 
@@ -2266,8 +2063,8 @@ int enfodataCmp(
    assert(enfo1 != NULL);
    assert(enfo2 != NULL);
 
-   h1 = ((SCIP_CONSNONLINEAR_EXPRENFO*)enfo1)->nlhdlr;
-   h2 = ((SCIP_CONSNONLINEAR_EXPRENFO*)enfo2)->nlhdlr;
+   h1 = ((EXPRENFO*)enfo1)->nlhdlr;
+   h2 = ((EXPRENFO*)enfo2)->nlhdlr;
 
    assert(h1 != NULL);
    assert(h2 != NULL);
@@ -8206,7 +8003,7 @@ SCIP_RETCODE consEnfo(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlr != NULL);
 
-   soltag = ++conshdlrdata->lastsoltag;
+   soltag = ++conshdlrdata->exprlastsoltag;
 
    *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
@@ -8378,7 +8175,7 @@ SCIP_RETCODE consSepa(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   soltag = ++conshdlrdata->lastsoltag;
+   soltag = ++conshdlrdata->exprlastsoltag;
 
    /* compute violations */
    for( c = 0; c < nconss; ++c )
@@ -10833,7 +10630,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    int nnotify;
    int c;
 
-   soltag = ++conshdlrdata->lastsoltag;
+   soltag = ++conshdlrdata->exprlastsoltag;
 
    *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
@@ -10896,7 +10693,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
    assert(conshdlrdata != NULL);
 
    *result = SCIP_FEASIBLE;
-   soltag = ++(conshdlrdata->lastsoltag);
+   soltag = ++(conshdlrdata->exprlastsoltag);
    maxviol = 0.0;
    maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
       && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
@@ -14227,7 +14024,7 @@ SCIP_RETCODE SCIPcomputeExprGradient(
       return SCIP_OKAY;
    }
 
-   difftag = ++(conshdlrdata->lastdifftag);
+   difftag = ++(conshdlrdata->exprlastdifftag);
 
    rootexpr->derivative = 1.0;
    rootexpr->difftag = difftag;
@@ -14437,7 +14234,7 @@ SCIP_RETCODE SCIPcomputeExprHessianDir(
    /* evaluate expression and directional derivative */
    SCIP_CALL( evalAndDiff(scip, consexprhdlr, rootexpr, sol, soltag) );
 
-   difftag = ++(conshdlrdata->lastdifftag);
+   difftag = ++(conshdlrdata->exprlastdifftag);
 
    rootexpr->derivative = 1.0;
    rootexpr->difftag = difftag;
@@ -15890,13 +15687,13 @@ SCIP_RETCODE SCIPactivateExprIterator(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->nactiveiter + 1 >= SCIP_EXPRITER_MAXNACTIVE )
+   if( conshdlrdata->nactiveexpriter + 1 >= SCIP_EXPRITER_MAXNACTIVE )
    {
       SCIPerrorMessage("Maximal number of active expression iterators reached.\n");
       return SCIP_MAXDEPTHLEVEL;
    }
 
-   *iterindex = conshdlrdata->nactiveiter++;
+   *iterindex = conshdlrdata->nactiveexpriter++;
 
    return SCIP_OKAY;
 }
@@ -15916,9 +15713,9 @@ void SCIPdeactivateExprIterator(
    assert(conshdlrdata != NULL);
 
    /* the iterindex must be the one of the last initialized iterator */
-   assert(iterindex == conshdlrdata->nactiveiter-1);
+   assert(iterindex == conshdlrdata->nactiveexpriter-1);
 
-   --conshdlrdata->nactiveiter;
+   --conshdlrdata->nactiveexpriter;
 }
 
 /** get a new tag that can be used to mark an expression as visited */
@@ -15933,7 +15730,7 @@ unsigned int SCIPgetExprIteratorNewVisitedTag(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
-   return ++conshdlrdata->lastvisitedtag;
+   return ++conshdlrdata->exprlastvisitedtag;
 }
 
 /** gets tag indicating current local variable bounds */
@@ -16368,7 +16165,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
    conshdlrdata->intevalvar = intEvalVarBoundTightening;
-   conshdlrdata->lastsoltag = 1;
+   conshdlrdata->exprlastsoltag = 1;
    conshdlrdata->curboundstag = 1;
    conshdlrdata->lastboundrelax = 1;
    conshdlrdata->curpropboundstag = 1;
@@ -16662,7 +16459,7 @@ SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
 {
    SCIP_CONSHDLR*        conshdlr;
    SCIP_CONSHDLRDATA*    conshdlrdata;
-   SCIP_EXPRCONSUPGRADE* exprconsupgrade;
+   CONSUPGRADE* exprconsupgrade;
    char                  paramname[SCIP_MAXSTRLEN];
    char                  paramdesc[SCIP_MAXSTRLEN];
    int                   i;

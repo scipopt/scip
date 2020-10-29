@@ -1190,6 +1190,11 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->ndialogs = 0;
    (*set)->dialogssize = 0;
    (*set)->exprhdlrs = NULL;
+   (*set)->exprhdlrvar = NULL;
+   (*set)->exprhdlrval = NULL;
+   (*set)->exprhdlrsum = NULL;
+   (*set)->exprhdlrproduct = NULL;
+   (*set)->exprhdlrpow = NULL;
    (*set)->nexprhdlrs = 0;
    (*set)->exprhdlrssize = 0;
    (*set)->exprhdlrssorted = FALSE;
@@ -2830,6 +2835,11 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nexprhdlrs);
+   (*set)->exprhdlrvar = NULL;
+   (*set)->exprhdlrval = NULL;
+   (*set)->exprhdlrsum = NULL;
+   (*set)->exprhdlrproduct = NULL;
+   (*set)->exprhdlrpow = NULL;
 
    /* free NLPIs */
    for( i = 0; i < (*set)->nnlpis; ++i )
@@ -4939,6 +4949,17 @@ SCIP_RETCODE SCIPsetIncludeExprhdlr(
    set->exprhdlrs[set->nexprhdlrs] = exprhdlr;
    set->nexprhdlrs++;
    set->exprhdlrssorted = FALSE;
+
+   if( set->exprhdlrvar != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0 )
+      set->exprhdlrvar = exprhdlr;
+   else if( set->exprhdlrval != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0 )
+      set->exprhdlrval = exprhdlr;
+   else if( set->exprhdlrsum != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0 )
+      set->exprhdlrsum = exprhdlr;
+   else if( set->exprhdlrproduct != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "prod") == 0 )
+      set->exprhdlrproduct = exprhdlr;
+   else if( set->exprhdlrpow != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0 )
+      set->exprhdlrpow = exprhdlr;
 
    return SCIP_OKAY;
 }

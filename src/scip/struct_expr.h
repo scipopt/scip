@@ -91,19 +91,19 @@ struct SCIP_Expr
    SCIP_DECL_EXPR_OWNERDATAFREE((*freeownerdata)); /**< callback for freeing ownerdata */
 
    /* point-evaluation and differentiation*/
-   unsigned int          evaltag;            /**< tag of point for which the expression has been evaluated last, or 0 */
    SCIP_Real             evalvalue;          /**< value of expression from last evaluation (corresponding to evaltag) */
    SCIP_Real             derivative;         /**< partial derivative of a "root path" w.r.t. this expression
                                                *  (see documentation of Differentiation methods) */
    SCIP_Real             dot;                /**< directional derivative of this expr */
    SCIP_Real             bardot;             /**< directional derivative of derivative of root (strictly speaking, a path) w.r.t this expr */
-   unsigned int          difftag;            /**< when computing partial derivatives of an expression w.r.t. a variable,
+   SCIP_Longint          evaltag;            /**< tag of point for which the expression has been evaluated last, or 0 */
+   SCIP_Longint          difftag;            /**< when computing partial derivatives of an expression w.r.t. a variable,
                                                *  the tag allows us to decide whether the expression depends on the variable;
                                                *  the tag will be checked in SCIPgetExprPartialDiff() */
 
    /* interval-evaluation (activity) */
    SCIP_INTERVAL         activity;           /**< activity of expression with respect to variable bounds */
-   unsigned int          activitytag;        /**< tag of variable bounds for which activity is valid */
+   SCIP_Longint          activitytag;        /**< tag of variable bounds for which activity is valid */
 
    /* curvature information */
    SCIP_EXPRCURV         curvature;           /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
@@ -115,6 +115,7 @@ struct SCIP_Expr
    /* integrality information */
    SCIP_Bool             isintegral;          /**< flag to store whether an expression is integral */
 
+   /* view expression as quadratic */
    SCIP_QUADEXPR*        quaddata;            /**< representation of expression as a quadratic, if checked and being quadratic */
    SCIP_Bool             quadchecked;         /**< whether we checked whether the expression is quadratic */
 };
@@ -131,27 +132,27 @@ struct SCIP_ExprIterData
 /** data for representation of an expression as quadratic */
 struct SCIP_QuadExpr
 {
-   SCIP_Real                constant;        /**< a constant term */
+   SCIP_Real             constant;           /**< a constant term */
 
-   int                      nlinexprs;       /**< number of expressions that appear linearly */
-   SCIP_EXPR**              linexprs;        /**< expressions that appear linearly */
-   SCIP_Real*               lincoefs;        /**< coefficients of expressions that appear linearly */
+   int                   nlinexprs;          /**< number of expressions that appear linearly */
+   SCIP_EXPR**           linexprs;           /**< expressions that appear linearly */
+   SCIP_Real*            lincoefs;           /**< coefficients of expressions that appear linearly */
 
-   int                      nquadexprs;      /**< number of expressions in quadratic terms */
-   SCIP_QUADEXPR_QUADTERM*  quadexprterms;   /**< array with quadratic expression terms */
+   int                   nquadexprs;         /**< number of expressions in quadratic terms */
+   SCIP_QUADEXPR_QUADTERM* quadexprterms;    /**< array with quadratic expression terms */
 
-   int                      nbilinexprterms; /**< number of bilinear expressions terms */
+   int                   nbilinexprterms;    /**< number of bilinear expressions terms */
    SCIP_QUADEXPR_BILINTERM* bilinexprterms;  /**< bilinear expression terms array */
 
-   SCIP_Bool                allexprsarevars; /**< whether all arguments (linexprs, quadexprterms[.].expr) are variable expressions */
+   SCIP_Bool             allexprsarevars;    /**< whether all arguments (linexprs, quadexprterms[.].expr) are variable expressions */
 
-   SCIP_EXPRCURV            curvature;       /**< curvature of the quadratic representation of the expression */
-   SCIP_Bool                curvaturechecked;/**< whether curvature has been checked */
-   SCIP_Bool                eigeninfostored; /**< whether the eigen information is stored */
+   SCIP_EXPRCURV         curvature;          /**< curvature of the quadratic representation of the expression */
+   SCIP_Bool             curvaturechecked;   /**< whether curvature has been checked */
+   SCIP_Bool             eigeninfostored;    /**< whether the eigen information is stored */
 
    /* eigen decomposition information */
-   SCIP_Real*               eigenvalues;     /**< eigenvalues of the Q matrix: size of nquadexprs */
-   SCIP_Real*               eigenvectors;    /**< eigenvalues of the Q matrix; size of nquadexprs^2 */
+   SCIP_Real*            eigenvalues;        /**< eigenvalues of the Q matrix: size of nquadexprs */
+   SCIP_Real*            eigenvectors;       /**< eigenvalues of the Q matrix; size of nquadexprs^2 */
 };
 
 /** data structure to store a single term associated to a quadratic variable */
@@ -184,26 +185,26 @@ struct SCIP_QuadExpr_BilinTerm
 /** expression iterator */
 struct SCIP_ExprIter
 {
-   BMS_BLKMEM*           blkmem;       /**< block memory */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
 
-   SCIP_Bool             initialized;  /**< whether the iterator has been initialized, that is, is in use */
-   SCIP_EXPRITER_TYPE    itertype;     /**< type of expression iterator */
-   SCIP_EXPR*            curr;         /**< current expression of the iterator */
-   int                   iterindex;    /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
-   unsigned int          visitedtag;   /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */
+   SCIP_Bool             initialized;        /**< whether the iterator has been initialized, that is, is in use */
+   SCIP_EXPRITER_TYPE    itertype;           /**< type of expression iterator */
+   SCIP_EXPR*            curr;               /**< current expression of the iterator */
+   int                   iterindex;          /**< index of iterator data in expressions, or -1 if not using iterator data in expressions */
+   unsigned int          visitedtag;         /**< tag to mark and recognize an expression as visited, or 0 if not avoiding multiple visits */
 
    /* data for rtopological mode */
-   SCIP_EXPR**           dfsexprs;     /**< DFS stack */
-   int*                  dfsnvisited;  /**< number of visited children for each expression in the stack */
-   int                   dfsnexprs;    /**< total number of expression in stack */
-   int                   dfssize;      /**< size DFS stack */
+   SCIP_EXPR**           dfsexprs;           /**< DFS stack */
+   int*                  dfsnvisited;        /**< number of visited children for each expression in the stack */
+   int                   dfsnexprs;          /**< total number of expression in stack */
+   int                   dfssize;            /**< size DFS stack */
 
    /* data for BFS mode */
-   SCIP_QUEUE*           queue;        /**< BFS queue */
+   SCIP_QUEUE*           queue;              /**< BFS queue */
 
    /* data for DFS mode */
-   SCIP_EXPRITER_STAGE   dfsstage;     /**< current stage */
-   unsigned int          stopstages;   /**< stages in which to interrupt iterator */
+   SCIP_EXPRITER_STAGE   dfsstage;           /**< current stage */
+   unsigned int          stopstages;         /**< stages in which to interrupt iterator */
 };
 
 #endif /* SCIP_STRUCT_EXPR_H_ */
