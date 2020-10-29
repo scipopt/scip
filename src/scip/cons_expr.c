@@ -3,7 +3,6 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
-#include "scip/struct_cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sum.h"
@@ -47,126 +46,6 @@
 /*
  * Local methods
  */
-
-static
-SCIP_RETCODE evalAndDiff(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
-   SCIP_EXPR*     expr,             /**< expression to be evaluated */
-   SCIP_SOL*               sol,              /**< solution to be evaluated */
-   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
-   )
-{
-   SCIP_EXPRITER* it;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(expr != NULL);
-
-   /* assume we'll get a domain error, so we don't have to get this expr back if we abort the iteration
-    * if there is no domain error, then we will overwrite the evalvalue in the last leaveexpr stage
-    */
-   expr->evalvalue = SCIP_INVALID;
-   expr->evaltag = soltag;
-   expr->dot = SCIP_INVALID;
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
-
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
-   {
-      /* evaluate expression only if necessary */
-      if( soltag == 0 || expr->evaltag != soltag )
-      {
-         SCIP_CALL( SCIPcallExprhdlrEval(scip, expr, &expr->evalvalue, NULL, sol) );
-
-         expr->evaltag = soltag;
-      }
-
-      if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
-         break;
-
-      /* compute forward diff */
-      SCIP_CALL( SCIPcallExprhdlrFwdiff(scip, expr, &expr->dot) );
-
-      if( expr->dot == SCIP_INVALID ) /*lint !e777*/
-         break;
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** creates an expression */
-static
-SCIP_RETCODE createExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR**    expr,             /**< pointer where to store expression */
-   SCIP_EXPRHDLR* exprhdlr,         /**< expression handler */
-   SCIP_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
-   int                     nchildren,        /**< number of children */
-   SCIP_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
-   )
-{
-   int c;
-
-   assert(expr != NULL);
-   assert(exprhdlr != NULL);
-   assert(children != NULL || nchildren == 0);
-   assert(exprdata == NULL || exprhdlr->copydata != NULL); /* copydata must be available if there is expression data */
-   assert(exprdata == NULL || exprhdlr->freedata != NULL); /* freedata must be available if there is expression data */
-
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
-
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
-   (*expr)->nenfos = -1;
-
-   /* initialize an empty interval for interval evaluation */
-   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->activity);
-
-   if( nchildren > 0 )
-   {
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children, children, nchildren) );
-      (*expr)->nchildren = nchildren;
-      (*expr)->childrensize = nchildren;
-
-      for( c = 0; c < nchildren; ++c )
-         SCIPcaptureExpr((*expr)->children[c]);
-   }
-
-   SCIPcaptureExpr(*expr);
-
-   return SCIP_OKAY;
-}
-
-/** frees an expression */
-static
-SCIP_RETCODE freeExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR**  expr                /**< pointer to free the expression */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(*expr != NULL);
-   assert((*expr)->nuses == 1);
-
-   /* free children array, if any */
-   SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
-
-   /* expression should not be locked anymore */
-   assert((*expr)->nlockspos == 0);
-   assert((*expr)->nlocksneg == 0);
-
-   SCIPfreeBlockMemory(scip, expr);
-   assert(*expr == NULL);
-
-   return SCIP_OKAY;
-}
 
 /** frees auxiliary variables of expression, if any */
 static

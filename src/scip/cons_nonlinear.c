@@ -311,6 +311,42 @@ typedef struct
 
 /* put your local methods here, and declare them static */
 
+/** callback that creates data that this conshdlr wants to store in an expression */
+static
+SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(ownerdata != NULL);
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, ownerdata) );
+
+   (*ownerdata)->nenfos = -1;
+
+   return SCIP_OKAY;
+}
+
+/** callback that frees data that this conshdlr stored in an expression */
+static
+SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(ownerdata != NULL);
+   assert(*ownerdata != NULL);
+
+   /* expression should not be locked anymore */
+   assert((*ownerdata)->nlockspos == 0);
+   assert((*ownerdata)->nlocksneg == 0);
+
+   /* expression should not be enforced anymore */
+   assert((*ownerdata)->nenfos == 0);
+   assert((*ownerdata)->auxvar == NULL);
+
+   SCIPfreeBlockMemory(scip, ownerdata);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler

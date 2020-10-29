@@ -26,7 +26,10 @@
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
+
 typedef struct SCIP_Expr_OwnerData SCIP_EXPR_OWNERDATA; /**< data stored by expression owner in expression */
+typedef struct SCIP_Expr_OwnerDataCreateData SCIP_EXPR_OWNERDATACREATEDATA; /**< data used to ownerdata-create callback */
+
 typedef struct SCIP_QuadExpr  SCIP_QUADEXPR;     /**< representation of expression as quadratic */
 typedef struct SCIP_QuadExpr_QuadTerm  SCIP_QUADEXPR_QUADTERM;  /**< a single term associated to a quadratic variable */
 typedef struct SCIP_QuadExpr_BilinTerm SCIP_QUADEXPR_BILINTERM; /**< a single bilinear term */
@@ -42,6 +45,43 @@ typedef enum
 
 /** the maximal number of estimates an expression handler can return in the INITESTIMATES callback */
 #define SCIP_EXPR_MAXINITESTIMATES 10
+
+/** callback for creating ownerdata of expression
+ *
+ * This callback is called when an expression has been created.
+ * It can create data which is then stored in the expression.
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : the expression that has been created
+ *  - ownerdatacreatedata : data that has been passed on by future owner of expression that can be used to create ownerdata
+ * output:
+ *  - ownerdata      : buffer to store ownerdata that shall be stored in expression (can be NULL)
+ */
+#define SCIP_DECL_EXPR_OWNERDATACREATE(x) SCIP_RETCODE x(\
+   SCIP* scip, \
+   SCIP_EXPR* expr, \
+   SCIP_EXPR_OWNERDATA** ownerdata, \
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
+
+/** callback for freeing ownerdata of expression
+ *
+ * This callback is called while an expression is freed.
+ * The callback shall free the ownerdata, if any.
+ * That is, the callback is also called on expressions that only store this callback, but no ownerdata.
+ *
+ * Note, that the children of the expression have already been release when this callback is called.
+ * The callback must not try to access the expressions children.
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : the expression which is freed
+ *  - ownerdata      : the ownerdata stored in the expression
+ */
+#define SCIP_DECL_EXPR_OWNERDATAFREE(x) SCIP_RETCODE x(\
+   SCIP* scip, \
+	SCIP_EXPR* expr, \
+	SCIP_EXPR_OWNERDATA** ownerdata)
 
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
