@@ -511,7 +511,7 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
 /** @} */
 
 
-/** @name Parsing methods
+/** @name Parsing methods (internal)
  * @{
  * Here is an attempt at defining the grammar of an expression.
  * We use upper case names for variables (in the grammar sense) and terminals are between "".
@@ -541,7 +541,6 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
 #define debugParse                      while( FALSE ) printf
 #endif
 static
-SCIP_RETCODE parseExpr(SCIP*, SCIP_CONSHDLR*, SCIP_HASHMAP*, const char*, const char**, SCIP_EXPR**);
 
 /** Parses base to build a value, variable, sum, or function-like ("func(...)") expression.
  * <pre>
@@ -602,7 +601,7 @@ SCIP_RETCODE parseBase(
    else if( *expr == '(' )
    {
       /* parse expression */
-      SCIP_CALL( parseExpr(set, blkmem, vartoexprvarmap, ++expr, newpos, basetree) );
+      SCIP_CALL( SCIPexprParse(set, blkmem, vartoexprvarmap, ++expr, newpos, basetree) );
       expr = *newpos;
 
       /* expect ')' */
@@ -886,134 +885,6 @@ SCIP_RETCODE parseTerm(
    {
       /* Term consists of this unique factor */
       *termtree = factortree;
-   }
-
-   *newpos = expr;
-
-   return SCIP_OKAY;
-}
-
-/** Parses an expression and builds a sum-expression with children.
- * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
- * </pre>
- */
-static
-SCIP_RETCODE parseExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
-   const char*           expr,               /**< expr that we are parsing */
-   const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_EXPR**           exprtree            /**< buffer to store the expr parsed by Expr */
-   )
-{
-   SCIP_Real sign;
-   SCIP_EXPR* termtree;
-
-   debugParse("parsing expression %s\n", expr); /*lint !e506 !e681*/
-
-   /* ignore whitespace */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
-
-   /* if '+' or '-', store it */
-   sign = 1.0;
-   if( *expr == '+' || *expr == '-' )
-   {
-      debugParse("while parsing expression, read char %c\n", *expr); /*lint !e506 !e681*/
-      sign = *expr == '+' ? 1.0 : -1.0;
-      ++expr;
-   }
-
-   SCIP_CALL( parseTerm(set, blkmem, vartoexprvarmap, expr, newpos, &termtree) );
-   expr = *newpos;
-
-   debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
-
-   /* check if Expr has another Term incoming */
-   while( isspace((unsigned char)*expr) )
-      ++expr;
-   if( *expr == '+' || *expr == '-' )
-   {
-      if( SCIPisExprValue(termtree) )
-      {
-         /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
-         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 0, NULL, NULL, sign * SCIPgetConsExprExprValueValue(termtree)) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
-      }
-      else
-      {
-         /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
-         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 1, &termtree, &sign, 0.0) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
-      }
-
-      /* loop: parse Term, find next symbol */
-      do
-      {
-         SCIP_RETCODE retcode;
-         SCIP_Real coef;
-
-         /* check if we have a "coef * <term>" */
-         if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
-         {
-            while( isspace((unsigned char)**newpos) )
-               ++(*newpos);
-
-            if( **newpos != '*' )
-            {
-               /* no '*', so fall back to parsing term after sign */
-               coef = (*expr == '+') ? 1.0 : -1.0;
-               ++expr;
-            }
-            else
-            {
-               /* keep coefficient in coef and continue parsing term after coefficient */
-               expr = (*newpos)+1;
-
-               while( isspace((unsigned char)*expr) )
-                  ++expr;
-            }
-         }
-         else
-         {
-            coef = (*expr == '+') ? 1.0 : -1.0;
-            ++expr;
-         }
-
-         debugParse("while parsing expression, read coefficient %g\n", coef); /*lint !e506 !e681*/
-
-         retcode = parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree);
-
-         /* release exprtree if parseTerm fails with an read-error */
-         if( retcode == SCIP_READERROR )
-         {
-            SCIP_CALL( SCIPreleaseExpr(scip, exprtree) );
-         }
-         SCIP_CALL( retcode );
-
-         /* append newly created term */
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
-
-         /* find next symbol */
-         expr = *newpos;
-         while( isspace((unsigned char)*expr) )
-            ++expr;
-      } while( *expr == '+' || *expr == '-' );
-   }
-   else
-   {
-      /* Expr consists of this unique ['+' | '-'] Term */
-      if( sign  < 0.0 )
-      {
-         assert(sign == -1.0);
-         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 1, &termtree, &sign, 0.0) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
-      }
-      else
-         *exprtree = termtree;
    }
 
    *newpos = expr;
@@ -2567,6 +2438,135 @@ SCIP_RETCODE SCIPexprCopy(
 
    return SCIP_OKAY;
 }
+
+/** parses an expression and builds a sum-expression with children
+ *
+ * <pre>
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * </pre>
+ */
+SCIP_RETCODE SCIPexprParse(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
+   const char*           expr,               /**< expr that we are parsing */
+   const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
+   SCIP_EXPR**           exprtree            /**< buffer to store the expr parsed by Expr */
+   )
+{
+   SCIP_Real sign;
+   SCIP_EXPR* termtree;
+
+   debugParse("parsing expression %s\n", expr); /*lint !e506 !e681*/
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+
+   /* if '+' or '-', store it */
+   sign = 1.0;
+   if( *expr == '+' || *expr == '-' )
+   {
+      debugParse("while parsing expression, read char %c\n", *expr); /*lint !e506 !e681*/
+      sign = *expr == '+' ? 1.0 : -1.0;
+      ++expr;
+   }
+
+   SCIP_CALL( parseTerm(set, blkmem, vartoexprvarmap, expr, newpos, &termtree) );
+   expr = *newpos;
+
+   debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
+
+   /* check if Expr has another Term incoming */
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+   if( *expr == '+' || *expr == '-' )
+   {
+      if( SCIPisExprValue(termtree) )
+      {
+         /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
+         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 0, NULL, NULL, sign * SCIPgetConsExprExprValueValue(termtree)) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+      }
+      else
+      {
+         /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
+         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 1, &termtree, &sign, 0.0) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+      }
+
+      /* loop: parse Term, find next symbol */
+      do
+      {
+         SCIP_RETCODE retcode;
+         SCIP_Real coef;
+
+         /* check if we have a "coef * <term>" */
+         if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
+         {
+            while( isspace((unsigned char)**newpos) )
+               ++(*newpos);
+
+            if( **newpos != '*' )
+            {
+               /* no '*', so fall back to parsing term after sign */
+               coef = (*expr == '+') ? 1.0 : -1.0;
+               ++expr;
+            }
+            else
+            {
+               /* keep coefficient in coef and continue parsing term after coefficient */
+               expr = (*newpos)+1;
+
+               while( isspace((unsigned char)*expr) )
+                  ++expr;
+            }
+         }
+         else
+         {
+            coef = (*expr == '+') ? 1.0 : -1.0;
+            ++expr;
+         }
+
+         debugParse("while parsing expression, read coefficient %g\n", coef); /*lint !e506 !e681*/
+
+         retcode = parseTerm(set, blkmem, vartoexprvarmap, expr, newpos, &termtree);
+
+         /* release exprtree if parseTerm fails with an read-error */
+         if( retcode == SCIP_READERROR )
+         {
+            SCIP_CALL( SCIPreleaseExpr(scip, exprtree) );
+         }
+         SCIP_CALL( retcode );
+
+         /* append newly created term */
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+
+         /* find next symbol */
+         expr = *newpos;
+         while( isspace((unsigned char)*expr) )
+            ++expr;
+      } while( *expr == '+' || *expr == '-' );
+   }
+   else
+   {
+      /* Expr consists of this unique ['+' | '-'] Term */
+      if( sign  < 0.0 )
+      {
+         assert(sign == -1.0);
+         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 1, &termtree, &sign, 0.0) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+      }
+      else
+         *exprtree = termtree;
+   }
+
+   *newpos = expr;
+
+   return SCIP_OKAY;
+}
+
 
 /** captures an expression (increments usage count) */
 SCIP_EXPORT

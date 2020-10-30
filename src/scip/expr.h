@@ -324,6 +324,22 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
    );
 
+/** parses an expression and builds a sum-expression with children
+ *
+ * <pre>
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * </pre>
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprParse(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   const char*           exprstr,            /**< string with the expr to parse */
+   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   SCIP_EXPR**           expr                /**< pointer to store the expr parsed */
+   );
+
 /** captures an expression (increments usage count) */
 SCIP_EXPORT
 void SCIPexprCapture(

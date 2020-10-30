@@ -9926,49 +9926,6 @@ SCIP_RETCODE SCIPdismantleExpr(
 
 
 
-
-/** Creates an expression from a string.
- * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
- * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
- * The actual definition:
- * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
- * Term       -> Factor { ("*" | "/" ) Factor }
- * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
- * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- * </pre>
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
- *
- * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method).
- *
- * See also @ref parseExpr.
- */
-SCIP_RETCODE SCIPparseExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   const char*           exprstr,            /**< string with the expr to parse */
-   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
-   SCIP_EXPR**  expr                /**< pointer to store the expr parsed */
-   )
-{
-   const char* finalpos_;
-   SCIP_RETCODE retcode;
-   SCIP_HASHMAP* vartoexprvarmap;
-
-   SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), 5 * SCIPgetNVars(scip)) );
-
-   /* if parseExpr fails, we still want to free hashmap */
-   retcode = parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr);
-
-   SCIPhashmapFree(&vartoexprvarmap);
-
-   if( finalpos != NULL )
-      *finalpos = finalpos_;
-
-   return retcode;
-}
-
 /** evaluate an expression in a point
  *
  * Iterates over expressions to also evaluate children, if necessary.

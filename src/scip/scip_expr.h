@@ -201,7 +201,8 @@ SCIP_RETCODE SCIPcopyExprShallow(
    SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
    );
 
-/** Creates an expression from a string.
+/** creates an expression from a string
+ *
  * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
  * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
  * The actual definition:
@@ -216,7 +217,7 @@ SCIP_RETCODE SCIPcopyExprShallow(
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
  * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * See also @ref parseExpr.
+ * See also @ref parseExpr in expr.c.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPparseExpr(
