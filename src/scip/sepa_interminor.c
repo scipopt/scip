@@ -516,11 +516,12 @@ SCIP_RETCODE constructBasicVars2TableauRowMap(
  * This function computes the coefficients A, B, C, D, E for the given ray.
  */
 static
-void computeRestrictionToRay(
+SCIP_RETCODE computeRestrictionToRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            ray,                /**< coefficients of ray */
    SCIP_VAR**            vars,               /**< variables */
-   SCIP_Real*            coefs               /**< buffer to store A, B, C, D, and E */
+   SCIP_Real*            coefs,              /**< buffer to store A, B, C, D, and E */
+   SCIP_Bool*            success             /**< FALSE if we need to abort generation because of numerics */
    )
 {
    SCIP_Real eigenvectors[16] = {1.0, 1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0, -1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0};
@@ -531,7 +532,11 @@ void computeRestrictionToRay(
    SCIP_Real* c;
    SCIP_Real* d;
    SCIP_Real* e;
+   SCIP_Real min;
+   SCIP_Real max;
    int i;
+
+   *success = TRUE;
 
    /* set all coefficients to zero */
    memset(coefs, 0, 5 * sizeof(SCIP_Real));
@@ -578,14 +583,46 @@ void computeRestrictionToRay(
    *e = SQRT( *e );
    *d /= *e;
 
-   /* some sanity checks */
-   assert(*c >= 0); /* radicand at zero */
-   assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
-   assert(*a >= 0); /* the function inside the root is convex */
+   if( SQRT( *c ) - *e >= 0.0 )
+   {
+      assert(SQRT( *c ) - *e < 1e-6);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
-#ifdef  DEBUG_INTERSECTIONCUT
-   SCIPinfoMessage(scip, NULL, "Restriction yields: a,b,c,d,e %g %g %g %g %g\n", coefs[0], coefs[1], coefs[2], coefs[3], coefs[4]);
+   /* maybe we want to avoid a large dynamism between A, B and C */
+   max = 0.0;
+   min = SCIPinfinity(scip);
+   for( i = 0; i < 3; ++i )
+   {
+      SCIP_Real absval;
+
+      absval = ABS(coefs[i]);
+      if( max < absval )
+         max = absval;
+      if( absval != 0.0 && absval < min )
+         min = absval;
+    }
+
+    if( SCIPisHugeValue(scip, max / min) )
+    {
+#ifdef DEBUG_INTERSECTIONCUT
+      printf("Bad numerics: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min);
 #endif
+      *success = FALSE;
+      return SCIP_OKAY;
+    }
+
+    /* some sanity checks */
+    assert(*c >= 0); /* radicand at zero */
+    assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
+    assert(*a >= 0); /* the function inside the root is convex */
+
+#ifdef DEBUG_INTERSECTIONCUT
+    SCIPinfoMessage(scip, NULL, "Restriction yields: a,b,c,d,e %g %g %g %g %g\n", coefs[0], coefs[1], coefs[2], coefs[3], coefs[4]);
+#endif
+
+    return SCIP_OKAY;
 }
 
 /** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
@@ -988,7 +1025,10 @@ SCIP_RETCODE addCols(
          continue;
 
       /* compute the cut */
-      computeRestrictionToRay(scip, ray, vars, coefs);
+      SCIP_CALL( computeRestrictionToRay(scip, ray, vars, coefs, success) );
+
+      if( *success == FALSE )
+         return SCIP_OKAY;
 
       /* compute intersection point */
       interpoint = computeRoot(scip, coefs);
@@ -1079,7 +1119,10 @@ SCIP_RETCODE addRows(
          continue;
 
       /* compute the cut */
-      computeRestrictionToRay(scip, ray, vars, coefs);
+      SCIP_CALL( computeRestrictionToRay(scip, ray, vars, coefs, success) );
+
+      if( *success == FALSE )
+         return SCIP_OKAY;
 
       /* compute intersection point */
       interpoint = computeRoot(scip, coefs);
