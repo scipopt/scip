@@ -1496,3 +1496,937 @@ void printExprHdlrStatistics(
       SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 }
+
+
+
+/*
+ * Public methods
+ */
+
+/**@name Expression Handler Methods */
+/**@{ */
+
+/** set the expression handler callbacks to copy and free an expression handler */
+void SCIPexprhdlrSetCopyFreeHdlr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRCOPYHDLR((*copyhdlr)),      /**< handler copy callback (can be NULL) */
+   SCIP_DECL_EXPRFREEHDLR((*freehdlr))       /**< handler free callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->copyhdlr = copyhdlr;
+   exprhdlr->freehdlr = freehdlr;
+}
+
+/** set the expression handler callbacks to copy and free expression data */
+void SCIPexprhdlrSetCopyFreeData(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions without data) */
+   SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not need to be freed) */
+)
+{  /*lint --e{715}*/
+   assert(exprhdlr != NULL);
+
+   exprhdlr->copydata = copydata;
+   exprhdlr->freedata = freedata;
+}
+
+/** set the print callback of an expression handler */
+void SCIPexprhdlrSetPrint(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRPRINT((*print))             /**< print callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->print = print;
+}
+
+/** set the parse callback of an expression handler */
+void SCIPexprhdlrSetParse(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRPARSE((*parse))             /**< parse callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->parse = parse;
+}
+
+/** set the curvature detection callback of an expression handler */
+void SCIPexprhdlrSetCurvature(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRCURVATURE((*curvature))     /**< curvature detection callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->curvature = curvature;
+}
+
+/** set the monotonicity detection callback of an expression handler */
+void SCIPexprhdlrSetMonotonicity(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->monotonicity = monotonicity;
+}
+
+/** set the integrality detection callback of an expression handler */
+void SCIPexprhdlrSetIntegrality(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->integrality = integrality;
+}
+
+/** set the hash callback of an expression handler */
+void SCIPexprhdlrSetHash(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRHASH((*hash))               /**< hash callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->hash = hash;
+}
+
+/** set the compare callback of an expression handler */
+void SCIPexprhdlrSetCompare(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRCOMPARE((*compare))         /**< compare callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->compare = compare;
+}
+
+/** set derivative evaluation callbacks of an expression handler */
+void SCIPexprhdlrSetDiff(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRBWDIFF((*bwdiff)),          /**< backward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_EXPRFWDIFF((*fwdiff)),          /**< forward derivative evaluation callback (can be NULL) */
+   SCIP_DECL_EXPRBWFWDIFF((*bwfwdiff))       /**< backward-forward derivative evaluation callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->bwdiff = bwdiff;
+   exprhdlr->fwdiff = fwdiff;
+   exprhdlr->bwfwdiff = bwfwdiff;
+}
+
+/** set the interval evaluation callback of an expression handler */
+void SCIPexprhdlrSetIntEval(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRINTEVAL((*inteval))         /**< interval evaluation callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->inteval = inteval;
+}
+
+/** set the simplify callback of an expression handler */
+void SCIPexprhdlrSetSimplify(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRSIMPLIFY((*simplify))       /**< simplify callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->simplify = simplify;
+}
+
+/** set the reverse propagation callback of an expression handler */
+void SCIPexprhdlrSetReverseProp(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->reverseprop = reverseprop;
+}
+
+/** set the and estimation callbacks of an expression handler */
+void SCIPexprhdlrSetEstimate(
+   SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
+   SCIP_DECL_EXPRINITESTIMATES((*initestimates)), /**< initial estimators callback (can be NULL) */
+   SCIP_DECL_EXPRESTIMATE((*estimate))            /**< estimator callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->initestimates = initestimates;
+   exprhdlr->estimate = estimate;
+}
+
+/** gives the name of an expression handler */
+const char* SCIPexprhdlrGetName(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->name;
+}
+
+/** gives the description of an expression handler (can be NULL) */
+const char* SCIPexprhdlrGetDescription(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->desc;
+}
+
+/** gives the precedence of an expression handler */
+unsigned int SCIPexprhdlrGetPrecedence(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->precedence;
+}
+
+/** gives the data of an expression handler */
+SCIP_EXPRHDLRDATA* SCIPexprhdlrGetData(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->data;
+}
+
+/** returns whether expression handler implements the print callback */
+SCIP_Bool SCIPexprhdlrHasPrint(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->print != NULL;
+}
+
+/** returns whether expression handler implements the backward differentiation callback */
+SCIP_Bool SCIPexprhdlrHasBwdiff(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->bwdiff != NULL;
+}
+
+/** returns whether expression handler implements the interval evaluation callback */
+SCIP_Bool SCIPexprhdlrHasIntEval(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->inteval != NULL;
+}
+
+/** returns whether expression handler implements the estimator callback */
+SCIP_Bool SCIPexprhdlrHasEstimate(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->estimate != NULL;
+}
+
+/** returns whether expression handler implements the initial estimators callback */
+SCIP_Bool SCIPexprhdlrHasInitEstimates(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->initestimates != NULL;
+}
+
+/** returns whether expression handler implements the simplification callback */
+SCIP_Bool SCIPexprhdlrHasSimplify(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->simplify != NULL;
+}
+
+/** returns whether expression handler implements the curvature callback */
+SCIP_Bool SCIPexprhdlrHasCurvature(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->curvature != NULL;
+}
+
+/** returns whether expression handler implements the reverse propagation callback */
+SCIP_Bool SCIPexprhdlrHasReverseProp(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->reverseprop != NULL;
+}
+
+/** increments the branching score count of an expression handler */
+void SCIPexprhdlrIncrementNBranchScore(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   ++exprhdlr->nbranchscores;
+}
+
+
+/** copies the given expression handler to a new scip */
+SCIP_RETCODE SCIPexprhdlrCopyInclude(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             targetset           /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(targetset != NULL);
+   assert(targetset->scip != NULL);
+
+   if( exprhdlr->copyhdlr != NULL )
+   {
+      SCIPsetDebugMsg(set, "including expression handler <%s> in subscip %p\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
+      SCIP_CALL( exprhdlr->copyhdlr(targetset->scip, exprhdlr) );
+   }
+   else
+   {
+      SCIPsetDebugMsg(set, "expression handler <%s> cannot be copied to subscip %p due to missing copyhdlr callback\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the print callback of an expression handler
+ *
+ * the method prints an expression
+ * it is called while iterating over the expression graph at different stages
+ */
+SCIP_RETCODE SCIPexprhdlrPrintExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRITER_STAGE   stage,              /**< stage of expression iteration */
+   int                   currentchild,       /**< index of current child if in stage visitingchild or visitedchild */
+   unsigned int          parentprecedence,   /**< precedence of parent */
+   FILE*                 file                /**< the file to print to */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(messagehdlr != NULL);
+   assert(currentchild >= 0);
+   assert(currentchild < expr->nchildren);
+
+   if( SCIPexprhdlrHasPrint(exprhdlr) )
+   {
+      SCIP_CALL( exprhdlr->print(set->scip, expr, stage, currentchild, parentprecedence, file) );
+   }
+   else
+   {
+      /* default: <hdlrname>(<child1>, <child2>, ...) */
+      switch( stage )
+      {
+         case SCIP_EXPRITER_ENTEREXPR :
+         {
+            SCIPmessageFPrintInfo(messagehdlr, file, SCIPexprhdlrGetName(expr->exprhdlr));
+            if( expr->nchildren > 0 )
+            {
+               SCIPmessageFPrintInfo(messagehdlr, file, "(");
+            }
+            break;
+         }
+
+         case SCIP_EXPRITER_VISITEDCHILD :
+         {
+            if( currentchild < expr->nchildren-1 )
+            {
+               SCIPmessageFPrintInfo(messagehdlr, file, ", ");
+            }
+            else
+            {
+               SCIPmessageFPrintInfo(messagehdlr, file, ")");
+            }
+
+            break;
+         }
+
+         case SCIP_EXPRITER_VISITINGCHILD :
+         case SCIP_EXPRITER_LEAVEEXPR :
+         default:
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the parse callback of an expression handler
+ *
+ * The method parses an expression.
+ * It should be called when parsing an expression and an operator with the expr handler name is found.
+ */
+SCIP_RETCODE SCIPexprhdlrParseExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           string,             /**< string containing expression to be parse */
+   const char**          endstring,          /**< buffer to store the position of string after parsing */
+   SCIP_EXPR**           expr,               /**< buffer to store the parsed expression */
+   SCIP_Bool*            success             /**< buffer to store whether the parsing was successful or not */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+
+   *expr = NULL;
+
+   if( exprhdlr->parse == NULL )
+   {
+      /* TODO we could just look for a comma separated list of operands and try to initialize the expr with this one?
+       * That would be sufficient for sin, cos, exp, log, abs, for example.
+       */
+      SCIPdebugMessage("Expression handler <%s> has no parsing method.\n", SCIPexprhdlrGetName(exprhdlr));
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* give control to exprhdlr's parser */
+   SCIP_CALL( exprhdlr->parse(set->scip, exprhdlr, string, endstring, expr, success) );
+
+   assert(*success || (*expr == NULL));
+
+   return SCIP_OKAY;
+}
+
+/** calls the curvature check callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRCURVATURE for details.
+ */
+SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to check the curvature for */
+   SCIP_EXPRCURV         exprcurvature,      /**< desired curvature of this expression */
+   SCIP_Bool*            success,            /**< buffer to store whether the desired curvature be obtained */
+   SCIP_EXPRCURV*        childcurv           /**< array to store required curvature for each child */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( exprhdlr->curvature != NULL )
+   {
+      SCIP_CALL( exprhdlr->curvature(set->scip, expr, exprcurvature, success, childcurv) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the hash callback of an expression handler
+ *
+ * The method hashes an expression by taking the hashes of its children into account.
+ */
+SCIP_RETCODE SCIPexprhdlrHashExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to be hashed */
+   unsigned int*         hashkey,            /**< buffer to store the hash value */
+   unsigned int*         childrenhashes      /**< array with hash values of children */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(hashkey != NULL);
+   assert(childrenhashes != NULL || expr->nchildren == 0);
+
+   if( expr->exprhdlr->hash != NULL )
+   {
+      SCIP_CALL( expr->exprhdlr->hash(set->scip, expr, hashkey, childrenhashes) );
+   }
+   else
+   {
+      int i;
+
+      /* compute initial hash from expression handler name if callback is not implemented
+       * this can lead to more collisions and thus a larger number of expensive expression compare calls
+       */
+      *hashkey = 0;
+      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+         *hashkey += (unsigned int) expr->exprhdlr->name[i]; /*lint !e571*/
+
+      *hashkey = SCIPcalcFibHash((SCIP_Real)*hashkey);
+
+      /* now make use of the hashkeys of the children */
+      for( i = 0; i < expr->nchildren; ++i )
+         *hashkey ^= childrenhashes[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the compare callback of an expression handler
+ *
+ * The method receives two expressions, expr1 and expr2, and returns
+ * - -1 if expr1 < expr2
+ * - 0  if expr1 = expr2
+ * - 1  if expr1 > expr2
+ */
+int SCIPexprhdlrCompareExpr(
+   SCIP_EXPR*            expr1,              /**< first expression in comparison */
+   SCIP_EXPR*            expr2               /**< second expression in comparison */
+   )
+{
+   int i;
+
+   assert(expr1 != NULL);
+   assert(expr2 != NULL);
+   assert(expr1->exprhdlr == expr2->exprhdlr);
+
+   if( expr1->exprhdlr->compare != NULL )
+   {
+      /* enforces OR1-OR4 */
+      return expr1->exprhdlr->compare(expr1, expr2);
+   }
+
+   /* enforces OR5: default comparison method of expressions of the same type:
+    * expr1 < expr2 if and only if expr1_i = expr2_i for all i < k and expr1_k < expr2_k.
+    * if there is no such k, use number of children to decide
+    * if number of children is equal, both expressions are equal
+    * @note: Warning, this method doesn't know about expression data. So if your expressions have special data,
+    * you must implement the compare callback: SCIP_DECL_EXPRCOMPARE
+    */
+   for( i = 0; i < expr1->nchildren && i < expr2->nchildren; ++i )
+   {
+      int compareresult = SCIPexprCompare(expr1->children[i], expr2->children[i]);
+      if( compareresult != 0 )
+         return compareresult;
+   }
+
+   return expr1->nchildren == expr2->nchildren ? 0 : expr1->nchildren < expr2->nchildren ? -1 : 1;
+}
+
+/** calls the evaluation callback of an expression handler
+ *
+ * The method evaluates an expression by taking the values of its children into account.
+ *
+ * Further, allows to evaluate w.r.t. given expression and children values instead of those stored in children expressions.
+ */
+SCIP_RETCODE SCIPexprhdlrEvalExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory, can be NULL if childrenvals is NULL */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            val,                /**< buffer to store value of expression */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_SOL*             sol                 /**< solution that is evaluated (can be NULL) */
+)
+{
+   SCIP_Real* origvals = NULL;
+
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(exprhdlr->eval != NULL);
+   assert(val != NULL);
+
+   /* temporarily overwrite the evalvalue in all children with values from childrenvals */
+   if( childrenvals != NULL && expr->nchildren > 0 )
+   {
+      int c;
+
+      assert(bufmem != NULL);
+
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &origvals, expr->nchildren) );
+
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         origvals[c] = expr->children[c]->evalvalue;
+         expr->children[c]->evalvalue = childrenvals[c];
+      }
+   }
+
+   /* call expression eval callback */
+   SCIP_CALL( exprhdlr->eval(set->scip, expr, val, sol) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*val) )
+      *val = SCIP_INVALID;
+
+   /* restore original evalvalues in children */
+   if( origvals != NULL )
+   {
+      int c;
+      for( c = 0; c < expr->nchildren; ++c )
+         expr->children[c]->evalvalue = origvals[c];
+
+      BMSfreeBufferMemoryArray(bufmem, &origvals);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the backward derivative evaluation callback of an expression handler
+ *
+ * The method should compute the partial derivative of expr w.r.t its child at childidx.
+ * That is, it returns
+ * \f[
+ *   \frac{\partial \text{expr}}{\partial \text{child}_{\text{childidx}}}
+ * \f]
+ *
+ * Further, allows to differentiate w.r.t. given expression and children values instead of those stored in children expressions.
+ */
+SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory, can be NULL if childrenvals is NULL */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   int                   childidx,           /**< index of the child */
+   SCIP_Real*            derivative,         /**< buffer to store the partial derivative w.r.t. the i-th children */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
+   SCIP_Real             exprval             /**< value for expression, used only if childrenvals is not NULL */
+   )
+{
+   SCIP_Real* origchildrenvals;
+   SCIP_Real origexprval;
+   int c;
+
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(derivative != NULL);
+
+   if( exprhdlr->bwdiff == NULL )
+   {
+      *derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   if( childrenvals != NULL )
+   {
+      /* temporarily overwrite the evalvalue in all children and expr with values from childrenvals and exprval, resp. */
+      if( expr->nchildren > 0 )
+      {
+         assert(bufmem != NULL);
+         SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &origchildrenvals, expr->nchildren) );
+
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            origchildrenvals[c] = expr->children[c]->evalvalue;
+            expr->children[c]->evalvalue = childrenvals[c];
+         }
+      }
+
+      origexprval = expr->evalvalue;
+      expr->evalvalue = exprval;
+   }
+
+   SCIP_CALL( expr->exprhdlr->bwdiff(set->scip, expr, childidx, derivative) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*derivative) )
+      *derivative = SCIP_INVALID;
+
+   /* restore original evalvalues in children */
+   if( childrenvals != NULL )
+   {
+      if( expr->nchildren > 0 )
+      {
+         for( c = 0; c < expr->nchildren; ++c )
+            expr->children[c]->evalvalue = origchildrenvals[c];  /*lint !e644*/
+
+         BMSfreeBufferMemoryArray(bufmem, &origchildrenvals);
+      }
+
+      expr->evalvalue = origexprval;   /*lint !e644*/
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the forward differentiation callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRFWDIFF for details.
+ */
+SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_Real*            dot,                /**< buffer to store derivative value */
+   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions) */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(dot != NULL);
+
+   if( exprhdlr->fwdiff == NULL )
+   {
+      *dot = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( exprhdlr->fwdiff(set->scip, expr, dot, direction) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*dot) )
+      *dot = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** calls the evaluation callback for Hessian directions (backward over forward) of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRBWFWDIFF for details.
+ */
+SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   int                   childidx,           /**< index of the child */
+   SCIP_Real*            bardot,             /**< buffer to store derivative value */
+   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions) */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(childidx >= 0);
+   assert(childidx < expr->nchildren);
+   assert(bardot != NULL);
+
+   if( exprhdlr->bwfwdiff == NULL )
+   {
+      *bardot = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( expr->exprhdlr->bwfwdiff(set->scip, expr, childidx, bardot, direction) );
+
+   /* if there was some evaluation error (e.g., overflow) that hasn't been caught yet, then do so now */
+   if( !SCIPisFinite(*bardot) )
+      *bardot = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** calls the interval evaluation callback of an expression handler */
+SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_INTERVAL*        interval,           /**< buffer where to store interval */
+   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), /**< callback to be called when interval-evaluating a variable */
+   void*                 intevalvardata      /**< data to be passed to intevalvar callback */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(interval != NULL);
+
+   if( exprhdlr->inteval != NULL )
+   {
+      SCIP_CALL( SCIPclockStart(exprhdlr->intevaltime, set) );
+      SCIP_CALL( exprhdlr->inteval(set->scip, expr, interval, intevalvar, intevalvardata) );
+      SCIP_CALL( SCIPclockStop(exprhdlr->intevaltime, set) );
+
+      ++exprhdlr->nintevalcalls;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the estimator callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRESTIMATE for details.
+ */
+SCIP_RETCODE SCIPexprhdlrEstimateExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to be estimated */
+   SCIP_SOL*             sol,                /**< solution at which to estimate (NULL for the LP solution) */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_Real             targetvalue,        /**< a value that the estimator shall exceed, can be +/-infinity */
+   SCIP_Real*            coefs,              /**< array to store coefficients of estimator */
+   SCIP_Real*            constant,           /**< buffer to store constant part of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator is valid locally only */
+   SCIP_Bool*            success,            /**< buffer to indicate whether an estimator could be computed */
+   SCIP_Bool*            branchcand          /**< array to indicate which children (not) to consider for branching */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(coefs != NULL);
+   assert(islocal != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   if( exprhdlr->estimate != NULL )
+   {
+      SCIP_CALL( SCIPclockStart(exprhdlr->estimatetime, set) );
+      SCIP_CALL( exprhdlr->estimate(set->scip, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
+      SCIP_CALL( SCIPclockStop(exprhdlr->estimatetime, set) );
+
+      /* update statistics */
+      ++exprhdlr->nestimatecalls;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the intitial estimators callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRINITESTIMATES for details.
+ */
+SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to be estimated */
+   SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
+   SCIP_Real*            coefs[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store coefficients of computed estimators */
+   SCIP_Real*            constant[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store constant of computed estimators */
+   SCIP_Bool*            islocal[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to return whether estimator validity depends on children activity */
+   int*                  nreturned           /**< buffer to store number of estimators that have been computed */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(nreturned != NULL);
+
+   *nreturned = 0;
+
+   if( exprhdlr->initestimates )
+   {
+      SCIP_CALL( SCIPclockStart(expr->exprhdlr->estimatetime, set) );
+      SCIP_CALL( exprhdlr->initestimates(set->scip, expr, overestimate, coefs, constant, islocal, nreturned) );
+      SCIP_CALL( SCIPclockStop(expr->exprhdlr->estimatetime, set) );
+
+      ++exprhdlr->nestimatecalls;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the simplification callback of an expression handler
+ *
+ * The function receives the expression to be simplified and a pointer to store the simplified expression.
+ */
+SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to simplify */
+   SCIP_EXPR**           simplifiedexpr      /**< buffer to store the simplified expression */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(simplifiedexpr != NULL);
+
+   if( exprhdlr->simplify != NULL )
+   {
+      SCIP_CALL( SCIPclockStart(expr->exprhdlr->simplifytime, set) );
+      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr) );
+      SCIP_CALL( SCIPclockStop(expr->exprhdlr->simplifytime) );
+
+      /* update statistics */
+      ++exprhdlr->nsimplifycalls;
+      if( expr != *simplifiedexpr )
+         ++exprhdlr->nsimplified;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the reverse propagation callback of an expression handler
+ *
+ * The method propagates given bounds over the children of an expression.
+ */
+SCIP_RETCODE SCIPexprhdlrReversePropExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to propagate */
+   SCIP_INTERVAL         bounds,             /**< the bounds on the expression that should be propagated */
+   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
+   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(childrenbounds != NULL || expr->nchildren == 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   if( exprhdlr->reverseprop != NULL )
+   {
+      SCIP_CALL( SCIPclockStart(exprhdlr->proptime, set) );
+      SCIP_CALL( exprhdlr->reverseprop(set->scip, expr, bounds, childrenbounds, infeasible) );
+      SCIP_CALL( SCIPclockStop(exprhdlr->proptime, set) );
+
+      /* update statistics */
+      if( *infeasible )
+         ++expr->exprhdlr->ncutoffs;
+      ++expr->exprhdlr->npropcalls;
+
+      //TODO move into nlhldr_default:
+      //assert(*nreductions >= 0);
+      //exprhdlr->ndomreds += *nreductions;
+   }
+
+   return SCIP_OKAY;
+}
+
+/**@} */

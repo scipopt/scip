@@ -155,12 +155,10 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  input:
  *  - scip              : target SCIP main data structure
  *  - sourceexprhdlr    : expression handler in source SCIP
- *  - valid             : to store indication whether the expression handler was copied
  */
 #define SCIP_DECL_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP*          scip, \
-   SCIP_EXPRHDLR* sourceexprhdlr, \
-   SCIP_Bool*     valid)
+   SCIP_EXPRHDLR* sourceexprhdlr)
 
 /** expression handler free callback
  *
@@ -245,16 +243,16 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 /** expression parse callback
  *
  * the method parses an expression
- * it is called when parsing a constraint and an operator with the expr handler name is found
+ * it is called when parsing an expression and an operator with the expr handler name is found
  *
  * input:
  *  - scip         : SCIP main data structure
  *  - string       : string containing expression to be parse
  *
  *  output:
- *  - endstring    : pointer to store the position of string after parsing
- *  - expr         : pointer to store the parsed expression
- *  - success      : pointer to store whether the parsing was successful or not
+ *  - endstring    : buffer to store the position of string after parsing
+ *  - expr         : buffer to store the parsed expression
+ *  - success      : buffer to store whether the parsing was successful or not
  */
 #define SCIP_DECL_EXPRPARSE(x) SCIP_RETCODE x (\
    SCIP*          scip, \
@@ -328,7 +326,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be hashed
- *  - hashkey : pointer to store the hash value
+ *  - hashkey : buffer to store the hash value
  *  - childrenhashes : array with hash values of children
  */
 #define SCIP_DECL_EXPRHASH(x) SCIP_RETCODE x (\
@@ -345,12 +343,28 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * 1  if expr1 > expr2
  *
  * input:
- *  - expr1 : first expression to compare
- *  - expr2 : second expression to compare
+ *  - expr1 : first expression in comparison
+ *  - expr2 : second expression in comparison
  */
 #define SCIP_DECL_EXPRCOMPARE(x) int x (\
    SCIP_EXPR* expr1, \
    SCIP_EXPR* expr2)
+
+/** expression (point-) evaluation callback
+ *
+ * The method evaluates an expression by taking the values of its children into account.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be evaluated
+ *  - val : buffer where to store value
+ *  - sol : solution that is evaluated (can be NULL)
+ */
+#define SCIP_DECL_EXPREVAL(x) SCIP_RETCODE x (\
+   SCIP*      scip, \
+   SCIP_EXPR* expr, \
+   SCIP_Real* val, \
+   SCIP_SOL*  sol)
 
 /** backward derivative evaluation callback
  *
@@ -362,7 +376,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *
  * input:
  *  - scip : SCIP main data structure
- *  - expr : expression to be evaluated
+ *  - expr : expression to be differentiated
  *  - childidx : index of the child
  *  - val : buffer to store the partial derivative w.r.t. the i-th children
  */
@@ -392,7 +406,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *
  * input:
  *  - scip : SCIP main data structure
- *  - expr : expression to be evaluated
+ *  - expr : expression to be differentiated
  *  - dot : buffer to store derivative value
  *  - direction : direction of the derivative (useful only for var expressions)
  *
@@ -446,32 +460,14 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    SCIP_Real* bardot, \
    SCIP_SOL*  direction)
 
-/** expression (point-) evaluation callback
- *
- * The method evaluates an expression by taking the values of its children into account.
- * We might extend this later to store (optionally) also information for
- * gradient and Hessian computations.
- *
- * input:
- *  - scip : SCIP main data structure
- *  - expr : expression to be evaluated
- *  - val : buffer where to store value
- *  - sol : solution that is evaluated (can be NULL)
- */
-#define SCIP_DECL_EXPREVAL(x) SCIP_RETCODE x (\
-   SCIP*      scip, \
-   SCIP_EXPR* expr, \
-   SCIP_Real* val, \
-   SCIP_SOL*  sol)
-
 /** expression (interval-) evaluation callback
  *
  * The method evaluates an expression by taking the intervals of its children into account.
  *
  * input:
  *  - scip : SCIP main data structure
- *  - interval : buffer where to store interval
  *  - expr : expression to be evaluated
+ *  - interval : buffer where to store interval
  *  - intevalvar : callback to be called when interval evaluating a variable
  *  - intevalvardata : data to be passed to intevalvar callback
  */
@@ -572,15 +568,15 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  - scip : SCIP main data structure
  *  - expr : expression
  *  - bounds : the bounds on the expression that should be propagated
- *  - infeasible: buffer to store whether a children bounds were propagated to an empty interval
  *  - childrenbounds : array to store computed bounds for children, initialized with current activity
+ *  - infeasible: buffer to store whether a children bounds were propagated to an empty interval
  */
 #define SCIP_DECL_EXPRREVERSEPROP(x) SCIP_RETCODE x (\
    SCIP*          scip, \
    SCIP_EXPR*     expr, \
    SCIP_INTERVAL  bounds, \
-   SCIP_Bool*     infeasible, \
-   SCIP_INTERVAL* childrenbounds)
+   SCIP_INTERVAL* childrenbounds, \
+   SCIP_Bool*     infeasible)
 
 /** @} */  /* expression handler */
 

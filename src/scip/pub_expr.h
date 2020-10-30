@@ -36,7 +36,7 @@ extern "C" {
 
 /** set the expression handler callbacks to copy and free an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetCopyFreeHdlr(
+void SCIPexprhdlrSetCopyFreeHdlr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCOPYHDLR((*copyhdlr)),      /**< handler copy callback (can be NULL) */
    SCIP_DECL_EXPRFREEHDLR((*freehdlr))       /**< handler free callback (can be NULL) */
@@ -44,7 +44,7 @@ SCIP_RETCODE SCIPexprhdlrSetCopyFreeHdlr(
 
 /** set the expression handler callbacks to copy and free expression data */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetCopyFreeData(
+void SCIPexprhdlrSetCopyFreeData(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions without data) */
    SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not need to be freed) */
@@ -52,56 +52,56 @@ SCIP_RETCODE SCIPexprhdlrSetCopyFreeData(
 
 /** set the print callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetPrint(
+void SCIPexprhdlrSetPrint(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRPRINT((*print))             /**< print callback (can be NULL) */
 );
 
 /** set the parse callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetParse(
+void SCIPexprhdlrSetParse(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRPARSE((*parse))             /**< parse callback (can be NULL) */
 );
 
 /** set the curvature detection callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetCurvature(
+void SCIPexprhdlrSetCurvature(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCURVATURE((*curvature))     /**< curvature detection callback (can be NULL) */
 );
 
 /** set the monotonicity detection callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetMonotonicity(
+void SCIPexprhdlrSetMonotonicity(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRMONOTONICITY((*monotonicity)) /**< monotonicity detection callback (can be NULL) */
 );
 
 /** set the integrality detection callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetIntegrality(
+void SCIPexprhdlrSetIntegrality(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRINTEGRALITY((*integrality)) /**< integrality detection callback (can be NULL) */
 );
 
 /** set the hash callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetHash(
+void SCIPexprhdlrSetHash(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRHASH((*hash))               /**< hash callback (can be NULL) */
 );
 
 /** set the compare callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetCompare(
+void SCIPexprhdlrSetCompare(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRCOMPARE((*compare))         /**< compare callback (can be NULL) */
 );
 
 /** set derivative evaluation callbacks of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetDiff(
+void SCIPexprhdlrSetDiff(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRBWDIFF((*bwdiff)),          /**< backward derivative evaluation callback (can be NULL) */
    SCIP_DECL_EXPRFWDIFF((*fwdiff)),          /**< forward derivative evaluation callback (can be NULL) */
@@ -110,28 +110,28 @@ SCIP_RETCODE SCIPexprhdlrSetDiff(
 
 /** set the interval evaluation callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetIntEval(
+void SCIPexprhdlrSetIntEval(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRINTEVAL((*inteval))         /**< interval evaluation callback (can be NULL) */
 );
 
 /** set the simplify callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetSimplify(
+void SCIPexprhdlrSetSimplify(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRSIMPLIFY((*simplify))       /**< simplify callback (can be NULL) */
 );
 
 /** set the reverse propagation callback of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetReverseProp(
+void SCIPexprhdlrSetReverseProp(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
 );
 
 /** set the and estimation callbacks of an expression handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPexprhdlrSetEstimate(
+void SCIPexprhdlrSetEstimate(
    SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
    SCIP_DECL_EXPRINITESTIMATES((*initestimates)), /**< initial estimators callback (can be NULL) */
    SCIP_DECL_EXPRESTIMATE((*estimate))            /**< estimator callback (can be NULL) */
