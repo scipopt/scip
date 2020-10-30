@@ -280,6 +280,7 @@ SCIP_RETCODE SCIPexprAppendChild(
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprReplaceChild(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression where a child is going to be replaced */
    int                   childidx,           /**< index of child being replaced */
@@ -293,6 +294,7 @@ SCIP_RETCODE SCIPexprReplaceChild(
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprRemoveChildren(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr                /**< expression */
    );

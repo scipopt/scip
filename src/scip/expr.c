@@ -97,10 +97,10 @@ SCIP_RETCODE createExpr(
       (*expr)->childrensize = nchildren;
 
       for( c = 0; c < nchildren; ++c )
-         SCIPcaptureExpr((*expr)->children[c]);
+         SCIPexprCapture((*expr)->children[c]);
    }
 
-   SCIPcaptureExpr(*expr);
+   SCIPexprCapture(*expr);
 
    return SCIP_OKAY;
 }
@@ -348,7 +348,7 @@ SCIP_RETCODE copyExpr(
             {
                /* abort */
                /* release exprcopy (should free also the already copied children) */
-               SCIP_CALL( SCIPreleaseExpr(targetscip, (SCIP_EXPR**)&exprcopy) );
+               SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, (SCIP_EXPR**)&exprcopy) );
 
                expriteruserdata.ptrval = NULL;
                SCIPexpriteratorSetCurrentUserData(it, expriteruserdata);
@@ -361,7 +361,7 @@ SCIP_RETCODE copyExpr(
             SCIP_CALL( SCIPappendExprChild(targetscip, exprcopy, childcopy) );
 
             /* release childcopy (still captured by exprcopy) */
-            SCIP_CALL( SCIPreleaseExpr(targetscip, &childcopy) );
+            SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, &childcopy) );
 
             break;
          }
@@ -550,6 +550,7 @@ static
 static
 SCIP_RETCODE parseBase(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between SCIP vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
@@ -588,7 +589,7 @@ SCIP_RETCODE parseBase(
       {
          debugParse("Variable <%s> has already been parsed, capturing its expression\n", SCIPvarGetName(var));
          *basetree = (SCIP_EXPR*)SCIPhashmapGetImage(vartoexprvarmap, (void*)var);
-         SCIPcaptureExpr(*basetree);
+         SCIPexprCapture(*basetree);
       }
       else
       {
@@ -608,7 +609,7 @@ SCIP_RETCODE parseBase(
       if( *expr != ')' )
       {
          SCIPerrorMessage("Read a '(', parsed expression inside --> expecting closing ')'. Got <%c>: rest of string <%s>\n", *expr, expr);
-         SCIP_CALL( SCIPreleaseExpr(scip, basetree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, basetree) );
          return SCIP_READERROR;
       }
       ++expr;
@@ -698,6 +699,7 @@ SCIP_RETCODE parseBase(
 static
 SCIP_RETCODE parseFactor(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Bool             isdenominator,      /**< whether factor is in the denominator */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
@@ -722,7 +724,7 @@ SCIP_RETCODE parseFactor(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseBase(scip, conshdlr, vartoexprvarmap, expr, newpos, &basetree) );
+   SCIP_CALL( parseBase(set, stat, blkmem, vartoexprvarmap, expr, newpos, &basetree) );
    expr = *newpos;
 
    /* check if there is an exponent */
@@ -738,7 +740,7 @@ SCIP_RETCODE parseFactor(
       if( *expr == '\0' )
       {
          SCIPerrorMessage("Unexpected end of expression string after '^'.\n");
-         SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &basetree) );
          return SCIP_READERROR;
       }
 
@@ -750,7 +752,7 @@ SCIP_RETCODE parseFactor(
          if( !SCIPstrToRealValue(expr, &exponent, (char**)&expr) )
          {
             SCIPerrorMessage("error parsing number from <%s>\n", expr);
-            SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+            SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &basetree) );
             return SCIP_READERROR;
          }
 
@@ -760,7 +762,7 @@ SCIP_RETCODE parseFactor(
          if( *expr != ')' )
          {
             SCIPerrorMessage("error in parsing exponent: expected ')', received <%c> from <%s>\n", *expr,  expr);
-            SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+            SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &basetree) );
             return SCIP_READERROR;
          }
          ++expr;
@@ -775,14 +777,14 @@ SCIP_RETCODE parseFactor(
             if( !SCIPstrToRealValue(expr, &exponent, (char**)&expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
-               SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+               SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &basetree) );
                return SCIP_READERROR;
             }
          }
          else
          {
             SCIPerrorMessage("error in parsing exponent, expected a digit, received <%c> from <%s>\n", *expr,  expr);
-            SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+            SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &basetree) );
             return SCIP_READERROR;
          }
       }
@@ -804,7 +806,7 @@ SCIP_RETCODE parseFactor(
    if( exponent != 1.0 )
    {
       SCIP_CALL( SCIPcreateConsExprExprPow(set->scip, factortree, basetree, exponent) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &basetree) );
    }
    else
       /* Factor consists of this unique Base */
@@ -821,6 +823,7 @@ SCIP_RETCODE parseFactor(
 static
 SCIP_RETCODE parseTerm(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
@@ -837,7 +840,7 @@ SCIP_RETCODE parseTerm(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseFactor(set, blkmem, FALSE, vartoexprvarmap, expr, newpos, &factortree) );
+   SCIP_CALL( parseFactor(set, stat, blkmem, FALSE, vartoexprvarmap, expr, newpos, &factortree) );
    expr = *newpos;
 
    debugParse("back to parsing Term, continue parsing from %s\n", expr);
@@ -849,7 +852,7 @@ SCIP_RETCODE parseTerm(
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
       SCIP_CALL( SCIPcreateConsExprExprProduct(set->scip, termtree, 1, &factortree, 1.0) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &factortree) );
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &factortree) );
 
       /* loop: parse Factor, find next symbol */
       do
@@ -862,18 +865,18 @@ SCIP_RETCODE parseTerm(
          debugParse("while parsing term, read char %c\n", *expr); /*lint !e506 !e681*/
 
          ++expr;
-         retcode = parseFactor(set->scip, isdivision, vartoexprvarmap, expr, newpos, &factortree);
+         retcode = parseFactor(set, stat, blkmem, isdivision, vartoexprvarmap, expr, newpos, &factortree);
 
          /* release termtree, if parseFactor fails with a read-error */
          if( retcode == SCIP_READERROR )
          {
-            SCIP_CALL( SCIPreleaseExpr(scip, termtree) );
+            SCIP_CALL( SCIPexprRelease(set, stat, blkmem, termtree) );
          }
          SCIP_CALL( retcode );
 
          /* append newly created factor */
          SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &factortree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &factortree) );
 
          /* find next symbol */
          expr = *newpos;
@@ -1114,7 +1117,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
          SCIP_CALL( SCIPreleaseExpr(set->scip, &exprs[i]) );
 
          exprs[i] = newroot;
-         SCIPcaptureExpr(newroot);
+         SCIPexprCapture(newroot);
 
          *replacedroot = TRUE;
 
@@ -1240,7 +1243,7 @@ SCIP_RETCODE simplifyConsExprExpr(
                 * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
                 */
                refexpr = expr;
-               SCIPcaptureExpr(refexpr);
+               SCIPexprCapture(refexpr);
             }
             assert(refexpr != NULL);
 
@@ -2341,7 +2344,7 @@ SCIP_RETCODE SCIPexprAppendChild(
    ++expr->nchildren;
 
    /* capture child */
-   SCIPcaptureExpr(child);
+   SCIPexprCapture(child);
 
    return SCIP_OKAY;
 }
@@ -2352,6 +2355,7 @@ SCIP_RETCODE SCIPexprAppendChild(
  */
 SCIP_RETCODE SCIPexprReplaceChild(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression where a child is going to be replaced */
    int                   childidx,           /**< index of child being replaced */
@@ -2373,9 +2377,9 @@ SCIP_RETCODE SCIPexprReplaceChild(
       return SCIP_OKAY;
 
    /* capture new child (do this before releasing the old child in case there are equal */
-   SCIPcaptureExpr(newchild);
+   SCIPexprCapture(newchild);
 
-   SCIP_CALL( SCIPreleaseExpr(scip, &(expr->children[childidx])) );
+   SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &(expr->children[childidx])) );
    expr->children[childidx] = newchild;
 
    return SCIP_OKAY;
@@ -2387,6 +2391,7 @@ SCIP_RETCODE SCIPexprReplaceChild(
  */
 SCIP_RETCODE SCIPexprRemoveChildren(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr                /**< expression */
    )
@@ -2400,7 +2405,7 @@ SCIP_RETCODE SCIPexprRemoveChildren(
    for( c = 0; c < expr->nchildren; ++c )
    {
       assert(expr->children[c] != NULL);
-      SCIP_CALL( SCIPreleaseExpr(scip, &(expr->children[c])) );
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &(expr->children[c])) );
    }
 
    expr->nchildren = 0;
@@ -2447,6 +2452,7 @@ SCIP_RETCODE SCIPexprCopy(
  */
 SCIP_RETCODE SCIPexprParse(
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
@@ -2472,7 +2478,7 @@ SCIP_RETCODE SCIPexprParse(
       ++expr;
    }
 
-   SCIP_CALL( parseTerm(set, blkmem, vartoexprvarmap, expr, newpos, &termtree) );
+   SCIP_CALL( parseTerm(set, stat, blkmem, vartoexprvarmap, expr, newpos, &termtree) );
    expr = *newpos;
 
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
@@ -2486,13 +2492,13 @@ SCIP_RETCODE SCIPexprParse(
       {
          /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
          SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 0, NULL, NULL, sign * SCIPgetConsExprExprValueValue(termtree)) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &termtree) );
       }
       else
       {
          /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
          SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 1, &termtree, &sign, 0.0) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &termtree) );
       }
 
       /* loop: parse Term, find next symbol */
@@ -2530,18 +2536,18 @@ SCIP_RETCODE SCIPexprParse(
 
          debugParse("while parsing expression, read coefficient %g\n", coef); /*lint !e506 !e681*/
 
-         retcode = parseTerm(set, blkmem, vartoexprvarmap, expr, newpos, &termtree);
+         retcode = parseTerm(set, stat, blkmem, vartoexprvarmap, expr, newpos, &termtree);
 
          /* release exprtree if parseTerm fails with an read-error */
          if( retcode == SCIP_READERROR )
          {
-            SCIP_CALL( SCIPreleaseExpr(scip, exprtree) );
+            SCIP_CALL( SCIPexprRelease(set, stat, blkmem, exprtree) );
          }
          SCIP_CALL( retcode );
 
          /* append newly created term */
          SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &termtree) );
 
          /* find next symbol */
          expr = *newpos;
@@ -2556,7 +2562,7 @@ SCIP_RETCODE SCIPexprParse(
       {
          assert(sign == -1.0);
          SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 1, &termtree, &sign, 0.0) );
-         SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &termtree) );
       }
       else
          *exprtree = termtree;

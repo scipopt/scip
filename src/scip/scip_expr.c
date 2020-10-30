@@ -433,7 +433,7 @@ SCIP_RETCODE SCIPreplaceExprChild(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprReplaceChild(scip->set, scip->mem->probmem, expr, childidx, newchild) );
+   SCIP_CALL( SCIPexprReplaceChild(scip->set, scip->stat, scip->mem->probmem, expr, childidx, newchild) );
 
    return SCIP_OKAY;
 }
@@ -450,7 +450,7 @@ SCIP_RETCODE SCIPremoveExprChildren(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprRemoveChildren(scip->set, scip->mem->probmem, expr) );
+   SCIP_CALL( SCIPexprRemoveChildren(scip->set, scip->stat, scip->mem->probmem, expr) );
 
    return SCIP_OKAY;
 }
