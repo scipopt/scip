@@ -105,15 +105,14 @@ struct SCIP_SepaData
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
 
    /* bilinear variables */
-   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the linearization variables/exprs of each bilinear term */
+   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the auxiliary variables/exprs of each bilinear term */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
    BILINVARDATA**        bilinvardatas;      /**< for each bilinear var: all vars that appear together with it in a product */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
    int                   bilinvarssize;      /**< size of arrays for variables occurring in bilinear terms */
 
-   /* information on linearizations of bilinear products */
-   /* TODO the "linexpr" here seem to refer to the auxexprs (aux.exprs) in SCIP_CONSEXPR_BILINTERM; should linexpr be renamed? */
-   int*                  eqlinexpr;          /**< position of the linexpr that is equal to the product (nlinexprs[i] if none) */
+   /* information about bilinear terms */
+   int*                  eqauxexpr;          /**< position of the auxexpr that is equal to the product (-1 if none) */
    int                   nbilinterms;        /**< total number of bilinear terms */
 
    /* parameters */
@@ -263,7 +262,7 @@ SCIP_RETCODE freeSepaData(
    /* free the remaining array */
    if( sepadata->nbilinterms > 0 )
    {
-      SCIPfreeBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->eqauxexpr, sepadata->nbilinterms);
    }
 
    /* free the hashmap */
@@ -621,7 +620,7 @@ SCIP_RETCODE extractProducts(
    SCIP_VAR* x;
    SCIP_VAR* y;
 
-   /* does linexpr overestimate the product? */
+   /* does auxexpr overestimate the product? */
    SCIP_Bool overest;
 
    /* coefficients in given relations: a for x, b for w, c for y; 1 and 2 for 1st and 2nd relation, respectively */
@@ -1680,7 +1679,7 @@ SCIP_RETCODE createSepaData(
    /* initialize some fields of sepadata */
    sepadata->varssorted = NULL;
    sepadata->bilinvardatas = NULL;
-   sepadata->eqlinexpr = NULL;
+   sepadata->eqauxexpr = NULL;
    sepadata->bilinvarssize = 0;
    sepadata->nbilinvars = 0;
 
@@ -1737,21 +1736,21 @@ SCIP_RETCODE createSepaData(
       bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
    }
 
-   /* mark positions of linear equality relations in aux.exprs */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqlinexpr, sepadata->nbilinterms) );
+   /* mark positions of aux.exprs that must be equal to the product */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->eqauxexpr, sepadata->nbilinterms) );
 
    for( i = 0; i < sepadata->nbilinterms; ++i )
    {
       int j;
 
-      sepadata->eqlinexpr[i] = -1;
+      sepadata->eqauxexpr[i] = -1;
       for( j = 0; j < bilinterms[i].nauxexprs; ++j )
       {
          assert(bilinterms[i].aux.exprs[j] != NULL);
 
          if( bilinterms[i].aux.exprs[j]->underestimate && bilinterms[i].aux.exprs[j]->overestimate )
          {
-            sepadata->eqlinexpr[i] = j;
+            sepadata->eqauxexpr[i] = j;
             break;
          }
       }
@@ -1782,7 +1781,7 @@ SCIP_RETCODE createSepaData(
    return SCIP_OKAY;
 }
 
-/** get the positions of the most violated linear under- and overestimators for all products */
+/** get the positions of the most violated auxiliary under- and overestimators for all products */
 static
 void getBestEstimators(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1793,7 +1792,7 @@ void getBestEstimators(
    )
 {
    SCIP_Real prodval;
-   SCIP_Real linval;
+   SCIP_Real auxval;
    SCIP_Real prodviol;
    SCIP_Real viol_below;
    SCIP_Real viol_above;
@@ -1822,8 +1821,8 @@ void getBestEstimators(
       /* if there are any auxexprs, look there */
       for( i = 0; i < terms[j].nauxexprs; ++i )
       {
-         linval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
-         prodviol = linval - prodval;
+         auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
+         prodviol = auxval - prodval;
 
          /* TODO would it make sense to check here already whether the aux.exprs is violated at all (check sign of prodviol) ?
           *   I see a "skip non-violated terms" in separateMcCormickImplicit(), but that has to reeval the aux-expr first
@@ -1869,7 +1868,7 @@ SCIP_RETCODE isAcceptableRow(
    {
       idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, SCIPcolGetVar(SCIProwGetCols(row)[i]));
 
-      /* if the product hasn't been found, no linearizations for it are known */
+      /* if the product hasn't been found, no auxiliary expressions for it are known */
       if( idx < 0 )
       {
          ++(*currentnunknown);
@@ -1877,7 +1876,7 @@ SCIP_RETCODE isAcceptableRow(
       }
 
       /* known terms are only those that have an aux.var or equality estimators */
-      if( sepadata->eqlinexpr[idx] == -1 && !(terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL) )
+      if( sepadata->eqauxexpr[idx] == -1 && !(terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL) )
       {
          ++(*currentnunknown);
       }
@@ -1894,7 +1893,7 @@ void addAuxexprToRow(  /*TODO rename, as this doesn't actually add anything to a
    SCIP_VAR*             var1,               /**< first product variable */
    SCIP_VAR*             var2,               /**< second product variable */
    SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to be added */
-   SCIP_Real             coef,               /**< coefficient of the linearization */
+   SCIP_Real             coef,               /**< coefficient of the auxiliary expression */
    SCIP_Real*            coefaux,            /**< coefficient of the auxiliary variable */
    SCIP_Real*            coef1,              /**< coefficient of the first variable */
    SCIP_Real*            coef2,              /**< coefficient of the second variable */
@@ -1954,7 +1953,7 @@ SCIP_RETCODE addRltTerm(
    SCIP_Real coefauxvar;
    SCIP_Real coefcolvar;
    SCIP_Real coefterm;
-   int linpos;
+   int auxpos;
    int idx;
    SCIP_CONSEXPR_BILINTERM* terms;
    SCIP_VAR* auxvar;
@@ -1989,38 +1988,38 @@ SCIP_RETCODE addRltTerm(
     */
 
    idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, colvar);
-   linpos = -1;
+   auxpos = -1;
 
    /* for an implicit term, get the position of the best estimator */
    if( idx >= 0 && terms[idx].nauxexprs > 0 )
    {
       if( computeEqCut )
       {
-         /* use an equality linearization (which should exist for computeEqCut to be TRUE) */
-         assert(sepadata->eqlinexpr[idx] >= 0);
-         linpos = sepadata->eqlinexpr[idx];
+         /* use an equality auxiliary expression (which should exist for computeEqCut to be TRUE) */
+         assert(sepadata->eqauxexpr[idx] >= 0);
+         auxpos = sepadata->eqauxexpr[idx];
       }
       else if( (uselhs && coefterm > 0.0) || (!uselhs && coefterm < 0.0) )
       {
          /* use an overestimator */
-         linpos = bestoverest[idx];
+         auxpos = bestoverest[idx];
       }
       else
       {
          /* use an underestimator */
-         linpos = bestunderest[idx];
+         auxpos = bestunderest[idx];
       }
    }
 
-   /* if the term is implicit and a suitable linearization for var*colvar exists,
-    * get the linearization of coefterm * var*colvar in form coefauxvar * auxvar + coefvar * colvar + cst
+   /* if the term is implicit and a suitable auxiliary expression for var*colvar exists,
+    * get the auxiliary expression of coefterm * var*colvar in form coefauxvar * auxvar + coefvar * colvar + cst
     */
-   if( linpos >= 0 )
+   if( auxpos >= 0 )
    {
-      SCIPdebugMsg(scip, "linearization for <%s> and <%s> found, will be added to cut:\n",
+      SCIPdebugMsg(scip, "auxiliary expression for <%s> and <%s> found, will be added to cut:\n",
                           SCIPvarGetName(colvar), SCIPvarGetName(var));
-      addAuxexprToRow(var, colvar, terms[idx].aux.exprs[linpos], coefterm, &coefauxvar, coefvar, &coefcolvar, cst);
-      auxvar = terms[idx].aux.exprs[linpos]->auxvar;
+      addAuxexprToRow(var, colvar, terms[idx].aux.exprs[auxpos], coefterm, &coefauxvar, coefvar, &coefcolvar, cst);
+      auxvar = terms[idx].aux.exprs[auxpos]->auxvar;
    }
    /* for an existing term, use the auxvar if there is one */
    else if( idx >= 0 && terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
@@ -2623,7 +2622,7 @@ SCIP_RETCODE markRowsXj(
          continue;
 
       /* use the most violated under- and overestimators for this product;
-       * if equality cuts are computed, we might end up using a different linearization;
+       * if equality cuts are computed, we might end up using a different auxiliry expression;
        * so this is an optimistic (i.e. taking the largest possible violation) estimation
        */
       if( bestunderest == NULL || bestunderest[idx] == -1 )
@@ -2668,7 +2667,7 @@ SCIP_RETCODE markRowsXj(
 
       SCIPdebugMsg(scip, "prodval = %g, prod viol below = %g, above = %g\n", valj * vali, viol_below, viol_above);
 
-      /* we are interested only in product relations where the linearization is violated */
+      /* we are interested only in product relations where the relation with auxiliary expression is violated */
       if( !SCIPisFeasPositive(scip, viol_below) && !SCIPisFeasPositive(scip, viol_above) )
       {
          SCIPdebugMsg(scip, "the product for vars <%s> and <%s> is not violated\n", SCIPvarGetName(xj), SCIPvarGetName(xi));
@@ -2710,8 +2709,8 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the point to be separated (can be NULL) */
-   int*                  bestunderestimators,/**< indices of linear underestimators with largest violation in sol */
-   int*                  bestoverestimators, /**< indices of linear overestimators with largest violation in sol */
+   int*                  bestunderestimators,/**< indices of auxiliary underestimators with largest violation in sol */
+   int*                  bestoverestimators, /**< indices of auxiliary overestimators with largest violation in sol */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -2863,8 +2862,8 @@ SCIP_RETCODE separateRltCuts(
    SCIP_ROW**            rows,               /**< problem rows */
    int                   nrows,              /**< number of problem rows */
    SCIP_Bool             allowlocal,         /**< are local cuts allowed? */
-   int*                  bestunderestimators,/**< indices of linear underestimators with largest violation in sol */
-   int*                  bestoverestimators, /**< indices of linear overestimators with largest violation in sol */
+   int*                  bestunderestimators,/**< indices of auxiliary underestimators with largest violation in sol */
+   int*                  bestoverestimators, /**< indices of auxiliary overestimators with largest violation in sol */
    SCIP_RESULT*          result              /**< buffer to store whether separation was successful */
    )
 {

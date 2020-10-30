@@ -113,7 +113,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-/* check a linearisation by comparing simplified expressions */
+/* check an auxiliary expression by comparing simplified expressions */
 static
 void checkAuxExpr(
    SCIP_CONSEXPR_BILINTERM term,
@@ -121,8 +121,8 @@ void checkAuxExpr(
    SCIP_VAR*             auxvar,             /* expected auxiliary variable */
    SCIP_Real*            vals,               /* expected coefficients in the order w, x, y */
    SCIP_Real             cst,                /* expected constant */
-   SCIP_Bool             underestimate,      /* should the linearisation underestimate the product? */
-   SCIP_Bool             overestimate        /* should the linearisation overestimate the product? */
+   SCIP_Bool             underestimate,      /* should the auxexpr underestimate the product? */
+   SCIP_Bool             overestimate        /* should the auxexpr overestimate the product? */
 )
 {
    int i;
@@ -139,9 +139,9 @@ void checkAuxExpr(
                                                                term.aux.exprs[auxidx]->cst);
 
    cr_expect(term.aux.exprs[auxidx]->underestimate == underestimate,
-             "linearisation expression [%d] should %sunderestimate", auxidx, underestimate ? "" : "NOT ");
+             "auxiliary expression [%d] should %sunderestimate", auxidx, underestimate ? "" : "NOT ");
    cr_expect(term.aux.exprs[auxidx]->overestimate == overestimate,
-             "linearisation expression [%d] should %soverestimate", auxidx, overestimate ? "" : "NOT ");
+             "auxiliary expression [%d] should %soverestimate", auxidx, overestimate ? "" : "NOT ");
 }
 
 Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
@@ -205,8 +205,8 @@ Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .descript
    terms = SCIPgetConsExprBilinTerms(conshdlr);
    cr_assert(terms != NULL);
 
-   cr_expect_eq(terms[0].nauxexprs, 4, "\nExpected 4 linear expressions for product 0, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 linear expressions for product 1, got %d", terms[1].nauxexprs);
+   cr_expect_eq(terms[0].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
 
    /* check the product expressions */
    cr_expect_eq(terms[0].x, b1, "x var of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
@@ -304,8 +304,8 @@ Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .descri
    cr_expect_eq(terms[1].x, b1, "x var of product 1 should be b1, got %s", SCIPvarGetName(terms[1].x));
    cr_expect_eq(terms[1].y, x1, "y var of product 1 should be x1, got %s", SCIPvarGetName(terms[1].y));
 
-   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 linear expressions for product b1x2, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 2, "\nExpected 2 linear expressions for product b1x1, got %d", terms[1].nauxexprs);
+   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product b1x2, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product b1x1, got %d", terms[1].nauxexprs);
 
    /* check expression from implied relation and a variable bound */
    checkAuxExpr(terms[0], 1, x1, (SCIP_Real[3]) {-1.0, -4.0, 0.0}, 3.0, FALSE, TRUE);
@@ -382,9 +382,9 @@ Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .des
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
    cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
                                                           SCIPgetConsExprNBilinTerms(conshdlr));
-   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 linear expressions for product 0, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 linear expressions for product 1, got %d", terms[1].nauxexprs);
-   cr_expect_eq(terms[2].nauxexprs, 3, "\nExpected 3 linear expressions for product 2, got %d", terms[2].nauxexprs);
+   cr_expect_eq(terms[0].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 4, "\nExpected 4 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
+   cr_expect_eq(terms[2].nauxexprs, 3, "\nExpected 3 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
 
    /* check the product expressions */
    cr_expect_eq(terms[0].x, b1, "Var 0 of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
@@ -460,9 +460,9 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
    cr_expect_eq(sepadata->nbilinvars, 3, "\nExpected 3 bilinear vars, got %d", sepadata->nbilinvars);
    cr_expect_eq(SCIPgetConsExprNBilinTerms(conshdlr), 3, "\nExpected 3 bilinear terms, got %d",
                                                           SCIPgetConsExprNBilinTerms(conshdlr));
-   cr_expect_eq(terms[0].nauxexprs, 2, "\nExpected 2 linear expressions for product 0, got %d", terms[0].nauxexprs);
-   cr_expect_eq(terms[1].nauxexprs, 1, "\nExpected 1 linear expressions for product 1, got %d", terms[1].nauxexprs);
-   cr_expect_eq(terms[2].nauxexprs, 1, "\nExpected 1 linear expressions for product 2, got %d", terms[2].nauxexprs);
+   cr_expect_eq(terms[0].nauxexprs, 2, "\nExpected 2 auxiliary expressions for product 0, got %d", terms[0].nauxexprs);
+   cr_expect_eq(terms[1].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 1, got %d", terms[1].nauxexprs);
+   cr_expect_eq(terms[2].nauxexprs, 1, "\nExpected 1 auxiliary expressions for product 2, got %d", terms[2].nauxexprs);
 
    /* check the product expressions */
    cr_expect_eq(terms[0].x, b1, "x var of product 0 should be b1, got %s", SCIPvarGetName(terms[0].x));
@@ -472,7 +472,7 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
    cr_expect_eq(terms[2].x, b2, "x var of product 1 should be b2, got %s", SCIPvarGetName(terms[2].x));
    cr_expect_eq(terms[2].y, x2, "y var of product 1 should be x2, got %s", SCIPvarGetName(terms[2].y));
 
-   /* check the linear expressions obtained from the implied relation and the implied bound */
+   /* check the auxiliary expressions obtained from the implied relation and the implied bound */
    /* expression from two implied bounds on x1: should be t_b1t_b2 <= -1t_x1 + -1t_b1 + 1t_b2 + 0 */
    checkAuxExpr(terms[0], 0, x1, (SCIP_Real[3]) {-1.0, -1.0, 1.0}, 0.0, FALSE, TRUE);
 
