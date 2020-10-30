@@ -455,4 +455,50 @@ SCIP_RETCODE SCIPremoveExprChildren(
    return SCIP_OKAY;
 }
 
+/** duplicates the given expression (including children) */
+SCIP_RETCODE SCIPcopyExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
+   void*                 mapvardata,         /**< data of variable mapping function */
+   SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
+   void*                 mapexprdata,        /**< data of expression mapping function */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprCopy(scip->set, scip->stat, scip->mem->probmem, scip->set, scip->mem->probmem, expr, copyexpr, mapvar, mapvardata, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
+   return SCIP_OKAY;
+}
+
+/** duplicates the given expression without its children */
+SCIP_RETCODE SCIPcopyExprShallow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   /* copy expression data */
+   SCIP_EXPRDATA* exprdatacopy = NULL;
+   if( SCIPexprGetData(expr) != NULL )
+   {
+      assert(expr->exprhdlr->copydata != NULL);
+      SCIP_CALL( expr->exprhdlr->copydata(scip, expr->exprhdlr, &exprdatacopy, scip, expr, NULL, NULL) );
+   }
+
+   /* create expression with same handler and copied data, but without children */
+   SCIP_CALL( SCIPexprCreate(scip->set, scip->mem->probmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /**@} */

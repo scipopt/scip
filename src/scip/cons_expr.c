@@ -9799,37 +9799,6 @@ SCIP_Bool SCIPgetBranchAuxNonlinear(
 
 
 
-/** duplicates the given expression */
-SCIP_RETCODE SCIPcopyExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_EXPR*   expr,               /**< original expression */
-   SCIP_EXPR**  copyexpr,           /**< buffer to store duplicate of expr */
-   SCIP_Bool             copychildren        /**< whether children (and all successors) should be copied, too */
-   )
-{
-   if( copychildren )
-   {
-      SCIP_CALL( copyExpr(scip, scip, consexprhdlr, expr, copyexpr, NULL, NULL) );
-   }
-   else
-   {
-      /* copy expression data */
-      SCIP_EXPRDATA* exprdatacopy = NULL;
-      if( SCIPexprGetData(expr) != NULL )
-      {
-         assert(expr->exprhdlr->copydata != NULL);
-         SCIP_CALL( expr->exprhdlr->copydata(scip, expr->exprhdlr, &exprdatacopy, scip, expr, NULL, NULL) );
-      }
-
-      /* create expression with same handler and copied data, but without children */
-      SCIP_CALL( SCIPcreateExpr(scip, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
-   }
-
-   assert(*copyexpr != NULL);
-
-   return SCIP_OKAY;
-}
 
 /** gets the number of times the expression is currently captured */
 int SCIPexprGetNUses(

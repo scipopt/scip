@@ -2543,4 +2543,35 @@ SCIP_RETCODE SCIPexprRemoveChildren(
    return SCIP_OKAY;
 }
 
+/** copies an expression including subexpressions
+ *
+ * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
+ *
+ * Variables can be mapped to different ones by specifying a mapvar callback.
+ * For all or some expressions, a mapping to an existing expression can be specified via the mapexpr callback.
+ * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
+ * If, however, the mapexpr callback returns NULL for the targetexpr, then the expr will be copied in the usual way.
+ */
+SCIP_RETCODE SCIPexprCopy(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             targetset,          /**< global SCIP settings data structure where target expression will live */
+   BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
+   SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
+   SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
+   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
+   void*                 mapvardata,         /**< data of variable mapping function */
+   SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
+   void*                 mapexprdata,        /**< data of expression mapping function */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   )
+{
+   SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetblkmem, sourceexpr, targetexpr, mapvar, mapvardata, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
+   return SCIP_OKAY;
+}
+
 /**@} */

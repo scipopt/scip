@@ -178,13 +178,27 @@ SCIP_RETCODE SCIPremoveExprChildren(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** duplicates the given expression */
+/** duplicates the given expression (including children) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcopyExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
-   SCIP_Bool             copychildren        /**< whether children (and all successors) should be copied, too */
+   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
+   void*                 mapvardata,         /**< data of variable mapping function */
+   SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
+   void*                 mapexprdata,        /**< data of expression mapping function */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   );
+
+/** duplicates the given expression without its children */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcopyExprShallow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
    );
 
 /** Creates an expression from a string.
