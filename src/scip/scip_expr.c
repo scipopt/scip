@@ -545,4 +545,139 @@ SCIP_Bool SCIPisExprValue(
    return SCIPexprIsValue(scip->set, expr);
 }
 
+/** print an expression as info-message */
+SCIP_RETCODE SCIPprintExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be printed */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprPrint(scip->set, scip->stat, scip->mem->blkmem, scip->messagehdlr, expr, file) );
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format to a give FILE* pointer */
+SCIP_RETCODE SCIPprintExprDotInit(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
+   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprPrintDotInit(scip->set, scip->stat, scip->mem->probmem, printdata, file, whattoprint) );
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format to a file with given filename */
+SCIP_RETCODE SCIPprintExprDotInit2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
+   const char*             filename,         /**< name of file to print to */
+   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprPrintDotInit2(scip->set, scip->stat, scip->mem->probmem, printdata, filename, whattoprint) );
+
+   return SCIP_OKAY;
+}
+
+/** main part of printing an expression in dot format */
+SCIP_RETCODE SCIPprintExprDot(
+   SCIP*                  scip,              /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA*    printdata,         /**< data as initialized by \ref SCIPprintExprDotInit() */
+   SCIP_EXPR*             expr               /**< expression to be printed */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprPrintDot(scip->set, scip->messagehdlr, printdata, expr) );
+
+   return SCIP_OKAY;
+}
+
+/** finishes printing of expressions in dot format */
+SCIP_RETCODE SCIPprintExprDotFinal(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**    printdata         /**< buffer where dot printing data has been stored */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprPrintDotFinal(scip->set, scip->stat, scip->mem->probmem, printdata) );
+
+   return SCIP_OKAY;
+}
+
+/** shows a single expression by use of dot and gv
+ *
+ * This function is meant for debugging purposes.
+ * It's signature is kept as simple as possible to make it
+ * easily callable from gdb, for example.
+ *
+ * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
+ * SCIP will hold until ghostscript is closed.
+ */
+SCIP_RETCODE SCIPshowExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression to be printed */
+   )
+{
+   /* this function is for developers, so don't bother with C variants that don't have popen() */
+#if _POSIX_C_SOURCE < 2
+   SCIPerrorMessage("No POSIX version 2. Try http://distrowatch.com/.");
+   return SCIP_ERROR;
+#else
+   SCIP_EXPRPRINTDATA* dotdata;
+   FILE* f;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   /* call dot to generate postscript output and show it via ghostview */
+   f = popen("dot -Tps | gv --media=a3 -", "w");
+   if( f == NULL )
+   {
+      SCIPerrorMessage("Calling popen() failed");
+      return SCIP_FILECREATEERROR;
+   }
+
+   /* print all of the expression into the pipe */
+   SCIP_CALL( SCIPprintExprDotInit(scip, &dotdata, f, SCIP_EXPRPRINT_ALL) );
+   SCIP_CALL( SCIPprintExprDot(scip, dotdata, expr) );
+   SCIP_CALL( SCIPprintExprDotFinal(scip, &dotdata) );
+
+   /* close the pipe */
+   (void) pclose(f);
+
+   return SCIP_OKAY;
+#endif
+}
+
+/** prints structure of an expression a la Maple's dismantle */
+SCIP_RETCODE SCIPdismantleExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPR*            expr                /**< expression to dismantle */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprDismantle(scip->set, scip->stat, scip->mem->blkmem, scip->messagehdlr, file, expr) );
+
+   return SCIP_OKAY;
+}
+
 /**@} */

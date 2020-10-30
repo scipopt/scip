@@ -353,6 +353,68 @@ SCIP_Bool SCIPexprIsValue(
    SCIP_EXPR*            expr                /**< expression */
    );
 
+/** print an expression as info-message */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprPrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPR*            expr                /**< expression to be printed */
+   );
+
+/** initializes printing of expressions in dot format to a give FILE* pointer */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprPrintDotInit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
+   );
+
+/** initializes printing of expressions in dot format to a file with given filename */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprPrintDotInit2(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   const char*           filename,           /**< name of file to print to */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
+   );
+
+/** main part of printing an expression in dot format */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprPrintDot(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EXPRPRINTDATA*   printdata,          /**< data as initialized by \ref SCIPprintExprDotInit() */
+   SCIP_EXPR*            expr                /**< expression to be printed */
+   );
+
+/** finishes printing of expressions in dot format */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprPrintDotFinal(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRPRINTDATA**  printdata           /**< buffer where dot printing data has been stored */
+   );
+
+/** prints structure of an expression a la Maple's dismantle */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprDismantle(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPR*            expr                /**< expression to dismantle */
+   );
+
 /**@} */
 
 #endif /* SCIP_EXPR_H_ */

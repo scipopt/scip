@@ -279,6 +279,7 @@ SCIP_RETCODE SCIPprintExprDotInit2(
    SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
    );
 
+/** main part of printing an expression in dot format */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDot(
    SCIP*                  scip,              /**< SCIP data structure */

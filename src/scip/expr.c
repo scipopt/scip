@@ -2736,6 +2736,363 @@ SCIP_Bool SCIPexprIsValue(
    return expr->exprhdlr == set->exprhdlrval;
 }
 
+/** print an expression as info-message */
+SCIP_RETCODE SCIPexprPrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EXPR*            expr,               /**< expression to be printed */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPRITER_STAGE stage;
+   int currentchild;
+   unsigned int parentprecedence;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, blkmem) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_ALLSTAGES);
+
+   while( !SCIPexpriteratorIsEnd(it) )
+   {
+      assert(expr->exprhdlr != NULL);
+      stage = SCIPexpriteratorGetStageDFS(it);
+
+      if( stage == SCIP_EXPRITER_VISITEDCHILD || stage == SCIP_EXPRITER_VISITINGCHILD )
+         currentchild = SCIPexpriteratorGetChildIdxDFS(it);
+      else
+         currentchild = -1;
+
+      if( SCIPexpriteratorGetParentDFS(it) != NULL )
+         parentprecedence = SCIPexprhdlrGetPrecedence(SCIPexprGetHdlr(SCIPexpriteratorGetParentDFS(it)));
+      else
+         parentprecedence = 0;
+
+      SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, stage, currentchild, parentprecedence, file) );
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format to a give FILE* pointer */
+SCIP_RETCODE SCIPexprPrintDotInit(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
+   )
+{
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(printdata != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, printdata) );
+
+   (*printdata)->file = file;
+   SCIP_CALL( SCIPexpriteratorCreate(&(*printdata)->iterator, blkmem) );
+   (*printdata)->closefile = FALSE;
+   (*printdata)->whattoprint = whattoprint;
+   SCIP_CALL( SCIPhashmapCreate(&(*printdata)->leaveexprs, blkmem, 100) );
+
+   fputs("strict digraph exprgraph {\n", file);
+   fputs("node [fontcolor=white, style=filled, rankdir=LR]\n", file);
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format to a file with given filename */
+SCIP_RETCODE SCIPexprPrintDotInit2(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   const char*           filename,           /**< name of file to print to */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
+   )
+{
+   FILE* f;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(printdata != NULL);
+   assert(filename != NULL);
+
+   f = fopen(filename, "w");
+   if( f == NULL )
+   {
+      SCIPerrorMessage("could not open file <%s> for writing\n", filename);  /* error code would be in errno */
+      return SCIP_FILECREATEERROR;
+   }
+
+   SCIP_CALL( SCIPexprPrintDotInit(set, stat, blkmem, printdata, f, whattoprint) );
+   (*printdata)->closefile = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** main part of printing an expression in dot format */
+SCIP_RETCODE SCIPexprPrintDot(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EXPRPRINTDATA*   printdata,          /**< data as initialized by \ref SCIPprintExprDotInit() */
+   SCIP_EXPR*            expr                /**< expression to be printed */
+   )
+{
+   SCIP_Real color;
+   int c;
+
+   assert(set != NULL);
+   assert(printdata != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorInit(printdata->iterator, expr, SCIP_EXPRITER_DFS, FALSE) );
+
+   while( !SCIPexpriteratorIsEnd(printdata->iterator) )
+   {
+      /* print expression as dot node */
+
+      if( expr->nchildren == 0 )
+      {
+         SCIP_CALL( SCIPhashmapInsert(printdata->leaveexprs, (void*)expr, NULL) );
+      }
+
+      /* make up some color from the expression type (it's name) */
+      color = 0.0;
+      for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
+         color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
+      color = SCIPsetFrac(set, color);
+      fprintf(printdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
+
+      if( printdata->whattoprint & SCIP_EXPRPRINT_EXPRHDLR )
+      {
+         fprintf(printdata->file, "%s\\n", expr->exprhdlr->name);
+      }
+
+      if( printdata->whattoprint & SCIP_EXPRPRINT_EXPRSTRING )
+      {
+         SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_ENTEREXPR, -1, 0, printdata->file) );
+         for( c = 0; c < expr->nchildren; ++c )
+         {
+            SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_VISITINGCHILD, c, 0, printdata->file) );
+            fprintf(printdata->file, "c%d", c);
+            SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_VISITEDCHILD, c, 0, printdata->file) );
+         }
+         SCIP_CALL( SCIPexprhdlrPrintExpr(expr->exprhdlr, set, messagehdlr, expr, SCIP_EXPRITER_LEAVEEXPR, -1, 0, printdata->file) );
+
+         fputs("\\n", printdata->file);
+      }
+
+      if( printdata->whattoprint & SCIP_EXPRPRINT_NUSES )
+      {
+         /* print number of uses */
+         fprintf(printdata->file, "%d uses\\n", expr->nuses);
+      }
+
+//      if( printdata->whattoprint & SCIP_EXPRPRINT_NLOCKS )
+//      {
+//         /* print number of locks */
+//         fprintf(printdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
+//      }
+
+      if( printdata->whattoprint & SCIP_EXPRPRINT_EVALVALUE )
+      {
+         /* print eval value */
+         fprintf(printdata->file, "val=%g", expr->evalvalue);
+
+         if( (printdata->whattoprint & SCIP_EXPRPRINT_EVALTAG) == SCIP_EXPRPRINT_EVALTAG )
+         {
+            /* print also eval tag */
+            fprintf(printdata->file, " (%u)", expr->evaltag);
+         }
+         fputs("\\n", printdata->file);
+      }
+
+      if( printdata->whattoprint & SCIP_EXPRPRINT_ACTIVITY )
+      {
+         /* print activity */
+         fprintf(printdata->file, "[%g,%g]", expr->activity.inf, expr->activity.sup);
+
+         if( (printdata->whattoprint & SCIP_EXPRPRINT_ACTIVITYTAG) == SCIP_EXPRPRINT_ACTIVITYTAG )
+         {
+            /* print also activity eval tag */
+            fprintf(printdata->file, " (%u)", expr->activitytag);
+         }
+         fputs("\\n", printdata->file);
+      }
+
+      fputs("\"]\n", printdata->file);  /* end of label and end of node */
+
+      /* add edges from expr to its children */
+      for( c = 0; c < expr->nchildren; ++c )
+         fprintf(printdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
+
+      expr = SCIPexpriteratorGetNext(printdata->iterator);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** finishes printing of expressions in dot format */
+SCIP_RETCODE SCIPexprPrintDotFinal(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRPRINTDATA**  printdata           /**< buffer where dot printing data has been stored */
+   )
+{
+   SCIP_EXPR* expr;
+   SCIP_HASHMAPENTRY* entry;
+   FILE* file;
+   int i;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(printdata != NULL);
+   assert(*printdata != NULL);
+
+   file = (*printdata)->file;
+   assert(file != NULL);
+
+   /* iterate through all entries of the map */
+   fputs("{rank=same;", file);
+   for( i = 0; i < SCIPhashmapGetNEntries((*printdata)->leaveexprs); ++i )
+   {
+      entry = SCIPhashmapGetEntry((*printdata)->leaveexprs, i);
+
+      if( entry != NULL )
+      {
+         expr = (SCIP_EXPR*) SCIPhashmapEntryGetOrigin(entry);
+         assert(expr != NULL);
+         assert(expr->nchildren == 0);
+
+         fprintf(file, " n%p", expr);
+      }
+   }
+   fprintf(file, "}\n");
+
+   fprintf(file, "}\n");
+
+   SCIPhashmapFree(&(*printdata)->leaveexprs);
+
+   SCIPexpriteratorFree(&(*printdata)->iterator);
+
+   if( (*printdata)->closefile )
+      fclose((*printdata)->file);
+
+   BMSfreeBlockMemory(blkmem, printdata);
+
+   return SCIP_OKAY;
+}
+
+/** prints structure of an expression a la Maple's dismantle */
+SCIP_RETCODE SCIPexprDismantle(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPR*            expr                /**< expression to dismantle */
+   )
+{
+   SCIP_EXPRITER* it;
+   int depth = -1;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(messagehdlr != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPexpriteratorCreate(&it, blkmem) );
+   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_ENTEREXPR:
+         {
+            int nspaces;
+
+            ++depth;
+            nspaces = 3 * depth;
+
+            /* use depth of expression to align output */
+            SCIPmessageFPrintInfo(messagehdlr, file, "%*s[%s]: ", nspaces, "", type);
+
+            if( SCIPexprIsVar(set, expr) )
+            {
+               SCIP_VAR* var;
+
+               var = SCIPgetConsExprExprVarVar(expr);
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+                  SCIPvarGetUbLocal(var));
+            }
+            else if( SCIPexprIsSum(set, expr) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprSumConstant(expr));
+            else if( SCIPexprIsProduct(set, expr) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprProductCoef(expr));
+            else if( SCIPexprIsValue(set, expr) )
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprValueValue(expr));
+            else if( SCIPexprIsPower(set, expr) || strcmp(expr->exprhdlr->name, "signpower") == 0)
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprPowExponent(expr));
+
+            SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+
+            break;
+         }
+
+         case SCIP_EXPRITER_VISITINGCHILD:
+         {
+            int nspaces = 3 * depth;
+
+            if( SCIPexprIsSum(expr) )
+            {
+               SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
+               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+            }
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR:
+         {
+            --depth;
+            break;
+         }
+
+         default:
+            /* shouldn't be here */
+            SCIPABORT();
+            break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /* from pub_expr.h */
 
 /** gets the number of times the expression is currently captured */
@@ -2789,6 +3146,24 @@ SCIP_EXPRDATA* SCIPexprGetData(
    assert(expr != NULL);
 
    return expr->exprdata;
+}
+
+/** sets the expression data of an expression
+ *
+ * The pointer to possible old data is overwritten and the
+ * freedata-callback is not called before.
+ * This function is intended to be used by expression handler.
+ */
+void SCIPexprSetData(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRDATA*        exprdata            /**< expression data to be set (can be NULL) */
+   )
+{
+   assert(expr != NULL);
+   assert(exprdata == NULL || expr->exprhdlr->copydata != NULL);  /* copydata must be available if there is expression data */
+   assert(exprdata == NULL || expr->exprhdlr->freedata != NULL);  /* freedata must be available if there is expression data */
+
+   expr->exprdata = exprdata;
 }
 
 /**@} */
