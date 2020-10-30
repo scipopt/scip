@@ -223,7 +223,7 @@ SCIP_RETCODE insertIndex(
          int newsize = SCIPcalcMemGrowSize(scip, arr->nvals + 1);
          assert(newsize > arr->nvals + 1);
 
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(arr->vals), arr->valssize, newsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &(arr->vals), newsize) );
          arr->valssize = newsize;
       }
 
@@ -237,10 +237,10 @@ SCIP_RETCODE insertIndex(
       struct myarray* arr;
 
       /* create index array */
-      SCIP_CALL( SCIPallocBlockMemory(scip, &arr) );
+      SCIP_CALL( SCIPallocBuffer(scip, &arr) );
       arr->valssize = 10;
       arr->nvals = 0;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &arr->vals, arr->valssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &arr->vals, arr->valssize) );
       SCIP_CALL( SCIPhashmapCreate(&arr->auxvars, SCIPblkmem(scip), arr->valssize) );
 
       /* insert */
@@ -444,6 +444,8 @@ SCIP_RETCODE detectMinors(
             }
          }
       }
+      SCIPfreeBufferArrayNull(scip, &rowi->vals);
+      SCIPfreeBufferArrayNull(scip, &rowi);
    }
 
    ///* permute bilinear terms if there are too many of them; the motivation for this is that we don't want to
