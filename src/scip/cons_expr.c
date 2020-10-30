@@ -44,13 +44,6 @@
  * Local methods
  */
 
-/** frees data of quadratic representation of expression, if any */
-static
-void quadFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*   expr                /**< expression whose quadratic data will be released */
-   );
-
 /** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
