@@ -80,8 +80,7 @@
 /** data object for pairs and triples of variables */
 struct HashData
 {
-   /* TODO change to   SCIP_VAR* vars[3]   to avoid extra allocation? */
-   SCIP_VAR**            vars;               /**< variables in the pair or triple, used for hash comparison */
+   SCIP_VAR*             vars[3];               /**< variables in the pair or triple, used for hash comparison */
    int                   nvars;              /**< number of variables */
    int                   nrows;              /**< number of rows */
    int                   firstrow;           /**< beginning of the corresponding row linked list */
@@ -209,7 +208,6 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
 
    hashdata = (HASHDATA*)key;
    assert(hashdata != NULL);
-   assert(hashdata->vars != NULL);
    assert(hashdata->nvars == 3 || hashdata->nvars == 2);
 
    idx[0] = SCIPvarGetIndex(hashdata->vars[0]);
@@ -990,7 +988,6 @@ SCIP_RETCODE detectProductsUnconditional(
 
    hashdata.nvars = 2;
    hashdata.firstrow = -1;
-   SCIP_CALL( SCIPallocBufferArray(scip, &(hashdata.vars), 2) );
    if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
    {
       pos1 = 0;
@@ -1037,7 +1034,6 @@ SCIP_RETCODE detectProductsUnconditional(
          r2 = row_list[r2];
       }
    }
-   SCIPfreeBufferArray(scip, &(hashdata.vars));
 
    return SCIP_OKAY;
 }
@@ -1134,7 +1130,6 @@ SCIP_RETCODE fillRelationTables(
          /* fill in hashdata so that to search for the two variables in hashtable2 */
          hashdata.nvars = 2;
          hashdata.firstrow = -1;
-         SCIP_CALL( SCIPallocBufferArray(scip, &(hashdata.vars), 2) );
          hashdata.vars[0] = SCIPcolGetVar(cols[0]);
          hashdata.vars[1] = SCIPcolGetVar(cols[1]);
 
@@ -1147,7 +1142,6 @@ SCIP_RETCODE fillRelationTables(
             row_list[r] = foundhashdata->firstrow;
             foundhashdata->firstrow = r;
             ++foundhashdata->nrows;
-            SCIPfreeBufferArray(scip, &(hashdata.vars));
          }
          else
          {
@@ -1156,7 +1150,8 @@ SCIP_RETCODE fillRelationTables(
 
             foundhashdata->nvars = 2;
             foundhashdata->nrows = 1;
-            foundhashdata->vars = hashdata.vars;
+            foundhashdata->vars[0] = hashdata.vars[0];
+            foundhashdata->vars[1] = hashdata.vars[1];
             foundhashdata->firstrow = r;
 
             SCIP_CALL( SCIPhashtableInsert(hashtable2, (void*)foundhashdata) );
@@ -1219,7 +1214,6 @@ SCIP_RETCODE fillRelationTables(
          /* fill in hashdata so that to search for the three variables in hashtable3 */
          hashdata.nvars = 3;
          hashdata.firstrow = -1;
-         SCIP_CALL( SCIPallocBufferArray(scip, &(hashdata.vars), 3) );
          hashdata.vars[0] = SCIPcolGetVar(cols[0]);
          hashdata.vars[1] = SCIPcolGetVar(cols[1]);
          hashdata.vars[2] = SCIPcolGetVar(cols[2]);
@@ -1242,7 +1236,9 @@ SCIP_RETCODE fillRelationTables(
 
             foundhashdata->nvars = 3;
             foundhashdata->nrows = 1;
-            foundhashdata->vars = hashdata.vars;
+            foundhashdata->vars[0] = hashdata.vars[0];
+            foundhashdata->vars[1] = hashdata.vars[1];
+            foundhashdata->vars[2] = hashdata.vars[2];
             foundhashdata->firstrow = r;
 
             SCIP_CALL( SCIPhashtableInsert(hashtable3, (void*)foundhashdata) );
@@ -1523,7 +1519,6 @@ SCIP_RETCODE detectHiddenProducts(
             }
          }
       }
-      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
       SCIPfreeBuffer(scip, &foundhashdata);
    }
 
@@ -1635,7 +1630,6 @@ SCIP_RETCODE detectHiddenProducts(
       SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
                    SCIPvarGetName(foundhashdata->vars[1]));
 
-      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
       SCIPfreeBuffer(scip, &foundhashdata);
    }
 
