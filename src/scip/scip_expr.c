@@ -501,4 +501,48 @@ SCIP_RETCODE SCIPcopyExprShallow(
    return SCIP_OKAY;
 }
 
+/** captures an expression (increments usage count) */
+void SCIPcaptureExpr(
+   SCIP_EXPR*            expr                /**< expression to be captured */
+   )
+{
+   SCIPexprCapture(expr);
+}
+
+/** releases an expression (decrements usage count and possibly frees expression) */
+SCIP_RETCODE SCIPreleaseExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           expr                /**< pointer to expression to be released */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprRelease(scip->set, scip->stat, scip->mem->probmem, expr) );
+
+   return SCIP_OKAY;
+}
+
+/** returns whether an expression is a variable expression */
+SCIP_Bool SCIPisExprVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPexprIsVar(scip->set, expr);
+}
+
+/** returns whether an expression is a value expression */
+SCIP_Bool SCIPisExprValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPexprIsValue(scip->set, expr);
+}
+
 /**@} */

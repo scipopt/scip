@@ -324,6 +324,35 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
    );
 
+/** captures an expression (increments usage count) */
+SCIP_EXPORT
+void SCIPexprCapture(
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** releases an expression (decrements usage count and possibly frees expression) */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprRelease(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR**           expr                /**< pointer to expression */
+   );
+
+/** returns whether an expression is a variable expression */
+SCIP_EXPORT
+SCIP_Bool SCIPexprIsVar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** returns whether an expression is a value expression */
+SCIP_EXPORT
+SCIP_Bool SCIPexprIsValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /**@} */
 
 #endif /* SCIP_EXPR_H_ */

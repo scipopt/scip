@@ -337,6 +337,8 @@ SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
    assert((*ownerdata)->nlockspos == 0);
    assert((*ownerdata)->nlocksneg == 0);
 
+   SCIP_CALL( freeEnfoData(scip, expr, TRUE) );
+
    /* expression should not be enforced anymore */
    assert((*ownerdata)->nenfos == 0);
    assert((*ownerdata)->auxvar == NULL);

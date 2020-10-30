@@ -149,14 +149,6 @@ SCIP_RETCODE freeExpr(
    assert(*expr != NULL);
    assert((*expr)->nuses == 1);
    assert((*expr)->quaddata == NULL);
-
-   /* call ownerdatafree callback, if given
-    * we intentially call this also if ownerdata is NULL, so owner can be notified without storing data
-    */
-   if( (*expr)->ownerdatafree != NULL )
-   {
-      SCIP_CALL( (*expr)->ownerdatafree(set->scip, *expr, &(*expr)->ownerdata) );
-   }
    assert((*expr)->ownerdata == NULL);
 
    /* free children array, if any */
@@ -2434,6 +2426,8 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 /**@name Expression Methods */
 /**@{ */
 
+/* from expr.h */
+
 /** creates and captures an expression with given expression data and children */
 SCIP_RETCODE SCIPexprCreate(
    SCIP_SET*             set,              /**< global SCIP settings */
@@ -2572,6 +2566,229 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetblkmem, sourceexpr, targetexpr, mapvar, mapvardata, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
    return SCIP_OKAY;
+}
+
+/** captures an expression (increments usage count) */
+SCIP_EXPORT
+void SCIPexprCapture(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   ++expr->nuses;
+}
+
+/** releases an expression (decrements usage count and possibly frees expression) */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprRelease(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR**           rootexpr            /**< pointer to expression */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+
+   assert(rootexpr != NULL);
+   assert(*rootexpr != NULL);
+   assert((*rootexpr)->nuses > 0);
+
+   if( (*rootexpr)->nuses > 1 )
+   {
+      --(*rootexpr)->nuses;
+      *rootexpr = NULL;
+
+      return SCIP_OKAY;
+   }
+
+   /* handle the root expr separately: free ownerdata, quaddata, and exprdata first */
+
+   /* call ownerdatafree callback, if given
+    * we intentially call this also if ownerdata is NULL, so owner can be notified without storing data
+    */
+   if( (*rootexpr)->ownerdatafree != NULL )
+   {
+      SCIP_CALL( (*rootexpr)->ownerdatafree(set->scip, *rootexpr, &(*rootexpr)->ownerdata) );
+   }
+   assert((*rootexpr)->ownerdata == NULL);
+
+   /* free quadratic info */
+   quadFree(blkmem, *rootexpr);
+
+   /* free expression data */
+   if( (*rootexpr)->exprdata != NULL )
+   {
+      assert((*rootexpr)->exprhdlr->freedata != NULL);
+      SCIP_CALL( (*rootexpr)->exprhdlr->freedata(scip, *rootexpr) );
+   }
+
+   /* now release and free children, where no longer in use */
+   SCIP_CALL( SCIPexpriteratorCreate(&it, blkmem) );
+   SCIP_CALL( SCIPexpriteratorInit(it, *rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_VISITEDCHILD);
+   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it) ; )
+   {
+      /* expression should be used by its parent and maybe by the iterator (only the root!)
+       * in VISITEDCHILD we assert that expression is only used by its parent
+       */
+      assert(expr != NULL);
+      assert(0 <= expr->nuses && expr->nuses <= 2);
+
+      switch( SCIPexpriteratorGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITINGCHILD :
+         {
+            /* check whether a child needs to be visited (nuses == 1)
+             * if not, then we still have to release it
+             */
+            SCIP_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            if( child->nuses > 1 )
+            {
+               /* child is not going to be freed: just release it */
+               SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &child) );
+               expr = SCIPexpriteratorSkipDFS(it);
+               continue;
+            }
+
+            assert(child->nuses == 1);
+
+            /* free child's quaddata, ownerdata, and exprdata when entering child */
+            if( child->ownerdatafree != NULL )
+            {
+               SCIP_CALL( (*rootexpr)->ownerdatafree(set->scip, child, &child->ownerdata) );
+            }
+            assert(child->ownerdata == NULL);
+
+            /* free quadratic info */
+            quadFree(blkmem, child);
+
+            /* free expression data */
+            if( child->exprdata != NULL )
+            {
+               assert(child->exprhdlr->freedata != NULL);
+               SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+               assert(child->exprdata == NULL);
+            }
+
+            break;
+         }
+
+         case SCIP_EXPRITER_VISITEDCHILD :
+         {
+            /* free child after visiting it */
+            SCIP_EXPR* child;
+
+            child = SCIPexpriteratorGetChildExprDFS(it);
+            /* child should only be used by its parent */
+            assert(child->nuses == 1);
+
+            /* child should have no data associated */
+            assert(child->exprdata == NULL);
+
+            /* free child expression */
+            SCIP_CALL( freeExpr(set, blkmem, &child) );
+            expr->children[SCIPexpriteratorGetChildIdxDFS(it)] = NULL;
+
+            break;
+         }
+
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+
+      expr = SCIPexpriteratorGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   /* handle the root expr separately: free its children and itself here */
+   SCIP_CALL( freeExpr(set, blkmem, rootexpr) );
+
+   return SCIP_OKAY;
+}
+
+/** returns whether an expression is a variable expression */
+SCIP_Bool SCIPexprIsVar(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(set != NULL);
+   assert(expr != NULL);
+
+   return expr->exprhdlr == set->exprhdlrvar;
+}
+
+/** returns whether an expression is a value expression */
+SCIP_Bool SCIPexprIsValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(set != NULL);
+   assert(expr != NULL);
+
+   return expr->exprhdlr == set->exprhdlrval;
+}
+
+/* from pub_expr.h */
+
+/** gets the number of times the expression is currently captured */
+int SCIPexprGetNUses(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->nuses;
+}
+
+/** gives the number of children of an expression */
+int SCIPexprGetNChildren(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->nchildren;
+}
+
+/** gives the children of an expression (can be NULL if no children) */
+SCIP_EXPR** SCIPexprGetChildren(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->children;
+}
+
+/** gets the expression handler of an expression
+ *
+ * This identifies the type of the expression (sum, variable, ...).
+ */
+SCIP_EXPRHDLR* SCIPexprGetHdlr(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->exprhdlr;
+}
+
+/** gets the expression data of an expression */
+SCIP_EXPRDATA* SCIPexprGetData(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->exprdata;
 }
 
 /**@} */
