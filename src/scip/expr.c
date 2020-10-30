@@ -664,7 +664,7 @@ SCIP_RETCODE parseBase(
       }
 
       ++expr;
-      SCIP_CALL( SCIPcallExprhdlrParse(set->scip, exprhdlr, expr, newpos, basetree, &success) );
+      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, set, newpos, basetree, &success) );
 
       if( !success )
       {
@@ -876,7 +876,7 @@ SCIP_RETCODE parseTerm(
          SCIP_CALL( retcode );
 
          /* append newly created factor */
-         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree) );
+         SCIP_CALL( SCIPappendConsExprExprProductExpr(set->scip, *termtree, factortree) );
          SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &factortree) );
 
          /* find next symbol */
@@ -932,7 +932,7 @@ SCIP_RETCODE evalAndDiff(
       /* evaluate expression only if necessary */
       if( soltag == 0 || expr->evaltag != soltag )
       {
-         SCIP_CALL( SCIPcallExprhdlrEval(set->scip, expr, &expr->evalvalue, NULL, sol) );
+         SCIP_CALL( SCIPexprhdlrEvalExpr(expr->exprhdlr, set, NULL, expr, &expr->evalvalue, NULL, sol) );
 
          expr->evaltag = soltag;
       }
@@ -941,7 +941,7 @@ SCIP_RETCODE evalAndDiff(
          break;
 
       /* compute forward diff */
-      SCIP_CALL( SCIPcallExprhdlrFwdiff(set->scip, expr, &expr->dot) );
+      SCIP_CALL( SCIPexprhdlrFwDiffExpr(expr->exprhdlr, set, expr, &expr->dot, NULL) );
 
       if( expr->dot == SCIP_INVALID ) /*lint !e777*/
          break;
