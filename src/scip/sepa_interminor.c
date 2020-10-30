@@ -269,10 +269,6 @@ SCIP_RETCODE detectMinors(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSEXPR_ITERATOR* it;
    SCIP_HASHMAP* rowmap;
-   SCIP_HASHMAP* quadmap;
-   SCIP_VAR** xs;
-   SCIP_VAR** ys;
-   SCIP_VAR** auxvars;
    int* rowvars = NULL;
    int* perm = NULL;
    int* intersection;
@@ -305,11 +301,7 @@ SCIP_RETCODE detectMinors(
 
    /* allocate memory */
    SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPhashmapCreate(&quadmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPhashmapCreate(&rowmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &xs, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ys, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &auxvars, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowvars, SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &intersection, SCIPgetNVars(scip)) );
 
@@ -392,7 +384,7 @@ SCIP_RETCODE detectMinors(
 
    /* store 2x2 minors */
    /* TODO: we might store some minors twice since the matrix is symmetric. Handle that! (see unit test for example) */
-   for( i = 0; i < nrowvars - 1; ++i )
+   for( i = 0; i < nrowvars; ++i )
    {
       int j;
       struct myarray* rowi;
@@ -445,6 +437,7 @@ SCIP_RETCODE detectMinors(
          }
       }
       SCIPfreeBufferArrayNull(scip, &rowi->vals);
+      SCIPhashmapFree(&rowi->auxvars);
       SCIPfreeBufferArrayNull(scip, &rowi);
    }
 
@@ -470,11 +463,7 @@ SCIP_RETCODE detectMinors(
    SCIPfreeBufferArrayNull(scip, &perm);
    SCIPfreeBufferArray(scip, &intersection);
    SCIPfreeBufferArray(scip, &rowvars);
-   SCIPfreeBufferArray(scip, &auxvars);
-   SCIPfreeBufferArray(scip, &ys);
-   SCIPfreeBufferArray(scip, &xs);
    SCIPhashmapFree(&rowmap);
-   SCIPhashmapFree(&quadmap);
    SCIPexpriteratorFree(&it);
 
 #ifdef SCIP_STATISTIC
