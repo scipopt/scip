@@ -2430,3 +2430,24 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 }
 
 /**@} */
+
+/**@name Expression Methods */
+/**@{ */
+
+/** creates and captures an expression with given expression data and children */
+SCIP_RETCODE SCIPexprCreate(
+   SCIP_SET*             set,              /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,           /**< block memory */
+   SCIP_EXPR**           expr,             /**< pointer where to store expression */
+   SCIP_EXPRHDLR*        exprhdlr,         /**< expression handler */
+   SCIP_EXPRDATA*        exprdata,         /**< expression data (expression assumes ownership) */
+   int                   nchildren,        /**< number of children */
+   SCIP_EXPR**           children          /**< children (can be NULL if nchildren is 0) */
+   )
+{
+   SCIP_CALL( createExpr(set, blkmem, expr, exprhdlr, exprdata, nchildren, children) );
+
+   return SCIP_OKAY;
+}
+
+/**@} */

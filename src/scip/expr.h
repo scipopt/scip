@@ -26,6 +26,9 @@
 
 #include "scip/pub_expr.h"
 
+/**@name Expression Handler Methods */
+/**@{ */
+
 /** copies the given expression handler to a new scip */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrCopyInclude(
@@ -242,5 +245,25 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
    SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
    SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
    );
+
+/**@} */
+
+
+/**@name Expression Methods */
+/**@{ */
+
+/** creates and captures an expression with given expression data and children */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprCreate(
+   SCIP_SET*             set,              /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,           /**< block memory */
+   SCIP_EXPR**           expr,             /**< pointer where to store expression */
+   SCIP_EXPRHDLR*        exprhdlr,         /**< expression handler */
+   SCIP_EXPRDATA*        exprdata,         /**< expression data (expression assumes ownership) */
+   int                   nchildren,        /**< number of children */
+   SCIP_EXPR**           children          /**< children (can be NULL if nchildren is 0) */
+   );
+
+/**@} */
 
 #endif /* SCIP_EXPR_H_ */
