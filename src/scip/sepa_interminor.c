@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -1279,13 +1278,13 @@ SCIP_RETCODE separatePoint(
 
       if( SCIPisFeasPositive(scip, det) )
       {
-         printf("separate xik xjl - xil xjk <= 0; det is %g\n", det);
+         //printf("separate xik xjl - xil xjk <= 0; det is %g\n", det);
          SCIP_CALL( separateDeterminant(scip, sepa, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, basicvarpos2tableaurow,
                   tableau, result) );
       }
       else if( SCIPisFeasNegative(scip, det) )
       {
-         printf("separate xil xjk - xik xjl <= 0; det is %g\n", det);
+         //printf("separate xil xjk - xik xjl <= 0; det is %g\n", det);
          SCIP_CALL( separateDeterminant(scip, sepa, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, basicvarpos2tableaurow,
                   tableau, result) );
       }
