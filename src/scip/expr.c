@@ -200,6 +200,7 @@ SCIP_RETCODE copyExpr(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             targetset,          /**< global SCIP settings data structure where target expression will live */
+   SCIP_STAT*            targetstat,         /**< dynamic problem statistics in target SCIP */
    BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
    SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
@@ -274,7 +275,8 @@ SCIP_RETCODE copyExpr(
                   SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, &exprcopy, targetvar) );
 
                   /* we need to release once since it has been captured by the mapvar() and createExprVar() call */
-                  SCIP_CALL( SCIPreleaseVar(targetscip, &targetvar) );
+                  assert(SCIPvarGetNUses(targetvar) > 1);  /* we pass eventqueue=NULL and lp=NULL, as they should not be needed anyway since var will not be freed */
+                  SCIP_CALL( SCIPvarRelease(&targetvar, targetblkmem, targetset, NULL, NULL) );
                }
                else
                {
@@ -2053,6 +2055,7 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             targetset,          /**< global SCIP settings data structure where target expression will live */
+   SCIP_STAT*            targetstat,         /**< dynamic problem statistics in target SCIP */
    BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
    SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
@@ -2065,7 +2068,7 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
-   SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetblkmem, sourceexpr, targetexpr, mapvar, mapvardata, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+   SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetstat, targetblkmem, sourceexpr, targetexpr, mapvar, mapvardata, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
    return SCIP_OKAY;
 }
