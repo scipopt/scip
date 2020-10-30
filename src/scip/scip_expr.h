@@ -381,7 +381,7 @@ SCIP_RETCODE SCIPevalExpr(
  * Note that an expression is a DAG representation of a function, but there is a 1-1 correspondence between paths
  * in the DAG and path in a tree diagram of a function.
  * Initially, we set root->derivative to 1.0.
- * Then, traversing the tree in Depth First (see SCIPexpriteratorInit), for every expr that *has* children,
+ * Then, traversing the tree in Depth First (see SCIPexpriterInit), for every expr that *has* children,
  * we store in its i-th child
  * child[i]->derivative = the derivative of expr w.r.t child evaluated at point * expr->derivative
  * Example:
@@ -576,24 +576,17 @@ SCIP_RETCODE SCIPgetExprVarExprs(
 /**@name Expression iterator */
 /**@{ */
 
-/** gets the index an expression iterator can use to store iterator specific data in an expression */
+/** creates an expression iterator */
 SCIP_EXPORT
-SCIP_RETCODE SCIPactivateExprIterator(
+SCIP_RETCODE SCIPcreateExpriter(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  iterindex           /**< buffer to store iteration index */
+   SCIP_EXPRITER**       iterator            /**< buffer to store expression iterator */
    );
 
-/** returns the index that an expression iterator used to store iterator specific data in an expression */
+/** frees an expression iterator */
 SCIP_EXPORT
-void SCIPdeactivateExprIterator(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   iterindex           /**< iteration index that is not used anymore */
-   );
-
-/** get a new tag that can be used to mark an expression as visited */
-SCIP_EXPORT
-unsigned int SCIPgetExprIteratorNewVisitedTag(
-   SCIP*                 scip                /**< SCIP data structure */
+void SCIPfreeExpriter(
+   SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
    );
 
 /** @} */
@@ -655,6 +648,11 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
    );
 
 /** @} */
+
+/**@name Expression Iterator Methods */
+/**@{ */
+
+/**@} */
 
 #ifdef __cplusplus
 }

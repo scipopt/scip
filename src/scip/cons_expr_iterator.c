@@ -38,13 +38,13 @@
 /** ensures minimum stack size of iterator's data */
 static
 SCIP_RETCODE ensureStackSize(
-   SCIP_CONSEXPR_ITERATOR*    iterator,     /**< expression iterator */
+   SCIP_EXPRITER*    iterator,     /**< expression iterator */
    int                        size          /**< minimum requires size */
    )
 {
    assert(iterator != NULL);
    assert(iterator->blkmem != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
+   assert(iterator->itertype == SCIP_EXPRITER_RTOPOLOGIC);
    assert(size >= 0);
 
    if( size > iterator->dfssize )
@@ -59,57 +59,11 @@ SCIP_RETCODE ensureStackSize(
    return SCIP_OKAY;
 }
 
-static
-void deinit(
-   SCIP_CONSEXPR_ITERATOR*    iterator      /**< expression iterator */
-   )
-{
-   assert(iterator != NULL );
-
-   if( !iterator->initialized )
-      return;
-
-   if( iterator->iterindex >= 0 )
-   {
-      /* tell conshdlr that this iterator is no longer active */
-      SCIPdeactivateConsExprExprHdlrIterator(iterator->consexprhdlr, iterator->iterindex);
-      iterator->iterindex = -1;
-   }
-
-   switch( iterator->itertype )
-   {
-      case SCIP_CONSEXPRITERATOR_BFS :
-      {
-         assert(iterator->queue != NULL);
-
-         SCIPqueueFree(&iterator->queue);
-
-         break;
-      }
-
-      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
-      {
-         assert(iterator->dfsnvisited != NULL);
-         assert(iterator->dfsexprs != NULL);
-
-         /* free dfs arrays */
-         BMSfreeBlockMemoryArray(iterator->blkmem, &iterator->dfsnvisited, iterator->dfssize);
-         BMSfreeBlockMemoryArray(iterator->blkmem, &iterator->dfsexprs, iterator->dfssize);
-         iterator->dfssize = 0;
-
-         break;
-      }
-
-      case SCIP_CONSEXPRITERATOR_DFS :
-      default: break;
-   }
-}
-
 /** adds an expression to the DFS stack */
 static
 void reverseTopologicalInsert(
-   SCIP_CONSEXPR_ITERATOR*    iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*        expr         /**< expression */
+   SCIP_EXPRITER*    iterator,    /**< expression iterator */
+   SCIP_EXPR*        expr         /**< expression */
    )
 {
    assert(iterator != NULL);
@@ -123,15 +77,15 @@ void reverseTopologicalInsert(
 
 /** moves to the next expression according to a reverse topological order */
 static
-SCIP_CONSEXPR_EXPR* doReverseTopologicalNext(
-   SCIP_CONSEXPR_ITERATOR*    iterator     /**< expression iterator */
+SCIP_EXPR* doReverseTopologicalNext(
+   SCIP_EXPRITER*    iterator     /**< expression iterator */
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    int childidx;
 
    assert(iterator != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_RTOPOLOGIC);
+   assert(iterator->itertype == SCIP_EXPRITER_RTOPOLOGIC);
 
    /* no expression left */
    if( iterator->dfsnexprs == 0 )
@@ -142,7 +96,7 @@ SCIP_CONSEXPR_EXPR* doReverseTopologicalNext(
    childidx = iterator->dfsnvisited[iterator->dfsnexprs - 1];
 
    /* remove the expression if all children have been visited */
-   if( childidx >= SCIPgetConsExprExprNChildren(expr) )
+   if( childidx >= SCIPexprGetNChildren(expr) )
    {
       --(iterator->dfsnexprs);
       return expr;
@@ -150,14 +104,14 @@ SCIP_CONSEXPR_EXPR* doReverseTopologicalNext(
    /* go to the next child */
    else
    {
-      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[childidx];
+      SCIP_EXPR* child = SCIPexprGetChildren(expr)[childidx];
       assert(child != NULL);
 
       /* mark that the child has been visited */
       ++(iterator->dfsnvisited[iterator->dfsnexprs-1]);
 
       /* do left-most step */
-      while( SCIPgetConsExprExprNChildren(child) > 0 )
+      while( SCIPexprGetNChildren(child) > 0 )
       {
          /* add child to the DFS stack */
          reverseTopologicalInsert(iterator, child);
@@ -165,7 +119,7 @@ SCIP_CONSEXPR_EXPR* doReverseTopologicalNext(
          /* mark that the child has been visited; note that child is on top of the DFS stack */
          ++(iterator->dfsnvisited[iterator->dfsnexprs-1]);
 
-         child = SCIPgetConsExprExprChildren(child)[0];
+         child = SCIPexprGetChildren(child)[0];
       }
 
       /* return last child; NOTE this child is not been added to the stack */
@@ -175,39 +129,39 @@ SCIP_CONSEXPR_EXPR* doReverseTopologicalNext(
 
 /** moves to the next expression according to the BFS rule */
 static
-SCIP_CONSEXPR_EXPR* doBfsNext(
-   SCIP_CONSEXPR_ITERATOR*    iterator     /**< expression iterator */
+SCIP_EXPR* doBfsNext(
+   SCIP_EXPRITER*    iterator     /**< expression iterator */
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    int i;
 
    assert(iterator != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_BFS);
+   assert(iterator->itertype == SCIP_EXPRITER_BFS);
    assert(iterator->queue != NULL);
 
    /* no expression left */
    if( SCIPqueueIsEmpty(iterator->queue) )
       return NULL;
 
-   expr = (SCIP_CONSEXPR_EXPR*) SCIPqueueRemove(iterator->queue);
+   expr = (SCIP_EXPR*) SCIPqueueRemove(iterator->queue);
    assert(expr != NULL);
 
    assert(iterator->visitedtag == 0 || iterator->iterindex >= 0);
-   assert(iterator->visitedtag == 0 || iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
+   assert(iterator->visitedtag == 0 || iterator->iterindex < SCIP_EXPRITER_MAXNACTIVE);
    /* we should have set the visitedtag when adding the expression to the queue */
    assert(iterator->visitedtag == 0 || expr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag);
 
    /* add all (possibly non-visited) children to the queue */
-   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
-      SCIP_CONSEXPR_EXPR* child = SCIPgetConsExprExprChildren(expr)[i];
+      SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
       if( iterator->visitedtag != 0 )
       {
          assert(iterator->iterindex >= 0);
-         assert(iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
+         assert(iterator->iterindex < SCIP_EXPRITER_MAXNACTIVE);
 
          /* skip children that have already been visited or have already been added to the queue */
          if( child->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
@@ -225,14 +179,14 @@ SCIP_CONSEXPR_EXPR* doBfsNext(
 }
 
 static
-SCIP_CONSEXPR_EXPR* doDfsNext(
-   SCIP_CONSEXPR_ITERATOR*    iterator     /**< expression iterator */
+SCIP_EXPR* doDfsNext(
+   SCIP_EXPRITER*    iterator     /**< expression iterator */
    )
 {
-   SCIP_CONSEXPR_EXPR_ITERDATA* iterdata;
+   SCIP_EXPRITERDATA* iterdata;
 
    assert(iterator != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
    assert(iterator->iterindex >= 0);
 
    if( iterator->curr == NULL )
@@ -242,35 +196,35 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
 
    switch( iterator->dfsstage )
    {
-      case SCIP_CONSEXPRITERATOR_VISITEDCHILD:
+      case SCIP_EXPRITER_VISITEDCHILD:
          /* consider next child */
          ++iterdata->currentchild;
          /* fall through */ /* no break */ /*lint -fallthrough*/
 
-      case SCIP_CONSEXPRITERATOR_ENTEREXPR:
+      case SCIP_EXPRITER_ENTEREXPR:
       {
          /* if there is an unvisited child (left), then go into visitingchild stage, otherwise go to leave stage */
-         iterator->dfsstage = SCIP_CONSEXPRITERATOR_LEAVEEXPR;  /* expect that we will leave expr, and change mind to visitingchild below */
+         iterator->dfsstage = SCIP_EXPRITER_LEAVEEXPR;  /* expect that we will leave expr, and change mind to visitingchild below */
          while( iterdata->currentchild < iterator->curr->nchildren )
          {
             if( iterator->visitedtag == 0 || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag )
             {
                /* if visitedtag is not used or child "currentchild" has not been visited yet, then go into visitingchild stage for this child */
-               iterator->dfsstage = SCIP_CONSEXPRITERATOR_VISITINGCHILD;
+               iterator->dfsstage = SCIP_EXPRITER_VISITINGCHILD;
                break;
             }
             ++iterdata->currentchild;
          }
-         assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITINGCHILD || iterdata->currentchild == iterator->curr->nchildren); /* if leaving expr, then currentchild should be at nchildren */
-         assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_LEAVEEXPR || iterdata->currentchild < iterator->curr->nchildren); /* if visiting child, then currentchild should be a valid index */
-         assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_LEAVEEXPR || iterator->visitedtag == 0 || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag); /* if visiting child, then either we don't care whether we visited it already or it has not been visited yet */
+         assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterdata->currentchild == iterator->curr->nchildren); /* if leaving expr, then currentchild should be at nchildren */
+         assert(iterator->dfsstage == SCIP_EXPRITER_LEAVEEXPR || iterdata->currentchild < iterator->curr->nchildren); /* if visiting child, then currentchild should be a valid index */
+         assert(iterator->dfsstage == SCIP_EXPRITER_LEAVEEXPR || iterator->visitedtag == 0 || iterator->visitedtag != iterator->curr->children[iterdata->currentchild]->iterdata[iterator->iterindex].visitedtag); /* if visiting child, then either we don't care whether we visited it already or it has not been visited yet */
 
          return iterator->curr;
       }
 
-      case SCIP_CONSEXPRITERATOR_VISITINGCHILD:
+      case SCIP_EXPRITER_VISITINGCHILD:
       {
-         SCIP_CONSEXPR_EXPR* child;
+         SCIP_EXPR* child;
 
          assert(iterdata->currentchild < iterator->curr->nchildren);
 
@@ -280,12 +234,12 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
          child->iterdata[iterator->iterindex].currentchild = 0;
 
          /* visit child */
-         iterator->dfsstage = SCIP_CONSEXPRITERATOR_ENTEREXPR;
+         iterator->dfsstage = SCIP_EXPRITER_ENTEREXPR;
 
          return child;
       }
 
-      case SCIP_CONSEXPRITERATOR_LEAVEEXPR:
+      case SCIP_EXPRITER_LEAVEEXPR:
       {
          /* go back to parent expression */
 
@@ -293,7 +247,7 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
          iterdata->visitedtag = iterator->visitedtag;
 
          /* be in visitedchild stage for the parent */
-         iterator->dfsstage = SCIP_CONSEXPRITERATOR_VISITEDCHILD;
+         iterator->dfsstage = SCIP_EXPRITER_VISITEDCHILD;
 
          return iterdata->parent;
       }
@@ -309,46 +263,11 @@ SCIP_CONSEXPR_EXPR* doDfsNext(
  * Interface methods
  */
 
-/** creates an expression iterator */
-SCIP_RETCODE SCIPexpriteratorCreate(
-   SCIP_CONSEXPR_ITERATOR**    iterator,    /**< buffer to store expression iterator */
-   SCIP_CONSHDLR*              consexprhdlr,/**< expr constraint handler, might be NULL */
-   BMS_BLKMEM*                 blkmem       /**< block memory used to store hash map entries */
-   )
-{
-   assert(iterator != NULL);
-   assert(blkmem  != NULL);
 
-   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, iterator) );
-
-   (*iterator)->blkmem = blkmem;
-   (*iterator)->consexprhdlr = consexprhdlr;
-
-   return SCIP_OKAY;
-}
-
-/** frees an expression iterator */
-void SCIPexpriteratorFree(
-   SCIP_CONSEXPR_ITERATOR**    iterator     /**< pointer to the expression iterator */
-   )
-{
-   assert(iterator != NULL);
-   assert(*iterator != NULL);
-   assert((*iterator)->blkmem != NULL);
-
-   deinit(*iterator);
-
-   assert((*iterator)->queue == NULL);
-   assert((*iterator)->dfsnvisited == NULL);
-   assert((*iterator)->dfsexprs == NULL);
-
-   /* free iterator */
-   BMSfreeBlockMemory((*iterator)->blkmem, iterator);
-}
 
 /** returns whether expression iterator is current initialized */
-SCIP_Bool SCIPexpriteratorIsInit(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_Bool SCIPexpriterIsInit(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
@@ -360,9 +279,9 @@ SCIP_Bool SCIPexpriteratorIsInit(
  *
  * @note If no conshdlr has been given when creating the iterator, then allowrevisit must be TRUE and type must not be DFS.
  *
- * @note If expr is NULL, then iterator will be ended (SCIPexpriteratorIsEnd() is TRUE). Useful if following with SCIPexpriteratorRestartDFS().
+ * @note If expr is NULL, then iterator will be ended (SCIPexpriterIsEnd() is TRUE). Useful if following with SCIPexpriterRestartDFS().
  *
- * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriteratorSetStagesDFS to change this.
+ * If type is DFS, then stopstages will be set to ENTEREXPR. Use SCIPexpriterSetStagesDFS to change this.
  *
  * More details on the DFS mode:
  * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
@@ -398,12 +317,12 @@ SCIP_Bool SCIPexpriteratorIsInit(
  * If given a pointer to the [+] expression is given as root to this expression, it will iterate
  * the graph in a depth-first manner and stop at various stages.
  * - When entering an expression, it stops in the enterexpr stage.
- *   The SCIPexpriteratorGetParentDFS() function indicates from where the expression has been entered (NULL for the root expression).
+ *   The SCIPexpriterGetParentDFS() function indicates from where the expression has been entered (NULL for the root expression).
  * - Before visiting a child of an expression, it stops in the visitingchild stage.
- *   The SCIPexpriteratorGetChildIdxDFS() function returns which child will be visited (as an index in the current expr's children array).
- *   Use SCIPexpriteratorGetChildExprDFS() to obtain the corresponding expression.
+ *   The SCIPexpriterGetChildIdxDFS() function returns which child will be visited (as an index in the current expr's children array).
+ *   Use SCIPexpriterGetChildExprDFS() to obtain the corresponding expression.
  * - When returning from visiting a child of an expression, it stops in the visitedchild stage.
- *   Again the SCIPexpriteratorGetChildExprDFS() function returns which child has been visited.
+ *   Again the SCIPexpriterGetChildExprDFS() function returns which child has been visited.
  * - When leaving an expression, it stops in the leaveexpr stage.
  *
  * Thus, for the above expression, the expression are visited in the following order and stages:
@@ -443,14 +362,14 @@ SCIP_Bool SCIPexpriteratorIsInit(
  * - leaveexpr([+])
  *
  * The caller can direct the iterator to skip parts of the tree:
- * If calling SCIPexpriteratorSkipDFS() in enterexpr stage, all children of that expression will be skipped. The leaveexpr stage will still be next.
- * If calling SCIPexpriteratorSkipDFS() in visitingchild stage, visiting the current child will be skipped.
- * If calling SCIPexpriteratorSkipDFS() in visitedchild child, visiting the remaining children will be skipped.
+ * If calling SCIPexpriterSkipDFS() in enterexpr stage, all children of that expression will be skipped. The leaveexpr stage will still be next.
+ * If calling SCIPexpriterSkipDFS() in visitingchild stage, visiting the current child will be skipped.
+ * If calling SCIPexpriterSkipDFS() in visitedchild child, visiting the remaining children will be skipped.
  */
-SCIP_RETCODE SCIPexpriteratorInit(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*         expr,        /**< expression of the iterator, can be NULL */
-   SCIP_CONSEXPRITERATOR_TYPE  type,        /**< type of expression iterator */
+SCIP_RETCODE SCIPexpriterInit(
+   SCIP_EXPRITER*     iterator,    /**< expression iterator */
+   SCIP_EXPR*         expr,        /**< expression of the iterator, can be NULL */
+   SCIP_EXPRITER_TYPE  type,        /**< type of expression iterator */
    SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
    )
 {
@@ -462,11 +381,11 @@ SCIP_RETCODE SCIPexpriteratorInit(
    iterator->itertype = type;
 
    /* get iterindex, if necessary */
-   if( !allowrevisit || type == SCIP_CONSEXPRITERATOR_DFS )
+   if( !allowrevisit || type == SCIP_EXPRITER_DFS )
    {
       assert(iterator->consexprhdlr != NULL);
 
-      SCIP_CALL( SCIPactivateConsExprExprHdlrIterator(iterator->consexprhdlr, &iterator->iterindex) );
+      SCIP_CALL( SCIPactivateExprIterator(iterator->consexprhdlr, &iterator->iterindex) );
    }
    else
    {
@@ -477,7 +396,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
    if( !allowrevisit )
    {
       assert(iterator->consexprhdlr != NULL);
-      iterator->visitedtag = SCIPgetConsExprExprHdlrNewVisitedTag(iterator->consexprhdlr);
+      iterator->visitedtag = SCIPgetExprIteratorNewVisitedTag(iterator->consexprhdlr);
    }
    else
    {
@@ -486,7 +405,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
 
    switch( iterator->itertype )
    {
-      case SCIP_CONSEXPRITERATOR_BFS:
+      case SCIP_EXPRITER_BFS:
       {
          SCIP_CALL( SCIPqueueCreate(&iterator->queue, MINBFSSIZE, 2.0) );
 
@@ -504,25 +423,25 @@ SCIP_RETCODE SCIPexpriteratorInit(
          if( iterator->visitedtag != 0 )
          {
             assert(iterator->iterindex >= 0);
-            assert(iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
+            assert(iterator->iterindex < SCIP_EXPRITER_MAXNACTIVE);
             assert(expr->iterdata[iterator->iterindex].visitedtag != iterator->visitedtag);
 
             /* mark expression as being in the queue */
             expr->iterdata[iterator->iterindex].visitedtag = iterator->visitedtag;
          }
 
-         iterator->curr = SCIPexpriteratorGetNext(iterator);
+         iterator->curr = SCIPexpriterGetNext(iterator);
          break;
       }
 
-      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
+      case SCIP_EXPRITER_RTOPOLOGIC :
       {
          SCIP_CALL( ensureStackSize(iterator, MINDFSSIZE) );
 
          if( expr != NULL )
          {
             reverseTopologicalInsert(iterator, expr);
-            iterator->curr = SCIPexpriteratorGetNext(iterator);
+            iterator->curr = SCIPexpriterGetNext(iterator);
          }
          else
          {
@@ -532,11 +451,11 @@ SCIP_RETCODE SCIPexpriteratorInit(
          break;
       }
 
-      case SCIP_CONSEXPRITERATOR_DFS :
+      case SCIP_EXPRITER_DFS :
       {
          assert(iterator->iterindex >= 0);
 
-         iterator->stopstages = SCIP_CONSEXPRITERATOR_ENTEREXPR;
+         iterator->stopstages = SCIP_EXPRITER_ENTEREXPR;
          iterator->curr = expr;
 
          if( expr == NULL )
@@ -544,7 +463,7 @@ SCIP_RETCODE SCIPexpriteratorInit(
 
          expr->iterdata[iterator->iterindex].currentchild = 0;
          expr->iterdata[iterator->iterindex].parent = NULL;
-         iterator->dfsstage = SCIP_CONSEXPRITERATOR_ENTEREXPR;
+         iterator->dfsstage = SCIP_EXPRITER_ENTEREXPR;
 
          break;
       }
@@ -569,14 +488,14 @@ SCIP_RETCODE SCIPexpriteratorInit(
  *
  * @return The current expression.
  */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*         expr         /**< expression of the iterator */
+SCIP_EXPR* SCIPexpriterRestartDFS(
+   SCIP_EXPRITER*     iterator,    /**< expression iterator */
+   SCIP_EXPR*         expr         /**< expression of the iterator */
    )
 {
    assert(iterator != NULL);
    assert(iterator->initialized);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
 
    /* if we forbid revisiting and root expr has already been visited, then set curr to NULL, that is, be at end of iterator */
    if( iterator->visitedtag > 0 && expr->iterdata[iterator->iterindex].visitedtag == iterator->visitedtag )
@@ -589,21 +508,21 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorRestartDFS(
    iterator->curr = expr;
    expr->iterdata[iterator->iterindex].currentchild = 0;
    expr->iterdata[iterator->iterindex].parent = NULL;
-   iterator->dfsstage = SCIP_CONSEXPRITERATOR_ENTEREXPR;
+   iterator->dfsstage = SCIP_EXPRITER_ENTEREXPR;
 
-   if( (iterator->stopstages & SCIP_CONSEXPRITERATOR_ENTEREXPR) == 0 )
-      return SCIPexpriteratorGetNext(iterator);
+   if( (iterator->stopstages & SCIP_EXPRITER_ENTEREXPR) == 0 )
+      return SCIPexpriterGetNext(iterator);
 
    return iterator->curr;
 }
 
 /** specifies in which stages to stop a DFS iterator
  *
- * @param stopstages should be a bitwise OR of different SCIP_CONSEXPRITERATOR_STAGE values
+ * @param stopstages should be a bitwise OR of different SCIP_EXPRITER_STAGE values
  */
-void SCIPexpriteratorSetStagesDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_STAGE stopstages   /**< the stages in which to stop when iterating via DFS */
+void SCIPexpriterSetStagesDFS(
+   SCIP_EXPRITER*     iterator,    /**< expression iterator */
+   SCIP_EXPRITER_STAGE stopstages   /**< the stages in which to stop when iterating via DFS */
    )
 {
    assert(iterator != NULL);
@@ -611,7 +530,7 @@ void SCIPexpriteratorSetStagesDFS(
    if( (iterator->dfsstage & stopstages) == 0 )
    {
       iterator->stopstages = stopstages;
-      (void) SCIPexpriteratorGetNext(iterator);
+      (void) SCIPexpriterGetNext(iterator);
    }
    else
    {
@@ -620,8 +539,8 @@ void SCIPexpriteratorSetStagesDFS(
 }
 
 /** gets the current expression that the expression iterator points to */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPR* SCIPexpriterGetCurrent(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
@@ -633,40 +552,40 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetCurrent(
  *
  * If the iterator has finished (IsEnd() is TRUE), then the stage is undefined.
  */
-SCIP_CONSEXPRITERATOR_STAGE SCIPexpriteratorGetStageDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPRITER_STAGE SCIPexpriterGetStageDFS(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
 
    return iterator->dfsstage;
 }
 
 /** gets the child index that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
-int SCIPexpriteratorGetChildIdxDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+int SCIPexpriterGetChildIdxDFS(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-   assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITEDCHILD);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
+   assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterator->dfsstage == SCIP_EXPRITER_VISITEDCHILD);
 
    return iterator->curr->iterdata[iterator->iterindex].currentchild;
 }
 
 /** gets the child expression that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPR* SCIPexpriterGetChildExprDFS(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-   assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITEDCHILD);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
+   assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterator->dfsstage == SCIP_EXPRITER_VISITEDCHILD);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
 
@@ -677,14 +596,14 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetChildExprDFS(
  *
  * @return the expression from which the current expression has been accessed
  */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPR* SCIPexpriterGetParentDFS(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
 
    return iterator->curr->iterdata[iterator->iterindex].parent;
 }
@@ -693,8 +612,8 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetParentDFS(
  *
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPRITER_USERDATA SCIPexpriterGetCurrentUserData(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
@@ -708,15 +627,15 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetCurrentUserData(
  *
  * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
-SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPRITER_USERDATA SCIPexpriterGetChildUserDataDFS(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-   assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITEDCHILD);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
+   assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterator->dfsstage == SCIP_EXPRITER_VISITEDCHILD);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
 
@@ -727,9 +646,9 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetChildUserDataDFS(
  *
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
-   SCIP_CONSEXPR_ITERATOR*     iterator,    /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*         expr         /**< expression for which to get the userdata of this iterator */
+SCIP_EXPRITER_USERDATA SCIPexpriterGetExprUserData(
+   SCIP_EXPRITER*     iterator,    /**< expression iterator */
+   SCIP_EXPR*         expr         /**< expression for which to get the userdata of this iterator */
    )
 {
    assert(iterator != NULL);
@@ -743,9 +662,9 @@ SCIP_CONSEXPRITERATOR_USERDATA SCIPexpriteratorGetExprUserData(
  *
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-void SCIPexpriteratorSetCurrentUserData(
-   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored */
+void SCIPexpriterSetCurrentUserData(
+   SCIP_EXPRITER*         iterator, /**< expression iterator */
+   SCIP_EXPRITER_USERDATA  userdata  /**< data to be stored */
    )
 {
    assert(iterator != NULL);
@@ -759,10 +678,10 @@ void SCIPexpriteratorSetCurrentUserData(
  *
  * @note The expression iterator mode must be DFS or another mode with allowrevisit=FALSE
  */
-void SCIPexpriteratorSetExprUserData(
-   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
-   SCIP_CONSEXPR_EXPR*             expr,     /**< expression where to set iterator data */
-   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored in current child */
+void SCIPexpriterSetExprUserData(
+   SCIP_EXPRITER*         iterator, /**< expression iterator */
+   SCIP_EXPR*             expr,     /**< expression where to set iterator data */
+   SCIP_EXPRITER_USERDATA  userdata  /**< data to be stored in current child */
    )
 {
    assert(iterator != NULL);
@@ -775,16 +694,16 @@ void SCIPexpriteratorSetExprUserData(
  *
  * @note The expression iterator mode must be in DFS mode and stage visitingchild or visitedchild
  */
-void SCIPexpriteratorSetChildUserData(
-   SCIP_CONSEXPR_ITERATOR*         iterator, /**< expression iterator */
-   SCIP_CONSEXPRITERATOR_USERDATA  userdata  /**< data to be stored in current child */
+void SCIPexpriterSetChildUserData(
+   SCIP_EXPRITER*         iterator, /**< expression iterator */
+   SCIP_EXPRITER_USERDATA  userdata  /**< data to be stored in current child */
    )
 {
    assert(iterator != NULL);
    assert(iterator->curr != NULL);
    assert(iterator->iterindex >= 0);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
-   assert(iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITINGCHILD || iterator->dfsstage == SCIP_CONSEXPRITERATOR_VISITEDCHILD);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
+   assert(iterator->dfsstage == SCIP_EXPRITER_VISITINGCHILD || iterator->dfsstage == SCIP_EXPRITER_VISITEDCHILD);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild >= 0);
    assert(iterator->curr->iterdata[iterator->iterindex].currentchild < iterator->curr->nchildren);
 
@@ -795,26 +714,26 @@ void SCIPexpriteratorSetChildUserData(
  *
  * @return the next expression, if any, and NULL otherwise
  */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPR* SCIPexpriterGetNext(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    /* move to the next expression according to iterator type */
    switch( iterator->itertype )
    {
-      case SCIP_CONSEXPRITERATOR_BFS:
+      case SCIP_EXPRITER_BFS:
       {
          iterator->curr = doBfsNext(iterator);
          break;
       }
 
-      case SCIP_CONSEXPRITERATOR_RTOPOLOGIC :
+      case SCIP_EXPRITER_RTOPOLOGIC :
       {
          iterator->curr = doReverseTopologicalNext(iterator);
          if( iterator->visitedtag != 0 )
          {
             assert(iterator->iterindex >= 0);
-            assert(iterator->iterindex < SCIP_CONSEXPRITERATOR_MAXNACTIVE);
+            assert(iterator->iterindex < SCIP_EXPRITER_MAXNACTIVE);
 
             /* skip already visited expressions */
             while( iterator->curr != NULL )
@@ -837,7 +756,7 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
          break;
       }
 
-      case SCIP_CONSEXPRITERATOR_DFS :
+      case SCIP_EXPRITER_DFS :
       {
          assert(iterator->iterindex >= 0);
 
@@ -867,47 +786,47 @@ SCIP_CONSEXPR_EXPR* SCIPexpriteratorGetNext(
  *
  * @return the next expression, if any, and NULL otherwise
  */
-SCIP_CONSEXPR_EXPR* SCIPexpriteratorSkipDFS(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_EXPR* SCIPexpriterSkipDFS(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);
    assert(iterator->curr != NULL);
-   assert(iterator->itertype == SCIP_CONSEXPRITERATOR_DFS);
+   assert(iterator->itertype == SCIP_EXPRITER_DFS);
    assert(iterator->iterindex >= 0);
 
    switch( iterator->dfsstage )
    {
-      case SCIP_CONSEXPRITERATOR_ENTEREXPR :
-      case SCIP_CONSEXPRITERATOR_VISITEDCHILD :
+      case SCIP_EXPRITER_ENTEREXPR :
+      case SCIP_EXPRITER_VISITEDCHILD :
       {
          /* move directly to leaveexpr */
-         iterator->dfsstage = SCIP_CONSEXPRITERATOR_LEAVEEXPR;
+         iterator->dfsstage = SCIP_EXPRITER_LEAVEEXPR;
          /* if leaveexpr is not a stopstage, then move on */
          while( iterator->curr != NULL && (iterator->dfsstage & iterator->stopstages) == 0 )
             iterator->curr = doDfsNext(iterator);
          return iterator->curr;
       }
 
-      case SCIP_CONSEXPRITERATOR_VISITINGCHILD :
+      case SCIP_EXPRITER_VISITINGCHILD :
       {
          /* skip the child to be visited */
          /* pretend we just visited this child and get next */
-         iterator->dfsstage = SCIP_CONSEXPRITERATOR_VISITEDCHILD;
-         return SCIPexpriteratorGetNext(iterator);
+         iterator->dfsstage = SCIP_EXPRITER_VISITEDCHILD;
+         return SCIPexpriterGetNext(iterator);
       }
 
-      case SCIP_CONSEXPRITERATOR_LEAVEEXPR :
+      case SCIP_EXPRITER_LEAVEEXPR :
       default :
-         SCIPerrorMessage("SCIPexpriteratorSkipDFS called in invalid stage %d", iterator->dfsstage);
+         SCIPerrorMessage("SCIPexpriterSkipDFS called in invalid stage %d", iterator->dfsstage);
          SCIPABORT();
          return iterator->curr;
    }
 }
 
 /** returns whether the iterator visited all expressions already */
-SCIP_Bool SCIPexpriteratorIsEnd(
-   SCIP_CONSEXPR_ITERATOR*     iterator     /**< expression iterator */
+SCIP_Bool SCIPexpriterIsEnd(
+   SCIP_EXPRITER*     iterator     /**< expression iterator */
    )
 {
    assert(iterator != NULL);

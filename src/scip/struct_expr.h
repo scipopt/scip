@@ -186,6 +186,7 @@ struct SCIP_QuadExpr_BilinTerm
 struct SCIP_ExprIter
 {
    BMS_BLKMEM*           blkmem;             /**< block memory */
+   SCIP_STAT*            stat;               /**< dynamic problem statistics */
 
    SCIP_Bool             initialized;        /**< whether the iterator has been initialized, that is, is in use */
    SCIP_EXPRITER_TYPE    itertype;           /**< type of expression iterator */

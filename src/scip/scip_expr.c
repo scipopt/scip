@@ -723,3 +723,30 @@ SCIP_RETCODE SCIPdismantleExpr(
 }
 
 /**@} */
+
+/**@name Expression Iterator Methods */
+/**@{ */
+
+/** creates an expression iterator */
+SCIP_RETCODE SCIPcreateExpriter(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRITER**       iterator            /**< buffer to store expression iterator */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexpriterCreate(scip->set, scip->stat, scip->mem->probmem, iterator) );
+
+   return SCIP_OKAY;
+}
+
+/** frees an expression iterator */
+void SCIPfreeExpriter(
+   SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
+   )
+{
+   SCIPexpriteratorFree(iterator);
+}
+
+/**@} */

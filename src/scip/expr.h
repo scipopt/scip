@@ -456,4 +456,23 @@ SCIP_RETCODE SCIPexprDismantle(
 
 /**@} */
 
+/**@name Expression Iterator Methods */
+/**@{ */
+
+/** creates an expression iterator */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexpriterCreate(
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRITER**       iterator            /**< buffer to store expression iterator */
+   );
+
+/** frees an expression iterator */
+SCIP_EXPORT
+void SCIPexpriterFree(
+   SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
+   );
+
+/**@} */
+
 #endif /* SCIP_EXPR_H_ */

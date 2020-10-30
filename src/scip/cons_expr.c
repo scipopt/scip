@@ -608,20 +608,20 @@ SCIP_RETCODE forwardPropExpr(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
 
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it);  )
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it);  )
    {
-      switch( SCIPexpriteratorGetStageDFS(it) )
+      switch( SCIPexpriterGetStageDFS(it) )
       {
          case SCIP_EXPRITER_VISITINGCHILD :
          {
             /* skip child if it has been evaluated already */
             SCIP_EXPR* child;
 
-            child = SCIPexpriteratorGetChildExprDFS(it);
+            child = SCIPexpriterGetChildExprDFS(it);
             if( conshdlrdata->curboundstag == child->activitytag )
             {
                if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, child->activity) )
@@ -630,7 +630,7 @@ SCIP_RETCODE forwardPropExpr(
                      *infeasible = TRUE;
                }
 
-               expr = SCIPexpriteratorSkipDFS(it);
+               expr = SCIPexpriterSkipDFS(it);
                continue;
             }
 
@@ -813,7 +813,7 @@ SCIP_RETCODE forwardPropExpr(
             break;
       }
 
-      expr = SCIPexpriteratorGetNext(it);
+      expr = SCIPexpriterGetNext(it);
    }
 
    SCIPexpriteratorFree(&it);
@@ -1030,7 +1030,7 @@ SCIP_RETCODE propConss(
    /* create iterator that we will use if we need to look at all auxvars */
    if( conshdlrdata->propauxvars )
    {
-      SCIP_CALL( SCIPexpriteratorCreate(&revpropcollectit, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriterCreate(&revpropcollectit, conshdlr, SCIPblkmem(scip)) );
    }
 
    /* main propagation loop */
@@ -1101,8 +1101,8 @@ SCIP_RETCODE propConss(
             SCIP_EXPR* expr;
 
             assert(revpropcollectit != NULL);
-            SCIP_CALL( SCIPexpriteratorInit(revpropcollectit, consdata->expr, SCIP_EXPRITER_BFS, FALSE) );
-            for( expr = SCIPexpriteratorGetCurrent(revpropcollectit); !SCIPexpriteratorIsEnd(revpropcollectit) && !cutoff; expr = SCIPexpriteratorGetNext(revpropcollectit) )  /*lint !e441*/
+            SCIP_CALL( SCIPexpriterInit(revpropcollectit, consdata->expr, SCIP_EXPRITER_BFS, FALSE) );
+            for( expr = SCIPexpriterGetCurrent(revpropcollectit); !SCIPexpriterIsEnd(revpropcollectit) && !cutoff; expr = SCIPexpriterGetNext(revpropcollectit) )  /*lint !e441*/
             {
                if( expr->auxvar == NULL )
                   continue;
@@ -1202,8 +1202,8 @@ SCIP_RETCODE propExprDomains(
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    for( c = 0; c < nconss && !cutoff; ++c )
    {
@@ -1214,7 +1214,7 @@ SCIP_RETCODE propExprDomains(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !cutoff; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it) && !cutoff; expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          /* call reverseprop for those nlhdlr that participate in this expr's activity computation
           * this will propagate the current activity
@@ -1665,8 +1665,8 @@ SCIP_RETCODE detectNlhdlrs(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, TRUE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, TRUE) );
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
    {
@@ -1719,7 +1719,7 @@ SCIP_RETCODE detectNlhdlrs(
       SCIP_CALL( SCIPcomputeExprIntegrality(scip, conshdlr, consdata->expr) );
 
       /* run detectNlhdlr on all expr where required */
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
       {
          /* skip exprs that we already looked at */
          if( expr->nenfos >= 0 )
@@ -1970,9 +1970,9 @@ SCIP_RETCODE deinitSolve(
    SCIP_Bool rootactivityvalid;
    int c;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
 
    /* call deinitialization callbacks of expression and nonlinear handlers
     * free nonlinear handlers information from expressions
@@ -1990,7 +1990,7 @@ SCIP_RETCODE deinitSolve(
       /* check and remember whether activity in root is valid */
       rootactivityvalid = consdata->expr->activitytag >= SCIPconshdlrGetData(conshdlr)->lastboundrelax;
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          SCIPdebugMsg(scip, "exitsepa and free nonlinear handler data for expression %p\n", (void*)expr);
 
@@ -2123,8 +2123,8 @@ SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
    if( !SCIPconshdlrGetData(conshdlr)->forbidmultaggrnlvar )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -2146,7 +2146,7 @@ SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
             if( SCIPexprGetHdlr(child) == SCIPgetExprHdlrVar(conshdlr) )
                continue;
 
-            for( expr = SCIPexpriteratorRestartDFS(it, child); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+            for( expr = SCIPexpriterRestartDFS(it, child); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
                if( SCIPexprGetHdlr(expr) == SCIPgetExprHdlrVar(conshdlr) )
                {
                   SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetConsExprExprVarVar(expr)) );
@@ -2155,7 +2155,7 @@ SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
       }
       else
       {
-         for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+         for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
             if( SCIPexprGetHdlr(expr) == SCIPgetExprHdlrVar(conshdlr) )
             {
                SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetConsExprExprVarVar(expr)) );
@@ -2675,24 +2675,24 @@ SCIP_RETCODE propagateLocks(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
-   assert(SCIPexpriteratorGetCurrent(it) == expr); /* iterator should not have moved */
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+   assert(SCIPexpriterGetCurrent(it) == expr); /* iterator should not have moved */
 
    /* store locks in root node */
    ituserdata.intvals[0] = nlockspos;
    ituserdata.intvals[1] = nlocksneg;
-   SCIPexpriteratorSetCurrentUserData(it, ituserdata);
+   SCIPexpriterSetCurrentUserData(it, ituserdata);
 
-   while( !SCIPexpriteratorIsEnd(it) )
+   while( !SCIPexpriterIsEnd(it) )
    {
       /* collect locks */
-      ituserdata = SCIPexpriteratorGetCurrentUserData(it);
+      ituserdata = SCIPexpriterGetCurrentUserData(it);
       nlockspos = ituserdata.intvals[0];
       nlocksneg = ituserdata.intvals[1];
 
-      switch( SCIPexpriteratorGetStageDFS(it) )
+      switch( SCIPexpriterGetStageDFS(it) )
       {
          case SCIP_EXPRITER_ENTEREXPR:
          {
@@ -2752,7 +2752,7 @@ SCIP_RETCODE propagateLocks(
             /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
              * SCIPcomputeExprMonotonicity
              */
-            monotonicity = expr->monotonicity != NULL ? expr->monotonicity[SCIPexpriteratorGetChildIdxDFS(it)] : SCIP_MONOTONE_UNKNOWN;
+            monotonicity = expr->monotonicity != NULL ? expr->monotonicity[SCIPexpriterGetChildIdxDFS(it)] : SCIP_MONOTONE_UNKNOWN;
 
             /* compute resulting locks of the child expression */
             switch( monotonicity )
@@ -2775,7 +2775,7 @@ SCIP_RETCODE propagateLocks(
                   break;
             }
             /* set locks in child expression */
-            SCIPexpriteratorSetChildUserData(it, ituserdata);
+            SCIPexpriterSetChildUserData(it, ituserdata);
 
             break;
          }
@@ -2786,7 +2786,7 @@ SCIP_RETCODE propagateLocks(
             break;
       }
 
-      expr = SCIPexpriteratorGetNext(it);
+      expr = SCIPexpriterGetNext(it);
    }
 
    SCIPexpriteratorFree(&it);
@@ -3628,15 +3628,15 @@ SCIP_RETCODE replaceBinaryProducts(
 
    SCIPdebugMsg(scip, "  check constraint %s\n", SCIPconsGetName(cons));
 
-   for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       SCIP_EXPR* newexpr = NULL;
       SCIP_EXPR* childexpr;
       int childexpridx;
 
-      childexpridx = SCIPexpriteratorGetChildIdxDFS(it);
+      childexpridx = SCIPexpriterGetChildIdxDFS(it);
       assert(childexpridx >= 0 && childexpridx < SCIPexprGetNChildren(expr));
-      childexpr = SCIPexpriteratorGetChildExprDFS(it);
+      childexpr = SCIPexpriterGetChildExprDFS(it);
       assert(childexpr != NULL);
 
       /* try to factorize variables in a sum expression that contains several products of binary variables */
@@ -3733,9 +3733,9 @@ SCIP_RETCODE presolveBinaryProducts(
    SCIP_CALL( SCIPhashmapCreate(&exprmap, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* create expression iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
 
    SCIPdebugMsg(scip, "call presolveBinaryProducts()\n");
 
@@ -3851,13 +3851,13 @@ SCIP_RETCODE canonicalizeConstraints(
       SCIP_EXPR* expr;
       SCIP_EXPRITER* it;
 
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
 
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      SCIP_CALL( SCIPexpriteratorInit(it, consdata->expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
-      for( expr = consdata->expr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      SCIP_CALL( SCIPexpriterInit(it, consdata->expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
+      for( expr = consdata->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          assert(expr != NULL);
          assert(expr->nlocksneg == 0);
@@ -4556,8 +4556,8 @@ SCIP_RETCODE initSepa(
    /* start with new propbounds (just to be sure, should not be needed) */
    ++conshdlrdata->curpropboundstag;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    /* first ensure activities are uptodate and create auxvars */
    *infeasible = FALSE;
@@ -4590,7 +4590,7 @@ SCIP_RETCODE initSepa(
       /* ensure we have a valid activity for auxvars and propExprDomains() call below */
       SCIP_CALL( SCIPevalExprActivity(scip, conshdlr, consdata->expr, &activity, TRUE) );
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          if( expr->nauxvaruses > 0 )
          {
@@ -4634,7 +4634,7 @@ SCIP_RETCODE initSepa(
     * TODO skip if !SCIPconsIsInitial(conss[c]) ?
     *   but at the moment, initSepa() is called from INITLP anyway, so we have SCIPconsIsInitial(conss[c]) anyway
     */
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
    for( c = 0; c < nconss && !*infeasible; ++c )
    {
       assert(conss != NULL);
@@ -4644,7 +4644,7 @@ SCIP_RETCODE initSepa(
       assert(consdata != NULL);
       assert(consdata->expr != NULL);
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it) && !*infeasible; expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it) && !*infeasible; expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          if( expr->nauxvaruses == 0 )
             continue;
@@ -4860,13 +4860,13 @@ SCIP_RETCODE addConsExprExprViolScoresAuxVars(
    /* sort variables to make lookup below faster */
    SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_BFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, FALSE) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nauxvars) );
    nexprs = 0;
 
-   for( expr = SCIPexpriteratorGetNext(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   for( expr = SCIPexpriterGetNext(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
    {
       auxvar = SCIPgetExprAuxVarNonlinear(expr);
       if( auxvar == NULL )
@@ -4970,8 +4970,8 @@ SCIP_RETCODE registerBranchingCandidates(
 
    if( SCIPgetBranchAuxNonlinear(scip, conshdlr) )
    {
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
    }
 
    /* register external branching candidates */
@@ -5040,7 +5040,7 @@ SCIP_RETCODE registerBranchingCandidates(
          SCIP_Real ub;
          SCIP_Real violscore;
 
-         for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+         for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
          {
             violscore = SCIPgetExprViolScoreNonlinear(conshdlr, expr);
             if( violscore == 0.0 )
@@ -5117,8 +5117,8 @@ SCIP_RETCODE collectBranchingCandidates(
 
    if( SCIPgetBranchAuxNonlinear(scip, conshdlr) )
    {
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
    }
 
    *ncands = 0;
@@ -5196,7 +5196,7 @@ SCIP_RETCODE collectBranchingCandidates(
             SCIP_Real lb;
             SCIP_Real ub;
 
-            for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+            for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
             {
                if( expr->violscoretag != conshdlrdata->enforound )
                   continue;
@@ -6142,7 +6142,7 @@ SCIP_RETCODE enforceConstraint(
          *result = SCIP_REDUCEDDOM;
    }
 
-   for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       SCIP_RESULT resultexpr;
 
@@ -6232,8 +6232,8 @@ SCIP_RETCODE enforceConstraints(
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, TRUE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, TRUE) );
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6352,8 +6352,8 @@ SCIP_RETCODE analyzeViolation(
    assert(maxauxviol != NULL);
    assert(maxvarboundviol != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    *maxabsconsviol = 0.0;
    *maxrelconsviol = 0.0;
@@ -6383,7 +6383,7 @@ SCIP_RETCODE analyzeViolation(
       SCIP_CALL( getConsRelViolation(scip, conss[c], &v, sol, soltag) );
       *maxrelconsviol = MAX(*maxrelconsviol, v);
 
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          SCIP_Real auxvarvalue;
          SCIP_Real auxvarlb;
@@ -7902,9 +7902,9 @@ SCIP_RETCODE bilinearTermsInsertAll(
       return SCIP_OKAY;
 
    /* create and initialize iterator */
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
    /* get product and pow expression handlers */
    producthdlr = SCIPgetExprHdlrProduct(conshdlr);
@@ -7921,7 +7921,7 @@ SCIP_RETCODE bilinearTermsInsertAll(
       assert(consdata != NULL);
 
       /* iterate through all expressions */
-      for( expr = SCIPexpriteratorRestartDFS(it, consdata->expr); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          SCIP_EXPR** children = SCIPexprGetChildren(expr);
          SCIP_VAR* x = NULL;
@@ -8150,7 +8150,7 @@ SCIP_RETCODE removeSingleLockedVars(
 {
    SCIP_EXPR* e;
 
-   for( e = SCIPexpriteratorRestartDFS(it, expr); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( e = SCIPexpriterRestartDFS(it, expr); !SCIPexpriterIsEnd(it); e = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       if( SCIPisExprVar(e) && SCIPhashmapExists(exprcands, (void*)e) )
       {
@@ -8349,9 +8349,9 @@ SCIP_RETCODE presolSingleLockedVars(
       nchildren = SCIPexprGetNChildren(consdata->expr);
 
       /* create iterator */
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
-      SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
+      SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+      SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR);
 
       for( i = 0; i < nchildren; ++i )
       {
@@ -9821,13 +9821,13 @@ SCIP_RETCODE SCIPdismantleExpr(
    SCIP_EXPRITER* it;
    int depth = -1;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
 
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
-      switch( SCIPexpriteratorGetStageDFS(it) )
+      switch( SCIPexpriterGetStageDFS(it) )
       {
          case SCIP_EXPRITER_ENTEREXPR:
          {
@@ -9900,7 +9900,7 @@ SCIP_RETCODE SCIPdismantleExpr(
             if( strcmp(type, "sum") == 0 )
             {
                SCIPinfoMessage(scip, file, "%*s   ", nspaces, "");
-               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriteratorGetChildIdxDFS(it)]);
+               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -9963,13 +9963,13 @@ SCIP_RETCODE SCIPevalExpr(
    expr->evalvalue = SCIP_INVALID;
    expr->evaltag = soltag;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
 
-   while( !SCIPexpriteratorIsEnd(it) )
+   while( !SCIPexpriterIsEnd(it) )
    {
-      switch( SCIPexpriteratorGetStageDFS(it) )
+      switch( SCIPexpriterGetStageDFS(it) )
       {
          case SCIP_EXPRITER_VISITINGCHILD :
          {
@@ -9979,7 +9979,7 @@ SCIP_RETCODE SCIPevalExpr(
                break;
 
             /* check whether child has been evaluated for that solution already */
-            child = SCIPexpriteratorGetChildExprDFS(it);
+            child = SCIPexpriterGetChildExprDFS(it);
             if( soltag == child->evaltag )
             {
                if( child->evalvalue == SCIP_INVALID ) /*lint !e777*/
@@ -9988,7 +9988,7 @@ SCIP_RETCODE SCIPevalExpr(
                /* skip this child
                 * this already returns the next one, so continue with loop
                 */
-               expr = SCIPexpriteratorSkipDFS(it);
+               expr = SCIPexpriterSkipDFS(it);
                continue;
             }
 
@@ -10012,7 +10012,7 @@ SCIP_RETCODE SCIPevalExpr(
             break;
       }
 
-      expr = SCIPexpriteratorGetNext(it);
+      expr = SCIPexpriterGetNext(it);
    }
 
 TERMINATE:
@@ -10114,11 +10114,11 @@ SCIP_RETCODE SCIPcomputeExprGradient(
    rootexpr->derivative = 1.0;
    rootexpr->difftag = difftag;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
+   SCIP_CALL( SCIPexpriterCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
 
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
 
@@ -10128,7 +10128,7 @@ SCIP_RETCODE SCIPcomputeExprGradient(
          break;
       }
 
-      child = SCIPexpriteratorGetChildExprDFS(it);
+      child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);
 
       /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
@@ -10146,7 +10146,7 @@ SCIP_RETCODE SCIPcomputeExprGradient(
       else
       {
          derivative = SCIP_INVALID;
-         SCIP_CALL( SCIPexprhdlrBwDiffExpr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative, NULL, 0.0) );
+         SCIP_CALL( SCIPexprhdlrBwDiffExpr(scip, expr, SCIPexpriterGetChildIdxDFS(it), &derivative, NULL, 0.0) );
 
          if( derivative == SCIP_INVALID ) /*lint !e777*/
          {
@@ -10324,12 +10324,12 @@ SCIP_RETCODE SCIPcomputeExprHessianDir(
    rootexpr->derivative = 1.0;
    rootexpr->difftag = difftag;
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
+   SCIP_CALL( SCIPexpriterCreate(&it, consexprhdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
 
    /* compute reverse diff and bardots: i.e. hessian times direction */
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       assert(expr->evalvalue != SCIP_INVALID); /*lint !e777*/
 
@@ -10340,7 +10340,7 @@ SCIP_RETCODE SCIPcomputeExprHessianDir(
          break;
       }
 
-      child = SCIPexpriteratorGetChildExprDFS(it);
+      child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);
 
       /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
@@ -10360,8 +10360,8 @@ SCIP_RETCODE SCIPcomputeExprHessianDir(
       {
          derivative = SCIP_INVALID;
          hessiandir = SCIP_INVALID;
-         SCIP_CALL( SCIPexprhdlrBwDiffExpr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &derivative, NULL, SCIP_INVALID) );
-         SCIP_CALL( SCIPexprhdlrBwFwDiffExpr(scip, expr, SCIPexpriteratorGetChildIdxDFS(it), &hessiandir) );
+         SCIP_CALL( SCIPexprhdlrBwDiffExpr(scip, expr, SCIPexpriterGetChildIdxDFS(it), &derivative, NULL, SCIP_INVALID) );
+         SCIP_CALL( SCIPexprhdlrBwFwDiffExpr(scip, expr, SCIPexpriterGetChildIdxDFS(it), &hessiandir) );
 
          if( derivative == SCIP_INVALID || hessiandir == SCIP_INVALID ) /*lint !e777*/
          {
@@ -10725,10 +10725,10 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
 
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
    {
       if( !SCIPisExprVar(expr) )
          continue;
@@ -10867,12 +10867,12 @@ SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
    varssize = 5;
    SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, varssize) );
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
 
    for( i = 0; i < nexprs; ++i )
    {
-      for( e = SCIPexpriteratorRestartDFS(it, exprs[i]); !SCIPexpriteratorIsEnd(it); e = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( e = SCIPexpriterRestartDFS(it, exprs[i]); !SCIPexpriterIsEnd(it); e = SCIPexpriterGetNext(it) ) /*lint !e441*/
       {
          assert(e != NULL);
 
@@ -10954,13 +10954,13 @@ SCIP_RETCODE SCIPhashExpr(
    assert(expr != NULL);
    assert(hashval != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, SCIPfindConshdlr(scip, CONSHDLR_NAME), SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
 
    SCIP_CALL( hashExpr(scip, expr, it, NULL) );
 
-   *hashval = SCIPexpriteratorGetExprUserData(it, expr).uintval;
+   *hashval = SCIPexpriterGetExprUserData(it, expr).uintval;
 
    SCIPexpriteratorFree(&it);
 
@@ -11279,11 +11279,11 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
    childcurvsize = 5;
    SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
 
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )  /*lint !e441*/
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
    {
       curv = SCIP_EXPRCURV_UNKNOWN;
 
@@ -11412,11 +11412,11 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriteratorSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
 
-   for( expr = SCIPexpriteratorGetCurrent(it); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       /* compute integrality information */
       expr->isintegral = FALSE;
@@ -11553,10 +11553,10 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
       SCIP_EXPRITER* it;
 
       /* create and initialize iterator */
-      SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-      SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+      SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+      SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
 
-      for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
          if( SCIPisExprVar(expr) )
             ++(expr->nactivityusessepa);
 
@@ -11584,11 +11584,11 @@ SCIP_RETCODE SCIPgetExprNVars(
    assert(expr != NULL);
    assert(nvars != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
 
    *nvars = 0;
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
       if( SCIPisExprVar(expr) )
          ++(*nvars);
 
@@ -11617,11 +11617,11 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    assert(varexprs != NULL);
    assert(nvarexprs != NULL);
 
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
 
    *nvarexprs = 0;
-   for( ; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) ) /*lint !e441*/
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
    {
       assert(expr != NULL);
 
