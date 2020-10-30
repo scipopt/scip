@@ -3730,6 +3730,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
       switch(algo)
       {
          case 's':
+            SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
             retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
             break;
          default:
@@ -3738,16 +3739,10 @@ SCIP_RETCODE lpExactFlushAndSolve(
       }
       if( retcode == SCIP_LPERROR )
       {
-         SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_FROMSCRATCH, TRUE);
-         retcode = SCIPlpiExactSolvePrimal(lpexact->lpiexact);
-
-         if( retcode == SCIP_LPERROR )
-         {
-            *lperror = TRUE;
-            lpexact->solved = FALSE;
-            lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-            SCIPdebugMessage("Error solving lp exactly. \n");
-         }
+         *lperror = TRUE;
+         lpexact->solved = FALSE;
+         lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+         SCIPdebugMessage("Error solving lp exactly. \n");
       }
       if( retcode != SCIP_LPERROR )
       {
