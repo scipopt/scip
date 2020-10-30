@@ -255,13 +255,46 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 /** creates and captures an expression with given expression data and children */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprCreate(
-   SCIP_SET*             set,              /**< global SCIP settings */
-   BMS_BLKMEM*           blkmem,           /**< block memory */
-   SCIP_EXPR**           expr,             /**< pointer where to store expression */
-   SCIP_EXPRHDLR*        exprhdlr,         /**< expression handler */
-   SCIP_EXPRDATA*        exprdata,         /**< expression data (expression assumes ownership) */
-   int                   nchildren,        /**< number of children */
-   SCIP_EXPR**           children          /**< children (can be NULL if nchildren is 0) */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children            /**< children (can be NULL if nchildren is 0) */
+   );
+
+/** appends child to the children list of expr */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprAppendChild(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPR*            child               /**< expression to be appended */
+   );
+
+/** overwrites/replaces a child of an expressions
+ *
+ * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprReplaceChild(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression where a child is going to be replaced */
+   int                   childidx,           /**< index of child being replaced */
+   SCIP_EXPR*            newchild            /**< the new child */
+   );
+
+/** remove all children of expr
+ *
+ * @attention only use if you really know what you are doing
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprRemoveChildren(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr                /**< expression */
    );
 
 /**@} */

@@ -404,4 +404,55 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    return SCIP_OKAY;
 }
 
+/** appends child to the children list of expr */
+SCIP_RETCODE SCIPappendExprChild(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPR*            child               /**< expression to be appended */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprAppendChild(scip->set, scip->mem->probmem, expr, child) );
+
+   return SCIP_OKAY;
+}
+
+/** overwrites/replaces a child of an expressions
+ *
+ * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
+ */
+SCIP_RETCODE SCIPreplaceExprChild(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPR*              expr,             /**< expression which is going to replace a child */
+   int                     childidx,         /**< index of child being replaced */
+   SCIP_EXPR*              newchild          /**< the new child */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprReplaceChild(scip->set, scip->mem->probmem, expr, childidx, newchild) );
+
+   return SCIP_OKAY;
+}
+
+/** remove all children of expr
+ *
+ * @attention only use if you really know what you are doing
+ */
+SCIP_RETCODE SCIPremoveExprChildren(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprRemoveChildren(scip->set, scip->mem->probmem, expr) );
+
+   return SCIP_OKAY;
+}
+
 /**@} */

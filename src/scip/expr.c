@@ -2450,4 +2450,97 @@ SCIP_RETCODE SCIPexprCreate(
    return SCIP_OKAY;
 }
 
+/** appends child to the children list of expr */
+SCIP_RETCODE SCIPexprAppendChild(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPR*            child               /**< expression to be appended */
+   )
+{
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(child != NULL);
+   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+//   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
+//   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
+   assert(expr->nchildren <= expr->childrensize);
+
+   if( expr->nchildren == expr->childrensize )
+   {
+      expr->childrensize = SCIPsetCalcMemGrowSize(set, expr->nchildren+1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &expr->children, expr->nchildren, expr->childrensize) );
+   }
+
+   expr->children[expr->nchildren] = child;
+   ++expr->nchildren;
+
+   /* capture child */
+   SCIPcaptureExpr(child);
+
+   return SCIP_OKAY;
+}
+
+/** overwrites/replaces a child of an expressions
+ *
+ * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
+ */
+SCIP_RETCODE SCIPexprReplaceChild(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression where a child is going to be replaced */
+   int                   childidx,           /**< index of child being replaced */
+   SCIP_EXPR*            newchild            /**< the new child */
+   )
+{
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(newchild != NULL);
+   assert(childidx >= 0);
+   assert(childidx < expr->nchildren);
+   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+//   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
+//   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
+
+   /* do nothing if child is not changing */
+   if( newchild == expr->children[childidx] )
+      return SCIP_OKAY;
+
+   /* capture new child (do this before releasing the old child in case there are equal */
+   SCIPcaptureExpr(newchild);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &(expr->children[childidx])) );
+   expr->children[childidx] = newchild;
+
+   return SCIP_OKAY;
+}
+
+/** remove all children of expr
+ *
+ * @attention only use if you really know what you are doing
+ */
+SCIP_RETCODE SCIPexprRemoveChildren(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int c;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   for( c = 0; c < expr->nchildren; ++c )
+   {
+      assert(expr->children[c] != NULL);
+      SCIP_CALL( SCIPreleaseExpr(scip, &(expr->children[c])) );
+   }
+
+   expr->nchildren = 0;
+
+   return SCIP_OKAY;
+}
+
 /**@} */
