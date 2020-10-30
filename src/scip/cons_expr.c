@@ -11758,66 +11758,6 @@ SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
  * constraint specific interface methods
  */
 
-/** gets the index an expression iterator can use to store iterator specific data in an expression */
-SCIP_RETCODE SCIPactivateExprIterator(
-   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   int*                       iterindex       /**< buffer to store iteration index */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(consexprhdlr != NULL);
-   assert(iterindex != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->nactiveexpriter + 1 >= SCIP_EXPRITER_MAXNACTIVE )
-   {
-      SCIPerrorMessage("Maximal number of active expression iterators reached.\n");
-      return SCIP_MAXDEPTHLEVEL;
-   }
-
-   *iterindex = conshdlrdata->nactiveexpriter++;
-
-   return SCIP_OKAY;
-}
-
-/** returns the index that an expression iterator used to store iterator specific data in an expression */
-void SCIPdeactivateExprIterator(
-   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   int                        iterindex       /**< iteration index that is not used anymore */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(consexprhdlr != NULL);
-   assert(iterindex >= 0);
-
-   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-   assert(conshdlrdata != NULL);
-
-   /* the iterindex must be the one of the last initialized iterator */
-   assert(iterindex == conshdlrdata->nactiveexpriter-1);
-
-   --conshdlrdata->nactiveexpriter;
-}
-
-/** get a new tag that can be used to mark an expression as visited */
-unsigned int SCIPgetExprIteratorNewVisitedTag(
-   SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(consexprhdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-   assert(conshdlrdata != NULL);
-
-   return ++conshdlrdata->exprlastvisitedtag;
-}
-
 /** gets tag indicating current local variable bounds */
 unsigned int SCIPgetCurBoundsTagNonlinear(
    SCIP_CONSHDLR*             consexprhdlr    /**< expression constraint handler */

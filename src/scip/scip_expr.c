@@ -736,7 +736,7 @@ SCIP_RETCODE SCIPcreateExpriter(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexpriterCreate(scip->set, scip->stat, scip->mem->probmem, iterator) );
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, iterator) );
 
    return SCIP_OKAY;
 }

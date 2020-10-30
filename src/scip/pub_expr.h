@@ -467,7 +467,7 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 /** returns whether expression iterator is current initialized */
 SCIP_EXPORT
 SCIP_Bool SCIPexpriterIsInit(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** initializes an expression iterator
@@ -563,10 +563,10 @@ SCIP_Bool SCIPexpriterIsInit(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexpriterInit(
-   SCIP_EXPRITER*     iterator,    /**< expression iterator */
-   SCIP_EXPR*         expr,        /**< expression of the iterator, can be NULL */
-   SCIP_EXPRITER_TYPE  type,        /**< type of expression iterator */
-   SCIP_Bool                   allowrevisit /**< whether expression are allowed to be visited more than once */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
+   SCIP_EXPR*            expr,               /**< expression of the iterator, can be NULL */
+   SCIP_EXPRITER_TYPE    type,               /**< type of expression iterator */
+   SCIP_Bool             allowrevisit        /**< whether expression are allowed to be visited more than once */
    );
 
 /** restarts an already initialized expression iterator in DFS mode
@@ -585,8 +585,8 @@ SCIP_RETCODE SCIPexpriterInit(
  */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterRestartDFS(
-   SCIP_EXPRITER*     iterator,    /**< expression iterator */
-   SCIP_EXPR*         expr         /**< expression of the iterator */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
+   SCIP_EXPR*            expr                /**< expression of the iterator */
    );
 
 /** specifies in which stages to stop a DFS iterator
@@ -597,14 +597,14 @@ SCIP_EXPR* SCIPexpriterRestartDFS(
  */
 SCIP_EXPORT
 void SCIPexpriterSetStagesDFS(
-   SCIP_EXPRITER*     iterator,    /**< expression iterator */
-   SCIP_EXPRITER_STAGE stopstages   /**< the stages in which to stop when iterating via DFS */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
+   SCIP_EXPRITER_STAGE   stopstages          /**< the stages in which to stop when iterating via DFS */
    );
 
 /** gets the current expression that the expression iterator points to */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterGetCurrent(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gets the current stage that the expression iterator is in when using DFS
@@ -613,19 +613,19 @@ SCIP_EXPR* SCIPexpriterGetCurrent(
  */
 SCIP_EXPORT
 SCIP_EXPRITER_STAGE SCIPexpriterGetStageDFS(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gets the child index that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
 SCIP_EXPORT
 int SCIPexpriterGetChildIdxDFS(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gets the child expression that the expression iterator considers when in DFS mode and stage visitingchild or visitedchild */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterGetChildExprDFS(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gives the parent of the current expression of an expression iteration if in DFS mode
@@ -634,7 +634,7 @@ SCIP_EXPR* SCIPexpriterGetChildExprDFS(
  */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterGetParentDFS(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gives the iterator specific user data of the current expression
@@ -643,7 +643,7 @@ SCIP_EXPR* SCIPexpriterGetParentDFS(
  */
 SCIP_EXPORT
 SCIP_EXPRITER_USERDATA SCIPexpriterGetCurrentUserData(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gives the iterator specific user data of the current expressions current child
@@ -652,7 +652,7 @@ SCIP_EXPRITER_USERDATA SCIPexpriterGetCurrentUserData(
  */
 SCIP_EXPORT
 SCIP_EXPRITER_USERDATA SCIPexpriterGetChildUserDataDFS(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** gives the iterator specific user data of a given expression
@@ -661,8 +661,8 @@ SCIP_EXPRITER_USERDATA SCIPexpriterGetChildUserDataDFS(
  */
 SCIP_EXPORT
 SCIP_EXPRITER_USERDATA SCIPexpriterGetExprUserData(
-   SCIP_EXPRITER*     iterator,    /**< expression iterator */
-   SCIP_EXPR*         expr         /**< expression for which to get the userdata of this iterator */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
+   SCIP_EXPR*            expr                /**< expression for which to get the userdata of this iterator */
    );
 
 /** sets the iterator specific user data of the current expression for an expression iteration if in DFS mode
@@ -671,8 +671,8 @@ SCIP_EXPRITER_USERDATA SCIPexpriterGetExprUserData(
  */
 SCIP_EXPORT
 void SCIPexpriterSetCurrentUserData(
-   SCIP_EXPRITER*         iterator, /**< expression iterator */
-   SCIP_EXPRITER_USERDATA  userdata  /**< data to be stored */
+   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPRITER_USERDATA userdata           /**< data to be stored */
    );
 
 /** sets the iterator specific user data of a given expression
@@ -681,9 +681,9 @@ void SCIPexpriterSetCurrentUserData(
  */
 SCIP_EXPORT
 void SCIPexpriterSetExprUserData(
-   SCIP_EXPRITER*         iterator, /**< expression iterator */
-   SCIP_EXPR*             expr,     /**< expression where to set iterator data */
-   SCIP_EXPRITER_USERDATA  userdata  /**< data to be stored in current child */
+   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPR*             expr,              /**< expression where to set iterator data */
+   SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    );
 
 
@@ -693,8 +693,8 @@ void SCIPexpriterSetExprUserData(
  */
 SCIP_EXPORT
 void SCIPexpriterSetChildUserData(
-   SCIP_EXPRITER*         iterator, /**< expression iterator */
-   SCIP_EXPRITER_USERDATA  userdata  /**< data to be stored in current child */
+   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    );
 
 /** moves the iterator to the next expression according to the mode of the expression iterator
@@ -703,7 +703,7 @@ void SCIPexpriterSetChildUserData(
  */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterGetNext(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** moves a DFS iterator to one of the next expressions
@@ -718,13 +718,13 @@ SCIP_EXPR* SCIPexpriterGetNext(
  */
 SCIP_EXPORT
 SCIP_EXPR* SCIPexpriterSkipDFS(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** returns whether the iterator visited all expressions already */
 SCIP_EXPORT
 SCIP_Bool SCIPexpriterIsEnd(
-   SCIP_EXPRITER*     iterator     /**< expression iterator */
+   SCIP_EXPRITER*        iterator            /**< expression iterator */
    );
 
 /** @} */
