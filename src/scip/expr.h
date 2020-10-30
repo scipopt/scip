@@ -371,6 +371,27 @@ SCIP_Bool SCIPexprIsValue(
    SCIP_EXPR*            expr                /**< expression */
    );
 
+/** returns whether an expression is a sum expression */
+SCIP_EXPORT
+SCIP_Bool SCIPexprIsSum(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** returns whether an expression is a product expression */
+SCIP_EXPORT
+SCIP_Bool SCIPexprIsProduct(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** returns whether an expression is a power expression */
+SCIP_EXPORT
+SCIP_Bool SCIPexprIsPower(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** print an expression as info-message */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprPrint(

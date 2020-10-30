@@ -2742,6 +2742,42 @@ SCIP_Bool SCIPexprIsValue(
    return expr->exprhdlr == set->exprhdlrval;
 }
 
+/** returns whether an expression is a sum expression */
+SCIP_Bool SCIPexprIsSum(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(set != NULL);
+   assert(expr != NULL);
+
+   return expr->exprhdlr == set->exprhdlrsum;
+}
+
+/** returns whether an expression is a product expression */
+SCIP_Bool SCIPexprIsProduct(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(set != NULL);
+   assert(expr != NULL);
+
+   return expr->exprhdlr == set->exprhdlrproduct;
+}
+
+/** returns whether an expression is a power expression */
+SCIP_Bool SCIPexprIsPower(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(set != NULL);
+   assert(expr != NULL);
+
+   return expr->exprhdlr == set->exprhdlrpow;
+}
+
 /** print an expression as info-message */
 SCIP_RETCODE SCIPexprPrint(
    SCIP_SET*             set,                /**< global SCIP settings */
