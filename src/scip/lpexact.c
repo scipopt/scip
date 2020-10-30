@@ -4243,6 +4243,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       goto TERMINATE;
    }
 
+TERMINATE:
+
    /* stop timing and update number of calls and fails, and proved bound status */
    if ( usefarkas )
    {
@@ -4254,9 +4256,7 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
       SCIPclockStop(stat->provedfeaslptime, set);
       stat->nexlp++;
    }
-   assert(!(*lperror) || !lp->solved);
 
- TERMINATE:
    return retcode;
 }
 
