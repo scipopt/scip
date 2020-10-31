@@ -132,6 +132,8 @@ Features
 --------
 
 - Extended check for valid variable and constraint names in PIP writer.
+- Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
+  name matching during parsing. The old format is still supported.
 
 Performance improvements
 ------------------------
