@@ -292,12 +292,12 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
    return SCIP_OKAY;
 }
 
-/** Compute orbit of a given variable and store it in @p orbit. The first entry of orbit will
+/** Compute orbit of a given variable and store it in @p orbit. The first entry of the orbit will
  *  be the given variable index and the rest is filled with the remaining variables excluding
- *  the ones specified in @p ignoredvars (note that it should contain the variable indices+1).
+ *  the ones specified in @p ignoredvars (note that the indices are shifted by +1).
  *
  *  @pre orbit is an initialized array of size propdata->npermvars
- *  @pre at least one of @p perms and @p permstrans has to be not NULL
+ *  @pre at least one of @p perms and @p permstrans should not be NULL
  */
 SCIP_RETCODE SCIPcomputeOrbitVar(
    SCIP*                 scip,               /**< SCIP instance */
@@ -307,7 +307,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
    SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
-                                               *  that should be ignored (or NULL) */
+                                              *   that should be ignored (or NULL) */
    SCIP_Shortbool*       varfound,           /**< bitmap to mark which variables have been added (or NULL) */
    int                   varidx,             /**< index of variable for which the orbit is requested */
    int                   component,          /**< component that var is in */
@@ -327,8 +327,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    assert( componentbegins != NULL );
    assert( orbit != NULL );
    assert( orbitsize != NULL );
-   assert( varidx >= 0 );
-   assert( varidx <= npermvars );
+   assert( 0 <= varidx && varidx < npermvars );
    assert( component >= 0 );
    assert( npermvars > 0 );
 
@@ -360,18 +359,18 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
 
          comp = components[p];
 
-         if ( permstrans == NULL )
+         if ( perms != NULL )
             image = perms[comp][currvar]; /*lint !e613*/
          else
             image = permstrans[currvar][comp];
 
          /* found new element of the orbit of varidx */
-         if ( !varadded[image] )
+         if ( ! varadded[image] )
          {
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
-            if ( ignoredvars == NULL || !SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) ) /*lint !e776*/
+            if ( ignoredvars == NULL || ! SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) ) /*lint !e776*/
             {
                orbit[(*orbitsize)++] = image;
 
@@ -518,7 +517,7 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
 }
 
 
-/** Checks whether a permutation is a composition of 2-cycles and this case determine the number of overall
+/** Checks whether a permutation is a composition of 2-cycles and in this case determines the number of overall
  *  2-cycles and binary 2-cycles. It is a composition of 2-cycles iff @p ntwocyclesperm > 0 upon termination.
  */
 SCIP_RETCODE SCIPisInvolutionPerm(
@@ -542,6 +541,8 @@ SCIP_RETCODE SCIPisInvolutionPerm(
    *nbincyclesperm = 0;
    for (i = 0; i < nvars; ++i)
    {
+      assert( 0 <= perm[i] && perm[i] < nvars );
+
       /* skip fixed points and avoid treating the same 2-cycle twice */
       if ( perm[i] <= i )
          continue;
@@ -549,11 +550,11 @@ SCIP_RETCODE SCIPisInvolutionPerm(
       if ( perm[perm[i]] == i )
       {
          if ( SCIPvarIsBinary(vars[i]) && SCIPvarIsBinary(vars[perm[i]]) )
-            *nbincyclesperm += 1;
+            ++(*nbincyclesperm);
          else if ( earlytermination )
-               return SCIP_OKAY;
+            return SCIP_OKAY;
 
-         ++ntwocycles ;
+         ++ntwocycles;
       }
       else
       {
@@ -1025,11 +1026,11 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
       cnt = 0;
       for (i = 0; i < nrows; ++i)
       {
-         /* skip rows containing non-binary variables*/
+         /* skip rows containing non-binary variables */
          if ( rowisbinary != NULL && ! rowisbinary[i] )
             continue;
 
-         assert( orbitopevaridx[i][curcolumn] < npermvars );
+         assert( 0 <= orbitopevaridx[i][curcolumn] && orbitopevaridx[i][curcolumn] < npermvars );
          assert( SCIPvarIsBinary(permvars[orbitopevaridx[i][curcolumn]]) );
 
          /* elements in first column of orbitope have to appear exactly once in the orbitope */
@@ -1043,7 +1044,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          if ( storelexorder )
          {
             (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][curcolumn];
-            *nvarsorder += 1;
+            ++(*nvarsorder);
          }
          (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
       }
@@ -1075,7 +1076,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          if ( storelexorder )
          {
             (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][1];
-            *nvarsorder += 1;
+            ++(*nvarsorder);
          }
          (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][1]];
       }
@@ -1095,7 +1096,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          if ( storelexorder )
          {
             (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][0];
-            *nvarsorder += 1;
+            ++(*nvarsorder);
          }
          (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][0]];
       }
@@ -1132,7 +1133,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
                if ( storelexorder )
                {
                   (*lexorder)[nvarsorderold + nrows * nfilledcols + cnt] = orbitopevaridx[i][curcolumn];
-                  *nvarsorder += 1;
+                  ++(*nvarsorder);
                }
                (*vars)[cnt++][nfilledcols] = permvars[orbitopevaridx[i][curcolumn]];
             }
