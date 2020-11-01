@@ -3676,10 +3676,10 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
          "Whether we separate inequalities for full orbitopes?",
          &conshdlrdata->sepafullorbitope, TRUE, DEFAULT_SEPAFULLORBITOPE, NULL, NULL) );
 
-
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
          "Whether orbitope constraints should be forced to be copied to sub SCIPs.",
          &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
