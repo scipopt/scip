@@ -2053,12 +2053,10 @@ SCIP_RETCODE findRho(
    )
 {
    int i;
-   SCIP_Real maxalpha;
 
    /* go through all rays not in the recession cone and compute the largest negative steplength possible. The
     * smallest of them is then the steplength rho we use for the current ray */
    *rho = 0.0;
-   maxalpha = 1.0;
    for( i = 0; i < rays->nrays; ++i )
    {
       SCIP_Real currentrho;
@@ -2068,7 +2066,7 @@ SCIP_RETCODE findRho(
          continue;
 
       /* if we cannot strengthen enough, we don't strengthen at all */
-      if( SCIPisInfinity(scip, -*rho) || SCIPisZero(scip, maxalpha) )
+      if( SCIPisInfinity(scip, -*rho) )
       {
          *rho = -SCIPinfinity(scip);
          return SCIP_OKAY;
@@ -2092,54 +2090,37 @@ SCIP_RETCODE findRho(
 
          SCIP_Bool inreccone;
          SCIP_Real alpha;
+         SCIP_Real lb;
+         SCIP_Real ub;
+         int j;
 
-         SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
-               vzlp, wcoefs, wzlp, kappa, maxalpha, &inreccone, success) );
-
-         if( ! *success )
-            return SCIP_OKAY;
-
-         if( inreccone )
-            alpha = maxalpha;
-         else
+         lb = 0.0;
+         ub = 1.0;
+         for( j = 0; j < BINSEARCH_MAXITERS; ++j )
          {
-            SCIP_Real lb;
-            SCIP_Real ub;
-            int j;
+            alpha = (lb + ub) / 2.0;
 
-            lb = 0.0;
-            ub = maxalpha;
-            for( j = 0; j < BINSEARCH_MAXITERS; ++j )
+            if( SCIPisZero(scip, alpha) )
             {
-               alpha = (lb + ub) / 2.0;
-
-               if( SCIPisZero(scip, alpha) )
-               {
-                  alpha = 0.0;
-                  maxalpha = 0.0;
-                  break;
-               }
-
-               SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
-                     vzlp, wcoefs, wzlp, kappa, alpha, &inreccone, success) );
-
-               if( ! *success )
-                  return SCIP_OKAY;
-
-               /* no root exists */
-               if( inreccone )
-               {
-                  lb = alpha;
-                  if( SCIPisEQ(scip, ub, lb) )
-                     break;
-               }
-               else
-                  ub = alpha;
+               alpha = 0.0;
+               break;
             }
 
-            assert(alpha <= maxalpha);
+            SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
+                  vzlp, wcoefs, wzlp, kappa, alpha, &inreccone, success) );
 
-            maxalpha = alpha;
+            if( ! *success )
+               return SCIP_OKAY;
+
+            /* no root exists */
+            if( inreccone )
+            {
+               lb = alpha;
+               if( SCIPisEQ(scip, ub, lb) )
+                  break;
+            }
+            else
+               ub = alpha;
          }
 
          /* now we found the best convex combination which we use to derive the corresponding coef. If alpha = 0, we
