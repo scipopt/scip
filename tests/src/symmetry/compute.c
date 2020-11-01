@@ -25,11 +25,18 @@
 #include <symmetry/compute_symmetry.h>
 #include <scip/scipdefplugins.h>
 
-
+/* global SCIP instance */
 static SCIP* scip;
 
+
+/** check whether two int arrays are equal */
 static
-void checkArraysEqual(int* expected, int* candidate, int length, const char* name)
+void checkIntArraysEqual(
+   int*                  expected,           /**< array of expected values */
+   int*                  candidate,          /**< array of values to be checked */
+   int                   length,             /**< length of arrays */
+   const char*           name                /**< name to be printed */
+   )
 {
    int i;
 
@@ -849,7 +856,13 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgrou
    SCIP_PROPDATA propdata;
    SCIP_VAR* dummyvar;
    SCIP_VAR* permvars[10];
+   unsigned componentblocked = FALSE;
+   int* graphcomponents;
+   int* graphcompbegins;
+   int* compcolorbegins;
+   int* usedperms;
    int* perms[6];
+   SCIP_Bool permused[6] = {FALSE};
    int permorder1[6] = {0,1,2,3,4,5};
    int permorder2[6] = {2,3,4,5,0,1};
    int permorder3[6] = {5,0,1,2,3,4};
@@ -861,11 +874,15 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgrou
    int perm6[10] = {6,7,2,8,9,5,0,1,3,4};
    int components[6] = {0,1,2,3,4,5};
    int componentbegins[2] = {0,6};
-   SCIP_Shortbool componentblocked = FALSE;
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int* usedperms;
+   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
+   int expectedcompbegins[4] = {0,3,6,10};
+   int expectedcolbegins[3] = {0,2,3};
+   int expectedcomps1[10] = {0,1,2,3,4,5,6,7,8,9};
+   int expectedcompbegins1[4] = {0,3,6,10};
+   int expectedcolbegins1[3] = {0,2,3};
+   int expectedcomps2[10] = {0,6,2,1,7,3,8,4,5,9};
+   int expectedcompbegins2[5] = {0,2,5,7,10};
+   int expectedcolbegins2[2] = {0,4};
    int ngraphcomponents;
    int ncompcolors;
    int nusedperms;
@@ -878,7 +895,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgrou
       return;
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   for( i = 0; i < 10; ++i )
+   for (i = 0; i < 10; ++i)
       permvars[i] = dummyvar;
 
    perms[0] = perm1;
@@ -901,81 +918,69 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgrou
    SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
 
    /* check canonical order */
-
+   for (i = 0; i < 6; ++i)
+      permused[i] = FALSE;
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
 
-   cr_assert(graphcomponents != NULL);
-   cr_assert(graphcompbegins != NULL);
-   cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms);
-   cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
-   cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
 
-   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
-   checkArraysEqual(expectedcomps, graphcomponents, 10, "components");
-
-   int expectedcompbegins[4] = {0,3,6,10};
-   checkArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
-
-   int expectedcolbegins[3] = {0,2,3};
-   checkArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
+   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
 
    SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
 
    /* check different order */
-
+   for (i = 0; i < 6; ++i)
+      permused[i] = FALSE;
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
 
-   cr_assert(graphcomponents != NULL);
-   cr_assert(graphcompbegins != NULL);
-   cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms);
-   cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
-   cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
 
-   int expectedcomps1[10] = {0,1,2,3,4,5,6,7,8,9};
-   checkArraysEqual(expectedcomps1, graphcomponents, 10, "components");
-
-   int expectedcompbegins1[4] = {0,3,6,10};
-   checkArraysEqual(expectedcompbegins1, graphcompbegins, ngraphcomponents, "compbegins");
-
-   int expectedcolbegins1[3] = {0,2,3};
-   checkArraysEqual(expectedcolbegins1, compcolorbegins, ncompcolors, "colorbegins");
+   checkIntArraysEqual(expectedcomps1, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins1, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins1, compcolorbegins, ncompcolors, "colorbegins");
 
    SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
 
    /* check order that leads to trivial subgroup */
-
+   for (i = 0; i < 6; ++i)
+      permused[i] = FALSE;
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder3, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
 
-   cr_assert(graphcomponents != NULL);
-   cr_assert(graphcompbegins != NULL);
-   cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 2, "expected 2 used permutations, but got %d\n", nusedperms);
-   cr_assert(ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents);
-   cr_assert(ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors);
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 2, "expected 2 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors );
 
-   int expectedcomps2[10] = {0,6,2,1,7,3,8,4,5,9};
-   checkArraysEqual(expectedcomps2, graphcomponents, 10, "components");
-
-   int expectedcompbegins2[5] = {0,2,5,7,10};
-   checkArraysEqual(expectedcompbegins2, graphcompbegins, ngraphcomponents, "compbegins");
-
-   int expectedcolbegins2[2] = {0,4};
-   checkArraysEqual(expectedcolbegins2, compcolorbegins, ncompcolors, "colorbegins");
+   checkIntArraysEqual(expectedcomps2, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins2, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins2, compcolorbegins, ncompcolors, "colorbegins");
 
    SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
    SCIPfreeBufferArray(scip, &usedperms);
-   SCIPreleaseVar(scip, &dummyvar);
+   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
 }
 
 /* TEST 8 (subgroups) */
@@ -984,7 +989,14 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    SCIP_PROPDATA propdata;
    SCIP_VAR* dummyvar;
    SCIP_VAR* permvars[10];
+   unsigned componentblocked = FALSE;
+   int* permorder;
+   int* graphcomponents;
+   int* graphcompbegins;
+   int* compcolorbegins;
+   int* usedperms;
    int* perms[6];
+   SCIP_Bool permused[6] = {FALSE};
    int perm1[10] = {0,2,1,3,5,4,6,7,8,9};
    int perm2[10] = {0,1,2,3,4,5,7,6,8,9};
    int perm3[10] = {0,1,2,3,4,5,6,8,7,9};
@@ -993,12 +1005,10 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    int perm6[10] = {0,1,2,3,4,5,6,7,9,8};
    int components[6] = {0,1,2,3,4,5};
    int componentbegins[2] = {0,6};
-   SCIP_Shortbool componentblocked = FALSE;
-   int* permorder;
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int* usedperms;
+   int expectedpermorder[6] = {5,1,2,4,0,3};
+   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
+   int expectedcompbegins[4] = {0,3,6,10};
+   int expectedcolbegins[3] = {0,2,3};
    int ngraphcomponents;
    int ncompcolors;
    int ntwocycleperms;
@@ -1019,7 +1029,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    perms[5] = perm6;
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   for( i = 0; i < 10; ++i )
+   for (i = 0; i < 10; ++i)
       permvars[i] = dummyvar;
 
    propdata.npermvars = 10;
@@ -1035,41 +1045,34 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
 
    /* check sorted order */
-
    SCIP_CALL( SCIPallocBufferArray(scip, &permorder, 6) );
 
-   for( i = 0; i < 6; ++i )
+   for (i = 0; i < 6; ++i)
       permorder[i] = i;
 
    SCIP_CALL( chooseOrderOfGenerators(scip, &propdata, 0, &permorder, &ntwocycleperms) );
-   cr_assert(ntwocycleperms == 5);
+   cr_assert( ntwocycleperms == 5 );
 
-   int expectedpermorder[6] = {5,1,2,4,0,3};
-   checkArraysEqual(expectedpermorder, permorder, 6, "permorder");
+   checkIntArraysEqual(expectedpermorder, permorder, 6, "permorder");
 
    SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, ntwocycleperms, 0, &graphcomponents,
-         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6) );
+         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
 
-   cr_assert(graphcomponents != NULL);
-   cr_assert(graphcompbegins != NULL);
-   cr_assert(compcolorbegins != NULL);
-   cr_assert(nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms);
-   cr_assert(ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents);
-   cr_assert(ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors);
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
 
-   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
-   checkArraysEqual(expectedcomps, graphcomponents, 10, "components");
-
-   int expectedcompbegins[4] = {0,3,6,10};
-   checkArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
-
-   int expectedcolbegins[3] = {0,2,3};
-   checkArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
+   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
 
    SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
    SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
    SCIPfreeBufferArray(scip, &permorder);
    SCIPfreeBufferArray(scip, &usedperms);
-   SCIPreleaseVar(scip, &dummyvar);
+   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
 }
