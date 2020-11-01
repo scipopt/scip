@@ -422,10 +422,6 @@ set(scip_reader_extensions
 #
 set(scip_writer_extensions
   "cip"
-  "gms"
-  "ppm"
-  "pbm"
-  "ccg"
   "opb"
   "pip"
   "rlp"
@@ -433,7 +429,6 @@ set(scip_writer_extensions
   "lp"
   "wbo"
   "fzn"
-  "bnd"
   )
 
 #
