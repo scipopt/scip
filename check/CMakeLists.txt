@@ -397,24 +397,11 @@ set(instances_Or
 set(scip_reader_extensions
   "mps"
   "lp"
-  "sol"
-  "osil"
   "opb"
-  "wbo"
   "pip"
   "fzn"
-  "cnf"
   "cip"
-  "smps"
-  "sto"
-  "tim"
-  "cor"
   "rlp"
-  "bnd"
-  "diff"
-  "dec"
-  "fix"
-  "mst"
   )
 
 #
