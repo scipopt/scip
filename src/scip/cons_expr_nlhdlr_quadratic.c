@@ -1951,7 +1951,7 @@ SCIP_Bool raysAreDependent(
       if( *coef != 0.0 )
       {
          /* cannot be dependent if the coefs aren't equal for all entries */
-         if( ! SCIPisFeasEQ(scip, *coef, raycoefs1[i] / raycoefs2[i]) )
+         if( ! SCIPisEQ(scip, *coef, raycoefs1[i] / raycoefs2[i]) )
          {
             return FALSE;
          }
@@ -2095,6 +2095,9 @@ SCIP_RETCODE findRho(
 
          SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
                vzlp, wcoefs, wzlp, kappa, maxalpha, &inreccone, success) );
+
+         if( ! *success )
+            return SCIP_OKAY;
 
          if( inreccone )
             alpha = maxalpha;
