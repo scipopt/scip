@@ -979,7 +979,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int curcolumn;
    int i;
    int cnt;
-   int nvarsorderold;
+   int nvarsorderold = 0;
 
    assert( vars != NULL );
    assert( nrows > 0 );

@@ -3916,7 +3916,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
 
             /* the leader of the weak inequalities has to be the first element in the lexicographic order */
-            (*lexorder)[*nvarsorder++] = (*lexorder)[0];
+            (*lexorder)[(*nvarsorder)++] = (*lexorder)[0];
             (*lexorder)[0] = orbit[activeorb][0];
          }
       }
@@ -4181,7 +4181,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       SCIP_Bool* permused;
       SCIP_Bool allpermsused = FALSE;
       SCIP_Bool handlednonbinarysymmetry = FALSE;
-      int norbitopesincomp = 0;
+      int norbitopesincomp;
 
       /* if component is blocked, skip it */
       if ( propdata->componentblocked[i] )
@@ -4332,7 +4332,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       for (j = 0; j < ncompcolors; ++j)
       {
-         int ncomps;
          int nbinarycomps = 0;
          int largestcolorcomp = -1;
          int largestcompsize = 0;
@@ -4354,9 +4353,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
             continue;
          }
 
-         ncomps = compcolorbegins[j+1] - compcolorbegins[j];
-
-         SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, ncomps,
+         SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, compcolorbegins[j+1] - compcolorbegins[j],
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
 
          /* check whether components of this color build an orbitope (with > 2 columns) */
