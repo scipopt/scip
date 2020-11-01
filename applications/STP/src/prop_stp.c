@@ -75,6 +75,7 @@
 /** propagator data */
 struct SCIP_PropData
 {
+   REDCOST*              redcostdata;        /**< reduced cost data */
    GRAPH*                propgraph;          /**< graph data */
    SCIP_Real*            fixingbounds;       /**< saves largest upper bound to each variable that would allow to fix it */
    SCIP_Real*            deg2bounds;         /**< saves largest upper bound to each variable that would allow to set degree 2 constraint */
@@ -309,7 +310,6 @@ SCIP_RETCODE getRedCostDistances(
    int* pathedge = NULL;
    const int nedges = graph_get_nEdges(g);
    const int nnodes = graph_get_nNodes(g);
-   int todo; // second next should be enough!
 
    assert(graph_isMarked(g));
 
@@ -327,6 +327,48 @@ SCIP_RETCODE getRedCostDistances(
       redcostrev[e] = FARAWAY;
 
    graph_get3nextTermPaths(g, redcostrev, redcostrev, vnoi, vbase, state);
+
+   SCIPfreeBufferArray(scip, &redcostrev);
+   SCIPfreeBufferArray(scip, &pathedge);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** initialize reduced cost distances */
+static
+SCIP_RETCODE getRedCost2ndNextDistances(
+   SCIP*                 scip,               /**< SCIP structure */
+   const SCIP_Real*      redcost,            /**< reduced costs */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 vnoi,               /**> Voronoi paths  */
+   SCIP_Real*            pathdist,           /**< path distance */
+   int*                  vbase,              /**< Voronoi base */
+   int*                  state               /**< state  */
+)
+{
+   SCIP_Real* redcostrev = NULL;
+   int* pathedge = NULL;
+   const int nedges = graph_get_nEdges(g);
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(graph_isMarked(g));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcostrev, nedges) );
+
+   /* distance from root to all nodes */
+   graph_path_execX(scip, g, g->source, redcost, pathdist, pathedge);
+
+   for( unsigned int e = 0; e < (unsigned) nedges; e++ )
+      redcostrev[e] = redcost[flipedge(e)];
+
+   /* no paths should go back to the root */
+   for( int e = g->outbeg[g->source]; e != EAT_LAST; e = g->oeat[e] )
+      redcostrev[e] = FARAWAY;
+
+   graph_get2nextTermPaths(g, redcostrev, redcostrev, vnoi, vbase, state);
 
    SCIPfreeBufferArray(scip, &redcostrev);
    SCIPfreeBufferArray(scip, &pathedge);
@@ -1287,16 +1329,16 @@ SCIP_RETCODE fixVarsDualcost(
          SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nfixed) );
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &state, 2 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 2 * nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 2 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
 
    graph_mark(graph);
 
    redcosts_forLPget(scip, vars, graph, redcost);
-   SCIP_CALL( getRedCostDistances(scip, redcost, graph, vnoi, pathdist, vbase, state) );
+   SCIP_CALL( getRedCost2ndNextDistances(scip, redcost, graph, vnoi, pathdist, vbase, state) );
 
    for( int k = 0; k < nnodes; k++ )
    {
@@ -1391,6 +1433,8 @@ SCIP_RETCODE fixVarsExtendedRed(
    {
       REDCOST redcostdata = { .redEdgeCost = redcost, .rootToNodeDist = pathdist, .nodeTo3TermsPaths = vnoi,
          .nodeTo3TermsBases = vbase, .cutoff = minpathcost, .dualBound = -1.0, .redCostRoot = graph->source};
+
+     // SCIP_CALL( redcosts_initializeDistances(scip, toplevel, g, redcostdata) );
 
       /* reduce graph and mark deletable arcs
        // todo: adjust the redcosts, set all deleted ars to FARAWAY!
@@ -1784,6 +1828,7 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata->deg2bounded = NULL;
    propdata->deg2bounds = NULL;
    propdata->propgraph = NULL;
+   propdata->redcostdata = NULL;
    propdata->propgraphnodenumber = -1;
 
    return SCIP_OKAY;
@@ -1803,8 +1848,11 @@ SCIP_DECL_PROPEXITSOL(propExitsolStp)
    SCIPfreeMemoryArrayNull(scip, &(propdata->deg2bounded));
    SCIPfreeMemoryArrayNull(scip, &(propdata->deg2bounds));
 
-   if( propdata->propgraph != NULL )
+   if( propdata->propgraph )
       graph_free(scip, &(propdata->propgraph), TRUE);
+
+   if( propdata->redcostdata )
+      redcosts_free(scip, &(propdata->redcostdata));
 
    return SCIP_OKAY;
 }
