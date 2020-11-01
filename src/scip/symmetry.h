@@ -125,12 +125,12 @@ SCIP_RETCODE SCIPcomputeOrbitsComponentsSym(
    int*                  varorbitmap         /**< array for storing the orbits for each variable */
    );
 
-/** Compute orbit of a given variable and store it in @p orbit. The first entry of orbit will
+/** Compute orbit of a given variable and store it in @p orbit. The first entry of the orbit will
  *  be the given variable index and the rest is filled with the remaining variables excluding
- *  the ones specified in @p ignoredvars (note that it should contain the variable indices+1).
+ *  the ones specified in @p ignoredvars (note that the indices are shifted by +1).
  *
  *  @pre orbit is an initialized array of size propdata->npermvars
- *  @pre at least one of @p perms and @p permstrans has to be not NULL
+ *  @pre at least one of @p perms and @p permstrans should not be NULL
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeOrbitVar(
@@ -141,7 +141,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
    SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
-                                               *  that should be ignored (or NULL) */
+                                              *   that should be ignored (or NULL) */
    SCIP_Shortbool*       varfound,           /**< bitmap to mark which variables have been added (or NULL) */
    int                   varidx,             /**< index of variable for which the orbit is requested */
    int                   component,          /**< component that var is in */
@@ -149,7 +149,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int*                  orbitsize           /**< buffer to store the size of the orbit */
    );
 
-/** Checks whether a permutation is a composition of 2-cycles and this case determine the number of overall
+/** Checks whether a permutation is a composition of 2-cycles and in this case determine the number of overall
  *  2-cycles and binary 2-cycles. It is a composition of 2-cycles iff @p ntwocyclesperm > 0 upon termination.
  */
 SCIP_EXPORT
