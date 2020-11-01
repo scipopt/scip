@@ -282,6 +282,16 @@ void redcosts_increaseOnDeletedArcs(
 
 /* initialize distances from reduced costs */
 EXTERN
+SCIP_RETCODE redcosts_initializeDistances(
+   SCIP*                 scip,               /**< SCIP */
+   int                   level,              /**< level to inizialize for*/
+   GRAPH*                g,                  /**< graph data structure */
+   REDCOST*              redcostdata         /**< reduced cost data */
+   );
+
+
+/* initialize top distances from reduced costs */
+EXTERN
 SCIP_RETCODE redcosts_initializeDistancesTop(
    SCIP*                 scip,               /**< SCIP */
    GRAPH*                g,                  /**< graph data structure */

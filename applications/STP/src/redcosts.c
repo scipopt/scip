@@ -378,7 +378,7 @@ int redcosts_getNlevels(
 
 /** sets cutoff */
 void redcosts_setCutoff(
-   int                 level,               /**< level to set cutoff for */
+   int                 level,              /**< level to set cutoff for */
    SCIP_Real           cutoff,             /**< the value */
    REDCOST*            redcostdata         /**< reduced costs data */
    )
@@ -440,19 +440,21 @@ void redcosts_addLevel(
 }
 
 
+
 /* initialize distances from reduced costs */
-SCIP_RETCODE redcosts_initializeDistancesTop(
+SCIP_RETCODE redcosts_initializeDistances(
    SCIP*                 scip,               /**< SCIP */
+   int                   level,              /**< level to inizialize for*/
    GRAPH*                g,                  /**< graph data structure */
    REDCOST*              redcostdata         /**< reduced cost data */
    )
 {
    int* pathedge;
-   const int daroot = redcosts_getRootTop(redcostdata);
-   const SCIP_Real* const redcosts = redcosts_getEdgeCostsTop(redcostdata);
-   PATH* const vnoi = redcosts_getNodeToTermsPathsTop(redcostdata);
-   SCIP_Real* const pathdist = redcosts_getRootToNodeDistTop(redcostdata);
-   int* const vbase = redcosts_getNodeToTermsBasesTop(redcostdata);
+   const int daroot = redcosts_getRoot(redcostdata, level);
+   const SCIP_Real* const redcosts = redcosts_getEdgeCosts(redcostdata, level);
+   PATH* const vnoi = redcosts_getNodeToTermsPaths(redcostdata, level);
+   SCIP_Real* const pathdist = redcosts_getRootToNodeDist(redcostdata, level);
+   int* const vbase = redcosts_getNodeToTermsBases(redcostdata, level);
    SCIP_Real* costrev = NULL;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
@@ -536,6 +538,24 @@ SCIP_RETCODE redcosts_initializeDistancesTop(
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &costrev);
+
+   return SCIP_OKAY;
+}
+
+
+
+/* initialize distances from reduced costs */
+SCIP_RETCODE redcosts_initializeDistancesTop(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                g,                  /**< graph data structure */
+   REDCOST*              redcostdata         /**< reduced cost data */
+   )
+{
+   const int toplevel = getTopLevel(redcostdata);
+
+   assert(g && scip);
+
+   SCIP_CALL( redcosts_initializeDistances(scip, toplevel, g, redcostdata) );
 
    return SCIP_OKAY;
 }
