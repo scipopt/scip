@@ -55,7 +55,7 @@
  * checks enabled with the defines below.
  * The maintenance of the memlist, however, is not threadsafe.
  */
-#ifdef NPARASCIP
+#ifndef SCIP_THREADSAFE
 /*#define ENABLE_MEMLIST_CHECKS*/
 #endif
 

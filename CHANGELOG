@@ -11,6 +11,8 @@ Features
 - New symmetry handling method, symmetry handling inequalities based on the Schreier Sims table,
   which is able to handle symmetries of arbitrary kinds of variables.
 - With benchmark emphasis the memory limit is largely ignored to avoid different solving paths depending on memory.
+- The LPIs for Gurobi and Mosek are thread-safe now.
+- The complete code is now thread-safe by default.
 
 Performance improvements
 ------------------------
@@ -19,6 +21,7 @@ Performance improvements
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 - improved upgrade of orbisacks to packing/partitioning orbitopes
+- Improved running time of symresack cover separation.
 
 Examples and applications
 -------------------------
@@ -98,7 +101,12 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- replace flag PARASCIP by THREADSAFE
+
 ### Makefile
+
+- replace flag PARASCIP by THREADSAFE
 
 Fixed bugs
 ----------
@@ -112,6 +120,7 @@ Miscellaneous
 - Avoid redundant calls to LP solver when LP is already flushed and solved
 - In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
 - Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
+- The define NPARASCIP has been replaced by SCIP_THREADSAFE
 
 Known bugs
 ----------
@@ -125,6 +134,8 @@ Features
 --------
 
 - Extended check for valid variable and constraint names in PIP writer.
+- Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
+  name matching during parsing. The old format is still supported.
 
 Performance improvements
 ------------------------
@@ -144,6 +155,7 @@ Interface changes
 ### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+- added new sorting functions SCIPsortPtrRealRealBoolBool()
 
 ### Command line interface
 
@@ -177,7 +189,7 @@ Fixed bugs
 - Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
-- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested nor modifiable rows
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
@@ -190,6 +202,8 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
+- Fixed bug with multi-aggregated integer variables in cons_xor.
+- Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 
 Miscellaneous
 -------------
