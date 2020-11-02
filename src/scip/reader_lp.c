@@ -902,11 +902,14 @@ SCIP_RETCODE readCoefficients(
    SCIP_VAR***           quadvars2,          /**< pointer to store the array with second variables in quadratic terms (must be freed by caller) */
    SCIP_Real**           quadcoefs,          /**< pointer to store the array with coefficients in quadratic terms (must be freed by caller) */
    int*                  nquadcoefs,         /**< pointer to store the number of quadratic coefficients */
+   SCIP_Real*            objoffset,          /**< pointer to store an objective offset (or NULL if ! isobjective) */
    SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
    )
 {
+   SCIP_VAR* var = NULL;
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
+   SCIP_Bool haveobjoffset = FALSE;
    SCIP_Real coef;
    int coefsign;
    SCIP_Bool inquadpart;
@@ -923,6 +926,7 @@ SCIP_RETCODE readCoefficients(
    assert(quadvars2 != NULL);
    assert(quadcoefs != NULL);
    assert(nquadcoefs != NULL);
+   assert(!isobjective || objoffset != NULL);
    assert(newsection != NULL);
 
    *coefssize = 0;
@@ -937,6 +941,12 @@ SCIP_RETCODE readCoefficients(
    *nquadcoefs = 0;
    *newsection = FALSE;
    inquadpart = FALSE;
+
+   if( isobjective )
+   {
+      assert(objoffset != NULL);
+      *objoffset = 0.0;
+   }
 
    /* read the first token, which may be the name of the line */
    if( getNextToken(scip, lpinput) )
@@ -996,13 +1006,25 @@ SCIP_RETCODE readCoefficients(
    *nquadcoefs = 0;
    while( getNextToken(scip, lpinput) )
    {
-      SCIP_VAR* var;
-
       /* check if we read a sign */
       if( isSign(lpinput, &coefsign) )
       {
          SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
          havesign = TRUE;
+
+         /* check whether we found an objective offset */
+         if( isobjective && havevalue && var == NULL )
+         {
+            if( haveobjoffset )
+            {
+               syntaxError(scip, lpinput, "two objective offsets.");
+               return SCIP_OKAY;
+            }
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", coefsign * coef);
+            haveobjoffset = TRUE;
+            *objoffset = coefsign * coef;
+         }
+
          continue;
       }
 
@@ -1044,7 +1066,14 @@ SCIP_RETCODE readCoefficients(
          }
          else if( isobjective && havevalue && !SCIPisZero(scip, coef) )
          {
-            SCIPwarningMessage(scip, "constant term %+g in objective is skipped\n", coef * coefsign);
+            /* check whether we found an objective offset */
+            if( haveobjoffset )
+            {
+               syntaxError(scip, lpinput, "two objective offsets.");
+               return SCIP_OKAY;
+            }
+            SCIPdebugMsg(scip, "(line %d) read objective offset %g\n", coefsign * coef);
+            *objoffset = coefsign * coef;
          }
 
          *newsection = TRUE;
@@ -1161,6 +1190,7 @@ SCIP_RETCODE readCoefficients(
       }
 
       /* check if the last variable should be squared */
+      var = NULL;
       if( *lpinput->token == '^' )
       {
          if( !inquadpart )
@@ -1267,6 +1297,7 @@ SCIP_RETCODE readObjective(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
    SCIP_Bool newsection;
+   SCIP_Real objoffset;
    int ncoefs;
    int coefssize;
    int quadcoefssize;
@@ -1276,7 +1307,12 @@ SCIP_RETCODE readObjective(
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
-         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &objoffset, &newsection) );
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, objoffset) );
+   }
 
    if( !hasError(lpinput) )
    {
@@ -1415,7 +1451,7 @@ SCIP_RETCODE createIndicatorConstraint(
 
    /* read linear constraint */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name2, &lincoefssize, &linvars, &lincoefs, &nlincoefs,
-         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, NULL, &newsection) );
 
    if( hasError(lpinput) )
       goto TERMINATE;
@@ -1599,7 +1635,7 @@ SCIP_RETCODE readConstraints(
 
    /* read coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
-         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, NULL, &newsection) );
 
    if( hasError(lpinput) )
       goto TERMINATE;
