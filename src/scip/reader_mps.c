@@ -4085,7 +4085,7 @@ SCIP_RETCODE SCIPwriteMps(
       {
          assert( matrix->nentries < matrix->sentries );
 
-         matrix->values[matrix->nentries] = value;
+         matrix->values[matrix->nentries] = objscale * value;
          matrix->columns[matrix->nentries] = var;
          matrix->rows[matrix->nentries] = "Obj";
          matrix->nentries++;
