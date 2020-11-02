@@ -3719,13 +3719,22 @@ SCIP_RETCODE SCIPwriteLp(
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
-   /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
-   if( zeroobj && nvars >= 1 )
+   /* add objective offset */
+   if ( ! SCIPisZero(scip, objoffset) )
    {
-      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
-
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g", objscale * objoffset);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+   else
+   {
+      /* add a linear term to avoid troubles when reading the lp file with another MIP solver */
+      if( zeroobj && nvars >= 1 )
+      {
+         (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[0]));
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " 0 %s", varname );
+
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
    }
 
    endLine(scip, file, linebuffer, &linecnt);
