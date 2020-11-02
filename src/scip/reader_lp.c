@@ -3714,7 +3714,7 @@ SCIP_RETCODE SCIPwriteLp(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", objscale * SCIPvarGetObj(var), varname );
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
