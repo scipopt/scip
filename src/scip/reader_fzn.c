@@ -4705,7 +4705,7 @@ SCIP_RETCODE writeFzn(
       /* potentially add an objective offset */
       if( !SCIPisZero(scip, objoffset) )
       {
-         flattenFloat(scip, objoffset, buffy);
+         flattenFloat(scip, objscale * objoffset, buffy);
          SCIPinfoMessage(scip, file, "%s%s", nfloatobjvars == 0 ? "" : ", ", buffy );
       }
 
