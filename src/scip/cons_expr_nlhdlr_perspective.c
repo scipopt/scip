@@ -41,6 +41,7 @@
 #define DEFAULT_PROBINGFREQ       1     /**< probing frequency (-1 - no probing, 0 - root node only) */
 #define DEFAULT_CONVEXONLY        FALSE /**< whether perspective cuts are added only for convex expressions */
 #define DEFAULT_TIGHTENBOUNDS     TRUE  /**< whether variable semicontinuity is used to tighten variable bounds */
+#define DEFAULT_ADJREFPOINT       FALSE /**< whether to adjust the reference point if indicator is not 1 */
 
 /*
  * Data structures
@@ -95,6 +96,7 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   probingfreq;        /**< if and when to do probing */
    SCIP_Bool             convexonly;         /**< whether perspective cuts are added only for convex expressions */
    SCIP_Bool             tightenbounds;      /**< whether variable semicontinuity is used to tighten variable bounds */
+   SCIP_Bool             adjrefpoint;        /**< whether to adjust the reference point if indicator is not 1 */
 };
 
 /*
@@ -1267,6 +1269,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool success = FALSE;
    int i;
+   SCIP_Bool alluseactivity = TRUE;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1297,7 +1300,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
        * that participates in separation without using activity for it.
        */
       SCIP_Bool hasnondefault = FALSE;
-      SCIP_Bool alluseactivity = TRUE;
 
       for( i = 0; i < SCIPgetConsExprExprNEnfos(expr); ++i )
       {
@@ -1372,6 +1374,12 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
        * but whatever they do, we want to be in and it doesn't harm to claim more than necessary
        */
       *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+
+      if( alluseactivity )
+      {
+         SCIPinfoMessage(scip, NULL, "\nnon-convex semicontinuous expr: ");
+         SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+      }
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
@@ -1499,6 +1507,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    SCIP_Bool stop;
    int nenfos;
    int* enfoposs;
+   SCIP_SOL* soladj;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1630,6 +1639,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
       SCIP_INTERVAL* probingdoms;
       int nprobingvars;
       SCIP_Bool doprobingind;
+      SCIP_Real indval;
 
       indicator = nlhdlrexprdata->indicators[i];
       probingvars = NULL;
@@ -1710,6 +1720,32 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          }
       }
 
+      if( nlhdlrdata->adjrefpoint )
+      {
+         /* make sure that when we adjust the point, we don't divide by something too close to 0.0 */
+         indval = MAX(SCIPgetSolVal(scip, solcopy, indicator), 0.1);
+
+         /* create an adjusted point x^adj = x* / z* */
+         SCIP_CALL( SCIPcreateSol(scip, &soladj, NULL) );
+         for( v = 0; v < nlhdlrexprdata->nvars; ++v )
+         {
+            if( SCIPvarGetStatus(nlhdlrexprdata->vars[v]) == SCIP_VARSTATUS_FIXED )
+               continue;
+            SCIP_CALL( SCIPsetSolVal(scip, soladj, nlhdlrexprdata->vars[v],
+                  SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]) / indval) );
+         }
+         for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
+         {
+            if( SCIPvarGetStatus(nlhdlrexprdata->indicators[v]) == SCIP_VARSTATUS_FIXED )
+               continue;
+
+            SCIP_CALL( SCIPsetSolVal(scip, soladj, nlhdlrexprdata->indicators[v],
+                  SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->indicators[v])) );
+         }
+         if( SCIPvarGetStatus(auxvar) != SCIP_VARSTATUS_FIXED )
+            SCIP_CALL( SCIPsetSolVal(scip, soladj, auxvar, SCIPgetSolVal(scip, solcopy, auxvar)) );
+      }
+
       /* use cuts from every suitable nlhdlr */
       for( j = 0; j < nenfos; ++j )
       {
@@ -1722,13 +1758,29 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPgetConsExprExprEnfoData(expr, enfoposs[j], &nlhdlr2, &nlhdlr2exprdata, NULL, NULL, NULL, &nlhdlr2auxvalue);
          assert(SCIPhasConsExprNlhdlrEstimate(nlhdlr2) && nlhdlr2 != nlhdlr);
 
+         if( nlhdlrdata->adjrefpoint )
+         {
+            SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
+            SCIPsetConsExprExprEnfoAuxValue(expr, j, nlhdlr2auxvalue);
+         }
+
          SCIPdebugMsg(scip, "asking nonlinear handler %s to %sestimate\n", SCIPgetConsExprNlhdlrName(nlhdlr2), overestimate ? "over" : "under");
 
          /* ask the nonlinear handler for an estimator */
-         SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr,
-               nlhdlr2exprdata, solcopy,
-               nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
-               rowpreps2, &success2, FALSE, &addedbranchscores2j) );
+         if( nlhdlrdata->adjrefpoint )
+         {
+            SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr,
+                  nlhdlr2exprdata, soladj,
+                  nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
+                  rowpreps2, &success2, FALSE, &addedbranchscores2j) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr,
+                  nlhdlr2exprdata, soladj,
+                  nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
+                  rowpreps2, &success2, FALSE, &addedbranchscores2j) );
+         }
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
          maxidx = SCIPgetPtrarrayMaxIdx(scip, rowpreps2);
@@ -1808,6 +1860,9 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
 
          SCIP_CALL( SCIPclearPtrarray(scip, rowpreps2) );
       }
+
+      if( nlhdlrdata->adjrefpoint )
+         SCIP_CALL( SCIPfreeSol(scip, &soladj) );
 
       if( doprobingind )
       {
@@ -1941,6 +1996,11 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/tightenbounds",
            "whether variable semicontinuity is used to tighten variable bounds",
            &nlhdlrdata->tightenbounds, FALSE, DEFAULT_TIGHTENBOUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/adjrefpoint",
+           "whether to adjust the reference point",
+           &nlhdlrdata->adjrefpoint, FALSE, DEFAULT_ADJREFPOINT, NULL, NULL) );
+
 
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
