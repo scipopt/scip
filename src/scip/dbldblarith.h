@@ -276,21 +276,37 @@
 #define SCIPdbldblSqrt(rhi, rlo, a) \
    do { \
       double __estim_dbldbl_sqrt = sqrt(a); \
-      SCIPdbldblDiv(rhi, rlo, a, __estim_dbldbl_sqrt); \
-      SCIPdbldblSum21(rhi, rlo, rhi, rlo, __estim_dbldbl_sqrt); \
-      (rhi) *= 0.5; \
-      (rlo) *= 0.5; \
+      if( __estim_dbldbl_sqrt != 0.0 ) \
+      { \
+         SCIPdbldblDiv(rhi, rlo, a, __estim_dbldbl_sqrt); \
+         SCIPdbldblSum21(rhi, rlo, rhi, rlo, __estim_dbldbl_sqrt); \
+         (rhi) *= 0.5; \
+         (rlo) *= 0.5; \
+      } \
+      else \
+      { \
+         (rhi) = 0.0; \
+         (rlo) = 0.0; \
+      } \
    } while(0)
 
 
 /** take the square root of a floating point number given by two doubles and return the result as two doubles. */
 #define SCIPdbldblSqrt2(rhi, rlo, ahi, alo) \
    do { \
-      double __estim_dbldbl_sqrt2 = sqrt(ahi); \
-      SCIPdbldblDiv21(rhi, rlo, ahi, alo, __estim_dbldbl_sqrt2); \
-      SCIPdbldblSum21(rhi, rlo, rhi, rlo, __estim_dbldbl_sqrt2); \
-      (rhi) *= 0.5; \
-      (rlo) *= 0.5; \
+      double __estim_dbldbl_sqrt2 = sqrt(ahi + alo); \
+      if( __estim_dbldbl_sqrt2 != 0.0 ) \
+      { \
+         SCIPdbldblDiv21(rhi, rlo, ahi, alo, __estim_dbldbl_sqrt2); \
+         SCIPdbldblSum21(rhi, rlo, rhi, rlo, __estim_dbldbl_sqrt2); \
+         (rhi) *= 0.5; \
+         (rlo) *= 0.5; \
+      } \
+      else \
+      { \
+         (rhi) = 0.0; \
+         (rlo) = 0.0; \
+      } \
    } while(0)
 
 /** compute the absolute value of the floating point number given by two doubles */
