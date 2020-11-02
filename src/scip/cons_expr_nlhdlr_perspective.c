@@ -1777,7 +1777,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          else
          {
             SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr2, expr,
-                  nlhdlr2exprdata, soladj,
+                  nlhdlr2exprdata, solcopy,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
                   rowpreps2, &success2, FALSE, &addedbranchscores2j) );
          }
