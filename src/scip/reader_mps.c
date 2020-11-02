@@ -3348,7 +3348,8 @@ void printRhsSection(
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Real*            rhss,               /**< right hand side array */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   SCIP_Real             objoffset           /**< objective offset */
    )
 {
    int recordcnt = 0;
@@ -3369,6 +3370,12 @@ void printRhsSection(
       assert(consnames[c] != NULL);
 
       printEntry(scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen);
+   }
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      /* write objective offset (-1 because it is moved to the rhs) */
+      printEntry(scip, file, "RHS", "Obj", -objoffset, &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -4675,7 +4682,7 @@ SCIP_RETCODE SCIPwriteMps(
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
 
    /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen);
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);
 
    /* output RANGES section */
    if( needRANGES )
