@@ -3120,8 +3120,14 @@ SCIP_RETCODE SCIPwritePip(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", objscale * SCIPvarGetObj(var), varname );
 
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", objscale * objoffset);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
