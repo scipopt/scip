@@ -35,7 +35,7 @@
 
 /* extreduce_base.c
  */
-extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, const REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
+extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern SCIP_RETCODE    extreduce_pseudoDeleteNodes(SCIP*, const SCIP_Bool*, REDCOST*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    extreduce_deleteGeneralStars(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
@@ -50,7 +50,7 @@ extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 /* extreduce_core.c
  */
 extern SCIP_RETCODE    extreduce_checkComponent(SCIP*, const GRAPH*, const REDCOST*, EXTCOMP*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, STAR*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
 

@@ -1290,7 +1290,7 @@ SCIP_RETCODE pseudodeleteExecute(
  * This method will also set edgedeletable[a] to TRUE if arc 'a' can be deleted, but its anti-parallel arc not. */
 SCIP_RETCODE extreduce_deleteArcs(
    SCIP*                 scip,               /**< SCIP data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data */
+   REDCOST*              redcostdata,        /**< reduced cost data */
    const int*            result,             /**< solution array or NULL */
    GRAPH*                graph,              /**< graph data structure */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed */
@@ -1529,7 +1529,7 @@ SCIP_RETCODE extreduce_deleteGeneralStars(
 SCIP_RETCODE extreduce_checkArc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const REDCOST*        redcostdata,        /**< reduced cost data structures */
+   REDCOST*              redcostdata,        /**< reduced cost data structures */
    int                   edge,               /**< edge to be checked */
    DISTDATA*             distdata,           /**< data for distance computations */
    EXTPERMA*             extpermanent,       /**< extension data */
@@ -1538,15 +1538,14 @@ SCIP_RETCODE extreduce_checkArc(
 {
    const SCIP_Bool* isterm = extpermanent->isterm;
    const int root = redcosts_getRootTop(redcostdata);
-   const SCIP_Real* redcost = redcosts_getEdgeCostsTop(redcostdata);
+   SCIP_Real* const redcost = redcosts_getEdgeCostsTop(redcostdata);
    const SCIP_Real* rootdist = redcosts_getRootToNodeDistTop(redcostdata);
    const PATH* nodeToTermpaths = redcosts_getNodeToTermsPathsTop(redcostdata);
    const SCIP_Real cutoff = redcosts_getCutoffTop(redcostdata);
    const int head = graph->head[edge];
    const int tail = graph->tail[edge];
+   const int edge_anti = flipedge(edge);
    const SCIP_Real edgebound = redcost[edge] + rootdist[tail] + nodeToTermpaths[head].dist;
-   SCIP_Bool restoreAntiArcDeleted = FALSE;
-   STP_Bool* const edgedeleted = extpermanent->edgedeleted;
 
    assert(scip && graph && redcost && rootdist && nodeToTermpaths && distdata);
    assert(edge >= 0 && edge < graph->edges);
@@ -1562,17 +1561,12 @@ SCIP_RETCODE extreduce_checkArc(
       return SCIP_OKAY;
    }
 
-   if( edgedeleted && !edgedeleted[flipedge(edge)] )
-   {
-      edgedeleted[flipedge(edge)] = TRUE;
-      restoreAntiArcDeleted = TRUE;
-   }
-
    *edgeIsDeletable = FALSE;
 
    /* can we extend from head of 'edge'? */
    if( extLeafIsExtendable(graph, isterm, head) )
    {
+      const SCIP_Real restoreCost = redcost[edge_anti];
       int comphead = graph->head[edge];
       int compedge = edge;
       EXTCOMP extcomp = { .compedges = &compedge, .extleaves = &(comphead),
@@ -1580,14 +1574,13 @@ SCIP_RETCODE extreduce_checkArc(
          .genstar_centeredge = -1,
          .allowReversion = FALSE };
 
+      redcost[edge_anti] += 2.0 * cutoff;
+
       SCIP_CALL( extreduce_checkComponent(scip, graph, redcostdata, &extcomp, distdata, extpermanent, edgeIsDeletable) );
+
+      redcost[edge_anti] = restoreCost;
    }
 
-   if( restoreAntiArcDeleted )
-   {
-      assert(edgedeleted);
-      edgedeleted[flipedge(edge)] = FALSE;
-   }
 
    return SCIP_OKAY;
 }
