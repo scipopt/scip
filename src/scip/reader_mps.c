@@ -1129,7 +1129,7 @@ SCIP_RETCODE readRhs(
          if( cons == NULL )
          {
             /* the rhs of the objective row is treated as objective constant */
-            if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+            if( strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) == 0 )
             {
                val = atof(mpsinputField3(mpsi));
                SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
@@ -1172,9 +1172,9 @@ SCIP_RETCODE readRhs(
             if( cons == NULL )
             {
                /* the rhs of the objective row is treated as objective constant */
-               if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+               if( strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) == 0 )
                {
-                  val = atof(mpsinputField3(mpsi));
+                  val = atof(mpsinputField5(mpsi));
                   SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
                }
                else
