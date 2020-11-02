@@ -865,7 +865,7 @@ SCIP_RETCODE reduceWithEdgeExtReds(
 
    for( int i = 0; i < nlevels; i++ )
    {
-      redcosts_setCutoffFromBound(i, upperbound, redcostdata);
+      redcosts_setCutoffFromBound(upperbound, i, redcostdata);
 
 #ifdef SCIP_DEBUG
       {
@@ -2522,7 +2522,7 @@ SCIP_RETCODE reduce_da(
          }
 
          if( useExtRed )
-            redcosts_increaseOnDeletedArcs(graph, arcsdeleted, redcostdata);
+            redcosts_increaseOnDeletedArcsTop(graph, arcsdeleted, redcostdata);
 
          if( useExtRed && run == nruns - 1 )
          {

@@ -1192,7 +1192,7 @@ void distgraphInsertEdge(
    assert(sdnode1 != sdnode2);
    assert(0 <= sdnode1 && sdnode1 < distgraph->knots);
    assert(0 <= sdnode2 && sdnode2 < distgraph->knots);
-   assert(GT(edgecost, 0.0));
+   assert(GE(edgecost, 0.0));
    assert(edgeorg != NULL || edgeid == -1);
 #endif
 

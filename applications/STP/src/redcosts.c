@@ -378,8 +378,8 @@ int redcosts_getNlevels(
 
 /** sets cutoff */
 void redcosts_setCutoff(
-   int                 level,              /**< level to set cutoff for */
    SCIP_Real           cutoff,             /**< the value */
+   int                 level,              /**< level to set cutoff for */
    REDCOST*            redcostdata         /**< reduced costs data */
    )
 {
@@ -398,7 +398,21 @@ void redcosts_setCutoffTop(
 {
    const int toplevel = getTopLevel(redcostdata);
 
-   redcosts_setCutoff(toplevel, cutoff, redcostdata);
+   redcosts_setCutoff(cutoff, toplevel, redcostdata);
+}
+
+
+/** sets dual-bound */
+void redcosts_setDualBound(
+   SCIP_Real           dualbound,          /**< the value */
+   int                 level,              /**< level to set dual bound for */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   )
+{
+   assert(levelIsValid(redcostdata, level));
+   assert(GE(dualbound, 0.0));
+
+   redcostdata->lvl_dualBound[level] = dualbound;
 }
 
 
@@ -411,7 +425,21 @@ void redcosts_setDualBoundTop(
    const int toplevel = getTopLevel(redcostdata);
    assert(GE(dualbound, 0.0));
 
-   redcostdata->lvl_dualBound[toplevel] = dualbound;
+   redcosts_setDualBound(dualbound, toplevel, redcostdata);
+}
+
+
+/** sets root used for reduced cost computation */
+void redcosts_setRoot(
+   int                   root,               /**< the root */
+   int                   level,              /**< level to set dual bound for */
+   REDCOST*              redcostdata         /**< reduced costs data */
+   )
+{
+   assert(levelIsValid(redcostdata, level));
+   assert(root >= 0);
+
+   redcostdata->lvl_redCostRoot[level] = root;
 }
 
 
@@ -424,7 +452,7 @@ void redcosts_setRootTop(
    const int toplevel = getTopLevel(redcostdata);
    assert(root >= 0);
 
-   redcostdata->lvl_redCostRoot[toplevel] = root;
+   redcosts_setRoot(root, toplevel, redcostdata);
 }
 
 
@@ -618,8 +646,8 @@ void redcosts_setAndReturnCutoffFromBoundTop(
 
 /** sets cutoff */
 void redcosts_setCutoffFromBound(
-  int                   level,              /**< level */
   SCIP_Real             upperbound,         /**< bound */
+  int                   level,              /**< level */
   REDCOST*              redcostdata         /**< reduced cost data */
 )
 {
@@ -637,7 +665,7 @@ void redcosts_setCutoffFromBound(
    if( cutoff < 0.0 )
       cutoff = 0.0;
 
-   redcosts_setCutoff(level, cutoff, redcostdata);
+   redcosts_setCutoff(cutoff, level, redcostdata);
 }
 
 
@@ -649,7 +677,7 @@ void redcosts_setCutoffFromBoundTop(
 {
    const int toplevel = getTopLevel(redcostdata);
 
-   redcosts_setCutoffFromBound(toplevel, upperbound, redcostdata);
+   redcosts_setCutoffFromBound(upperbound, toplevel, redcostdata);
 }
 
 
@@ -657,12 +685,13 @@ void redcosts_setCutoffFromBoundTop(
 void redcosts_increaseOnDeletedArcs(
    const GRAPH*          graph,              /**< graph */
    const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
+   int                   level,              /**< the level */
    REDCOST*              redcostdata         /**< reduced cost data */
 )
 {
-   SCIP_Real* const redEdgeCost = redcosts_getEdgeCostsTop(redcostdata);
+   SCIP_Real* const redEdgeCost = redcosts_getEdgeCosts(redcostdata, level);
    const int nedges = graph_get_nEdges(graph);
-   const SCIP_Real offset = 2.0 * redcosts_getCutoffTop(redcostdata) + 1.0;
+   const SCIP_Real offset = 2.0 * redcosts_getCutoff(redcostdata, level) + 1.0;
 
    assert(GE(offset, 1.0));
    assert(nedges == redcostdata->nedges);
@@ -672,6 +701,44 @@ void redcosts_increaseOnDeletedArcs(
       if( arcsdeleted[i] )
          redEdgeCost[i] += offset;
    }
+}
+
+
+/** unifies costs  */
+void redcosts_unifyBlockedEdgeCosts(
+   const GRAPH*          graph,              /**< graph */
+   int                   level,              /**< the level */
+   REDCOST*              redcostdata         /**< reduced cost data */
+)
+{
+   SCIP_Real* const redEdgeCost = redcosts_getEdgeCosts(redcostdata, level);
+   const int nedges = graph_get_nEdges(graph);
+   const SCIP_Real bound = 2.0 * redcosts_getCutoff(redcostdata, level) + 1.0;
+
+   assert(GE(bound, 1.0));
+   assert(LT(bound, FARAWAY));
+   assert(nedges == redcostdata->nedges);
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      if( redEdgeCost[i] > bound )
+         redEdgeCost[i] = bound;
+   }
+}
+
+
+/** increases reduced cost for deleted arcs for top level */
+void redcosts_increaseOnDeletedArcsTop(
+   const GRAPH*          graph,              /**< graph */
+   const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
+   REDCOST*              redcostdata         /**< reduced cost data */
+)
+{
+   const int toplevel = getTopLevel(redcostdata);
+
+   assert(graph && arcsdeleted);
+
+   redcosts_increaseOnDeletedArcs(graph, arcsdeleted, toplevel, redcostdata);
 }
 
 

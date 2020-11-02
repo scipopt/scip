@@ -83,6 +83,7 @@ typedef unsigned char STP_Bool;
 #define LE(a, b)   (((a) - (b))     <  EPS_ZERO)
 #define GT(a, b)   (((a) - (b))     >  EPS_ZERO)
 #define GE(a, b)   (((a) - (b))     > -EPS_ZERO)
+#define GE_HARD(a, b)   (((a) - (b))     > -EPS_ZERO_HARD)
 
 #ifdef __GNUC__
 #define does_not_return   __attribute__((noreturn))

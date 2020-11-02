@@ -1297,6 +1297,7 @@ SCIP_RETCODE extreduce_deleteArcs(
    int*                  nelims              /**< number of eliminations */
 )
 {
+   const SCIP_Bool useSd = !graph_pc_isPc(graph);
    const int nedges = graph_get_nEdges(graph);
    DISTDATA distdata;
    EXTPERMA extpermanent;
@@ -1309,7 +1310,13 @@ SCIP_RETCODE extreduce_deleteArcs(
    if( SCIPisZero(scip, redcosts_getCutoffTop(redcostdata)) )
       return SCIP_OKAY;
 
-   SCIP_CALL( extInit(scip, FALSE, graph, NULL, &distdata, &extpermanent) );
+   SCIP_CALL( extInit(scip, useSd, graph, NULL, &distdata, &extpermanent) );
+
+   if( useSd )
+   {
+      assert(distdata.sdistdata);
+      SCIP_CALL( reduce_sdRepairSetUp(scip, graph, distdata.sdistdata) );
+   }
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )

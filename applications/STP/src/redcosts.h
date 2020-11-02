@@ -180,8 +180,8 @@ int redcosts_getNlevels(
 /** sets cutoff */
 EXTERN
 void redcosts_setCutoff(
-   int                 level,               /**< level to set cutoff for */
    SCIP_Real           cutoff,             /**< the value */
+   int                 level,               /**< level to set cutoff for */
    REDCOST*            redcostdata         /**< reduced costs data */
    );
 
@@ -194,7 +194,17 @@ void redcosts_setCutoffTop(
    );
 
 
+
 /** sets dual-bound */
+EXTERN
+void redcosts_setDualBound(
+   SCIP_Real           dualbound,          /**< the value */
+   int                 level,              /**< level to set dual bound for */
+   REDCOST*            redcostdata         /**< reduced costs data */
+   );
+
+
+/** sets dual-bound for top level */
 EXTERN
 void redcosts_setDualBoundTop(
    SCIP_Real           dualbound,          /**< the value */
@@ -203,6 +213,15 @@ void redcosts_setDualBoundTop(
 
 
 /** sets root used for reduced cost computation */
+EXTERN
+void redcosts_setRoot(
+   int                   root,               /**< the root */
+   int                   level,              /**< level to set dual bound for */
+   REDCOST*              redcostdata         /**< reduced costs data */
+   );
+
+
+/** sets root used for reduced cost computation for top level */
 EXTERN
 void redcosts_setRootTop(
    int                   root,               /**< the root */
@@ -258,8 +277,8 @@ void redcosts_setAndReturnCutoffFromBoundTop(
 /** sets cutoff */
 EXTERN
 void redcosts_setCutoffFromBound(
-  int                   level,              /**< level */
   SCIP_Real             upperbound,         /**< bound */
+  int                   level,              /**< level */
   REDCOST*              redcostdata         /**< reduced cost data */
 );
 
@@ -271,9 +290,30 @@ void redcosts_setCutoffFromBoundTop(
   REDCOST*              redcostdata         /**< reduced cost data */
 );
 
+
+
 /** increases reduced cost for deleted arcs */
 EXTERN
 void redcosts_increaseOnDeletedArcs(
+   const GRAPH*          graph,              /**< graph */
+   const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
+   int                   level,              /**< the level */
+   REDCOST*              redcostdata         /**< reduced cost data */
+);
+
+
+/** unifies costs */
+EXTERN
+void redcosts_unifyBlockedEdgeCosts(
+   const GRAPH*          graph,              /**< graph */
+   int                   level,              /**< the level */
+   REDCOST*              redcostdata         /**< reduced cost data */
+);
+
+
+/** increases reduced cost for deleted arcs for top level */
+EXTERN
+void redcosts_increaseOnDeletedArcsTop(
    const GRAPH*          graph,              /**< graph */
    const STP_Bool*       arcsdeleted,        /**< array to mark deleted arcs */
    REDCOST*              redcostdata         /**< reduced cost data */
