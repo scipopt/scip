@@ -3325,12 +3325,10 @@ void checkConsnames(
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
-   SCIP_Bool printwarning;
+   SCIP_Bool printwarning = TRUE;
 
    assert( scip != NULL );
    assert( conss != NULL || nconss == 0 );
-
-   printwarning = TRUE;
 
    for( c = 0; c < nconss; ++c )
    {
