@@ -1000,22 +1000,19 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
     */
    if ( storelexorder )
    {
-      if ( *maxnvarsorder == 0 )
-      {
-         assert( *nvarsorder == 0 );
-         *maxnvarsorder = nrows * ncols;
+      assert( *nvarsorder == *maxnvarsorder );
 
+      *maxnvarsorder += nrows * ncols;
+      nvarsorderold = *nvarsorder;
+
+      if ( lexorder == NULL )
+      {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
       }
       else
       {
-         assert( *nvarsorder == *maxnvarsorder );
-
-         *maxnvarsorder += nrows * ncols;
-
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
       }
-      nvarsorderold = *nvarsorder;
    }
 
    curcolumn = ncols - 1;
