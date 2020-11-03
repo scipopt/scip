@@ -3212,7 +3212,7 @@ SCIP_RETCODE buildSubgroupGraph(
    int**                 usedperms,          /**< buffer to store the indices of permutations that were used */
    int*                  nusedperms,         /**< pointer to store the number of used permutations in the graph */
    int                   usedpermssize,      /**< initial size of usedperms */
-   SCIP_Bool*            permused            /**< initialized buffer to store which permutations have beend used
+   SCIP_Shortbool*       permused            /**< initialized buffer to store which permutations have beend used
                                               *   (identified by index in component) */
    )
 {
@@ -4175,7 +4175,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
-      SCIP_Bool* permused;
+      SCIP_Shortbool* permused;
       SCIP_Bool allpermsused = FALSE;
       SCIP_Bool handlednonbinarysymmetry = FALSE;
       int norbitopesincomp;
