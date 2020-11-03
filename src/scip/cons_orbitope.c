@@ -250,6 +250,12 @@ SCIP_RETCODE consdataCreate(
    int j;
 
    assert(consdata != NULL);
+#ifndef NDEBUG
+   if ( usedynamicprop )
+   {
+      assert( ! mayinteract );
+   }
+#endif
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
@@ -260,7 +266,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->roworder, nspcons) );
 
    /* if orbitope might interact with other symmetries, we cannot adapt the row order of orbitopes dynamically */
-   if ( usedynamicprop && ! mayinteract )
+   if ( usedynamicprop )
    {
       SCIP_CALL( SCIPhashmapCreate(&(*consdata)->rowindexmap, SCIPblkmem(scip), nspcons) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rowused, nspcons) );
@@ -274,7 +280,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
       (*consdata)->roworder[i] = i;
 
-      if ( usedynamicprop && ! mayinteract )
+      if ( usedynamicprop )
       {
          (*consdata)->rowused[i] = FALSE;
       }
@@ -290,7 +296,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->istrianglefixed = FALSE;
    (*consdata)->ismodelcons = ismodelcons;
    (*consdata)->mayinteract = mayinteract;
-   (*consdata)->usedynamicprop = usedynamicprop && ! mayinteract;
+   (*consdata)->usedynamicprop = usedynamicprop;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
@@ -307,7 +313,7 @@ SCIP_RETCODE consdataCreate(
          {
             SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
-            if ( usedynamicprop & ! mayinteract )
+            if ( usedynamicprop )
             {
                SCIP_CALL( SCIPhashmapInsert((*consdata)->rowindexmap, (*consdata)->vars[i][j], (void*) (size_t) i) );
             }
@@ -3743,6 +3749,13 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* check for consistency */
+   if ( usedynamicprop && mayinteract )
+   {
+      SCIPwarningMessage(scip, "Dynamic propagation is only possible if orbitope does not interact with \
+                          other symmetry handling constraints. Ignore value of <usedynamicprop>.\n");
+   }
+
    assert( nspcons > 0 );
    assert( nblocks > 0 );
 
@@ -3800,7 +3813,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype,
-         resolveprop, usedynamicprop, ismodelcons, mayinteract) );
+         resolveprop, usedynamicprop && ! mayinteract, ismodelcons, mayinteract) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
