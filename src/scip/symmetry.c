@@ -1018,7 +1018,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    curcolumn = ncols - 1;
 
    /* start filling vars matrix with the right-most column w.r.t. columnorder */
-   while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 )
+   while ( curcolumn >= 0 && columnorder[curcolumn] >= 0 && ! *infeasible )
    {
       cnt = 0;
       for (i = 0; i < nrows; ++i)
@@ -1057,7 +1057,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    /* Either we are in case 1) or case 3), or all columns should have been added to vars in case 2) */
    assert( curcolumn > 1 || (curcolumn < 0 && nfilledcols == ncols) );
 
-   if ( curcolumn > 1 )
+   if ( curcolumn > 1 && ! *infeasible )
    {
       /* add column with columnorder 1 to vars */
       cnt = 0;
@@ -1105,7 +1105,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
          assert( ncols > 2 );
 
          curcolumn = 2;
-         while ( nfilledcols < ncols )
+         while ( nfilledcols < ncols && ! *infeasible )
          {
             assert( columnorder[curcolumn] < 0 );
 
