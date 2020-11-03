@@ -632,7 +632,7 @@ SCIP_RETCODE SCIPextendSubOrbitope(
    SCIP_Bool             leftextension,      /**< whether we extend the suborbitope to the left */
    int**                 nusedelems,         /**< pointer to array storing how often an element was used in the orbitope */
    SCIP_VAR**            permvars,           /**< permutation vars array */
-   SCIP_Bool*            rowisbinary,        /**< array encoding whether variables in an orbitope row are binary (or NULL) */
+   SCIP_Shortbool*       rowisbinary,        /**< array encoding whether variables in an orbitope row are binary (or NULL) */
    SCIP_Bool*            success,            /**< pointer to store whether extension was successful */
    SCIP_Bool*            infeasible          /**< pointer to store if the number of intersecting cycles is too small */
    )
@@ -967,7 +967,7 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    int**                 orbitopevaridx,     /**< permuted index table of variables in permvars that are contained in orbitope */
    int*                  columnorder,        /**< permutation to reorder column of orbitopevaridx */
    int*                  nusedelems,         /**< array storing how often an element was used in the orbitope */
-   SCIP_Bool*            rowisbinary,        /**< array encoding whether a row contains only binary variables (or NULL) */
+   SCIP_Shortbool*       rowisbinary,        /**< array encoding whether a row contains only binary variables (or NULL) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the potential orbitope is not an orbitope */
    SCIP_Bool             storelexorder,      /**< whether the lexicographic order induced by the orbitope shall be stored */
    int**                 lexorder,           /**< pointer to array storing the lexorder (or NULL) */

@@ -2881,7 +2881,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int**                 orbitopevaridx,     /**< pointer to store variable index matrix */
    int*                  columnorder,        /**< pointer to store column order */
    int*                  nusedelems,         /**< pointer to store how often each element was used */
-   SCIP_Bool*            rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
+   SCIP_Shortbool*       rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
    SCIP_Bool*            isorbitope,         /**< buffer to store result */
    SCIP_HASHSET*         activevars          /**< hashset of relevant variable indices (+1) (or NULL) */
    )
@@ -4726,7 +4726,7 @@ SCIP_RETCODE detectOrbitopes(
       SCIP_VAR*** vars;
       SCIP_VAR*** varsallocorder;
       SCIP_CONS* cons;
-      SCIP_Bool* rowisbinary;
+      SCIP_Shortbool* rowisbinary;
       SCIP_Bool isorbitope = TRUE;
       SCIP_Bool infeasibleorbitope;
       int** orbitopevaridx;
