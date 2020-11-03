@@ -3572,6 +3572,9 @@ SCIP_DECL_CONSPARSE(consParseOrbitope)
    while ( *s != ')' );
    ++nspcons;
 
+   /* to ensure consistency, we disable dynamic propagation and tell SCIP that the orbitope could potentially
+    * interact with other symmetry handling constraints
+    */
    SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, FALSE, TRUE, TRUE, TRUE,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
