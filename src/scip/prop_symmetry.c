@@ -3769,7 +3769,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    int*                  maxnvarsorder       /**< maximum number of variables in lexicographic order */
    )
 {  /*lint --e{571}*/
-   SCIP_HASHSET* usedvars;
+   SCIP_Shortbool* usedvars;
    SCIP_VAR* vars[2];
    SCIP_Real vals[2] = {1, -1};
    SCIP_Shortbool* varfound;
@@ -3777,7 +3777,6 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    int orbitsize[2] = {1, 1};
    int activeorb = 0;
    int chosencolor = -1;
-   int npermsincomp;
    int j;
 
    assert( scip != NULL );
@@ -3794,9 +3793,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    assert( ! storelexorder || nvarsorder != NULL );
    assert( ! storelexorder || maxnvarsorder != NULL );
 
-   npermsincomp = propdata->componentbegins[symgrpcompidx + 1] - propdata->componentbegins[symgrpcompidx];
-
-   SCIP_CALL( SCIPhashsetCreate(&usedvars, SCIPblkmem(scip), 2 * npermsincomp) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &usedvars, propdata->npermvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varfound, propdata->npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit[1], propdata->npermvars) );
@@ -3821,13 +3818,9 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       if ( varfound[ firstvaridxpercolor[j]] || graphcompsize == propdata->npermvars )
          continue;
 
-      SCIPhashsetRemoveAll(usedvars);
-
       /* mark all variables that have been used in strong SBCs */
       for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
-      {
-         SCIP_CALL( SCIPhashsetInsert(usedvars, SCIPblkmem(scip), (void*) (size_t) (graphcomponents[k]+1)) ); /*lint !e776*/
-      }
+         usedvars[graphcomponents[k]] = TRUE;
 
       SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
             propdata->permstrans, propdata->components, propdata->componentbegins,
@@ -3842,6 +3835,10 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          activeorb = !activeorb;
          chosencolor = j;
       }
+
+      /* reset array */
+      for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
+         usedvars[graphcomponents[k]] = FALSE;
    }
 
    /* check if we have found at least one non-empty orbit */
@@ -3927,7 +3924,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    SCIPfreeBufferArray(scip, &orbit[1]);
    SCIPfreeBufferArray(scip, &orbit[0]);
    SCIPfreeBufferArray(scip, &varfound);
-   SCIPhashsetFree(&usedvars, SCIPblkmem(scip));
+   SCIPfreeCleanBufferArray(scip, &usedvars);
 
    return SCIP_OKAY;
 }

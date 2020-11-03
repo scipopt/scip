@@ -294,7 +294,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
 
 /** Compute orbit of a given variable and store it in @p orbit. The first entry of the orbit will
  *  be the given variable index and the rest is filled with the remaining variables excluding
- *  the ones specified in @p ignoredvars (note that the indices are shifted by +1).
+ *  the ones specified in @p ignoredvars.
  *
  *  @pre orbit is an initialized array of size propdata->npermvars
  *  @pre at least one of @p perms and @p permstrans should not be NULL
@@ -306,8 +306,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    int**                 permstrans,         /**< the transposed matrix of generators (or NULL) */
    int*                  components,         /**< the components of the permutation group */
    int*                  componentbegins,    /**< array containing the starting index of each component */
-   SCIP_HASHSET*         ignoredvars,        /**< hashset containing variable indices (shifted by +1)
-                                              *   that should be ignored (or NULL) */
+   SCIP_Shortbool*       ignoredvars,        /**< array indicating which variables should be ignored */
    SCIP_Shortbool*       varfound,           /**< bitmap to mark which variables have been added (or NULL) */
    int                   varidx,             /**< index of variable for which the orbit is requested */
    int                   component,          /**< component that var is in */
@@ -325,6 +324,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
    assert( perms != NULL || permstrans != NULL );
    assert( components != NULL );
    assert( componentbegins != NULL );
+   assert( ignoredvars != NULL );
    assert( orbit != NULL );
    assert( orbitsize != NULL );
    assert( 0 <= varidx && varidx < npermvars );
@@ -370,7 +370,7 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
             varstotest[nvarstotest++] = image;
             varadded[image] = TRUE;
 
-            if ( ignoredvars == NULL || ! SCIPhashsetExists(ignoredvars, (void*) (size_t) (image+1)) ) /*lint !e776*/
+            if ( ! ignoredvars[image] )
             {
                orbit[(*orbitsize)++] = image;
 
