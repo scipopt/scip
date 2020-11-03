@@ -3322,7 +3322,11 @@ SCIP_RETCODE buildSubgroupGraph(
          SCIP_CALL( SCIPdigraphAddArc(graph, img, k, NULL) );
       }
 
-      SCIP_CALL( isAcyclicGraph(scip, graph, &isacyclic) );
+      /* we only need to check for acyclicity if all swaps are valid */
+      if ( k == npermvars )
+      {
+         SCIP_CALL( isAcyclicGraph(scip, graph, &isacyclic) );
+      }
 
       /* if the generator is invalid or the new graph is not acyclic, delete the newly added edges */
       if ( k < npermvars || ! isacyclic )
