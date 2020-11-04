@@ -2883,7 +2883,8 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    int*                  nusedelems,         /**< pointer to store how often each element was used */
    SCIP_Shortbool*       rowisbinary,        /**< pointer to store which rows are binary (or NULL) */
    SCIP_Bool*            isorbitope,         /**< buffer to store result */
-   SCIP_HASHSET*         activevars          /**< hashset of relevant variable indices (+1) (or NULL) */
+   SCIP_Shortbool*       activevars,         /**< bitset to store whether a variable is active (or NULL) */
+   int                   nactivevars         /**< number of active vars (if activevars not NULL) */
    )
 {  /*lint --e{571}*/
    SCIP_Bool* usedperm;
@@ -2906,6 +2907,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    assert( nactiveperms > 0 );
    assert( ntwocycles > 0 );
    assert( npermvars > 0 );
+   assert( activevars == NULL || (0 <= nactiveperms && nactiveperms < npermvars) );
 
    *isorbitope = TRUE;
 
@@ -2926,10 +2928,10 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
 
       for (j = 0; j < npermvars; ++j)
       {
-         if ( activevars != NULL && ! SCIPhashsetExists(activevars, (void*) (size_t) (j+1)) ) /*lint !e776*/
+         if ( activevars != NULL && ! activevars[j] )
             continue;
 
-         assert( activevars == NULL || SCIPhashsetExists(activevars, (void*) (size_t) (perms[permidx][j]+1)) ); /*lint !e776*/
+         assert( activevars == NULL || activevars[perms[permidx][j]] );
 
          /* avoid adding the same 2-cycle twice */
          if ( perms[permidx][j] > j )
@@ -3034,7 +3036,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    if ( activevars == NULL && nusedperms < nactiveperms ) /*lint !e850*/
       *isorbitope = FALSE;
 
-   assert( activevars == NULL || nusedperms == SCIPhashsetGetNElements(activevars) / ntwocycles - 1 );
+   assert( activevars == NULL || nusedperms == nactivevars / ntwocycles - 1 );
 
    SCIPfreeBufferArray(scip, &usedperm);
 
@@ -3501,13 +3503,14 @@ SCIP_RETCODE addOrbitopeSubgroup(
 {  /*lint --e{571}*/
    char name[SCIP_MAXSTRLEN];
    SCIP_VAR*** orbitopevarmatrix;
-   SCIP_HASHSET* activevars;
+   SCIP_Shortbool* activevars;
    int** orbitopevaridx;
    int* columnorder;
    int* nusedelems;
    SCIP_CONS* cons;
    SCIP_Bool isorbitope;
    SCIP_Bool infeasible = FALSE;
+   int nactivevars = 0;
    int k;
 
    assert( scip != NULL );
@@ -3524,7 +3527,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    assert( maxnvarslexorder != NULL );
 
    /* create hashset to mark variables */
-   SCIP_CALL( SCIPhashsetCreate(&activevars, SCIPblkmem(scip), nrows * ncols) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &activevars, propdata->npermvars) );
 
    /* orbitope matrix for indices of variables in permvars array */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevaridx, nrows) );
@@ -3559,17 +3562,18 @@ SCIP_RETCODE addOrbitopeSubgroup(
          int varidx;
 
          varidx = graphcomponents[compstart + l];
-         assert( ! SCIPhashsetExists(activevars, (void*) (size_t) (varidx + 1)) ); /*lint !e776*/
+         assert( ! activevars[varidx] );
 
-         SCIP_CALL( SCIPhashsetInsert(activevars, SCIPblkmem(scip), (void*) (size_t) (varidx + 1)) ); /*lint !e776*/
+         activevars[varidx] = TRUE;
+         ++nactivevars;
       }
    }
-   assert( SCIPhashsetGetNElements(activevars) == nrows * ncols );
+   assert( nactivevars == nrows * ncols );
 
    /* build the variable index matrix for the orbitope */
    SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, propdata->permvars, propdata->npermvars,
          propdata->perms, usedperms, nrows, nusedperms, orbitopevaridx, columnorder,
-         nusedelems, NULL, &isorbitope, activevars) );
+         nusedelems, NULL, &isorbitope, activevars, nactivevars) );
 
    assert( isorbitope );
 
@@ -3655,7 +3659,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    for (k = nrows - 1; k >= 0; --k)
       SCIPfreeBufferArray(scip, &orbitopevaridx[k]);
    SCIPfreeBufferArray(scip, &orbitopevaridx);
-   SCIPhashsetFree(&activevars, SCIPblkmem(scip));
+   SCIPfreeBufferArray(scip, &activevars);
 
    return SCIP_OKAY;
 }
@@ -4818,7 +4822,7 @@ SCIP_RETCODE detectOrbitopes(
       /* check if the permutations fulfill properties of an orbitope */
       SCIP_CALL( checkTwoCyclePermsAreOrbitope(scip, permvars, npermvars, perms,
             &(components[componentbegins[i]]), ntwocyclescomp, npermsincomponent,
-            orbitopevaridx, columnorder, nusedelems, rowisbinary, &isorbitope, NULL) );
+            orbitopevaridx, columnorder, nusedelems, rowisbinary, &isorbitope, NULL, 0) );
 
       if ( ! isorbitope )
          goto FREEDATASTRUCTURES;
