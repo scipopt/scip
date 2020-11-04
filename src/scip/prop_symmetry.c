@@ -3837,10 +3837,10 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
       assert( orbit[activeorb][0] ==  firstvaridxpercolor[j] );
 
-      if ( orbitsize[activeorb] > orbitsize[!activeorb] ) /*lint !e514*/
+      if ( orbitsize[activeorb] > orbitsize[1 - activeorb] ) /*lint !e514*/
       {
          /* if the new orbit is larger then the old largest one, flip activeorb */
-         activeorb = !activeorb;
+         activeorb = 1 - activeorb;
          chosencolor = j;
       }
 
@@ -3853,7 +3853,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    if ( chosencolor > -1 )
    {
       /* flip activeorb again to avoid confusion, it is then at the largest orbit */
-      activeorb = !activeorb;
+      activeorb = 1 - activeorb;
 
       assert( orbit[activeorb][0] == firstvaridxpercolor[chosencolor] );
       vars[0] = propdata->permvars[orbit[activeorb][0]];
