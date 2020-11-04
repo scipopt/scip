@@ -346,11 +346,12 @@ SCIP_RETCODE SCIPcomputeOrbitVar(
       varfound[varidx] = TRUE;
 
    /* iterate over variables in orbit and compute their images */
-   for (j = 0; j < nvarstotest; ++j)
+   j = 0;
+   while ( j < nvarstotest )
    {
       int currvar;
 
-      currvar = varstotest[j];
+      currvar = varstotest[j++];
 
       for (p = componentbegins[component]; p < componentbegins[component+1]; ++p)
       {
