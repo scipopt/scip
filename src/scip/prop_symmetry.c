@@ -3824,7 +3824,11 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
       /* mark all variables that have been used in strong SBCs */
       for (k = graphcompbegins[graphcomp]; k < graphcompbegins[graphcomp+1]; ++k)
+      {
+         assert( 0 <= graphcomponents[k] && graphcomponents[k] < propdata->npermvars );
+
          usedvars[graphcomponents[k]] = TRUE;
+      }
 
       SCIP_CALL( SCIPcomputeOrbitVar(scip, propdata->npermvars, propdata->perms,
             propdata->permstrans, propdata->components, propdata->componentbegins,
