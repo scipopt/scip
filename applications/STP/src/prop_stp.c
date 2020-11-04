@@ -341,7 +341,7 @@ SCIP_RETCODE getRedCost2ndNextDistances(
 }
 
 
-/** marks arcs globally fixed to 0 */
+/** marks arcs fixed to 0 */
 static inline
 void mark0FixedArcs(
    const GRAPH*          graph,              /**< graph structure */
@@ -353,10 +353,17 @@ void mark0FixedArcs(
 
    assert(vars && arcIs0Fixed);
 
+#ifdef USE_EXTRED_FULL
    for( int e = 0; e < nedges; e++ )
    {
       arcIs0Fixed[e] = (SCIPvarGetUbGlobal(vars[e]) < 0.5);
    }
+#else
+   for( int e = 0; e < nedges; e++ )
+   {
+      arcIs0Fixed[e] = (SCIPvarGetUbLocal(vars[e]) < 0.5);
+   }
+#endif
 }
 
 
@@ -1229,7 +1236,12 @@ SCIP_RETCODE initRedcostdata(
 {
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
-   RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = PROP_STP_REDCOST_LEVELS, .nCloseTerms = 3,
+#ifdef USE_EXTRED_FULL
+   int nlevels = PROP_STP_REDCOST_LEVELS;
+#else
+   int nlevels = 1;
+#endif
+   RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = nlevels, .nCloseTerms = 3,
                               .nnodes = nnodes, .nedges = nedges, .redCostRoot = -1 };
 
    assert(scip && graph && propdata);
@@ -1252,18 +1264,21 @@ void updateRedcostdata(
    SCIP_PROPDATA*        propdata            /**< propagator data */
 )
 {
-   REDCOST* redcostdata = propdata->redcostdata;
+#ifdef USE_EXTRED_FULL
+   REDCOST* redcostdata = propdata->redcostdata;;
+#endif
 
-   assert(redcostdata);
+   assert(propdata->redcostdata);
 
    /* NOTE: ugly workaround */
    if( propdata->redcostnupdates == 0 )
    {
-      assert(redcosts_getNlevels(redcostdata) == 1);
+      assert(redcosts_getNlevels(propdata->redcostdata) == 1);
       propdata->redcostnupdates++;
       return;
    }
 
+#ifdef USE_EXTRED_FULL
    assert(redcosts_getNlevels(redcostdata) >= 1);
 
    if( redcosts_getNlevels(redcostdata) < PROP_STP_REDCOST_LEVELS )
@@ -1290,6 +1305,7 @@ void updateRedcostdata(
          propdata->redcostnupdates++;
       }
    }
+#endif
 
    propdata->lpobjval_last = propdata->lpobjval;
 }
@@ -1474,10 +1490,14 @@ SCIP_RETCODE fixVarsExtendedRed(
    REDCOST* const redcostdata = propdata->redcostdata;
    GRAPH* const propgraph = propdata->propgraph;
    STP_Bool* arcdeleted = NULL;
-   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
    int nfixededges = 0;
    const int nedges = propgraph->edges;
    const SCIP_Bool isPcMw = graph_pc_isPcMw(propgraph);
+#ifdef USE_EXTRED_FULL
+   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
+#endif
+
+   assert(redcostdata);
 
    /* in this case the reduced cost reductions are not valid anymore! (because the root has changed) */
    if( graph->stp_type != propgraph->stp_type )
@@ -1493,7 +1513,7 @@ SCIP_RETCODE fixVarsExtendedRed(
 
    if( isPcMw )
       graph_pc_2org(scip, propgraph);
-
+#ifdef USE_EXTRED_FULL
    SCIPdebugMessage("starting extended reductions with %d red. cost levels \n", redcosts_getNlevels(redcostdata));
 
    for( int i = 0; i < redcosts_getNlevels(redcostdata); i++ )
@@ -1513,6 +1533,15 @@ SCIP_RETCODE fixVarsExtendedRed(
    /* reduce graph and mark deletable arcs */
    SCIP_CALL( extreduce_deleteArcs(scip, redcostdata, NULL, propgraph,
          arcdeleted, &nfixededges) );
+#else
+   writeRedcostdata(scip, 0, graph, vars, propdata);
+   redcosts_increaseOnDeletedArcs(propgraph, arcdeleted, 0, redcostdata);
+   SCIP_CALL( redcosts_initializeDistances(scip, 0, propgraph, redcostdata) );
+
+   nfixededges = reduce_extendedEdge(scip, propgraph, redcosts_getNodeToTermsPathsTop(redcostdata),
+        redcosts_getEdgeCostsTop(redcostdata), redcosts_getRootToNodeDistTop(redcostdata),
+        NULL, redcosts_getCutoffTop(redcostdata), propgraph->source, arcdeleted, TRUE);
+#endif
 
    if( isPcMw )
       graph_pc_2trans(scip, propgraph);
