@@ -58,28 +58,6 @@ typedef struct multi_level_distances_storage MLDISTS;
 /** structure for storing data for algorithms based on contraction of extension tree */
 typedef struct extension_tree_contraction CONTRACT;
 
-/** permanent extension data */
-typedef struct extension_data_permanent
-{
-   CONTRACT*             contration;         /**< contraction data */
-   DCMST*                dcmst;              /**< dynamic MST */
-   CSRDEPO*              msts_comp;          /**< storage for MSTs with extending node of the given level */
-   CSRDEPO*              msts_levelbase;     /**< storage for MSTs without extending node of the level below */
-   MLDISTS*              sds_horizontal;     /**< SDs from deepest leaves to remaining ones */
-   MLDISTS*              sds_vertical;       /**< SDs between leaves of same depth */
-   STP_Bool*             edgedeleted;        /**< (non-owned!) edge array to mark which directed edge can be removed */
-   SCIP_Bool*            isterm;             /**< marks whether node is a terminal (or proper terminal for PC) */
-   SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
-   SCIP_Real*            pcSdToNode;         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
-   int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
-   STP_Vectype(int)*     nodes_implications; /**< implied nodes for each node */
-   int                   nnodes;             /**< number of nodes */
-   int                   tree_maxnleaves;
-   int                   tree_maxdepth;
-   int                   tree_maxnedges;
-   SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
-} EXTPERMA;
-
 
 /** path root state */
 typedef struct pathroot_state
@@ -107,6 +85,34 @@ typedef struct distance_data
    int closenodes_totalsize;
    int closenodes_maxnumber;
 } DISTDATA;
+
+
+/** permanent extension data */
+typedef struct extension_data_permanent
+{
+/* non-owned data: */
+   REDCOST*              redcostdata;        /**< reduced cost data (initialized to NULL) */
+   DISTDATA*             distdata_default;   /**< default distance data (initialized to NULL) */
+   DISTDATA*             distdata_biased;    /**< biased distance data (initialized to NULL) */
+/* owned data: */
+   CONTRACT*             contration;         /**< contraction data */
+   DCMST*                dcmst;              /**< dynamic MST */
+   CSRDEPO*              msts_comp;          /**< storage for MSTs with extending node of the given level */
+   CSRDEPO*              msts_levelbase;     /**< storage for MSTs without extending node of the level below */
+   MLDISTS*              sds_horizontal;     /**< SDs from deepest leaves to remaining ones */
+   MLDISTS*              sds_vertical;       /**< SDs between leaves of same depth */
+   STP_Bool*             edgedeleted;        /**< (non-owned!) edge array to mark which directed edge can be removed */
+   SCIP_Bool*            isterm;             /**< marks whether node is a terminal (or proper terminal for PC) */
+   SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
+   SCIP_Real*            pcSdToNode;         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
+   int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
+   STP_Vectype(int)*     nodes_implications; /**< implied nodes for each node */
+   int                   nnodes;             /**< number of nodes */
+   int                   tree_maxnleaves;
+   int                   tree_maxdepth;
+   int                   tree_maxnedges;
+   SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
+} EXTPERMA;
 
 
 /** Reduction data; just used internally.

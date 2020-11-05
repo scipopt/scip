@@ -35,9 +35,11 @@
 
 /* extreduce_base.c
  */
+extern SCIP_RETCODE    extreduce_init(SCIP*, SCIP_Bool, GRAPH*, REDCOST*, STP_Bool*, EXTPERMA**);
+extern void            extreduce_exit(SCIP*, GRAPH*, EXTPERMA**);
 extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
-extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
-extern SCIP_RETCODE    extreduce_pseudoDeleteNodes(SCIP*, const SCIP_Bool*, REDCOST*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const int*, EXTPERMA*, GRAPH*, int*);
+extern SCIP_RETCODE    extreduce_pseudoDeleteNodes(SCIP*, const SCIP_Bool*, EXTPERMA*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    extreduce_deleteGeneralStars(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
 extern int             extreduce_getMaxTreeDepth(const GRAPH*);
 extern int             extreduce_getMaxStackSize(void);
@@ -62,15 +64,16 @@ extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const E
 
 /* extreduce_dist.c
  */
-extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA*);
+extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA**);
 extern SCIP_Real          extreduce_distDataGetSp(SCIP*, const GRAPH*, int, int, int*, int*, DISTDATA*);
+extern void               extreduce_distDataRecomputeDirtyPaths(SCIP*, const GRAPH*, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDouble(SCIP*, const GRAPH*, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDoubleForbiddenSingle(SCIP*, const GRAPH*, int, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDoubleForbiddenLast(SCIP*, const GRAPH*, int, int, int, int, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDoubleForbiddenEq(SCIP*, const GRAPH*, SCIP_Real, int, int, int, EXTDATA*);
 extern SCIP_Real          extreduce_distDataGetSdDoubleForbidden(SCIP*, const GRAPH*, int, int, EXTDATA*);
-extern void               extreduce_distDataFreeMembers(SCIP*, const GRAPH*, DISTDATA*);
+extern void               extreduce_distDataFree(SCIP*, const GRAPH*, DISTDATA**);
 extern void               extreduce_distDataDeleteEdge(SCIP*, const GRAPH*, int, DISTDATA*);
 
 
@@ -154,9 +157,9 @@ extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
  */
 
 void                      extreduce_extCompClean(SCIP*, const GRAPH*, const EXTCOMP*, SCIP_Bool, EXTDATA*);
-extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA*);
+extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA**);
 extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
-extern void               extreduce_extPermaFreeMembers(SCIP*, EXTPERMA*);
+extern void               extreduce_extPermaFree(SCIP*, EXTPERMA**);
 extern void               extreduce_extdataClean(EXTDATA*);
 extern SCIP_Bool          extreduce_extdataIsClean(const GRAPH*, const EXTDATA*);
 extern void               extreduce_reddataClean(REDDATA*);

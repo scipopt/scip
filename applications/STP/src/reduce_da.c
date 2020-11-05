@@ -856,11 +856,12 @@ SCIP_RETCODE reduceWithEdgeExtReds(
    SCIP*                 scip,               /**< SCIP data structure */
    const int*            result,             /**< solution */
    SCIP_Real             upperbound,         /**< best upperbound */
-   REDCOST*              redcostdata,        /**< reduced costs */
+   EXTPERMA*             extperma,           /**< extension data */
    GRAPH*                graph,              /**< graph data structure */
    int*                  nextdeleted         /**< newly deleted edges */
 )
 {
+   REDCOST* const redcostdata = extperma->redcostdata;
    const int nlevels = redcosts_getNlevels(redcostdata);
 
    for( int i = 0; i < nlevels; i++ )
@@ -875,7 +876,7 @@ SCIP_RETCODE reduceWithEdgeExtReds(
 #endif
    }
 
-   SCIP_CALL( extreduce_deleteEdges(scip, redcostdata, result, graph, NULL, nextdeleted) );
+   SCIP_CALL( extreduce_deleteEdges(scip, result, extperma, graph, nextdeleted) );
 
 //#define EXT_WRITE
 //   graph_printInfo(graph);  printf("newly fixedSECOND =%d \n", *nextdeleted);
@@ -2388,6 +2389,7 @@ SCIP_RETCODE reduce_da(
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
 )
 {
+   EXTPERMA* extpermanent = NULL;
    STPSOLPOOL* pool = NULL;
    SCIP_Real* edgefixingbounds = NULL;
    SCIP_Real* nodefixingbounds = NULL;
@@ -2526,8 +2528,10 @@ SCIP_RETCODE reduce_da(
 
          if( useExtRed && run == nruns - 1 )
          {
+            const SCIP_Bool useSd = !graph_pc_isPc(graph);
             int nextfixed = 0;
-            SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, redcostdata, graph, &nextfixed) );
+            SCIP_CALL( extreduce_init(scip, useSd, graph, redcostdata, arcsdeleted, &extpermanent) );
+            SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, extpermanent, graph, &nextfixed) );
             ndeletions_run += nextfixed;
          }
 
@@ -2559,7 +2563,7 @@ SCIP_RETCODE reduce_da(
 
          if( useExtRed )
          {
-            SCIP_CALL( extreduce_pseudoDeleteNodes(scip, pseudoDelNodes, redcostdata, graph, offsetp, &nreplacings) );
+            SCIP_CALL( extreduce_pseudoDeleteNodes(scip, pseudoDelNodes, extpermanent, graph, offsetp, &nreplacings) );
          }
          else
          {
@@ -2576,6 +2580,12 @@ SCIP_RETCODE reduce_da(
 
          assert(graph_valid_ancestors(scip, graph));
          graph_mark(graph);
+      }
+
+      if( extpermanent )
+      {
+         assert(useExtRed);
+         extreduce_exit(scip, graph, &extpermanent);
       }
 
       daRedcostsExit(scip, &redcostdata);

@@ -276,7 +276,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValid1(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   DISTDATA distdata;
+   DISTDATA* distdata;
    GRAPH* graph;
    const int nnodes = 4;
    const int nedges = 8;
@@ -315,9 +315,9 @@ SCIP_RETCODE testDistCloseNodesPcAreValid1(
 
    /* test close nodes */
    {
-      const RANGE* node_range = distdata.closenodes_range;
-      const int* node_idx = distdata.closenodes_indices;
-      const SCIP_Real* node_dist = distdata.closenodes_distances;
+      const RANGE* node_range = distdata->closenodes_range;
+      const int* node_idx = distdata->closenodes_indices;
+      const SCIP_Real* node_dist = distdata->closenodes_distances;
 
       STPTEST_ASSERT(node_idx[node_range[0].start] == 1);
       STPTEST_ASSERT(node_idx[node_range[0].start + 1] == 2);
@@ -328,7 +328,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValid1(
       STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 2], 1.5));
    }
 
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
    stptest_extreduceTearDown(scip, graph, NULL);
 
@@ -342,7 +342,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValid2(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   DISTDATA distdata;
+   DISTDATA* distdata;
    GRAPH* graph;
    const int nnodes = 5;
    const int nedges = 10;
@@ -384,8 +384,8 @@ SCIP_RETCODE testDistCloseNodesPcAreValid2(
 
    /* test close nodes */
    {
-      const RANGE* node_range = distdata.closenodes_range;
-      const SCIP_Real* node_dist = distdata.closenodes_distances;
+      const RANGE* node_range = distdata->closenodes_range;
+      const SCIP_Real* node_dist = distdata->closenodes_distances;
 
       STPTEST_ASSERT(EQ(node_dist[node_range[0].start], 1.5));
       STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 1], 1.5));
@@ -393,7 +393,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValid2(
       STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 3], 1.5));
    }
 
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
    stptest_extreduceTearDown(scip, graph, NULL);
 
@@ -407,7 +407,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValidAfterDeletion(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
-   DISTDATA distdata;
+   DISTDATA* distdata;
    GRAPH* graph;
    const int nnodes = 5;
    const int nedges = 12;
@@ -450,9 +450,9 @@ SCIP_RETCODE testDistCloseNodesPcAreValidAfterDeletion(
 
    /* test close nodes */
    {
-      const RANGE* node_range = distdata.closenodes_range;
-      const int* node_idx = distdata.closenodes_indices;
-      const SCIP_Real* node_dist = distdata.closenodes_distances;
+      const RANGE* node_range = distdata->closenodes_range;
+      const int* node_idx = distdata->closenodes_indices;
+      const SCIP_Real* node_dist = distdata->closenodes_distances;
 
       STPTEST_ASSERT(EQ(node_dist[node_range[0].start], 1.0));
       STPTEST_ASSERT(EQ(node_dist[node_range[0].start + 1], 1.0));
@@ -461,14 +461,14 @@ SCIP_RETCODE testDistCloseNodesPcAreValidAfterDeletion(
 
       STPTEST_ASSERT(node_idx[node_range[0].start + 3] == 4);
 
-      extreduce_edgeRemove(scip, 2, graph, &distdata, NULL);
-      extreduce_edgeRemove(scip, 4, graph, &distdata, NULL);
-      extreduce_edgeRemove(scip, 8, graph, &distdata, NULL);
+      extreduce_edgeRemove(scip, 2, graph, distdata, NULL);
+      extreduce_edgeRemove(scip, 4, graph, distdata, NULL);
+      extreduce_edgeRemove(scip, 8, graph, distdata, NULL);
 
-      STPTEST_ASSERT(extreduce_distCloseNodesAreValid(scip, graph, &distdata));
+      STPTEST_ASSERT(extreduce_distCloseNodesAreValid(scip, graph, distdata));
    }
 
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
    stptest_extreduceTearDown(scip, graph, NULL);
 
@@ -488,7 +488,7 @@ SCIP_RETCODE testDistCloseNodesAreValid(
    const int root = 0;
    const int nclosenodes = 2;         /**< max. number of close nodes to each node */
 
-   DISTDATA distdata;
+   DISTDATA* distdata;
 
    assert(scip);
 
@@ -528,10 +528,10 @@ SCIP_RETCODE testDistCloseNodesAreValid(
 
    /* test close nodes */
    {
-      const RANGE* node_range = distdata.closenodes_range;
-      const int* node_idx = distdata.closenodes_indices;
+      const RANGE* node_range = distdata->closenodes_range;
+      const int* node_idx = distdata->closenodes_indices;
 #if 0
-      const SCIP_Real* node_dist = distdata.closenodes_distances;
+      const SCIP_Real* node_dist = distdata->closenodes_distances;
 
       for( int node = 0; node < 6; node++ )
       {
@@ -550,7 +550,7 @@ SCIP_RETCODE testDistCloseNodesAreValid(
       STPTEST_ASSERT(node_idx[node_range[5].start + 1] == 2);
    }
 
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    graph_path_exit(scip, graph);
@@ -574,7 +574,7 @@ SCIP_RETCODE testDistRootPathsAreValid(
    const int root = 0;
    const int nclosenodes = 2;         /**< max. number of close nodes to each node */
 
-   DISTDATA distdata;
+   DISTDATA* distdata;
 
    assert(scip);
 
@@ -615,8 +615,8 @@ SCIP_RETCODE testDistRootPathsAreValid(
    /* test edge root paths */
    {
       const int edge = 2;
-      PRSTATE** pathroot_blocks = distdata.pathroot_blocks;
-      int* pathroot_blocksizes = distdata.pathroot_blocksizes;
+      PRSTATE** pathroot_blocks = distdata->pathroot_blocks;
+      int* pathroot_blocksizes = distdata->pathroot_blocksizes;
 
 
 #ifdef SCIP_DEBUG
@@ -631,7 +631,7 @@ SCIP_RETCODE testDistRootPathsAreValid(
          SCIPdebugMessage("...root=%d  \n", pathroot_blocks[edge / 2][i].pathroot_id);
    }
 
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    graph_path_exit(scip, graph);
@@ -654,7 +654,7 @@ SCIP_RETCODE testDistDistancesAreValid(
    const int root = 0;
    const int nclosenodes = 2;         /**< max. number of close nodes to each node */
 
-   DISTDATA distdata;
+   DISTDATA* distdata;
 
    assert(scip);
 
@@ -692,12 +692,12 @@ SCIP_RETCODE testDistDistancesAreValid(
    /* test distances */
    {
       const int edge = 2;
-      const SCIP_Real dist1_2 = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
-      const SCIP_Real dist1_3 = extreduce_distDataGetSd(scip, graph, 1, 3, &distdata);
-      const SCIP_Real dist1_5 = extreduce_distDataGetSd(scip, graph, 1, 5, &distdata);
-      const SCIP_Real dist2_1 = extreduce_distDataGetSd(scip, graph, 2, 1, &distdata);
-      const SCIP_Real dist2_5 = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
-      const SCIP_Real dist2_6 = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
+      const SCIP_Real dist1_2 = extreduce_distDataGetSd(scip, graph, 1, 2, distdata);
+      const SCIP_Real dist1_3 = extreduce_distDataGetSd(scip, graph, 1, 3, distdata);
+      const SCIP_Real dist1_5 = extreduce_distDataGetSd(scip, graph, 1, 5, distdata);
+      const SCIP_Real dist2_1 = extreduce_distDataGetSd(scip, graph, 2, 1, distdata);
+      const SCIP_Real dist2_5 = extreduce_distDataGetSd(scip, graph, 2, 5, distdata);
+      const SCIP_Real dist2_6 = extreduce_distDataGetSd(scip, graph, 2, 6, distdata);
 
       STPTEST_ASSERT(dist1_2 == 0.4);
       STPTEST_ASSERT(dist1_3 == -1.0);
@@ -708,12 +708,12 @@ SCIP_RETCODE testDistDistancesAreValid(
 
       assert(graph->head[edge] == 2 && graph->tail[edge] == 1);
       graph_edge_delFull(scip, graph, edge, TRUE);
-      extreduce_distDataDeleteEdge(scip, graph, edge, &distdata);
+      extreduce_distDataDeleteEdge(scip, graph, edge, distdata);
 
       {
-         const SCIP_Real dist1_2_b = extreduce_distDataGetSd(scip, graph, 1, 2, &distdata);
-         const SCIP_Real dist2_6_b = extreduce_distDataGetSd(scip, graph, 2, 6, &distdata);
-         const SCIP_Real dist2_5_b = extreduce_distDataGetSd(scip, graph, 2, 5, &distdata);
+         const SCIP_Real dist1_2_b = extreduce_distDataGetSd(scip, graph, 1, 2, distdata);
+         const SCIP_Real dist2_6_b = extreduce_distDataGetSd(scip, graph, 2, 6, distdata);
+         const SCIP_Real dist2_5_b = extreduce_distDataGetSd(scip, graph, 2, 5, distdata);
 
          STPTEST_ASSERT(dist1_2_b == -1.0);
          STPTEST_ASSERT(dist2_6_b == -1.0);
@@ -721,7 +721,7 @@ SCIP_RETCODE testDistDistancesAreValid(
       }
    }
 
-   extreduce_distDataFreeMembers(scip, graph, &distdata);
+   extreduce_distDataFree(scip, graph, &distdata);
    graph_free_dcsr(scip, graph);
 
    graph_path_exit(scip, graph);

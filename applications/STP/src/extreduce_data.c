@@ -151,14 +151,16 @@ void extreduce_extCompClean(
 }
 
 
-/** initialize permanent extension data struct */
+/** initialize permanent extension data struct
+ *  NOTE: Sets distdata and reddata entries to NULL, since non-owned */
 SCIP_RETCODE extreduce_extPermaInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    STP_Bool*             edgedeleted,        /**< edge array to mark which directed edge can be removed */
-   EXTPERMA*             extperm             /**< (uninitialized) extension data */
+   EXTPERMA**            extpermanent        /**< (uninitialized) extension data */
 )
 {
+   EXTPERMA* extperm;
    STP_Vectype(int)* nodes_implied = NULL;
    SCIP_Bool* isterm = NULL;
    SCIP_Real* bottleneckDistNode = NULL;
@@ -175,7 +177,10 @@ SCIP_RETCODE extreduce_extPermaInit(
    const SCIP_Bool sds_vertical_useids = FALSE;
 #endif
 
-   assert(scip && extperm);
+   assert(scip && extpermanent);
+
+   SCIP_CALL( SCIPallocMemory(scip, extpermanent) );
+   extperm = *extpermanent;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &nodes_implied, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &isterm, nnodes) );
@@ -200,6 +205,10 @@ SCIP_RETCODE extreduce_extPermaInit(
 
    SCIP_CALL( extreduce_contractionInit(scip, STP_EXT_MAXDFSDEPTH,
          STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->contration)) );
+
+   extperm->distdata_default = NULL;
+   extperm->distdata_biased = NULL;
+   extperm->redcostdata = NULL;
 
    extperm->nodes_implications = nodes_implied;
    extperm->edgedeleted = edgedeleted;
@@ -308,13 +317,17 @@ SCIP_Bool extreduce_extPermaIsClean(
 }
 
 
-/** frees members of extension data */
-void extreduce_extPermaFreeMembers(
+/** frees  extension data */
+void extreduce_extPermaFree(
    SCIP*                 scip,               /**< SCIP */
-   EXTPERMA*             extperm             /**< extension data */
+   EXTPERMA**            extpermanent        /**< extension data */
 )
 {
-   assert(scip && extperm);
+   EXTPERMA* extperm;
+
+   assert(scip && extpermanent);
+
+   extperm = *extpermanent;
 
    extreduce_contractionFree(scip, &(extperm->contration));
    extreduce_mldistsFree(scip, &(extperm->sds_horizontal));
@@ -334,7 +347,7 @@ void extreduce_extPermaFreeMembers(
    }
    SCIPfreeMemoryArray(scip, &(extperm->nodes_implications));
 
-   extperm->nnodes = -1;
+   SCIPfreeMemory(scip, extpermanent);
 }
 
 

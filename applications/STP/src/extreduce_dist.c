@@ -1192,23 +1192,27 @@ SCIP_RETCODE extreduce_distDataInit(
    GRAPH*                g,                  /**< graph data structure */
    int                   maxnclosenodes,     /**< maximum number of close nodes to each node */
    SCIP_Bool             computeSD,          /**< also compute special distances? */
-   DISTDATA*             distdata            /**< to be initialized */
+   DISTDATA**            distdata            /**< to be initialized */
 )
 {
    const int nnodes = g->knots;
    RANGE* range_closenodes;
    DIJK* dijkdata;
    DHEAP* dheap;
+   DISTDATA* dist;
 
    assert(distdata && g && scip && g->dcsr_storage);
    assert(graph_valid_dcsr(g, FALSE));
    assert(!graph_pc_isPcMw(g) || !g->extended);
 
-   distDataInitSizes(g, maxnclosenodes, distdata);
-   SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, distdata) );
+   SCIP_CALL( SCIPallocMemory(scip, distdata) );
+   dist = *distdata;
 
-   SCIP_CALL( graph_dijkLimited_init(scip, g, &(distdata->dijkdata)) );
-   dijkdata = distdata->dijkdata;
+   distDataInitSizes(g, maxnclosenodes, dist);
+   SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, dist) );
+
+   SCIP_CALL( graph_dijkLimited_init(scip, g, &(dist->dijkdata)) );
+   dijkdata = dist->dijkdata;
 
    if( graph_pc_isPc(g) )
    {
@@ -1217,14 +1221,14 @@ SCIP_RETCODE extreduce_distDataInit(
 
    if( computeSD )
    {
-      SCIP_CALL( reduce_sdInit(scip, g, &(distdata->sdistdata)) );
+      SCIP_CALL( reduce_sdInit(scip, g, &(dist->sdistdata)) );
    }
    else
    {
-      distdata->sdistdata = NULL;
+      dist->sdistdata = NULL;
    }
 
-   range_closenodes = distdata->closenodes_range;
+   range_closenodes = dist->closenodes_range;
 
    /* compute close nodes to each not yet deleted node */
    for( int k = 0; k < nnodes; k++ )
@@ -1250,19 +1254,19 @@ SCIP_RETCODE extreduce_distDataInit(
 
       assert(g->grad[k] > 0);
 
-      SCIP_CALL( distDataComputeCloseNodes(scip, g, k, TRUE, dijkdata, distdata) );
+      SCIP_CALL( distDataComputeCloseNodes(scip, g, k, TRUE, dijkdata, dist) );
 
       graph_dijkLimited_reset(g, dijkdata);
    }
 
    /* store for each edge the roots of all paths it is used for */
-   SCIP_CALL( distDataPathRootsInitialize(scip, g, distdata) );
+   SCIP_CALL( distDataPathRootsInitialize(scip, g, dist) );
 
    SCIP_CALL( graph_heap_create(scip, nnodes, NULL, NULL, &dheap) );
-   distdata->dheap = dheap;
+   dist->dheap = dheap;
 
-   assert(distdata->closenodes_prededges);
-   assert(extreduce_distCloseNodesAreValid(scip, g, distdata));
+   assert(dist->closenodes_prededges);
+   assert(extreduce_distCloseNodesAreValid(scip, g, dist));
 
    return SCIP_OKAY;
 }
@@ -1320,6 +1324,34 @@ void extreduce_distDataDeleteEdge(
 
    distdata->pathroot_blocksizes[halfedge] = 0;
    distdata->pathroot_blocksizesmax[halfedge] = 0;
+}
+
+
+/** recomputes shortest paths for dirty nodes */
+void extreduce_distDataRecomputeDirtyPaths(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   DISTDATA*             distdata            /**< distance data */
+)
+{
+   SCIP_Bool* pathroot_isdirty;
+   const int* isMarked;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && distdata);
+   assert(graph_isMarked(g));
+
+   pathroot_isdirty = distdata->pathroot_isdirty;
+   isMarked = g->mark;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( pathroot_isdirty[i] && isMarked[i] )
+      {
+         distDataRecomputeNormalDist(scip, g, i, distdata);
+         pathroot_isdirty[i] = FALSE;
+      }
+   }
 }
 
 
@@ -1666,22 +1698,30 @@ SCIP_Real extreduce_distDataGetSdDoubleForbiddenLast(
 }
 
 
-/** frees members of distance data */
-void extreduce_distDataFreeMembers(
+/** frees distance data */
+void extreduce_distDataFree(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   DISTDATA*             distdata            /**< to be freed */
+   DISTDATA**            distdata            /**< to be freed */
 )
 {
-   graph_heap_free(scip, TRUE, TRUE, &(distdata->dheap));
-   SCIPfreeMemoryArray(scip, &(distdata->closenodes_range));
-   SCIPfreeMemoryArray(scip, &(distdata->closenodes_indices));
-   SCIPfreeMemoryArray(scip, &(distdata->closenodes_distances));
-   SCIPfreeMemoryArrayNull(scip, &(distdata->closenodes_prededges));
+   DISTDATA* dist;
 
-   if( distdata->sdistdata )
-      reduce_sdFree(scip, &(distdata->sdistdata));
+   assert(scip && graph && distdata);
 
-   distDataPathRootsFree(scip, graph, distdata);
-   graph_dijkLimited_free(scip, &(distdata->dijkdata));
+   dist = *distdata;
+
+   graph_heap_free(scip, TRUE, TRUE, &(dist->dheap));
+   SCIPfreeMemoryArray(scip, &(dist->closenodes_range));
+   SCIPfreeMemoryArray(scip, &(dist->closenodes_indices));
+   SCIPfreeMemoryArray(scip, &(dist->closenodes_distances));
+   SCIPfreeMemoryArrayNull(scip, &(dist->closenodes_prededges));
+
+   if( dist->sdistdata )
+      reduce_sdFree(scip, &(dist->sdistdata));
+
+   distDataPathRootsFree(scip, graph, dist);
+   graph_dijkLimited_free(scip, &(dist->dijkdata));
+
+   SCIPfreeMemory(scip, distdata);
 }
