@@ -2563,7 +2563,10 @@ SCIP_RETCODE reduce_da(
 
          if( useExtRed )
          {
-            SCIP_CALL( extreduce_pseudoDeleteNodes(scip, pseudoDelNodes, extpermanent, graph, offsetp, &nreplacings) );
+            havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
+
+            SCIP_CALL( extreduce_pseudoDeleteNodes(scip, (havenewsol ? result : NULL),
+                  pseudoDelNodes, extpermanent, graph, offsetp, &nreplacings) );
          }
          else
          {
