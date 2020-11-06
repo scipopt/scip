@@ -2389,6 +2389,7 @@ SCIP_RETCODE detectNlhdlr(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethodsallowed;
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethods;
    SCIP_CONSEXPR_EXPRENFO_METHOD enforcemethodsnew;
    SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlrenforcemethods;
@@ -2430,6 +2431,9 @@ SCIP_RETCODE detectNlhdlr(
 
    /* it doesn't make sense to have been called on detectNlhdlr, if the expr isn't used for anything */
    assert(enforcemethods != SCIP_CONSEXPR_EXPRENFO_ALL);
+
+   /* all methods that have not been flagged above are the ones that we want to be handled by nlhdlrs */
+   enforcemethodsallowed = ~enforcemethods;
 
    expr->nenfos = 0;
    enfossize = 2;
@@ -2505,6 +2509,19 @@ SCIP_RETCODE detectNlhdlr(
 
       /* update enforcement flags */
       enforcemethods = enforcemethodsnew;
+   }
+
+   /* some nlhdlrs might have claimed more than needed: clean up sepa flags */
+   for( h = 0; h < expr->nenfos; ++h )
+   {
+      expr->enfos[h]->nlhdlrparticipation &= enforcemethodsallowed;
+
+      /* if nothing is done, there is no activity usage */
+      if( expr->enfos[h]->nlhdlrparticipation == SCIP_CONSEXPR_EXPRENFO_NONE )
+      {
+         expr->enfos[h]->sepaaboveusesactivity = FALSE;
+         expr->enfos[h]->sepabelowusesactivity = FALSE;
+      }
    }
 
    conshdlrdata->indetect = FALSE;
