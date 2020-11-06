@@ -2465,19 +2465,31 @@ SCIP_RETCODE detectNlhdlr(
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterConsExprExprUsage() as called by detect may set this to TRUE */
       SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
+      /* nlhdlr might have claimed more than needed: clean up sepa flags */
+      nlhdlrparticipating &= enforcemethodsallowed;
+
       /* detection is only allowed to augment to nlhdlrenforcemethods, so previous enforcemethods must still be set */
       assert((enforcemethodsnew & enforcemethods) == enforcemethods);
 
-      /* because of the previous assert, nlhdlrenforcenew ^ enforcemethods are the methods enforced by this nlhdlr */
-      nlhdlrenforcemethods = enforcemethodsnew ^ enforcemethods;
+      /* Because of the previous assert, nlhdlrenforcenew ^ enforcemethods are the methods enforced by this nlhdlr.
+       * They are also cleaned up here to ensure that only the needed methods are claimed.
+       */
+      nlhdlrenforcemethods = (enforcemethodsnew ^ enforcemethods) & enforcemethodsallowed;
 
       /* nlhdlr needs to participate for the methods it is enforcing */
       assert((nlhdlrparticipating & nlhdlrenforcemethods) == nlhdlrenforcemethods);
 
       if( nlhdlrparticipating == SCIP_CONSEXPR_EXPRENFO_NONE )
       {
-         /* nlhdlrexprdata can only be non-NULL if the nlhdlr participates */
-         assert(nlhdlrexprdata == NULL);
+         /* nlhdlr might not have detected anything, or all set flags might have been removed by
+          * clean up; in the latter case, we may need to free nlhdlrexprdata */
+
+         /* free nlhdlr exprdata, if there is any and there is a method to free this data */
+         if( nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
+         {
+            SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, expr, &nlhdlrexprdata) );
+            assert(nlhdlrexprdata == NULL);
+         }
          /* nlhdlr cannot have added an enforcement method if it doesn't participate (actually redundant due to previous asserts) */
          assert(nlhdlrenforcemethods == SCIP_CONSEXPR_EXPRENFO_NONE);
 
@@ -2509,19 +2521,6 @@ SCIP_RETCODE detectNlhdlr(
 
       /* update enforcement flags */
       enforcemethods = enforcemethodsnew;
-   }
-
-   /* some nlhdlrs might have claimed more than needed: clean up sepa flags */
-   for( h = 0; h < expr->nenfos; ++h )
-   {
-      expr->enfos[h]->nlhdlrparticipation &= enforcemethodsallowed;
-
-      /* if nothing is done, there is no activity usage */
-      if( expr->enfos[h]->nlhdlrparticipation == SCIP_CONSEXPR_EXPRENFO_NONE )
-      {
-         expr->enfos[h]->sepaaboveusesactivity = FALSE;
-         expr->enfos[h]->sepabelowusesactivity = FALSE;
-      }
    }
 
    conshdlrdata->indetect = FALSE;
