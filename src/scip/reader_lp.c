@@ -1006,12 +1006,9 @@ SCIP_RETCODE readCoefficients(
    *nquadcoefs = 0;
    while( getNextToken(scip, lpinput) )
    {
-      /* check if we read a sign */
-      if( isSign(lpinput, &coefsign) )
+      /* check whether we reached a new sign token */
+      if( lpinput->token[1] == '\0' && ( *lpinput->token == '+' || *lpinput->token == '-' ) )
       {
-         SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
-         havesign = TRUE;
-
          /* check whether we found an objective offset */
          if( isobjective && havevalue && var == NULL )
          {
@@ -1024,7 +1021,13 @@ SCIP_RETCODE readCoefficients(
             haveobjoffset = TRUE;
             *objoffset = coefsign * coef;
          }
+      }
 
+      /* check if we read a sign */
+      if( isSign(lpinput, &coefsign) )
+      {
+         SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", lpinput->linenumber, coefsign);
+         havesign = TRUE;
          continue;
       }
 
