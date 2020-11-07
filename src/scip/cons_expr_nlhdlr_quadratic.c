@@ -121,6 +121,8 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   nbadnonbasic;       /**< number of times a cut was aborted because the nonbasic row was not nonbasic enough */
    int                   nhighre;            /**< number of times a cut was not added because range / efficacy was too large */
    int                   nphinonneg;         /**< number of times a cut was aborted because phi is nonnegative at 0 */
+   int                   nstrengthenings;    /**< number of successful strengthenings */
+   SCIP_Real             densitysum;         /**< sum of density of cuts */
 };
 
 /* structure to store rays. note that for a given ray, the entries in raysidx are sorted. */
@@ -158,8 +160,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
 
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
-         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas");
+   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
+         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef", "AveDensity");
    SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
@@ -168,6 +170,9 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadrayrestriction);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nphinonneg);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
+   SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->densitysum / nlhdlrdata->ncutsadded);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
@@ -2950,7 +2955,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
 
-
       SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, nlhdlrdata->mincutviolation,
                &violation, &success) );
       INTERLOG(if( !success) printf("Clean up failed\n"); )
@@ -2996,6 +3000,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
          {
             *result = SCIP_SEPARATED;
             nlhdlrdata->ncutsadded += 1;
+            nlhdlrdata->densitysum += (SCIP_Real) rowprep->nvars / (SCIP_Real) SCIPgetNVars(scip);
          }
 
       }
