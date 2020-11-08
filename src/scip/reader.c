@@ -423,7 +423,7 @@ SCIP_RETCODE SCIPreaderWrite(
 
       /* call reader to write problem */
       retcode = reader->readerwrite(set->scip, reader, file, prob->name, prob->probdata, prob->transformed,
-         prob->transformed ? SCIP_OBJSENSE_MINIMIZE : prob->objsense, prob->objscale, prob->objoffset,
+         prob->objsense, prob->objscale, prob->objoffset,
          vars, nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
          fixedvars, nfixedvars, prob->startnvars, 
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);

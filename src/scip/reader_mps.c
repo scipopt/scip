@@ -4059,6 +4059,10 @@ SCIP_RETCODE SCIPwriteMps(
    SCIPinfoMessage(scip, file, "OBJSENSE\n");
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MAXIMIZE ? "  MAX" : "  MIN");
 
+   /* adapt objective scale for transformed problem (for the original no change is necessary) */
+   if( transformed && objsense == SCIP_OBJSENSE_MAXIMIZE )
+      objscale *= -1.0;
+
    /* start ROWS section */
    SCIPinfoMessage(scip, file, "ROWS\n");
 
