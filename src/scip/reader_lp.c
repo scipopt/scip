@@ -3687,8 +3687,6 @@ SCIP_RETCODE SCIPwriteLp(
    SCIPinfoMessage(scip, file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "\\   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "\\   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "\\   Obj. offset      : %.15g\n", objoffset);
 
    /* print objective sense */
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
