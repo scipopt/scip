@@ -134,6 +134,8 @@ Features
 - Extended check for valid variable and constraint names in PIP writer.
 - Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
   name matching during parsing. The old format is still supported.
+- The objective scale and offset are now taken into account when reading/writing problems in lp/mps/fzn/pip format.
+  This often changes the behavior when writing transformed problems.
 
 Performance improvements
 ------------------------
