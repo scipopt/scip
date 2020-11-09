@@ -53,6 +53,7 @@
 #define BINSEARCH_MAXITERS          120 /**< default iteration limit for binary search */
 #define INTERCUTS_MINVIOL          1e-4 /**< minimal violation the cut needs to have to be added */
 #define DEFAULT_USESTRENGTHENING  FALSE /**< default for using strengthend intersection cuts to separate */
+#define DEFAULT_USEBOUNDS         FALSE /**< default for using nonnegativity bounds when separating */
 
 /*
  * Data structures
@@ -62,6 +63,7 @@
 struct SCIP_SepaData
 {
    SCIP_VAR**            minors;             /**< variables of 2x2 minors; each minor is stored like (auxvar_x^2,auxvar_y^2,auxvar_xy) */
+   SCIP_Bool*            isdiagonal;         /**< bool array determining if the variables appearing in the minor are diagonal */
    int                   nminors;            /**< total number of minors */
    int                   minorssize;         /**< size of minors array */
    int                   maxminorsconst;     /**< constant for the maximum number of minors, i.e., max(const, fac * # quadratic terms) */
@@ -72,6 +74,7 @@ struct SCIP_SepaData
    SCIP_Real             mincutviol;         /**< minimum required violation of a cut */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generation */
    SCIP_Bool             usestrengthening;   /**< whether to use strengthened intersection cuts to separate minors */
+   SCIP_Bool             usebounds;          /**< whether to also enforce nonegativity bounds of principle minors */
    SCIP_Bool             ignorepackingconss; /**< whether to ignore circle packing constraints during minor detection */
 };
 
@@ -79,6 +82,7 @@ struct SCIP_SepaData
 struct myarray
 {
    int*                  vals;               /**< index of the column */
+   int                   rowidx;             /**< index corresponding to variable of that row */
    int                   nvals;
    int                   valssize;
    SCIP_HASHMAP*         auxvars;            /**< entry of the matrix */
@@ -96,7 +100,11 @@ SCIP_RETCODE sepadataAddMinor(
    SCIP_VAR*             auxvarxik,          /**< auxiliary variable X_ik = x_i * x_k */
    SCIP_VAR*             auxvarxil,          /**< auxiliary variable X_il = x_i * x_l */
    SCIP_VAR*             auxvarxjk,          /**< auxiliary variable X_jk = x_j * x_k */
-   SCIP_VAR*             auxvarxjl           /**< auxiliary variable X_jl = x_j * x_l */
+   SCIP_VAR*             auxvarxjl,          /**< auxiliary variable X_jl = x_j * x_l */
+   SCIP_Bool             isauxvarxikdiag,    /**< is X_ik diagonal? (i.e. i = k) */
+   SCIP_Bool             isauxvarxildiag,    /**< is X_il diagonal? (i.e. i = l) */
+   SCIP_Bool             isauxvarxjkdiag,    /**< is X_jk diagonal? (i.e. j = k) */
+   SCIP_Bool             isauxvarxjldiag     /**< is X_jl diagonal? (i.e. j = l) */
    )
 {
    assert(sepadata != NULL);
@@ -117,6 +125,7 @@ SCIP_RETCODE sepadataAddMinor(
       assert(newsize >= 4 * (sepadata->nminors + 1));
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->minors), sepadata->minorssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(sepadata->isdiagonal), sepadata->minorssize, newsize) );
       sepadata->minorssize = newsize;
    }
 
@@ -125,6 +134,10 @@ SCIP_RETCODE sepadataAddMinor(
    sepadata->minors[4 * sepadata->nminors + 1] = auxvarxil;
    sepadata->minors[4 * sepadata->nminors + 2] = auxvarxjk;
    sepadata->minors[4 * sepadata->nminors + 3] = auxvarxjl;
+   sepadata->isdiagonal[4 * sepadata->nminors] = isauxvarxikdiag;
+   sepadata->isdiagonal[4 * sepadata->nminors + 1] = isauxvarxildiag;
+   sepadata->isdiagonal[4 * sepadata->nminors + 2] = isauxvarxjkdiag;
+   sepadata->isdiagonal[4 * sepadata->nminors + 3] = isauxvarxjldiag;
    ++(sepadata->nminors);
 
    /* capture variables */
@@ -158,6 +171,7 @@ SCIP_RETCODE sepadataClear(
 
    /* free memory */
    SCIPfreeBlockMemoryArrayNull(scip, &sepadata->minors, sepadata->minorssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &sepadata->isdiagonal, sepadata->minorssize);
 
    /* reset counters */
    sepadata->nminors = 0;
@@ -165,7 +179,6 @@ SCIP_RETCODE sepadataClear(
 
    return SCIP_OKAY;
 }
-
 
 /** helper method to get the variables associated to a minor */
 static
@@ -175,7 +188,11 @@ SCIP_RETCODE getMinorVars(
    SCIP_VAR**            auxvarxik,          /**< auxiliary variable X_ik = x_i * x_k */
    SCIP_VAR**            auxvarxil,          /**< auxiliary variable X_il = x_i * x_l */
    SCIP_VAR**            auxvarxjk,          /**< auxiliary variable X_jk = x_j * x_k */
-   SCIP_VAR**            auxvarxjl           /**< auxiliary variable X_jl = x_j * x_l */
+   SCIP_VAR**            auxvarxjl,          /**< auxiliary variable X_jl = x_j * x_l */
+   SCIP_Bool*            isauxvarxikdiag,    /**< is X_ik diagonal? (i.e. i = k) */
+   SCIP_Bool*            isauxvarxildiag,    /**< is X_il diagonal? (i.e. i = l) */
+   SCIP_Bool*            isauxvarxjkdiag,    /**< is X_jk diagonal? (i.e. j = k) */
+   SCIP_Bool*            isauxvarxjldiag     /**< is X_jl diagonal? (i.e. j = l) */
    )
 {
    assert(auxvarxik != NULL);
@@ -187,6 +204,11 @@ SCIP_RETCODE getMinorVars(
    *auxvarxil = sepadata->minors[4 * idx + 1];
    *auxvarxjk = sepadata->minors[4 * idx + 2];
    *auxvarxjl = sepadata->minors[4 * idx + 3];
+
+   *isauxvarxikdiag = sepadata->isdiagonal[4 * idx];
+   *isauxvarxildiag = sepadata->isdiagonal[4 * idx + 1];
+   *isauxvarxjkdiag = sepadata->isdiagonal[4 * idx + 2];
+   *isauxvarxjldiag = sepadata->isdiagonal[4 * idx + 3];
 
    return SCIP_OKAY;
 }
@@ -246,6 +268,7 @@ SCIP_RETCODE insertIndex(
       SCIP_CALL( SCIPhashmapCreate(&arr->auxvars, SCIPblkmem(scip), arr->valssize) );
 
       /* insert */
+      arr->rowidx = SCIPvarGetProbindex(row);
       arr->vals[arr->nvals] = SCIPvarGetProbindex(col);
       SCIP_CALL( SCIPhashmapInsert(arr->auxvars, (void*)col, (void *)auxvar) );
       arr->nvals += 1;
@@ -421,19 +444,42 @@ SCIP_RETCODE detectMinors(
                   SCIP_VAR* auxvaril;
                   SCIP_VAR* auxvarjk;
                   SCIP_VAR* auxvarjl;
+                  int i;
+                  int j;
+                  int k;
+                  int l;
+                  SCIP_Bool isauxvarikdiag = FALSE;
+                  SCIP_Bool isauxvarildiag = FALSE;
+                  SCIP_Bool isauxvarjkdiag = FALSE;
+                  SCIP_Bool isauxvarjldiag = FALSE;
+
+                  i = rowi->rowidx;
+                  j = rowj->rowidx;
+                  k = intersection[p];
+                  l = intersection[q];
 
                   rowicols = rowi->auxvars;
                   rowjcols = rowj->auxvars;
 
-                  colk = SCIPgetVars(scip)[intersection[p]];
-                  coll = SCIPgetVars(scip)[intersection[q]];
+                  colk = SCIPgetVars(scip)[k];
+                  coll = SCIPgetVars(scip)[l];
 
                   auxvarik = SCIPhashmapGetImage(rowicols, colk);
                   auxvaril = SCIPhashmapGetImage(rowicols, coll);
                   auxvarjk = SCIPhashmapGetImage(rowjcols, colk);
                   auxvarjl = SCIPhashmapGetImage(rowjcols, coll);
 
-                  SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarik, auxvaril, auxvarjk, auxvarjl) );
+                  if( i == k )
+                     isauxvarikdiag = TRUE;
+                  else if( i == l )
+                     isauxvarildiag = TRUE;
+                  if( j == k )
+                     isauxvarjkdiag = TRUE;
+                  else if( j == l )
+                     isauxvarjldiag = TRUE;
+
+                  SCIP_CALL( sepadataAddMinor(scip, sepadata, auxvarik, auxvaril, auxvarjk, auxvarjl,
+                        isauxvarikdiag, isauxvarildiag, isauxvarjkdiag, isauxvarjldiag) );
                }
             }
          }
@@ -513,6 +559,10 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP_Real*            ray,                /**< coefficients of ray */
    SCIP_VAR**            vars,               /**< variables */
    SCIP_Real*            coefs,              /**< buffer to store A, B, C, D, and E */
+   SCIP_Real*            coefs4b,
+   SCIP_Real*            coefscondition,
+   SCIP_Bool             usebounds,          /**< TRUE if we want to separate non-negative bound */
+   SCIP_Real*            ad,                 /**< coefs a and d for the hyperplane aTx + dTy <= 0 */
    SCIP_Bool*            success             /**< FALSE if we need to abort generation because of numerics */
    )
 {
@@ -526,12 +576,19 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP_Real* e;
    SCIP_Real min;
    SCIP_Real max;
+   SCIP_Real norm1;
+   SCIP_Real norm2;
+   int negidx;
+   int posidx;
    int i;
 
    *success = TRUE;
 
    /* set all coefficients to zero */
    memset(coefs, 0, 5 * sizeof(SCIP_Real));
+   memset(coefs4b, 0, 5 * sizeof(SCIP_Real));
+   norm1 = 0.0;
+   norm2 = 0.0;
 
    a = coefs;
    b = coefs + 1;
@@ -539,6 +596,8 @@ SCIP_RETCODE computeRestrictionToRay(
    d = coefs + 3;
    e = coefs + 4;
 
+   negidx = 2;
+   posidx = 0;
    for( i = 0; i < 4; ++i )
    {
       int j;
@@ -560,6 +619,14 @@ SCIP_RETCODE computeRestrictionToRay(
          /* positive eigenvalue: compute D and E */
          *d += eigenvalues[i] * vzlp * vdotray;
          *e += eigenvalues[i] * SQR( vzlp );
+
+         if( usebounds )
+         {
+            norm1 += eigenvalues[i] * (1 - SQR( ad[posidx] )) * SQR( vzlp );
+            norm2 += SQRT( eigenvalues[i] ) * ad[posidx] * vzlp;
+            ++posidx;
+         }
+
       }
       else
       {
@@ -567,20 +634,50 @@ SCIP_RETCODE computeRestrictionToRay(
          *a -= eigenvalues[i] * SQR( vdotray );
          *b -= 2.0 * eigenvalues[i] * vzlp * vdotray;
          *c -= eigenvalues[i] * SQR( vzlp );
+
+         if( usebounds )
+         {
+            coefs4b[0] -= eigenvalues[i] * (1 - SQR( ad[negidx] )) * SQR( vdotray );
+            coefs4b[1] -= 2.0 * eigenvalues[i] * (1 - SQR( ad[negidx] )) * vzlp * vdotray;
+            coefs4b[2] -= eigenvalues[i] * (1 - SQR( ad[negidx] )) * SQR( vzlp );
+            coefs4b[3] += SQRT( -eigenvalues[i] ) * ad[negidx] * vdotray;
+            coefs4b[4] += SQRT( -eigenvalues[i] ) * ad[negidx] * vzlp;
+            ++negidx;
+         }
       }
    }
 
-   /* finish computation of D and E */
    assert(*e > 0);
-   *e = SQRT( *e );
-   *d /= *e;
 
-   if( SQRT( *c ) - *e >= 0.0 )
+   if( SQRT( *c ) - SQRT( *e ) >= 0.0 )
    {
-      assert(SQRT( *c ) - *e < 1e-6);
+      assert(SQRT( *c ) - SQRT( *e ) < 1e-6);
       *success = FALSE;
       return SCIP_OKAY;
    }
+
+   /* finish computation of coefficients when using bounds */
+   if( usebounds )
+   {
+      coefscondition[0] = norm2 / SQRT( *e );
+      coefscondition[1] = coefs4b[3];
+      coefscondition[2] = coefs4b[4];
+
+      coefs4b[0] *= norm1 / *e;
+      coefs4b[1] *= norm1 / *e;
+      coefs4b[2] *= norm1 / *e;
+      coefs4b[3] *= norm2 / SQRT( *e );
+      coefs4b[4] *= norm2 / SQRT( *e );
+
+      coefs4b[3] += *d / SQRT( *e );
+      coefs4b[4] += SQRT( *e );
+
+      assert( SQRT( coefs4b[2] ) - coefs4b[4] < 0.0 );
+   }
+
+   /* finish computation of D and E */
+   *e = SQRT( *e );
+   *d /= *e;
 
    /* maybe we want to avoid a large dynamism between A, B and C */
    max = 0.0;
@@ -714,6 +811,18 @@ void doBinarySearch(
 
 }
 
+static
+SCIP_Real isCase4a(
+   SCIP_Real             tsol,               /**< t in the above formula */
+   SCIP_Real*            coefs,              /**< coefficients A, B, C, D, and E of case 4a */
+   SCIP_Real*            coefscondition      /**< extra coefficients needed for the evaluation of the condition:
+                                                num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
+   )
+{
+   return (coefscondition[0] * SQRT( coefs[0] * SQR( tsol ) + coefs[1] * tsol + coefs[2] ) + coefscondition[1] *
+      tsol + coefscondition[2]) <= 0.0;
+}
+
 /**  finds smallest positive root phi by finding the smallest positive root of
  * (A - D^2) t^2 + (B - 2 D*E) t + (C - E^2) = 0
  * However, we are conservative and want a solution such that phi is negative, but close to 0;
@@ -782,6 +891,54 @@ SCIP_Real computeRoot(
    }
 
    return sol;
+}
+
+static
+SCIP_Real computeIntersectionPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             usebounds,          /**< whether we are in case 4 or not */
+   SCIP_Real*            coefs,              /**< values of A, B, C, D, and E of cases 1, 2, 3, or 4a */
+   SCIP_Real*            coefs4b,            /**< values of A, B, C, D, and E of case 4b */
+   SCIP_Real*            coefscondition      /**< values needed to evaluate condition of case 4 */
+   )
+{
+   SCIP_Real sol;
+   SCIP_Real sol4b;
+
+   assert(coefs != NULL);
+
+   if( ! usebounds )
+      return computeRoot(scip, coefs);
+
+   assert(coefs4b != NULL);
+   assert(coefscondition != NULL);
+
+   /* compute solution of first piece */
+   sol = computeRoot(scip, coefs);
+
+   /* if there is no solution --> second piece doesn't have solution */
+   if( SCIPisInfinity(scip, sol) )
+   {
+      /* this assert fails on multiplants_mtg5 the problem is that sqrt(A) <= D in 4a but not in 4b,
+       * now, this is impossible since the phi4a >= phi4b, so actually sqrt(A) is 10e-15 away from
+       * D in 4b
+       */
+      /* assert(SCIPisInfinity(scip, computeRoot(scip, coefs4b))); */
+      return sol;
+   }
+
+   /* if solution of 4a is in 4a, then return */
+   if( isCase4a(sol, coefs, coefscondition) )
+      return sol;
+
+   /* not on 4a --> then the intersection point is whatever 4b says: as phi4a >= phi4b, the solution of phi4b should
+    * always be larger (but shouldn't be equal at this point given that isCase4a failed, and the condition function
+    * evaluates to 0 when phi4a == phi4b) than the solution of phi4a; However, because of numerics (or limits in the
+    * binary search) we can find a slightly smaller solution; thus, we just keep the larger one
+    */
+   sol4b = computeRoot(scip, coefs4b);
+
+   return MAX(sol, sol4b);
 }
 
 /** adds cutcoef * (col - col*) to rowprep */
@@ -876,7 +1033,6 @@ SCIP_RETCODE addRowToCut(
    return SCIP_OKAY;
 }
 
-
 /** get the tableau rows of the variables in vars */
 static
 SCIP_RETCODE getTableauRows(
@@ -957,6 +1113,8 @@ SCIP_RETCODE addCols(
    int*                  nrays,              /**< pointer to store number of nonzero rays */
    int*                  rayslppos,           /**< buffer to store lppos of nonzero rays */
    SCIP_Real*            interpoints,        /**< buffer to store intersection points or NULL if not needed */
+   SCIP_Bool             usebounds,
+   SCIP_Real*            ad,
    SCIP_Bool*            success             /**< pointer to store whether the generation of cutcoefs was successful */
    )
 {
@@ -973,6 +1131,8 @@ SCIP_RETCODE addCols(
    {
       SCIP_COL* col;
       SCIP_Real coefs[5];
+      SCIP_Real coefs4b[5];
+      SCIP_Real coefscondition[3];
       SCIP_Real factor;
       SCIP_Bool israynonzero;
       SCIP_Real cutcoef;
@@ -1020,13 +1180,14 @@ SCIP_RETCODE addCols(
          continue;
 
       /* compute the cut */
-      SCIP_CALL( computeRestrictionToRay(scip, &rays[(*nrays) * 4], vars, coefs, success) );
+      SCIP_CALL( computeRestrictionToRay(scip, &rays[(*nrays) * 4], vars, coefs, coefs4b, coefscondition, usebounds,
+            ad, success) );
 
       if( *success == FALSE )
          return SCIP_OKAY;
 
       /* compute intersection point */
-      interpoint = computeRoot(scip, coefs);
+      interpoint = computeIntersectionPoint(scip, usebounds, coefs, coefs4b, coefscondition);
 
       /* store intersection points */
       interpoints[*nrays] = interpoint;
@@ -1062,6 +1223,8 @@ SCIP_RETCODE addRows(
    int*                  nrays,              /**< pointer to store number of nonzero rays */
    int*                  rayslppos,           /**< buffer to store lppos of nonzero rays */
    SCIP_Real*            interpoints,        /**< buffer to store intersection points or NULL if not needed */
+   SCIP_Bool             usebounds,
+   SCIP_Real*            ad,
    SCIP_Bool*            success             /**< pointer to store whether the generation of cutcoefs was successful */
    )
 {
@@ -1081,6 +1244,8 @@ SCIP_RETCODE addRows(
    {
       SCIP_ROW* row;
       SCIP_Real coefs[5];
+      SCIP_Real coefs4b[5];
+      SCIP_Real coefscondition[3];
       SCIP_Real factor;
       SCIP_Bool israynonzero;
       SCIP_Real cutcoef;
@@ -1126,13 +1291,14 @@ SCIP_RETCODE addRows(
          continue;
 
       /* compute the cut */
-      SCIP_CALL( computeRestrictionToRay(scip, &rays[(*nrays) * 4], vars, coefs, success) );
+      SCIP_CALL( computeRestrictionToRay(scip, &rays[(*nrays) * 4], vars, coefs, coefs4b, coefscondition, usebounds,
+            ad, success) );
 
       if( *success == FALSE )
          return SCIP_OKAY;
 
       /* compute intersection point */
-      interpoint = computeRoot(scip, coefs);
+      interpoint = computeIntersectionPoint(scip, usebounds, coefs, coefs4b, coefscondition);
 
       /* store intersection points */
       interpoints[*nrays] = interpoint;
@@ -1200,7 +1366,9 @@ SCIP_RETCODE findRho(
    int                   idx,                /**< index of current ray we want to find rho for */
    SCIP_Real*            interpoints,        /**< intersection points of nonzero rays */
    SCIP_VAR**            vars,               /**< variables */
-   SCIP_Real*            rho,                /**< pointer to store the oprimal rho */
+   SCIP_Real*            rho,                /**< pointer to store the optimal rho */
+   SCIP_Bool             usebounds,          /**< TRUE if we want to separate non-negative bound */
+   SCIP_Real*            ad,                 /**< coefs a and d for the hyperplane aTx + dTy <= 0 */
    SCIP_Bool*            success             /**< TRUE if computation of rho was successful */
    )
 {
@@ -1236,6 +1404,8 @@ SCIP_RETCODE findRho(
          for( j = 0; j < BINSEARCH_MAXITERS; ++j )
          {
             SCIP_Real coefs[5];
+            SCIP_Real coefs4b[5];
+            SCIP_Real coefscondition[3];
             SCIP_Real newray[4];
             SCIP_Real interpoint;
             int k;
@@ -1247,7 +1417,8 @@ SCIP_RETCODE findRho(
                newray[k] = alpha * rays[4 * i + k] - (1 - alpha) * rays[4 * idx + k];
 
             /* restrict phi to the "new" ray */
-            SCIP_CALL( computeRestrictionToRay(scip, newray, vars, coefs, success) );
+            SCIP_CALL( computeRestrictionToRay(scip, newray, vars, coefs, coefs4b, coefscondition, usebounds,
+                  ad, success) );
 
             if( ! *success )
                return SCIP_OKAY;
@@ -1257,7 +1428,7 @@ SCIP_RETCODE findRho(
              */
 
             /* compute intersection point */
-            interpoint = computeRoot(scip, coefs);
+            interpoint = computeIntersectionPoint(scip, usebounds, coefs, coefs4b, coefscondition);
 
             /* no root exists */
             if( SCIPisInfinity(scip, interpoint) )
@@ -1297,6 +1468,8 @@ SCIP_RETCODE computeNegCutcoefs(
    int*                  rayslppos,          /**< lppos of nonzero rays */
    SCIP_Real*            interpoints,        /**< intersection points */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
+   SCIP_Bool             usebounds,          /**< TRUE if we want to separate non-negative bound */
+   SCIP_Real*            ad,                 /**< coefs a and d for the hyperplane aTx + dTy <= 0 */
    SCIP_Bool*            success             /**< if a cut candidate could be computed */
    )
 {
@@ -1321,7 +1494,7 @@ SCIP_RETCODE computeNegCutcoefs(
          continue;
 
       /* compute the smallest rho */
-      SCIP_CALL( findRho(scip, rays, nrays, i, interpoints, vars, &rho, success) );
+      SCIP_CALL( findRho(scip, rays, nrays, i, interpoints, vars, &rho, usebounds, ad, success) );
 
       if( ! *success )
          continue;
@@ -1366,6 +1539,10 @@ SCIP_RETCODE separateDeterminant(
    SCIP_VAR*             xil,                /**< variable X_il = x_i * x_l */
    SCIP_VAR*             xjk,                /**< variable X_jk = x_j * x_k */
    SCIP_VAR*             xjl,                /**< variable X_jl = x_j * x_l */
+   SCIP_Bool*            isxikdiag,          /**< is X_ik diagonal? (i.e. i = k) */
+   SCIP_Bool*            isxildiag,          /**< is X_il diagonal? (i.e. i = l) */
+   SCIP_Bool*            isxjkdiag,          /**< is X_jk diagonal? (i.e. j = k) */
+   SCIP_Bool*            isxjldiag,          /**< is X_jl diagonal? (i.e. j = l) */
    int*                  basicvarpos2tableaurow,/**< map between basic var and its tableau row */
    SCIP_HASHMAP*         tableau,            /**< map between var an its tableau row */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
@@ -1381,6 +1558,11 @@ SCIP_RETCODE separateDeterminant(
    int ncols;
    int nrows;
    SCIP_Bool success;
+   SCIP_Real ad[4] = {0.0, 0.0, 0.0, 0.0};
+   SCIP_Real solxik;
+   SCIP_Real solxil;
+   SCIP_Real solxjk;
+   SCIP_Real solxjl;
 
    ncols = SCIPgetNLPCols(scip);
    nrows = SCIPgetNLPRows(scip);
@@ -1402,15 +1584,45 @@ SCIP_RETCODE separateDeterminant(
    if( ! success )
       goto CLEANUP;
 
+   /* if we want to enforce bounds, set the right a and d to enforce aTx + dTy <= 0 */
+   if( sepadata->usebounds )
+   {
+      solxik = SCIPvarGetLPSol(xik);
+      solxil = SCIPvarGetLPSol(xil);
+      solxjk = SCIPvarGetLPSol(xjk);
+      solxjl = SCIPvarGetLPSol(xjl);
+
+      if( isxikdiag && SCIPisFeasNegative(scip, solxik) )
+      {
+         ad[0] = -1.0;
+         ad[2] = 1.0;
+      }
+      else if( isxjldiag && SCIPisFeasNegative(scip, solxjl) )
+      {
+         ad[0] = -1.0;
+         ad[2] = -1.0;
+      }
+      else if( isxildiag && SCIPisFeasNegative(scip, solxil) )
+      {
+         ad[1] = 1.0;
+         ad[3] = -1.0;
+      }
+      else if( isxjkdiag && SCIPisFeasNegative(scip, solxjk) )
+      {
+         ad[1] = -1.0;
+         ad[3] = -1.0;
+      }
+   }
+
    nrays = 0;
    /* loop over each non-basic var; get the ray; compute cut coefficient */
-   SCIP_CALL( addCols(scip, vars, tableaurows, rowprep, rays, &nrays, rayslppos, interpoints, &success) );
+   SCIP_CALL( addCols(scip, vars, tableaurows, rowprep, rays, &nrays, rayslppos, interpoints, sepadata->usebounds, ad, &success) );
 
    if( ! success )
       goto CLEANUP;
 
    /* loop over non-basic slack variables */
-   SCIP_CALL( addRows(scip, vars, tableaurows, rowprep, rays, &nrays, rayslppos, interpoints, &success) );
+   SCIP_CALL( addRows(scip, vars, tableaurows, rowprep, rays, &nrays, rayslppos, interpoints, sepadata->usebounds, ad, &success) );
 
    if( ! success )
       goto CLEANUP;
@@ -1418,7 +1630,7 @@ SCIP_RETCODE separateDeterminant(
    /* do strengthening */
    if( sepadata->usestrengthening )
    {
-      SCIP_CALL( computeNegCutcoefs(scip, vars, rays, nrays, rayslppos, interpoints, rowprep, &success) );
+      SCIP_CALL( computeNegCutcoefs(scip, vars, rays, nrays, rayslppos, interpoints, rowprep, sepadata->usebounds, ad, &success) );
 
       if( ! success )
          goto CLEANUP;
@@ -1507,14 +1719,20 @@ SCIP_RETCODE separatePoint(
       SCIP_VAR* auxvarxil;
       SCIP_VAR* auxvarxjk;
       SCIP_VAR* auxvarxjl;
+      SCIP_Bool isauxvarxikdiag;
+      SCIP_Bool isauxvarxildiag;
+      SCIP_Bool isauxvarxjkdiag;
+      SCIP_Bool isauxvarxjldiag;
       SCIP_Real solxik;
       SCIP_Real solxil;
       SCIP_Real solxjk;
       SCIP_Real solxjl;
       SCIP_Real det;
+      SCIP_Real ad[4];
 
       /* get variables of the i-th minor */
-      SCIP_CALL( getMinorVars(sepadata, i, &auxvarxik, &auxvarxil, &auxvarxjk, &auxvarxjl) );
+      SCIP_CALL( getMinorVars(sepadata, i, &auxvarxik, &auxvarxil, &auxvarxjk, &auxvarxjl, &isauxvarxikdiag,
+            &isauxvarxildiag, &isauxvarxjkdiag, &isauxvarxjldiag) );
 
       /* get current solution values */
       solxik = SCIPvarGetLPSol(auxvarxik);
@@ -1524,18 +1742,19 @@ SCIP_RETCODE separatePoint(
 
       det = solxik * solxjl - solxil * solxjk;
 
+      if( SCIPisFeasZero(scip, det) )
+         continue;
+
       if( SCIPisFeasPositive(scip, det) )
       {
-         SCIP_CALL( separateDeterminant(scip, sepa, sepadata, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, basicvarpos2tableaurow,
-                  tableau, result) );
+         SCIP_CALL( separateDeterminant(scip, sepa, sepadata, auxvarxik, auxvarxil, auxvarxjk, auxvarxjl, &isauxvarxikdiag,
+                  &isauxvarxildiag, &isauxvarxjkdiag, &isauxvarxjldiag, basicvarpos2tableaurow, tableau, result) );
       }
       else if( SCIPisFeasNegative(scip, det) )
       {
-         SCIP_CALL( separateDeterminant(scip, sepa, sepadata, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, basicvarpos2tableaurow,
-                  tableau, result) );
+         SCIP_CALL( separateDeterminant(scip, sepa, sepadata, auxvarxil, auxvarxik, auxvarxjl, auxvarxjk, &isauxvarxildiag,
+                  &isauxvarxikdiag, &isauxvarxjldiag, &isauxvarxjkdiag, basicvarpos2tableaurow, tableau, result) );
       }
-      else
-         continue;
    }
 
    /* free memory */
@@ -1729,6 +1948,11 @@ SCIP_RETCODE SCIPincludeSepaInterminor(
          "separating/" SEPA_NAME "/usestrengthening",
          "whether to use strengthened intersection cuts to separate minors",
          &sepadata->usestrengthening, FALSE, DEFAULT_USESTRENGTHENING, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/" SEPA_NAME "/usebounds",
+         "whether to also enforce nonegativity bounds of principle minors",
+         &sepadata->usebounds, FALSE, DEFAULT_USEBOUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/" SEPA_NAME "/maxminorsconst",
