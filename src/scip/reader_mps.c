@@ -1129,7 +1129,7 @@ SCIP_RETCODE readRhs(
          if( cons == NULL )
          {
             /* the rhs of the objective row is treated as objective constant */
-            if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+            if( strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) == 0 )
             {
                val = atof(mpsinputField3(mpsi));
                SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
@@ -1172,9 +1172,9 @@ SCIP_RETCODE readRhs(
             if( cons == NULL )
             {
                /* the rhs of the objective row is treated as objective constant */
-               if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+               if( strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) == 0 )
                {
-                  val = atof(mpsinputField3(mpsi));
+                  val = atof(mpsinputField5(mpsi));
                   SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
                }
                else
@@ -3348,7 +3348,8 @@ void printRhsSection(
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Real*            rhss,               /**< right hand side array */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   SCIP_Real             objoffset           /**< objective offset */
    )
 {
    int recordcnt = 0;
@@ -3369,6 +3370,12 @@ void printRhsSection(
       assert(consnames[c] != NULL);
 
       printEntry(scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen);
+   }
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      /* write objective offset (-1 because it is moved to the rhs) */
+      printEntry(scip, file, "RHS", "Obj", -objoffset, &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -4044,8 +4051,6 @@ SCIP_RETCODE SCIPwriteMps(
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
 
    /* print NAME of the problem */
    SCIPinfoMessage(scip, file, "%-14s%s\n", "NAME", name);
@@ -4078,7 +4083,7 @@ SCIP_RETCODE SCIPwriteMps(
       {
          assert( matrix->nentries < matrix->sentries );
 
-         matrix->values[matrix->nentries] = value;
+         matrix->values[matrix->nentries] = objscale * value;
          matrix->columns[matrix->nentries] = var;
          matrix->rows[matrix->nentries] = "Obj";
          matrix->nentries++;
@@ -4675,7 +4680,7 @@ SCIP_RETCODE SCIPwriteMps(
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
 
    /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen);
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);
 
    /* output RANGES section */
    if( needRANGES )

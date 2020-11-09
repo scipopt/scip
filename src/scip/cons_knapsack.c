@@ -4909,7 +4909,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5076,7 +5076,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5203,7 +5203,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 

@@ -1093,7 +1093,6 @@ SCIP_RETCODE SCIPlpiCreate(
    int restat;
 
    assert(sizeof(SCIP_Real) == sizeof(double)); /* CPLEX only works with doubles as floating points */ /*lint !e506*/
-   assert(sizeof(SCIP_Bool) == sizeof(int));    /* CPLEX only works with ints as bools */ /*lint !e506*/
    assert(lpi != NULL);
    assert(name != NULL);
 

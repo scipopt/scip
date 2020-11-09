@@ -7,6 +7,10 @@ Features
 --------
 
 - Extended check for valid variable and constraint names in PIP writer.
+- Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
+  name matching during parsing. The old format is still supported.
+- The objective scale and offset are now taken into account when reading/writing problems in lp/mps/fzn/pip format.
+  This often changes the behavior when writing transformed problems.
 
 Performance improvements
 ------------------------
@@ -26,6 +30,7 @@ Interface changes
 ### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+- added new sorting functions SCIPsortPtrRealRealBoolBool()
 
 ### Command line interface
 
@@ -59,13 +64,20 @@ Fixed bugs
 - Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
-- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested nor modifiable rows
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
+- Fixed treatment of negated variables in parsing orbitope constraints
 - Fixed potential indexing error in prop_vbounds.c
 - Fixed bug in writing fzn format
 - Revert to old parameter value when parameter change is rejected in PARAMCHGD callback
+- Fixed order of linker flags when building AMPL interface with cmake system.
+- Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
+- Fixed bug in presol_boundshift: do not shift non-active variables
+- Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
+- Fixed bug with multi-aggregated integer variables in cons_xor.
+- Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 
 Miscellaneous
 -------------
