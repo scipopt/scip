@@ -3096,10 +3096,6 @@ SCIP_RETCODE SCIPwritePip(
    /* print objective sense */
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
 
-   /* adapt objective scale for transformed problem (for the original no change is necessary) */
-   if( transformed && objsense == SCIP_OBJSENSE_MAXIMIZE )
-      objscale *= -1.0;
-
    clearLine(linebuffer, &linecnt);
    appendLine(scip, file, linebuffer, &linecnt, " Obj:");
 

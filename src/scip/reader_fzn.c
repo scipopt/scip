@@ -4677,10 +4677,6 @@ SCIP_RETCODE writeFzn(
    {
       SCIPinfoMessage(scip, file, "solve %s int_float_lin([", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize" );
 
-      /* adapt objective scale for transformed problem (for the original no change is necessary) */
-      if( transformed && objsense == SCIP_OBJSENSE_MAXIMIZE )
-         objscale *= -1.0;
-
       /* first array: coefficients (in float representation) of discrete variables with integral objective coefficient */
       for( v = 0; v < nintobjvars; v++ )
       {
