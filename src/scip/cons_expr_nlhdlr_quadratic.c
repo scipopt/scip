@@ -52,7 +52,7 @@
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "quadratic"
 #define NLHDLR_DESC               "handler for quadratic expressions"
-#define NLHDLR_DETECTPRIORITY     100
+#define NLHDLR_DETECTPRIORITY       1
 #define NLHDLR_ENFOPRIORITY       100
 
 /* properties of the quadratic nlhdlr statistics table */
@@ -96,6 +96,8 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_CONS*            cons;               /**< if expr is the root of constraint cons, store cons; otherwise NULL */
    SCIP_Bool             separating;         /**< whether we are using the nlhdlr also for separation */
    SCIP_Bool             origvars;           /**< whether the quad expr in quaddata is in original (non-aux) variables */
+
+   int                   ncutsadded;         /**< number of intersection cuts added for this quadratic */
 };
 
 /** nonlinear handler data */
@@ -113,7 +115,12 @@ struct SCIP_ConsExpr_NlhdlrData
    int                   ncutslimitroot;     /**< limit for number of cuts generated at root node */
    int                   maxrank;            /**< maximal rank a slackvar can have */
    SCIP_Real             mincutviolation;    /**< minimal cut violation the generated cuts must fulfill to be added to the LP */
+   SCIP_Real             minviolation;       /**< minimal violation the constraint must fulfill such that a cut can be generated */
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n) */
+   int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
+   SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
+   SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
+   SCIP_Bool             ignorehighre;      /**< should cut be added even when range / efficacy is large? */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -1191,7 +1198,8 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            coefs1234a,         /**< buffer to store A, B, C, D, and E of cases 1, 2, 3, or 4a */
    SCIP_Real*            coefs4b,            /**< buffer to store A, B, C, D, and E of case 4b (or NULL if not needed) */
-   SCIP_Real*            coefscondition      /**< buffer to store data to evaluate condition to decide case 4a or 4b */
+   SCIP_Real*            coefscondition,     /**< buffer to store data to evaluate condition to decide case 4a or 4b */
+   SCIP_Bool*            success             /**< did we successfully compute the coefficients? */
    )
 {
    SCIP_CONSEXPR_QUADEXPR* quaddata;
@@ -1205,6 +1213,8 @@ SCIP_RETCODE computeRestrictionToRay(
    SCIP_Real* e;
    SCIP_Real wray;
    int i;
+
+   *success = TRUE;
 
    quaddata = nlhdlrexprdata->quaddata;
    SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
@@ -1267,7 +1277,7 @@ SCIP_RETCODE computeRestrictionToRay(
          *e += (sidefactor * eigenvalues[i]) * SQR( dot );
 
 #ifdef INTERCUT_MOREDEBUG
-         printf("Positive eigenvalue: computing D: v^T ray %g, v^T( zlp + b/theta ) %g and theta %g \n", vdotray, dot, (sidefactor * nlhdlrexprdata->eigenvalues[i]));
+         printf("Positive eigenvalue: computing D: v^T ray %g, v^T( zlp + b/theta ) %g and theta %g \n", vdotray, dot, (sidefactor * eigenvalues[i]));
 #endif
       }
       else
@@ -1278,7 +1288,7 @@ SCIP_RETCODE computeRestrictionToRay(
          *c -= (sidefactor * eigenvalues[i]) * SQR( dot );
 
 #ifdef INTERCUT_MOREDEBUG
-         printf("Negative eigenvalue: computing A: v^T ray %g, and theta %g \n", vdotray, (sidefactor * nlhdlrexprdata->eigenvalues[i]));
+         printf("Negative eigenvalue: computing A: v^T ray %g, and theta %g \n", vdotray, (sidefactor * eigenvalues[i]));
 #endif
       }
    }
@@ -1296,7 +1306,19 @@ SCIP_RETCODE computeRestrictionToRay(
 
       /* some sanity checks only applicable to these cases (more at the end) */
       assert(*c >= 0);
-      assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
+
+      /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
+       * the generation of the cut in this case.
+       */
+      if( SQRT( *c ) - *e >= 0 )
+      {
+         /* check if it's really a numerical problem */
+         assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+
+         INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
    }
    else
    {
@@ -1700,8 +1722,6 @@ SCIP_RETCODE computeIntercut(
    SCIP_ROW** rows;
    int i;
 
-   *success = TRUE;
-
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
@@ -1718,7 +1738,10 @@ SCIP_RETCODE computeIntercut(
       /* restrict phi to ray */
       SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
                &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-               rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition) );
+               rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+
+      if( ! *success )
+         return SCIP_OKAY;
 
       /* if restriction to ray is numerically nasty -> abort cut separation */
       // TODO: put this in another function
@@ -1739,34 +1762,14 @@ SCIP_RETCODE computeIntercut(
          }
 
          /* maybe we want to avoid a large dynamism between A, B and C */
-         max = 0.0; min = SCIPinfinity(scip);
-         for( j = 0; j < 3; ++j )
-         {
-            SCIP_Real absval;
-
-            absval = ABS(coefs1234a[j]);
-            if( max < absval )
-               max = absval;
-            if( absval != 0.0 && absval < min )
-               min = absval;
-         }
-
-         if( SCIPisHugeValue(scip, max / min) )
-         {
-            INTERLOG(printf("Bad numerics 1 2 3 or 4a: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
-            *success = FALSE;
-            nlhdlrdata->nbadrayrestriction++;
-            return SCIP_OKAY;
-         }
-
-         if( iscase4 )
+         if( nlhdlrdata->ignorebadrayrestriction )
          {
             max = 0.0; min = SCIPinfinity(scip);
             for( j = 0; j < 3; ++j )
             {
                SCIP_Real absval;
 
-               absval = ABS(coefs4b[j]);
+               absval = ABS(coefs1234a[j]);
                if( max < absval )
                   max = absval;
                if( absval != 0.0 && absval < min )
@@ -1775,10 +1778,33 @@ SCIP_RETCODE computeIntercut(
 
             if( SCIPisHugeValue(scip, max / min) )
             {
-               INTERLOG(printf("Bad numeric 4b: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
+               INTERLOG(printf("Bad numerics 1 2 3 or 4a: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
                *success = FALSE;
                nlhdlrdata->nbadrayrestriction++;
                return SCIP_OKAY;
+            }
+
+            if( iscase4 )
+            {
+               max = 0.0; min = SCIPinfinity(scip);
+               for( j = 0; j < 3; ++j )
+               {
+                  SCIP_Real absval;
+
+                  absval = ABS(coefs4b[j]);
+                  if( max < absval )
+                     max = absval;
+                  if( absval != 0.0 && absval < min )
+                     min = absval;
+               }
+
+               if( SCIPisHugeValue(scip, max / min) )
+               {
+                  INTERLOG(printf("Bad numeric 4b: max(A,B,C)/min(A,B,C) is too large (%g)\n", max / min); )
+                  *success = FALSE;
+                  nlhdlrdata->nbadrayrestriction++;
+                  return SCIP_OKAY;
+               }
             }
          }
       }
@@ -1927,7 +1953,7 @@ SCIP_Bool raysAreDependent(
       if( *coef != 0.0 )
       {
          /* cannot be dependent if the coefs aren't equal for all entries */
-         if( ! SCIPisFeasEQ(scip, *coef, raycoefs1[i] / raycoefs2[i]) )
+         if( ! SCIPisEQ(scip, *coef, raycoefs1[i] / raycoefs2[i]) )
          {
             return FALSE;
          }
@@ -1937,6 +1963,75 @@ SCIP_Bool raysAreDependent(
    }
 
    return TRUE;
+}
+
+/** checks if the ray alpha * ray_i + (1 - alpha) * ray_j is in the recession cone of the S-free set. To do so,
+  * we check if phi restricted to the ray has a positive root.
+  */
+static
+SCIP_RETCODE rayInRecessionCone(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata,     /**< nlhdlr data */
+   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nlhdlr expression data */
+   RAYS*                 rays,               /**< rays */
+   int                   j,                  /**< index of current ray in recession cone */
+   int                   i,                  /**< index of current ray not in recession cone */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q <= rhs, -1.0 otherwise */
+   SCIP_Bool             iscase4,            /**< whether we are in case 4 */
+   SCIP_Real*            vb,                 /**< array containing v_i^T b for i in I_+ \cup I_- */
+   SCIP_Real*            vzlp,               /**< array containing v_i^T zlp_q for i in I_+ \cup I_- */
+   SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
+   SCIP_Real             wzlp,               /**< value of w at zlp */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             alpha,              /**< coef for combining the two rays */
+   SCIP_Bool*            inreccone,          /**< pointer to store whether the ray is in the recession cone or not */
+   SCIP_Bool*            success             /**< Did numerical troubles occur? */
+   )
+{
+   SCIP_Real coefs1234a[5];
+   SCIP_Real coefs4b[5];
+   SCIP_Real coefscondition[3];
+   SCIP_Real interpoint;
+   SCIP_Real* newraycoefs;
+   int* newrayidx;
+   int newraynnonz;
+
+  *inreccone = FALSE;
+
+   /* allocate memory for new ray */
+   newraynnonz = (rays->raysbegin[i + 1] - rays->raysbegin[i]) + (rays->raysbegin[j + 1] - rays->raysbegin[j]);
+   SCIP_CALL( SCIPallocBufferArray(scip, &newraycoefs, newraynnonz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newrayidx, newraynnonz) );
+
+   /* build the ray alpha * ray_i + (1 - alpha) * ray_j */
+   combineRays(&rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+           rays->raysbegin[i], &rays->rays[rays->raysbegin[j]], &rays->raysidx[rays->raysbegin[j]],
+           rays->raysbegin[j + 1] - rays->raysbegin[j], newraycoefs, newrayidx, &newraynnonz, alpha,
+           -1 + alpha);
+
+   /* restrict phi to the "new" ray */
+   SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4, newraycoefs, newrayidx,
+           newraynnonz, vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+
+   if( ! *success )
+      goto CLEANUP;
+
+   /* check if restriction to "new" ray is numerically nasty. If so, treat the corresponding rho as if phi is
+    * positive
+    */
+
+   /* compute intersection point */
+   interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
+
+   /* no root exists */
+   if( SCIPisInfinity(scip, interpoint) )
+      *inreccone = TRUE;
+
+CLEANUP:
+   SCIPfreeBufferArray(scip, &newrayidx);
+   SCIPfreeBufferArray(scip, &newraycoefs);
+
+   return SCIP_OKAY;
 }
 
 static
@@ -1955,14 +2050,15 @@ SCIP_RETCODE findRho(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
                                                   needs to be stored */
-   SCIP_Real*            rho                 /**< pointer to store the oprimal rho */
+   SCIP_Real*            rho,                /**< pointer to store the oprimal rho */
+   SCIP_Bool*            success             /**< could we successfully find the right rho? */
    )
 {
    int i;
 
    /* go through all rays not in the recession cone and compute the largest negative steplength possible. The
     * smallest of them is then the steplength rho we use for the current ray */
-   *rho = 0;
+   *rho = 0.0;
    for( i = 0; i < rays->nrays; ++i )
    {
       SCIP_Real currentrho;
@@ -1970,6 +2066,13 @@ SCIP_RETCODE findRho(
 
       if( SCIPisInfinity(scip, interpoints[i]) )
          continue;
+
+      /* if we cannot strengthen enough, we don't strengthen at all */
+      if( SCIPisInfinity(scip, -*rho) )
+      {
+         *rho = -SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
 
       /* if the rays are linearly independent, we don't need to search for rho */
       if( raysAreDependent(scip, &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]],
@@ -1980,51 +2083,39 @@ SCIP_RETCODE findRho(
       }
       else
       {
+         /*  since the two rays are linearly independent, we need to find the biggest alpha such that
+          *  alpha * ray_i + (1 - alpha) * ray_idx in the recession cone is. For every ray i, we compute
+          *  such a alpha but take the smallest one of them. We use "maxalpha" to keep track of this.
+          *  Since we know that we can only use alpha < maxalpha, we don't need to do the whole binary search
+          *  for every ray i. We only need to search the intervall [0, maxalpha]. Thereby, we start by checking
+          *  if alpha = maxalpha is already feasable */
+
+         SCIP_Bool inreccone;
+         SCIP_Real alpha;
          SCIP_Real lb;
          SCIP_Real ub;
-         SCIP_Real alpha;
-         SCIP_Real* newraycoefs;
-         int* newrayidx;
-         int newraynnonz;
          int j;
 
-         /* allocate memory for new ray */
-         newraynnonz = (rays->raysbegin[i + 1] - rays->raysbegin[i]) + (rays->raysbegin[idx + 1] - rays->raysbegin[idx]);
-         SCIP_CALL( SCIPallocBufferArray(scip, &newraycoefs, newraynnonz) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &newrayidx, newraynnonz) );
-
-         /* do binary search by lookig at the convex combinations of r_i and r_j */
          lb = 0.0;
          ub = 1.0;
-
          for( j = 0; j < BINSEARCH_MAXITERS; ++j )
          {
-            SCIP_Real coefs1234a[5];
-            SCIP_Real coefs4b[5];
-            SCIP_Real coefscondition[3];
-            SCIP_Real interpoint;
-
             alpha = (lb + ub) / 2.0;
 
-            /* build the ray alpha * ray_i + (1 - alpha) * ray_idx */
-            combineRays(&rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-                    rays->raysbegin[i], &rays->rays[rays->raysbegin[idx]], &rays->raysidx[rays->raysbegin[idx]],
-                    rays->raysbegin[idx + 1] - rays->raysbegin[idx], newraycoefs, newrayidx, &newraynnonz, alpha,
-                    -1 + alpha);
+            if( SCIPisZero(scip, alpha) )
+            {
+               alpha = 0.0;
+               break;
+            }
 
-            /* restrict phi to the "new" ray */
-            SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4, newraycoefs, newrayidx,
-                     newraynnonz, vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition) );
+            SCIP_CALL( rayInRecessionCone(scip, nlhdlrdata, nlhdlrexprdata, rays, idx, i, sidefactor, iscase4, vb,
+                  vzlp, wcoefs, wzlp, kappa, alpha, &inreccone, success) );
 
-            /* check if restriction to "new" ray is numerically nasty. If so, treat the corresponding rho as if phi is
-             * positive
-             */
-
-            /* compute intersection point */
-            interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
+            if( ! *success )
+               return SCIP_OKAY;
 
             /* no root exists */
-            if( SCIPisInfinity(scip, interpoint) )
+            if( inreccone )
             {
                lb = alpha;
                if( SCIPisEQ(scip, ub, lb) )
@@ -2033,9 +2124,6 @@ SCIP_RETCODE findRho(
             else
                ub = alpha;
          }
-
-         SCIPfreeBufferArray(scip, &newrayidx);
-         SCIPfreeBufferArray(scip, &newraycoefs);
 
          /* now we found the best convex combination which we use to derive the corresponding coef. If alpha = 0, we
           * cannot move the ray in the recession cone, i.e. strengthening is not possible */
@@ -2050,6 +2138,9 @@ SCIP_RETCODE findRho(
 
       if( currentrho < *rho )
          *rho = currentrho;
+
+      if( *rho < -10e+06 )
+         *rho = -SCIPinfinity(scip);
    }
 
    return SCIP_OKAY;
@@ -2069,15 +2160,19 @@ SCIP_RETCODE computeStrengthenedIntercut(
    SCIP_Real             wzlp,               /**< value of w at zlp */
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
-   SCIP_Bool*            success             /**< if a cut candidate could be computed */
+   SCIP_Bool*            success,            /**< if a cut candidate could be computed */
+   SCIP_Bool*            strengthsuccess     /**< if strengthening was successfully applied */
    )
 {
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_Real* interpoints;
+   SCIP_Real avecutcoef;
+   int counter;
    int i;
 
    *success = TRUE;
+   *strengthsuccess = FALSE;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
@@ -2092,6 +2187,10 @@ SCIP_RETCODE computeStrengthenedIntercut(
    if( ! *success )
       goto CLEANUP;
 
+   /* keep track of the number of attempted strengthenings and average cutcoef */
+   counter = 0;
+   avecutcoef = 0.0;
+
    /* go through all intersection points that are equal to infinity -> these correspond to the rays which are in the
     * recession cone of C, i.e. the rays for which we (possibly) can compute a negative steplength */
    for( i = 0; i < rays->nrays; ++i )
@@ -2103,12 +2202,26 @@ SCIP_RETCODE computeStrengthenedIntercut(
       if( !SCIPisInfinity(scip, interpoints[i]) )
          continue;
 
+      /* if we reached the limit of strengthenings, we stop */
+      if( counter >= nlhdlrdata->nstrengthlimit )
+         break;
+
       /* compute the smallest rho */
       SCIP_CALL( findRho(scip, nlhdlrdata, nlhdlrexprdata, rays, i, sidefactor, iscase4, vb, vzlp, wcoefs, wzlp, kappa,
-               interpoints, &rho) );
+               interpoints, &rho, success));
 
       /* compute cut coef */
-      cutcoef = SCIPisInfinity(scip, -rho) ? 0.0 : 1.0 / rho;
+      if( ! *success  || SCIPisInfinity(scip, -rho) )
+         cutcoef = 0.0;
+      else
+         cutcoef = 1.0 / rho;
+
+      /* track average cut coef */
+      counter += 1;
+      avecutcoef += cutcoef;
+
+      if( ! SCIPisZero(scip, cutcoef) )
+         *strengthsuccess = TRUE;
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
@@ -2124,7 +2237,7 @@ SCIP_RETCODE computeStrengthenedIntercut(
 
          if( ! *success )
          {
-            INTERLOG(printf("Bad numeric: now not nonbasic enough\n");)
+            INTERLOG(printf("Bad numeric: row not nonbasic enough\n");)
             nlhdlrdata->nbadnonbasic++;
             return SCIP_OKAY;
          }
@@ -2137,6 +2250,9 @@ SCIP_RETCODE computeStrengthenedIntercut(
                   cutcoef, cols[lppos]) );
       }
    }
+
+   if( counter > 0 )
+      nlhdlrdata->cutcoefsum += avecutcoef / counter;
 
 CLEANUP:
    SCIPfreeBufferArray(scip, &interpoints);
@@ -2226,8 +2342,13 @@ SCIP_RETCODE generateIntercut(
     */
    if( nlhdlrdata->usestrengthening )
    {
+      SCIP_Bool strengthsuccess;
+
       SCIP_CALL( computeStrengthenedIntercut(scip, nlhdlrdata, nlhdlrexprdata, rays, sidefactor, iscase4, vb, vzlp, wcoefs,
-            wzlp, kappa, rowprep, success) );
+            wzlp, kappa, rowprep, success, &strengthsuccess) );
+
+      if( *success && strengthsuccess )
+         nlhdlrdata->nstrengthenings++;
    }
    else
    {
@@ -2867,8 +2988,11 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       nlhdlrdata->lastnodenumber = nodenumber;
       nlhdlrdata->lastncuts = nlhdlrdata->ncutsadded;
    }
-   else if( (depth > 0 && nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimit) || (depth == 0 &&
-            nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimitroot))
+   //else if( (depth > 0 && nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimit) || (depth == 0 &&
+   //         nlhdlrdata->ncutsadded - nlhdlrdata->lastncuts >= nlhdlrdata->ncutslimitroot))
+   /* allow the addition of a certain number of cuts per quadratic */
+   if( (depth > 0 && nlhdlrexprdata->ncutsadded >= nlhdlrdata->ncutslimit) || (depth == 0 &&
+      nlhdlrexprdata->ncutsadded >= nlhdlrdata->ncutslimitroot) )
    {
       INTERLOG(printf("Too many cuts added already\n");)
       return SCIP_OKAY;
@@ -2895,7 +3019,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       violation = MAX( SCIPgetLhsConsExpr(scip, nlhdlrexprdata->cons) - auxvalue, auxvalue - SCIPgetRhsConsExpr(scip,
                nlhdlrexprdata->cons) ); /*lint !e666*/
 
-   if( violation < INTERCUTS_MINVIOL )
+   if( violation < nlhdlrdata->minviolation )
    {
       INTERLOG(printf("Violation %g is just too small\n", violation); )
       return SCIP_OKAY;
@@ -2940,8 +3064,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
    /* cut (in the nonbasic space) is of the form alpha^T x >= 1 */
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_LEFT, TRUE) );
-
    INTERLOG(printf("Generating inter cut\n"); )
+
    SCIP_CALL( generateIntercut(scip, expr, nlhdlrdata, nlhdlrexprdata, cons, sol, rowprep, overestimate, &success) );
 
    INTERLOG(if( !success) printf("Generation failed\n"); )
@@ -2951,6 +3075,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
    {
       assert(sol == NULL);
       nlhdlrdata->ncutsgenerated += 1;
+      nlhdlrexprdata->ncutsadded += 1;
 
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
@@ -2983,7 +3108,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* intersection cuts can be numerically nasty; we do some extra numerical checks here */
       //printf("SCIP DEPTH %d got a cut with violation %g, efficacy %g and r/e %g\n", SCIPgetSubscipDepth(scip), violation, SCIPgetCutEfficacy(scip, NULL, row), SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row));
       assert(SCIPgetCutEfficacy(scip, NULL, row) > 0.0);
-      if( SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
+      if( ! nlhdlrdata->ignorehighre || SCIPgetRowMaxCoef(scip, row) / SCIPgetRowMinCoef(scip, row) / SCIPgetCutEfficacy(scip, NULL, row) < 1e9 )
       {
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "adding cut ");
@@ -3849,9 +3974,25 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
          "minimal cut violation the generated cuts must fulfill to be added to the LP",
          &nlhdlrdata->mincutviolation, FALSE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/minviolation",
+         "minimal violation the constraint must fulfill such that a cut is generated",
+         &nlhdlrdata->mincutviolation, FALSE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/atwhichnodes",
          "determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n",
          &nlhdlrdata->atwhichnodes, FALSE, 1, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/nstrengthlimit",
+         "limit for number of rays we do the strengthening for",
+         &nlhdlrdata->nstrengthlimit, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
+         "should cut be generated even with bad numerics when restricting to ray?",
+         &nlhdlrdata->ignorebadrayrestriction, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/ignorenhighre",
+         "should cut be added even when range / efficacy is large?",
+         &nlhdlrdata->ignorehighre, FALSE, TRUE, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
