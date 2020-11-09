@@ -2433,7 +2433,7 @@ SCIP_RETCODE detectNlhdlr(
    assert(enforcemethods != SCIP_CONSEXPR_EXPRENFO_ALL);
 
    /* all methods that have not been flagged above are the ones that we want to be handled by nlhdlrs */
-   enforcemethodsallowed = ~enforcemethods;
+   enforcemethodsallowed = ~enforcemethods & SCIP_CONSEXPR_EXPRENFO_ALL;
 
    expr->nenfos = 0;
    enfossize = 2;
