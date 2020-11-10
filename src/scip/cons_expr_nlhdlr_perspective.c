@@ -1309,7 +1309,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
        * that participates in separation without using activity for it. Otherwise, check for
        * participation regardless of activity usage.
        */
-      if( nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW && (!nlhdlrdata->convexonly || !sepabelowusesactivity) )
+      if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && (!nlhdlrdata->convexonly || !sepabelowusesactivity) )
          hassepabelow = TRUE;
 
       if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && (!nlhdlrdata->convexonly || !sepaaboveusesactivity) )
