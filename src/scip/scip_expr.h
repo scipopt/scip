@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPevalExpr(
  * be set to SCIP_INVALID.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeExprGradient(
+SCIP_RETCODE SCIPevalExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
@@ -471,7 +471,7 @@ SCIP_RETCODE SCIPcomputeExprGradient(
  * be set to SCIP_INVALID.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeExprHessianDir(
+SCIP_RETCODE SCIPevalExprHessianDir(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */

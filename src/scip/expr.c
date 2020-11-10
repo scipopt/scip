@@ -927,7 +927,7 @@ SCIP_RETCODE evalAndDiff(
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
 
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       /* evaluate expression only if necessary */
       if( soltag == 0 || expr->evaltag != soltag )
@@ -937,13 +937,13 @@ SCIP_RETCODE evalAndDiff(
          expr->evaltag = soltag;
       }
 
-      if( expr->evalvalue == SCIP_INVALID ) /*lint !e777*/
+      if( expr->evalvalue == SCIP_INVALID )
          break;
 
       /* compute forward diff */
       SCIP_CALL( SCIPexprhdlrFwDiffExpr(expr->exprhdlr, set, expr, &expr->dot, NULL) );
 
-      if( expr->dot == SCIP_INVALID ) /*lint !e777*/
+      if( expr->dot == SCIP_INVALID )
          break;
    }
 
@@ -2697,7 +2697,7 @@ SCIP_RETCODE SCIPexprDismantle(
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
 
-   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       switch( SCIPexpriterGetStageDFS(it) )
       {
@@ -2756,6 +2756,329 @@ SCIP_RETCODE SCIPexprDismantle(
             /* shouldn't be here */
             SCIPABORT();
             break;
+      }
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** evaluate an expression in a point
+ *
+ * Iterates over expressions to also evaluate children, if necessary.
+ * Value can be received via SCIPexprGetEvalValue().
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ *
+ * If a nonzero \p soltag is passed, then only (sub)expressions are
+ * reevaluated that have a different solution tag. If a soltag of 0
+ * is passed, then subexpressions are always reevaluated.
+ * The tag is stored together with the value and can be received via
+ * SCIPexprGetEvalTag().
+ */
+SCIP_RETCODE SCIPexprEval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_EXPRITER* it;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   /* if value is up-to-date, then nothing to do */
+   if( soltag != 0 && expr->evaltag == soltag )
+      return SCIP_OKAY;
+
+   /* assume we'll get a domain error, so we don't have to get this expr back if we abort the iteration
+    * if there is no domain error, then we will overwrite the evalvalue in the last leaveexpr stage
+    */
+   expr->evalvalue = SCIP_INVALID;
+   expr->evaltag = soltag;
+
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   while( !SCIPexpriterIsEnd(it) )
+   {
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITINGCHILD :
+         {
+            SCIP_EXPR* child;
+
+            if( soltag == 0 )
+               break;
+
+            /* check whether child has been evaluated for that solution already */
+            child = SCIPexpriterGetChildExprDFS(it);
+            if( soltag == child->evaltag )
+            {
+               if( child->evalvalue == SCIP_INVALID )
+                  goto TERMINATE;
+
+               /* skip this child
+                * this already returns the next one, so continue with loop
+                */
+               expr = SCIPexpriterSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR :
+         {
+            SCIP_CALL( SCIPexprhdlrEvalExpr(expr->exprhdlr, set, NULL , expr, &expr->evalvalue, NULL, sol) );
+            expr->evaltag = soltag;
+
+            if( expr->evalvalue == SCIP_INVALID )
+               goto TERMINATE;
+
+            break;
+         }
+
+         default :
+            /* we should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriterGetNext(it);
+   }
+
+TERMINATE:
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** computes the gradient for a given point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPexprEvalGradient(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* child;
+   SCIP_Real derivative;
+   unsigned int difftag;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(rootexpr != NULL);
+
+   /* ensure expression is evaluated */
+   SCIP_CALL( SCIPexprEval(set, stat, blkmem, rootexpr, sol, soltag) );
+
+   /* check if expression could not be evaluated */
+   if( SCIPexprGetEvalValue(rootexpr) == SCIP_INVALID )
+   {
+      rootexpr->derivative = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPexprIsValue(set, rootexpr) )
+   {
+      rootexpr->derivative = 0.0;
+      return SCIP_OKAY;
+   }
+
+   difftag = ++(stat->exprlastdifftag);
+
+   rootexpr->derivative = 1.0;
+   rootexpr->difftag = difftag;
+
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      assert(expr->evalvalue != SCIP_INVALID);
+
+      if( expr->exprhdlr->bwdiff == NULL )
+      {
+         rootexpr->derivative = SCIP_INVALID;
+         break;
+      }
+
+      child = SCIPexpriterGetChildExprDFS(it);
+      assert(child != NULL);
+
+      /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
+      if( child->difftag != difftag && SCIPexprIsVar(set, child) )
+         child->derivative = 0.0;
+
+      /* update differentiation tag of the child */
+      child->difftag = difftag;
+
+      /* call backward differentiation callback */
+      if( SCIPexprIsValue(set, child) )
+      {
+         derivative = 0.0;
+      }
+      else
+      {
+         derivative = SCIP_INVALID;
+         SCIP_CALL( SCIPexprhdlrBwDiffExpr(expr->exprhdlr, set, NULL, expr, SCIPexpriterGetChildIdxDFS(it), &derivative, NULL, 0.0) );
+
+         if( derivative == SCIP_INVALID )
+         {
+            rootexpr->derivative = SCIP_INVALID;
+            break;
+         }
+      }
+
+      /* update partial derivative stored in the child expression
+       * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
+       * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
+       */
+      if( !SCIPexprIsVar(set, child) )
+         child->derivative = expr->derivative * derivative;
+      else
+         child->derivative += expr->derivative * derivative;
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** computes the Hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear()
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPexprEvalHessianDir(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction           /**< direction */
+   )
+{
+   /* TODO: handle tags
+    *       better way to handle direction?
+    */
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* child;
+   SCIP_Real derivative;
+   SCIP_Real hessiandir;
+   unsigned int difftag;
+   SCIP_CONSDATA* consdata;
+   int v;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(rootexpr != NULL);
+
+   if( SCIPexprIsValue(set, rootexpr) )
+   {
+      rootexpr->dot = 0.0;
+      return SCIP_OKAY;
+   }
+
+   /* evaluate expression and directional derivative */
+   SCIP_CALL( evalAndDiff(set, stat, blkmem, rootexpr, sol, soltag) );
+
+   difftag = ++(stat->exprlastdifftag);
+
+   rootexpr->derivative = 1.0;
+   rootexpr->difftag = difftag;
+
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
+
+   /* compute reverse diff and bardots: i.e. hessian times direction */
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      assert(expr->evalvalue != SCIP_INVALID);
+
+      if( expr->exprhdlr->bwdiff == NULL || expr->exprhdlr->bwfwdiff == NULL )
+      {
+         rootexpr->derivative = SCIP_INVALID;
+         rootexpr->bardot = SCIP_INVALID;
+         break;
+      }
+
+      child = SCIPexpriterGetChildExprDFS(it);
+      assert(child != NULL);
+
+      if( child->difftag != difftag && SCIPexprIsVar(set, child) )
+      {
+         /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
+         child->derivative = 0.0;
+
+         /* set up direction if we see var for the first time */
+         child->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v])); // FIXME
+         child->bardot = 0.0;
+      }
+
+      /* update differentiation tag of the child */
+      child->difftag = difftag;
+
+      /* call backward and forward-backward differentiation callback */
+      if( SCIPexprIsValue(set, child) )
+      {
+         derivative = 0.0;
+         hessiandir = 0.0;
+      }
+      else
+      {
+         derivative = SCIP_INVALID;
+         hessiandir = SCIP_INVALID;
+         SCIP_CALL( SCIPexprhdlrBwDiffExpr(expr->exprhdlr, set, NULL, expr, SCIPexpriterGetChildIdxDFS(it), &derivative, NULL, SCIP_INVALID) );
+         SCIP_CALL( SCIPexprhdlrBwFwDiffExpr(expr->exprhdlr, set, expr, SCIPexpriterGetChildIdxDFS(it), &hessiandir, NULL) );
+
+         if( derivative == SCIP_INVALID || hessiandir == SCIP_INVALID )
+         {
+            rootexpr->derivative = SCIP_INVALID;
+            rootexpr->bardot = SCIP_INVALID;
+            break;
+         }
+      }
+
+      /* update partial derivative and hessian stored in the child expression
+       * for a variable, we have to sum up the partial derivatives of the root w.r.t. this variable over all parents
+       * for other intermediate expressions, we only store the partial derivative of the root w.r.t. this expression
+       */
+      if( !SCIPexprIsVar(set, child) )
+      {
+         child->derivative = expr->derivative * derivative;
+         child->bardot = expr->bardot * derivative + expr->derivative * hessiandir;
+      }
+      else
+      {
+         child->derivative += expr->derivative * derivative;
+         child->bardot += expr->bardot * derivative + expr->derivative * hessiandir;
       }
    }
 
@@ -2835,6 +3158,83 @@ void SCIPexprSetData(
    assert(exprdata == NULL || expr->exprhdlr->freedata != NULL);  /* freedata must be available if there is expression data */
 
    expr->exprdata = exprdata;
+}
+
+/** gets the data that the owner of an expression has stored in an expression */
+SCIP_EXPR_OWNERDATA* SCIPexprGetOwnerData(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->ownerdata;
+}
+
+/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
+SCIP_Real SCIPexprGetEvalValue(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->evalvalue;
+}
+
+/* TODO make private or remove */
+/** sets the evaluation value */
+void SCIPexprSetEvalValue(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             value,              /**< value to set */
+   unsigned int          tag                 /**< tag of solution that was evaluated, or 0 */
+   )
+{
+   assert(expr != NULL);
+
+   expr->evalvalue = value;
+   expr->evaltag = tag;
+}
+
+/** gives the evaluation tag from the last evaluation, or 0 */
+unsigned int SCIPexprGetEvalTag(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->evaltag;
+}
+
+/** returns the derivative stored in an expression (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPexprGetDerivative(
+   SCIP_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->derivative;
+}
+
+/** gives the value of directional derivative from the last evaluation of a directional derivative of expression (or SCIP_INVALID if there was an error) */
+SCIP_Real SCIPexprGetDot(
+   SCIP_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->dot;
+}
+
+/** returns the difftag stored in an expression
+ *
+ * can be used to check whether partial derivative value is valid
+ */
+unsigned int SCIPexprGetDiffTag(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->difftag;
 }
 
 /**@} */

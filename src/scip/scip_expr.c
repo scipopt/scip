@@ -1094,7 +1094,80 @@ SCIP_RETCODE SCIPdismantleExpr(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprDismantle(scip->set, scip->stat, scip->mem->blkmem, scip->messagehdlr, file, expr) );
+   SCIP_CALL( SCIPexprDismantle(scip->set, scip->stat, scip->mem->probmem, scip->messagehdlr, file, expr) );
+
+   return SCIP_OKAY;
+}
+
+/** evaluate an expression in a point
+ *
+ * Iterates over expressions to also evaluate children, if necessary.
+ * Value can be received via SCIPexprGetEvalValue().
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ *
+ * If a nonzero \p soltag is passed, then only (sub)expressions are
+ * reevaluated that have a different solution tag. If a soltag of 0
+ * is passed, then subexpressions are always reevaluated.
+ * The tag is stored together with the value and can be received via
+ * SCIPexprGetEvalTag().
+ */
+SCIP_RETCODE SCIPevalExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprEval(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag) );
+
+   return SCIP_OKAY;
+}
+
+/** computes the gradient for a given point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPevalExprGradient(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprEvalGradient(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag) );
+
+   return SCIP_OKAY;
+}
+
+/** computes the Hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPevalExprHessianDir(
+   SCIP*                 scip,             /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction         /**< direction */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprEvalHessianDir(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag, direction) );
 
    return SCIP_OKAY;
 }

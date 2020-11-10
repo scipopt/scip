@@ -454,6 +454,64 @@ SCIP_RETCODE SCIPexprDismantle(
    SCIP_EXPR*            expr                /**< expression to dismantle */
    );
 
+/** evaluate an expression in a point
+ *
+ * Iterates over expressions to also evaluate children, if necessary.
+ * Value can be received via SCIPexprGetEvalValue().
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ *
+ * If a nonzero \p soltag is passed, then only (sub)expressions are
+ * reevaluated that have a different solution tag. If a soltag of 0
+ * is passed, then subexpressions are always reevaluated.
+ * The tag is stored together with the value and can be received via
+ * SCIPexprGetEvalTag().
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprEval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
+/** computes the gradient for a given point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffNonlinear().
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprEvalGradient(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
+/** computes the Hessian * v at a given point
+ *
+ * Evaluates children, if necessary.
+ * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear()
+ * If an error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprEvalHessianDir(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   unsigned int          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction           /**< direction */
+   );
+
 /**@} */
 
 /**@name Expression Iterator Methods */

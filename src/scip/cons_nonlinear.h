@@ -868,7 +868,7 @@ SCIP_EXPORT
 SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPcomputeExprHessianDir() call */
+   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprHessianDir() call */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 

@@ -411,7 +411,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  - direction : direction of the derivative (useful only for var expressions)
  *
  *  TODO: think whether we actually need to pass direction. Right now, the direction is being set
- *  to the var expressions in SCIPcomputeExprHessianDir and it is not used anywhere else.
+ *  to the var expressions in SCIPevalExprHessianDir and it is not used anywhere else.
  *  If we remove direction, update documentation accordingly
  */
 #define SCIP_DECL_EXPRFWDIFF(x) SCIP_RETCODE x (\
