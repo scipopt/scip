@@ -25,6 +25,9 @@
 // do not attribute responsibility for last write in callee to caller (this avoids frequent warnings if returned values are not used)
 -fcw
 
+// declare SCIP_ABORT to not return
+-sem(SCIP_ABORT, r_no)
+
 // turn off the following warning, because this often arises from old lint versions
 -e72
 
