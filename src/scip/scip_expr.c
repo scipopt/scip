@@ -1372,6 +1372,86 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    return SCIP_OKAY;
 }
 
+/** returns the total number of variables in an expression
+ *
+ * The function counts variables in common sub-expressions only once.
+ */
+SCIP_RETCODE SCIPgetExprNVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   int*                  nvars               /**< buffer to store the total number of variables */
+   )
+{
+   SCIP_EXPRITER* it;
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+   assert(nvars != NULL);
+
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+
+   *nvars = 0;
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      if( SCIPexprIsVar(scip->set, expr) )
+         ++(*nvars);
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** returns all variable expressions contained in a given expression
+ *
+ * the array to store all variable expressions needs
+ * to be at least of size the number of unique variables in the expression which is given by SCIPgetExprNVars()
+ * and can be bounded by SCIPgetNVars().
+ *
+ * @note function captures variable expressions
+ */
+SCIP_RETCODE SCIPgetExprVarExprs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPR**           varexprs,           /**< array to store all variable expressions */
+   int*                  nvarexprs           /**< buffer to store the total number of variable expressions */
+   )
+{
+   SCIP_EXPRITER* it;
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+   assert(varexprs != NULL);
+   assert(nvarexprs != NULL);
+
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+
+   *nvarexprs = 0;
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      assert(expr != NULL);
+
+      if( SCIPexprIsVar(scip->set, expr) )
+      {
+         /* add variable expression to array and capture expr */
+         assert(SCIPgetNTotalVars(scip) >= *nvarexprs + 1);
+
+         varexprs[(*nvarexprs)++] = expr;
+
+         /* capture expression */
+         SCIPcaptureExpr(expr);
+      }
+   }
+
+   /* @todo sort variable expressions here? */
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Expression Iterator Methods */
