@@ -96,12 +96,14 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 {  /*lint --e{715}*/
 
    SCIP_VAR** vars;
+   SCIP_CONS** consprob;
    SCIP_SOL* exactsol;
    SCIP_Bool foundsol;
    SCIP_Bool lperror;
    int nintvars;
    int nvars;
    int nfixedvars;
+   int nconsprob;
    int i;
    int c;
    SCIP_Real starttime;
@@ -129,9 +131,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    if( SCIPgetNContVars(scip) > 0.8 * SCIPgetNVars(scip) )
-      return SCIP_OKAY;
-
-   if( SCIPgetNExactSol(scip) >= SCIPceil(scip, ((SCIPgetNExactLP(scip) - SCIPgetNExactSol(scip)) / 3.0)) )
       return SCIP_OKAY;
 
    /* if we are not solving exactly, we have nothing to check */
@@ -169,15 +168,17 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       return SCIP_OKAY;
 
    starttime = SCIPgetSolvingTime(scip);
+   nconsprob = SCIPgetNConss(scip);
+   consprob = SCIPgetConss(scip);
 
    /* check if solution is floating point feasible */
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconsprob && *result == SCIP_FEASIBLE; ++c )
    {
       SCIP_Real activity;
       SCIP_ROW* row;
 
       /* get row corresponding to constraint */
-      row = SCIPconsGetRow(scip, conss[c]);
+      row = SCIPconsGetRow(scip, consprob[c]);
       assert(row != NULL);
 
       /* get row activity */

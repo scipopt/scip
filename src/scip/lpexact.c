@@ -7197,6 +7197,7 @@ SCIP_RETCODE rowExactStoreSolVals(
       if( infeasible )
       {
          SCIP_CALL( RatCopy(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
+         SCIP_CALL( RatCreateBlock(blkmem, &(storedsolvals->activity)) );
          RatSetString(storedsolvals->activity, "inf");
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }

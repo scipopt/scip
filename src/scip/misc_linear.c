@@ -435,6 +435,10 @@ SCIP_ROW* SCIPconsGetRow(
    {
       return SCIPgetRowVarbound(scip, cons);
    }
+   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      return SCIPgetRowExactLinear(scip, cons);
+   }
    else
    {
       SCIPwarningMessage(scip, "Cannot return row for constraint of type <%s>\n", conshdlrname);

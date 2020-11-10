@@ -125,7 +125,10 @@ SCIP_RETCODE checkSolOrig(
 
    if( SCIPisExactSolve(scip) )
    {
-      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
+      if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+         SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+      else
+         SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
    }
 
    /* check bounds */
