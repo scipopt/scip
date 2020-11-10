@@ -3006,7 +3006,7 @@ SCIP_Real SCIPgetTreesizeEstimation(
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    TSPOS tspos = TSPOS_NONE;
-   SCIP_Real estim = -1.0;
+   SCIP_Real estim;
 
    assert(scip != NULL);
 
