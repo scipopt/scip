@@ -494,23 +494,152 @@ SCIP_RETCODE SCIPevalExprActivity(
 /** compute the hash value of an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPhashExpr(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_EXPR*            expr,             /**< expression */
-   unsigned int*         hashval           /**< pointer to store the hash value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   unsigned int*         hashval             /**< pointer to store the hash value */
    );
 
 /** simplifies an expression
  *
  * The given expression will be released and overwritten with the simplified expression.
  * To keep the expression, duplicate it via SCIPcopyExpr before calling this method.
+ *
+ * This is largely inspired in Joel Cohen's
+ * Computer algebra and symbolic computation: Mathematical methods
+ * In particular Chapter 3
+ * The other fountain of inspiration is the current simplifying methods in expr.c.
+ *
+ * Note: The things to keep in mind when adding simplification rules are the following.
+ * I will be using the product expressions as an example.
+ * There are mainly 3 parts of the simplification process. You need to decide
+ * at which stage the simplification rule makes sense.
+ * 1. Simplify each factor (simplifyFactor): At this stage we got the children of the product expression.
+ * At this point, each child is simplified when viewed as a stand-alone
+ * expression, but not necessarily when viewed as child of a product
+ * expression. Rules like SP2, SP7, etc are enforced at this point.
+ * 2. Multiply the factors (mergeProductExprlist): At this point rules like SP4, SP5 and SP14 are enforced.
+ * 3. Build the actual simplified product expression (buildSimplifiedProduct):
+ * At this point rules like SP10, SP11, etc are enforced.
+ *
+ * **During step 1. and 2. do not forget to set the flag changed to TRUE when something actually changes**
+ *
+ * Definition of simplified expressions
+ * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ * An expression is simplified if it
+ * - is a value expression
+ * - is a var expression
+ * - is a product expression such that
+ *    SP1:  every child is simplified
+ *    SP2:  no child is a product
+ *    SP4:  no two children are the same expression (those should be multiplied)
+ *    SP5:  the children are sorted [commutative rule]
+ *    SP7:  no child is a value
+ *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
+ *    SP10: it has at least two children
+ *    ? at most one child is an abs
+ *    SP11: no two children are expr*log(expr)
+ *    (TODO: we could handle more complicated stuff like x*y*log(x) -> - y * entropy(x), but I am not sure this should
+ *    happen at the simplifcation level, or (x*y) * log(x*y), which currently simplifies to x * y * log(x*y))
+ *    SP12: if it has two children, then neither of them is a sum (expand sums)
+ *    SP13: no child is a sum with a single term
+ *    SP14: at most one child is an exp
+ * - is a (signed)power expression such that
+ *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
+ *   an integer for signedpower to distribute over a product (POW5, POW6, POW8). Others can also be improved
+ *    POW1: exponent is not 0
+ *    POW2: exponent is not 1
+ *    POW3: its child is not a value
+ *    POW4: its child is simplified
+ *    POW5: if exponent is integer, its child is not a product
+ *    POW6: if exponent is integer, its child is not a sum with a single term ((2*x)^2 -> 4*x^2)
+ *    POW7: if exponent is 2, its child is not a sum (expand sums)
+ *    POW8: its child is not a power unless (x^n)^m with n*m being integer and n or m fractional and n not being even integer
+ *    POW9: its child is not a sum with a single term with a positive coefficient: (25*x)^0.5 -> 5 x^0.5
+ *    POW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
+ *    POW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
+ * - is a signedpower expression such that
+ *   TODO: Some of these criteria are too restrictive for signed powers; for example, the exponent does not need to be
+ *   an integer for signedpower to distribute over a product (SPOW5, SPOW6, SPOW8). Others can also be improved
+ *    SPOW1: exponent is not 0
+ *    SPOW2: exponent is not 1
+ *    SPOW3: its child is not a value
+ *    SPOW4: its child is simplified
+ *    SPOW5: (TODO) do we want to distribute signpowers over products like we do powers?
+ *    SPOW6: exponent is not an odd integer: (signpow odd expr) -> (pow odd expr)
+ *    SPOW8: if exponent is integer, its child is not a power
+ *    SPOW9: its child is not a sum with a single term: (25*x)^0.5 -> 5 x^0.5
+ *    SPOW10: its child is not a binary variable: b^e and e > 0 --> b, b^e and e < 0 --> fix b to 1
+ *    SPOW11: its child is not an exponential: exp(expr)^e --> exp(e * expr)
+ *    SPOW?: TODO: what happens when child is another signed power?
+ *    SPOW?: if child >= 0 -> transform to normal power; if child < 0 -> transform to - normal power
+ * - is a sum expression such that
+ *    SS1: every child is simplified
+ *    SS2: no child is a sum
+ *    SS3: no child is a value (values should go in the constant of the sum)
+ *    SS4: no two children are the same expression (those should be summed up)
+ *    SS5: the children are sorted [commutative rule]
+ *    SS6: it has at least one child
+ *    SS7: if it consists of a single child, then either constant is != 0.0 or coef != 1
+ *    SS8: no child has coefficient 0
+ *    SS9: if a child c is a product that has an exponential expression as one of its factors, then the coefficient of c is +/-1.0
+ *    SS10: if a child c is an exponential, then the coefficient of c is +/-1.0 (TODO)
+ *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
+ * - it is a function with simplified arguments, but not all of them can be values
+ * ? a logarithm doesn't have a product as a child
+ * ? the exponent of an exponential is always 1
+ *
+ * ORDERING RULES (see SCIPexprCompare())
+ * ^^^^^^^^^^^^^^
+ * These rules define a total order on *simplified* expressions.
+ * There are two groups of rules, when comparing equal type expressions and different type expressions
+ * Equal type expressions:
+ * OR1: u,v value expressions: u < v <=> val(u) < val(v)
+ * OR2: u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v))
+ * OR3: u,v are both sum or product expression: < is a lexicographical order on the terms
+ * OR4: u,v are both pow: u < v <=> base(u) < base(v) or, base(u) == base(v) and expo(u) < expo(v)
+ * OR5: u,v are u = FUN(u_1, ..., u_n), v = FUN(v_1, ..., v_m): u < v <=> For the first k such that u_k != v_k, u_k < v_k,
+ *      or if such a k doesn't exist, then n < m.
+ *
+ * Different type expressions:
+ * OR6: u value, v other: u < v always
+ * OR7: u sum, v var or func: u < v <=> u < 0+v
+ *      In other words, u = sum_{i = 1}^n alpha_i u_i, then u < v <=> u_n < v or if u_n = v and alpha_n < 1
+ * OR8: u product, v pow, sum, var or func: u < v <=> u < 1*v
+ *      In other words, u = Pi_{i = 1}^n u_i,  then u < v <=> u_n < v
+ *      @note: since this applies only to simplified expressions, the form of the product is correct. Simplified products
+ *             do *not* have constant coefficients
+ * OR9: u pow, v sum, var or func: u < v <=> u < v^1
+ * OR10: u var, v func: u < v always
+ * OR11: u func, v other type of func: u < v <=> name(type(u)) < name(type(v))
+ * OR12: none of the rules apply: u < v <=> ! v < u
+ * Examples:
+ * OR12: x < x^2 ?:  x is var and x^2 product, so none applies.
+ *       Hence, we try to answer x^2 < x ?: x^2 < x <=> x < x or if x = x and 2 < 1 <=> 2 < 1 <=> False, so x < x^2 is True
+ *       x < x^-1 --OR12--> ~(x^-1 < x) --OR9--> ~(x^-1 < x^1) --OR4--> ~(x < x or -1 < 1) --> ~True --> False
+ *       x*y < x --OR8--> x*y < 1*x --OR3--> y < x --OR2--> False
+ *       x*y < y --OR8--> x*y < 1*y --OR3--> y < x --OR2--> False
+ *
+ * Algorithm
+ * ^^^^^^^^^
+ * The recursive version of the algorithm is
+ *
+ * EXPR simplify(expr)
+ *    for c in 1..expr->nchildren
+ *       expr->children[c] = simplify(expr->children[c])
+ *    end
+ *    return expr->exprhdlr->simplify(expr)
+ * end
+ *
+ * Important: Whatever is returned by a simplify callback **has** to be simplified.
+ * Also, all children of the given expression **are** already simplified
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPsimplifyExpr(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_EXPR*            rootexpr,         /**< expression to be simplified */
-   SCIP_EXPR**           simplified,       /**< buffer to store simplified expression */
-   SCIP_Bool*            changed,          /**< buffer to store if rootexpr actually changed */
-   SCIP_Bool*            infeasible        /**< buffer to store whether infeasibility has been detected */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
+   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
+   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
    );
 
 /** computes the curvature of a given expression and all its subexpressions

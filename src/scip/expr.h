@@ -524,17 +524,16 @@ SCIP_RETCODE SCIPexprEvalActivity(
    SCIP_EXPR*            rootexpr            /**< expression */
    );
 
-/** evaluates activity of expression w.r.t. current local variable bounds
- *
- * Value van be received via SCIPexprGetActivity().
- *
- * Reevaluate activity if any variable has changed bounds since last eval call.
+/** compare expressions
+ * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
+ * @note: The given expressions are assumed to be simplified.
  */
-SCIP_RETCODE SCIPevalExprActivity(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR*              expr,             /**< expression */
-   SCIP_INTERVAL*          activity          /**< interval where to store expression */
-   )
+SCIP_EXPORT
+int SCIPexprCompare(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr1,              /**< first expression */
+   SCIP_EXPR*            expr2               /**< second expression */
+   );
 
 /**@} */
 

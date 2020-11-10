@@ -336,16 +336,6 @@ SCIP_Longint SCIPexprGetActivityTag(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** compare expressions
- * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
- * @note: The given expressions are assumed to be simplified.
- */
-SCIP_EXPORT
-int SCIPexprCompare(
-   SCIP_EXPR*            expr1,              /**< first expression */
-   SCIP_EXPR*            expr2               /**< second expression */
-   );
-
 /** returns the curvature of an expression
  *
  *  @note Call SCIPcomputeExprCurvature before calling this function.

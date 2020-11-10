@@ -121,6 +121,7 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
    return SCIPexpriterGetExprUserData(hashiterator, expr).uintval;
 }  /*lint !e715*/
 
+// TODO move into SCIPhashExpr or expr.c  ?
 /** hashes an expression using an already existing iterator
  *
  * The iterator must by of type DFS with allowrevisit=FALSE and only the leaveexpr stage enabled.
@@ -295,9 +296,10 @@ SCIP_RETCODE replaceCommonSubexpressions(
    return SCIP_OKAY;
 }
 
+// TODO move into SCIPsimplifyExpr or expr.c
 /** helper function to simplify an expression and its subexpressions */
 static
-SCIP_RETCODE simplifyConsExprExpr(
+SCIP_RETCODE simplifyExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -974,7 +976,7 @@ SCIP_RETCODE SCIPprintExpr(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprPrint(scip->set, scip->stat, scip->mem->blkmem, scip->messagehdlr, expr, file) );
+   SCIP_CALL( SCIPexprPrint(scip->set, scip->stat, scip->mem->probmem, scip->messagehdlr, expr, file) );
 
    return SCIP_OKAY;
 }
@@ -1187,6 +1189,50 @@ SCIP_RETCODE SCIPevalExprActivity(
    assert(scip->mem != NULL);
 
    SCIP_CALL( SCIPexprEvalActivity(scip->set, scip->stat, scip->mem->probmem, expr) );
+
+   return SCIP_OKAY;
+}
+
+/** compute the hash value of an expression */
+SCIP_RETCODE SCIPhashExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   unsigned int*         hashval             /**< pointer to store the hash value */
+   )
+{
+   SCIP_EXPRITER* it;
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+   assert(hashval != NULL);
+
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+
+   SCIP_CALL( hashExpr(scip->set, scip->mem->buffer, expr, it, NULL) );
+
+   *hashval = SCIPexpriterGetExprUserData(it, expr).uintval;
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/* simplifies an expression (duplication of long doxygen comment omitted here) */
+SCIP_RETCODE SCIPsimplifyExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
+   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
+   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( simplifyExpr(scip->set, scip->stat, scip->mem->probmem, rootexpr, simplified, changed, infeasible) );
 
    return SCIP_OKAY;
 }

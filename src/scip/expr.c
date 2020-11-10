@@ -3211,6 +3211,114 @@ SCIP_RETCODE SCIPexprEvalActivity(
    return SCIP_OKAY;
 }
 
+/** compare expressions
+ * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
+ * @note: The given expressions are assumed to be simplified.
+ */
+int SCIPexprCompare(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr1,              /**< first expression */
+   SCIP_EXPR*            expr2               /**< second expression */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr1;
+   SCIP_EXPRHDLR* exprhdlr2;
+   int retval;
+
+   exprhdlr1 = expr1->exprhdlr;
+   exprhdlr2 = expr2->exprhdlr;
+
+   /* expressions are of the same kind/type; use compare callback or default method */
+   if( exprhdlr1 == exprhdlr2 )
+   {
+      return SCIPexprhdlrCompareExpr(expr1, expr2);
+   }
+
+   /* expressions are of different kind/type */
+   /* enforces OR6 */
+   if( SCIPexprIsValue(set, expr1) )
+   {
+      return -1;
+   }
+   /* enforces OR12 */
+   if( SCIPexprIsValue(set, expr2) )
+      return -SCIPexprCompare(expr2, expr1);
+
+   /* enforces OR7 */
+   if( SCIPexprIsSum(set, expr1) )
+   {
+      int compareresult;
+      int nchildren;
+
+      nchildren = expr1->nchildren;
+      compareresult = SCIPexprCompare(expr1->children[nchildren-1], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
+      if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
+         return -1;
+
+      /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( SCIPexprIsSum(set, expr2) )
+      return -SCIPexprCompare(expr2, expr1);
+
+   /* enforces OR8 */
+   if( SCIPexprIsProduct(set, expr1) )
+   {
+      int compareresult;
+      int nchildren;
+
+      nchildren = expr1->nchildren;
+      compareresult = SCIPexprCompare(expr1->children[nchildren-1], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* largest expression of product is larger or equal than expr2 => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( SCIPexprIsProduct(set, expr2) )
+      return -SCIPexprCompare(expr2, expr1);
+
+   /* enforces OR9 */
+   if( SCIPexprIsPower(set, expr1) )
+   {
+      int compareresult;
+
+      compareresult = SCIPexprCompare(expr1->children[0], expr2);
+
+      if( compareresult != 0 )
+         return compareresult;
+
+      /* base equal to expr2, exponent might tell us that expr2 is larger */
+      if( SCIPgetConsExprExprPowExponent(expr1) < 1.0 )
+         return -1;
+
+      /* power expression is larger => expr1 > expr2 */
+      return 1;
+   }
+   /* enforces OR12 */
+   if( SCIPexprIsPower(set, expr2) )
+      return -SCIPexprCompare(expr2, expr1);
+
+   /* enforces OR10 */
+   if( SCIPexprIsVar(set, expr1) )
+      return -1;
+   /* enforces OR12 */
+   if( SCIPexprIsVar(set, expr2) )
+      return -SCIPexprCompare(expr2, expr1);
+
+   /* enforces OR11 */
+   retval = strcmp(SCIPexprhdlrGetName(exprhdlr1), SCIPexprhdlrGetName(exprhdlr2));
+   return retval == 0 ? 0 : retval < 0 ? -1 : 1;
+}
+
 /* from pub_expr.h */
 
 /** gets the number of times the expression is currently captured */
