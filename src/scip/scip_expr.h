@@ -652,9 +652,9 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** computes the monotonicity of an expression w.r.t. to a given child */
+/** get the monotonicity of an expression w.r.t. to a given child */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcomputeExprMonotonicity(
+SCIP_RETCODE SCIPgetExprMonotonicity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    int                   childidx,           /**< index of child */

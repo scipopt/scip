@@ -1237,6 +1237,141 @@ SCIP_RETCODE SCIPsimplifyExpr(
    return SCIP_OKAY;
 }
 
+/** computes the curvature of a given expression and all its subexpressions
+ *
+ *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
+ */
+SCIP_RETCODE SCIPcomputeExprCurvature(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPRCURV curv;
+   SCIP_EXPRCURV* childcurv;
+   int childcurvsize;
+   SCIP_Bool success;
+   SCIP_EXPRCURV trialcurv[3] = { SCIP_EXPRCURV_LINEAR, SCIP_EXPRCURV_CONVEX, SCIP_EXPRCURV_CONCAVE };
+   int i, c;
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+
+   childcurvsize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
+
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      curv = SCIP_EXPRCURV_UNKNOWN;
+
+      if( expr->exprhdlr->curvature == NULL )
+      {
+         /* set curvature in expression */
+         SCIPexprSetCurvature(expr, curv);
+         continue;
+      }
+
+      if( SCIPexprGetNChildren(expr) > childcurvsize )
+      {
+         childcurvsize = SCIPcalcMemGrowSize(scip, SCIPexprGetNChildren(expr));
+         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
+      }
+
+      for( i = 0; i < 3; ++i )
+      {
+         /* check if expression can have a curvature trialcurv[i] */
+         SCIP_CALL( SCIPexprhdlrCurvatureExpr(expr->exprhdlr, set, expr, trialcurv[i], &success, childcurv) );
+         if( !success )
+            continue;
+
+         /* check if conditions on children are satisfied */
+         for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+         {
+            if( (childcurv[c] & SCIPexprGetCurvature(SCIPexprGetChildren(expr)[c])) != childcurv[c] )
+            {
+               success = FALSE;
+               break;
+            }
+         }
+
+         if( success )
+         {
+            curv = trialcurv[i];
+            break;
+         }
+      }
+
+      /* set curvature in expression */
+      SCIPexprSetCurvature(expr, curv);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   SCIPfreeBufferArray(scip, &childcurv);
+
+   return SCIP_OKAY;
+}
+
+/** get the monotonicity of an expression w.r.t. to a given child */
+SCIP_RETCODE SCIPgetExprMonotonicity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   childidx,           /**< index of child */
+   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPexprhdlrMonotonicityExpr(expr->exprhdlr, scip->set, expr, childidx, monotonicity) );
+
+   return SCIP_OKAY;
+}
+
+/** computes integrality information of a given expression and all its subexpressions
+ *
+ * the integrality information can be accessed via SCIPexprIsIntegral()
+ */
+SCIP_RETCODE SCIPcomputeExprIntegrality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   SCIP_EXPRITER* it;
+
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+
+   /* shortcut for expr without children */
+   if( expr->nchildren == 0 )
+   {
+      /* compute integrality information */
+      SCIP_CALL( SCIPexprhdlrIntegralityExpr(expr->exprhdlr, scip->set, expr, &expr->isintegral) );
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      /* compute integrality information */
+      SCIP_CALL( SCIPexprhdlrIntegralityExpr(expr->exprhdlr, scip->set, expr, &expr->isintegral) );
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Expression Iterator Methods */

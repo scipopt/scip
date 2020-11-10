@@ -1452,6 +1452,63 @@ SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
    return SCIP_OKAY;
 }
 
+/** calls the monotonicity check callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRMONOTONICITY for details.
+ */
+SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to check the monotonicity for */
+   int                   childidx,           /**< index of the considered child expression */
+   SCIP_EXPRCURV*        result              /**< buffer to store the monotonicity */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(result != NULL);
+
+   *result = SCIP_MONOTONE_UNKNOWN;
+
+   /* check whether the expression handler implements the monotonicity callback */
+   if( exprhdlr->monotonicity != NULL )
+   {
+      SCIP_CALL( exprhdlr->monotonicity(set->scip, expr, childidx, result) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls the integrality check callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRINTEGRALITY for details.
+ */
+SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to check integrality for */
+   SCIP_Bool*            isintegral          /**< buffer to store whether expression is integral */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(expr->exprhdlr == exprhdlr);
+   assert(isintegral != NULL);
+
+   *isintegral = SCIP_MONOTONE_UNKNOWN;
+
+   /* check whether the expression handler implements the monotonicity callback */
+   if( exprhdlr->integrality != NULL )
+   {
+      SCIP_CALL( exprhdlr->integrality(set->scip, expr, isintegral) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls the hash callback of an expression handler
  *
  * The method hashes an expression by taking the hashes of its children into account.
@@ -3491,6 +3548,40 @@ SCIP_Longint SCIPexprGetActivityTag(
    assert(expr != NULL);
 
    return expr->activitytag;
+}
+
+/** returns the curvature of an expression
+ *
+ *  @note Call SCIPcomputeExprCurvature before calling this function.
+ */
+SCIP_EXPRCURV SCIPexprGetCurvature(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->curvature;
+}
+
+/** sets the curvature of an expression */
+void SCIPexprSetCurvature(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
+   )
+{
+   assert(expr != NULL);
+
+   expr->curvature = curvature;
+}
+
+/** returns whether an expression is integral */
+SCIP_Bool SCIPexprIsIntegral(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->isintegral;
 }
 
 /**@} */

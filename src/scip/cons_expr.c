@@ -2743,7 +2743,7 @@ SCIP_RETCODE propagateLocks(
 
             /* get monotonicity of child */
             /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
-             * SCIPcomputeExprMonotonicity
+             * SCIPgetExprMonotonicity
              */
             monotonicity = expr->monotonicity != NULL ? expr->monotonicity[SCIPexpriterGetChildIdxDFS(it)] : SCIP_MONOTONE_UNKNOWN;
 
@@ -10530,141 +10530,6 @@ SCIP_Real SCIPgetExprViolScoreNonlinear(
    }
 }
 
-
-
-
-
-/** sets the curvature of an expression */
-void SCIPexprSetCurvature(
-   SCIP_EXPR*   expr,               /**< expression */
-   SCIP_EXPRCURV         curvature           /**< curvature of the expression */
-   )
-{
-   assert(expr != NULL);
-   expr->curvature = curvature;
-}
-
-/** returns the curvature of an expression */
-SCIP_EXPRCURV SCIPexprGetCurvature(
-   SCIP_EXPR*   expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   return expr->curvature;
-}
-
-/** computes the curvature of a given expression and all its subexpressions
- *
- *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
- */
-SCIP_RETCODE SCIPcomputeExprCurvature(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*   expr                /**< expression */
-   )
-{
-   SCIP_EXPRITER* it;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_EXPRCURV curv;
-   SCIP_EXPRCURV* childcurv;
-   int childcurvsize;
-   SCIP_Bool success;
-   SCIP_EXPRCURV trialcurv[3] = { SCIP_EXPRCURV_LINEAR, SCIP_EXPRCURV_CONVEX, SCIP_EXPRCURV_CONCAVE };
-   int i, c;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-
-   childcurvsize = 5;
-   SCIP_CALL( SCIPallocBufferArray(scip, &childcurv, childcurvsize) );
-
-   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
-
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
-   {
-      curv = SCIP_EXPRCURV_UNKNOWN;
-
-      if( expr->exprhdlr->curvature == NULL )
-      {
-         /* set curvature in expression */
-         SCIPexprSetCurvature(expr, curv);
-         continue;
-      }
-
-      if( SCIPexprGetNChildren(expr) > childcurvsize )
-      {
-         childcurvsize = SCIPcalcMemGrowSize(scip, SCIPexprGetNChildren(expr));
-         SCIP_CALL( SCIPreallocBufferArray(scip, &childcurv, childcurvsize) );
-      }
-
-      /* SCIPprintExpr(scip, conshdlr, expr, NULL);
-      SCIPinfoMessage(scip, NULL, " (%p)", expr); */
-      for( i = 0; i < 3; ++i )
-      {
-         /* check if expression can have a curvature trialcurv[i] */
-         SCIP_CALL( SCIPexprhdlrCurvatureExpr(scip, conshdlr, expr, trialcurv[i], &success, childcurv) );
-         /* SCIPinfoMessage(scip, NULL, " %s? %d", SCIPexprcurvGetName(trialcurv[i]), success); */
-         if( !success )
-            continue;
-
-         /* check if conditions on children are satisfied */
-         for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
-         {
-            if( (childcurv[c] & SCIPexprGetCurvature(SCIPexprGetChildren(expr)[c])) != childcurv[c] )
-            {
-               success = FALSE;
-               break;
-            }
-         }
-
-         if( success )
-         {
-            curv = trialcurv[i];
-            break;
-         }
-      }
-
-      /* set curvature in expression */
-      SCIPexprSetCurvature(expr, curv);
-      /* SCIPinfoMessage(scip, NULL, " -> curv = %s\n", SCIPexprcurvGetName(curv)); */
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   SCIPfreeBufferArray(scip, &childcurv);
-
-   return SCIP_OKAY;
-}
-
-/** computes the monotonicity of an expression w.r.t. to a given child */
-SCIP_RETCODE SCIPcomputeExprMonotonicity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_EXPR*   expr,               /**< expression */
-   int                   childidx,           /**< index of child */
-   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
-   )
-{
-   assert(expr != NULL);
-   assert(childidx >= 0 || expr->nchildren == 0);
-   assert(childidx < expr->nchildren);
-   assert(monotonicity != NULL);
-
-   *monotonicity = SCIP_MONOTONE_UNKNOWN;
-
-   /* check whether the expression handler implements the monotonicity callback */
-   if( expr->exprhdlr->monotonicity != NULL )
-   {
-      SCIP_CALL( (*expr->exprhdlr->monotonicity)(scip, conshdlr, expr, childidx, monotonicity) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** returns the number of positive rounding locks of an expression */
 int SCIPgetExprNLocksPosNonlinear(
    SCIP_EXPR*   expr                /**< expression */
@@ -10681,66 +10546,6 @@ int SCIPgetExprNLocksNegNonlinear(
 {
    assert(expr != NULL);
    return expr->nlocksneg;
-}
-
-/** computes integrality information of a given expression and all its subexpressions; the integrality information can
- * be accessed via SCIPexprIsIntegral()
- */
-SCIP_RETCODE SCIPcomputeExprIntegrality(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_EXPR*   expr                /**< expression */
-   )
-{
-   SCIP_EXPRITER* it;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(expr != NULL);
-
-   /* shortcut for expr without children */
-   if( SCIPexprGetNChildren(expr) == 0 )
-   {
-      /* compute integrality information */
-      expr->isintegral = FALSE;
-
-      if( expr->exprhdlr->integrality != NULL )
-      {
-         /* get curvature from expression handler */
-         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
-      }
-
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPexpriterCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_LEAVEEXPR);
-
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
-   {
-      /* compute integrality information */
-      expr->isintegral = FALSE;
-
-      if( expr->exprhdlr->integrality != NULL )
-      {
-         /* get curvature from expression handler */
-         SCIP_CALL( (*expr->exprhdlr->integrality)(scip, expr, &expr->isintegral) );
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** returns whether an expression is integral */
-SCIP_Bool SCIPexprIsIntegral(
-   SCIP_EXPR*   expr                /**< expression */
-   )
-{
-   assert(expr != NULL);
-   return expr->isintegral;
 }
 
 /** number of nonlinear handlers whose activity computation and propagation methods depend on the activity of the expression

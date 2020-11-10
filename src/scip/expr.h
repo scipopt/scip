@@ -82,6 +82,31 @@ SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
    SCIP_EXPRCURV*        childcurv           /**< array to store required curvature for each child */
    );
 
+/** calls the monotonicity check callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRMONOTONICITY for details.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to check the monotonicity for */
+   int                   childidx,           /**< index of the considered child expression */
+   SCIP_EXPRCURV*        result              /**< buffer to store the monotonicity */
+   );
+
+/** calls the integrality check callback of an expression handler
+ *
+ * See @ref SCIP_DECL_EXPRINTEGRALITY for details.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression to check integrality for */
+   SCIP_Bool*            isintegral          /**< buffer to store whether expression is integral */
+   );
+
 /** calls the hash callback of an expression handler
  *
  * The method hashes an expression by taking the hashes of its children into account.
