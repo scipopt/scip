@@ -267,7 +267,7 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABOTH, "expecting sepa, got %d\n", participating);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
    cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -317,11 +317,20 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_2, 1.0, 0.0, &infeas, &nbndchgs) );
    SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
 
+   /* detect wants another nlhdlr to have detected; pretend that convex has detected */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
+   expr->nenfos = 2;
+   expr->enfos[0]->nlhdlr = nlhdlr_conv;
+   expr->enfos[0]->nlhdlrparticipation = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+   expr->enfos[1]->nlhdlr = nlhdlr;
+
    /* detect */
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABOTH, "expecting sepa, got %d\n", participating);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
    cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -330,11 +339,16 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
+   SCIPfreeBlockMemory(scip, &expr->enfos[1]);
+   SCIPfreeBlockMemory(scip, &expr->enfos[0]);
+   SCIPfreeBlockMemoryArray(scip, &expr->enfos, 2);
+   expr->nenfos = 0;
+
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
-/* detects log(x1+x2) as an on/off expression */
+/* detects log(x1+x2+1) as an on/off expression */
 Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
 {
    SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
@@ -367,11 +381,20 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddVarVlb(scip, x_2, z_3, 1.0, 0.0, &infeas, &nbndchgs) );
    SCIP_CALL( SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs) );
 
+   /* detect wants another nlhdlr to have detected; pretend that convex has detected */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
+   expr->nenfos = 2;
+   expr->enfos[0]->nlhdlr = nlhdlr_conv;
+   expr->enfos[0]->nlhdlrparticipation = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   expr->enfos[1]->nlhdlr = nlhdlr;
+
    /* detect */
    enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABOTH, "expecting sepa, got %d\n", participating);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPAABOVE, "expecting sepaabove, got %d\n", participating);
    cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -379,6 +402,11 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
 
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
+
+   SCIPfreeBlockMemory(scip, &expr->enfos[1]);
+   SCIPfreeBlockMemory(scip, &expr->enfos[0]);
+   SCIPfreeBlockMemoryArray(scip, &expr->enfos, 2);
+   expr->nenfos = 0;
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -451,7 +479,7 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    /* detect by perspective handler */
    participating = SCIP_CONSEXPR_EXPRENFO_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABOTH, "expecting sepa, got %d\n", participating);
+   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
