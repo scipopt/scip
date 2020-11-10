@@ -1302,6 +1302,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
          continue;
 
+      if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
+         continue;
+
       if( strcmp(SCIPgetConsExprNlhdlrName(nlhdlr2), "default") != 0 )
          hasnondefault = TRUE;
 
