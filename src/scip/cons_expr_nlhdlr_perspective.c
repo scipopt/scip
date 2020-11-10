@@ -1333,8 +1333,6 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
     */
    if( !hassepabelow && !hassepaabove )
    {
-      /* if we do not require that activity is not used, then at least default would separate */
-      assert(nlhdlrdata->convexonly);
       SCIPdebugMsg(scip, "no nlhdlr separates without using activity, not running perspective detection\n");
       return SCIP_OKAY;
    }
