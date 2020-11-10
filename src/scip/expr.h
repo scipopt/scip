@@ -477,7 +477,7 @@ SCIP_RETCODE SCIPexprEval(
    unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** computes the gradient for a given point
+/** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffNonlinear().
@@ -494,7 +494,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
    unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** computes the Hessian * v at a given point
+/** evaluates Hessian-vector product of an expression for a given point and direction
  *
  * Evaluates children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear()
@@ -511,6 +511,30 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    unsigned int          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
    SCIP_SOL*             direction           /**< direction */
    );
+
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprEvalActivity(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr            /**< expression */
+   );
+
+/** evaluates activity of expression w.r.t. current local variable bounds
+ *
+ * Value van be received via SCIPexprGetActivity().
+ *
+ * Reevaluate activity if any variable has changed bounds since last eval call.
+ */
+SCIP_RETCODE SCIPevalExprActivity(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPR*              expr,             /**< expression */
+   SCIP_INTERVAL*          activity          /**< interval where to store expression */
+   )
 
 /**@} */
 

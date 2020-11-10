@@ -295,7 +295,7 @@ void SCIPexprSetEvalValue(
 
 /** gives the evaluation tag from the last evaluation, or 0 */
 SCIP_EXPORT
-unsigned int SCIPexprGetEvalTag(
+SCIP_Longint SCIPexprGetEvalTag(
    SCIP_EXPR*            expr                /**< expression */
    );
 
@@ -316,19 +316,11 @@ SCIP_Real SCIPexprGetDot(
  * can be used to check whether partial derivative value is valid
  */
 SCIP_EXPORT
-unsigned int SCIPexprGetDiffTag(
+SCIP_Longint SCIPexprGetDiffTag(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** returns the activity of the expression
- *
- * TODO this is conshdlr specific:
- * The caller needs to make sure that the activity is valid.
- * For expression and nonlinear handlers, this is made sure when the following callbacks are called:
- * - interval evaluation (intervals for children only)
- * - reverse propagation
- * - estimate and enforce (for exprs where activity usage was signaled during nlhdlr detect)
- */
+/** returns the activity that is currently stored for an expression */
 SCIP_EXPORT
 SCIP_INTERVAL SCIPexprGetActivity(
    SCIP_EXPR*            expr                /**< expression */
@@ -336,12 +328,11 @@ SCIP_INTERVAL SCIPexprGetActivity(
 
 /** returns the tag associated with the activity of the expression
  *
- * TODO this is conshdlr specific:
- * Can be compared with SCIPgetCurBoundsTagNonlinear() and SCIPgetLastBoundRelaxTagNonlinear()
- * to check whether the activity currently stored in this expression is current and valid, respectively.
+ * It can depend on the owner of the expression how to interpret this tag.
+ * SCIPevalExprActivity() compares with stat->domchgcount.
  */
 SCIP_EXPORT
-unsigned int SCIPexprGetActivityTag(
+SCIP_Longint SCIPexprGetActivityTag(
    SCIP_EXPR*            expr                /**< expression */
    );
 

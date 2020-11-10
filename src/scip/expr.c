@@ -3087,6 +3087,130 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    return SCIP_OKAY;
 }
 
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
+ */
+SCIP_RETCODE SCIPexprEvalActivity(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr            /**< expression */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(rootexpr != NULL);
+   assert(rootexpr->activitytag <= stat->domchgcount);
+
+   /* if value is up-to-date, then nothing to do */
+   if( rootexpr->activitytag == stat->domchgcount )
+   {
+#ifdef DEBUG_PROP
+      SCIPsetDebugMsg(set, "activitytag of root expr equals domchgcount (%u), skip evalactivity\n", stat->domchgcount);
+#endif
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPexpriterCreate(set, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it);  )
+   {
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITINGCHILD :
+         {
+            /* skip child if it has been evaluated already */
+            SCIP_EXPR* child;
+
+            child = SCIPexpriterGetChildExprDFS(it);
+            if( child->activitytag == stat->domchgcount )
+            {
+               expr = SCIPexpriterSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR :
+         {
+            /* we should not have entered this expression if its activity was already uptodate */
+            assert(expr->activitytag < stat->domchgcount);
+
+            /* reset activity to entire if invalid, so we can use it as starting point below */
+            SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &expr->activity);
+
+#ifdef DEBUG_PROP
+            SCIPsetDebugMsg(set, "interval evaluation of expr %p ", (void*)expr);
+            SCIP_CALL( SCIPprintExpr(set->scip, expr, NULL) );
+            SCIPsetDebugMsgPrint(set, "\n");
+#endif
+
+            /* call the inteval callback of the exprhdlr */
+            // FIXME calling with NULL gives global bounds; I think we should change the exprhdlr_var to give local bounds
+            SCIP_CALL( SCIPexprhdlrIntEvalExpr(expr->exprhdlr, set, expr, &expr->activity, NULL, NULL) );
+#ifdef DEBUG_PROP
+            SCIPsetDebugMsg(set, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
+#endif
+
+#if !1  // TODO?  (should we assume that isintegral is valid? the default false is always ok)
+            /* if expression is integral, then we try to tighten the interval bounds a bit
+             * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
+             * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
+             * do this only if using boundtightening-inteval and not in redundancy check (there we really want to relax all variables)
+             * boundtightening-inteval does not relax integer variables, so can omit expressions without children
+             * (constants should be ok, too)
+             */
+            if( expr->isintegral && conshdlrdata->intevalvar == intEvalVarBoundTightening && expr->nchildren > 0 )
+            {
+               if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
+                  expr->activity.inf = SCIPsetCeil(set, expr->activity.inf);
+               if( expr->activity.sup <  SCIP_INTERVAL_INFINITY )
+                  expr->activity.sup = SCIPsetFloor(set, expr->activity.sup);
+#ifdef DEBUG_PROP
+               SCIPsetDebugMsg(set, " applying integrality: [%.20g, %.20g]\n", expr->activity.inf, expr->activity.sup);
+#endif
+            }
+#endif
+
+            /* mark activity as empty if either the lower/upper bound is above/below +/- SCIPinfinity()
+             * TODO this is a problem if dual-presolve fixed a variable to +/- infinity
+             */
+            if( SCIPsetIsInfinity(set, expr->activity.inf) || SCIPsetIsInfinity(set, -expr->activity.sup) )
+            {
+               SCIPsetDebugMsg(set, "treat activity [%g,%g] as empty as beyond infinity\n", expr->activity.inf, expr->activity.sup);
+               SCIPintervalSetEmpty(&expr->activity);
+               //TODO set rootexpr->activity to empty? exit?
+            }
+
+            /* remember that activity is uptodate now */
+            expr->activitytag = stat->domchgcount;
+
+            break;
+         }
+
+         default:
+            /* you should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriterGetNext(it);
+   }
+
+   SCIPexpriteratorFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /* from pub_expr.h */
 
 /** gets the number of times the expression is currently captured */
@@ -3195,7 +3319,7 @@ void SCIPexprSetEvalValue(
 }
 
 /** gives the evaluation tag from the last evaluation, or 0 */
-unsigned int SCIPexprGetEvalTag(
+SCIP_Longint SCIPexprGetEvalTag(
    SCIP_EXPR*            expr                /**< expression */
    )
 {
@@ -3228,13 +3352,37 @@ SCIP_Real SCIPexprGetDot(
  *
  * can be used to check whether partial derivative value is valid
  */
-unsigned int SCIPexprGetDiffTag(
+SCIP_Longint SCIPexprGetDiffTag(
    SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
 
    return expr->difftag;
+}
+
+/** returns the activity that is currently stored for an expression */
+SCIP_INTERVAL SCIPexprGetActivity(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->activity;
+}
+
+/** returns the tag associated with the activity of the expression
+ *
+ * It can depend on the owner of the expression how to interpret this tag.
+ * SCIPevalExprActivity() compares with stat->domchgcount.
+ */
+SCIP_Longint SCIPexprGetActivityTag(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->activitytag;
 }
 
 /**@} */

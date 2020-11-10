@@ -10007,11 +10007,6 @@ SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    return (expr->difftag != varexpr->difftag) ? 0.0 : varexpr->bardot;
 }
 
-
-
-
-
-
 /** returns the activity of the expression
  *
  * The caller needs to make sure that the activity is valid.
@@ -10052,10 +10047,7 @@ SCIP_INTERVAL SCIPexprGetActivity(
  */
 unsigned int SCIPexprGetActivityTag(
    SCIP_EXPR*     expr              /**< expression */
-   )
-{
-   return expr->activitytag;
-}
+   );
 
 /** possibly reevaluates and then returns the activity of the expression
  *
@@ -10537,6 +10529,10 @@ SCIP_Real SCIPgetExprViolScoreNonlinear(
          return SCIP_INVALID;
    }
 }
+
+
+
+
 
 /** returns the hash value of an expression */
 SCIP_RETCODE SCIPhashExpr(

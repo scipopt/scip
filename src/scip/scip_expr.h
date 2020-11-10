@@ -448,7 +448,7 @@ SCIP_RETCODE SCIPevalExpr(
  * @{
  */
 
-/** computes the gradient for a given point
+/** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffNonlinear().
@@ -463,7 +463,7 @@ SCIP_RETCODE SCIPevalExprGradient(
    unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** computes the Hessian * v at a given point
+/** evaluates Hessian-vector product of an expression for a given point and direction
  *
  * Evaluates children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear().
@@ -487,9 +487,8 @@ SCIP_RETCODE SCIPevalExprHessianDir(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprActivity(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR*              expr,             /**< expression */
-   SCIP_INTERVAL*          activity          /**< interval where to store expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
    );
 
 /** compute the hash value of an expression */

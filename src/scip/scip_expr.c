@@ -1127,7 +1127,7 @@ SCIP_RETCODE SCIPevalExpr(
    return SCIP_OKAY;
 }
 
-/** computes the gradient for a given point
+/** evaluates gradient of an expression for a given point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffNonlinear().
@@ -1149,7 +1149,7 @@ SCIP_RETCODE SCIPevalExprGradient(
    return SCIP_OKAY;
 }
 
-/** computes the Hessian * v at a given point
+/** evaluates Hessian-vector product of an expression for a given point and direction
  *
  * Evaluates children, if necessary.
  * Value can be received via SCIPgetExprPartialDiffGradientDirNonlinear().
@@ -1168,6 +1168,25 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    assert(scip->mem != NULL);
 
    SCIP_CALL( SCIPexprEvalHessianDir(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag, direction) );
+
+   return SCIP_OKAY;
+}
+
+/** evaluates activity of expression w.r.t. current local variable bounds
+ *
+ * Value van be received via SCIPexprGetActivity().
+ *
+ * Reevaluate activity if any variable has changed bounds since last eval call.
+ */
+SCIP_RETCODE SCIPevalExprActivity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprEvalActivity(scip->set, scip->stat, scip->mem->probmem, expr) );
 
    return SCIP_OKAY;
 }
