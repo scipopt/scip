@@ -4683,7 +4683,7 @@ SCIP_RETCODE writeFzn(
       {
          SCIP_Real obj;
          var = vars[intobjvars[v]];
-         obj = objscale*SCIPvarGetObj(var);
+         obj = objscale * SCIPvarGetObj(var);
          SCIPdebugMsg(scip, "variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n", SCIPvarGetName(var), v, intobjvars[v], obj, objscale, SCIPvarGetObj(var));
 
          assert( SCIPisIntegral(scip, obj) );
@@ -4696,7 +4696,7 @@ SCIP_RETCODE writeFzn(
       for( v = 0; v < nfloatobjvars; v++ )
       {
          SCIP_Real obj;
-         obj = objscale*SCIPvarGetObj(vars[floatobjvars[v]]);
+         obj = objscale * SCIPvarGetObj(vars[floatobjvars[v]]);
          flattenFloat(scip, obj, buffy);
          assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS
             || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_IMPLINT);
@@ -4706,7 +4706,7 @@ SCIP_RETCODE writeFzn(
       /* potentially add an objective offset */
       if( !SCIPisZero(scip, objoffset) )
       {
-         flattenFloat(scip, objoffset, buffy);
+         flattenFloat(scip, objscale * objoffset, buffy);
          SCIPinfoMessage(scip, file, "%s%s", nfloatobjvars == 0 ? "" : ", ", buffy );
       }
 

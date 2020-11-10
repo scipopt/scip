@@ -132,6 +132,10 @@ Features
 --------
 
 - Extended check for valid variable and constraint names in PIP writer.
+- Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
+  name matching during parsing. The old format is still supported.
+- The objective scale and offset are now taken into account when reading/writing problems in lp/mps/fzn/pip format.
+  This often changes the behavior when writing transformed problems.
 
 Performance improvements
 ------------------------
@@ -151,6 +155,7 @@ Interface changes
 ### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+- added new sorting functions SCIPsortPtrRealRealBoolBool()
 
 ### Command line interface
 
@@ -198,6 +203,7 @@ Fixed bugs
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
 - Fixed bug with multi-aggregated integer variables in cons_xor.
+- Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 
 Miscellaneous
 -------------

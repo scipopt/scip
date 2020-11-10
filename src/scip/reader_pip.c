@@ -2699,10 +2699,11 @@ void checkConsnames(
    const char* conshdlrname;
 
    assert( scip != NULL );
-   assert( conss != NULL );
+   assert( conss != NULL || nconss == 0 );
 
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL); /* for lint */
       cons = conss[c];
       assert(cons != NULL );
 
@@ -2715,9 +2716,9 @@ void checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
-      if( !isNameValid(SCIPconsGetName(conss[c])) )
+      if( !isNameValid(SCIPconsGetName(cons)) )
       {
-         SCIPwarningMessage(scip, "constraint name <%s> is not valid (too long or unallowed characters); PIP might be corrupted\n", SCIPconsGetName(conss[c]));
+         SCIPwarningMessage(scip, "constraint name <%s> is not valid (too long or unallowed characters); PIP might be corrupted\n", SCIPconsGetName(cons));
          return;
       }
 
@@ -2727,14 +2728,13 @@ void checkConsnames(
          SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
 
          /* for ranged constraints, we need to be able to append _lhs and _rhs to the constraint name, so need additional 4 characters */
-         if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > PIP_MAX_NAMELEN -  4 )
+         if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(cons)) > PIP_MAX_NAMELEN -  4 )
          {
             SCIPwarningMessage(scip, "name of ranged constraint <%s> has to be cut down to %d characters;\n", SCIPconsGetName(conss[c]),
                PIP_MAX_NAMELEN  - 1);
             return;
          }
       }
-
    }
 }
 
@@ -2811,8 +2811,6 @@ SCIP_RETCODE SCIPwritePip(
    SCIPinfoMessage(scip, file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "\\   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "\\   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "\\   Obj. offset      : %.15g\n", objoffset);
 
    /* print objective sense */
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
@@ -2838,8 +2836,14 @@ SCIP_RETCODE SCIPwritePip(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g %s", objscale * SCIPvarGetObj(var), varname );
 
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %+.15g", objscale * objoffset);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 

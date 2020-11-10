@@ -40,6 +40,10 @@
 
 -function(exit,__assertfail)
 
+// make sure lint knows which functions are thread protected
+-sem(nlpiSolveFilterSQP, thread_protected)
+
+
 // turn off all errors for va_* functions:
 -emacro((*),va_*)
 

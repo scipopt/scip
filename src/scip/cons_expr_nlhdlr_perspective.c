@@ -1267,6 +1267,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIP_CONSEXPR_EXPR** varexprs;
    SCIP_Bool success = FALSE;
    int i;
+   SCIP_Bool hassepabelow = FALSE;
+   SCIP_Bool hassepaabove = FALSE;
+   SCIP_Bool hasnondefault = FALSE;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1288,48 +1291,50 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       return SCIP_OKAY;
    }
 
-   if( nlhdlrdata->convexonly || SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) )
+   for( i = 0; i < SCIPgetConsExprExprNEnfos(expr); ++i )
    {
-      /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
-       * Since the sum will then be linear in auxiliary variables, perspective can't improve anything for it
-       *
-       * If we are supposed to run only on convex expressions, than check whether there is a nlhdlr
-       * that participates in separation without using activity for it.
+      SCIP_CONSEXPR_NLHDLR* nlhdlr2;
+      SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlr2participates;
+      SCIP_Bool sepabelowusesactivity;
+      SCIP_Bool sepaaboveusesactivity;
+      SCIPgetConsExprExprEnfoData(expr, i, &nlhdlr2, NULL, &nlhdlr2participates, &sepabelowusesactivity, &sepaaboveusesactivity, NULL);
+
+      if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
+         continue;
+
+      if( !SCIPhasConsExprNlhdlrEstimate(nlhdlr2) )
+         continue;
+
+      if( strcmp(SCIPgetConsExprNlhdlrName(nlhdlr2), "default") != 0 )
+         hasnondefault = TRUE;
+
+      /* If we are supposed to run only on convex expressions, than check whether there is a nlhdlr
+       * that participates in separation without using activity for it. Otherwise, check for
+       * participation regardless of activity usage.
        */
-      SCIP_Bool hasnondefault = FALSE;
-      SCIP_Bool alluseactivity = TRUE;
+      if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && (!nlhdlrdata->convexonly || !sepabelowusesactivity) )
+         hassepabelow = TRUE;
 
-      for( i = 0; i < SCIPgetConsExprExprNEnfos(expr); ++i )
-      {
-         SCIP_CONSEXPR_NLHDLR* nlhdlr2;
-         SCIP_CONSEXPR_EXPRENFO_METHOD nlhdlr2participates;
-         SCIP_Bool sepabelowusesactivity;
-         SCIP_Bool sepaaboveusesactivity;
-         SCIPgetConsExprExprEnfoData(expr, i, &nlhdlr2, NULL, &nlhdlr2participates, &sepabelowusesactivity, &sepaaboveusesactivity, NULL);
+      if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && (!nlhdlrdata->convexonly || !sepaaboveusesactivity) )
+         hassepaabove = TRUE;
+   }
 
-         if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == 0 )
-            continue;
+   /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
+    * Since the sum will then be linear in auxiliary variables, perspective can't improve anything for it
+    */
+   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && !hasnondefault )
+   {
+      SCIPdebugMsg(scip, "sum expr only has default exprhdlr, not running perspective detection\n");
+      return SCIP_OKAY;
+   }
 
-         if( strcmp(SCIPgetConsExprNlhdlrName(nlhdlr2), "default") != 0 )
-            hasnondefault = TRUE;
-
-         if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !sepabelowusesactivity )
-            alluseactivity = FALSE;
-         if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && !sepaaboveusesactivity )
-            alluseactivity = FALSE;
-      }
-
-      if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) && !hasnondefault )
-      {
-         SCIPdebugMsg(scip, "sum expr only has default exprhdlr, not running perspective detection\n");
-         return SCIP_OKAY;
-      }
-
-      if( nlhdlrdata->convexonly && alluseactivity )
-      {
-         SCIPdebugMsg(scip, "expr only has nlhdlr that use activity for sepa, but convexonly is set, not running perspective detection\n");
-         return SCIP_OKAY;
-      }
+   /* If no other nlhdlr separates, neither does perspective (if convexonly, only separation
+    * without using activity counts)
+    */
+   if( !hassepabelow && !hassepaabove )
+   {
+      SCIPdebugMsg(scip, "no nlhdlr separates without using activity, not running perspective detection\n");
+      return SCIP_OKAY;
    }
 
 #ifdef SCIP_DEBUG
@@ -1368,10 +1373,10 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
       assert(*nlhdlrexprdata != NULL);
       assert((*nlhdlrexprdata)->nindicators > 0);
 
-      /* we don't know at this point whether other nlhdlr will separate below or above,
-       * but whatever they do, we want to be in and it doesn't harm to claim more than necessary
-       */
-      *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABOTH;
+      if( hassepaabove )
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+      if( hassepabelow )
+         *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
