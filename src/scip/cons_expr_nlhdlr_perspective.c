@@ -1508,6 +1508,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
    int nenfos;
    int* enfoposs;
    SCIP_SOL* soladj;
+   int pos;
+   SCVARDATA* scvdata;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1731,8 +1733,16 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          {
             if( SCIPvarGetStatus(nlhdlrexprdata->vars[v]) == SCIP_VARSTATUS_FIXED )
                continue;
+
+            scvdata = getSCVarDataInd(nlhdlrdata->scvars, rowprep->vars[v], indicator, &pos);
+
+            /* a non-semicontinuous variable must be linear in expr; skip it */
+            if( scvdata == NULL )
+               continue;
+
             SCIP_CALL( SCIPsetSolVal(scip, soladj, nlhdlrexprdata->vars[v],
-                  SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]) / indval) );
+                  (SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]) - scvdata->vals0[pos]) / indval)
+                  + scvdata->vals0[pos]);
          }
          for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
          {
@@ -1791,8 +1801,6 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          for( r = minidx; r <= maxidx; ++r )
          {
             SCIP_Real maxcoef;
-            int pos;
-            SCVARDATA* scvdata;
 
             rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps2, r);
             assert(rowprep != NULL);
