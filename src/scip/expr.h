@@ -328,7 +328,6 @@ SCIP_RETCODE SCIPexprRemoveChildren(
  *
  * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
  *
- * Variables can be mapped to different ones by specifying a mapvar callback.
  * For all or some expressions, a mapping to an existing expression can be specified via the mapexpr callback.
  * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
  * If, however, the mapexpr callback returns NULL for the targetexpr, then the expr will be copied in the usual way.
@@ -342,8 +341,6 @@ SCIP_RETCODE SCIPexprCopy(
    BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
    SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
-   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
-   void*                 mapvardata,         /**< data of variable mapping function */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */

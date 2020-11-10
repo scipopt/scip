@@ -29,6 +29,47 @@
  * local functions
  */
 
+/** variable mapping data passed on during copying expressions when copying SCIP instances */
+typedef struct
+{
+   SCIP_HASHMAP*         varmap;             /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP */
+   SCIP_HASHMAP*         consmap;            /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP */
+   SCIP_Bool             global;             /**< should a global or a local copy be created */
+   SCIP_Bool             valid;              /**< indicates whether every variable copy was valid */
+} COPY_MAPEXPR_DATA;
+
+/** variable expression mapping callback to call when copying expressions (within same or different SCIPs) */
+static
+SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
+{
+   COPY_MAPEXPR_DATA* data;
+   SCIP_Bool valid;
+   SCIP_VAR* targetvar;
+
+   assert(sourcescip != NULL);
+   assert(sourceexpr != NULL);
+   assert(targetscip != NULL);
+   assert(targetexpr != NULL);
+   assert(mapexprdata != NULL);
+
+   *targetexpr = NULL;
+
+   if( !SCIPisExprVar(sourcescip, sourceexpr) )
+      return SCIP_OKAY;
+
+   data = (COPY_MAPEXPR_DATA*)mapexprdata;
+
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, SCIPgetConsExprExprVarVar(sourceexpr), &targetvar, data->varmap, data->consmap, data->global, &valid) );
+   assert(*targetvar != NULL);
+
+   /* if copy was not valid, store so in mapvar data */
+   if( !valid )
+      data->valid = FALSE;
+
+   SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, NULL, targetexpr, targetvar) );
+
+   return SCIP_OKAY;
+}
 
 /** @name Simplifying expressions (hashing, common subexpressions, simplify)
  * @{
@@ -835,12 +876,10 @@ SCIP_RETCODE SCIPremoveExprChildren(
 }
 
 /** duplicates the given expression (including children) */
-SCIP_RETCODE SCIPcopyExpr(
+SCIP_RETCODE SCIPduplicateExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
-   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
-   void*                 mapvardata,         /**< data of variable mapping function */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
@@ -857,7 +896,7 @@ SCIP_RETCODE SCIPcopyExpr(
 }
 
 /** duplicates the given expression without its children */
-SCIP_RETCODE SCIPcopyExprShallow(
+SCIP_RETCODE SCIPduplicateExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
@@ -876,6 +915,44 @@ SCIP_RETCODE SCIPcopyExprShallow(
 
    /* create expression with same handler and copied data, but without children */
    SCIP_CALL( SCIPexprCreate(scip->set, scip->mem->probmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** copies an expression to use in a (possibly different) SCIP instance (including children) */
+SCIP_RETCODE SCIPcopyExpr(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool*            valid,              /**< pointer to store whether all checked or enforced constraints were validly copied */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(sourcescip->mem != NULL);
+   assert(targetscip != NULL);
+   assert(targetscip->mem != NULL);
+
+   COPY_MAPEXPR_DATA copydata = {
+      .varmap = varmap,
+      .consmap = consmap,
+      .global = global,
+      .valid = TRUE
+   };
+
+   SCIP_CALL( SCIPexprCopy(sourcescip->set, sourcescip->stat, sourcescip->mem->probmem,
+      targetscip->set, targetscip->stat, targetscip->mem->probmem,
+      expr, copyexpr, copyVarExpr, &copydata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
+   *valid = copydata.valid;
 
    return SCIP_OKAY;
 }

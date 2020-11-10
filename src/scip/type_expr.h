@@ -100,26 +100,6 @@ typedef enum
    void* intevalvardata \
    )
 
-/** variable mapping callback for expression copy callback
- *
- * The method maps a variable (in a source SCIP instance) to a variable
- * (in a target SCIP instance) and captures the target variable.
- *
- *  input:
- *  - targetscip         : target SCIP main data structure
- *  - targetvar          : pointer to store the mapped variable
- *  - sourcescip         : source SCIP main data structure
- *  - sourcevar          : variable to be mapped
- *  - mapvardata         : data of callback
- */
-#define SCIP_DECL_EXPR_MAPVAR(x) SCIP_RETCODE x (\
-   SCIP*      targetscip, \
-   SCIP_VAR** targetvar, \
-   SCIP*      sourcescip, \
-   SCIP_VAR*  sourcevar, \
-   void*      mapvardata \
-   )
-
 /** expression mapping callback for expression copy callback
  *
  * The method maps an expression (in a source SCIP instance) to an expression
@@ -191,18 +171,14 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  - targetexprhdlr     : expression handler in target SCIP
  *  - targetexprdata     : pointer to store the copied expression data
  *  - sourcescip         : source SCIP main data structure
- *  - sourceexpr         : expression in source SCIP which data is to be copied,
- *  - mapvar             : variable mapping callback for use by variable expression handler
- *  - mapvardata         : data of variable mapping callback
+ *  - sourceexpr         : expression in source SCIP which data is to be copied
  */
 #define SCIP_DECL_EXPRCOPYDATA(x) SCIP_RETCODE x (\
    SCIP*           targetscip, \
    SCIP_EXPRHDLR*  targetexprhdlr, \
    SCIP_EXPRDATA** targetexprdata, \
    SCIP*           sourcescip, \
-   SCIP_EXPR*      sourceexpr, \
-   SCIP_DECL_EXPR_MAPVAR(mapvar), \
-   void*           mapvardata)
+   SCIP_EXPR*      sourceexpr)
 
 /** expression data free callback
  *

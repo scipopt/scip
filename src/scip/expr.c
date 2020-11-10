@@ -35,15 +35,6 @@
  * Data structures
  */
 
-/** variable mapping data passed on during copying expressions when copying SCIP instances */
-typedef struct
-{
-   SCIP_HASHMAP*         varmap;             /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP */
-   SCIP_HASHMAP*         consmap;            /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP */
-   SCIP_Bool             global;             /**< should a global or a local copy be created */
-   SCIP_Bool             valid;              /**< indicates whether every variable copy was valid */
-} COPY_MAPVAR_DATA;
-
 /** printing to file data */
 struct SCIP_ExprPrintData
 {
@@ -159,32 +150,6 @@ SCIP_RETCODE freeExpr(
    return SCIP_OKAY;
 }
 
-/** variable mapping callback to call when copying expressions (within same or different SCIPs) */
-static
-SCIP_DECL_EXPR_MAPVAR(copyVar)
-{
-   COPY_MAPVAR_DATA* data;
-   SCIP_Bool valid;
-
-   assert(sourcevar != NULL);
-   assert(targetvar != NULL);
-   assert(mapvardata != NULL);
-
-   data = (COPY_MAPVAR_DATA*)mapvardata;
-
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, targetvar, data->varmap, data->consmap, data->global, &valid) );
-   assert(*targetvar != NULL);
-
-   /* if copy was not valid, store so in mapvar data */
-   if( !valid )
-      data->valid = FALSE;
-
-   /* caller assumes that target variable has been captured */
-   SCIP_CALL( SCIPcaptureVar(targetscip, *targetvar) );
-
-   return SCIP_OKAY;
-}
-
 /** copies an expression including subexpressions
  *
  * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
@@ -204,8 +169,6 @@ SCIP_RETCODE copyExpr(
    BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
    SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
-   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
-   void*                 mapvardata,         /**< data of variable mapping function */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
@@ -240,6 +203,8 @@ SCIP_RETCODE copyExpr(
          case SCIP_EXPRITER_ENTEREXPR :
          {
             /* create expr that will hold the copy */
+            SCIP_EXPRHDLR* targetexprhdlr;
+            SCIP_EXPRDATA* targetexprdata;
             SCIP_EXPR* exprcopy = NULL;
 
             if( mapexprdata != NULL )
@@ -252,78 +217,49 @@ SCIP_RETCODE copyExpr(
                   expriteruserdata.ptrval = exprcopy;
                   SCIPexpriterSetCurrentUserData(it, expriteruserdata);
 
+                  /* let future owner creates its data and store its free callback in the expr */
+                  SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
                   /* skip subexpression (assume that exprcopy is a complete copy) and continue */
                   expr = SCIPexpriterSkipDFS(it);
                   continue;
                }
             }
 
-            /* if the source is a variable expression create a variable expression directly; otherwise copy the expression data */
-            if( SCIPisExprVar(expr) )
+            /* get the exprhdlr of the target scip */
+            if( targetscip != sourcescip )
             {
-               SCIP_VAR* sourcevar;
-               SCIP_VAR* targetvar;
+               targetexprhdlr = SCIPsetFindExprhdlr(targetset, expr->exprhdlr->name);
 
-               sourcevar = SCIPgetConsExprExprVarVar(expr);
-               assert(sourcevar != NULL);
-               targetvar = NULL;
-
-               /* get the corresponding variable in the target SCIP */
-               if( mapvar != NULL )
+               if( targetexprhdlr == NULL )
                {
-                  SCIP_CALL( mapvar(targetscip, &targetvar, sourcescip, sourcevar, mapvardata) );
-                  SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, &exprcopy, targetvar) );
+                  /* expression handler not in target scip (probably did not have a copy callback) -> abort */
+                  expriteruserdata.ptrval = NULL;
+                  SCIPexpriterSetCurrentUserData(it, expriteruserdata);
 
-                  /* we need to release once since it has been captured by the mapvar() and createExprVar() call */
-                  assert(SCIPvarGetNUses(targetvar) > 1);  /* we pass eventqueue=NULL and lp=NULL, as they should not be needed anyway since var will not be freed */
-                  SCIP_CALL( SCIPvarRelease(&targetvar, targetblkmem, targetset, NULL, NULL) );
-               }
-               else
-               {
-                  targetvar = sourcevar;
-                  SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, &exprcopy, targetvar) );
+                  expr = SCIPexpriterSkipDFS(it);
+                  continue;
                }
             }
             else
             {
-               SCIP_EXPRHDLR* targetexprhdlr;
-               SCIP_EXPRDATA* targetexprdata;
-
-               /* get the exprhdlr of the target scip */
-               if( targetscip != sourcescip )
-               {
-                  targetexprhdlr = SCIPsetFindExprhdlr(targetset, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
-
-                  if( targetexprhdlr == NULL )
-                  {
-                     /* expression handler not in target scip (probably did not have a copy callback) -> abort */
-                     expriteruserdata.ptrval = NULL;
-                     SCIPexpriterSetCurrentUserData(it, expriteruserdata);
-
-                     expr = SCIPexpriterSkipDFS(it);
-                     continue;
-                  }
-               }
-               else
-               {
-                  targetexprhdlr = SCIPexprGetHdlr(expr);
-               }
-               assert(targetexprhdlr != NULL);
-
-               /* copy expression data */
-               if( expr->exprdata != NULL )
-               {
-                  assert(expr->exprhdlr->copydata != NULL);
-                  SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr, mapvar, mapvardata) );
-               }
-               else
-               {
-                  targetexprdata = NULL;
-               }
-
-               /* create in targetexpr an expression of the same type as expr, but without children for now */
-               SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+               targetexprhdlr = expr->exprhdlr;
             }
+            assert(targetexprhdlr != NULL);
+
+            /* copy expression data */
+            if( expr->exprdata != NULL )
+            {
+               assert(expr->exprhdlr->copydata != NULL);
+               SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr) );
+            }
+            else
+            {
+               targetexprdata = NULL;
+            }
+
+            /* create in targetexpr an expression of the same type as expr, but without children for now */
+            SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
             /* let future owner creates its data and store its free callback in the expr */
             SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
@@ -2116,8 +2052,6 @@ SCIP_RETCODE SCIPexprCopy(
    BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
    SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
-   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
-   void*                 mapvardata,         /**< data of variable mapping function */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
@@ -2125,7 +2059,7 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
-   SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetstat, targetblkmem, sourceexpr, targetexpr, mapvar, mapvardata, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+   SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetstat, targetblkmem, sourceexpr, targetexpr, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
    return SCIP_OKAY;
 }

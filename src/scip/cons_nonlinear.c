@@ -588,7 +588,7 @@ SCIP_RETCODE createCons(
    if( copyexpr )
    {
       /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
-      SCIP_CALL( SCIPcopyExpr(scip, scip, expr, &consdata->expr, NULL, NULL, mapexprvar, conshdlr, exprownerdataCreate, NULL, exprownerdataFree) );
+      SCIP_CALL( SCIPduplicateExpr(scip, scip, expr, &consdata->expr, NULL, NULL, mapexprvar, conshdlr, exprownerdataCreate, NULL, exprownerdataFree) );
    }
    else
    {

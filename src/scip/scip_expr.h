@@ -180,12 +180,10 @@ SCIP_RETCODE SCIPremoveExprChildren(
 
 /** duplicates the given expression (including children) */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyExpr(
+SCIP_RETCODE SCIPduplicateExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
-   SCIP_DECL_EXPR_MAPVAR((*mapvar)),         /**< variable mapping function, or NULL for identity mapping */
-   void*                 mapvardata,         /**< data of variable mapping function */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
@@ -195,10 +193,28 @@ SCIP_RETCODE SCIPcopyExpr(
 
 /** duplicates the given expression without its children */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcopyExprShallow(
+SCIP_RETCODE SCIPduplicateExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
+   );
+
+/** copies an expression to use in a (possibly different) SCIP instance (including children) */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcopyExpr(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
+                                              *   variables of the target SCIP, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool*            valid,              /**< pointer to store whether all checked or enforced constraints were validly copied */
    );
 
 /** creates an expression from a string
@@ -502,7 +518,7 @@ SCIP_RETCODE SCIPhashExpr(
 /** simplifies an expression
  *
  * The given expression will be released and overwritten with the simplified expression.
- * To keep the expression, duplicate it via SCIPcopyExpr before calling this method.
+ * To keep the expression, duplicate it via SCIPduplicateExpr before calling this method.
  *
  * This is largely inspired in Joel Cohen's
  * Computer algebra and symbolic computation: Mathematical methods
