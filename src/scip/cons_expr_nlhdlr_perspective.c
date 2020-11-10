@@ -97,6 +97,9 @@ struct SCIP_ConsExpr_NlhdlrData
    SCIP_Bool             convexonly;         /**< whether perspective cuts are added only for convex expressions */
    SCIP_Bool             tightenbounds;      /**< whether variable semicontinuity is used to tighten variable bounds */
    SCIP_Bool             adjrefpoint;        /**< whether to adjust the reference point if indicator is not 1 */
+
+   /* statistic counters */
+   int                   ndetects;           /**< total number of expressions detected */
 };
 
 /*
@@ -1215,13 +1218,17 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
 }
 
 /** callback to be called in initialization */
-#if 0
 static
 SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 {  /*lint --e{715}*/
+   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+
+   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+   nlhdlrdata->ndetects = 0;
+
    return SCIP_OKAY;
 }
-#endif
 
 /** callback to be called in deinitialization */
 static
@@ -1253,6 +1260,8 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
       SCIPhashmapFree(&nlhdlrdata->scvars);
       assert(nlhdlrdata->scvars == NULL);
    }
+
+   SCIPinfoMessage(scip, NULL, "\nndetects = %d", nlhdlrdata->ndetects);
 
    return SCIP_OKAY;
 }
@@ -1379,6 +1388,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          *participating |= SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
       if( hassepabelow )
          *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
+
+      ++(nlhdlrdata->ndetects);
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
