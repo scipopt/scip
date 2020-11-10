@@ -405,7 +405,7 @@ void SCIPexprGetQuadraticData(
  */
 SCIP_EXPORT
 void SCIPexprGetQuadraticQuadTerm(
-   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_EXPR*            quadexpr,           /**< quadratic expression */
    int                   termidx,            /**< index of quadratic term */
    SCIP_EXPR**           expr,               /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of variable, or NULL */
@@ -437,7 +437,7 @@ void SCIPexprGetQuadraticBilinTerm(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPexprAreQuadraticExprsVariables(
-   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_EXPR*            expr                /**< quadratic expression */
    );
 
 /** @} */

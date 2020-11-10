@@ -581,4 +581,25 @@ void SCIPexpriterFree(
 
 /**@} */
 
+
+/**@name Quadratic expression functions */
+/**@{ */
+
+/** checks whether an expression is quadratic
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ *
+ * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprCheckQuadratic(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool*            isquadratic         /**< buffer to store result */
+   );
+
+/**@} */
+
 #endif /* SCIP_EXPR_H_ */

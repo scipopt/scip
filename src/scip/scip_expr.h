@@ -701,7 +701,7 @@ SCIP_RETCODE SCIPgetExprVarExprs(
 /** @} */
 
 
-/**@name Expression iterator */
+/**@name Expression Iterator Methods */
 /**@{ */
 
 /** creates an expression iterator */
@@ -718,7 +718,6 @@ void SCIPfreeExpriter(
    );
 
 /** @} */
-
 
 
 /**@name Quadratic expression functions */
@@ -776,11 +775,6 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
    );
 
 /** @} */
-
-/**@name Expression Iterator Methods */
-/**@{ */
-
-/**@} */
 
 #ifdef __cplusplus
 }

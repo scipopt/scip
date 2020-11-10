@@ -3376,6 +3376,276 @@ int SCIPexprCompare(
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
+/** checks whether an expression is quadratic
+ *
+ * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),
+ * or a sum of terms where at least one is a square or a product.
+ *
+ * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
+ */
+SCIP_RETCODE SCIPexprCheckQuadratic(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool*            isquadratic         /**< buffer to store result */
+   )
+{
+   SCIP_HASHMAP* expr2idx;
+   SCIP_HASHMAP* seenexpr = NULL;
+   int nquadterms = 0;
+   int nlinterms = 0;
+   int nbilinterms = 0;
+   int c;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(isquadratic != NULL);
+
+   if( expr->quadchecked )
+   {
+      *isquadratic = expr->quaddata != NULL;
+      return SCIP_OKAY;
+   }
+   assert(expr->quaddata == NULL);
+
+   expr->quadchecked = TRUE;
+   *isquadratic = FALSE;
+
+   /* check if expression is a quadratic expression */
+   SCIPsetDebugMsg(set, "checking if expr %p is quadratic\n", (void*)expr);
+
+   /* handle single square term */
+   if( SCIPexprIsPower(set, expr) && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
+   {
+      SCIPsetDebugMsg(set, "expr looks like square: fill data structures\n", (void*)expr);
+      SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
+
+      expr->quaddata->nquadexprs = 1;
+      SCIP_ALLOC( SCIPallocClearBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms, 1) );
+      expr->quaddata->quadexprterms[0].expr = expr->children[0];
+      expr->quaddata->quadexprterms[0].sqrcoef = 1.0;
+
+      expr->quaddata->allexprsarevars = SCIPexprIsVar(set, expr->quaddata->quadexprterms[0].expr);
+
+      *isquadratic = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* handle single bilinear term */
+   if( SCIPexprIsProduct(set, expr) && SCIPexprGetNChildren(expr) == 2 )
+   {
+      SCIPsetDebugMsg(set, "expr looks like bilinear product: fill data structures\n", (void*)expr);
+      SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
+      expr->quaddata->nquadexprs = 2;
+
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms, 2) );
+      expr->quaddata->quadexprterms[0].expr = SCIPexprGetChildren(expr)[0];
+      expr->quaddata->quadexprterms[0].nadjbilin = 1;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms[0].adjbilin, 1) );
+      expr->quaddata->quadexprterms[0].adjbilin[0] = 0;
+
+      expr->quaddata->quadexprterms[1].expr = SCIPexprGetChildren(expr)[1];
+      expr->quaddata->quadexprterms[1].nadjbilin = 1;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms[1].adjbilin, 1) );
+      expr->quaddata->quadexprterms[1].adjbilin[0] = 0;
+
+      expr->quaddata->nbilinexprterms = 1;
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &expr->quaddata->bilinexprterms, 1) );
+      expr->quaddata->bilinexprterms[0].expr1 = SCIPexprGetChildren(expr)[1];
+      expr->quaddata->bilinexprterms[0].expr2 = SCIPexprGetChildren(expr)[0];
+      expr->quaddata->bilinexprterms[0].coef = 1.0;
+
+      expr->quaddata->allexprsarevars = SCIPexprIsVar(set, expr->quaddata->quadexprterms[0].expr) && SCIPexprIsVar(set, expr->quaddata->quadexprterms[1].expr);
+
+      *isquadratic = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* neither a sum, nor a square, nor a bilinear term */
+   if( !SCIPexprIsSum(set, expr) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPhashmapCreate(&seenexpr, blkmem, 2*SCIPexprGetNChildren(expr)) );
+   for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+   {
+      SCIP_EXPR* child;
+
+      child = SCIPexprGetChildren(expr)[c];
+      assert(child != NULL);
+
+      if( SCIPexprIsPower(child) && SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      {
+         SCIP_CALL( quadDetectProcessExpr(SCIPexprGetChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
+      }
+      else if( SCIPexprIsProduct(child) && SCIPexprGetNChildren(child) == 2 ) /* bilinear term */
+      {
+         ++nbilinterms;
+         SCIP_CALL( quadDetectProcessExpr(SCIPexprGetChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
+         SCIP_CALL( quadDetectProcessExpr(SCIPexprGetChildren(child)[1], seenexpr, &nquadterms, &nlinterms) );
+      }
+      else
+      {
+         /* first time seen linearly --> assign -1; ++nlinterms
+          * not first time --> assign +=1;
+          */
+         if( SCIPhashmapExists(seenexpr, (void*)child) )
+         {
+            assert(SCIPhashmapGetImageInt(seenexpr, (void*)child) > 0);
+
+            SCIP_CALL( SCIPhashmapSetImageInt(seenexpr, (void*)child, SCIPhashmapGetImageInt(seenexpr, (void*)child) + 1) );
+         }
+         else
+         {
+            ++nlinterms;
+            SCIP_CALL( SCIPhashmapInsertInt(seenexpr, (void*)child, -1) );
+         }
+      }
+   }
+
+   if( nquadterms == 0 )
+   {
+      /* only linear sum */
+      SCIPhashmapFree(&seenexpr);
+      return SCIP_OKAY;
+   }
+
+   SCIPsetDebugMsg(set, "expr looks quadratic: fill data structures\n", (void*)expr);
+
+   /* expr2idx maps expressions to indices; if index > 0, it is its index in the linexprs array, otherwise -index-1 is
+    * its index in the quadexprterms array
+    */
+   SCIP_CALL( SCIPhashmapCreate(&expr2idx, blkmem, nquadterms + nlinterms) );
+
+   /* allocate memory, etc */
+   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms, nquadterms) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->linexprs, nlinterms) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->lincoefs, nlinterms) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->bilinexprterms, nbilinterms) );
+
+   expr->quaddata->constant = SCIPgetConsExprExprSumConstant(expr);
+
+   expr->quaddata->allexprsarevars = TRUE;
+   /* for every term of the sum-expr */
+   for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+   {
+      SCIP_EXPR* child;
+      SCIP_Real coef;
+
+      child = SCIPexprGetChildren(expr)[c];
+      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
+
+      assert(child != NULL);
+      assert(coef != 0.0);
+
+      if( SCIPexprIsPower(set, child) && SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      {
+         SCIP_QUADEXPR_QUADTERM* quadexprterm;
+         assert(SCIPexprGetNChildren(child) == 1);
+
+         child = SCIPexprGetChildren(child)[0];
+         assert(SCIPhashmapGetImageInt(seenexpr, (void *)child) > 0);
+
+         SCIP_CALL( quadDetectGetQuadexprterm(blkmem, child, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+         assert(quadexprterm->expr == child);
+         quadexprterm->sqrcoef = coef;
+         quadexprterm->sqrexpr = SCIPexprGetChildren(expr)[c];
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPexprIsVar(set, quadexprterm->expr);
+      }
+      else if( SCIPexprIsProduct(set, child) && SCIPexprGetNChildren(child) == 2 ) /* bilinear term */
+      {
+         SCIP_QUADEXPR_BILINTERM* bilinexprterm;
+         SCIP_QUADEXPR_QUADTERM* quadexprterm;
+         SCIP_EXPR* expr1;
+         SCIP_EXPR* expr2;
+
+         assert(SCIPgetConsExprExprProductCoef(child) == 1.0);
+
+         expr1 = SCIPexprGetChildren(child)[0];
+         expr2 = SCIPexprGetChildren(child)[1];
+         assert(expr1 != NULL && expr2 != NULL);
+
+         bilinexprterm = &expr->quaddata->bilinexprterms[expr->quaddata->nbilinexprterms];
+
+         bilinexprterm->coef = coef;
+         if( SCIPhashmapGetImageInt(seenexpr, (void*)expr1) >= SCIPhashmapGetImageInt(seenexpr, (void*)expr2) )
+         {
+            bilinexprterm->expr1 = expr1;
+            bilinexprterm->expr2 = expr2;
+         }
+         else
+         {
+            bilinexprterm->expr1 = expr2;
+            bilinexprterm->expr2 = expr1;
+         }
+         bilinexprterm->prodexpr = child;
+
+         SCIP_CALL( quadDetectGetQuadexprterm(blkmem, expr1, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+         assert(quadexprterm->expr == expr1);
+         quadexprterm->adjbilin[quadexprterm->nadjbilin] = expr->quaddata->nbilinexprterms;
+         ++quadexprterm->nadjbilin;
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPexprIsVar(set, quadexprterm->expr);
+
+         SCIP_CALL( quadDetectGetQuadexprterm(blkmem, expr2, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+         assert(quadexprterm->expr == expr2);
+         quadexprterm->adjbilin[quadexprterm->nadjbilin] = expr->quaddata->nbilinexprterms;
+         ++quadexprterm->nadjbilin;
+
+         if( expr->quaddata->allexprsarevars )
+            expr->quaddata->allexprsarevars = SCIPexprIsVar(set, quadexprterm->expr);
+
+         ++expr->quaddata->nbilinexprterms;
+
+         /* store position of second factor in quadexprterms */
+         bilinexprterm->pos2 = SCIPhashmapGetImageInt(expr2idx, (void*)bilinexprterm->expr2);
+      }
+      else /* linear term */
+      {
+         if( SCIPhashmapGetImageInt(seenexpr, (void*)child) < 0 )
+         {
+            assert(SCIPhashmapGetImageInt(seenexpr, (void*)child) == -1);
+
+            /* expression only appears linearly */
+            expr->quaddata->linexprs[expr->quaddata->nlinexprs] = child;
+            expr->quaddata->lincoefs[expr->quaddata->nlinexprs] = coef;
+            expr->quaddata->nlinexprs++;
+
+            if( expr->quaddata->allexprsarevars )
+               expr->quaddata->allexprsarevars = SCIPexprIsVar(set, child);
+         }
+         else
+         {
+            /* expression appears non-linearly: set lin coef */
+            SCIP_QUADEXPR_QUADTERM* quadexprterm;
+            assert(SCIPhashmapGetImageInt(seenexpr, (void*)child) > 0);
+
+            SCIP_CALL( quadDetectGetQuadexprterm(blkmem, child, expr2idx, seenexpr, expr->quaddata, &quadexprterm) );
+            assert(quadexprterm->expr == child);
+            quadexprterm->lincoef = coef;
+
+            if( expr->quaddata->allexprsarevars )
+               expr->quaddata->allexprsarevars = SCIPexprIsVar(set, quadexprterm->expr);
+         }
+      }
+   }
+   assert(expr->quaddata->nquadexprs == nquadterms);
+   assert(expr->quaddata->nlinexprs == nlinterms);
+   assert(expr->quaddata->nbilinexprterms == nbilinterms);
+
+   SCIPhashmapFree(&seenexpr);
+   SCIPhashmapFree(&expr2idx);
+
+   *isquadratic = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /* from pub_expr.h */
 
 /** gets the number of times the expression is currently captured */
@@ -3582,6 +3852,156 @@ SCIP_Bool SCIPexprIsIntegral(
    assert(expr != NULL);
 
    return expr->isintegral;
+}
+
+/** gives the coefficients and expressions that define a quadratic expression
+ *
+ * It can return the constant part, the number, arguments, and coefficients of the purely linear part
+ * and the number of quadratic terms and bilinear terms.
+ * Note that for arguments that appear in the quadratic part, a linear coefficient is
+ * stored with the quadratic term.
+ * Use SCIPexprGetQuadraticQuadTerm() and SCIPexprGetQuadraticBilinTerm()
+ * to access the data for a quadratic or bilinear term.
+ *
+ * It can also return the eigenvalues and the eigenvectors of the matrix Q when the quadratic is written
+ * as x^T Q x + b^T x + c^T y + d, where c^T y defines the purely linear part.
+ * Note, however, that to have access to them one needs to call SCIPcomputeExprQuadraticCurvature()
+ * with storeeigeninfo equals to TRUE. If the eigen infortmation was not stored or it failed to be computed,
+ * eigenvalues and eigenvectors will be set to NULL.
+ *
+ *
+ * This function returns pointers to internal data in linexprs and lincoefs.
+ * The user must not change this data.
+ */
+void SCIPexprGetQuadraticData(
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_Real*            constant,           /**< buffer to store constant term, or NULL */
+   int*                  nlinexprs,          /**< buffer to store number of expressions that appear linearly, or NULL */
+   SCIP_EXPR***          linexprs,           /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**           lincoefs,           /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
+   int*                  nquadexprs,         /**< buffer to store number of expressions in quadratic terms, or NULL */
+   int*                  nbilinexprs,        /**< buffer to store number of bilinear expressions terms, or NULL */
+   SCIP_Real**           eigenvalues,        /**< buffer to store pointer to array of eigenvalues of Q, or NULL */
+   SCIP_Real**           eigenvectors        /**< buffer to store pointer to array of eigenvectors of Q, or NULL */
+   )
+{
+   SCIP_QUADEXPR* quaddata;
+
+   assert(expr != NULL);
+
+   quaddata = expr->quaddata;
+   assert(quaddata != NULL);
+
+   if( constant != NULL )
+      *constant = quaddata->constant;
+   if( nlinexprs != NULL )
+      *nlinexprs = quaddata->nlinexprs;
+   if( linexprs != NULL )
+      *linexprs = quaddata->linexprs;
+   if( lincoefs != NULL )
+      *lincoefs = quaddata->lincoefs;
+   if( nquadexprs != NULL )
+      *nquadexprs = quaddata->nquadexprs;
+   if( nbilinexprs != NULL )
+      *nbilinexprs = quaddata->nbilinexprterms;
+   if( eigenvalues != NULL )
+      *eigenvalues = quaddata->eigenvalues;
+   if( eigenvectors != NULL )
+      *eigenvectors = quaddata->eigenvectors;
+}
+
+/** gives the data of a quadratic expression term
+ *
+ * For a term a*expr^2 + b*expr + sum_i (c_i * expr * otherexpr_i), returns
+ * expr, a, b, the number of summands, and indices of bilinear terms in the quadratic expressions bilinexprterms.
+ *
+ * This function returns pointers to internal data in adjbilin.
+ * The user must not change this data.
+ */
+void SCIPexprGetQuadraticQuadTerm(
+   SCIP_EXPR*            quadexpr,           /**< quadratic expression */
+   int                   termidx,            /**< index of quadratic term */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
+   SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of variable, or NULL */
+   SCIP_Real*            sqrcoef,            /**< buffer to store square coefficient of variable, or NULL */
+   int*                  nadjbilin,          /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
+   int**                 adjbilin,           /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
+   SCIP_EXPR**           sqrexpr             /**< buffer to store pointer to square expression (the 'x^2') of this term or NULL if no square expression, or NULL */
+   )
+{
+   SCIP_QUADEXPR_QUADTERM* quadexprterm;
+
+   assert(quadexpr != NULL);
+   assert(quadexpr->quaddata != NULL);
+   assert(quadexpr->quaddata->quadexprterms != NULL);
+   assert(termidx >= 0);
+   assert(termidx < quadexpr->quaddata->nquadexprs);
+
+   quadexprterm = &quadexpr->quaddata->quadexprterms[termidx];
+
+   if( expr != NULL )
+      *expr = quadexprterm->expr;
+   if( lincoef != NULL )
+      *lincoef = quadexprterm->lincoef;
+   if( sqrcoef != NULL )
+      *sqrcoef = quadexprterm->sqrcoef;
+   if( nadjbilin != NULL )
+      *nadjbilin = quadexprterm->nadjbilin;
+   if( adjbilin != NULL )
+      *adjbilin = quadexprterm->adjbilin;
+   if( sqrexpr != NULL )
+      *sqrexpr = quadexprterm->sqrexpr;
+}
+
+/** gives the data of a bilinear expression term
+ *
+ * For a term a*expr1*expr2, returns
+ * expr1, expr2, a, and the position of the quadratic expression term that uses expr2 in the quadratic expressions quadexprterms.
+ */
+void SCIPexprGetQuadraticBilinTerm(
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   int                   termidx,            /**< index of bilinear term */
+   SCIP_EXPR**           expr1,              /**< buffer to store first factor, or NULL */
+   SCIP_EXPR**           expr2,              /**< buffer to store second factor, or NULL */
+   SCIP_Real*            coef,               /**< buffer to coefficient, or NULL */
+   int*                  pos2,               /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   SCIP_EXPR**           prodexpr            /**< buffer to store pointer to expression that is product if first and second factor, or NULL */
+   )
+{
+   SCIP_QUADEXPR_BILINTERM* bilinexprterm;
+
+   assert(expr != NULL);
+   assert(expr->quaddata != NULL);
+   assert(expr->quaddata->bilinexprterms != NULL);
+   assert(termidx >= 0);
+   assert(termidx < expr->quaddata->nbilinexprterms);
+
+   bilinexprterm = &expr->quaddata->bilinexprterms[termidx];
+
+   if( expr1 != NULL )
+      *expr1 = bilinexprterm->expr1;
+   if( expr2 != NULL )
+      *expr2 = bilinexprterm->expr2;
+   if( coef != NULL )
+      *coef = bilinexprterm->coef;
+   if( pos2 != NULL )
+      *pos2 = bilinexprterm->pos2;
+   if( prodexpr != NULL )
+      *prodexpr = bilinexprterm->prodexpr;
+}
+
+/** returns whether all expressions that are used in a quadratic expression are variable expression
+ *
+ * @return TRUE iff all linexprs and quadexprterms[.].expr are variable expressions
+ */
+SCIP_Bool SCIPexprAreQuadraticExprsVariables(
+   SCIP_EXPR*            expr                /**< quadratic expression */
+   )
+{
+   assert(expr != NULL);
+   assert(expr->quaddata != NULL);
+
+   return expr->quaddata->allexprsarevars;
 }
 
 /**@} */
