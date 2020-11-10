@@ -32,7 +32,6 @@
 #define __SCIP_SCIP_NLP_H__
 
 
-#include "nlpi/type_expr.h"
 #include "nlpi/type_nlpi.h"
 #include "scip/def.h"
 #include "scip/type_lp.h"
@@ -41,6 +40,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {

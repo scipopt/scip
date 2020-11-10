@@ -188,7 +188,7 @@ SCIP_RETCODE SCIPduplicateExpr(
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
    SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    );
 
 /** duplicates the given expression without its children */
@@ -214,7 +214,7 @@ SCIP_RETCODE SCIPcopyExpr(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            valid,              /**< pointer to store whether all checked or enforced constraints were validly copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all checked or enforced constraints were validly copied */
    );
 
 /** creates an expression from a string

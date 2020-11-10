@@ -30,7 +30,7 @@
 #include "blockmemshell/memory.h"
 #include "nlpi/exprinterpret.h"
 #include "nlpi/nlpi.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"

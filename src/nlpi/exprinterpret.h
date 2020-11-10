@@ -34,7 +34,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expr.h"
+#include "scip/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
 #include "scip/intervalarith.h"
 

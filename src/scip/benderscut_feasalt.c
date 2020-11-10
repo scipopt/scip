@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "nlpi/exprinterpret.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "nlpi/nlpi.h"
 #include "scip/benderscut_feasalt.h"
 #include "scip/benderscut_opt.h"

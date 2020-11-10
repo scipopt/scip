@@ -28,7 +28,6 @@
 #include "scip/def.h"
 #include "scip/type_message.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {

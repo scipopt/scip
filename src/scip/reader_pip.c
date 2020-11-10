@@ -24,7 +24,6 @@
 
 #include "blockmemshell/memory.h"
 #include <ctype.h>
-#include "nlpi/pub_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_sum.h"
@@ -35,6 +34,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/pub_cons.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_fileio.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"

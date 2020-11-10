@@ -22,7 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "nlpi/exprinterpret.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/benderscut_feas.h"
 #include "scip/benderscut_opt.h"
 #include "scip/cons_linear.h"

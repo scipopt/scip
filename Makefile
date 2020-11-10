@@ -359,10 +359,10 @@ endif
 # NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	= 	nlpi/nlpi.o \
-			nlpi/nlpi_all.o \
-			nlpi/nlpioracle.o \
-			nlpi/expr.o
+NLPILIBCOBJ	=
+#NLPILIBCOBJ	= 	nlpi/nlpi.o \
+#			nlpi/nlpi_all.o \
+#			nlpi/nlpioracle.o
 
 NLPILIBCXXOBJ	= 	nlpi/intervalarithext.o
 
@@ -374,10 +374,10 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/rbtree.o
 
 ifeq ($(EXPRINT),none)
-NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
+#NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
-NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
+#NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
 endif
 
 ifeq ($(IPOPT),true)
@@ -509,7 +509,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/benderscut_feasalt.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
-			scip/benderscut_opt.o \
 			scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
@@ -536,29 +535,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
-			scip/cons_expr.o \
-			scip/cons_expr_abs.o \
-			scip/cons_expr_cos.o \
-			scip/cons_expr_erf.o \
-			scip/cons_expr_exp.o \
-			scip/cons_expr_iterator.o \
-			scip/cons_expr_log.o \
-			scip/cons_expr_pow.o \
-			scip/cons_expr_product.o \
-			scip/cons_expr_rowprep.o \
-			scip/cons_expr_sin.o \
-			scip/cons_expr_sum.o \
-			scip/cons_expr_value.o \
-			scip/cons_expr_var.o \
-			scip/cons_expr_entropy.o \
-			scip/cons_expr_nlhdlr_bilinear.o \
-			scip/cons_expr_nlhdlr_convex.o \
-			scip/cons_expr_nlhdlr_default.o \
-			scip/cons_expr_nlhdlr_perspective.o \
-			scip/cons_expr_nlhdlr_quadratic.o \
-			scip/cons_expr_nlhdlr_quotient.o \
-			scip/cons_expr_nlhdlr_soc.o \
-			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \
 			scip/cons_linear.o \
@@ -719,6 +695,9 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
+#			scip/benderscut_opt.o \
+#			scip/cons_indicator.o \
+
 
 SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
 
@@ -744,6 +723,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
+			scip/expr.c \
 			scip/fileio.o \
 			scip/heur.o \
 			scip/heuristics.o \
@@ -757,7 +737,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
-			scip/nlp.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -791,7 +770,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_lp.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \
-			scip/scip_nlp.o \
 			scip/scip_nodesel.o \
 			scip/scip_nonlinear.o \
 			scip/scip_numerics.o \
@@ -838,6 +816,9 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			tclique/tclique_graph.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
+
+#			scip/nlp.o \
+#			scip/scip_nlp.o \
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)

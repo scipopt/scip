@@ -57,7 +57,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include "nlpi/pub_expr.h"
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK

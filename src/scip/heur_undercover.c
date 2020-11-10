@@ -36,7 +36,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/exprinterpret.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_expr.h"

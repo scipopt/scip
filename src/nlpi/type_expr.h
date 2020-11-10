@@ -79,20 +79,10 @@ enum SCIP_ExprOp {
    SCIP_EXPR_LAST      = 70   /**< no expression, used for counting reasons */
 };
 
-/** Curvature types */
-enum SCIP_ExprCurv
-{
-   SCIP_EXPRCURV_UNKNOWN    = 0,             /**< unknown curvature (or indefinite) */
-   SCIP_EXPRCURV_CONVEX     = 1,             /**< convex */
-   SCIP_EXPRCURV_CONCAVE    = 2,             /**< concave */
-   SCIP_EXPRCURV_LINEAR     = SCIP_EXPRCURV_CONVEX | SCIP_EXPRCURV_CONCAVE/**< linear = convex and concave */
-};
-
 typedef enum   SCIP_ExprOp      SCIP_EXPROP;     /**< expression operand */
 typedef union  SCIP_ExprOpData  SCIP_EXPROPDATA; /**< expression operand data */
 typedef struct SCIP_Expr        SCIP_EXPR;       /**< expression */
 typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
-typedef enum   SCIP_ExprCurv    SCIP_EXPRCURV;   /**< curvature types */
 
 /** An element of a quadratic term: two variable indices and a coefficient.
  * The convention is to have idx1 <= idx2.

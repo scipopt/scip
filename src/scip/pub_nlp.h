@@ -35,7 +35,7 @@
 #include "scip/type_nlp.h"
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
-#include "nlpi/type_expr.h"
+#include "scip/type_expr.h"
 #include "nlpi/type_nlpi.h"
 
 #ifdef __cplusplus

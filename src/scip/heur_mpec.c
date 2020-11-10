@@ -24,7 +24,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/heur_mpec.h"
 #include "scip/heur_subnlp.h"
 #include "scip/pub_cons.h"

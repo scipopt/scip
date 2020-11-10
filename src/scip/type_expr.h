@@ -24,6 +24,15 @@
 #ifndef SCIP_TYPE_EXPR_H_
 #define SCIP_TYPE_EXPR_H_
 
+#include "scip/type_scip.h"
+#include "scip/type_sol.h"
+#include "scip/type_var.h"
+
+// FIXME temporarily to ease compilation
+typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
+typedef struct SCIP_QuadElement SCIP_QUADELEM;   /**< element of a quadratic term */
+
+
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
 
@@ -33,6 +42,15 @@ typedef struct SCIP_Expr_OwnerDataCreateData SCIP_EXPR_OWNERDATACREATEDATA; /**<
 typedef struct SCIP_QuadExpr  SCIP_QUADEXPR;     /**< representation of expression as quadratic */
 typedef struct SCIP_QuadExpr_QuadTerm  SCIP_QUADEXPR_QUADTERM;  /**< a single term associated to a quadratic variable */
 typedef struct SCIP_QuadExpr_BilinTerm SCIP_QUADEXPR_BILINTERM; /**< a single bilinear term */
+
+/** curvature types */
+typedef enum
+{
+   SCIP_EXPRCURV_UNKNOWN    = 0,             /**< unknown curvature (or indefinite) */
+   SCIP_EXPRCURV_CONVEX     = 1,             /**< convex */
+   SCIP_EXPRCURV_CONCAVE    = 2,             /**< concave */
+   SCIP_EXPRCURV_LINEAR     = SCIP_EXPRCURV_CONVEX | SCIP_EXPRCURV_CONCAVE/**< linear = convex and concave */
+} SCIP_EXPRCURV;
 
 /** monotonicity */
 typedef enum

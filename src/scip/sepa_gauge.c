@@ -33,7 +33,7 @@
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpioracle.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"

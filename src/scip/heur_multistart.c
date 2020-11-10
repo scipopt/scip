@@ -23,7 +23,7 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/exprinterpret.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_subnlp.h"
 #include "scip/pub_heur.h"
