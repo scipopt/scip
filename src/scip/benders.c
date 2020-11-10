@@ -37,7 +37,6 @@
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_misc_linear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_nlhdlr_convex.h"

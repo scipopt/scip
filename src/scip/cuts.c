@@ -7898,7 +7898,7 @@ SCIP_Bool computeInitialKnapsackCover(
    }
 
    /* there is no cover */
-   if( SCIPisFeasLE(scip, QUAD_TO_DBL(*coverweight), cutrhs) )
+   if( SCIPisFeasLE(scip, QUAD_TO_DBL(*coverweight), cutrhs) || *coversize == 0 )
       return FALSE;
 
    SCIPdebugMessage("coverweight is %g and right hand side is %g\n", QUAD_TO_DBL(*coverweight), cutrhs);
