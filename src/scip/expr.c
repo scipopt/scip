@@ -150,176 +150,6 @@ SCIP_RETCODE freeExpr(
    return SCIP_OKAY;
 }
 
-/** copies an expression including subexpressions
- *
- * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
- *
- * Variables can be mapped to different ones by specifying a mapvar callback.
- * For all or some expressions, a mapping to an existing expression can be specified via the mapexpr callback.
- * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
- * If, however, the mapexpr callback returns NULL for the targetexpr, then the expr will be copied in the usual way.
- */
-static
-SCIP_RETCODE copyExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             targetset,          /**< global SCIP settings data structure where target expression will live */
-   SCIP_STAT*            targetstat,         /**< dynamic problem statistics in target SCIP */
-   BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
-   SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
-   SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
-   SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
-   void*                 mapexprdata,        /**< data of expression mapping function */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
-   )
-{
-   SCIP_EXPRITER* it;
-   SCIP_EXPRITER_USERDATA expriteruserdata;
-   SCIP_EXPR* expr;
-   SCIP* sourcescip = set->scip;        /* SCIP data structure corresponding to source expression */
-   SCIP* targetscip = targetset->scip;  /* SCIP data structure where target expression will live */
-
-   assert(set != NULL);
-   assert(stat != NULL);
-   assert(blkmem != NULL);
-   assert(targetset != NULL);
-   assert(sourceexpr != NULL);
-   assert(targetexpr != NULL);
-   assert(sourcescip != NULL);
-   assert(targetscip != NULL);
-
-   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, sourceexpr, SCIP_EXPRITER_DFS, TRUE) );  /*TODO use FALSE, i.e., don't duplicate common subexpr? */
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITEDCHILD);
-
-   expr = sourceexpr;
-   while( !SCIPexpriterIsEnd(it) )
-   {
-      switch( SCIPexpriterGetStageDFS(it) )
-      {
-         case SCIP_EXPRITER_ENTEREXPR :
-         {
-            /* create expr that will hold the copy */
-            SCIP_EXPRHDLR* targetexprhdlr;
-            SCIP_EXPRDATA* targetexprdata;
-            SCIP_EXPR* exprcopy = NULL;
-
-            if( mapexprdata != NULL )
-            {
-               SCIP_CALL( mapexprdata(targetscip, &exprcopy, sourcescip, expr, mapexprdata) );
-               if( exprcopy != NULL )
-               {
-                  /* map callback gave us an expression to use for the copy */
-                  /* store targetexpr */
-                  expriteruserdata.ptrval = exprcopy;
-                  SCIPexpriterSetCurrentUserData(it, expriteruserdata);
-
-                  /* let future owner creates its data and store its free callback in the expr */
-                  SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
-
-                  /* skip subexpression (assume that exprcopy is a complete copy) and continue */
-                  expr = SCIPexpriterSkipDFS(it);
-                  continue;
-               }
-            }
-
-            /* get the exprhdlr of the target scip */
-            if( targetscip != sourcescip )
-            {
-               targetexprhdlr = SCIPsetFindExprhdlr(targetset, expr->exprhdlr->name);
-
-               if( targetexprhdlr == NULL )
-               {
-                  /* expression handler not in target scip (probably did not have a copy callback) -> abort */
-                  expriteruserdata.ptrval = NULL;
-                  SCIPexpriterSetCurrentUserData(it, expriteruserdata);
-
-                  expr = SCIPexpriterSkipDFS(it);
-                  continue;
-               }
-            }
-            else
-            {
-               targetexprhdlr = expr->exprhdlr;
-            }
-            assert(targetexprhdlr != NULL);
-
-            /* copy expression data */
-            if( expr->exprdata != NULL )
-            {
-               assert(expr->exprhdlr->copydata != NULL);
-               SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr) );
-            }
-            else
-            {
-               targetexprdata = NULL;
-            }
-
-            /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
-
-            /* let future owner creates its data and store its free callback in the expr */
-            SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
-
-            /* store targetexpr */
-            expriteruserdata.ptrval = exprcopy;
-            SCIPexpriterSetCurrentUserData(it, expriteruserdata);
-
-            break;
-         }
-
-         case SCIP_EXPRITER_VISITEDCHILD :
-         {
-            /* just visited child so a copy of himself should be available; append it */
-            SCIP_EXPR* exprcopy;
-            SCIP_EXPR* childcopy;
-
-            exprcopy = (SCIP_EXPR*)SCIPexpriterGetCurrentUserData(it).ptrval;
-
-            /* get copy of child */
-            childcopy = (SCIP_EXPR*)SCIPexpriterGetChildUserDataDFS(it).ptrval;
-            if( childcopy == NULL )
-            {
-               /* abort */
-               /* release exprcopy (should free also the already copied children) */
-               SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, (SCIP_EXPR**)&exprcopy) );
-
-               expriteruserdata.ptrval = NULL;
-               SCIPexpriterSetCurrentUserData(it, expriteruserdata);
-
-               expr = SCIPexpriterSkipDFS(it);
-               continue;
-            }
-
-            /* append child to exprcopy */
-            SCIP_CALL( SCIPappendExprChild(targetscip, exprcopy, childcopy) );
-
-            /* release childcopy (still captured by exprcopy) */
-            SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, &childcopy) );
-
-            break;
-         }
-
-         default:
-            /* we should never be called in this stage */
-            SCIPABORT();
-            break;
-      }
-
-      expr = SCIPexpriterGetNext(it);
-   }
-
-   /* the target expression should be stored in the userdata of the sourceexpr (can be NULL if aborted) */
-   *targetexpr = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, sourceexpr).ptrval;
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
 
 /*
  * quadratic representation of expression
@@ -2038,7 +1868,6 @@ SCIP_RETCODE SCIPexprRemoveChildren(
  *
  * @note If copying fails due to an expression handler not being available in the targetscip, then *targetexpr will be set to NULL.
  *
- * Variables can be mapped to different ones by specifying a mapvar callback.
  * For all or some expressions, a mapping to an existing expression can be specified via the mapexpr callback.
  * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
  * If, however, the mapexpr callback returns NULL for the targetexpr, then the expr will be copied in the usual way.
@@ -2059,7 +1888,146 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
-   SCIP_CALL( copyExpr(set, stat, blkmem, targetset, targetstat, targetblkmem, sourceexpr, targetexpr, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+   SCIP_EXPRITER* it;
+   SCIP_EXPRITER_USERDATA expriteruserdata;
+   SCIP_EXPR* expr;
+   SCIP* sourcescip = set->scip;        /* SCIP data structure corresponding to source expression */
+   SCIP* targetscip = targetset->scip;  /* SCIP data structure where target expression will live */
+
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(targetset != NULL);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, sourceexpr, SCIP_EXPRITER_DFS, TRUE) );  /*TODO use FALSE, i.e., don't duplicate common subexpr? */
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITEDCHILD);
+
+   expr = sourceexpr;
+   while( !SCIPexpriterIsEnd(it) )
+   {
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_ENTEREXPR :
+         {
+            /* create expr that will hold the copy */
+            SCIP_EXPRHDLR* targetexprhdlr;
+            SCIP_EXPRDATA* targetexprdata;
+            SCIP_EXPR* exprcopy = NULL;
+
+            if( mapexprdata != NULL )
+            {
+               SCIP_CALL( mapexprdata(targetscip, &exprcopy, sourcescip, expr, mapexprdata) );
+               if( exprcopy != NULL )
+               {
+                  /* map callback gave us an expression to use for the copy */
+                  /* store targetexpr */
+                  expriteruserdata.ptrval = exprcopy;
+                  SCIPexpriterSetCurrentUserData(it, expriteruserdata);
+
+                  /* let future owner creates its data and store its free callback in the expr */
+                  SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
+                  /* skip subexpression (assume that exprcopy is a complete copy) and continue */
+                  expr = SCIPexpriterSkipDFS(it);
+                  continue;
+               }
+            }
+
+            /* get the exprhdlr of the target scip */
+            if( targetscip != sourcescip )
+            {
+               targetexprhdlr = SCIPsetFindExprhdlr(targetset, expr->exprhdlr->name);
+
+               if( targetexprhdlr == NULL )
+               {
+                  /* expression handler not in target scip (probably did not have a copy callback) -> abort */
+                  expriteruserdata.ptrval = NULL;
+                  SCIPexpriterSetCurrentUserData(it, expriteruserdata);
+
+                  expr = SCIPexpriterSkipDFS(it);
+                  continue;
+               }
+            }
+            else
+            {
+               targetexprhdlr = expr->exprhdlr;
+            }
+            assert(targetexprhdlr != NULL);
+
+            /* copy expression data */
+            if( expr->exprdata != NULL )
+            {
+               assert(expr->exprhdlr->copydata != NULL);
+               SCIP_CALL( expr->exprhdlr->copydata(targetscip, targetexprhdlr, &targetexprdata, sourcescip, expr) );
+            }
+            else
+            {
+               targetexprdata = NULL;
+            }
+
+            /* create in targetexpr an expression of the same type as expr, but without children for now */
+            SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
+            /* let future owner creates its data and store its free callback in the expr */
+            SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+
+            /* store targetexpr */
+            expriteruserdata.ptrval = exprcopy;
+            SCIPexpriterSetCurrentUserData(it, expriteruserdata);
+
+            break;
+         }
+
+         case SCIP_EXPRITER_VISITEDCHILD :
+         {
+            /* just visited child so a copy of himself should be available; append it */
+            SCIP_EXPR* exprcopy;
+            SCIP_EXPR* childcopy;
+
+            exprcopy = (SCIP_EXPR*)SCIPexpriterGetCurrentUserData(it).ptrval;
+
+            /* get copy of child */
+            childcopy = (SCIP_EXPR*)SCIPexpriterGetChildUserDataDFS(it).ptrval;
+            if( childcopy == NULL )
+            {
+               /* abort */
+               /* release exprcopy (should free also the already copied children) */
+               SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, (SCIP_EXPR**)&exprcopy) );
+
+               expriteruserdata.ptrval = NULL;
+               SCIPexpriterSetCurrentUserData(it, expriteruserdata);
+
+               expr = SCIPexpriterSkipDFS(it);
+               continue;
+            }
+
+            /* append child to exprcopy */
+            SCIP_CALL( SCIPappendExprChild(targetscip, exprcopy, childcopy) );
+
+            /* release childcopy (still captured by exprcopy) */
+            SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, &childcopy) );
+
+            break;
+         }
+
+         default:
+            /* we should never be called in this stage */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriterGetNext(it);
+   }
+
+   /* the target expression should be stored in the userdata of the sourceexpr (can be NULL if aborted) */
+   *targetexpr = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, sourceexpr).ptrval;
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }
