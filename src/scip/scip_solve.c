@@ -2188,6 +2188,16 @@ SCIP_RETCODE displayRelevantStats(
          else
             SCIPmessagePrintInfo(scip->messagehdlr, "%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
+      if( scip->set->exact_enabled && scip->primal->nsolsfound > 0 )
+      {
+         SCIP_Rational* objval;
+         RatCreateBuffer(SCIPbuffer(scip), &objval);
+         SCIPmessagePrintInfo(scip->messagehdlr, "Best exact objval  : ");
+         SCIPgetPrimalboundExact(scip, objval);
+         RatMessage(scip->messagehdlr, NULL, objval);
+         RatFreeBuffer(SCIPbuffer(scip), &objval);
+         SCIPmessagePrintInfo(scip->messagehdlr, "\n");
+      }
 
       /* check solution for feasibility in original problem */
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
