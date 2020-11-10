@@ -80,7 +80,7 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
  */
 static
 SCIP_RETCODE findEqualExpr(
-//   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to replace */
    SCIP_MULTIHASH*       key2expr,           /**< mapping of hashes to expressions */
    SCIP_EXPR**           newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
@@ -88,7 +88,7 @@ SCIP_RETCODE findEqualExpr(
 {  /*lint --e{438}*/
    SCIP_MULTIHASHLIST* multihashlist;
 
-//   assert(set != NULL);
+   assert(set != NULL);
    assert(expr != NULL);
    assert(key2expr != NULL);
    assert(newexpr != NULL);
@@ -108,7 +108,7 @@ SCIP_RETCODE findEqualExpr(
       }
       else if( expr != *newexpr )
       {
-         assert(SCIPexprCompare(expr, *newexpr) == 0);
+         assert(SCIPexprCompare(set, expr, *newexpr) == 0);
          break;
       }
       else
@@ -162,7 +162,6 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
    return SCIPexpriterGetExprUserData(hashiterator, expr).uintval;
 }  /*lint !e715*/
 
-// TODO move into SCIPhashExpr or expr.c  ?
 /** hashes an expression using an already existing iterator
  *
  * The iterator must by of type DFS with allowrevisit=FALSE and only the leaveexpr stage enabled.
@@ -279,7 +278,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
       SCIP_EXPR* child;
 
       /* check the root for equivalence separately first */
-      SCIP_CALL( findEqualExpr(exprs[i], key2expr, &newroot) );
+      SCIP_CALL( findEqualExpr(set, exprs[i], key2expr, &newroot) );
 
       if( newroot != NULL )
       {
@@ -308,7 +307,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
          assert(child != NULL);
 
          /* try to find an equivalent expression */
-         SCIP_CALL( findEqualExpr(child, key2expr, &newchild) );
+         SCIP_CALL( findEqualExpr(set, child, key2expr, &newchild) );
 
          /* replace child with newchild */
          if( newchild != NULL )
@@ -337,113 +336,11 @@ SCIP_RETCODE replaceCommonSubexpressions(
    return SCIP_OKAY;
 }
 
-// TODO move into SCIPsimplifyExpr or expr.c
-/** helper function to simplify an expression and its subexpressions */
-static
-SCIP_RETCODE simplifyExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
-   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
-   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
-   SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
-   )
-{
-   SCIP_EXPR* expr;
-   SCIP_EXPRITER* it;
-
-   assert(set != NULL);
-   assert(stat != NULL);
-   assert(blkmem != NULL);
-   assert(rootexpr != NULL);
-   assert(simplified != NULL);
-   assert(changed != NULL);
-   assert(infeasible != NULL);
-
-   /* simplify bottom up
-    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
-    * after the child was visited, it is replaced with the simplified expr
-    */
-   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR);
-
-   *changed = FALSE;
-   *infeasible = FALSE;
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
-   {
-      switch( SCIPexpriterGetStageDFS(it) )
-      {
-         case SCIP_EXPRITER_VISITEDCHILD:
-         {
-            SCIP_EXPR* newchild;
-            SCIP_EXPR* child;
-
-            newchild = (SCIP_EXPR*)SCIPexpriterGetChildUserDataDFS(it).ptrval;
-            child = SCIPexpriterGetChildExprDFS(it);
-            assert(newchild != NULL);
-
-            /* if child got simplified, replace it with the new child */
-            if( newchild != child )
-            {
-               SCIP_CALL( SCIPreplaceExprChild(scip, expr, SCIPexpriterGetChildIdxDFS(it), newchild) );
-            }
-
-            /* we do not need to hold newchild anymore */
-            SCIP_CALL( SCIPreleaseExpr(scip, &newchild) );
-
-            break;
-         }
-
-         case SCIP_EXPRITER_LEAVEEXPR:
-         {
-            SCIP_EXPR* refexpr = NULL;
-            SCIP_EXPRITER_USERDATA iterdata;
-
-            /* TODO we should do constant folding (handle that all children are value-expressions) here in a generic way
-             * instead of reimplementing it in every handler
-             */
-
-            /* use simplification of expression handlers */
-            if( SCIPexprhdlrHasSimplify(expr->exprhdlr) )
-            {
-               SCIP_CALL( SCIPcallExprhdlrSimplify(scip, conshdlr, expr, &refexpr) );
-               if( expr != refexpr )
-                  *changed = TRUE;
-            }
-            else
-            {
-               /* if an expression handler doesn't implement simplify, we assume all those type of expressions are simplified
-                * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
-                */
-               refexpr = expr;
-               SCIPexprCapture(refexpr);
-            }
-            assert(refexpr != NULL);
-
-            iterdata.ptrval = (void*) refexpr;
-            SCIPexpriterSetCurrentUserData(it, iterdata);
-
-            break;
-         }
-
-         default:
-            SCIPABORT(); /* we should never be called in this stage */
-            break;
-      }
-   }
-
-   *simplified = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, rootexpr).ptrval;
-   assert(*simplified != NULL);
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
 /** @} */  /* end of simplify methods */
 
+/*
+ * public functions
+ */
 
 /**@name Expression Handler Methods */
 /**@{ */
@@ -1306,10 +1203,82 @@ SCIP_RETCODE SCIPsimplifyExpr(
    SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
    )
 {
+   SCIP_EXPR* expr;
+   SCIP_EXPRITER* it;
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
+   assert(rootexpr != NULL);
+   assert(simplified != NULL);
+   assert(changed != NULL);
+   assert(infeasible != NULL);
 
-   SCIP_CALL( simplifyExpr(scip->set, scip->stat, scip->mem->probmem, rootexpr, simplified, changed, infeasible) );
+   /* simplify bottom up
+    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
+    * after the child was visited, it is replaced with the simplified expr
+    */
+   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   *changed = FALSE;
+   *infeasible = FALSE;
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
+   {
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITEDCHILD:
+         {
+            SCIP_EXPR* newchild;
+            SCIP_EXPR* child;
+
+            newchild = (SCIP_EXPR*)SCIPexpriterGetChildUserDataDFS(it).ptrval;
+            child = SCIPexpriterGetChildExprDFS(it);
+            assert(newchild != NULL);
+
+            /* if child got simplified, replace it with the new child */
+            if( newchild != child )
+            {
+               SCIP_CALL( SCIPreplaceExprChild(scip, expr, SCIPexpriterGetChildIdxDFS(it), newchild) );
+            }
+
+            /* we do not need to hold newchild anymore */
+            SCIP_CALL( SCIPreleaseExpr(scip, &newchild) );
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR:
+         {
+            SCIP_EXPR* refexpr = NULL;
+            SCIP_EXPRITER_USERDATA iterdata;
+
+            /* TODO we should do constant folding (handle that all children are value-expressions) here in a generic way
+             * instead of reimplementing it in every handler
+             */
+
+            /* use simplification of expression handlers */
+            SCIP_CALL( SCIPexprhdlrSimplifyExpr(expr->exprhdlr, scip->set, expr, &refexpr) );
+            assert(refexpr != NULL);
+            if( expr != refexpr )
+               *changed = TRUE;
+
+            iterdata.ptrval = (void*) refexpr;
+            SCIPexpriterSetCurrentUserData(it, iterdata);
+
+            break;
+         }
+
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+   }
+
+   *simplified = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, rootexpr).ptrval;
+   assert(*simplified != NULL);
+
+   SCIPexpriteratorFree(&it);
 
    return SCIP_OKAY;
 }

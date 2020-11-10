@@ -1701,6 +1701,15 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
       if( expr != *simplifiedexpr )
          ++exprhdlr->nsimplified;
    }
+   else
+   {
+      *simplifiedexpr = expr;
+
+      /* if an expression handler doesn't implement simplify, we assume that it is already simplified
+       * we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created
+       */
+      SCIPexprCapture(expr);
+   }
 
    return SCIP_OKAY;
 }
