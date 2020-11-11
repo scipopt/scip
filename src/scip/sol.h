@@ -491,6 +491,15 @@ void SCIPsolRecomputeObj(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
+/** recomputes the exact objective value of an original solution, e.g., when transferring solutions
+ *  from the solution pool (objective coefficients might have changed in the meantime)
+ */
+void SCIPsolRecomputeObjExact(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob            /**< original problem */
+   );
 
 /** returns whether the given solutions in transformed space are equal */
 SCIP_Bool SCIPsolsAreEqual(

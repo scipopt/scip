@@ -636,6 +636,26 @@ SCIP_RETCODE SCIPprimalUpdateRay(
    return SCIP_OKAY;
 }
 
+/** forward declaration; adds exact primal solution to solution storage at given position */
+static
+SCIP_RETCODE primalAddSolExact(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            solptr,             /**< pointer to primal CIP solution */
+   int                   insertpos,          /**< position in solution storage to add solution to */
+   SCIP_Bool             replace             /**< should the solution at insertpos be replaced by the new solution? */
+   );
+
 /** adds primal solution to solution storage at given position */
 static
 SCIP_RETCODE primalAddSol(
@@ -674,6 +694,15 @@ SCIP_RETCODE primalAddSol(
    sol = *solptr;
    assert(sol != NULL);
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
+
+   if( set->exact_enabled && !SCIPsolIsExact(sol) )
+   {
+       SCIP_CALL( SCIPsolMakeExact(sol, blkmem, set, stat, transprob) );
+       SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+            tree, reopt, lp->lpexact, eventqueue, eventfilter, solptr, insertpos, replace) );
+       return SCIP_OKAY;
+   }
+
 
    SCIPsetDebugMsg(set, "insert primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, obj, insertpos, replace);
