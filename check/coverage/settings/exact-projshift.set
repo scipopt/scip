@@ -11,3 +11,5 @@ exact/enabled = TRUE
 # exip: method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)
 # [type: char, advanced: FALSE, range: {npea}, default: a]
 exact/safedbmethod = p
+
+presolving/milp/maxrounds = 0
