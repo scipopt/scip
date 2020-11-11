@@ -809,7 +809,7 @@ SCIP_RETCODE forwardPropExpr(
       expr = SCIPexpriterGetNext(it);
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -1145,7 +1145,7 @@ SCIP_RETCODE propConss(
 
    if( conshdlrdata->propauxvars )
    {
-      SCIPexpriteratorFree(&revpropcollectit);
+      SCIPfreeExpriter(&revpropcollectit);
    }
 
    conshdlrdata->forceboundtightening = FALSE;
@@ -1261,7 +1261,7 @@ SCIP_RETCODE propExprDomains(
       *result = SCIP_REDUCEDDOM;
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    /* invalidate propbounds in all exprs, so noone accidentally uses them outside propagation */
    ++SCIPconshdlrGetData(conshdlr)->curpropboundstag;
@@ -1778,7 +1778,7 @@ SCIP_RETCODE detectNlhdlrs(
       SCIPincrementCurBoundsTagNonlinear(conshdlr, FALSE);
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -2041,7 +2041,7 @@ SCIP_RETCODE deinitSolve(
       consdata->curv = SCIP_EXPRCURV_UNKNOWN;
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -2172,7 +2172,7 @@ SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -2798,7 +2798,7 @@ SCIP_RETCODE propagateLocks(
       expr = SCIPexpriterGetNext(it);
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -3781,7 +3781,7 @@ SCIP_RETCODE presolveBinaryProducts(
 
    /* free memory */
    SCIPhashmapFree(&exprmap);
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -3872,7 +3872,7 @@ SCIP_RETCODE canonicalizeConstraints(
          assert(expr->nlocksneg == 0);
          assert(expr->nlockspos == 0);
       }
-      SCIPexpriteratorFree(&it);
+      SCIPfreeExpriter(&it);
    }
 #endif
 
@@ -4704,7 +4704,7 @@ SCIP_RETCODE initSepa(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -4894,7 +4894,7 @@ SCIP_RETCODE addConsExprExprViolScoresAuxVars(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    if( nexprs > 0 )
    {
@@ -5082,7 +5082,7 @@ SCIP_RETCODE registerBranchingCandidates(
    }
 
    if( SCIPgetBranchAuxNonlinear(scip, conshdlr) )
-      SCIPexpriteratorFree(&it);
+      SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -5240,7 +5240,7 @@ SCIP_RETCODE collectBranchingCandidates(
    }
 
    if( SCIPgetBranchAuxNonlinear(scip, conshdlr) )
-      SCIPexpriteratorFree(&it);
+      SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -6305,7 +6305,7 @@ SCIP_RETCODE enforceConstraints(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
 
@@ -6505,7 +6505,7 @@ SCIP_RETCODE analyzeViolation(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -7959,7 +7959,7 @@ SCIP_RETCODE bilinearTermsInsertAll(
    }
 
    /* release iterator */
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -8420,7 +8420,7 @@ SCIP_RETCODE presolSingleLockedVars(
       }
 
       /* free expression iterator */
-      SCIPexpriteratorFree(&it);
+      SCIPfreeExpriter(&it);
    }
 
    /* check whether the bound disjunction constraint handler is available */
@@ -9928,7 +9928,7 @@ SCIP_RETCODE SCIPdismantleExpr(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }
@@ -10349,7 +10349,7 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    SCIPincrementCurBoundsTagNonlinear(conshdlr, FALSE);
 
@@ -10496,7 +10496,7 @@ SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    addConsExprExprsViolScore(scip, conshdlr, varexprs, nvars, violscore, sol, success);
 
@@ -10683,7 +10683,7 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
             ++(expr->nactivityusessepa);
 
       /* free iterator */
-      SCIPexpriteratorFree(&it);
+      SCIPfreeExpriter(&it);
    }
 
    return SCIP_OKAY;
@@ -11785,26 +11785,26 @@ SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
 
 /** returns representation of the expression of the given expression constraint as quadratic form, if possible
  *
- * Only sets *quaddata to non-NULL if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
  * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
  */
 SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    SCIP*                    scip,               /**< SCIP data structure */
    SCIP_CONS*               cons,               /**< constraint data */
-   SCIP_QUADEXPR** quaddata            /**< buffer to store pointer to quaddata, if quadratic; stores NULL, otherwise */
+   SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
    )
 {
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(quaddata != NULL);
+   assert(isquadratic != NULL);
 
    /* check whether constraint expression is quadratic in extended formulation */
-   SCIP_CALL( SCIPcheckExprQuadratic(scip, SCIPconsGetHdlr(cons), SCIPgetExprConsNonlinear(scip, cons), quaddata) );
+   SCIP_CALL( SCIPcheckExprQuadratic(scip, SCIPgetExprConsNonlinear(scip, cons), isquadratic) );
 
-   /* if not quadratic in non-extended formulation, then do not return quaddata */
-   if( *quaddata != NULL && !(*quaddata)->allexprsarevars )
-      *quaddata = NULL;
+   /* if not quadratic in non-extended formulation, then do indicate quadratic */
+   if( *isquadratic )
+      *isquadratic = SCIPexprAreQuadraticExprsVariables(SCIPgetExprConsNonlinear(scip, cons));
 
    return SCIP_OKAY;
 }

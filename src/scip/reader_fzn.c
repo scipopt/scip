@@ -30,7 +30,7 @@
 
 #include "blockmemshell/memory.h"
 #include <ctype.h>
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_and.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_knapsack.h"
@@ -1194,7 +1194,7 @@ SCIP_RETCODE createQuadraticCons(
 {
    SCIP_CONS* cons;
 
-   SCIP_CALL( SCIPcreateConsExprQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1,
+   SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1,
          quadvars2, quadcoefs, lhs, rhs, initialconss, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss,
          dynamicrows) );
 

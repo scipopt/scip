@@ -38,8 +38,8 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_nlhdlr_convex.h"
+#include "scip/cons_nonlinear.h"
+//#include "scip/cons_expr_nlhdlr_convex.h"
 
 #include "scip/struct_benders.h"
 #include "scip/struct_benderscut.h"
@@ -1358,8 +1358,8 @@ SCIP_RETCODE addSlackVars(
    }
    else
    {
-      rhs = SCIPgetRhsConsExpr(scip, cons);
-      lhs = SCIPgetLhsConsExpr(scip, cons);
+      rhs = SCIPgetRhsConsNonlinear(scip, cons);
+      lhs = SCIPgetLhsConsNonlinear(scip, cons);
    }
 
    /* getting the objective coefficient for the slack variables */
@@ -1382,7 +1382,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         SCIP_CALL( SCIPaddLinearTermConsExpr(scip, cons, -1.0, var) );
+         SCIP_CALL( SCIPaddLinearTermConsNonlinear(scip, cons, -1.0, var) );
       }
 
       /* releasing the variable */
@@ -1406,7 +1406,7 @@ SCIP_RETCODE addSlackVars(
       }
       else
       {
-         SCIP_CALL( SCIPaddLinearTermConsExpr(scip, cons, 1.0, var) );
+         SCIP_CALL( SCIPaddLinearTermConsNonlinear(scip, cons, 1.0, var) );
       }
 
       /* releasing the variable */
@@ -1673,8 +1673,8 @@ SCIP_RETCODE checkSubproblemConvexity(
 
          isnonlinear = TRUE;
 
-         havelhs = !SCIPisInfinity(subproblem, -SCIPgetLhsConsExpr(subproblem, cons));
-         haverhs = !SCIPisInfinity(subproblem,  SCIPgetRhsConsExpr(subproblem, cons));
+         havelhs = !SCIPisInfinity(subproblem, -SCIPgetLhsConsNonlinear(subproblem, cons));
+         haverhs = !SCIPisInfinity(subproblem,  SCIPgetRhsConsNonlinear(subproblem, cons));
          if( havelhs && haverhs )
          {
             isconvex = FALSE;
@@ -1682,19 +1682,18 @@ SCIP_RETCODE checkSubproblemConvexity(
          else
          {
             /* look at curvature stored in cons, though at this stage this will be unknown a.a. */
-            curv = SCIPgetCurvatureConsExpr(subproblem, cons);
+            curv = SCIPgetCurvatureConsNonlinear(subproblem, cons);
             isconvex = ((!havelhs || (curv & SCIP_EXPRCURV_CONCAVE) == SCIP_EXPRCURV_CONCAVE)) &&
                 ((!haverhs || (curv & SCIP_EXPRCURV_CONVEX) == SCIP_EXPRCURV_CONVEX));
 
             if( !isconvex )
             {
                /* if not found convex, compute curvature via nlhdlr_convex and decide again */
-               SCIP_INTERVAL activity;
 
                /* make sure activities are uptodate, SCIPhasConsExprExprCurvature currently assumes that this is already the case */
-               SCIP_CALL( SCIPevalConsExprExprActivity(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), &activity, TRUE) );
+               SCIP_CALL( SCIPevalExprActivity(subproblem, SCIPgetExprConsNonlinear(subproblem, cons)) );  // FIXME use cons_nonlinear specific activity-eval function
 
-               SCIP_CALL( SCIPhasConsExprExprCurvature(subproblem, conshdlr_expr, SCIPgetExprConsExpr(subproblem, cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
+               SCIP_CALL( SCIPhasConsExprExprCurvature(subproblem, SCIPgetExprConsNonlinear(subproblem, cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
             }
          }
 

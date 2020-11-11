@@ -254,25 +254,6 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
    }
 
-   /* quadratic part */
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
-   {
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
-      SCIP_Real grad1;
-      SCIP_Real grad2;
-
-      var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
-      var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
-      grad1 = SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPgetSolVal(scip, projection, var2);
-      grad2 = SCIPnlrowGetQuadElems(nlrow)[i].coef * SCIPgetSolVal(scip, projection, var1);
-
-      SCIP_CALL( SCIPaddVarToRow(scip, *row, var1, grad1) );
-      SCIP_CALL( SCIPaddVarToRow(scip, *row, var2, grad2) );
-
-      gradx0 += grad1 * SCIPgetSolVal(scip, projection, var1) + grad2 * SCIPgetSolVal(scip, projection, var2);
-   }
-
    /* expression tree part */
    {
       SCIP_Real* grad;
@@ -331,6 +312,7 @@ SCIP_RETCODE setQuadraticObj(
    SCIP_SEPADATA*        sepadata            /**< the cut separator data */
    )
 {
+#if !1 //FIXME
    SCIP_QUADELEM* quadelems;
    int i;
 
@@ -360,7 +342,7 @@ SCIP_RETCODE setQuadraticObj(
 
    /* free memory */
    SCIPfreeBufferArray(scip, &quadelems);
-
+#endif
    return SCIP_OKAY;
 }
 

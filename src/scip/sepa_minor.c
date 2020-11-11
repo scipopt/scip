@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "scip/sepa_minor.h"
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_pow.h"
 #include "scip/cons_expr_product.h"

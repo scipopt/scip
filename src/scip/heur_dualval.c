@@ -27,7 +27,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
-#include "nlpi/type_expr.h"
+#include "scip/type_expr.h"
 #include "nlpi/type_nlpi.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"

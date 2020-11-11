@@ -644,7 +644,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_nlobbt.o \
-			scip/prop_obbt.o \
 			scip/prop_probing.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_redcost.o \
@@ -665,8 +664,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_mps.o \
 			scip/reader_mst.o \
 			scip/reader_opb.o \
-			scip/reader_osil.o \
-			scip/reader_pip.o \
 			scip/reader_pbm.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
@@ -682,21 +679,24 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_aggregation.o \
 			scip/sepa_convexproj.o \
 			scip/sepa_disjunctive.o \
-			scip/sepa_eccuts.o \
 			scip/sepa_gauge.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
-			scip/sepa_minor.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
-			scip/sepa_rlt.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 #			scip/benderscut_opt.o \
 #			scip/cons_indicator.o \
+#			scip/prop_obbt.o \
+#			scip/reader_osil.o \
+#			scip/reader_pip.o \
+#			scip/sepa_eccuts.o \
+#			scip/sepa_minor.o \
+#			scip/sepa_rlt.o \
 
 
 SCIPPLUGINLIBCPPOBJ =	scip/presol_milp.o
@@ -723,7 +723,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/dialog.o \
 			scip/disp.o \
 			scip/event.o \
-			scip/expr.c \
+			scip/expr.o \
 			scip/fileio.o \
 			scip/heur.o \
 			scip/heuristics.o \

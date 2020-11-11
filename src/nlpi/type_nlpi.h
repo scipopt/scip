@@ -27,6 +27,7 @@
 
 #include "scip/def.h"
 #include "scip/type_message.h"
+#include "scip/type_expr.h"
 #include "blockmemshell/memory.h"
 
 #ifdef __cplusplus

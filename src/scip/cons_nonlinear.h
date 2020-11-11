@@ -580,17 +580,17 @@ SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** checks whether representation of the expression of the given nonlinear constraint as quadratic form is possible
+/** returns representation of the expression of the given expression constraint as quadratic form, if possible
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
- * \ref SCIPgetExprVar() can be used to retrieve the variable.
+ * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_Bool*            isquadratic         /**< buffer to store result */
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_CONS*               cons,               /**< constraint data */
+   SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
    );
 
 /** adds coef * var to expression constraint

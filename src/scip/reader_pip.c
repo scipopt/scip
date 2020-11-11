@@ -25,9 +25,9 @@
 #include "blockmemshell/memory.h"
 #include <ctype.h>
 #include "scip/cons_and.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_var.h"
+#include "scip/cons_nonlinear.h"
+//#include "scip/cons_expr_sum.h"
+//#include "scip/cons_expr_var.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"

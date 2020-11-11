@@ -7114,7 +7114,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
 {
-   SCIP_QUADEXPR* quaddata;
+   SCIP_Bool isquadratic;
+   SCIP_EXPR* expr;
    SCIP_EXPR* expr1;
    SCIP_EXPR* expr2;
    SCIP_VAR* bilinvars[2];
@@ -7153,13 +7154,13 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
    if( SCIPisInfinity(scip, rhs) || !SCIPisEQ(scip, SCIPgetLhsConsNonlinear(scip, cons), rhs) )
       return SCIP_OKAY;
 
-   /* get quadratic representation, if possible */
-   SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &quaddata) );
-
-   if( quaddata == NULL || !SCIPexprAreQuadraticExprsVariables(quaddata) )
+   /* check whether constraint is quadratic */
+   SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
+   if( !isquadratic )
       return SCIP_OKAY;
 
-   SCIPexprGetQuadraticData(SCIPgetExprConsNonlinear(scip, cons), &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
+   expr = SCIPgetExprConsNonlinear(scip, cons);
+   SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, NULL, NULL, &nquadexprs, &nbilinexprterms, NULL, NULL);
 
    /* adjust rhs */
    rhs -= constant;
@@ -7177,7 +7178,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
       return SCIP_OKAY;
 
    /* get bilinear term */
-   SCIPexprGetQuadraticBilinTerm(quaddata, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
+   SCIPexprGetQuadraticBilinTerm(expr, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
    bilinvars[0] = SCIPgetConsExprExprVarVar(expr1);
    bilinvars[1] = SCIPgetConsExprExprVarVar(expr2);
 
@@ -7189,10 +7190,10 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
       return SCIP_OKAY;
 
    /* get data of quadratic terms */
-   SCIPexprGetQuadraticQuadTerm(quaddata, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
+   SCIPexprGetQuadraticQuadTerm(expr, 0, &expr1, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefx = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
-   SCIPexprGetQuadraticQuadTerm(quaddata, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
+   SCIPexprGetQuadraticQuadTerm(expr, 1, &expr2, &lincoef, &sqrcoef, NULL, NULL, NULL);
    coefy = lincoef + sqrcoef;  /* for binary variables, we can treat sqr coef as lin coef */
 
    /* divide constraint by coefficient of x*y */

@@ -24,6 +24,7 @@
 #ifndef SCIP_TYPE_EXPR_H_
 #define SCIP_TYPE_EXPR_H_
 
+#include "scip/def.h"
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"

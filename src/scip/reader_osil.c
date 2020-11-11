@@ -26,7 +26,7 @@
 #define _USE_MATH_DEFINES   /* to get M_PI and M_E on Windows */  /*lint !750 */
 #include "blockmemshell/memory.h"
 #include "scip/cons_bounddisjunction.h"
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_cos.h"
 #include "scip/cons_expr_erf.h"

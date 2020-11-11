@@ -629,29 +629,6 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
    }
 
-   /* quadratic part */
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
-   {
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
-      SCIP_Real grad1;
-      SCIP_Real grad2;
-      SCIP_Real solval1;
-      SCIP_Real solval2;
-
-      var1    = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
-      var2    = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
-      solval1 = SCIPgetSolVal(scip, sol, var1);
-      solval2 = SCIPgetSolVal(scip, sol, var2);
-      grad1   = SCIPnlrowGetQuadElems(nlrow)[i].coef * solval2; /* note that solval2 is correct */
-      grad2   = SCIPnlrowGetQuadElems(nlrow)[i].coef * solval1;
-
-      SCIP_CALL( SCIPaddVarToRow(scip, row, var1, grad1) );
-      SCIP_CALL( SCIPaddVarToRow(scip, row, var2, grad2) );
-
-      gradx0 += grad1 * solval1 + grad2 * solval2;
-   }
-
    /* expression tree part */
    {
       SCIP_Real* grad;

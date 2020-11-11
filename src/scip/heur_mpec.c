@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
+#include "scip/intervalarith.h"
 #include "nlpi/nlpi.h"
 #include "scip/pub_expr.h"
 #include "scip/heur_mpec.h"
@@ -191,6 +192,7 @@ SCIP_RETCODE addRegularScholtes(
    /* add or update regularization for each non-fixed binary variables */
    if( !update )
    {
+#if !1  // FIXME
       SCIP_QUADELEM* quadelems;
       SCIP_Real* linvals;
       int* lininds;
@@ -226,6 +228,7 @@ SCIP_RETCODE addRegularScholtes(
       SCIPfreeBufferArray(scip, &linvals);
       SCIPfreeBufferArray(scip, &lininds);
       SCIPfreeBufferArray(scip, &quadelems);
+#endif
    }
    else
    {

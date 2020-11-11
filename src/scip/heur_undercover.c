@@ -39,7 +39,7 @@
 #include "scip/pub_expr.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
-#include "scip/cons_expr.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
@@ -498,6 +498,7 @@ SCIP_RETCODE processNlRow(
       }
    }
 
+#if !1  // FIXME
    /* go through all quadratic terms */
    for( t = SCIPnlrowGetNQuadElems(nlrow)-1; t >= 0; t-- )
    {
@@ -579,7 +580,7 @@ SCIP_RETCODE processNlRow(
          incCounters(termcounter, conscounter, consmarker, probidx2);
       }
    }
-
+#endif
    *success = TRUE;
 
    return SCIP_OKAY;

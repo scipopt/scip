@@ -39,8 +39,7 @@
 #include <string.h>
 
 #include "scip/cons_linear.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
+#include "scip/cons_nonlinear.h"
 #include "scip/intervalarith.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"
@@ -71,7 +70,7 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 
-#include "scip/cons_expr.h"
+#include "scip/cons_expr_var.h"
 #include "scip/cons_expr_product.h"
 #include "scip/cons_expr_nlhdlr_bilinear.h"
 
