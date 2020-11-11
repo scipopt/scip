@@ -25,6 +25,7 @@
 #define SCIP_STRUCT_EXPR_H_
 
 #include "scip/type_expr.h"
+#include "scip/type_clock.h"
 
 /** generic data and callback methods of an expression handler */
 struct SCIP_ExprHdlr
@@ -73,6 +74,15 @@ struct SCIP_ExprHdlr
    SCIP_CLOCK*           simplifytime;       /**< time used for expression simplification */
 };
 
+/* expression iteration data stored in an expression */
+struct SCIP_ExprIterData
+{
+   SCIP_EXPR*             parent;            /**< parent expression in DFS iteration */
+   int                    currentchild;      /**< child that is currently visited (or will be visited next) by DFS iteration */
+   unsigned int           visitedtag;        /**< tag to identify whether an expression has been visited already */
+   SCIP_EXPRITER_USERDATA userdata;          /**< space for iterator user to store some (temporary) data */
+};
+
 /** an algebraic expression */
 struct SCIP_Expr
 {
@@ -118,15 +128,6 @@ struct SCIP_Expr
    /* view expression as quadratic */
    SCIP_QUADEXPR*        quaddata;            /**< representation of expression as a quadratic, if checked and being quadratic */
    SCIP_Bool             quadchecked;         /**< whether we checked whether the expression is quadratic */
-};
-
-/* expression iteration data stored in an expression */
-struct SCIP_ExprIterData
-{
-   SCIP_EXPR*             parent;            /**< parent expression in DFS iteration */
-   int                    currentchild;      /**< child that is currently visited (or will be visited next) by DFS iteration */
-   unsigned int           visitedtag;        /**< tag to identify whether an expression has been visited already */
-   SCIP_EXPRITER_USERDATA userdata;          /**< space for iterator user to store some (temporary) data */
 };
 
 /** data for representation of an expression as quadratic */

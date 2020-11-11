@@ -4965,7 +4965,7 @@ SCIP_RETCODE SCIPsetIncludeExprhdlr(
 }
 
 /** returns the expression handler of the given name, or NULL if not existing */
-SCIP_NLPI* SCIPsetFindExprhdlr(
+SCIP_EXPRHDLR* SCIPsetFindExprhdlr(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name                /**< name of expression handler */
    )

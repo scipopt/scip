@@ -29,6 +29,11 @@
 
 #include "scip/expr.h"
 #include "scip/struct_expr.h"
+#include "scip/pub_misc.h"
+#include "scip/clock.h"
+#include "scip/set.h"
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
 #include "nlpi/nlpi_ipopt.h" /* for LAPACK */
 
 /*
@@ -58,7 +63,7 @@ SCIP_RETCODE createExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
    int                   nchildren,          /**< number of children */
-   SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
+   SCIP_EXPR**           children            /**< children (can be NULL if nchildren is 0) */
    )
 {
    int c;
@@ -129,12 +134,10 @@ SCIP_RETCODE createExprOwnerData(
 /** frees an expression */
 static
 SCIP_RETCODE freeExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR**           expr                /**< pointer to free the expression */
    )
 {
-   assert(scip != NULL);
    assert(expr != NULL);
    assert(*expr != NULL);
    assert((*expr)->nuses == 1);
@@ -307,7 +310,6 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
 #else
 #define debugParse                      while( FALSE ) printf
 #endif
-static
 
 /** Parses base to build a value, variable, sum, or function-like ("func(...)") expression.
  * <pre>
@@ -369,7 +371,7 @@ SCIP_RETCODE parseBase(
    else if( *expr == '(' )
    {
       /* parse expression */
-      SCIP_CALL( SCIPexprParse(set, blkmem, vartoexprvarmap, ++expr, newpos, basetree) );
+      SCIP_CALL( SCIPexprParse(set, stat, blkmem, vartoexprvarmap, ++expr, newpos, basetree) );
       expr = *newpos;
 
       /* expect ')' */
@@ -392,7 +394,7 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       debugParse("Parsed value %g, creating a value-expression.\n", value);
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, basetree, value) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(set->scip, basetree, value) );
    }
    else if( isalpha(*expr) )
    {
@@ -430,7 +432,7 @@ SCIP_RETCODE parseBase(
       }
 
       ++expr;
-      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, set, newpos, basetree, &success) );
+      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, set, expr, newpos, basetree, &success) );
 
       if( !success )
       {
@@ -713,7 +715,7 @@ SCIP_RETCODE evalAndDiff(
          break;
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -1073,12 +1075,12 @@ SCIP_RETCODE SCIPexprhdlrCopyInclude(
 
    if( exprhdlr->copyhdlr != NULL )
    {
-      SCIPsetDebugMsg(set, "including expression handler <%s> in subscip %p\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
+      SCIPsetDebugMsg(targetset, "including expression handler <%s> in subscip %p\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
       SCIP_CALL( exprhdlr->copyhdlr(targetset->scip, exprhdlr) );
    }
    else
    {
-      SCIPsetDebugMsg(set, "expression handler <%s> cannot be copied to subscip %p due to missing copyhdlr callback\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
+      SCIPsetDebugMsg(targetset, "expression handler <%s> cannot be copied to subscip %p due to missing copyhdlr callback\n", SCIPexprhdlrGetName(exprhdlr), (void*)targetset->scip);
    }
 
    return SCIP_OKAY;
@@ -1227,7 +1229,7 @@ SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check the monotonicity for */
    int                   childidx,           /**< index of the considered child expression */
-   SCIP_EXPRCURV*        result              /**< buffer to store the monotonicity */
+   SCIP_MONOTONE*        result              /**< buffer to store the monotonicity */
    )
 {
    assert(exprhdlr != NULL);
@@ -1327,6 +1329,7 @@ SCIP_RETCODE SCIPexprhdlrHashExpr(
  * - 1  if expr1 > expr2
  */
 int SCIPexprhdlrCompareExpr(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr1,              /**< first expression in comparison */
    SCIP_EXPR*            expr2               /**< second expression in comparison */
    )
@@ -1352,7 +1355,7 @@ int SCIPexprhdlrCompareExpr(
     */
    for( i = 0; i < expr1->nchildren && i < expr2->nchildren; ++i )
    {
-      int compareresult = SCIPexprCompare(expr1->children[i], expr2->children[i]);
+      int compareresult = SCIPexprCompare(set, expr1->children[i], expr2->children[i]);
       if( compareresult != 0 )
          return compareresult;
    }
@@ -1587,9 +1590,9 @@ SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
 
    if( exprhdlr->inteval != NULL )
    {
-      SCIP_CALL( SCIPclockStart(exprhdlr->intevaltime, set) );
+      SCIPclockStart(exprhdlr->intevaltime, set);
       SCIP_CALL( exprhdlr->inteval(set->scip, expr, interval, intevalvar, intevalvardata) );
-      SCIP_CALL( SCIPclockStop(exprhdlr->intevaltime, set) );
+      SCIPclockStop(exprhdlr->intevaltime, set);
 
       ++exprhdlr->nintevalcalls;
    }
@@ -1627,9 +1630,9 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
 
    if( exprhdlr->estimate != NULL )
    {
-      SCIP_CALL( SCIPclockStart(exprhdlr->estimatetime, set) );
+      SCIPclockStart(exprhdlr->estimatetime, set);
       SCIP_CALL( exprhdlr->estimate(set->scip, expr, sol, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
-      SCIP_CALL( SCIPclockStop(exprhdlr->estimatetime, set) );
+      SCIPclockStop(exprhdlr->estimatetime, set);
 
       /* update statistics */
       ++exprhdlr->nestimatecalls;
@@ -1663,9 +1666,9 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
 
    if( exprhdlr->initestimates )
    {
-      SCIP_CALL( SCIPclockStart(expr->exprhdlr->estimatetime, set) );
+      SCIPclockStart(expr->exprhdlr->estimatetime, set);
       SCIP_CALL( exprhdlr->initestimates(set->scip, expr, overestimate, coefs, constant, islocal, nreturned) );
-      SCIP_CALL( SCIPclockStop(expr->exprhdlr->estimatetime, set) );
+      SCIPclockStop(expr->exprhdlr->estimatetime, set);
 
       ++exprhdlr->nestimatecalls;
    }
@@ -1692,9 +1695,9 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
 
    if( exprhdlr->simplify != NULL )
    {
-      SCIP_CALL( SCIPclockStart(expr->exprhdlr->simplifytime, set) );
+      SCIPclockStart(expr->exprhdlr->simplifytime, set);
       SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr) );
-      SCIP_CALL( SCIPclockStop(expr->exprhdlr->simplifytime) );
+      SCIPclockStop(expr->exprhdlr->simplifytime, set);
 
       /* update statistics */
       ++exprhdlr->nsimplifycalls;
@@ -1738,9 +1741,9 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 
    if( exprhdlr->reverseprop != NULL )
    {
-      SCIP_CALL( SCIPclockStart(exprhdlr->proptime, set) );
+      SCIPclockStart(exprhdlr->proptime, set);
       SCIP_CALL( exprhdlr->reverseprop(set->scip, expr, bounds, childrenbounds, infeasible) );
-      SCIP_CALL( SCIPclockStop(exprhdlr->proptime, set) );
+      SCIPclockStop(exprhdlr->proptime, set);
 
       /* update statistics */
       if( *infeasible )
@@ -1894,7 +1897,7 @@ SCIP_RETCODE SCIPexprCopy(
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
    SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
    SCIP_EXPRITER* it;
@@ -1928,9 +1931,9 @@ SCIP_RETCODE SCIPexprCopy(
             SCIP_EXPRDATA* targetexprdata;
             SCIP_EXPR* exprcopy = NULL;
 
-            if( mapexprdata != NULL )
+            if( mapexpr != NULL )
             {
-               SCIP_CALL( mapexprdata(targetscip, &exprcopy, sourcescip, expr, mapexprdata) );
+               SCIP_CALL( mapexpr(targetscip, &exprcopy, sourcescip, expr, mapexprdata) );
                if( exprcopy != NULL )
                {
                   /* map callback gave us an expression to use for the copy */
@@ -1980,7 +1983,7 @@ SCIP_RETCODE SCIPexprCopy(
             }
 
             /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+            SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL) );
 
             /* let future owner creates its data and store its free callback in the expr */
             SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
@@ -2143,7 +2146,7 @@ SCIP_RETCODE SCIPexprParse(
          SCIP_CALL( retcode );
 
          /* append newly created term */
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(set->scip, *exprtree, termtree, coef) );
          SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &termtree) );
 
          /* find next symbol */
@@ -2224,7 +2227,7 @@ SCIP_RETCODE SCIPexprRelease(
    if( (*rootexpr)->exprdata != NULL )
    {
       assert((*rootexpr)->exprhdlr->freedata != NULL);
-      SCIP_CALL( (*rootexpr)->exprhdlr->freedata(scip, *rootexpr) );
+      SCIP_CALL( (*rootexpr)->exprhdlr->freedata(set->scip, *rootexpr) );
    }
 
    /* now release and free children, where no longer in use */
@@ -2273,7 +2276,7 @@ SCIP_RETCODE SCIPexprRelease(
             if( child->exprdata != NULL )
             {
                assert(child->exprhdlr->freedata != NULL);
-               SCIP_CALL( child->exprhdlr->freedata(scip, child) );
+               SCIP_CALL( child->exprhdlr->freedata(set->scip, child) );
                assert(child->exprdata == NULL);
             }
 
@@ -2293,7 +2296,7 @@ SCIP_RETCODE SCIPexprRelease(
             assert(child->exprdata == NULL);
 
             /* free child expression */
-            SCIP_CALL( freeExpr(set, blkmem, &child) );
+            SCIP_CALL( freeExpr(blkmem, &child) );
             expr->children[SCIPexpriterGetChildIdxDFS(it)] = NULL;
 
             break;
@@ -2310,7 +2313,7 @@ SCIP_RETCODE SCIPexprRelease(
    SCIPexpriteratorFree(&it);
 
    /* handle the root expr separately: free its children and itself here */
-   SCIP_CALL( freeExpr(set, blkmem, rootexpr) );
+   SCIP_CALL( freeExpr(blkmem, rootexpr) );
 
    return SCIP_OKAY;
 }
@@ -2381,8 +2384,8 @@ SCIP_RETCODE SCIPexprPrint(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_EXPR*            expr,               /**< expression to be printed */
-   FILE*                 file                /**< file to print to, or NULL for stdout */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPR*            expr                /**< expression to be printed */
    )
 {
    SCIP_EXPRITER* it;
@@ -2518,7 +2521,7 @@ SCIP_RETCODE SCIPexprPrintDot(
       for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
          color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
       color = SCIPsetFrac(set, color);
-      fprintf(printdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
+      fprintf(printdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", (void*)expr, color, color, color);
 
       if( printdata->whattoprint & SCIP_EXPRPRINT_EXPRHDLR )
       {
@@ -2559,7 +2562,7 @@ SCIP_RETCODE SCIPexprPrintDot(
          if( (printdata->whattoprint & SCIP_EXPRPRINT_EVALTAG) == SCIP_EXPRPRINT_EVALTAG )
          {
             /* print also eval tag */
-            fprintf(printdata->file, " (%u)", expr->evaltag);
+            fprintf(printdata->file, " (%" SCIP_LONGINT_FORMAT ")", expr->evaltag);
          }
          fputs("\\n", printdata->file);
       }
@@ -2572,7 +2575,7 @@ SCIP_RETCODE SCIPexprPrintDot(
          if( (printdata->whattoprint & SCIP_EXPRPRINT_ACTIVITYTAG) == SCIP_EXPRPRINT_ACTIVITYTAG )
          {
             /* print also activity eval tag */
-            fprintf(printdata->file, " (%u)", expr->activitytag);
+            fprintf(printdata->file, " (%" SCIP_LONGINT_FORMAT ")", expr->activitytag);
          }
          fputs("\\n", printdata->file);
       }
@@ -2623,7 +2626,7 @@ SCIP_RETCODE SCIPexprPrintDotFinal(
          assert(expr != NULL);
          assert(expr->nchildren == 0);
 
-         fprintf(file, " n%p", expr);
+         fprintf(file, " n%p", (void*)expr);
       }
    }
    fprintf(file, "}\n");
@@ -2677,7 +2680,7 @@ SCIP_RETCODE SCIPexprDismantle(
             nspaces = 3 * depth;
 
             /* use depth of expression to align output */
-            SCIPmessageFPrintInfo(messagehdlr, file, "%*s[%s]: ", nspaces, "", type);
+            SCIPmessageFPrintInfo(messagehdlr, file, "%*s[%s]: ", nspaces, "", expr->exprhdlr->name);
 
             if( SCIPexprIsVar(set, expr) )
             {
@@ -2705,10 +2708,10 @@ SCIP_RETCODE SCIPexprDismantle(
          {
             int nspaces = 3 * depth;
 
-            if( SCIPexprIsSum(expr) )
+            if( SCIPexprIsSum(set, expr) )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
+//FIXME               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -2959,8 +2962,6 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_Real derivative;
    SCIP_Real hessiandir;
    unsigned int difftag;
-   SCIP_CONSDATA* consdata;
-   int v;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -3006,7 +3007,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
          child->derivative = 0.0;
 
          /* set up direction if we see var for the first time */
-         child->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v])); // FIXME
+//FIXME         child->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v]));
          child->bardot = 0.0;
       }
 
@@ -3085,7 +3086,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPexpriterCreate(set, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
    SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
    SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
 
@@ -3198,9 +3199,7 @@ int SCIPexprCompare(
 
    /* expressions are of the same kind/type; use compare callback or default method */
    if( exprhdlr1 == exprhdlr2 )
-   {
-      return SCIPexprhdlrCompareExpr(expr1, expr2);
-   }
+      return SCIPexprhdlrCompareExpr(set, expr1, expr2);
 
    /* expressions are of different kind/type */
    /* enforces OR6 */
@@ -3210,7 +3209,7 @@ int SCIPexprCompare(
    }
    /* enforces OR12 */
    if( SCIPexprIsValue(set, expr2) )
-      return -SCIPexprCompare(expr2, expr1);
+      return -SCIPexprCompare(set, expr2, expr1);
 
    /* enforces OR7 */
    if( SCIPexprIsSum(set, expr1) )
@@ -3219,21 +3218,21 @@ int SCIPexprCompare(
       int nchildren;
 
       nchildren = expr1->nchildren;
-      compareresult = SCIPexprCompare(expr1->children[nchildren-1], expr2);
+      compareresult = SCIPexprCompare(set, expr1->children[nchildren-1], expr2);
 
       if( compareresult != 0 )
          return compareresult;
 
       /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
-      if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
-         return -1;
+//FIXME      if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
+//         return -1;
 
       /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
       return 1;
    }
    /* enforces OR12 */
    if( SCIPexprIsSum(set, expr2) )
-      return -SCIPexprCompare(expr2, expr1);
+      return -SCIPexprCompare(set, expr2, expr1);
 
    /* enforces OR8 */
    if( SCIPexprIsProduct(set, expr1) )
@@ -3242,7 +3241,7 @@ int SCIPexprCompare(
       int nchildren;
 
       nchildren = expr1->nchildren;
-      compareresult = SCIPexprCompare(expr1->children[nchildren-1], expr2);
+      compareresult = SCIPexprCompare(set, expr1->children[nchildren-1], expr2);
 
       if( compareresult != 0 )
          return compareresult;
@@ -3252,14 +3251,14 @@ int SCIPexprCompare(
    }
    /* enforces OR12 */
    if( SCIPexprIsProduct(set, expr2) )
-      return -SCIPexprCompare(expr2, expr1);
+      return -SCIPexprCompare(set, expr2, expr1);
 
    /* enforces OR9 */
    if( SCIPexprIsPower(set, expr1) )
    {
       int compareresult;
 
-      compareresult = SCIPexprCompare(expr1->children[0], expr2);
+      compareresult = SCIPexprCompare(set, expr1->children[0], expr2);
 
       if( compareresult != 0 )
          return compareresult;
@@ -3273,14 +3272,14 @@ int SCIPexprCompare(
    }
    /* enforces OR12 */
    if( SCIPexprIsPower(set, expr2) )
-      return -SCIPexprCompare(expr2, expr1);
+      return -SCIPexprCompare(set, expr2, expr1);
 
    /* enforces OR10 */
    if( SCIPexprIsVar(set, expr1) )
       return -1;
    /* enforces OR12 */
    if( SCIPexprIsVar(set, expr2) )
-      return -SCIPexprCompare(expr2, expr1);
+      return -SCIPexprCompare(set, expr2, expr1);
 
    /* enforces OR11 */
    retval = strcmp(SCIPexprhdlrGetName(exprhdlr1), SCIPexprhdlrGetName(exprhdlr2));
@@ -3333,7 +3332,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
 
       expr->quaddata->nquadexprs = 1;
-      SCIP_ALLOC( SCIPallocClearBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms, 1) );
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &expr->quaddata->quadexprterms, 1) );
       expr->quaddata->quadexprterms[0].expr = expr->children[0];
       expr->quaddata->quadexprterms[0].sqrcoef = 1.0;
 
@@ -3385,11 +3384,11 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       child = SCIPexprGetChildren(expr)[c];
       assert(child != NULL);
 
-      if( SCIPexprIsPower(child) && SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      if( SCIPexprIsPower(set, child) && SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
       {
          SCIP_CALL( quadDetectProcessExpr(SCIPexprGetChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
       }
-      else if( SCIPexprIsProduct(child) && SCIPexprGetNChildren(child) == 2 ) /* bilinear term */
+      else if( SCIPexprIsProduct(set, child) && SCIPexprGetNChildren(child) == 2 ) /* bilinear term */
       {
          ++nbilinterms;
          SCIP_CALL( quadDetectProcessExpr(SCIPexprGetChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
@@ -3445,7 +3444,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
-      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
+//FIXME      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
 
       assert(child != NULL);
       assert(coef != 0.0);

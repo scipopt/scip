@@ -24,7 +24,12 @@
 #ifndef SCIP_EXPR_H_
 #define SCIP_EXPR_H_
 
+#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
+#include "scip/type_set.h"
+#include "scip/type_stat.h"
+#include "scip/type_clock.h"
+#include "blockmemshell/memory.h"
 
 /**@name Expression Handler Methods */
 /**@{ */
@@ -92,7 +97,7 @@ SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check the monotonicity for */
    int                   childidx,           /**< index of the considered child expression */
-   SCIP_EXPRCURV*        result              /**< buffer to store the monotonicity */
+   SCIP_MONOTONE*        result              /**< buffer to store the monotonicity */
    );
 
 /** calls the integrality check callback of an expression handler
@@ -129,6 +134,7 @@ SCIP_RETCODE SCIPexprhdlrHashExpr(
  */
 SCIP_EXPORT
 int SCIPexprhdlrCompareExpr(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr1,              /**< first expression in comparison */
    SCIP_EXPR*            expr2               /**< second expression in comparison */
    );
@@ -338,6 +344,7 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             targetset,          /**< global SCIP settings data structure where target expression will live */
+   SCIP_STAT*            targetstat,         /**< dynamic problem statistics in target SCIP */
    BMS_BLKMEM*           targetblkmem,       /**< block memory in target SCIP */
    SCIP_EXPR*            sourceexpr,         /**< expression to be copied */
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
@@ -345,7 +352,7 @@ SCIP_RETCODE SCIPexprCopy(
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
    SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)),     /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    );
 
 /** parses an expression and builds a sum-expression with children
@@ -359,6 +366,7 @@ SCIP_RETCODE SCIPexprParse(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           exprstr,            /**< string with the expr to parse */
    const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
    SCIP_EXPR**           expr                /**< pointer to store the expr parsed */
