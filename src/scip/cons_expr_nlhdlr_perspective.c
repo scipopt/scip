@@ -1261,7 +1261,11 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
       assert(nlhdlrdata->scvars == NULL);
    }
 
-   SCIPinfoMessage(scip, NULL, "\nndetects = %d", nlhdlrdata->ndetects);
+   if( nlhdlrdata->ndetects > 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "\nndetects%s = %d", SCIPgetSubscipDepth(scip) > 0 ? " (in subscip)" : "",
+            nlhdlrdata->ndetects);
+   }
 
    return SCIP_OKAY;
 }
