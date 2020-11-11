@@ -359,6 +359,13 @@ SCIP_Bool SCIPexprIsIntegral(
    SCIP_EXPR*            expr                /**< expression */
    );
 
+/** sets the integrality flag of an expression */
+SCIP_EXPORT
+void SCIPexprSetIntegrality(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool             isintegral          /**< integrality of the expression */
+   );
+
 /** @} */
 
 /**@name Quadratic expression functions */

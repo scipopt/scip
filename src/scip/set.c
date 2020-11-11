@@ -2832,7 +2832,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free expression handler */
    for( i = 0; i < (*set)->nexprhdlrs; ++i )
    {
-      SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set) );
+      SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set, blkmem) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nexprhdlrs);
    (*set)->exprhdlrvar = NULL;
@@ -4942,7 +4942,7 @@ SCIP_RETCODE SCIPsetIncludeExprhdlr(
    if( set->nexprhdlrs >= set->exprhdlrssize )
    {
       set->exprhdlrssize = SCIPsetCalcMemGrowSize(set, set->nexprhdlrs+1);
-      SCIP_ALLOC( BMSreallocMemoryArray(&set->nexprhdlrs, set->exprhdlrssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->exprhdlrs, set->exprhdlrssize) );
    }
    assert(set->nexprhdlrs < set->exprhdlrssize);
 

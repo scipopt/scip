@@ -768,6 +768,67 @@ void printExprHdlrStatistics(
 /**@name Expression Handler Methods */
 /**@{ */
 
+/** create expression handler */
+SCIP_RETCODE SCIPexprhdlrCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
+   const char*           name,               /**< name of expression handler (must not be NULL) */
+   const char*           desc,               /**< description of expression handler (can be NULL) */
+   unsigned int          precedence,         /**< precedence of expression operation (used for printing) */
+   SCIP_DECL_EXPREVAL((*eval)),              /**< point evaluation callback (must not be NULL) */
+   SCIP_EXPRHDLRDATA*    data                /**< data of expression handler (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+   assert(name != NULL);
+
+   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, exprhdlr) );
+
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*exprhdlr)->name, name, strlen(name)+1) );
+   if( desc != NULL )
+   {
+      SCIP_ALLOC( BMSduplicateMemoryArray(&(*exprhdlr)->desc, desc, strlen(desc)+1) );
+   }
+
+   (*exprhdlr)->precedence = precedence;
+   (*exprhdlr)->eval = eval;
+   (*exprhdlr)->data = data;
+
+   /* create clocks */
+   SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->estimatetime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->intevaltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*exprhdlr)->simplifytime, SCIP_CLOCKTYPE_DEFAULT) );
+
+   return SCIP_OKAY;
+}
+
+/** frees expression handler */
+SCIP_RETCODE SCIPexprhdlrFree(
+   SCIP_EXPRHDLR**       exprhdlr,           /**< pointer to expression handler to be freed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   if( (*exprhdlr)->freehdlr != NULL )
+   {
+      SCIP_CALL( (*exprhdlr)->freehdlr(set->scip, *exprhdlr, &(*exprhdlr)->data) );
+   }
+
+   /* free clocks */
+   SCIPclockFree(&(*exprhdlr)->simplifytime);
+   SCIPclockFree(&(*exprhdlr)->intevaltime);
+   SCIPclockFree(&(*exprhdlr)->proptime);
+   SCIPclockFree(&(*exprhdlr)->estimatetime);
+
+   BMSfreeMemoryArrayNull(&(*exprhdlr)->desc);
+   BMSfreeMemoryArray(&(*exprhdlr)->name);
+
+   BMSfreeBlockMemory(blkmem, exprhdlr);
+
+   return SCIP_OKAY;
+}
+
 /** set the expression handler callbacks to copy and free an expression handler */
 void SCIPexprhdlrSetCopyFreeHdlr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -2039,7 +2100,35 @@ SCIP_RETCODE SCIPexprCopy(
    /* the target expression should be stored in the userdata of the sourceexpr (can be NULL if aborted) */
    *targetexpr = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, sourceexpr).ptrval;
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** duplicates the given expression without its children */
+SCIP_RETCODE SCIPexprDuplicateShallow(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
+   )
+{
+   SCIP_EXPRDATA* exprdatacopy = NULL;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(copyexpr != NULL);
+
+   /* copy expression data */
+   if( expr->exprdata != NULL )
+   {
+      assert(expr->exprhdlr->copydata != NULL);
+      SCIP_CALL( expr->exprhdlr->copydata(set->scip, expr->exprhdlr, &exprdatacopy, set->scip, expr) );
+   }
+
+   /* create expression with same handler and copied data, but without children */
+   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2088,7 +2177,7 @@ SCIP_RETCODE SCIPexprParse(
       ++expr;
    if( *expr == '+' || *expr == '-' )
    {
-      if( SCIPisExprValue(termtree) )
+      if( SCIPexprIsValue(set, termtree) )
       {
          /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
          SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 0, NULL, NULL, sign * SCIPgetConsExprExprValueValue(termtree)) );
@@ -2310,7 +2399,7 @@ SCIP_RETCODE SCIPexprRelease(
       expr = SCIPexpriterGetNext(it);
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    /* handle the root expr separately: free its children and itself here */
    SCIP_CALL( freeExpr(blkmem, rootexpr) );
@@ -2421,7 +2510,7 @@ SCIP_RETCODE SCIPexprPrint(
       expr = SCIPexpriterGetNext(it);
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2635,7 +2724,7 @@ SCIP_RETCODE SCIPexprPrintDotFinal(
 
    SCIPhashmapFree(&(*printdata)->leaveexprs);
 
-   SCIPexpriteratorFree(&(*printdata)->iterator);
+   SCIPexpriterFree(&(*printdata)->iterator);
 
    if( (*printdata)->closefile )
       fclose((*printdata)->file);
@@ -2730,7 +2819,7 @@ SCIP_RETCODE SCIPexprDismantle(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2827,7 +2916,7 @@ SCIP_RETCODE SCIPexprEval(
    }
 
 TERMINATE:
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -2931,7 +3020,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
          child->derivative += expr->derivative * derivative;
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -3051,7 +3140,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
       }
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -3175,7 +3264,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
       expr = SCIPexpriterGetNext(it);
    }
 
-   SCIPexpriteratorFree(&it);
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -3555,6 +3644,192 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    return SCIP_OKAY;
 }
 
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ *
+ * If assumevarfixed is given and some entries of x correspond to variables present in
+ * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
+ */
+SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_EXPRCURV*        curv,               /**< pointer to store the curvature of quadratics */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
+   )
+{
+   SCIP_QUADEXPR* quaddata;
+   SCIP_HASHMAP* expr2matrix;
+   double* matrix;
+   double* alleigval;
+   int nvars;
+   int nn;
+   int n;
+   int i;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(bufmem != NULL);
+   assert(messagehdlr != NULL);
+   assert(expr != NULL);
+   assert(curv != NULL);
+
+   quaddata = expr->quaddata;
+   assert(quaddata != NULL);
+
+   /* do not store eigen information if we are not considering full matrix */
+   if( assumevarfixed != NULL )
+      storeeigeninfo = FALSE;
+
+   if( quaddata->eigeninfostored || (quaddata->curvaturechecked && !storeeigeninfo) )
+   {
+      *curv = quaddata->curvature;
+      /* if we are convex or concave on the full set of variables, then we will also be so on a subset */
+      if( assumevarfixed == NULL || quaddata->curvature != SCIP_EXPRCURV_UNKNOWN )
+         return SCIP_OKAY;
+   }
+   assert(quaddata->curvature == SCIP_EXPRCURV_UNKNOWN || assumevarfixed != NULL || (storeeigeninfo && !quaddata->eigeninfostored));
+
+   *curv = SCIP_EXPRCURV_UNKNOWN;
+
+   n  = quaddata->nquadexprs;
+
+   /* do not check curvature if nn will be too large
+    * we want nn * sizeof(real) to fit into an unsigned int, so n must be <= sqrt(unit_max/sizeof(real))
+    * sqrt(2*214748364/8) = 7327.1475350234
+    */
+   if( n > 7000 )
+   {
+      SCIPmessageFPrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL, NULL, "number of quadratic variables is too large (%d) to check the curvature\n", n);
+      return SCIP_OKAY;
+   }
+
+   /* TODO do some simple tests first; like diagonal entries don't change sign, etc */
+
+   if( !SCIPisIpoptAvailableIpopt() )
+      return SCIP_OKAY;
+
+   nn = n * n;
+   assert(nn > 0);
+   assert((unsigned)nn < UINT_MAX / sizeof(SCIP_Real));
+
+   if( storeeigeninfo )
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &quaddata->eigenvalues, n));
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &quaddata->eigenvectors, nn));
+
+      alleigval = quaddata->eigenvalues;
+      matrix = quaddata->eigenvectors;
+   }
+   else
+   {
+      SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &alleigval, n) );
+      SCIP_ALLOC( BMSallocClearBufferMemoryArray(bufmem, &matrix, nn) );
+   }
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2matrix, blkmem, n) );
+
+   /* fill matrix's diagonal */
+   nvars = 0;
+   for( i = 0; i < n; ++i )
+   {
+      SCIP_QUADEXPR_QUADTERM quadexprterm;
+
+      quadexprterm = quaddata->quadexprterms[i];
+
+      assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
+
+      /* skip expr if it is a variable mentioned in assumevarfixed */
+      if( assumevarfixed != NULL && SCIPexprIsVar(set, quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(quadexprterm.expr)) )
+         continue;
+
+      if( quadexprterm.sqrcoef == 0.0 && ! storeeigeninfo )
+      {
+         assert(quadexprterm.nadjbilin > 0);
+         /* SCIPdebugMsg(scip, "var <%s> appears in bilinear term but is not squared --> indefinite quadratic\n", SCIPvarGetName(quadexprterm.var)); */
+         goto CLEANUP;
+      }
+
+      matrix[nvars * n + nvars] = quadexprterm.sqrcoef;
+
+      /* remember row of variable in matrix */
+      SCIP_CALL( SCIPhashmapInsert(expr2matrix, (void *)quadexprterm.expr, (void *)(size_t)nvars) );
+      nvars++;
+   }
+
+   /* fill matrix's upper-diagonal */
+   for( i = 0; i < quaddata->nbilinexprterms; ++i )
+   {
+      SCIP_QUADEXPR_BILINTERM bilinexprterm;
+      int col;
+      int row;
+
+      bilinexprterm = quaddata->bilinexprterms[i];
+
+      /* each factor should have been added to expr2matrix unless it corresponds to a variable mentioned in assumevarfixed */
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr1) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr1))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr2) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr2))));
+
+      /* skip bilinear terms where at least one of the factors should be assumed to be fixed (i.e., not present in expr2matrix map) */
+      if( !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) )
+         continue;
+
+      row = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr1);
+      col = (int)(size_t)SCIPhashmapGetImage(expr2matrix, bilinexprterm.expr2);
+
+      assert(row != col);
+
+      if( row < col )
+         matrix[row * n + col] = bilinexprterm.coef / 2.0;
+      else
+         matrix[col * n + row] = bilinexprterm.coef / 2.0;
+   }
+
+   /* compute eigenvalues */
+   if( LapackDsyev(storeeigeninfo, n, matrix, alleigval) != SCIP_OKAY )
+   {
+      SCIPmessagePrintWarning(messagehdlr, "Failed to compute eigenvalues of quadratic coefficient matrix --> don't know curvature\n");
+      goto CLEANUP;
+   }
+
+   /* check convexity */
+   if( !SCIPsetIsNegative(set, alleigval[0]) )
+      *curv = SCIP_EXPRCURV_CONVEX;
+   else if( !SCIPsetIsPositive(set, alleigval[n-1]) )
+      *curv = SCIP_EXPRCURV_CONCAVE;
+
+CLEANUP:
+   SCIPhashmapFree(&expr2matrix);
+
+   if( !storeeigeninfo )
+   {
+      BMSfreeBufferMemoryArray(bufmem, &matrix);
+      BMSfreeBufferMemoryArray(bufmem, &alleigval);
+   }
+   else
+   {
+      assert(!quaddata->eigeninfostored);
+      quaddata->eigeninfostored = TRUE;
+   }
+
+   /* if checked convexity on full Q matrix, then remember it
+    * if indefinite on submatrix, then it will also be indefinite on full matrix, so can remember that, too */
+   if( assumevarfixed == NULL || *curv == SCIP_EXPRCURV_UNKNOWN )
+   {
+      quaddata->curvature = *curv;
+      quaddata->curvaturechecked = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /* from pub_expr.h */
 
@@ -3762,6 +4037,17 @@ SCIP_Bool SCIPexprIsIntegral(
    assert(expr != NULL);
 
    return expr->isintegral;
+}
+
+/** sets the integrality flag of an expression */
+void SCIPexprSetIntegrality(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool             isintegral          /**< integrality of the expression */
+   )
+{
+   assert(expr != NULL);
+
+   expr->isintegral = isintegral;
 }
 
 /** gives the coefficients and expressions that define a quadratic expression

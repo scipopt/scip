@@ -30,6 +30,7 @@ extern "C" {
 
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
+#include "scip/type_misc.h"
 
 /**@name Expression Handler Methods */
 /**@{ */

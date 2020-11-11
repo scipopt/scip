@@ -634,7 +634,7 @@ typedef struct SCIP_ExprIter     SCIP_EXPRITER;      /**< expression iterator */
 #define SCIP_EXPRPRINT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
 
 /** print everything */
-#define SCIP_EXPRPRINT_ALL SCIP_EXPRPRINT_EXPRSTRING | SCIP_EXPRPRINT_EXPRHDLR | SCIP_EXPRPRINT_NUSES | SCIP_EXPRPRINT_NLOCKS | SCIP_EXPRPRINT_EVALTAG | SCIP_EXPRPRIN_ACTIVITYTAG
+#define SCIP_EXPRPRINT_ALL SCIP_EXPRPRINT_EXPRSTRING | SCIP_EXPRPRINT_EXPRHDLR | SCIP_EXPRPRINT_NUSES | SCIP_EXPRPRINT_NLOCKS | SCIP_EXPRPRINT_EVALTAG | SCIP_EXPRPRINT_ACTIVITYTAG
 
 typedef unsigned int              SCIP_EXPRPRINT_WHAT; /**< type for exprprint bitflags */
 typedef struct SCIP_ExprPrintData SCIP_EXPRPRINTDATA;  /**< printing a expression file data */

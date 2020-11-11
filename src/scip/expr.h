@@ -34,6 +34,26 @@
 /**@name Expression Handler Methods */
 /**@{ */
 
+/** create expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprhdlrCreate(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
+   const char*           name,               /**< name of expression handler (must not be NULL) */
+   const char*           desc,               /**< description of expression handler (can be NULL) */
+   unsigned int          precedence,         /**< precedence of expression operation (used for printing) */
+   SCIP_DECL_EXPREVAL((*eval)),              /**< point evaluation callback (must not be NULL) */
+   SCIP_EXPRHDLRDATA*    data                /**< data of expression handler (can be NULL) */
+   );
+
+/** frees expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprhdlrFree(
+   SCIP_EXPRHDLR**       exprhdlr,           /**< pointer to expression handler to be freed */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** copies the given expression handler to a new scip */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrCopyInclude(
@@ -355,6 +375,15 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    );
 
+/** duplicates the given expression without its children */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprDuplicateShallow(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< original expression */
+   SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
+   );
+
 /** parses an expression and builds a sum-expression with children
  *
  * <pre>
@@ -603,6 +632,28 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Bool*            isquadratic         /**< buffer to store result */
+   );
+
+/** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
+ *
+ * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is
+ * - semidefinite positive -> provided is set to sepaunder
+ * - semidefinite negative -> provided is set to sepaover
+ * - otherwise -> provided is set to none
+ *
+ * If assumevarfixed is given and some entries of x correspond to variables present in
+ * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_EXPRCURV*        curv,               /**< pointer to store the curvature of quadratics */
+   SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
+   SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
    );
 
 /**@} */

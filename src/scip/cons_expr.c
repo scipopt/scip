@@ -8521,28 +8521,6 @@ SCIP_DECL_CONSFREE(consFreeExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
-   {
-      exprhdlr = conshdlrdata->exprhdlrs[i];
-      assert(exprhdlr != NULL);
-
-      if( exprhdlr->freehdlr != NULL )
-      {
-         SCIP_CALL( (*exprhdlr->freehdlr)(scip, conshdlr, exprhdlr, &exprhdlr->data) );
-      }
-
-      /* free clocks */
-      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->simplifytime) );
-      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->intevaltime) );
-      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->proptime) );
-      SCIP_CALL( SCIPfreeClock(scip, &(exprhdlr)->estimatetime) );
-
-      SCIPfreeMemory(scip, &exprhdlr->name);
-      SCIPfreeMemoryNull(scip, &exprhdlr->desc);
-
-      SCIPfreeMemory(scip, &exprhdlr);
-   }
-
    SCIPfreeBlockMemoryArray(scip, &conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize);
 
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
