@@ -30,6 +30,8 @@
 #include "scip/clock.h"
 #include "scip/set.h"
 #include "scip/pub_var.h"
+#include "scip/sol.h"
+#include "scip/tree.h"
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
 #include "nlpi/nlpi_ipopt.h" /* for LAPACK */
@@ -333,6 +335,7 @@ SCIP_RETCODE evalAndDiff(
    return SCIP_OKAY;
 }
 
+#if SCIP_DISABLED_CODE
 /** print statistics for expression handlers */
 static
 void printExprHdlrStatistics(
@@ -371,7 +374,7 @@ void printExprHdlrStatistics(
       SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 }
-
+#endif
 
 
 /*
@@ -1693,7 +1696,7 @@ SCIP_RETCODE SCIPexprCopy(
             }
 
             /* append child to exprcopy */
-            SCIP_CALL( SCIPappendExprChild(targetscip, exprcopy, childcopy) );
+            SCIP_CALL( SCIPexprAppendChild(targetset, targetblkmem, exprcopy, childcopy) );
 
             /* release childcopy (still captured by exprcopy) */
             SCIP_CALL( SCIPexprRelease(targetset, targetstat, targetblkmem, &childcopy) );
@@ -2519,6 +2522,7 @@ SCIP_RETCODE SCIPexprEvalGradient(
 SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
@@ -2580,7 +2584,12 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
          child->derivative = 0.0;
 
          /* set up direction if we see var for the first time */
-         child->dot = SCIPgetSolVal(set->scip, direction, SCIPexprvarGetVar(child));
+         /* child->dot = SCIPgetSolVal(set->scip, direction, SCIPexprvarGetVar(child)); */
+         if( sol != NULL )
+            child->dot = SCIPsolGetVal(sol, set, stat, SCIPexprvarGetVar(child));
+         else
+            child->dot = SCIPvarGetSol(SCIPexprvarGetVar(child), SCIPtreeHasCurrentNodeLP(tree));
+
          child->bardot = 0.0;
       }
 

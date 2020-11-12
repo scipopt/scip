@@ -1662,7 +1662,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprEvalHessianDir(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag, direction) );
+   SCIP_CALL( SCIPexprEvalHessianDir(scip->set, scip->stat, scip->tree, scip->mem->probmem, expr, sol, soltag, direction) );
 
    return SCIP_OKAY;
 }

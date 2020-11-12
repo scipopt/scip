@@ -28,6 +28,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
+#include "scip/type_tree.h"
 
 // FIXME temporarily to ease compilation
 typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
