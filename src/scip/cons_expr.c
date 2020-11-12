@@ -3522,7 +3522,7 @@ SCIP_RETCODE getBinaryProductExpr(
             if( SCIPcliqueHasVar(xcliques[c], y, TRUE) ) /* x + y <= 1 => x*y = 0 */
             {
                /* create zero value expression */
-               SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, newexpr, 0.0) );
+               SCIP_CALL( SCIPcreateExprValue(scip, conshdlr, newexpr, 0.0) );
 
                if( nchgcoefs != NULL )
                   *nchgcoefs += 1;
@@ -11415,7 +11415,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    conshdlrdata->exprvarhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    /* include and remember handler for constant value expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrValue(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeExprHdlrValue(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "val") == 0);
    conshdlrdata->exprvalhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 

@@ -39,6 +39,7 @@
 #include "scip/struct_mem.h"
 
 /* core expression handler plugins */
+#include "scip/expr_value.h"
 #include "scip/expr_var.h"
 
 /* #define PARSE_DEBUG */
@@ -214,7 +215,7 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       debugParse("Parsed value %g, creating a value-expression.\n", value);
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, basetree, value) );
+      SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownerdatacreate, ownerdatacreatedata) );
    }
    else if( isalpha(*expr) )
    {
@@ -1079,7 +1080,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    /* return 1 as constant expression if there are no factors */
    if( nfactors == 0 )
    {
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, expr, 1.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, expr, 1.0, ownerdatacreate, ownerdatacreatedata) );
    }
    else if( nfactors == 1 )
    {

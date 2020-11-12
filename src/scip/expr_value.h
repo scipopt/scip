@@ -13,49 +13,41 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_value.h
+/**@file   expr_value.h
  * @brief  constant value expression handler
  * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_VALUE_H__
-#define __SCIP_CONS_EXPR_VALUE_H__
-
+#ifndef __SCIP_EXPR_VALUE_H__
+#define __SCIP_EXPR_VALUE_H__
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the handler for constant value expression and includes it into the expression constraint handler */
+/** creates the handler for constant value expression and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrValue(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates constant value expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprValue(
+SCIP_RETCODE SCIPcreateExprValue(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_Real             value               /**< value to be stored */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_Real             value,              /**< value to be stored */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
-
-/** gets the value of a constant value expression */
-SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprValueValue(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
-   );
-
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_VALUE_H__ */
+#endif /* __SCIPEXPR_VALUE_H__ */

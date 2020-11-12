@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_value.c
+/**@file   expr_value.c
  * @brief  constant value expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -23,7 +23,7 @@
 
 #include <string.h>
 
-#include "scip/cons_expr_value.h"
+#include "scip/expr_value.h"
 
 #define EXPRHDLR_NAME            "val"
 #define EXPRHDLR_DESC            "constant value"
@@ -32,56 +32,55 @@
 
 /** the order of two values is the real order */
 static
-SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareValue)
+SCIP_DECL_EXPRCOMPARE(compareValue)
 {  /*lint --e{715}*/
    SCIP_Real val1;
    SCIP_Real val2;
 
-   val1 = SCIPgetConsExprExprValueValue(expr1);
-   val2 = SCIPgetConsExprExprValueValue(expr2);
+   val1 = SCIPexprvalGetValue(expr1);
+   val2 = SCIPexprvalGetValue(expr2);
 
    return val1 < val2 ? -1 : val1 == val2 ? 0 : 1; /*lint !e777*/
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
+SCIP_DECL_EXPRCOPYHDLR(copyhdlrValue)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrValue(scip, consexprhdlr) );
-   *valid = TRUE;
+   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
+SCIP_DECL_EXPRCOPYDATA(copydataValue)
 {  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
-   *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
+   *targetexprdata = SCIPexprGetData(sourceexpr);
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataValue)
+SCIP_DECL_EXPRFREEDATA(freedataValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
    /* nothing much to do, as currently the data is the pointer */
-   SCIPsetConsExprExprData(expr, NULL);
+   SCIPexprSetData(expr, NULL);
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
+SCIP_DECL_EXPRPRINT(printValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   if( stage == SCIP_CONSEXPRITERATOR_ENTEREXPR )
+   if( stage == SCIP_EXPRITER_ENTEREXPR )
    {
-      SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
+      SCIP_Real v = SCIPexprvalGetValue(expr);
       if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )
       {
          SCIPinfoMessage(scip, file, "(%g)", v);
@@ -97,13 +96,13 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 
 /** expression point evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
+SCIP_DECL_EXPREVAL(evalValue)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_EXPRDATA* exprdata;
 
    assert(expr != NULL);
 
-   exprdata = SCIPgetConsExprExprData(expr);
+   exprdata = SCIPexprGetData(expr);
    memcpy(val, &exprdata, sizeof(SCIP_Real));
 
    return SCIP_OKAY;
@@ -111,10 +110,10 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
 
 /** expression derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffValue)
+SCIP_DECL_EXPRBWDIFF(bwdiffValue)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) != NULL);
+   assert(SCIPexprGetData(expr) != NULL);
 
    /* this should never happen because variable expressions do not have children */
    return SCIP_INVALIDCALL;
@@ -122,14 +121,14 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffValue)
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
+SCIP_DECL_EXPRINTEVAL(intevalValue)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_EXPRDATA* exprdata;
    SCIP_Real val;
 
    assert(expr != NULL);
 
-   exprdata = SCIPgetConsExprExprData(expr);
+   exprdata = SCIPexprGetData(expr);
    memcpy(&val, &exprdata, sizeof(SCIP_Real));
 
    SCIPintervalSet(interval, val);
@@ -139,27 +138,27 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
 
 /** expression hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
+SCIP_DECL_EXPRHASH(hashValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+   assert(SCIPexprGetNChildren(expr) == 0);
    assert(hashkey != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
-   *hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
+   *hashkey ^= SCIPcalcFibHash(SCIPexprvalGetValue(expr));
 
    return SCIP_OKAY;
 }
 
 /** expression curvature detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
+SCIP_DECL_EXPRCURVATURE(curvatureValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(success != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+   assert(SCIPexprGetNChildren(expr) == 0);
 
    *success = TRUE;
 
@@ -168,12 +167,12 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureValue)
 
 /** expression monotonicity detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityValue)
+SCIP_DECL_EXPRMONOTONICITY(monotonicityValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(result != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 0);
+   assert(SCIPexprGetNChildren(expr) == 0);
 
    *result = SCIP_MONOTONE_CONST;
 
@@ -182,77 +181,77 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityValue)
 
 /** expression integrality detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityValue)
+SCIP_DECL_EXPRINTEGRALITY(integralityValue)
 {  /*lint --e{715}*/
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(isintegral != NULL);
 
-   *isintegral = EPSISINT(SCIPgetConsExprExprValueValue(expr), 0.0); /*lint !e835 !e666*/
+   *isintegral = EPSISINT(SCIPexprvalGetValue(expr), 0.0); /*lint !e835 !e666*/
 
    return SCIP_OKAY;
 }
 
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrValue(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalValue, NULL) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalValue, NULL) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, freedataValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffValue, NULL, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityValue) );
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrValue, NULL);
+   SCIPexprhdlrSetCopyFreeData(exprhdlr, copydataValue, freedataValue);
+   SCIPexprhdlrSetCompare(exprhdlr, compareValue);
+   SCIPexprhdlrSetPrint(exprhdlr, printValue);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalValue);
+   SCIPexprhdlrSetHash(exprhdlr, hashValue);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffValue, NULL, NULL);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureValue);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityValue);
+   SCIPexprhdlrSetIntegrality(exprhdlr, integralityValue);
 
    return SCIP_OKAY;
 }
 
 /** creates constant value expression */
-SCIP_RETCODE SCIPcreateConsExprExprValue(
+SCIP_RETCODE SCIPcreateExprValue(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_Real             value               /**< value to be stored */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_Real             value,              /**< value to be stored */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_EXPRDATA* exprdata;
 
-   assert(consexprhdlr != NULL);
    assert(expr != NULL);
    assert(SCIPisFinite(value));
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*));
    memcpy(&exprdata, &value, sizeof(SCIP_Real));
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrValue(consexprhdlr), exprdata, 0, NULL) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrValue(scip), exprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }
 
+/* from pub_expr.h */
 
 /** gets the value of a constant value expression */
-SCIP_Real SCIPgetConsExprExprValueValue(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+SCIP_Real SCIPexprvalGetValue(
+   SCIP_EXPR*   expr                /**< expression */
    )
 {
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_EXPRDATA* exprdata;
    SCIP_Real v;
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*));
 
-   exprdata = SCIPgetConsExprExprData(expr);
+   exprdata = SCIPexprGetData(expr);
    memcpy(&v, &exprdata, sizeof(SCIP_Real));
 
    return v;
