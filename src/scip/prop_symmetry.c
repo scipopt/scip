@@ -1444,7 +1444,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
             /* simplify permuted expr in order to guarantee sorted variables */
             permutedexpr = SCIPgetExprConsNonlinear(scip, permutedcons);
-            SCIP_CALL( SCIPsimplifyExpr(scip, permutedexpr, &permutedexpr, &success, &infeasible) );
+            SCIP_CALL( SCIPsimplifyExpr(scip, permutedexpr, &permutedexpr, &success, &infeasible, NULL, NULL, NULL) );
             assert(!infeasible);
 
             /* look for a constraint with same lhs, rhs and expression */

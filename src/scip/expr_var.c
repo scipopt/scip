@@ -115,7 +115,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    {
       SCIP_EXPR* child;
 
-      SCIP_CALL( SCIPcreateExprVar(scip, &child, vars[i]) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &child, vars[i], ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
       SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, child, coefs[i]) );
       SCIP_CALL( SCIPreleaseExpr(scip, &child) );
    }
@@ -395,7 +395,10 @@ SCIP_RETCODE SCIPincludeExprHdlrVar(
 SCIP_RETCODE SCIPcreateExprVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
-   SCIP_VAR*             var                 /**< variable to be stored */
+   SCIP_VAR*             var,                /**< variable to be stored */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
    SCIP_EXPRDATA* exprdata;
@@ -410,7 +413,7 @@ SCIP_RETCODE SCIPcreateExprVar(
    exprdata->var = var;
    exprdata->filterpos = -1;
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
    return SCIP_OKAY;
 }

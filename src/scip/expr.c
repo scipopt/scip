@@ -54,52 +54,6 @@ struct SCIP_ExprPrintData
  * Local methods
  */
 
-/** creates an expression */
-static
-SCIP_RETCODE createExpr(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPR**           expr,               /**< pointer where to store expression */
-   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
-   SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
-   int                   nchildren,          /**< number of children */
-   SCIP_EXPR**           children            /**< children (can be NULL if nchildren is 0) */
-   )
-{
-   int c;
-
-   assert(set != NULL);
-   assert(blkmem != NULL);
-   assert(expr != NULL);
-   assert(exprhdlr != NULL);
-   assert(children != NULL || nchildren == 0);
-   assert(exprdata == NULL || exprhdlr->copydata != NULL); /* copydata must be available if there is expression data */
-   assert(exprdata == NULL || exprhdlr->freedata != NULL); /* freedata must be available if there is expression data */
-
-   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, expr) );
-
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
-
-   /* initialize activity to entire interval */
-   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->activity);
-
-   if( nchildren > 0 )
-   {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*expr)->children, children, nchildren) );
-      (*expr)->nchildren = nchildren;
-      (*expr)->childrensize = nchildren;
-
-      for( c = 0; c < nchildren; ++c )
-         SCIPexprCapture((*expr)->children[c]);
-   }
-
-   SCIPexprCapture(*expr);
-
-   return SCIP_OKAY;
-}
-
 /** initializes the ownerdata of an expression
  *
  * typically called right after creating an expression
@@ -1361,7 +1315,10 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to simplify */
-   SCIP_EXPR**           simplifiedexpr      /**< buffer to store the simplified expression */
+   SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
    assert(exprhdlr != NULL);
@@ -1373,7 +1330,7 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    if( exprhdlr->simplify != NULL )
    {
       SCIPclockStart(expr->exprhdlr->simplifytime, set);
-      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr) );
+      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
       SCIPclockStop(expr->exprhdlr->simplifytime, set);
 
       /* update statistics */
@@ -1450,10 +1407,44 @@ SCIP_RETCODE SCIPexprCreate(
    SCIP_EXPRHDLR*        exprhdlr,         /**< expression handler */
    SCIP_EXPRDATA*        exprdata,         /**< expression data (expression assumes ownership) */
    int                   nchildren,        /**< number of children */
-   SCIP_EXPR**           children          /**< children (can be NULL if nchildren is 0) */
+   SCIP_EXPR**           children,         /**< children (can be NULL if nchildren is 0) */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
-   SCIP_CALL( createExpr(set, blkmem, expr, exprhdlr, exprdata, nchildren, children) );
+   int c;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(exprhdlr != NULL);
+   assert(children != NULL || nchildren == 0);
+   assert(exprdata == NULL || exprhdlr->copydata != NULL); /* copydata must be available if there is expression data */
+   assert(exprdata == NULL || exprhdlr->freedata != NULL); /* freedata must be available if there is expression data */
+
+   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, expr) );
+
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
+   (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
+
+   /* initialize activity to entire interval */
+   SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &(*expr)->activity);
+
+   if( nchildren > 0 )
+   {
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*expr)->children, children, nchildren) );
+      (*expr)->nchildren = nchildren;
+      (*expr)->childrensize = nchildren;
+
+      for( c = 0; c < nchildren; ++c )
+         SCIPexprCapture((*expr)->children[c]);
+   }
+
+   SCIPexprCapture(*expr);
+
+   SCIP_CALL( createExprOwnerData(set, *expr, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
    return SCIP_OKAY;
 }
@@ -1660,10 +1651,7 @@ SCIP_RETCODE SCIPexprCopy(
             }
 
             /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( createExpr(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL) );
-
-            /* let future owner creates its data and store its free callback in the expr */
-            SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
             /* store targetexpr */
             expriteruserdata.ptrval = exprcopy;
@@ -1726,7 +1714,10 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< original expression */
-   SCIP_EXPR**           copyexpr            /**< buffer to store (shallow) duplicate of expr */
+   SCIP_EXPR**           copyexpr,           /**< buffer to store (shallow) duplicate of expr */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
    )
 {
    SCIP_EXPRDATA* exprdatacopy = NULL;
@@ -1744,7 +1735,7 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    }
 
    /* create expression with same handler and copied data, but without children */
-   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL) );
+   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
 
    return SCIP_OKAY;
 }

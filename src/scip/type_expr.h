@@ -544,13 +544,19 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * input:
  *  - scip           : SCIP main data structure
  *  - expr           : expression to simplify
+ *  - ownerdatacreate: function to call to create ownerdata
+ *  - ownerdatacreatedata: data to pass to ownerdatacreate
+ *  - ownerdatafree  : function to call when freeing expression, e.g., to free ownerdata
  * output:
  *  - simplifiedexpr : the simplified expression
  */
 #define SCIP_DECL_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
    SCIP*          scip,     \
    SCIP_EXPR*     expr,     \
-   SCIP_EXPR**    simplifiedexpr)
+   SCIP_EXPR**    simplifiedexpr, \
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, \
+   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)))
 
 /** expression callback for reverse propagation
  *
