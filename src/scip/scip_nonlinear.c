@@ -37,8 +37,9 @@
 
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
-#include "nlpi/pub_expr.h"
-#include "nlpi/type_expr.h"
+#include "scip/intervalarith.h"
+#include "scip/pub_expr.h"
+#include "scip/type_expr.h"
 #include "scip/dbldblarith.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
@@ -1363,49 +1364,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             lininds[nconss][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
             assert(var == vars[lininds[nconss][k]]);
             linvals[nconss][k] = SCIPnlrowGetLinearCoefs(nlrow)[k];
-         }
-      }
-
-      /* copy quadratic part */
-      if( SCIPnlrowGetNQuadElems(nlrow) > 0 )
-      {
-         SCIP_QUADELEM quadelem;
-         SCIP_VAR* var1;
-         SCIP_VAR* var2;
-
-         nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrow);
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) ); /*lint !e866*/
-
-         for( k = 0; k < nquadelems[nconss]; ++k )
-         {
-            quadelem = SCIPnlrowGetQuadElems(nlrow)[k];
-
-            var1 = SCIPnlrowGetQuadVars(nlrow)[quadelem.idx1];
-            assert(var1 != NULL);
-            assert(SCIPhashmapExists(var2idx, (void*)var1));
-
-            var2 = SCIPnlrowGetQuadVars(nlrow)[quadelem.idx2];
-            assert(var2 != NULL);
-            assert(SCIPhashmapExists(var2idx, (void*)var2));
-
-            quadelems[nconss][k].coef = quadelem.coef;
-            quadelems[nconss][k].idx1 = SCIPhashmapGetImageInt(var2idx, (void*)var1);
-            quadelems[nconss][k].idx2 = SCIPhashmapGetImageInt(var2idx, (void*)var2);
-
-            /* expr.c assumes that the indices are ordered */
-            if( quadelems[nconss][k].idx1 > quadelems[nconss][k].idx2 )
-            {
-               SCIPswapInts(&quadelems[nconss][k].idx1, &quadelems[nconss][k].idx2);
-            }
-            assert(quadelems[nconss][k].idx1 <= quadelems[nconss][k].idx2);
-
-            /* update nlscore */
-            if( nlscore != NULL )
-            {
-               ++nlscore[quadelems[nconss][k].idx1];
-               if( quadelems[nconss][k].idx1 != quadelems[nconss][k].idx2 )
-                  ++nlscore[quadelems[nconss][k].idx2];
-            }
          }
       }
 
