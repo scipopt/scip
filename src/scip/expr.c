@@ -945,7 +945,7 @@ int SCIPexprhdlrCompareExpr(
    if( expr1->exprhdlr->compare != NULL )
    {
       /* enforces OR1-OR4 */
-      return expr1->exprhdlr->compare(expr1, expr2);
+      return expr1->exprhdlr->compare(set->scip, expr1, expr2);
    }
 
    /* enforces OR5: default comparison method of expressions of the same type:

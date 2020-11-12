@@ -344,10 +344,12 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * 1  if expr1 > expr2
  *
  * input:
+ *  - scip  : SCIP main data structure
  *  - expr1 : first expression in comparison
  *  - expr2 : second expression in comparison
  */
 #define SCIP_DECL_EXPRCOMPARE(x) int x (\
+   SCIP*      scip, \
    SCIP_EXPR* expr1, \
    SCIP_EXPR* expr2)
 

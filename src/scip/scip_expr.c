@@ -24,6 +24,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "scip/intervalarith.h"
 #include "scip/scip_expr.h"
 #include "scip/expr.h"
 #include "scip/set.h"
@@ -41,6 +42,7 @@
 /* core expression handler plugins */
 #include "scip/expr_value.h"
 #include "scip/expr_var.h"
+#include "scip/expr_sum.h"
 
 /* #define PARSE_DEBUG */
 
@@ -534,13 +536,13 @@ SCIP_RETCODE parseExpr(
       if( SCIPexprIsValue(scip->set, termtree) )
       {
          /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, exprtree, 0, NULL, NULL, sign * SCIPexprvalGetValue(termtree)) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 0, NULL, NULL, sign * SCIPexprvalGetValue(termtree), ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
       else
       {
          /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, exprtree, 1, &termtree, &sign, 0.0) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 1, &termtree, &sign, 0.0, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
 
@@ -589,7 +591,7 @@ SCIP_RETCODE parseExpr(
          SCIP_CALL( retcode );
 
          /* append newly created term */
-         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
+         SCIP_CALL( SCIPappendExprSumExpr(scip, *exprtree, termtree, coef) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
 
          /* find next symbol */
@@ -604,7 +606,7 @@ SCIP_RETCODE parseExpr(
       if( sign  < 0.0 )
       {
          assert(sign == -1.0);
-         SCIP_CALL( SCIPcreateConsExprExprSum(scip, exprtree, 1, &termtree, &sign, 0.0) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 1, &termtree, &sign, 0.0, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
       else
@@ -1046,7 +1048,7 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
    }
 
    /* create sum expression */
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, expr, nquadterms + nlinvars, children, coefs, 0.0, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExprSum(scip, expr, nquadterms + nlinvars, children, coefs, 0.0, ownerdatacreate, ownerdatacreatedata) );
 
    /* release children */
    for( i = 0; i < nquadterms + nlinvars; ++i )
@@ -2077,6 +2079,153 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    /* @todo sort variable expressions here? */
 
    SCIPexpriterFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** reverse propagate a weighted sum of expressions in the given interval */
+SCIP_RETCODE SCIPreversepropExprWeightedSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nexprs,             /**< number of expressions to propagate */
+   SCIP_EXPR**           exprs,              /**< expressions to propagate */
+   SCIP_Real*            weights,            /**< weights of expressions in sum */
+   SCIP_Real             constant,           /**< constant in sum */
+   SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i \in interval */
+   SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
+   int*                  nreductions         /**< buffer to store the number of interval reductions */
+   )
+{
+   SCIP_INTERVAL* bounds;
+   SCIP_ROUNDMODE prevroundmode;
+   SCIP_INTERVAL childbounds;
+   SCIP_Real minlinactivity;
+   SCIP_Real maxlinactivity;
+   int minlinactivityinf;
+   int maxlinactivityinf;
+   int c;
+
+   assert(scip != NULL);
+   assert(exprs != NULL || nexprs == 0);
+   assert(infeasible != NULL);
+   assert(nreductions != NULL);
+
+   *infeasible = FALSE;
+   *nreductions = 0;
+
+   /* not possible to conclude finite bounds if the interval is [-inf,inf] */
+   if( SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, interval) )
+      return SCIP_OKAY;
+
+   prevroundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeDownwards();
+
+   minlinactivity = constant;
+   maxlinactivity = -constant; /* use -constant because of the rounding mode */
+   minlinactivityinf = 0;
+   maxlinactivityinf = 0;
+
+   SCIPdebugMsg(scip, "reverse prop with %d children: %.20g", constant);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nexprs) );
+
+   /* shift coefficients into the intervals of the children; compute the min and max activities */
+   for( c = 0; c < nexprs; ++c )
+   {
+      /* childbounds = SCIPgetExprBoundsNonlinear(scip, conshdlr, exprs[c]); */
+      childbounds = SCIPexprGetActivity(exprs[c]);  /* FIXME this should be input? */
+      SCIPdebugMsgPrint(scip, " %+.20g*[%.20g,%.20g]", weights[c], childbounds.inf, childbounds.sup); /*lint !e613 */
+
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbounds) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+
+      SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &bounds[c], childbounds, weights[c]);
+
+      if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
+         ++maxlinactivityinf;
+      else
+      {
+         assert(SCIPintervalGetSup(bounds[c]) > -SCIP_INTERVAL_INFINITY);
+         maxlinactivity -= SCIPintervalGetSup(bounds[c]);
+      }
+
+      if( SCIPisInfinity(scip, -SCIPintervalGetInf(bounds[c])) )
+         ++minlinactivityinf;
+      else
+      {
+         assert(SCIPintervalGetInf(bounds[c]) < SCIP_INTERVAL_INFINITY);
+         minlinactivity += SCIPintervalGetInf(bounds[c]);
+      }
+   }
+   maxlinactivity = -maxlinactivity; /* correct sign */
+
+   SCIPdebugMsgPrint(scip, " = [%.20g,%.20g] in rhs = [%.20g,%.20g]\n",
+      minlinactivityinf ? -SCIP_INTERVAL_INFINITY : minlinactivity,
+      maxlinactivityinf ?  SCIP_INTERVAL_INFINITY : maxlinactivity,
+      interval.inf, interval.sup);
+
+   /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
+   if( (minlinactivityinf >= 2 || SCIPisInfinity(scip,  SCIPintervalGetSup(interval))) &&
+      ( maxlinactivityinf >= 2 || SCIPisInfinity(scip, -SCIPintervalGetInf(interval)))
+      )
+   {
+      goto TERMINATE;
+   }
+
+   for( c = 0; c < nexprs && !(*infeasible); ++c )
+   {
+      /* upper bounds of c_i is
+       *   node->bounds.sup - (minlinactivity - c_i.inf), if c_i.inf > -infinity and minlinactivityinf == 0
+       *   node->bounds.sup - minlinactivity, if c_i.inf == -infinity and minlinactivityinf == 1
+       */
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &childbounds);
+      if( !SCIPisInfinity(scip, SCIPintervalGetSup(interval)) )
+      {
+         /* we are still in downward rounding mode, so negate and negate to get upward rounding */
+         if( bounds[c].inf <= -SCIP_INTERVAL_INFINITY && minlinactivityinf <= 1 )
+         {
+            assert(minlinactivityinf == 1);
+            childbounds.sup = SCIPintervalNegateReal(minlinactivity - interval.sup);
+         }
+         else if( minlinactivityinf == 0 )
+         {
+            childbounds.sup = SCIPintervalNegateReal(minlinactivity - interval.sup - bounds[c].inf);
+         }
+      }
+
+      /* lower bounds of c_i is
+       *   node->bounds.inf - (maxlinactivity - c_i.sup), if c_i.sup < infinity and maxlinactivityinf == 0
+       *   node->bounds.inf - maxlinactivity, if c_i.sup == infinity and maxlinactivityinf == 1
+       */
+      if( interval.inf > -SCIP_INTERVAL_INFINITY )
+      {
+         if( bounds[c].sup >= SCIP_INTERVAL_INFINITY && maxlinactivityinf <= 1 )
+         {
+            assert(maxlinactivityinf == 1);
+            childbounds.inf = interval.inf - maxlinactivity;
+         }
+         else if( maxlinactivityinf == 0 )
+         {
+            childbounds.inf = interval.inf - maxlinactivity + bounds[c].sup;
+         }
+      }
+
+      SCIPdebugMsg(scip, "child %d: %.20g*x in [%.20g,%.20g]", c, weights[c], childbounds.inf, childbounds.sup);
+
+      /* divide by the child coefficient */
+      SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &childbounds, childbounds, weights[c]);
+
+      SCIPdebugMsgPrint(scip, " -> x = [%.20g,%.20g]\n", childbounds.inf, childbounds.sup);
+
+      /* try to tighten the bounds of the expression */
+//FIXME      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, conshdlr, exprs[c], childbounds, infeasible, nreductions) );
+   }
+
+TERMINATE:
+   SCIPintervalSetRoundingMode(prevroundmode);
+   SCIPfreeBufferArray(scip, &bounds);
 
    return SCIP_OKAY;
 }

@@ -24,7 +24,7 @@
 
 #include <string.h>
 #include "scip/expr_var.h"
-//#include "scip/expr_sum.h"
+#include "scip/expr_sum.h"
 
 #define EXPRHDLR_NAME         "var"
 #define EXPRHDLR_DESC         "variable expression"
@@ -109,14 +109,14 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    }
 
    /* create expression for constant + sum coefs_i vars_i */
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, &sumexpr, 0, NULL, NULL, constant) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 0, NULL, NULL, constant, ownerdatacreate, ownerdatacreatedata) );
 
    for( i = 0; i < nvars; ++i )
    {
       SCIP_EXPR* child;
 
       SCIP_CALL( SCIPcreateExprVar(scip, &child, vars[i], ownerdatacreate, ownerdatacreatedata) );
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, child, coefs[i]) );
+      SCIP_CALL( SCIPappendExprSumExpr(scip, sumexpr, child, coefs[i]) );
       SCIP_CALL( SCIPreleaseExpr(scip, &child) );
    }
 

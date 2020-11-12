@@ -559,6 +559,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
 			scip/event_estim.o \
+			scip/expr_sum.o \
 			scip/expr_value.o \
 			scip/expr_var.o \
 			scip/heur_sync.o \

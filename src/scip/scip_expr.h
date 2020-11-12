@@ -773,6 +773,19 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    int*                  nvarexprs           /**< buffer to store the total number of variable expressions */
    );
 
+/** reverse propagate a weighted sum of expressions in the given interval */
+SCIP_EXPORT
+SCIP_RETCODE SCIPreversepropExprWeightedSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nexprs,             /**< number of expressions to propagate */
+   SCIP_EXPR**           exprs,              /**< expressions to propagate */
+   SCIP_Real*            weights,            /**< weights of expressions in sum */
+   SCIP_Real             constant,           /**< constant in sum */
+   SCIP_INTERVAL         interval,           /**< constant + sum weight_i expr_i \in interval */
+   SCIP_Bool*            infeasible,         /**< buffer to store if propagation produced infeasibility */
+   int*                  nreductions         /**< buffer to store the number of interval reductions */
+   );
+
 /** @} */
 
 

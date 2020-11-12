@@ -193,7 +193,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
    return SCIP_OKAY;
 }
 
-/** creates the handler for constant value expression and includes it into the expression constraint handler */
+/** creates the handler for constant value expression and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprHdlrValue(
    SCIP*                 scip                /**< SCIP data structure */
    )
