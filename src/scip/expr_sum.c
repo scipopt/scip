@@ -972,19 +972,28 @@ static
 SCIP_DECL_EXPRREVERSEPROP(reversepropSum)
 {  /*lint --e{715}*/
    SCIP_EXPRDATA* exprdata;
+   SCIP_INTERVAL* newbounds;
+   int nchildren;
    int nreductions;
+
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPexprGetNChildren(expr) > 0);
    assert(infeasible != NULL);
-//   assert(nreductions != NULL);
+
+   nchildren = SCIPexprGetNChildren(expr);
+   assert(nchildren > 0);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPreversepropExprWeightedSum(scip, SCIPexprGetNChildren(expr),
-            SCIPexprGetChildren(expr), exprdata->coefficients, exprdata->constant,
-            bounds, infeasible, &nreductions) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newbounds, nchildren) );
+
+   nreductions = SCIPintervalPropagateWeightedSum(SCIP_DEFAULT_INFINITY, nchildren, childrenbounds, exprdata->coefficients, exprdata->constant, bounds, newbounds, infeasible);
+
+   if( !*infeasible && nreductions > 0 )
+      BMScopyMemoryArray(childrenbounds, newbounds, nchildren);
+
+   SCIPfreeBufferArray(scip, &newbounds);
 
    return SCIP_OKAY;
 }
