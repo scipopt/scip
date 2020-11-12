@@ -84,8 +84,7 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
    if( !valid )
       data->valid = FALSE;
 
-   /* TODO should we pass an ownerdatacreate here? */
-   SCIP_CALL( SCIPcreateExprVar(targetscip, targetexpr, targetvar, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(targetscip, targetexpr, targetvar, ownerdatacreate, ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }

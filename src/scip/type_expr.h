@@ -128,6 +128,8 @@ typedef enum
  *  - targetexpr         : pointer to store the mapped expression, or NULL if expression shall be copied
  *  - sourcescip         : source SCIP main data structure
  *  - sourceexpr         : expression to be mapped
+ *  - ownerdatacreate    : callback to call when creating a new expression
+ *  - ownerdatacreatedata: data for ownerdatacreate callback
  *  - mapexprdata        : data of callback
  */
 #define SCIP_DECL_EXPR_MAPEXPR(x) SCIP_RETCODE x (\
@@ -135,8 +137,9 @@ typedef enum
    SCIP_EXPR** targetexpr, \
    SCIP*       sourcescip, \
    SCIP_EXPR*  sourceexpr, \
-   void*       mapexprdata \
-   )
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, \
+   void*       mapexprdata)
 
 /**@name Expression Handler */
 /**@{ */

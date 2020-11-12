@@ -54,35 +54,6 @@ struct SCIP_ExprPrintData
  * Local methods
  */
 
-/** initializes the ownerdata of an expression
- *
- * typically called right after creating an expression
- */
-static
-SCIP_RETCODE createExprOwnerData(
-   SCIP_SET*             set,                          /**< global SCIP settings */
-   SCIP_EXPR*            expr,                         /**< expression for which to create ownerdata */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
-   )
-{
-   assert(set != NULL);
-   assert(expr != NULL);
-
-   /* expr should not yet have ownerdata or ownerdatafree
-    * (if this becomes an issue some day, we could call the ownerdatafree here instead of the asserts)
-    */
-   assert(expr->ownerdata == NULL);
-   assert(expr->ownerdatafree == NULL);
-
-   if( ownerdatacreate != NULL )
-   {
-      SCIP_CALL( ownerdatacreate(set->scip, expr, &expr->ownerdata, &expr->ownerdatafree, ownerdatacreatedata) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** frees an expression */
 static
 SCIP_RETCODE freeExpr(
@@ -1442,7 +1413,11 @@ SCIP_RETCODE SCIPexprCreate(
 
    SCIPexprCapture(*expr);
 
-   SCIP_CALL( createExprOwnerData(set, *expr, ownerdatacreate, ownerdatacreatedata) );
+   /* initializes the ownerdata */
+   if( ownerdatacreate != NULL )
+   {
+      SCIP_CALL( ownerdatacreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerdatafree, ownerdatacreatedata) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1598,16 +1573,13 @@ SCIP_RETCODE SCIPexprCopy(
 
             if( mapexpr != NULL )
             {
-               SCIP_CALL( mapexpr(targetscip, &exprcopy, sourcescip, expr, mapexprdata) );
+               SCIP_CALL( mapexpr(targetscip, &exprcopy, sourcescip, expr, ownerdatacreate, ownerdatacreatedata, mapexprdata) );
                if( exprcopy != NULL )
                {
                   /* map callback gave us an expression to use for the copy */
                   /* store targetexpr */
                   expriteruserdata.ptrval = exprcopy;
                   SCIPexpriterSetCurrentUserData(it, expriteruserdata);
-
-                  /* let future owner creates its data and store its free callback in the expr */
-                  SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata) );
 
                   /* skip subexpression (assume that exprcopy is a complete copy) and continue */
                   expr = SCIPexpriterSkipDFS(it);
@@ -1735,7 +1707,6 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
 
    return SCIP_OKAY;
 }
-
 
 /** captures an expression (increments usage count) */
 SCIP_EXPORT
