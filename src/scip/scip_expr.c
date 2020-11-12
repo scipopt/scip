@@ -128,7 +128,9 @@ SCIP_RETCODE parseExpr(
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_EXPR**           exprtree            /**< buffer to store the expr parsed by Expr */
+   SCIP_EXPR**           exprtree,           /**< buffer to store the expr parsed by Expr */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 /** Parses base to build a value, variable, sum, or function-like ("func(...)") expression.
@@ -142,7 +144,9 @@ SCIP_RETCODE parseBase(
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between SCIP vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_EXPR**           basetree            /**< buffer to store the expr parsed by Base */
+   SCIP_EXPR**           basetree,           /**< buffer to store the expr parsed by Base */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    debugParse("parsing base from %s\n", expr);
@@ -181,14 +185,14 @@ SCIP_RETCODE parseBase(
       {
          debugParse("First time parsing variable <%s>, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var));
          /* intentionally not using createExprVar here, since parsed expressions are not part of a constraint (they will be copied when a constraint is created) */
-         SCIP_CALL( SCIPcreateExprVar(scip, basetree, var, NULL, NULL) );  // FIXME pass on ownerdata
+         SCIP_CALL( SCIPcreateExprVar(scip, basetree, var, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPhashmapInsert(vartoexprvarmap, (void*)var, (void*)(*basetree)) );
       }
    }
    else if( *expr == '(' )
    {
       /* parse expression */
-      SCIP_CALL( parseExpr(scip, vartoexprvarmap, ++expr, newpos, basetree) );
+      SCIP_CALL( parseExpr(scip, vartoexprvarmap, ++expr, newpos, basetree, ownerdatacreate, ownerdatacreatedata) );
       expr = *newpos;
 
       /* expect ')' */
@@ -249,7 +253,7 @@ SCIP_RETCODE parseBase(
       }
 
       ++expr;
-      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, scip->set, expr, newpos, basetree, &success) );
+      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, scip->set, expr, newpos, basetree, &success, ownerdatacreate, ownerdatacreatedata) );
 
       if( !success )
       {
@@ -289,7 +293,9 @@ SCIP_RETCODE parseFactor(
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_EXPR**           factortree          /**< buffer to store the expr parsed by Factor */
+   SCIP_EXPR**           factortree,         /**< buffer to store the expr parsed by Factor */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    SCIP_EXPR*  basetree;
@@ -308,7 +314,7 @@ SCIP_RETCODE parseFactor(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseBase(scip, vartoexprvarmap, expr, newpos, &basetree) );
+   SCIP_CALL( parseBase(scip, vartoexprvarmap, expr, newpos, &basetree, ownerdatacreate, ownerdatacreatedata) );
    expr = *newpos;
 
    /* check if there is an exponent */
@@ -410,7 +416,9 @@ SCIP_RETCODE parseTerm(
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_EXPR**           termtree            /**< buffer to store the expr parsed by Term */
+   SCIP_EXPR**           termtree,           /**< buffer to store the expr parsed by Term */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    SCIP_EXPR* factortree;
@@ -422,7 +430,7 @@ SCIP_RETCODE parseTerm(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseFactor(scip, FALSE, vartoexprvarmap, expr, newpos, &factortree) );
+   SCIP_CALL( parseFactor(scip, FALSE, vartoexprvarmap, expr, newpos, &factortree, ownerdatacreate, ownerdatacreatedata) );
    expr = *newpos;
 
    debugParse("back to parsing Term, continue parsing from %s\n", expr);
@@ -447,7 +455,7 @@ SCIP_RETCODE parseTerm(
          debugParse("while parsing term, read char %c\n", *expr); /*lint !e506 !e681*/
 
          ++expr;
-         retcode = parseFactor(scip, isdivision, vartoexprvarmap, expr, newpos, &factortree);
+         retcode = parseFactor(scip, isdivision, vartoexprvarmap, expr, newpos, &factortree, ownerdatacreate, ownerdatacreatedata);
 
          /* release termtree, if parseFactor fails with a read-error */
          if( retcode == SCIP_READERROR )
@@ -490,7 +498,9 @@ SCIP_RETCODE parseExpr(
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_EXPR**           exprtree            /**< buffer to store the expr parsed by Expr */
+   SCIP_EXPR**           exprtree,           /**< buffer to store the expr parsed by Expr */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    SCIP_Real sign;
@@ -511,7 +521,7 @@ SCIP_RETCODE parseExpr(
       ++expr;
    }
 
-   SCIP_CALL( parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree) );
+   SCIP_CALL( parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree, ownerdatacreate, ownerdatacreatedata) );
    expr = *newpos;
 
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
@@ -569,7 +579,7 @@ SCIP_RETCODE parseExpr(
 
          debugParse("while parsing expression, read coefficient %g\n", coef); /*lint !e506 !e681*/
 
-         retcode = parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree);
+         retcode = parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree, ownerdatacreate, ownerdatacreatedata);
 
          /* release exprtree if parseTerm fails with an read-error */
          if( retcode == SCIP_READERROR )
@@ -1278,13 +1288,15 @@ SCIP_RETCODE SCIPcopyExpr(
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
  * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * See also @ref parseExpr in expr.c.
+ * See also @ref parseExpr.
  */
 SCIP_RETCODE SCIPparseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer to store the expr parsed */
    const char*           exprstr,            /**< string with the expr to parse */
-   const char**          finalpos            /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
 )
 {
    const char* finalpos_;
@@ -1296,7 +1308,7 @@ SCIP_RETCODE SCIPparseExpr(
    SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), 5 * SCIPgetNVars(scip)) );
 
    /* if parseExpr fails, we still want to free hashmap */
-   retcode = parseExpr(scip, vartoexprvarmap, exprstr, &finalpos_, expr);
+   retcode = parseExpr(scip, vartoexprvarmap, exprstr, &finalpos_, expr, ownerdatacreate, ownerdatacreatedata);
 
    SCIPhashmapFree(&vartoexprvarmap);
 

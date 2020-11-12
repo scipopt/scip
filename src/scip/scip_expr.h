@@ -249,7 +249,9 @@ SCIP_RETCODE SCIPparseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer to store the expr parsed */
    const char*           exprstr,            /**< string with the expr to parse */
-   const char**          finalpos            /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 /** captures an expression (increments usage count) */

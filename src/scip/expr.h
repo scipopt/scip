@@ -90,7 +90,9 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
    const char*           string,             /**< string containing expression to be parse */
    const char**          endstring,          /**< buffer to store the position of string after parsing */
    SCIP_EXPR**           expr,               /**< buffer to store the parsed expression */
-   SCIP_Bool*            success             /**< buffer to store whether the parsing was successful or not */
+   SCIP_Bool*            success,            /**< buffer to store whether the parsing was successful or not */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 /** calls the curvature check callback of an expression handler

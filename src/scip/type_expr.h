@@ -242,6 +242,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * input:
  *  - scip         : SCIP main data structure
  *  - string       : string containing expression to be parse
+ *  - ownerdatacreate: function to call to create ownerdata
+ *  - ownerdatacreatedata: data to pass to ownerdatacreate
  *
  *  output:
  *  - endstring    : buffer to store the position of string after parsing
@@ -254,7 +256,9 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    const char*    string, \
    const char**   endstring, \
    SCIP_EXPR**    expr, \
-   SCIP_Bool*     success)
+   SCIP_Bool*     success, \
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
 
 /** expression curvature detection callback
  *
