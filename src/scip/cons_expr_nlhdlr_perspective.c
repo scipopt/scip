@@ -100,6 +100,8 @@ struct SCIP_ConsExpr_NlhdlrData
 
    /* statistic counters */
    int                   ndetects;           /**< total number of expressions detected */
+   int                   nconvexdetects;     /**< total number of convex expressions detected */
+   int                   nnonconvexdetects;  /**< total number of nonconvex expressions detected */
 };
 
 /*
@@ -1225,7 +1227,10 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitPerspective)
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
    assert(nlhdlrdata != NULL);
+
    nlhdlrdata->ndetects = 0;
+   nlhdlrdata->nconvexdetects = 0;
+   nlhdlrdata->nnonconvexdetects = 0;
 
    return SCIP_OKAY;
 }
@@ -1267,6 +1272,18 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitPerspective)
             nlhdlrdata->ndetects);
    }
 
+   if( nlhdlrdata->nconvexdetects > 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "\nnconvexdetects%s = %d", SCIPgetSubscipDepth(scip) > 0 ? " (in subscip)" : "",
+            nlhdlrdata->nconvexdetects);
+   }
+
+   if( nlhdlrdata->nnonconvexdetects > 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "\nnnonconvexdetects%s = %d", SCIPgetSubscipDepth(scip) > 0 ? " (in subscip)" : "",
+            nlhdlrdata->nnonconvexdetects);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1285,6 +1302,9 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
    SCIP_Bool hassepabelow = FALSE;
    SCIP_Bool hassepaabove = FALSE;
    SCIP_Bool hasnondefault = FALSE;
+   /* some variables for statistics */
+   SCIP_Bool hasconvexsepa = FALSE;
+   SCIP_Bool hasnonconvexsepa = FALSE;
 
    nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
 
@@ -1332,6 +1352,15 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
 
       if( (nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && (!nlhdlrdata->convexonly || !sepaaboveusesactivity) )
          hassepaabove = TRUE;
+
+      /* save more sepa information for statistics */
+      if( ((nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && !sepabelowusesactivity) ||
+          ((nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && !sepaaboveusesactivity) )
+         hasconvexsepa = TRUE;
+
+      if( ((nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPABELOW) && sepabelowusesactivity) ||
+          ((nlhdlr2participates & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) && sepaaboveusesactivity) )
+         hasnonconvexsepa = TRUE;
    }
 
    /* If a sum expression is handled only by default nlhdlr, then all the children will have auxiliary vars.
@@ -1394,6 +1423,11 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectPerspective)
          *participating |= SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
 
       ++(nlhdlrdata->ndetects);
+
+      if( hasconvexsepa )
+         ++(nlhdlrdata->nconvexdetects);
+      if( hasnonconvexsepa && !nlhdlrdata->convexonly )
+         ++(nlhdlrdata->nnonconvexdetects);
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "detected an on/off expr: ");
