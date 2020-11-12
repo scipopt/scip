@@ -2800,7 +2800,7 @@ SCIP_RETCODE SCIPexprDismantle(
             if( SCIPexprIsSum(set, expr) )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-//FIXME               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPexprsumGetCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPexprsumGetCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -3096,7 +3096,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
          child->derivative = 0.0;
 
          /* set up direction if we see var for the first time */
-//FIXME         child->dot = SCIPgetSolVal(scip, direction, SCIPexprvarGetVar(consdata->varexprs[v]));
+         child->dot = SCIPgetSolVal(set->scip, direction, SCIPexprvarGetVar(child));
          child->bardot = 0.0;
       }
 
@@ -3313,8 +3313,8 @@ int SCIPexprCompare(
          return compareresult;
 
       /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
-//FIXME      if( SCIPexprsumGetCoefs(expr1)[nchildren-1] < 1.0 )
-//         return -1;
+      if( SCIPexprsumGetCoefs(expr1)[nchildren-1] < 1.0 )
+         return -1;
 
       /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
       return 1;
@@ -3533,7 +3533,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
-//FIXME      coef = SCIPexprsumGetCoefs(expr)[c];
+      coef = SCIPexprsumGetCoefs(expr)[c];
 
       assert(child != NULL);
       assert(coef != 0.0);
