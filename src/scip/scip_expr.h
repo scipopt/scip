@@ -682,6 +682,20 @@ SCIP_RETCODE SCIPsimplifyExpr(
    SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
+/** calls the simplify callback for an expression
+ *
+ * Does not simplify descendants (children, etc).
+ * This function is mainly used by the simplify callback of exprhdlrs.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsimplifyExprShallow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be simplified */
+   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+);
+
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
  *
  *  The algorithm consists of two steps:
