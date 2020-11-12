@@ -293,8 +293,8 @@ SCIP_DECL_EXPRINTEVAL(intevalVar)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      lb = SCIPvarGetLbGlobal(var);
-      ub = SCIPvarGetUbGlobal(var);
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
 
       SCIPintervalSetBounds(interval,  /*lint !e666*/
          -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -lb),    /*lint !e666*/

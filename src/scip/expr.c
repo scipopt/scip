@@ -2664,7 +2664,6 @@ SCIP_RETCODE SCIPexprEvalActivity(
 #endif
 
             /* call the inteval callback of the exprhdlr */
-            // FIXME calling with NULL gives global bounds; I think we should change the exprhdlr_var to give local bounds
             SCIP_CALL( SCIPexprhdlrIntEvalExpr(expr->exprhdlr, set, expr, &expr->activity, NULL, NULL) );
 #ifdef DEBUG_PROP
             SCIPsetDebugMsg(set, " exprhdlr <%s>::inteval = [%.20g, %.20g]", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
