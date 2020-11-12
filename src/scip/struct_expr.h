@@ -74,7 +74,7 @@ struct SCIP_ExprHdlr
    SCIP_CLOCK*           simplifytime;       /**< time used for expression simplification */
 };
 
-/* expression iteration data stored in an expression */
+/** expression iteration data stored in an expression */
 struct SCIP_ExprIterData
 {
    SCIP_EXPR*             parent;            /**< parent expression in DFS iteration */
@@ -82,6 +82,11 @@ struct SCIP_ExprIterData
    unsigned int           visitedtag;        /**< tag to identify whether an expression has been visited already */
    SCIP_EXPRITER_USERDATA userdata;          /**< space for iterator user to store some (temporary) data */
 };
+
+/* private types */
+typedef struct SCIP_QuadExpr  SCIP_QUADEXPR;     /**< representation of expression as quadratic */
+typedef struct SCIP_QuadExpr_QuadTerm  SCIP_QUADEXPR_QUADTERM;  /**< a single term associated to a quadratic variable */
+typedef struct SCIP_QuadExpr_BilinTerm SCIP_QUADEXPR_BILINTERM; /**< a single bilinear term */
 
 /** an algebraic expression */
 struct SCIP_Expr
