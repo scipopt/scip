@@ -46,8 +46,7 @@ SCIP_RETCODE SCIPcreateExprVar(
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_VAR*             var,                /**< variable to be stored */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 #if !1  // FIXME move into cons_nonlinear

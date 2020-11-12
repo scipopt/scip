@@ -63,8 +63,7 @@ SCIP_RETCODE createExprOwnerData(
    SCIP_SET*             set,                          /**< global SCIP settings */
    SCIP_EXPR*            expr,                         /**< expression for which to create ownerdata */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    assert(set != NULL);
@@ -78,9 +77,8 @@ SCIP_RETCODE createExprOwnerData(
 
    if( ownerdatacreate != NULL )
    {
-      SCIP_CALL( ownerdatacreate(set->scip, expr, &expr->ownerdata, ownerdatacreatedata) );
+      SCIP_CALL( ownerdatacreate(set->scip, expr, &expr->ownerdata, &expr->ownerdatafree, ownerdatacreatedata) );
    }
-   expr->ownerdatafree = ownerdatafree;
 
    return SCIP_OKAY;
 }
@@ -1317,8 +1315,7 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_EXPR*            expr,               /**< expression to simplify */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    assert(exprhdlr != NULL);
@@ -1330,7 +1327,7 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    if( exprhdlr->simplify != NULL )
    {
       SCIPclockStart(expr->exprhdlr->simplifytime, set);
-      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
       SCIPclockStop(expr->exprhdlr->simplifytime, set);
 
       /* update statistics */
@@ -1409,8 +1406,7 @@ SCIP_RETCODE SCIPexprCreate(
    int                   nchildren,        /**< number of children */
    SCIP_EXPR**           children,         /**< children (can be NULL if nchildren is 0) */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    int c;
@@ -1444,7 +1440,7 @@ SCIP_RETCODE SCIPexprCreate(
 
    SCIPexprCapture(*expr);
 
-   SCIP_CALL( createExprOwnerData(set, *expr, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+   SCIP_CALL( createExprOwnerData(set, *expr, ownerdatacreate, ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }
@@ -1564,8 +1560,7 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    SCIP_EXPRITER* it;
@@ -1610,7 +1605,7 @@ SCIP_RETCODE SCIPexprCopy(
                   SCIPexpriterSetCurrentUserData(it, expriteruserdata);
 
                   /* let future owner creates its data and store its free callback in the expr */
-                  SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+                  SCIP_CALL( createExprOwnerData(targetset, exprcopy, ownerdatacreate, ownerdatacreatedata) );
 
                   /* skip subexpression (assume that exprcopy is a complete copy) and continue */
                   expr = SCIPexpriterSkipDFS(it);
@@ -1651,7 +1646,7 @@ SCIP_RETCODE SCIPexprCopy(
             }
 
             /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
 
             /* store targetexpr */
             expriteruserdata.ptrval = exprcopy;
@@ -1716,8 +1711,7 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store (shallow) duplicate of expr */
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree))      /**< function to call when freeing expression, e.g., to free ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    SCIP_EXPRDATA* exprdatacopy = NULL;
@@ -1735,7 +1729,7 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    }
 
    /* create expression with same handler and copied data, but without children */
-   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownerdatacreate, ownerdatacreatedata, ownerdatafree) );
+   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }

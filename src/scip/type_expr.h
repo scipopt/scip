@@ -62,24 +62,6 @@ typedef enum
 /** the maximal number of estimates an expression handler can return in the INITESTIMATES callback */
 #define SCIP_EXPR_MAXINITESTIMATES 10
 
-/** callback for creating ownerdata of expression
- *
- * This callback is called when an expression has been created.
- * It can create data which is then stored in the expression.
- *
- * input:
- *  - scip           : SCIP main data structure
- *  - expr           : the expression that has been created
- *  - ownerdatacreatedata : data that has been passed on by future owner of expression that can be used to create ownerdata
- * output:
- *  - ownerdata      : buffer to store ownerdata that shall be stored in expression (can be NULL)
- */
-#define SCIP_DECL_EXPR_OWNERDATACREATE(x) SCIP_RETCODE x(\
-   SCIP* scip, \
-   SCIP_EXPR* expr, \
-   SCIP_EXPR_OWNERDATA** ownerdata, \
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
-
 /** callback for freeing ownerdata of expression
  *
  * This callback is called while an expression is freed.
@@ -96,8 +78,28 @@ typedef enum
  */
 #define SCIP_DECL_EXPR_OWNERDATAFREE(x) SCIP_RETCODE x(\
    SCIP* scip, \
-	SCIP_EXPR* expr, \
-	SCIP_EXPR_OWNERDATA** ownerdata)
+   SCIP_EXPR* expr, \
+   SCIP_EXPR_OWNERDATA** ownerdata)
+
+/** callback for creating ownerdata of expression
+ *
+ * This callback is called when an expression has been created.
+ * It can create data which is then stored in the expression.
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : the expression that has been created
+ *  - ownerdatacreatedata : data that has been passed on by future owner of expression that can be used to create ownerdata
+ * output:
+ *  - ownerdata      : buffer to store ownerdata that shall be stored in expression (can be NULL)
+ *  - ownerdatafree  : buffer to store function to be called to free ownerdata when expression is freed
+ */
+#define SCIP_DECL_EXPR_OWNERDATACREATE(x) SCIP_RETCODE x(\
+   SCIP* scip, \
+   SCIP_EXPR* expr, \
+   SCIP_EXPR_OWNERDATA** ownerdata, \
+   SCIP_DECL_EXPR_OWNERDATAFREE((**ownerdatafree)), \
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
 
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
@@ -546,7 +548,6 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  - expr           : expression to simplify
  *  - ownerdatacreate: function to call to create ownerdata
  *  - ownerdatacreatedata: data to pass to ownerdatacreate
- *  - ownerdatafree  : function to call when freeing expression, e.g., to free ownerdata
  * output:
  *  - simplifiedexpr : the simplified expression
  */
@@ -555,8 +556,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    SCIP_EXPR*     expr,     \
    SCIP_EXPR**    simplifiedexpr, \
    SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, \
-   SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)))
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
 
 /** expression callback for reverse propagation
  *
