@@ -670,6 +670,27 @@ SCIP_RETCODE SCIPsimplifyExpr(
    SCIP_Bool*            infeasible          /**< buffer to store whether infeasibility has been detected */
    );
 
+/** replaces common sub-expressions in a given expression graph by using a hash key for each expression
+ *
+ *  The algorithm consists of two steps:
+ *
+ *  1. traverse through all given expressions and compute for each of them a (not necessarily unique) hash
+ *
+ *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a
+ *     structural equivalent expression in the hash table; if yes we replace the expression by the expression inside the
+ *     hash table, otherwise we add it to the hash table
+ *
+ *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
+ *  (with the same hash) are structurally the same we use the function SCIPexprCompare()
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPreplaceCommonSubexpressions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           exprs,              /**< expressions (possibly replaced by equivalent on output) */
+   int                   nexprs,             /**< total number of expressions */
+   SCIP_Bool*            replacedroot        /**< buffer to store whether any root expression (expression in exprs) was replaced */
+);
+
 /** computes the curvature of a given expression and all its subexpressions
  *
  *  @note this function also evaluates all subexpressions w.r.t. current variable bounds
