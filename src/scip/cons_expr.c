@@ -11410,7 +11410,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    assert(conshdlrdata != NULL);
 
    /* include and remember handler for variable expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrVar(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeExprHdlrVar(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "var") == 0);
    conshdlrdata->exprvarhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 

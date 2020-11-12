@@ -38,6 +38,9 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_mem.h"
 
+/* core expression handler plugins */
+#include "scip/expr_var.h"
+
 /* #define PARSE_DEBUG */
 
 /*
@@ -81,7 +84,7 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
    if( !valid )
       data->valid = FALSE;
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(targetscip, NULL, targetexpr, targetvar) );
+   SCIP_CALL( SCIPcreateExprVar(targetscip, NULL, targetexpr, targetvar) );
 
    return SCIP_OKAY;
 }
@@ -177,7 +180,7 @@ SCIP_RETCODE parseBase(
       {
          debugParse("First time parsing variable <%s>, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var));
          /* intentionally not using createExprVar here, since parsed expressions are not part of a constraint (they will be copied when a constraint is created) */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, basetree, var) );
+         SCIP_CALL( SCIPcreateExprVar(scip, basetree, var) );
          SCIP_CALL( SCIPhashmapInsert(vartoexprvarmap, (void*)var, (void*)(*basetree)) );
       }
    }
@@ -980,7 +983,7 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
          /* create variable expression; intentionally not using createExprVar here,
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, &xexpr, quadvars1[i]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, quadvars1[i]) );
 
          /* create pow expression */
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, &children[i], xexpr, 2.0) );
@@ -995,8 +998,8 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
          /* create variable expressions; intentionally not using createExprVar here,
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, &exprs[0], quadvars1[i]) );
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, &exprs[1], quadvars2[i]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &exprs[0], quadvars1[i]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &exprs[1], quadvars2[i]) );
 
          /* create product expression */
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, &children[i], 2, exprs, 1.0) );
@@ -1019,7 +1022,7 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
        * since expression created here is not part of a constraint (they will be copied when a constraint is created);
        * release variable expression after the sum expression has been created
        */
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, &children[nquadterms + i], linvars[i]) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &children[nquadterms + i], linvars[i]) );
 
       /* store coefficient */
       coefs[nquadterms + i] = lincoefs[i];
@@ -1068,7 +1071,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
          /* intentionally not using createExprVar here, since expression created here is not part of
           * a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, expr, vars[0]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, expr, vars[0]) );
       }
       else
       {
@@ -1077,7 +1080,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
          /* create variable and power expression; intentionally not using createExprVar here,
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, &varexpr, vars[0]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[0]) );
          SCIP_CALL( SCIPcreateConsExprExprPow(scip, expr, varexpr, exponents[0]) );
          SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
       }
@@ -1096,14 +1099,14 @@ SCIP_RETCODE SCIPcreateExprMonomial(
          /* check whether to create a power expression or not, i.e., exponent == 1 */
          if( exponents == NULL || exponents[i] == 1.0 )
          {
-            SCIP_CALL( SCIPcreateConsExprExprVar(scip, &children[i], vars[i]) );
+            SCIP_CALL( SCIPcreateExprVar(scip, &children[i], vars[i]) );
          }
          else
          {
             SCIP_EXPR* varexpr;
 
             /* create variable and pow expression */
-            SCIP_CALL( SCIPcreateConsExprExprVar(scip, &varexpr, vars[i]) );
+            SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[i]) );
             SCIP_CALL( SCIPcreateConsExprExprPow(scip, &children[i], varexpr, exponents[i]) );
             SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
          }

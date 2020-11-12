@@ -466,7 +466,7 @@ SCIP_RETCODE createExprVar(
    if( *expr == NULL )
    {
       /* create a new variable expression; this also captures the expression */
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, expr, var) );
+      SCIP_CALL( SCIPcreateExprVar(scip, conshdlr, expr, var) );
       assert(*expr != NULL);
 
       /* create data of conshdlr for new expr */

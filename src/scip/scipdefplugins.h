@@ -77,6 +77,7 @@
 #include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
+#include "scip/expr_var.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_adaptivediving.h"
 #include "scip/heur_bound.h"
