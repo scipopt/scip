@@ -2168,7 +2168,7 @@ SCIP_RETCODE computeSymmetryGroup(
                   /* for variables, we check whether they appear nonlinearly and store the result in the resp. array */
                   if( SCIPisExprVar(scip, expr) )
                   {
-                     (*isnonlinvar)[SCIPvarGetProbindex(SCIPgetConsExprExprVarVar(expr))]
+                     (*isnonlinvar)[SCIPvarGetProbindex(SCIPexprvarGetVar(expr))]
                         = (SCIPexpriterGetParentDFS(it) != rootexpr || !SCIPisExprSum(scip, rootexpr));
                   }
                   else

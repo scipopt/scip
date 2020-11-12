@@ -450,6 +450,48 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 
 /** @} */
 
+/**@name Expression Methods using core plugins */
+/**@{ */
+
+/** gives the variable for a var-expression */
+SCIP_EXPORT
+SCIP_VAR* SCIPexprvarGetVar(
+   SCIP_EXPR*            expr                /**< var expression */
+   );
+
+/** gives the value for a value-expression */
+SCIP_EXPORT
+SCIP_Real SCIPexprvalGetValue(
+   SCIP_EXPR*            expr                /**< value expression */
+   );
+
+/** gives the coefficients of a sum-expression */
+SCIP_EXPORT
+SCIP_Real* SCIPexprsumGetCoefs(
+   SCIP_EXPR*            expr                /**< sum expression */
+   );
+
+/** gives the constant of a sum-expression */
+SCIP_EXPORT
+SCIP_Real SCIPexprsumGetConstant(
+   SCIP_EXPR*            expr                /**< sum expression */
+   );
+
+/** gives the constant coefficient of a product-expression */
+SCIP_EXPORT
+SCIP_Real SCIPexprprodGetCoef(
+   SCIP_EXPR*            expr                /**< product expression */
+   );
+
+/** gives the exponent of a power- or signed-power-expression */
+SCIP_EXPORT
+SCIP_Real SCIPexprpowGetExponent(
+   SCIP_EXPR*            expr                /**< (signed) power expression */
+   );
+
+/**@} */
+
+
 /**@name Expression Iterator Methods */
 /**@{ */
 

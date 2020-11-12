@@ -651,7 +651,7 @@ SCIP_RETCODE forwardPropExpr(
                assert(SCIPisRelEQ(scip, exprhdlrinterval.sup, expr->activity.sup));
 #endif
 #ifdef DEBUG_PROP
-               SCIPdebugMsg(scip, "skip interval evaluation of expr for var <%s> [%g,%g]\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)), expr->activity.inf, expr->activity.sup);
+               SCIPdebugMsg(scip, "skip interval evaluation of expr for var <%s> [%g,%g]\n", SCIPvarGetName(SCIPexprvarGetVar(expr)), expr->activity.inf, expr->activity.sup);
 #endif
                expr->activitytag = conshdlrdata->curboundstag;
 
@@ -1341,7 +1341,7 @@ SCIP_RETCODE checkRedundancyConss(
       /* handle constant expressions separately: either the problem is infeasible or the constraint is redundant */
       if( consdata->expr->exprhdlr == SCIPgetExprHdlrValue(conshdlr) )
       {
-         SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
+         SCIP_Real value = SCIPexprvalGetValue(consdata->expr);
 
          if(  (!SCIPisInfinity(scip, -consdata->lhs) && value < consdata->lhs - SCIPfeastol(scip))
             || (!SCIPisInfinity(scip, consdata->rhs) && value > consdata->rhs + SCIPfeastol(scip)) )
@@ -1366,7 +1366,7 @@ SCIP_RETCODE checkRedundancyConss(
          SCIP_VAR* var;
          SCIP_Bool tightened;
 
-         var = SCIPgetConsExprExprVarVar(consdata->expr);
+         var = SCIPexprvarGetVar(consdata->expr);
          assert(var != NULL);
 
          SCIPdebugMsg(scip, "variable constraint <%s> can be made redundant: <%s>[%g,%g] in [%g,%g]\n", SCIPconsGetName(conss[i]), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), consdata->lhs, consdata->rhs);
@@ -1817,8 +1817,8 @@ void findUnlockedLinearVar(
       /* check whether the child is a variable expression */
       if( SCIPisExprVar(child) )
       {
-         SCIP_VAR* var = SCIPgetConsExprExprVarVar(child);
-         SCIP_Real coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
+         SCIP_VAR* var = SCIPexprvarGetVar(child);
+         SCIP_Real coef = SCIPexprsumGetCoefs(consdata->expr)[i];
 
          if( coef > 0.0 )
          {
@@ -2158,7 +2158,7 @@ SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
             for( expr = SCIPexpriterRestartDFS(it, child); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
                if( SCIPexprGetHdlr(expr) == SCIPgetExprHdlrVar(conshdlr) )
                {
-                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetConsExprExprVarVar(expr)) );
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPexprvarGetVar(expr)) );
                }
          }
       }
@@ -2167,7 +2167,7 @@ SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
          for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
             if( SCIPexprGetHdlr(expr) == SCIPgetExprHdlrVar(conshdlr) )
             {
-               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetConsExprExprVarVar(expr)) );
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPexprvarGetVar(expr)) );
             }
       }
    }
@@ -2519,7 +2519,7 @@ SCIP_RETCODE catchVarEvents(
          SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &expr->activity, intEvalVarBoundTightening, conshdlrdata) );
          expr->activitytag = conshdlrdata->curboundstag;
 #ifdef DEBUG_PROP
-         SCIPdebugMsg(scip, "var-exprhdlr::inteval for var <%s> = [%.20g, %.20g]\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)), expr->activity.inf, expr->activity.sup);
+         SCIPdebugMsg(scip, "var-exprhdlr::inteval for var <%s> = [%.20g, %.20g]\n", SCIPvarGetName(SCIPexprvarGetVar(expr)), expr->activity.inf, expr->activity.sup);
 #endif
       }
    }
@@ -2708,7 +2708,7 @@ SCIP_RETCODE propagateLocks(
             if( SCIPexprGetHdlr(expr) == SCIPgetExprHdlrVar(conshdlr) )
             {
                /* if a variable, then also add nlocksneg/nlockspos via SCIPaddVarLocks() */
-               SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocks(scip, SCIPexprvarGetVar(expr), nlocksneg, nlockspos) );
             }
 
             /* add locks to expression */
@@ -2894,8 +2894,8 @@ SCIP_RETCODE scaleConsSides(
       int nchildren;
       int counter = 0;
 
-      coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
-      constant = SCIPgetConsExprExprSumConstant(consdata->expr);
+      coefs = SCIPexprsumGetCoefs(consdata->expr);
+      constant = SCIPexprsumGetConstant(consdata->expr);
       nchildren = SCIPexprGetNChildren(consdata->expr);
 
       /* handle special case when constraint is l <= -f(x) <= r and f(x) not a sum: simplfy ensures f is not a sum */
@@ -2975,7 +2975,7 @@ SCIP_Bool isBinaryProduct(
    /* don't consider products with a coefficient != 1 and products with a single child; simplification will take care
     * of this expression later
     */
-   if( nchildren <= 1 || SCIPgetConsExprExprProductCoef(expr) != 1.0 )
+   if( nchildren <= 1 || SCIPexprprodGetCoef(expr) != 1.0 )
       return FALSE;
 
    for( i = 0; i < nchildren; ++i )
@@ -2991,7 +2991,7 @@ SCIP_Bool isBinaryProduct(
       if( !SCIPisExprVar(child) )
          return FALSE;
 
-      var = SCIPgetConsExprExprVarVar(child);
+      var = SCIPexprvarGetVar(child);
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
 
@@ -3034,8 +3034,8 @@ SCIP_RETCODE getBilinearBinaryTerms(
 
       if( SCIPexprGetNChildren(child) == 2 && isBinaryProduct(scip, conshdlr, child) )
       {
-         SCIP_VAR* x = SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[0]);
-         SCIP_VAR* y = SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[1]);
+         SCIP_VAR* x = SCIPexprvarGetVar(SCIPexprGetChildren(child)[0]);
+         SCIP_VAR* y = SCIPexprvarGetVar(SCIPexprGetChildren(child)[1]);
 
          assert(x != NULL);
          assert(y != NULL);
@@ -3193,7 +3193,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       return SCIP_OKAY;
 
    nchildren = SCIPexprGetNChildren(sumexpr);
-   sumcoefs = SCIPgetConsExprExprSumCoefs(sumexpr);
+   sumcoefs = SCIPexprsumGetCoefs(sumexpr);
    nvars = SCIPgetNVars(scip);
    ntotalvars = SCIPgetNTotalVars(scip);
 
@@ -3325,7 +3325,7 @@ SCIP_RETCODE getFactorizedBinaryQuadraticExpr(
       }
 
       /* create a new sum expression */
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, newexpr, nexprs, exprs, exprcoefs, SCIPgetConsExprExprSumConstant(sumexpr)) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, newexpr, nexprs, exprs, exprcoefs, SCIPexprsumGetConstant(sumexpr)) );
 
       /* release all expressions that have been generated by reformulateFactorizedBinaryQuadratic() */
       for( i = 0; i < nexprsold; ++i )
@@ -3384,7 +3384,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
-      vars[i] = SCIPgetConsExprExprVarVar(SCIPexprGetChildren(prodexpr)[i]);
+      vars[i] = SCIPexprvarGetVar(SCIPexprGetChildren(prodexpr)[i]);
       coefs[i] = 1.0;
       assert(vars[i] != NULL);
       (void) strcat(name, "_");
@@ -3507,9 +3507,9 @@ SCIP_RETCODE getBinaryProductExpr(
          int c;
 
          /* get variables from the product expression */
-         x = SCIPgetConsExprExprVarVar(SCIPexprGetChildren(prodexpr)[0]);
+         x = SCIPexprvarGetVar(SCIPexprGetChildren(prodexpr)[0]);
          assert(x != NULL);
-         y = SCIPgetConsExprExprVarVar(SCIPexprGetChildren(prodexpr)[1]);
+         y = SCIPexprvarGetVar(SCIPexprGetChildren(prodexpr)[1]);
          assert(y != NULL);
          assert(x != y);
 
@@ -3950,7 +3950,7 @@ SCIP_RETCODE canonicalizeConstraints(
          /* handle constant root expression; either the problem is infeasible or the constraint is redundant */
          if( consdata->expr->exprhdlr == SCIPgetExprHdlrValue(conshdlr) )
          {
-            SCIP_Real value = SCIPgetConsExprExprValueValue(consdata->expr);
+            SCIP_Real value = SCIPexprvalGetValue(consdata->expr);
             if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisFeasNegative(scip, value - consdata->lhs)) ||
                 (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasPositive(scip, value - consdata->rhs)) )
             {
@@ -4096,11 +4096,11 @@ SCIP_RETCODE makeClassicExpr(
    }
    else if( strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0 )
    {
-      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_CONST, SCIPgetConsExprExprValueValue(sourceexpr)) );
+      SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_CONST, SCIPexprvalGetValue(sourceexpr)) );
    }
    else if( strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0 )
    {
-      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), targetexpr, nchildren, children, SCIPgetConsExprExprSumCoefs(sourceexpr), SCIPgetConsExprExprSumConstant(sourceexpr)) );
+      SCIP_CALL( SCIPexprCreateLinear(SCIPblkmem(scip), targetexpr, nchildren, children, SCIPexprsumGetCoefs(sourceexpr), SCIPexprsumGetConstant(sourceexpr)) );
    }
    else if( strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0 )
    {
@@ -4109,7 +4109,7 @@ SCIP_RETCODE makeClassicExpr(
       assert(nchildren == 1);
       assert(children != NULL && children[0] != NULL);
 
-      exponent = SCIPgetConsExprExprPowExponent(sourceexpr);
+      exponent = SCIPexprpowGetExponent(sourceexpr);
       if( EPSISINT(exponent, 0.0) )  /*lint !e835*/
       {
          SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_INTPOWER, *children, (int)exponent) );
@@ -4124,12 +4124,12 @@ SCIP_RETCODE makeClassicExpr(
       assert(nchildren == 1);
       assert(children != NULL && children[0] != NULL);
       SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), targetexpr, SCIP_EXPR_SIGNPOWER, *children,
-         SCIPgetConsExprExprPowExponent(sourceexpr)) );
+         SCIPexprpowGetExponent(sourceexpr)) );
    }
    else if( strcmp(SCIPexprhdlrGetName(exprhdlr), "prod") == 0 )
    {
       SCIP_EXPRDATA_MONOMIAL* monomial;
-      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, SCIPgetConsExprExprProductCoef(sourceexpr), nchildren, NULL, NULL) );
+      SCIP_CALL( SCIPexprCreateMonomial(SCIPblkmem(scip), &monomial, SCIPexprprodGetCoef(sourceexpr), nchildren, NULL, NULL) );
       SCIP_CALL( SCIPexprCreatePolynomial(SCIPblkmem(scip), targetexpr, nchildren, children, 1, &monomial, 0.0, FALSE) );
    }
    else if( strcmp(SCIPexprhdlrGetName(exprhdlr), "abs") == 0 )
@@ -4229,9 +4229,9 @@ SCIP_RETCODE createNlRow(
       SCIP_Real* coefs;
 
       /* constant term of sum */
-      SCIP_CALL( SCIPchgNlRowConstant(scip, consdata->nlrow, SCIPgetConsExprExprSumConstant(consdata->expr)) );
+      SCIP_CALL( SCIPchgNlRowConstant(scip, consdata->nlrow, SCIPexprsumGetConstant(consdata->expr)) );
 
-      coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+      coefs = SCIPexprsumGetCoefs(consdata->expr);
 
       for( i = 0; i < SCIPexprGetNChildren(consdata->expr); ++i )
       {
@@ -4240,19 +4240,19 @@ SCIP_RETCODE createNlRow(
          if( SCIPisExprVar(child) )
          {
             /* linear term */
-            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(child), coefs[i]) );
+            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(child), coefs[i]) );
          }
          else if( SCIPexprGetHdlr(child) == conshdlrdata->exprpowhdlr &&
-            SCIPgetConsExprExprPowExponent(child) == 2.0 &&
+            SCIPexprpowGetExponent(child) == 2.0 &&
             SCIPisExprVar(SCIPexprGetChildren(child)[0]) )
          {
             /* square term  */
             SCIP_QUADELEM quadelem;
 
-            quadelem.idx1 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[0]));
+            quadelem.idx1 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(child)[0]));
             if( quadelem.idx1 == -1 )
             {
-               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[0])) );
+               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(child)[0])) );
                quadelem.idx1 = SCIPnlrowGetNQuadVars(consdata->nlrow)-1;
             }
             quadelem.idx2 = quadelem.idx1;
@@ -4268,17 +4268,17 @@ SCIP_RETCODE createNlRow(
             /* bilinear term */
             SCIP_QUADELEM quadelem;
 
-            quadelem.idx1 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[0]));
+            quadelem.idx1 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(child)[0]));
             if( quadelem.idx1 == -1 )
             {
-               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[0])) );
+               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(child)[0])) );
                quadelem.idx1 = SCIPnlrowGetNQuadVars(consdata->nlrow)-1;
             }
 
-            quadelem.idx2 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[1]));
+            quadelem.idx2 = SCIPnlrowSearchQuadVar(consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(child)[1]));
             if( quadelem.idx2 == -1 )
             {
-               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(child)[1])) );
+               SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(child)[1])) );
                quadelem.idx2 = SCIPnlrowGetNQuadVars(consdata->nlrow)-1;
             }
 
@@ -4331,7 +4331,7 @@ SCIP_RETCODE createNlRow(
             else
             {
                reindexvars[i] = nnlvars;
-               nlvars[nnlvars] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+               nlvars[nnlvars] = SCIPexprvarGetVar(consdata->varexprs[i]);
                ++nnlvars;
             }
          }
@@ -4343,13 +4343,13 @@ SCIP_RETCODE createNlRow(
       }
    }
    else if( SCIPexprGetHdlr(consdata->expr) == conshdlrdata->exprpowhdlr &&
-      SCIPgetConsExprExprPowExponent(consdata->expr) == 2.0 &&
+      SCIPexprpowGetExponent(consdata->expr) == 2.0 &&
       SCIPisExprVar(SCIPexprGetChildren(consdata->expr)[0]) )
    {
       /* if root is a x^2, then set the quadratic part of the nlrow */
       SCIP_QUADELEM quadelem;
 
-      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(consdata->expr)[0])) );
+      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(consdata->expr)[0])) );
       quadelem.idx1 = 0;
       quadelem.idx2 = 0;
       quadelem.coef = 1.0;
@@ -4364,8 +4364,8 @@ SCIP_RETCODE createNlRow(
       /* if root is a bilinear term x*y, then set the quadratic part of the nlrow */
       SCIP_QUADELEM quadelem;
 
-      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(consdata->expr)[0])) );
-      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPgetConsExprExprVarVar(SCIPexprGetChildren(consdata->expr)[1])) );
+      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(consdata->expr)[0])) );
+      SCIP_CALL( SCIPaddQuadVarToNlRow(scip, consdata->nlrow, SCIPexprvarGetVar(SCIPexprGetChildren(consdata->expr)[1])) );
 
       quadelem.idx1 = 0;
       quadelem.idx2 = 1;
@@ -4383,7 +4383,7 @@ SCIP_RETCODE createNlRow(
 
       nnlvars = consdata->nvarexprs;
       for( i = 0; i < consdata->nvarexprs; ++i )
-         nlvars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+         nlvars[i] = SCIPexprvarGetVar(consdata->varexprs[i]);
    }
    assert((classicexpr != NULL) == (nlvars != NULL));
 
@@ -4944,7 +4944,7 @@ SCIP_RETCODE registerBranchingCandidatesAllUnfixed(
       assert(consdata->varexprs != NULL);
       for( i = 0; i < consdata->nvarexprs; ++i )
       {
-         var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+         var = SCIPexprvarGetVar(consdata->varexprs[i]);
          assert(var != NULL);
 
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
@@ -5016,7 +5016,7 @@ SCIP_RETCODE registerBranchingCandidates(
             if( violscore == 0.0 )
                continue;
 
-            var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+            var = SCIPexprvarGetVar(consdata->varexprs[i]);
             assert(var != NULL);
 
             lb = SCIPvarGetLbLocal(var);
@@ -5176,7 +5176,7 @@ SCIP_RETCODE collectBranchingCandidates(
                if( conshdlrdata->enforound != consdata->varexprs[i]->violscoretag )
                   continue;
 
-               var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+               var = SCIPexprvarGetVar(consdata->varexprs[i]);
                assert(var != NULL);
 
                lb = SCIPvarGetLbLocal(var);
@@ -6273,7 +6273,7 @@ SCIP_RETCODE enforceConstraints(
          for( i = 0; i < consdata->nvarexprs; ++i )
          {
             SCIP_VAR* var;
-            var = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+            var = SCIPexprvarGetVar(consdata->varexprs[i]);
             SCIPinfoMessage(scip, enfologfile, "  %-10s = %15g bounds: [%15g,%15g]\n", SCIPvarGetName(var),
                   SCIPgetSolVal(scip, sol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
@@ -6409,7 +6409,7 @@ SCIP_RETCODE analyzeViolation(
             if( SCIPisExprVar(expr) )
             {
                SCIP_VAR* var;
-               var = SCIPgetConsExprExprVarVar(expr);
+               var = SCIPexprvarGetVar(expr);
                auxvarvalue = SCIPgetSolVal(scip, sol, var);
                auxvarlb = SCIPvarGetLbLocal(var);
                auxvarub = SCIPvarGetUbLocal(var);
@@ -7937,7 +7937,7 @@ SCIP_RETCODE bilinearTermsInsertAll(
          SCIP_VAR* y = NULL;
 
          /* check whether the expression is of the form f(..)^2 */
-         if( SCIPexprGetHdlr(expr) == powhdlr && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
+         if( SCIPexprGetHdlr(expr) == powhdlr && SCIPexprpowGetExponent(expr) == 2.0 )
          {
             x = SCIPgetExprAuxVarNonlinear(children[0]);
             y = x;
@@ -8137,7 +8137,7 @@ SCIP_Bool isSingleLockedCand(
 
    assert(SCIPisExprVar(expr));
 
-   var = SCIPgetConsExprExprVarVar(expr);
+   var = SCIPexprvarGetVar(expr);
    assert(var != NULL);
 
    return SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPgetExprNLocksNegNonlinear(expr)
@@ -8218,14 +8218,14 @@ SCIP_RETCODE presolveImplint(
        */
       if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) && SCIPisIntegral(scip, consdata->lhs)
          && nchildren > 1 && SCIPexprGetHdlr(consdata->expr) == sumhdlr
-         && SCIPisIntegral(scip, SCIPgetConsExprExprSumConstant(consdata->expr)) )
+         && SCIPisIntegral(scip, SCIPexprsumGetConstant(consdata->expr)) )
       {
          SCIP_Real* coefs;
          SCIP_VAR* cand = NULL;
          SCIP_Bool fail = FALSE;
          int i;
 
-         coefs = SCIPgetConsExprExprSumCoefs(consdata->expr);
+         coefs = SCIPexprsumGetCoefs(consdata->expr);
 
          /* find candidate variable and check whether all coefficients are integral */
          for( i = 0; i < nchildren; ++i )
@@ -8247,7 +8247,7 @@ SCIP_RETCODE presolveImplint(
                }
 
                /* store candidate variable */
-               cand = SCIPgetConsExprExprVarVar(children[i]);
+               cand = SCIPexprvarGetVar(children[i]);
             }
          }
 
@@ -8369,7 +8369,7 @@ SCIP_RETCODE presolSingleLockedVars(
 
          child = children[i];
          assert(child != NULL);
-         coef = SCIPgetConsExprExprSumCoefs(consdata->expr)[i];
+         coef = SCIPexprsumGetCoefs(consdata->expr)[i];
 
          /* ignore linear terms */
          if( SCIPisExprVar(child) )
@@ -8399,7 +8399,7 @@ SCIP_RETCODE presolSingleLockedVars(
          else if( SCIPexprGetHdlr(child) == powhdlr )
          {
             SCIP_EXPR* grandchild = SCIPexprGetChildren(child)[0];
-            SCIP_Real exponent = SCIPgetConsExprExprPowExponent(child);
+            SCIP_Real exponent = SCIPexprpowGetExponent(child);
             SCIP_Bool valid;
 
             /* check for even integral exponent */
@@ -8439,7 +8439,7 @@ SCIP_RETCODE presolSingleLockedVars(
          char name[SCIP_MAXSTRLEN];
          SCIP_VAR* var;
 
-         var = SCIPgetConsExprExprVarVar(singlelocked[i]);
+         var = SCIPexprvarGetVar(singlelocked[i]);
          assert(var != NULL);
          SCIPdebugMsg(scip, "found single locked variable %s in [%g,%g] that can be fixed to one of its bounds\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
@@ -9703,7 +9703,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsExpr)
 
    for( i = 0; i < consdata->nvarexprs; ++i )
    {
-      vars[i] = SCIPgetConsExprExprVarVar(consdata->varexprs[i]);
+      vars[i] = SCIPexprvarGetVar(consdata->varexprs[i]);
       assert(vars[i] != NULL);
    }
 
@@ -9794,7 +9794,7 @@ SCIP_VAR* SCIPgetExprAuxVarNonlinear(
 {
    assert(expr != NULL);
 
-   return SCIPisExprVar(expr) ? SCIPgetConsExprExprVarVar(expr) : expr->auxvar;
+   return SCIPisExprVar(expr) ? SCIPexprvarGetVar(expr) : expr->auxvar;
 }
 
 // TODO this should become a cons_nonlinear-specific version that prints ownerdata
@@ -9832,18 +9832,18 @@ SCIP_RETCODE SCIPdismantleExpr(
             {
                SCIP_VAR* var;
 
-               var = SCIPgetConsExprExprVarVar(expr);
+               var = SCIPexprvarGetVar(expr);
                SCIPinfoMessage(scip, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if(strcmp(type, "sum") == 0)
-               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprSumConstant(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPexprsumGetConstant(expr));
             else if(strcmp(type, "prod") == 0)
-               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprProductCoef(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPexprprodGetCoef(expr));
             else if(strcmp(type, "val") == 0)
-               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPexprvalGetValue(expr));
             else if(strcmp(type, "pow") == 0 || strcmp(type, "signpower") == 0)
-               SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprPowExponent(expr));
+               SCIPinfoMessage(scip, file, "%g", SCIPexprpowGetExponent(expr));
 
             /* print nl handlers associated to expr */
             if(expr->nenfos > 0 )
@@ -9887,7 +9887,7 @@ SCIP_RETCODE SCIPdismantleExpr(
             if( strcmp(type, "sum") == 0 )
             {
                SCIPinfoMessage(scip, file, "%*s   ", nspaces, "");
-               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
+               SCIPinfoMessage(scip, file, "[coef]: %g\n", SCIPexprsumGetCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -10841,7 +10841,7 @@ SCIP_RETCODE SCIPnotifyExprVarFreedNonlinear(
    conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
    assert(conshdlrdata != NULL);
 
-   var = SCIPgetConsExprExprVarVar(varexpr);
+   var = SCIPexprvarGetVar(varexpr);
    assert(var != NULL);
 
    /* if no variable-expression stored for var hashmap, then the var hasn't been used in any constraint, so do nothing
@@ -11765,7 +11765,7 @@ SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
- * \ref SCIPgetConsExprExprVarVar() can be used to retrieve the variable.
+ * \ref SCIPexprvarGetVar() can be used to retrieve the variable.
  */
 SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    SCIP*                    scip,               /**< SCIP data structure */
@@ -12053,15 +12053,15 @@ SCIP_RETCODE SCIPgetLinearConsNonlinear(
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
 
       assert(child->exprhdlr == varhdlr);
-      vars[i] = SCIPgetConsExprExprVarVar(child);
+      vars[i] = SCIPexprvarGetVar(child);
    }
 
    /* consider constant part of the sum expression */
-   lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - SCIPgetConsExprExprSumConstant(expr));
-   rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - SCIPgetConsExprExprSumConstant(expr));
+   lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - SCIPexprsumGetConstant(expr));
+   rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - SCIPexprsumGetConstant(expr));
 
    SCIP_CALL( SCIPcreateConsLinear(scip, lincons, SCIPconsGetName(cons),
-         SCIPexprGetNChildren(expr), vars, SCIPgetConsExprExprSumCoefs(expr),
+         SCIPexprGetNChildren(expr), vars, SCIPexprsumGetCoefs(expr),
          lhs, rhs,
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
          SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),

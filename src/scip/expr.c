@@ -2180,7 +2180,7 @@ SCIP_RETCODE SCIPexprParse(
       if( SCIPexprIsValue(set, termtree) )
       {
          /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
-         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 0, NULL, NULL, sign * SCIPgetConsExprExprValueValue(termtree)) );
+         SCIP_CALL( SCIPcreateConsExprExprSum(set->scip, exprtree, 0, NULL, NULL, sign * SCIPexprvalGetValue(termtree)) );
          SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &termtree) );
       }
       else
@@ -2775,18 +2775,18 @@ SCIP_RETCODE SCIPexprDismantle(
             {
                SCIP_VAR* var;
 
-               var = SCIPgetConsExprExprVarVar(expr);
+               var = SCIPexprvarGetVar(expr);
                SCIPmessageFPrintInfo(messagehdlr, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if( SCIPexprIsSum(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprSumConstant(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPexprsumGetConstant(expr));
             else if( SCIPexprIsProduct(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprProductCoef(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPexprprodGetCoef(expr));
             else if( SCIPexprIsValue(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprValueValue(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPexprvalGetValue(expr));
             else if( SCIPexprIsPower(set, expr) || strcmp(expr->exprhdlr->name, "signpower") == 0)
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConsExprExprPowExponent(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPexprpowGetExponent(expr));
 
             SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 
@@ -2800,7 +2800,7 @@ SCIP_RETCODE SCIPexprDismantle(
             if( SCIPexprIsSum(set, expr) )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-//FIXME               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
+//FIXME               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPexprsumGetCoefs(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -3096,7 +3096,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
          child->derivative = 0.0;
 
          /* set up direction if we see var for the first time */
-//FIXME         child->dot = SCIPgetSolVal(scip, direction, SCIPgetConsExprExprVarVar(consdata->varexprs[v]));
+//FIXME         child->dot = SCIPgetSolVal(scip, direction, SCIPexprvarGetVar(consdata->varexprs[v]));
          child->bardot = 0.0;
       }
 
@@ -3313,7 +3313,7 @@ int SCIPexprCompare(
          return compareresult;
 
       /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
-//FIXME      if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
+//FIXME      if( SCIPexprsumGetCoefs(expr1)[nchildren-1] < 1.0 )
 //         return -1;
 
       /* largest expression of sum is larger or equal than expr2 => expr1 > expr2 */
@@ -3353,7 +3353,7 @@ int SCIPexprCompare(
          return compareresult;
 
       /* base equal to expr2, exponent might tell us that expr2 is larger */
-      if( SCIPgetConsExprExprPowExponent(expr1) < 1.0 )
+      if( SCIPexprpowGetExponent(expr1) < 1.0 )
          return -1;
 
       /* power expression is larger => expr1 > expr2 */
@@ -3415,7 +3415,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    SCIPsetDebugMsg(set, "checking if expr %p is quadratic\n", (void*)expr);
 
    /* handle single square term */
-   if( SCIPexprIsPower(set, expr) && SCIPgetConsExprExprPowExponent(expr) == 2.0 )
+   if( SCIPexprIsPower(set, expr) && SCIPexprpowGetExponent(expr) == 2.0 )
    {
       SCIPsetDebugMsg(set, "expr looks like square: fill data structures\n", (void*)expr);
       SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, &expr->quaddata) );
@@ -3473,7 +3473,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       child = SCIPexprGetChildren(expr)[c];
       assert(child != NULL);
 
-      if( SCIPexprIsPower(set, child) && SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      if( SCIPexprIsPower(set, child) && SCIPexprpowGetExponent(child) == 2.0 ) /* quadratic term */
       {
          SCIP_CALL( quadDetectProcessExpr(SCIPexprGetChildren(child)[0], seenexpr, &nquadterms, &nlinterms) );
       }
@@ -3523,7 +3523,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->lincoefs, nlinterms) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &expr->quaddata->bilinexprterms, nbilinterms) );
 
-   expr->quaddata->constant = SCIPgetConsExprExprSumConstant(expr);
+   expr->quaddata->constant = SCIPexprsumGetConstant(expr);
 
    expr->quaddata->allexprsarevars = TRUE;
    /* for every term of the sum-expr */
@@ -3533,12 +3533,12 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
-//FIXME      coef = SCIPgetConsExprExprSumCoefs(expr)[c];
+//FIXME      coef = SCIPexprsumGetCoefs(expr)[c];
 
       assert(child != NULL);
       assert(coef != 0.0);
 
-      if( SCIPexprIsPower(set, child) && SCIPgetConsExprExprPowExponent(child) == 2.0 ) /* quadratic term */
+      if( SCIPexprIsPower(set, child) && SCIPexprpowGetExponent(child) == 2.0 ) /* quadratic term */
       {
          SCIP_QUADEXPR_QUADTERM* quadexprterm;
          assert(SCIPexprGetNChildren(child) == 1);
@@ -3561,7 +3561,7 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
          SCIP_EXPR* expr1;
          SCIP_EXPR* expr2;
 
-         assert(SCIPgetConsExprExprProductCoef(child) == 1.0);
+         assert(SCIPexprprodGetCoef(child) == 1.0);
 
          expr1 = SCIPexprGetChildren(child)[0];
          expr2 = SCIPexprGetChildren(child)[1];
@@ -3747,7 +3747,7 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
       assert(!SCIPhashmapExists(expr2matrix, (void*)quadexprterm.expr));
 
       /* skip expr if it is a variable mentioned in assumevarfixed */
-      if( assumevarfixed != NULL && SCIPexprIsVar(set, quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(quadexprterm.expr)) )
+      if( assumevarfixed != NULL && SCIPexprIsVar(set, quadexprterm.expr) && SCIPhashmapExists(assumevarfixed, (void*)SCIPexprvarGetVar(quadexprterm.expr)) )
          continue;
 
       if( quadexprterm.sqrcoef == 0.0 && ! storeeigeninfo )
@@ -3774,8 +3774,8 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
       bilinexprterm = quaddata->bilinexprterms[i];
 
       /* each factor should have been added to expr2matrix unless it corresponds to a variable mentioned in assumevarfixed */
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr1) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr1))));
-      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr2) && SCIPhashmapExists(assumevarfixed, (void*)SCIPgetConsExprExprVarVar(bilinexprterm.expr2))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr1) && SCIPhashmapExists(assumevarfixed, (void*)SCIPexprvarGetVar(bilinexprterm.expr1))));
+      assert(SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) || (assumevarfixed != NULL && SCIPexprIsVar(set, bilinexprterm.expr2) && SCIPhashmapExists(assumevarfixed, (void*)SCIPexprvarGetVar(bilinexprterm.expr2))));
 
       /* skip bilinear terms where at least one of the factors should be assumed to be fixed (i.e., not present in expr2matrix map) */
       if( !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr1) || !SCIPhashmapExists(expr2matrix, (void*)bilinexprterm.expr2) )

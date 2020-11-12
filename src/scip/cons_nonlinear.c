@@ -516,7 +516,7 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
    if( !SCIPisExprVar(sourceexpr) )
       return NULL;
 
-   SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPgetConsExprExprVarVar(sourceexpr)) );
+   SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPexprvarGetVar(sourceexpr)) );
 
    return SCIP_OKAY;
 }
