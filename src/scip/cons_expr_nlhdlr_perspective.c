@@ -2027,7 +2027,7 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrPerspective(
    SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrPerspective);
    SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataPerspective);
    SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataPerspective);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, NULL, nlhdlrExitPerspective);
+   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitPerspective, nlhdlrExitPerspective);
    SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaPerspective, nlhdlrEnfoPerspective, NULL, NULL);
 
    return SCIP_OKAY;
