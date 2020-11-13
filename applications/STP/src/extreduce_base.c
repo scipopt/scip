@@ -275,7 +275,7 @@ SCIP_RETCODE extInit(
    graph_mark(graph);
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, FALSE, distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeletable, extpermanent) );
 
    return SCIP_OKAY;
@@ -1250,11 +1250,19 @@ SCIP_RETCODE pseudodeleteExecute(
    REDCOST* const redcostdata = extperma->redcostdata;
    EXTPSEUDO extpseudo;
 
-   assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
    assert(graph_isMarked(graph));
 
    SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, nelims, &extpseudo) );
    extreduce_distDataRecomputeDirtyPaths(scip, graph, distdata);
+
+   if( !graph_pc_isPc(graph) && 0 )
+   {
+      assert(!extperma->distdata_biased);
+
+      // todo: fewer iterations
+      SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, TRUE, TRUE, &(extperma->distdata_biased)) );
+   }
+
 
    if( pseudoDelNodes )
    {
@@ -1334,7 +1342,7 @@ SCIP_RETCODE extreduce_init(
    SCIP_CALL( extreduce_extPermaInit(scip, graph, NULL, extpermanent) );
    extperma = *extpermanent;
 
-   SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, &(extperma->distdata_default)) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, FALSE, &(extperma->distdata_default)) );
    extperma->redcostdata = redcostdata;
 
    return SCIP_OKAY;
@@ -1353,6 +1361,9 @@ void extreduce_exit(
    assert(scip && graph && extpermanent);
 
    extperma = *extpermanent;
+
+   if( extperma->distdata_biased )
+      extreduce_distDataFree(scip, graph, &(extperma->distdata_biased));
 
    graph_free_dcsr(scip, graph);
    extreduce_distDataFree(scip, graph, &(extperma->distdata_default));

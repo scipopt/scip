@@ -55,7 +55,7 @@ SCIP_RETCODE extCheckArc(
    EXTPERMA* extpermanent;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
 
    if( edgedelete >= 0 )
@@ -94,7 +94,7 @@ SCIP_RETCODE extCheckEdge(
    EXTPERMA* extpermanent;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, FALSE, &distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
 
    extpermanent->redcostEqualAllow = allowEquality;
@@ -128,7 +128,7 @@ SCIP_RETCODE extCheckNode(
    EXTPERMA* extpermanent;
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, FALSE, &distdata) );
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
    SCIP_CALL( reduce_starInit(scip, graph->grad[node], &star) );
 

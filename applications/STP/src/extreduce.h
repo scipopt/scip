@@ -64,7 +64,7 @@ extern SCIP_Bool          extreduce_extCompFullIsPromising(const GRAPH*, const E
 
 /* extreduce_dist.c
  */
-extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, DISTDATA**);
+extern SCIP_RETCODE       extreduce_distDataInit(SCIP*, GRAPH*, int, SCIP_Bool, SCIP_Bool, DISTDATA**);
 extern SCIP_Real          extreduce_distDataGetSp(SCIP*, const GRAPH*, int, int, int*, int*, DISTDATA*);
 extern void               extreduce_distDataRecomputeDirtyPaths(SCIP*, const GRAPH*, DISTDATA*);
 extern SCIP_Real          extreduce_distDataGetSd(SCIP*, const GRAPH*, int, int, DISTDATA*);

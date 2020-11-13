@@ -40,6 +40,16 @@
 
 #define EDGE_FORBIDDEN_NONE -2
 
+/** auxiliary data for (single) closenodes run*/
+typedef struct close_nodes_run
+{
+   int*                  prededge;           /**< predecessors */
+   SCIP_Bool*            edgemark;           /**< debug only */
+   int                   startvertex;        /**< start vertex */
+   SCIP_Bool             is_buildphase;      /**< in build up phase? */
+} CNODESRUN;
+
+
 /**@name Local methods
  *
  * @{
@@ -535,32 +545,31 @@ static inline
 SCIP_RETCODE closeNodesRunInit(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
-   const DISTDATA*       distdata,           /**< data */
-   int                   startvertex,        /**< start vertex */
-   DIJK*                 dijkdata,           /**< limited Dijkstra data */
-   int**                 prededge,           /**< predecessors */
-   SCIP_Bool**           edgemark            /**< debug only */
+   DISTDATA*             distdata,           /**< distance data */
+   CNODESRUN*            cnodesrun           /**< auxiliary data */
 )
 {
+   DIJK* const dijkdata = distdata->dijkdata;
    SCIP_Real* const dist = dijkdata->node_distance;
    DHEAP* const dheap = dijkdata->dheap;
    const int nnodes = g->knots;
+   const int startvertex = cnodesrun->startvertex;
 
    assert(dheap->size == 0 && distdata->closenodes_maxnumber > 0);
-   assert(startvertex >= 0 && startvertex < g->knots);
+   assert(graph_knot_isInRange(g, startvertex));
    assert(distdata->closenodes_range[startvertex].start == distdata->closenodes_range[startvertex].end);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, prededge, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cnodesrun->prededge), nnodes) );
 
 #ifndef NDEBUG
-   SCIP_CALL( SCIPallocMemoryArray(scip, edgemark, g->edges / 2) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(cnodesrun->edgemark), g->edges / 2) );
 
    for( int e = 0; e < g->edges / 2; e++ )
-      (*edgemark)[e] = FALSE;
+      (cnodesrun->edgemark)[e] = FALSE;
 
    for( int k = 0; k < nnodes; k++ )
    {
-      (*prededge)[k] = -1;
+      (cnodesrun->prededge)[k] = -1;
       assert(dist[k] == FARAWAY && dheap->position[k] == UNKNOWN);
    }
 #endif
@@ -582,18 +591,17 @@ static inline
 SCIP_RETCODE closeNodesRunCompute(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
-   int                   startvertex,        /**< start vertex */
-   SCIP_Bool             is_buildphase,      /**< in build up phase? */
-   DIJK*                 dijkdata,           /**< limited Dijkstra data */
-   DISTDATA*             distdata,           /**< to be initialized */
-   int*                  prededge,           /**< predecessors */
-   SCIP_Bool*            edgemark            /**< debug only */
+   CNODESRUN*            cnodesrun,          /**< auxiliary data */
+   DISTDATA*             distdata            /**< to be initialized */
    )
 {
+   const SDPROFIT* sdprofit = distdata->sdistdata->sdprofit;
+   DIJK* const dijkdata = distdata->dijkdata;
    int* const visitlist = dijkdata->visitlist;
    SCIP_Real* const dist = dijkdata->node_distance;
    DHEAP* const dheap = dijkdata->dheap;
    STP_Bool* const visited = dijkdata->node_visited;
+   int* const prededge = cnodesrun->prededge;
    int* const state = dheap->position;
    DCSR* const dcsr = g->dcsr_storage;
    const RANGE* const RESTRICT range_csr = dcsr->range;
@@ -607,10 +615,13 @@ SCIP_RETCODE closeNodesRunCompute(
    SCIP_Real* const closenodes_distances = distdata->closenodes_distances;
    int nvisits = dijkdata->nvisits;
    int nclosenodes = 0;
+   const int startvertex = cnodesrun->startvertex;
    const int closenodes_limit = distdata->closenodes_maxnumber;
    const SCIP_Bool isPc = graph_pc_isPc(g);
+   const SCIP_Bool withProfit = (sdprofit != NULL);
+   const SCIP_Bool is_buildphase = cnodesrun->is_buildphase;
 
-   assert(dcsr && dist && visitlist && visited && dheap && prededge && edgemark);
+   assert(dcsr && dist && visitlist && visited && dheap && prededge && cnodesrun->edgemark);
    assert(range_closenodes && closenodes_indices && closenodes_prededges);
    assert(dheap->size == 1);
    assert(!isPc || pc_costshifts);
@@ -623,17 +634,18 @@ SCIP_RETCODE closeNodesRunCompute(
       const int k_start = range_csr[k].start;
       const int k_end = range_csr[k].end;
       const SCIP_Real k_dist = dist[k];
+      int k_pred = -1;
 
       if( k != startvertex )
       {
          const int closenodes_pos = range_closenodes[startvertex].end;
 
 #ifndef NDEBUG
-         assert((prededge[k] >= 0 && prededge[k] < g->edges));
-         assert(edgemark[prededge[k] / 2] == FALSE);  /* make sure that the edge is not marked twice */
+         assert(graph_edge_isInRange(g, prededge[k]));
+         assert(cnodesrun->edgemark[prededge[k] / 2] == FALSE);  /* make sure that the edge is not marked twice */
          assert(closenodes_pos < distdata->closenodes_totalsize && state[k] == CONNECT);
 
-         edgemark[prededge[k] / 2] = TRUE;
+         cnodesrun->edgemark[prededge[k] / 2] = TRUE;
 #endif
 
          closenodes_indices[closenodes_pos] = k;
@@ -653,6 +665,9 @@ SCIP_RETCODE closeNodesRunCompute(
 
          if( ++nclosenodes >= closenodes_limit )
             break;
+
+         if( withProfit )
+            k_pred = g->tail[prededge[k]];
       }
 
       /* correct adjacent nodes */
@@ -663,11 +678,19 @@ SCIP_RETCODE closeNodesRunCompute(
 
          if( state[m] != CONNECT )
          {
-            const SCIP_Real distnew = isPc ?
+            SCIP_Real distnew = isPc ?
                k_dist + cost_csr[e] - pc_costshifts[m]
              : k_dist + cost_csr[e];
 
             assert(GE(distnew, 0.0));
+
+            if( withProfit && m != k_pred )
+            {
+               SCIP_Real profitBias = reduce_sdprofitGetProfit(sdprofit, k, m, k_pred);
+               profitBias = MIN(profitBias, cost_csr[e]);
+               profitBias = MIN(profitBias, k_dist);
+               distnew -= profitBias;
+            }
 
             if( LT(distnew, dist[m]) )
             {
@@ -724,12 +747,11 @@ void closeNodesRunSort(
 static inline
 void closeNodesRunExit(
    SCIP*                 scip,               /**< SCIP */
-   int**                 prededge,           /**< predecessors */
-   SCIP_Bool**           edgemark            /**< debug only */
+   CNODESRUN*            cnodesrun           /**< auxiliary data */
 )
 {
-   SCIPfreeMemoryArrayNull(scip, edgemark);
-   SCIPfreeBufferArray(scip, prededge);
+   SCIPfreeMemoryArrayNull(scip, &(cnodesrun ->edgemark));
+   SCIPfreeBufferArray(scip, &(cnodesrun ->prededge));
 }
 
 
@@ -870,48 +892,25 @@ void distDataPathRootsFree(
 }
 
 
-/** limited Dijkstra to constant number of neighbors, taking SD distances into account */
-/*  todo use for computing extra distances with biased SD! */
-static inline
-SCIP_RETCODE distDataComputeCloseNodesSD(
-   SCIP*                 scip,               /**< SCIP */
-   const GRAPH*          g,                  /**< graph data structure */
-   int                   startvertex,        /**< start vertex */
-   SCIP_Bool             is_buildphase,      /**< in build up phase? */
-   DIJK*                 dijkdata,           /**< limited Dijkstra data */
-   DISTDATA*             distdata            /**< to be initialized */
-   )
-{
-
-   return SCIP_OKAY;
-}
-
-
 /** computes sorted shortest path list to constant number of neighbors */
 static
 SCIP_RETCODE distDataComputeCloseNodes(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
-   int                   startvertex,        /**< start vertex */
-   SCIP_Bool             is_buildphase,      /**< in build up phase? */
-   DIJK*                 dijkdata,           /**< limited Dijkstra data */
+   CNODESRUN*            cnodesrun,          /**< auxiliary data */
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
-   int* prededge = NULL;
-   SCIP_Bool* edgemark = NULL;
+   assert(scip && g && distdata && cnodesrun);
 
-   assert(scip && g && dijkdata && distdata);
+   SCIP_CALL( closeNodesRunInit(scip, g, distdata, cnodesrun) );
 
-   SCIP_CALL( closeNodesRunInit(scip, g, distdata, startvertex, dijkdata, &prededge, &edgemark) );
+   SCIP_CALL( closeNodesRunCompute(scip, g, cnodesrun, distdata) );
 
-   SCIP_CALL( closeNodesRunCompute( scip, g, startvertex, is_buildphase,
-         dijkdata, distdata, prededge, edgemark) );
-
-   closeNodesRunExit(scip, &prededge, &edgemark);
+   closeNodesRunExit(scip, cnodesrun);
 
    /* sort close nodes according to their index */
-   closeNodesRunSort(g, startvertex, distdata);
+   closeNodesRunSort(g, cnodesrun->startvertex, distdata);
 
    return SCIP_OKAY;
 }
@@ -945,7 +944,6 @@ static
 SCIP_RETCODE distDataAllocateNodesArrays(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Bool             computeSD,          /**< also compute special distances? */
    DISTDATA*             distdata            /**< to be initialized */
 )
 {
@@ -964,7 +962,7 @@ SCIP_RETCODE distDataAllocateNodesArrays(
 }
 
 
-
+/** re-compute close nodes for default distance from vertex1 */
 static inline
 void distDataRecomputeNormalDist(
    SCIP*                 scip,               /**< SCIP */
@@ -973,10 +971,14 @@ void distDataRecomputeNormalDist(
    DISTDATA*             distdata            /**< distance data */
 )
 {
+   CNODESRUN closenodes = { .edgemark = NULL, .prededge = NULL,
+                            .startvertex = vertex1, .is_buildphase = FALSE };
+
    assert(distdata->pathroot_isdirty[vertex1]);
+   assert(!distdata->sdistdata->sdprofit && "not supported for recomputation");
 
    distdata->pathroot_nrecomps[vertex1]++;
-   SCIP_CALL_ABORT( distDataComputeCloseNodes(scip, g, vertex1, FALSE, distdata->dijkdata, distdata) );
+   SCIP_CALL_ABORT( distDataComputeCloseNodes(scip, g, &closenodes, distdata) );
 
    graph_dijkLimited_reset(g, distdata->dijkdata);
 
@@ -1192,12 +1194,13 @@ SCIP_RETCODE extreduce_distDataInit(
    GRAPH*                g,                  /**< graph data structure */
    int                   maxnclosenodes,     /**< maximum number of close nodes to each node */
    SCIP_Bool             computeSD,          /**< also compute special distances? */
+   SCIP_Bool             useBias,            /**< use bias? */
    DISTDATA**            distdata            /**< to be initialized */
 )
 {
+   CNODESRUN closenodes = { NULL, NULL, -1, FALSE };
    const int nnodes = g->knots;
    RANGE* range_closenodes;
-   DIJK* dijkdata;
    DHEAP* dheap;
    DISTDATA* dist;
 
@@ -1209,22 +1212,29 @@ SCIP_RETCODE extreduce_distDataInit(
    dist = *distdata;
 
    distDataInitSizes(g, maxnclosenodes, dist);
-   SCIP_CALL( distDataAllocateNodesArrays(scip, g, computeSD, dist) );
+   SCIP_CALL( distDataAllocateNodesArrays(scip, g, dist) );
 
    SCIP_CALL( graph_dijkLimited_init(scip, g, &(dist->dijkdata)) );
-   dijkdata = dist->dijkdata;
 
    if( graph_pc_isPc(g) )
    {
-      SCIP_CALL( graph_dijkLimited_initPcShifts(scip, g, dijkdata) );
+      SCIP_CALL( graph_dijkLimited_initPcShifts(scip, g, dist->dijkdata) );
    }
 
    if( computeSD )
    {
-      SCIP_CALL( reduce_sdInit(scip, g, &(dist->sdistdata)) );
+      if( useBias )
+      {
+         SCIP_CALL( reduce_sdInitBiased(scip, g, &(dist->sdistdata)) );
+      }
+      else
+      {
+         SCIP_CALL( reduce_sdInit(scip, g, &(dist->sdistdata)) );
+      }
    }
    else
    {
+      assert(!useBias);
       dist->sdistdata = NULL;
    }
 
@@ -1254,9 +1264,11 @@ SCIP_RETCODE extreduce_distDataInit(
 
       assert(g->grad[k] > 0);
 
-      SCIP_CALL( distDataComputeCloseNodes(scip, g, k, TRUE, dijkdata, dist) );
+      closenodes.startvertex = k;
+      closenodes.is_buildphase = TRUE;
+      SCIP_CALL( distDataComputeCloseNodes(scip, g, &closenodes, dist) );
 
-      graph_dijkLimited_reset(g, dijkdata);
+      graph_dijkLimited_reset(g, dist->dijkdata);
    }
 
    /* store for each edge the roots of all paths it is used for */
@@ -1266,7 +1278,7 @@ SCIP_RETCODE extreduce_distDataInit(
    dist->dheap = dheap;
 
    assert(dist->closenodes_prededges);
-   assert(extreduce_distCloseNodesAreValid(scip, g, dist));
+   assert(useBias || extreduce_distCloseNodesAreValid(scip, g, dist));
 
    return SCIP_OKAY;
 }

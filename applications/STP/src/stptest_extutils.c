@@ -309,7 +309,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValid1(
    SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
 
    /* 2. do the actual test */
 
@@ -378,7 +378,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValid2(
    SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
 
    /* 2. do the actual test */
 
@@ -444,7 +444,7 @@ SCIP_RETCODE testDistCloseNodesPcAreValidAfterDeletion(
    SCIP_CALL( stptest_graphSetUpPcOrg(scip, graph, NULL, NULL) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
 
    /* 2. do the actual test */
 
@@ -522,7 +522,7 @@ SCIP_RETCODE testDistCloseNodesAreValid(
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
 
    /* 2. do the actual test */
 
@@ -608,7 +608,7 @@ SCIP_RETCODE testDistRootPathsAreValid(
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
 
    /* 2. do the actual test */
 
@@ -687,7 +687,7 @@ SCIP_RETCODE testDistDistancesAreValid(
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, &distdata) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, nclosenodes, FALSE, FALSE, &distdata) );
 
    /* test distances */
    {
