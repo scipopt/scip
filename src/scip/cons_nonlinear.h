@@ -584,7 +584,7 @@ SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
- * \ref SCIPexprvarGetVar() can be used to retrieve the variable.
+ * \ref SCIPexprGetVarExprVar() can be used to retrieve the variable.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(

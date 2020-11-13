@@ -37,8 +37,8 @@ SCIP_DECL_EXPRCOMPARE(compareValue)
    SCIP_Real val1;
    SCIP_Real val2;
 
-   val1 = SCIPexprvalGetValue(expr1);
-   val2 = SCIPexprvalGetValue(expr2);
+   val1 = SCIPexprGetValueExprValue(expr1);
+   val2 = SCIPexprGetValueExprValue(expr2);
 
    return val1 < val2 ? -1 : val1 == val2 ? 0 : 1; /*lint !e777*/
 }
@@ -80,7 +80,7 @@ SCIP_DECL_EXPRPRINT(printValue)
 
    if( stage == SCIP_EXPRITER_ENTEREXPR )
    {
-      SCIP_Real v = SCIPexprvalGetValue(expr);
+      SCIP_Real v = SCIPexprGetValueExprValue(expr);
       if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )
       {
          SCIPinfoMessage(scip, file, "(%g)", v);
@@ -146,7 +146,7 @@ SCIP_DECL_EXPRHASH(hashValue)
    assert(hashkey != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
-   *hashkey ^= SCIPcalcFibHash(SCIPexprvalGetValue(expr));
+   *hashkey ^= SCIPcalcFibHash(SCIPexprGetValueExprValue(expr));
 
    return SCIP_OKAY;
 }
@@ -188,7 +188,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
    assert(expr != NULL);
    assert(isintegral != NULL);
 
-   *isintegral = EPSISINT(SCIPexprvalGetValue(expr), 0.0); /*lint !e835 !e666*/
+   *isintegral = EPSISINT(SCIPexprGetValueExprValue(expr), 0.0); /*lint !e835 !e666*/
 
    return SCIP_OKAY;
 }
@@ -242,7 +242,7 @@ SCIP_RETCODE SCIPcreateExprValue(
 /* from pub_expr.h */
 
 /** gets the value of a constant value expression */
-SCIP_Real SCIPexprvalGetValue(
+SCIP_Real SCIPexprGetValueExprValue(
    SCIP_EXPR*   expr                /**< expression */
    )
 {

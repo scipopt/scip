@@ -7179,8 +7179,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
 
    /* get bilinear term */
    SCIPexprGetQuadraticBilinTerm(expr, 0, &expr1, &expr2, &bilincoef, NULL, NULL);
-   bilinvars[0] = SCIPexprvarGetVar(expr1);
-   bilinvars[1] = SCIPexprvarGetVar(expr2);
+   bilinvars[0] = SCIPexprGetVarExprVar(expr1);
+   bilinvars[1] = SCIPexprGetVarExprVar(expr2);
 
    if( SCIPisZero(scip, bilincoef) )
       return SCIP_OKAY;
@@ -7215,23 +7215,23 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
 
    if( SCIPisZero(scip, coefy) )
    {
-      vars[0] = SCIPexprvarGetVar(expr1);
+      vars[0] = SCIPexprGetVarExprVar(expr1);
    }
    else
    {
       assert(SCIPisEQ(scip, coefy, -1.0));
       /* x - 1 = -(1-x) = -(~x) */
-      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPexprvarGetVar(expr1), &vars[0]) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPexprGetVarExprVar(expr1), &vars[0]) );
    }
    if( SCIPisZero(scip, coefx) )
    {
-      vars[1] = SCIPexprvarGetVar(expr2);
+      vars[1] = SCIPexprGetVarExprVar(expr2);
    }
    else
    {
       assert(SCIPisEQ(scip, coefx, -1.0));
       /* y - 1 = -(1 - y) = -(~y) */
-      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPexprvarGetVar(expr2), &vars[1]) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, SCIPexprGetVarExprVar(expr2), &vars[1]) );
    }
 
    /* constraint is now of the form  vars[0] * vars[1] == 0 */

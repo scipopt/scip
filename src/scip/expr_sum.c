@@ -121,8 +121,8 @@ SCIP_RETCODE simplifyTerm(
    assert(changed != NULL);
 
    children  = SCIPexprGetChildren(duplicate);
-   coefs     = SCIPexprsumGetCoefs(duplicate);
-   constant  = SCIPexprsumGetConstant(duplicate);
+   coefs     = SCIPexprGetCoefsExprSum(duplicate);
+   constant  = SCIPexprGetConstantExprSum(duplicate);
 
    coef = coefs[idx];
    expr = children[idx];
@@ -132,7 +132,7 @@ SCIP_RETCODE simplifyTerm(
    if( SCIPisExprValue(scip, expr) )
    {
       *changed = TRUE;
-      constant += coef * SCIPexprvalGetValue(expr);
+      constant += coef * SCIPexprGetValueExprValue(expr);
       SCIPsetConstantExprSum(duplicate, constant);
 
       /* TODO: remove child? */
@@ -147,7 +147,7 @@ SCIP_RETCODE simplifyTerm(
       *changed = TRUE;
 
       /* pass constant to parent */
-      constant += coef * SCIPexprsumGetConstant(expr);
+      constant += coef * SCIPexprGetConstantExprSum(expr);
       SCIPsetConstantExprSum(duplicate, constant);
 
       /* append all children of expr on parent except the first one */
@@ -158,16 +158,16 @@ SCIP_RETCODE simplifyTerm(
          for( i = 1; i < SCIPexprGetNChildren(expr); ++i )
          {
             assert(!SCIPisExprSum(scip, SCIPexprGetChildren(expr)[i]));
-            SCIP_CALL( SCIPappendExprSumExpr(scip, duplicate, SCIPexprGetChildren(expr)[i], coef * SCIPexprsumGetCoefs(expr)[i]) );
+            SCIP_CALL( SCIPappendExprSumExpr(scip, duplicate, SCIPexprGetChildren(expr)[i], coef * SCIPexprGetCoefsExprSum(expr)[i]) );
          }
       }
 
       /* replace expr with first child; need to get data again since it might be re-allocated */
       assert(!SCIPisExprSum(scip, SCIPexprGetChildren(expr)[0]));
 
-      coefs = SCIPexprsumGetCoefs(duplicate);
+      coefs = SCIPexprGetCoefsExprSum(duplicate);
 
-      coefs[idx] = coef * SCIPexprsumGetCoefs(expr)[0];
+      coefs[idx] = coef * SCIPexprGetCoefsExprSum(expr)[0];
       SCIP_CALL( SCIPreplaceExprChild(scip, duplicate, idx, SCIPexprGetChildren(expr)[0]) );
 
       return SCIP_OKAY;
@@ -329,7 +329,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    {
       /* enforces SS8 TODO: remove child? */
       /* we have to ask for the coefs everytime, since it might get realloced in simpifyTerm */
-      if( SCIPexprsumGetCoefs(duplicate)[i] == 0.0 )
+      if( SCIPexprGetCoefsExprSum(duplicate)[i] == 0.0 )
       {
          changed = TRUE;
          continue;
@@ -342,12 +342,12 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    /* simplifyTerm can add new children to duplicate and realloc them; so get them again */
    nchildren = SCIPexprGetNChildren(duplicate);
    children  = SCIPexprGetChildren(duplicate);
-   coefs     = SCIPexprsumGetCoefs(duplicate);
+   coefs     = SCIPexprGetCoefsExprSum(duplicate);
 
    /* treat zero term case */
    if( nchildren == 0 )
    {
-      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPexprsumGetConstant(duplicate), ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPexprGetConstantExprSum(duplicate), ownerdatacreate, ownerdatacreatedata) );
       goto CLEANUP;
    }
 
@@ -356,11 +356,11 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    {
       if( coefs[0] == 0.0 )
       {
-         SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPexprsumGetConstant(duplicate), ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPexprGetConstantExprSum(duplicate), ownerdatacreate, ownerdatacreatedata) );
          goto CLEANUP;
       }
 
-      if( coefs[0] == 1.0 && SCIPexprsumGetConstant(duplicate) == 0.0 )
+      if( coefs[0] == 1.0 && SCIPexprGetConstantExprSum(duplicate) == 0.0 )
          *simplifiedexpr = children[0]; /* SS7 */
       else
          *simplifiedexpr = changed ? duplicate : expr;
@@ -428,7 +428,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    }
 
    /* build sum expression from finalchildren and post-simplify */
-   newconstant = SCIPexprsumGetConstant(duplicate);
+   newconstant = SCIPexprGetConstantExprSum(duplicate);
 
    debugSimplify("what to do? finalchildren has length %d\n", nnewchildren); /*lint !e506 !e681*/
 
@@ -500,10 +500,10 @@ SCIP_DECL_EXPRCOMPARE(compareSum)
    nchildren2 = SCIPexprGetNChildren(expr2);
    children1 = SCIPexprGetChildren(expr1);
    children2 = SCIPexprGetChildren(expr2);
-   coefs1 = SCIPexprsumGetCoefs(expr1);
-   coefs2 = SCIPexprsumGetCoefs(expr2);
-   const1 = SCIPexprsumGetConstant(expr1);
-   const2 = SCIPexprsumGetConstant(expr2);
+   coefs1 = SCIPexprGetCoefsExprSum(expr1);
+   coefs2 = SCIPexprGetCoefsExprSum(expr2);
+   const1 = SCIPexprGetConstantExprSum(expr1);
+   const2 = SCIPexprGetConstantExprSum(expr2);
 
    for( i = nchildren1 - 1, j = nchildren2 - 1; i >= 0 && j >= 0; --i, --j )
    {
@@ -720,7 +720,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffSum)
    assert(SCIPexprGetChildren(expr)[childidx] != NULL);
    assert(!SCIPisExprValue(scip, SCIPexprGetChildren(expr)[childidx]));
 
-   *val = SCIPexprsumGetCoefs(expr)[childidx];
+   *val = SCIPexprGetCoefsExprSum(expr)[childidx];
 
    return SCIP_OKAY;
 }
@@ -1078,7 +1078,7 @@ void SCIPmultiplyByConstantExprSum(
 /* from pub_expr.h */
 
 /** gets the coefficients of a summation expression */
-SCIP_Real* SCIPexprsumGetCoefs(
+SCIP_Real* SCIPexprGetCoefsExprSum(
    SCIP_EXPR*   expr                /**< sum expression */
    )
 {
@@ -1093,7 +1093,7 @@ SCIP_Real* SCIPexprsumGetCoefs(
 }
 
 /** gets the constant of a summation expression */
-SCIP_Real SCIPexprsumGetConstant(
+SCIP_Real SCIPexprGetConstantExprSum(
    SCIP_EXPR*   expr                /**< sum expression */
    )
 {

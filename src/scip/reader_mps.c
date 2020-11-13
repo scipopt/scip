@@ -4326,7 +4326,7 @@ SCIP_RETCODE SCIPwriteMps(
             SCIPexprGetQuadraticQuadTerm(expr, j, &qexpr, &quadvarlincoefs[j], NULL, NULL, NULL, NULL);
 
             assert(SCIPisExprVar(scip, qexpr));
-            quadvars[j] = SCIPexprvarGetVar(qexpr);
+            quadvars[j] = SCIPexprGetVarExprVar(qexpr);
          }
 
          lhs = SCIPgetLhsConsNonlinear(scip, cons);
@@ -4358,7 +4358,7 @@ SCIP_RETCODE SCIPwriteMps(
             /* get linear vars */
             SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nlinexprs) );
             for( j = 0; j < nlinexprs; ++j )
-               linvars[j] = SCIPexprvarGetVar(linexprs[j]);
+               linvars[j] = SCIPexprGetVarExprVar(linexprs[j]);
 
             /* compute column entries for linear part */
             SCIP_CALL( getLinearCoeffs(scip, consname, linvars, lincoefs, nlinexprs, transformed, matrix, &rhss[c]) );
@@ -4778,7 +4778,7 @@ SCIP_RETCODE SCIPwriteMps(
                continue;
 
             assert(SCIPisExprVar(scip, qexpr));
-            qvar = SCIPexprvarGetVar(qexpr);
+            qvar = SCIPexprGetVarExprVar(qexpr);
 
             /* get variable name */
             assert(SCIPhashmapExists(varnameHashmap, qvar));
@@ -4810,8 +4810,8 @@ SCIP_RETCODE SCIPwriteMps(
             if( coef == 0.0 )
                continue;
 
-            var1 = SCIPexprvarGetVar(expr1);
-            var2 = SCIPexprvarGetVar(expr2);
+            var1 = SCIPexprGetVarExprVar(expr1);
+            var2 = SCIPexprGetVarExprVar(expr2);
 
             /* get name of first variable */
             assert ( SCIPhashmapExists(varnameHashmap, var1) );
