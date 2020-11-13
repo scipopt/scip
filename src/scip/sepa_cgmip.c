@@ -3359,7 +3359,7 @@ SCIP_RETCODE createCGCutDirect(
             SCIP_ROW* cut;
 
             /* create the cut */
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%" SCIP_LONGINT_FORMAT "_%u", SCIPgetNLPs(scip), *ngen);
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
@@ -3622,7 +3622,7 @@ SCIP_RETCODE createCGCutCMIR(
       SCIP_ROW* cut;
 
       /* create the cut */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%" SCIP_LONGINT_FORMAT "_%u", SCIPgetNLPs(scip), *ngen);
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -3853,7 +3853,7 @@ SCIP_RETCODE createCGCutStrongCG(
       SCIP_ROW* cut;
 
       /* create the cut */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%d_%u", SCIPgetNLPs(scip), *ngen);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cgcut%" SCIP_LONGINT_FORMAT "_%u", SCIPgetNLPs(scip), *ngen);
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );

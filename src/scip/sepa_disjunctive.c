@@ -382,7 +382,7 @@ SCIP_RETCODE generateDisjCutSOS1(
    }
 
    /* create cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
    if ( SCIPgetDepth(scip) == 0 )
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
    else
