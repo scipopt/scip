@@ -113,6 +113,7 @@ void sortDescendingIntRealReal(
    assert(keyArr && dataArr1 && dataArr2);
    assert(nentries >= 1);
 
+#if 1
    for( int i = 1; i < nentries; i++ )
    {
       int j;
@@ -131,6 +132,36 @@ void sortDescendingIntRealReal(
       dataArr1[j + 1] = currData1;
       dataArr2[j + 1] = currData2;
    }
+#else
+   for( int i = 0; i < nentries - 1; i++ )
+   {
+      int max_pos = i;
+
+      for( int j = i + 1; j < nentries; j++ )
+      {
+         if( keyArr[j] > keyArr[max_pos] )
+            max_pos = j;
+      }
+
+      if( max_pos != i )
+      {
+         int temp_int;
+         SCIP_Real tmp_real;
+
+         temp_int = keyArr[max_pos];
+         keyArr[max_pos] = keyArr[i];
+         keyArr[i] = temp_int;
+
+         tmp_real = dataArr1[max_pos];
+         dataArr1[max_pos] = dataArr1[i];
+         dataArr1[i] = tmp_real;
+
+         tmp_real = dataArr2[max_pos];
+         dataArr2[max_pos] = dataArr2[i];
+         dataArr2[i] = tmp_real;
+      }
+   }
+#endif
 
 #ifndef NDEBUG
    for( int i = 1; i < nentries; i++ )
