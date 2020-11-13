@@ -32,7 +32,6 @@
 //#include "scip/cons_expr_product.h"
 //#include "scip/cons_expr_exp.h"
 #include "scip/expr_value.h"
-#include "scip/cons_nonlinear.h"  /* for rowprep */ // FIXME should not need it
 
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
@@ -269,63 +268,6 @@ SCIP_RETCODE simplifyTerm(
    /* other types of (simplified) expressions can be a child of a simplified sum */
    assert(!SCIPisExprSum(scip, expr));
    assert(!SCIPisExprValue(scip, expr));
-
-   return SCIP_OKAY;
-}
-
-/** helper function to separate a given point; needed for proper unittest */
-static
-SCIP_RETCODE separatePointSum(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< sum expression */
-   SCIP_Bool             overestimate,       /**< should the expression be overestimated? */
-   SCIP_ROWPREP**        rowprep             /**< pointer to store the row preparation */
-   )
-{
-   SCIP_EXPRDATA* exprdata;
-   SCIP_VAR* auxvar;
-   int c;
-
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-   assert(rowprep != NULL);
-
-   exprdata = SCIPexprGetData(expr);
-   assert(exprdata != NULL);
-
-   auxvar = SCIPgetExprAuxVarNonlinear(expr);
-   assert(auxvar != NULL);
-
-   *rowprep = NULL;
-
-   /* create rowprep */
-   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE));
-   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, SCIPexprGetNChildren(expr) + 1) );
-
-   /* compute  w = sum_i alpha_i z_i + const */
-   for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
-   {
-      SCIP_EXPR* child;
-      SCIP_VAR* var;
-
-      child = SCIPexprGetChildren(expr)[c];
-      assert(child != NULL);
-
-      /* value expressions should have been removed during simplification */
-      assert(!SCIPisExprValue(scip, child));
-
-      var = SCIPgetExprAuxVarNonlinear(child);
-      assert(var != NULL);
-
-      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, var, exprdata->coefficients[c]) );
-   }
-
-   /* add -1 * auxvar and set side */
-   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
-   SCIPaddRowprepSide(*rowprep, -exprdata->constant);
-
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "sum");  /* @todo make cutname unique, e.g., add LP number */
 
    return SCIP_OKAY;
 }
@@ -841,103 +783,34 @@ SCIP_DECL_EXPRINTEVAL(intevalSum)
    return SCIP_OKAY;
 }
 
-/* TODO we should get rid of this somehow
- * maybe initsepa of nlhdlr_default should call estimate,
- * but it currently doesn't know for which expr's the estimator can be computed without a solution
- */
-/** separation initialization callback */
+/** initial estimators callback */
 static
-SCIP_DECL_EXPRINITESTIMATES(initSepaSum)
+SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
 {  /*lint --e{715}*/
-#if !1 // FIXME
-   int i;
-
-   assert(overestimate);
-   *infeasible = FALSE;
+   SCIP_EXPRDATA* exprdata;
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "initSepaSum %d children: ", SCIPexprGetNChildren(expr));
-   SCIPprintExpr(scip, conshdlr, expr, NULL);
+   SCIPinfoMessage(scip, NULL, "initEstimatesSum %d children: ", SCIPexprGetNChildren(expr));
+   SCIPprintExpr(scip, expr, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 #endif
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
 
-   /* i = 0 for overestimation; i = 1 for underestimation */
-   for( i = 0; i < 2 && !*infeasible; ++i )
-   {
-      SCIP_ROWPREP* rowprep;
-      SCIP_Bool success;
+   assert(coefs[0] != NULL);
+   assert(constant[0] != NULL);
+   assert(islocal[0] != NULL);
+   assert(nreturned != NULL);
 
-      if( (i == 0 && !overestimate) || (i == 1 && !underestimate) )
-         continue;
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
 
-      /* create rowprep */
-      SCIP_CALL( separatePointSum(scip, expr, i == 0, &rowprep) );
-      assert(rowprep != NULL);
+   BMScopyMemoryArray(coefs[0], exprdata->coefficients, SCIPexprGetNChildren(expr));
+   *constant[0] = exprdata->constant;
+   *islocal[0] = FALSE;
+   *nreturned = 1;
 
-      /* first try scale-up rowprep to try to get rid of within-epsilon of integer coefficients */
-      (void) SCIPscaleupRowprep(scip, rowprep, 1.0, &success);
-
-      if( success && underestimate && overestimate )
-      {
-         SCIP_ROW* row;
-
-         assert(i == 0);
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-         /* since we did not relax the overestimator (i=0), we can turn the row into an equality if we need an underestimator, too */
-         if( rowprep->sidetype == SCIP_SIDETYPE_LEFT )
-         {
-            SCIP_CALL( SCIPchgRowRhs(scip, row, rowprep->side) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPchgRowLhs(scip, row, rowprep->side) );
-         }
-
-#ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "adding row ");
-         SCIPprintRow(scip, row, NULL);
-#endif
-
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-         /* free rowprep */
-         SCIPfreeRowprep(scip, &rowprep);
-
-         break;
-      }
-
-      if( !success )
-      {
-         /* if scale-up is not sufficient, then do clean-up
-          * this might relax the row, so we only get a bounding cut
-          */
-         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, 0.0, NULL, &success) );
-      }
-
-      /* create a SCIP_ROW and add it to the initial LP */
-      if( success )
-      {
-         SCIP_ROW* row;
-
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-
-#ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "adding row ");
-         SCIPprintRow(scip, row, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
-#endif
-
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      }
-
-      /* free rowprep */
-      SCIPfreeRowprep(scip, &rowprep);
-   }
-#endif
    return SCIP_OKAY;
 }
 
@@ -955,14 +828,14 @@ SCIP_DECL_EXPRESTIMATE(estimateSum)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   memcpy(coefs, exprdata->coefficients, SCIPexprGetNChildren(expr) * sizeof(SCIP_Real));
+   BMScopyMemoryArray(coefs, exprdata->coefficients, SCIPexprGetNChildren(expr));
    *constant = exprdata->constant;
    *success = TRUE;
 
    /* for none of our children, branching would improve the underestimator, so set branchcand[i]=FALSE everywhere
     * if we branch for numerical reasons, then cons-expr-core should figure out what the candidates are
     */
-   memset(branchcand, 0, SCIPexprGetNChildren(expr) * sizeof(SCIP_Bool));
+   BMSclearMemoryArray(branchcand, SCIPexprGetNChildren(expr));
 
    return SCIP_OKAY;
 }
@@ -1107,7 +980,7 @@ SCIP_RETCODE SCIPincludeExprHdlrSum(
    SCIPexprhdlrSetCompare(exprhdlr, compareSum);
    SCIPexprhdlrSetPrint(exprhdlr, printSum);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalSum);
-   SCIPexprhdlrSetEstimate(exprhdlr, initSepaSum, estimateSum);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimatesSum, estimateSum);
    SCIPexprhdlrSetReverseProp(exprhdlr, reversepropSum);
    SCIPexprhdlrSetHash(exprhdlr, hashSum);
    SCIPexprhdlrSetDiff(exprhdlr, bwdiffSum, fwdiffSum, bwfwdiffSum);
