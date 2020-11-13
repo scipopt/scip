@@ -6959,6 +6959,8 @@ SCIP_Real evaluateLiftingFunction(
    SCIP_Real xpluslambda;
    int i;
 
+   assert( liftingdata != NULL );
+
    xpluslambda = x + liftingdata->lambda;
 
    i = 0;

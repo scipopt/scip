@@ -1012,6 +1012,7 @@ SCIP_RETCODE readCoefficients(
          /* check whether we found an objective offset */
          if( isobjective && havevalue && var == NULL )
          {
+            assert( objoffset != NULL );
             if( haveobjoffset )
             {
                syntaxError(scip, lpinput, "two objective offsets.");
@@ -1069,6 +1070,7 @@ SCIP_RETCODE readCoefficients(
          }
          else if( isobjective && havevalue && !SCIPisZero(scip, coef) )
          {
+            assert( objoffset != NULL );
             /* check whether we found an objective offset */
             if( haveobjoffset )
             {
