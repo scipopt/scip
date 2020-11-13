@@ -11425,7 +11425,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    conshdlrdata->exprsumhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    /* include and remember handler for product expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrProduct(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeExprHdlrProduct(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "prod") == 0);
    conshdlrdata->exprprodhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 

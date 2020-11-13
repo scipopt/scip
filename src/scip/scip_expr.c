@@ -43,6 +43,7 @@
 #include "scip/expr_value.h"
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
+#include "scip/expr_product.h"
 
 /* #define PARSE_DEBUG */
 
@@ -443,7 +444,7 @@ SCIP_RETCODE parseTerm(
    if( *expr == '*' || *expr == '/' )
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, termtree, 1, &factortree, 1.0) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, termtree, 1, &factortree, 1.0, ownerdatacreate, ownerdatacreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &factortree) );
 
       /* loop: parse Factor, find next symbol */
@@ -1021,7 +1022,7 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
          SCIP_CALL( SCIPcreateExprVar(scip, &exprs[1], quadvars2[i], ownerdatacreate, ownerdatacreatedata) );
 
          /* create product expression */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, &children[i], 2, exprs, 1.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &children[i], 2, exprs, 1.0, ownerdatacreate, ownerdatacreatedata) );
 
          /* release variable expressions; note that the variable expressions are still captured by children[i] */
          SCIP_CALL( SCIPreleaseExpr(scip, &exprs[1]) );
@@ -1134,7 +1135,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
       }
 
       /* create product expression */
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, expr, nfactors, children, 1.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, expr, nfactors, children, 1.0, ownerdatacreate, ownerdatacreatedata) );
 
       /* release children */
       for( i = 0; i < nfactors; ++i )

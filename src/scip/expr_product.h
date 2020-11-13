@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_product.h
+/**@file   expr_product.h
  * @brief  product expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -21,51 +21,37 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_PROD_H__
-#define __SCIP_CONS_EXPR_PROD_H__
+#ifndef __SCIP_EXPR_PROD_H__
+#define __SCIP_EXPR_PROD_H__
 
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the handler for product expressions and includes it into the expression constraint handler */
+/** creates the handler for product expressions and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrProduct(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates a product expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprProduct(
+SCIP_RETCODE SCIPcreateExprProduct(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR**  children,           /**< children */
-   SCIP_Real             coefficient         /**< constant coefficient of product */
-   );
-
-/** gets the constant coefficient of a product expression */
-SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprProductCoef(
-   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
-   );
-
-/** appends an expression to a product expression */
-SCIP_EXPORT
-SCIP_RETCODE SCIPappendConsExprExprProductExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   SCIP_EXPR**           children,           /**< children */
+   SCIP_Real             coefficient,        /**< constant coefficient of product */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_PROD_H__ */
+#endif /* __SCIP_EXPR_PROD_H__ */

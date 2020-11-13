@@ -29,9 +29,9 @@
 #include <stddef.h>
 
 #include "scip/expr_sum.h"
-//#include "scip/cons_expr_product.h"
-//#include "scip/cons_expr_exp.h"
 #include "scip/expr_value.h"
+#include "scip/expr_product.h"
+//#include "scip/cons_expr_exp.h"
 
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
@@ -233,7 +233,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreleaseExpr(scip, &exponential) );
 
          /* create product with new child */
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, &prod, 0, NULL, 1.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &prod, 0, NULL, 1.0, ownerdatacreate, ownerdatacreatedata) );
 
          for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
          {
