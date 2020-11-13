@@ -44,6 +44,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_product.h"
+#include "scip/expr_pow.h"
 
 /* #define PARSE_DEBUG */
 
@@ -398,7 +399,7 @@ SCIP_RETCODE parseFactor(
    /* create power */
    if( exponent != 1.0 )
    {
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, factortree, basetree, exponent) );
+      SCIP_CALL( SCIPcreateExprPow(scip, factortree, basetree, exponent, ownerdatacreate, ownerdatacreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
    }
    else
@@ -1006,7 +1007,7 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
          SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, quadvars1[i], ownerdatacreate, ownerdatacreatedata) );
 
          /* create pow expression */
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, &children[i], xexpr, 2.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &children[i], xexpr, 2.0, ownerdatacreate, ownerdatacreatedata) );
 
          /* release variable expression; note that the variable expression is still captured by children[i] */
          SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
@@ -1103,7 +1104,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
          SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[0], ownerdatacreate, ownerdatacreatedata) );
-         SCIP_CALL( SCIPcreateConsExprExprPow(scip, expr, varexpr, exponents[0], ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprPow(scip, expr, varexpr, exponents[0], ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
       }
    }
@@ -1129,7 +1130,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
 
             /* create variable and pow expression */
             SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[i], ownerdatacreate, ownerdatacreatedata) );
-            SCIP_CALL( SCIPcreateConsExprExprPow(scip, &children[i], varexpr, exponents[i], ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPcreateExprPow(scip, &children[i], varexpr, exponents[i], ownerdatacreate, ownerdatacreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
          }
       }

@@ -13,19 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_pow.h
+/**@file   expr_pow.h
  * @brief  power expression handler
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_POW_H__
-#define __SCIP_CONS_EXPR_POW_H__
-
+#ifndef __SCIP_EXPR_POW_H__
+#define __SCIP_EXPR_POW_H__
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,46 +32,40 @@ extern "C" {
 
 /** creates a power expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprPow(
+SCIP_RETCODE SCIPcreateExprPow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child,              /**< single child */
-   SCIP_Real             exponent            /**< exponent of the power expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< single child */
+   SCIP_Real             exponent,           /**< exponent of the power expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 /** creates a signpower expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprSignPower(
+SCIP_RETCODE SCIPcreateExprSignpower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child,              /**< single child */
-   SCIP_Real             exponent            /**< exponent of the power expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< single child */
+   SCIP_Real             exponent,           /**< exponent of the power expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
-/** creates the handler for power expression and includes it into the expression constraint handler */
+/** creates the handler for power expression and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrPow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrPow(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates the handler for power expression and includes it into the expression constraint handler */
+/** creates the handler for signed power expression and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrSignpower(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
-   );
-
-/** gets the exponent of a power or signed power expression */
-SCIP_EXPORT
-SCIP_Real SCIPgetConsExprExprPowExponent(
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+SCIP_RETCODE SCIPincludeExprHdlrSignpower(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_POW_H__ */
+#endif /* __SCIP_EXPR_POW_H__ */

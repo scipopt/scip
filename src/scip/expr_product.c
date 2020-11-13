@@ -554,7 +554,7 @@ SCIP_RETCODE mergeProductExprlist(
             if( (EPSISINT(expo1, 0.0) && EPSISINT(expo2, 0.0)) || !EPSISINT(expo1+expo2, 0.0) )  /*lint !e835*/
 #endif
             {
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
             }
          }
          else if( issignpower1 ^ issignpower2 )
@@ -569,7 +569,7 @@ SCIP_RETCODE mergeProductExprlist(
                    * |expr|^even -> expr^even, since the call to SCIPsimplifyExprShallow(scip, conshdlr, power,
                    * &simplifiedpower) below will take care of this.
                    */
-                  SCIP_CALL( SCIPcreateConsExprExprSignPower(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+                  SCIP_CALL( SCIPcreateExprSignpower(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
                }
                else
                {
@@ -577,14 +577,14 @@ SCIP_RETCODE mergeProductExprlist(
                   SCIP_EXPR* absbase;
 
                   SCIP_CALL( SCIPcreateConsExprExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
-                  SCIP_CALL( SCIPcreateConsExprExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+                  SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
                   SCIP_CALL( SCIPreleaseExpr(scip, &absbase) );
                }
             }
             else if( !EPSISINT(expo1+expo2, 0.0) )  /*lint !e835*/
             {
                /* if expo2 is fractional and expo1+expo2 is fractional, then we need x >= 0, so we can use x^(expo1+expo2) */
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
             }
             /* else: expo2 is fractional but expo1+expo2 is integral, then we better do not do anything for now
              * (leave power at NULL)
@@ -597,14 +597,14 @@ SCIP_RETCODE mergeProductExprlist(
              */
             if( EPSISINT(expo1+expo2, 0.0) && (int)(expo1+expo2)%2 == 0 ) /*lint !e835*/
             {
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
             }
             else
             {
                SCIP_EXPR* absbase;
 
                SCIP_CALL( SCIPcreateConsExprExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
-               SCIP_CALL( SCIPcreateConsExprExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
                SCIP_CALL( SCIPreleaseExpr(scip, &absbase) );
             }
          }
