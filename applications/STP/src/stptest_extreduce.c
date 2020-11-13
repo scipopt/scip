@@ -1287,6 +1287,71 @@ SCIP_RETCODE testNode3PseudoDeletedByContraction(
 
 /** tests that node can be deleted */
 static
+SCIP_RETCODE testNode3PseudoDeletedBySdBiased(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   DISTDATA* distdata_default;
+   DISTDATA* distdata_biased;
+   REDCOST* redcostdata;
+   GRAPH* graph;
+   const int nnodes = 7;
+   const int nedges = 16;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   int testnode = 0;
+   SCIP_Bool deletable = FALSE;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+
+
+   graph->source = 5;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 3, 1.0);
+   graph_edge_addBi(scip, graph, 2, 4, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 2.0);
+   graph_edge_addBi(scip, graph, 3, 4, 1.0);
+   graph_edge_addBi(scip, graph, 4, 5, 1.0);
+
+   /* dummy */
+   graph_edge_addBi(scip, graph, 5, 6, 12.0);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
+   extInitRedCostArrays(graph, redcostdata);
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, FALSE, &distdata_default) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, TRUE, TRUE, &distdata_biased) );
+
+   SCIP_CALL(  extreduce_mstbiasedCheck3NodeSimple(scip, graph, testnode, distdata_default, distdata_biased, &deletable) );
+
+   STPTEST_ASSERT_MSG(deletable, "node was not marked as deleteable! \n");
+
+   extreduce_distDataFree(scip, graph, &distdata_biased);
+   extreduce_distDataFree(scip, graph, &distdata_default);
+   graph_free_dcsr(scip, graph);
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
+/** tests that node can be deleted */
+static
 SCIP_RETCODE testNode3PseudoDeletedBySd1(
    SCIP*                 scip                /**< SCIP data structure */
 )
@@ -2077,6 +2142,8 @@ SCIP_RETCODE stptest_extreduce(
 {
    assert(scip);
 
+
+   SCIP_CALL( testNode3PseudoDeletedBySdBiased(scip) );
 
 
    SCIP_CALL( testNode3PseudoDeletedByContraction(scip) );

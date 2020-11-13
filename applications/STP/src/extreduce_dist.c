@@ -595,7 +595,7 @@ SCIP_RETCODE closeNodesRunCompute(
    DISTDATA*             distdata            /**< to be initialized */
    )
 {
-   const SDPROFIT* sdprofit = distdata->sdistdata->sdprofit;
+   const SDPROFIT* sdprofit = NULL;
    DIJK* const dijkdata = distdata->dijkdata;
    int* const visitlist = dijkdata->visitlist;
    SCIP_Real* const dist = dijkdata->node_distance;
@@ -618,13 +618,16 @@ SCIP_RETCODE closeNodesRunCompute(
    const int startvertex = cnodesrun->startvertex;
    const int closenodes_limit = distdata->closenodes_maxnumber;
    const SCIP_Bool isPc = graph_pc_isPc(g);
-   const SCIP_Bool withProfit = (sdprofit != NULL);
+   const SCIP_Bool withProfit = (distdata->sdistdata != NULL && distdata->sdistdata->sdprofit != NULL);
    const SCIP_Bool is_buildphase = cnodesrun->is_buildphase;
 
    assert(dcsr && dist && visitlist && visited && dheap && prededge && cnodesrun->edgemark);
    assert(range_closenodes && closenodes_indices && closenodes_prededges);
    assert(dheap->size == 1);
    assert(!isPc || pc_costshifts);
+
+   if( withProfit )
+      sdprofit = distdata->sdistdata->sdprofit;
 
    /* main loop */
    while( dheap->size > 0 )
@@ -975,7 +978,7 @@ void distDataRecomputeNormalDist(
                             .startvertex = vertex1, .is_buildphase = FALSE };
 
    assert(distdata->pathroot_isdirty[vertex1]);
-   assert(!distdata->sdistdata->sdprofit && "not supported for recomputation");
+   assert(!distdata->sdistdata || !distdata->sdistdata->sdprofit);
 
    distdata->pathroot_nrecomps[vertex1]++;
    SCIP_CALL_ABORT( distDataComputeCloseNodes(scip, g, &closenodes, distdata) );

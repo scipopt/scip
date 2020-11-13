@@ -1255,8 +1255,11 @@ SCIP_RETCODE pseudodeleteExecute(
    SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, nelims, &extpseudo) );
    extreduce_distDataRecomputeDirtyPaths(scip, graph, distdata);
 
+   // check whether promising todo
    if( !graph_pc_isPc(graph) && 0 )
    {
+      // compute pseudodeleteExecute two times? one with positive profit nodes, one without (and with activated _biased)?
+      // also with pseudoDelNodes == FALSE in second run
       assert(!extperma->distdata_biased);
 
       // todo: fewer iterations
