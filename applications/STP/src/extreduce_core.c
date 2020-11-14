@@ -35,6 +35,8 @@
 #include "graph.h"
 #include "portab.h"
 #include "extreduce.h"
+#include "extreducedefs.h"
+
 
 #define EXT_COSTS_RECOMPBOUND 10
 

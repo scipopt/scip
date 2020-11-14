@@ -34,6 +34,8 @@
 //#define STP_DEBUG_EXT
 
 #include "extreduce.h"
+#include "extreducedefs.h"
+
 
 
 struct extension_tree_contraction

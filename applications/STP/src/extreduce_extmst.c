@@ -46,6 +46,8 @@
 #include "graph.h"
 #include "portab.h"
 #include "extreduce.h"
+#include "extreducedefs.h"
+
 
 #define EXT_PC_SDMAXVISITS 20  /**< maximum visits for PC specific SD computation */
 #define EXT_DOUBLESD_ALWAYS
