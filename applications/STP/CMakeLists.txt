@@ -22,6 +22,7 @@ add_executable(scipstp
     src/extreduce_dbg.c
     src/extreduce_dist.c
     src/extreduce_extmst.c
+    src/extreduce_extmstbiased.c
     src/extreduce_extspg.c
     src/extreduce_mldists.c
     src/extreduce_redcosts.c

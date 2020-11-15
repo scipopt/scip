@@ -1252,7 +1252,7 @@ SCIP_RETCODE extreduce_distDataInit(
       if( !g->mark[k] )
       {
          assert(g->grad[k] == 0 || graph_pc_isPcMw(g));
-         assert(g->dcsr_storage->range[k].end == g->dcsr_storage->range[k].start);
+      //   assert(g->dcsr_storage->range[k].end == g->dcsr_storage->range[k].start);
 
          continue;
       }

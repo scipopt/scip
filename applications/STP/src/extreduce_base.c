@@ -44,6 +44,10 @@
 #define GENSTAR_NODE_COMBI 3
 
 
+enum EXTPSEUDO_MODE { delete_all = 0, delete_profits = 1, delete_nonprofits = 2 };
+
+
+
 /** generalized star */
 typedef struct general_star
 {
@@ -66,12 +70,14 @@ typedef struct extension_pseudo_deletion
    SCIP_Real*            cutoffs;            /**< cutoffs array of size STP_DELPSEUDO_MAXNEDGES */
    int*                  nodestouches;       /**< touches array on nodes */
    SCIP_Real*            offsetp;            /**< pointer to store offset */
-   int*                  nelimsp;            /**< pointer number of eliminations */
    STP_Bool*             nodeInSol;          /**< solution marker per node or NULL */
    int                   node;               /**< current node */
+   int                   nelims_extended;    /**< number of eliminations */
+   int                   nelims_simple;      /**< number of eliminations for simple deletion */
    SCIP_Bool             cutoffIsPromising;  /**< is sufficient cutoff possible? */
    SCIP_Bool             cutoffIsComputed;   /**< already computed?? */
    SCIP_Bool             useSolForEq;        /**< use solution for equality? */
+   enum EXTPSEUDO_MODE   deletionMode;       /**< what to delete */
 } EXTPSEUDO;
 
 
@@ -848,7 +854,6 @@ SCIP_RETCODE pseudodeleteInit(
    const int*            result,             /**< solution array or NULL */
    const GRAPH*          g,                  /**< graph data structure  */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
-   int*                  nelims,             /**< number of eliminations (out) */
    EXTPSEUDO*            extpseudo           /**< to initialize */
    )
 {
@@ -856,9 +861,7 @@ SCIP_RETCODE pseudodeleteInit(
    int* nodestouches;
    const int nnodes = graph_get_nNodes(g);
 
-   assert(nelims && extpseudo);
-
-   *nelims = 0;
+   assert(extpseudo);
 
    if( result )
    {
@@ -887,9 +890,11 @@ SCIP_RETCODE pseudodeleteInit(
    extpseudo->cutoffIsComputed = FALSE;
    extpseudo->node = -1;
    extpseudo->offsetp = offsetp;
-   extpseudo->nelimsp = nelims;
+   extpseudo->nelims_extended = 0;
+   extpseudo->nelims_simple = 0;
    extpseudo->nodestouches = nodestouches;
    extpseudo->cutoffs = cutoffs;
+   extpseudo->deletionMode = delete_all;
 
    return SCIP_OKAY;
 }
@@ -899,9 +904,17 @@ SCIP_RETCODE pseudodeleteInit(
 static inline
 void pseudodeleteExit(
    SCIP*                 scip,               /**< SCIP data structure */
-   EXTPSEUDO*            extpseudo           /**< to initialize */
+   EXTPSEUDO*            extpseudo,          /**< to initialize */
+   int*                  nelimsp
    )
 {
+   assert(nelimsp);
+   assert(*nelimsp == 0);
+   assert(extpseudo->nelims_extended >= 0 && extpseudo->nelims_simple >= 0);
+
+
+   *nelimsp = extpseudo->nelims_extended + extpseudo->nelims_simple;
+
    SCIPfreeBufferArray(scip, &(extpseudo->nodestouches));
    SCIPfreeBufferArray(scip, &(extpseudo->cutoffs));
    SCIPfreeBufferArrayNull(scip, &(extpseudo->nodeInSol));
@@ -984,10 +997,29 @@ SCIP_Bool pseudodeleteAllStarsChecked(
 }
 
 
+/** is biased SD extension promising? */
+static inline
+SCIP_Bool pseudodeleteBiasedIsPromising(
+   const GRAPH*          g                   /**< graph data structure  */
+)
+{
+   int todo;
+   if( graph_pc_isPc(g) )
+   {
+      return FALSE;
+   }
+
+   // check whether at least 10 % of terminals have a simple profit!
+
+   return TRUE;
+}
+
 /** is node a good candidate for pseudo deletion? */
 static inline
 SCIP_Bool pseudodeleteNodeIsPromising(
    const GRAPH*          g,                  /**< graph data structure  */
+   const EXTPERMA*       extperma,           /**< extension data */
+   const EXTPSEUDO*      extpseudo,          /**< pseudo */
    int                   node                /**< node */
 )
 {
@@ -1024,6 +1056,23 @@ SCIP_Bool pseudodeleteNodeIsPromising(
 
    if( degree < EXT_PSEUDO_DEGREE_MIN || degree > EXT_PSEUDO_DEGREE_MAX  )
       return FALSE;
+
+   if( extpseudo->deletionMode != delete_all )
+   {
+      SCIP_Bool hasProfit;
+      assert(extperma->distdata_biased);
+      assert(extperma->distdata_biased->sdistdata);
+      assert(extperma->distdata_biased->sdistdata->sdprofit);
+      assert(!graph_pc_isPcMw(g));
+
+      hasProfit = GT(reduce_sdprofitGetProfit(extperma->distdata_biased->sdistdata->sdprofit, node, -1, -1), 0.0);
+
+      if( extpseudo->deletionMode == delete_profits && !hasProfit )
+         return FALSE;
+
+      if( extpseudo->deletionMode == delete_nonprofits && hasProfit )
+         return FALSE;
+   }
 
    return TRUE;
 }
@@ -1132,14 +1181,14 @@ SCIP_RETCODE pseudodeleteDeleteNode(
    REDCOST*              redcostdata,        /**< reduced cost data */
    DISTDATA*             distdata,           /**< distance data */
    GRAPH*                graph,              /**< graph data structure */
-   EXTPSEUDO*            extpseudo           /**< data */
+   EXTPSEUDO*            extpseudo,          /**< data */
+   SCIP_Bool*            success
 )
 {
    const SCIP_Real* cutoffs = extpseudo->cutoffs;
    int* const nodestouches = extpseudo->nodestouches;
    SCIP_Real prize = -1.0;
    SCIP_Bool rpc3term = FALSE;
-   SCIP_Bool success;
    const SCIP_Bool isPc = graph_pc_isPc(graph);
 
    assert(redcostdata);
@@ -1160,11 +1209,10 @@ SCIP_RETCODE pseudodeleteDeleteNode(
       nodestouches[graph->head[e]]++;
 
    /* now try to eliminate... */
-   SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, node, redcostdata, &success) );
+   SCIP_CALL( graph_knot_delPseudo(scip, graph, graph->cost, cutoffs, NULL, node, redcostdata, success) );
 
-   if( success )
+   if( *success )
    {
-      (*(extpseudo->nelimsp))++;
       graph->mark[node] = FALSE;
 
       if( extpseudo->useSolForEq )
@@ -1206,24 +1254,28 @@ SCIP_RETCODE pseudodeleteDeleteMarkedNodes(
    DISTDATA*             distdata,           /**< distance data */
    GRAPH*                graph,              /**< graph data structure */
    EXTPSEUDO*            extpseudo           /**< data */
-
 )
 {
    const int nnodes = graph_get_nNodes(graph);
 
    assert(pseudoDelNodes);
+   assert(extpseudo->nelims_simple == 0);
 
    for( int degree = 2; degree <= STP_DELPSEUDO_MAXGRAD; degree++ )
    {
       for( int k = 0; k < nnodes; ++k )
       {
-        if( pseudoDelNodes[k] && graph->grad[k] == degree  )
-        {
-           assert(!Is_term(graph->term[k]));
+         if( pseudoDelNodes[k] && graph->grad[k] == degree  )
+         {
+            SCIP_Bool success;
+            assert(!Is_term(graph->term[k]));
 
-           SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, FALSE, FALSE, distdata, k, graph, extpseudo) );
-           SCIP_CALL( pseudodeleteDeleteNode(scip, k, redcostdata, distdata, graph, extpseudo) );
-        }
+            SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, FALSE, FALSE, distdata, k, graph, extpseudo) );
+            SCIP_CALL( pseudodeleteDeleteNode(scip, k, redcostdata, distdata, graph, extpseudo, &success) );
+
+            if( success )
+               extpseudo->nelims_simple++;
+         }
       }
    }
 
@@ -1239,38 +1291,23 @@ SCIP_RETCODE pseudodeleteExecute(
    const int*            result,             /**< solution array or NULL */
    const SCIP_Bool*      pseudoDelNodes,     /**< nodes to pseudo-eliminate already */
    EXTPERMA*             extperma,           /**< extension data */
-   GRAPH*                graph,              /**< graph data structure (in/out) */
-   SCIP_Real*            offsetp,            /**< pointer to store offset */
-   int*                  nelims              /**< number of eliminations (out) */
+   EXTPSEUDO*            extpseudo,          /**< pseudo-deletion data */
+   GRAPH*                graph               /**< graph data structure (in/out) */
 )
 {
    const int nnodes = graph_get_nNodes(graph);
    STAR* stardata;
-   DISTDATA* const distdata = extperma->distdata_default;
+   DISTDATA* const distdata_default = extperma->distdata_default;
    REDCOST* const redcostdata = extperma->redcostdata;
-   EXTPSEUDO extpseudo;
 
    assert(graph_isMarked(graph));
 
-   SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, nelims, &extpseudo) );
-   extreduce_distDataRecomputeDirtyPaths(scip, graph, distdata);
-
-   // check whether promising todo
-   if( !graph_pc_isPc(graph) && 0 )
-   {
-      // compute pseudodeleteExecute two times? one with positive profit nodes, one without (and with activated _biased)?
-      // also with pseudoDelNodes == FALSE in second run
-      assert(!extperma->distdata_biased);
-
-      // todo: fewer iterations
-      SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, TRUE, TRUE, &(extperma->distdata_biased)) );
-   }
-
+   extreduce_distDataRecomputeDirtyPaths(scip, graph, distdata_default);
 
    if( pseudoDelNodes )
    {
-      SCIP_CALL( pseudodeleteDeleteMarkedNodes(scip, pseudoDelNodes, redcostdata, distdata, graph, &extpseudo) );
-      SCIPdebugMessage("number of eliminations after initial pseudo-elimination %d \n", *nelims);
+      SCIP_CALL( pseudodeleteDeleteMarkedNodes(scip, pseudoDelNodes, redcostdata, distdata_default, graph, extpseudo) );
+      SCIPdebugMessage("number of eliminations by simple pseudo-elimination %d \n", extpseudo->nelims_simple);
    }
 
    SCIP_CALL( reduce_starInit(scip, EXT_PSEUDO_DEGREE_MAX, &stardata) );
@@ -1280,6 +1317,7 @@ SCIP_RETCODE pseudodeleteExecute(
       /* pseudo-elimination loop */
       for( int i = 0; i < nnodes; ++i )
       {
+         SCIP_Bool isReplaced;
          SCIP_Bool nodeisDeletable = FALSE;
 
          if( graph->grad[i] == 1 && !Is_term(graph->term[i]) )
@@ -1292,33 +1330,46 @@ SCIP_RETCODE pseudodeleteExecute(
          if( graph->grad[i] != degree )
             continue;
 
-         if( pseudodeleteNodeIsPromising(graph, i) )
+         if( pseudodeleteNodeIsPromising(graph, extperma, extpseudo, i) )
          {
-            SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, TRUE, TRUE, distdata, i, graph, &extpseudo) );
+            SCIP_CALL( pseudodeleteDeleteComputeCutoffs(scip, TRUE, TRUE, distdata_default, i, graph, extpseudo) );
 
-            if( extpseudo.cutoffIsPromising )
+            if( extpseudo->cutoffIsPromising )
             {
-               extperma->redcostEqualAllow = (extpseudo.useSolForEq && !extpseudo.nodeInSol[i]);
+               extperma->redcostEqualAllow = (extpseudo->useSolForEq && !extpseudo->nodeInSol[i]);
 
-               SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, distdata, extperma, &nodeisDeletable) );
+               // todo!
+               if( !extperma->useSdBias )
+               {
+                  SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, distdata_default, extperma, &nodeisDeletable) );
+
+               }
+               else
+               {
+                  if( graph->grad[i] == 3 )
+                   SCIP_CALL(  extreduce_mstbiasedCheck3NodeSimple(scip, graph, i, distdata_default, extperma->distdata_biased, &nodeisDeletable) );
+
+                  if( !nodeisDeletable )
+                     SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, distdata_default, extperma, &nodeisDeletable) );
+               }
             }
          }
 
          if( !nodeisDeletable )
             continue;
 
-         SCIP_CALL( pseudodeleteDeleteNode(scip, i, redcostdata, distdata, graph, &extpseudo) );
+         // todo maybe does not work with biased!
+         SCIP_CALL( pseudodeleteDeleteNode(scip, i, redcostdata,
+         //      extperma->useSdBias ? extperma->distdata_biased :
+                     distdata_default,
+               graph, extpseudo, &isReplaced) );
+
+         if( isReplaced )
+            extpseudo->nelims_extended++;
       }
    }
 
    reduce_starFree(scip, &stardata);
-   pseudodeleteExit(scip, &extpseudo);
-
-   SCIPdebugMessage("number of eliminations after extended pseudo-elimination %d \n", *nelims);
-
-   /* todo in I015 we get isolated vertices...not sure whether this is a bug or normal behavior */
-   SCIP_CALL( reduceLevel0(scip, graph));
-
    assert(graphmarkIsClean(redcostdata, graph));
 
    return SCIP_OKAY;
@@ -1549,9 +1600,12 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
    int*                  nelims              /**< number of eliminations (out) */
 )
 {
+   EXTPSEUDO extpseudo;
    SCIP_Bool isExtendedOrg;
 
    assert(scip && extperma && extperma->redcostdata && graph && nelims);
+   assert(!extperma->useSdBias);
+   *nelims = 0;
 
    if( SCIPisZero(scip, redcosts_getCutoffTop(extperma->redcostdata)) )
       return SCIP_OKAY;
@@ -1560,8 +1614,40 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
    if( graph_pc_isPc(graph) )
       graph_pc_2orgcheck(scip, graph);
 
+   SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, &extpseudo) );
+
+   if( pseudodeleteBiasedIsPromising(graph) )
+   {
+      assert(!extperma->distdata_biased);
+      extperma->useSdBias = TRUE;
+      extpseudo.deletionMode = delete_nonprofits;
+      // todo fewer runs...maybe 32
+      // todo maybe also just check 3 nearest terminals!
+      SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, TRUE, TRUE, &(extperma->distdata_biased)) );
+   }
+   assert(extpseudo.deletionMode == delete_nonprofits || extpseudo.deletionMode == delete_all);
+
    /* call actual method */
-   SCIP_CALL( pseudodeleteExecute(scip, result, pseudoDelNodes, extperma, graph, offsetp, nelims) );
+   SCIP_CALL( pseudodeleteExecute(scip, result, NULL, extperma, &extpseudo, graph) );
+   SCIPdebugMessage("number of eliminations after extended pseudo-elimination %d \n", extpseudo.nelims_extended);
+
+   if( extperma->useSdBias )
+   {
+      assert(extperma->distdata_biased);
+
+      extperma->useSdBias = FALSE;
+      extpseudo.deletionMode = delete_profits;
+      SCIP_CALL( pseudodeleteExecute(scip, result, pseudoDelNodes, extperma, &extpseudo, graph) );
+
+      SCIPdebugMessage("number of eliminations after extended pseudo-elimination on profits %d \n", extpseudo.nelims_extended);
+   }
+
+   /* NOTE: also sets "nelims" pointer*/
+   pseudodeleteExit(scip, &extpseudo, nelims);
+
+   /* todo otherwise (I015) we get isolated vertices...not sure whether this is a bug or normal behavior */
+   if( *nelims > 0 )
+      SCIP_CALL( reduceLevel0(scip, graph));
 
    if( graph_pc_isPc(graph) && isExtendedOrg != graph->extended )
       graph_pc_2trans(scip, graph);
