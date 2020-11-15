@@ -5820,7 +5820,7 @@ SCIP_RETCODE addCut(
    }
 
    /* create the cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%" SCIP_LONGINT_FORMAT "_%d", SCIPgetNLPs(scip), *ncuts);
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE,
          sepadata->dynamiccuts) );
 
