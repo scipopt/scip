@@ -491,9 +491,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             /* construct cut name */
             if( c >= 0 )
-               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
+               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
             else
-               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
 
             /* create empty cut */
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
