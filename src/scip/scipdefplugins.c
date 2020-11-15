@@ -251,6 +251,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
    }
 
+   /* coverity[leaked_storage] */
    SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
    if( nlpi != NULL )
    {

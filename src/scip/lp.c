@@ -16576,6 +16576,7 @@ SCIP_RETCODE SCIPlpWriteMip(
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
+         fclose(file);
          return SCIP_ERROR;
       }
    }
@@ -16666,6 +16667,7 @@ SCIP_RETCODE SCIPlpWriteMip(
             break;
          default:
             SCIPerrorMessage("Undefined row type!\n");
+            fclose(file);
             return SCIP_ERROR;
          }
       }
