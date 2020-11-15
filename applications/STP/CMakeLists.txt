@@ -16,6 +16,7 @@ add_executable(scipstp
     src/enumeration.c
     src/event_bestsol.c
     src/extreduce_base.c
+    src/extreduce_bottleneck.c
     src/extreduce_contract.c
     src/extreduce_core.c
     src/extreduce_data.c

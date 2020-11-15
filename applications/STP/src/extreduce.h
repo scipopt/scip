@@ -149,6 +149,17 @@ extern SCIP_Bool       extreduce_spg3LeafTreeRuleOut(SCIP*, const GRAPH*, SCIP_R
 extern SCIP_RETCODE    extreduce_mstbiasedCheck3NodeSimple(SCIP*, const GRAPH*, int, DISTDATA*, DISTDATA*, SCIP_Bool*);
 
 
+/* extreduce_bottleneck.c
+ */
+extern void            extreduce_bottleneckMarkRootPath(const GRAPH*, int, EXTDATA*);
+extern void            extreduce_bottleneckUnmarkRootPath(const GRAPH*, int, EXTDATA*);
+extern SCIP_Bool       extreduce_bottleneckIsDominated(SCIP*, const GRAPH*, int, int, SCIP_Real, int, EXTDATA*);
+extern SCIP_Bool       extreduce_bottleneckWithExtedgeIsDominated(SCIP*, const GRAPH*, int, int, int, SCIP_Real, EXTDATA*);
+extern SCIP_Bool       extreduce_bottleneckToSiblingIsDominated(SCIP*, const GRAPH*, int, int, SCIP_Real, EXTDATA*);
+extern void            extreduce_bottleneckCheckNonLeaves_pc(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+extern void            extreduce_bottleneckCheckNonLeaves(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
+
+
 /* extreduce_recosts.c
  */
 extern void            extreduce_redcostAddEdge(const GRAPH*, int, REDDATA*, EXTDATA*);

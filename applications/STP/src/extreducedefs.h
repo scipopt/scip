@@ -440,4 +440,19 @@ SCIP_Real extSdGetProper(
 }
 
 
+/** is given SD non-trivial? */
+static inline
+SCIP_Real sdIsNonTrivial(
+   SCIP_Real             specialDist         /**< SD */
+  )
+{
+   assert(specialDist >= 0 || EQ(specialDist, -1.0));
+   assert(LT(specialDist, FARAWAY));
+
+   return (specialDist >= -0.5);
+}
+
+
+
+
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCEDEFS_H_ */
