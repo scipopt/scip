@@ -419,9 +419,9 @@ SCIP_RETCODE setupAggregationData(
                   continue;
 
                ++aggrdata->nbadvarsinrow[SCIProwGetLPPos(colrows[k])];
-               /* coverity[var_deref_op] */
                assert(aggrdata->aggrrows != NULL);  /* for lint */
                assert(aggrdata->aggrrowscoef != NULL);
+               /* coverity[var_deref_op] */
                aggrdata->aggrrows[aggrdata->naggrrows] = colrows[k];
                aggrdata->aggrrowscoef[aggrdata->naggrrows] = colrowvals[k];
                ++aggrdata->naggrrows;
