@@ -802,7 +802,7 @@ SCIP_RETCODE SCIPincludeExprHdlr(
    assert(scip->mem != NULL);
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPexprhdlrCreate(scip->mem->probmem, exprhdlr, name, desc, precedence, eval, data) );
+   SCIP_CALL( SCIPexprhdlrCreate(scip->mem->setmem, exprhdlr, name, desc, precedence, eval, data) );
    assert(*exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetIncludeExprhdlr(scip->set, *exprhdlr) );
