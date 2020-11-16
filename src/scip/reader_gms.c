@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_gms.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  GAMS file writer
  * @author Ambros Gleixner
  * @author Stefan Vigerske
@@ -55,22 +56,9 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-#ifdef WITH_GAMS
-#include <sys/stat.h>
-
-#include "gmomcc.h"
-#include "gevmcc.h"
-
-#include "reader_gmo.h"
-#endif
-
 
 #define READER_NAME             "gmsreader"
-#ifdef WITH_GAMS
 #define READER_DESC             "file writer for MI(NL)(SOC)Ps in GAMS file format"
-#else
-#define READER_DESC             "file reader and writer for MI(NL)(SOC)Ps in GAMS file format"
-#endif
 #define READER_EXTENSION        "gms"
 
 
@@ -157,6 +145,7 @@ void endLine(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < GMS_MAX_LINELEN );
 
    if( (*linecnt) > 0 )
    {
@@ -189,7 +178,7 @@ void appendLine(
     * because of overlapping memory areas in memcpy used in sprintf.
     */
    len = strlen(linebuffer);
-   strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
+   (void) strncat(linebuffer, extension, GMS_MAX_PRINTLEN - len);
 
    (*linecnt) += (int) strlen(extension);
 
@@ -475,6 +464,9 @@ SCIP_RETCODE printLinearRow(
 
    for( v = 0; v < nvars; ++v )
    {
+      assert(vars != NULL);  /* for lint */
+      assert(vals != NULL);
+
       var = vars[v];
       assert( var != NULL );
 
@@ -1046,7 +1038,7 @@ SCIP_RETCODE printIndicatorCons(
  *
  * write as
  * Set name_sosset /1*nvars/;
- * SOS1/2 Variable name_sosvar(name_sosset);
+ * SOS1/2 Variable name_sosvar(name_sosset); name_sosvar.lo(name_sosset) = -inf;
  * Equation name_sosequ(e1_sosset);
  * name_sosequ(name_sosset).. name_sosvar(e1_sosset) =e=
  * vars[0]$sameas(name_sosset, '1') + vars[1]$sameas(name_sosset, '2') + ... + vars[nvars-1]$sameas(name_sosset, nvars);
@@ -1483,7 +1475,7 @@ SCIP_RETCODE printExpr(
           * but if reading/gmsreader/signpower is TRUE, then we print as signpower(x,y), unless y is odd integer
           */
          exponent = SCIPexprGetSignPowerExponent(expr);
-         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1);
+         nisoddint = (((SCIP_Real)((int)exponent)) == exponent) && (((int)exponent)%2 == 1); /*lint !e777*/
 
          if( !nisoddint )
          {
@@ -1732,7 +1724,7 @@ SCIP_RETCODE printExpr(
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
                   appendLineWithIndent(scip, file, linebuffer, linecnt, ")");
                }
-               else if( ((SCIP_Real)((int)exponent)) == exponent )
+               else if( ((SCIP_Real)((int)exponent)) == exponent ) /*lint !e777*/
                {
                   appendLineWithIndent(scip, file, linebuffer, linecnt, "power(");
                   SCIP_CALL( printExpr(scip, file, linebuffer, linecnt, nsmooth, transformed, SCIPexprGetChildren(expr)[SCIPexprGetMonomialChildIndices(monomdata)[j]], exprvars) );
@@ -2055,107 +2047,6 @@ SCIP_DECL_READERCOPY(readerCopyGms)
    return SCIP_OKAY;
 }
 
-#ifdef WITH_GAMS
-/** problem reading method of reader */
-static
-SCIP_DECL_READERREAD(readerReadGms)
-{
-   SCIP_RETCODE ret;
-   FILE* convertdopt;
-   char gamscall[SCIP_MAXSTRLEN];
-   char buffer[GMS_SSSIZE];
-   int rc;
-   gmoHandle_t gmo = NULL;
-   gevHandle_t gev = NULL;
-
-   assert(scip != NULL);
-   assert(reader != NULL);
-   assert(filename != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-   ret = SCIP_ERROR;
-
-   /* create temporary directory */
-   mkdir("loadgms.tmp", S_IRWXU);
-
-   /* create empty convertd options file */
-   convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
-   if( convertdopt == NULL )
-   {
-      SCIPerrorMessage("Could not create convertd options file. Do you have write permissions in execution directory?\n");
-      goto TERMINATE;
-   }
-   fputs(" ", convertdopt);
-   fclose(convertdopt);
-
-   /* call GAMS with convertd solver to get compiled model instance in temporary directory */
-   SCIPsnprintf(gamscall, SCIP_MAXSTRLEN, WITH_GAMS "/gams %s LP=CONVERTD RMIP=CONVERTD QCP=CONVERTD RMIQCP=CONVERTD NLP=CONVERTD DNLP=CONVERTD RMINLP=CONVERTD CNS=CONVERTD MIP=CONVERTD MIQCP=CONVERTD MINLP=CONVERTD MCP=CONVERTD MPEC=CONVERTD RMPEC=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=%d",
-      filename, SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL ? 3 : 0);
-   SCIPdebugMsg(scip, gamscall);
-   rc = system(gamscall);
-   if( rc != 0 )
-   {
-      SCIPerrorMessage("GAMS call returned with code %d, check loadgms.tmp/listing for details.\n", rc);
-      /* likely the GAMS model could not be compiled, which we could report as a readerror */
-      ret = SCIP_READERROR;
-      goto TERMINATE;
-   }
-
-   /* initialize GEV library and create GEV */
-   if( !gevCreateDD(&gev, WITH_GAMS, buffer, sizeof(buffer)) )
-   {
-      SCIPerrorMessage(buffer);
-      goto TERMINATE;
-   }
-
-   /* initialize GMO library and create GMO */
-   if( !gmoCreateDD(&gmo, WITH_GAMS, buffer, sizeof(buffer)) )
-   {
-      SCIPerrorMessage(buffer);
-      goto TERMINATE;
-   }
-
-   /* load control file */
-   if( gevInitEnvironmentLegacy(gev, "loadgms.tmp/gamscntr.dat") )
-   {
-      SCIPerrorMessage("Could not load control file loadgms.tmp/gamscntr.dat\n");
-      goto TERMINATE;
-   }
-
-   /* tell GMO about GEV */
-   if( gmoRegisterEnvironment(gmo, gev, buffer) )
-   {
-      SCIPerrorMessage("Error registering GAMS Environment: %s\n", buffer);
-      goto TERMINATE;
-   }
-
-   /* load GAMS model instance into GMO */
-   if( gmoLoadDataLegacy(gmo, buffer) )
-   {
-      SCIPerrorMessage("Could not load model data.\n");
-      goto TERMINATE;
-   }
-
-   /* create SCIP problem out of GMO, using the magic from reader_gmo in interfaces/gams */
-   SCIP_CALL( SCIPcreateProblemReaderGmo(scip, gmo, NULL, FALSE) );
-   *result = SCIP_SUCCESS;
-
-   ret = SCIP_OKAY;
-
-TERMINATE:
-   if( gmo != NULL )
-      gmoFree(&gmo);
-   if( gev != NULL )
-      gevFree(&gev);
-
-   /* remove temporary directory content (should have only files and directory itself) */
-   if( ret != SCIP_READERROR )
-      system("rm loadgms.tmp/* && rmdir loadgms.tmp");
-
-   return ret;
-}
-#endif
 
 /** problem writing method of reader */
 static
@@ -2166,20 +2057,6 @@ SCIP_DECL_READERWRITE(readerWriteGms)
 
    return SCIP_OKAY;
 }
-
-#ifdef WITH_GAMS
-/** destructor of reader to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_READERFREE(readerFreeGms)
-{
-   if( gmoLibraryLoaded() )
-      gmoLibraryUnload();
-   if( gevLibraryLoaded() )
-      gevLibraryUnload();
-
-   return SCIP_OKAY;
-}
-#endif
 
 /*
  * reader specific interface methods
@@ -2197,10 +2074,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyGms) );
-#ifdef WITH_GAMS
-   SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadGms) );
-   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeGms) );
-#endif
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteGms) );
 
    /* add gms reader parameters for writing routines*/

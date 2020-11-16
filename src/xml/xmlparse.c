@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   xmldef.h
+ * @ingroup OTHER_CFILES
  * @brief  declarations for XML parsing
  * @author Thorsten Koch
  * @author Marc Pfetsch
@@ -31,10 +32,11 @@
 
 #include "xml.h"
 #include "xmldef.h"
+#include "scip/misc.h"
 
 
 #include <sys/types.h>
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 #if defined(_WIN32) || defined(_WIN64)
 #define R_OK _A_RDONLY
 #define access _access
@@ -689,7 +691,8 @@ void handleDecl(
       for(; (end >= beg) && (c != key[end].name[k]); end--)
          ;
       k++;
-   } while(beg < end);
+   }
+   while(beg < end);
 
    if ( beg != end )
    {
@@ -702,6 +705,7 @@ void handleDecl(
    {
       assert(beg == end);
       assert(beg <  (int)(sizeof(key) / sizeof(*key)));
+      assert(beg >= 0);
 
       switch(key[beg].what)
       {
@@ -1087,7 +1091,7 @@ XML_NODE* xmlProcess(
       return NULL;
    BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
    if ( access(filename, R_OK) != 0 )
    {
       strcat(myfilename, ".gz");
@@ -1096,7 +1100,7 @@ XML_NODE* xmlProcess(
        * to get a better error message.
        */
       if ( access(myfilename, R_OK) != 0 )
-         strcpy(myfilename, filename);
+         (void)SCIPstrncpy(myfilename, filename, (int)filenamelen + 5);
    }
 #endif
    ppos.fp = FOPEN(myfilename, "r");

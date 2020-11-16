@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -17,7 +17,7 @@
  * @ingroup PUBLICCOREAPI
  * @brief  methods for the aggregation rows
  * @author Jakob Witzig
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  *
  */
 
@@ -48,7 +48,7 @@ extern "C" {
 /** perform activity based coefficient tigthening on the given cut; returns TRUE if the cut was detected
  *  to be redundant due to acitvity bounds
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPcutsTightenCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             cutislocal,         /**< is the cut local? */
@@ -60,21 +60,21 @@ SCIP_Bool SCIPcutsTightenCoefficients(
    );
 
 /** create an empty the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow             /**< pointer to return the aggregation row */
    );
 
 /** free a the aggregation row */
-EXTERN
+SCIP_EXPORT
 void SCIPaggrRowFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow             /**< pointer to the aggregation row that should be freed */
    );
 
 /** output aggregation row to file stream */
-EXTERN
+SCIP_EXPORT
 void SCIPaggrRowPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< pointer to return aggregation row */
@@ -82,7 +82,7 @@ void SCIPaggrRowPrint(
    );
 
 /** copy the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW**        aggrrow,            /**< pointer to return the aggregation row */
@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPaggrRowCopy(
    );
 
 /** add weighted row to the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPaggrRowAddRow(
  *
  *  @note: The list of non-zero indices will be updated by swapping the last non-zero index to @p pos.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPaggrRowCancelVarWithBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -116,7 +116,7 @@ void SCIPaggrRowCancelVarWithBound(
    );
 
 /** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    );
 
 /** add weighted constraint to the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddCustomCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -142,14 +142,14 @@ SCIP_RETCODE SCIPaggrRowAddCustomCons(
  *
  *  @return the efficacy norm of the given aggregation row, which depends on the "separating/efficacynorm" parameter
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPaggrRowCalcEfficacyNorm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** clear all entries in the aggregation row but do not free the internal memory */
-EXTERN
+SCIP_EXPORT
 void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
@@ -157,7 +157,7 @@ void SCIPaggrRowClear(
 /** aggregate rows using the given weights; the current content of the aggregation
  *  row, \p aggrrow, gets overwritten
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -172,27 +172,28 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    );
 
 /** removes all (close enough to) zero entries in the aggregation row */
-EXTERN
+SCIP_EXPORT
 void SCIPaggrRowRemoveZeros(
    SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Bool             useglbbounds,       /**< consider global bound although the cut is local? */
    SCIP_Bool*            valid               /**< pointer to return whether the aggregation row is still valid */
    );
 
 /** get array with lp positions of aggregated rows */
-EXTERN
+SCIP_EXPORT
 int* SCIPaggrRowGetRowInds(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** get array with weights of aggregated rows */
-EXTERN
+SCIP_EXPORT
 SCIP_Real* SCIPaggrRowGetRowWeights(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** checks whether a given row has been added to the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPaggrRowHasRowBeenAdded(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
@@ -201,7 +202,7 @@ SCIP_Bool SCIPaggrRowHasRowBeenAdded(
 /** gets the min and max absolute value of the weights used to aggregate the rows;
  *  must not be called for empty aggregation rows
  */
-EXTERN
+SCIP_EXPORT
 void SCIPaggrRowGetAbsWeightRange(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for aggregating rows */
@@ -209,13 +210,13 @@ void SCIPaggrRowGetAbsWeightRange(
    );
 
 /** gets the array of corresponding variable problem indices for each non-zero in the aggregation row */
-EXTERN
+SCIP_EXPORT
 int* SCIPaggrRowGetInds(
     SCIP_AGGRROW*        aggrrow
    );
 
 /** gets the number of non-zeros in the aggregation row */
-EXTERN
+SCIP_EXPORT
 int SCIPaggrRowGetNNz(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
@@ -249,25 +250,25 @@ SCIP_Real SCIPaggrRowGetProbvarValue(
 }
 
 /** gets the rank of the aggregation row */
-EXTERN
+SCIP_EXPORT
 int SCIPaggrRowGetRank(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** checks if the aggregation row is only valid locally */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPaggrRowIsLocal(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** gets the right hand side of the aggregation row */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPaggrRowGetRhs(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
 /** gets the number of row aggregations */
-EXTERN
+SCIP_EXPORT
 int SCIPaggrRowGetNRows(
    SCIP_AGGRROW*         aggrrow             /**< aggregation row */
    );
@@ -275,7 +276,7 @@ int SCIPaggrRowGetNRows(
 /** perform a cut selection algorithm for the given array of cuts; the array is partitioned
  *  so that the selected cuts come first and the remaining ones are at the end of the array
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPselectCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
@@ -308,7 +309,7 @@ SCIP_RETCODE SCIPselectCuts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -353,7 +354,7 @@ SCIP_RETCODE SCIPcalcMIR(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -383,7 +384,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
 /** calculates a lifted simple generalized flow cover cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
- *  participate in an MIR cut.
+ *  participate in the cut.
  *  For further details we refer to:
  *
  *  Gu, Z., Nemhauser, G. L., & Savelsbergh, M. W. (1999). Lifted flow cover inequalities for mixed 0-1 integer programs.
@@ -397,12 +398,44 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcalcFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             postprocess,        /**< apply a post-processing step to the resulting cut? */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
+   SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
+   SCIP_Real*            cutrhs,             /**< pointer to store the right hand side of the cut */
+   int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
+   int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
+   SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
+   SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
+   );
+
+/** calculates a lifted knapsack cover cut out of the weighted sum of LP rows given by an aggregation row; the
+ *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
+ *  participate in the cut.
+ *  For further details we refer to:
+ *
+ *  Letchford, A. N., & Souli, G. (2019). On lifted cover inequalities: A new lifting procedure with unusual properties.
+ *  Operations Research Letters, 47(2), 83-87.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcalcKnapsackCover(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row to compute flow cover cut for */
    SCIP_Real*            cutcoefs,           /**< array to store the non-zero coefficients in the cut */
@@ -427,7 +460,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcalcStrongCG(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
@@ -449,7 +482,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

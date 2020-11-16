@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -197,7 +197,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MySepa is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjSepa*        objsepa,            /**< cut separator object */
@@ -205,14 +205,14 @@ SCIP_RETCODE SCIPincludeObjSepa(
    );
 
 /** returns the sepa object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjSepa* SCIPfindObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of cut separator */
    );
 
 /** returns the sepa object for the given cut separator */
-EXTERN
+SCIP_EXPORT
 scip::ObjSepa* SCIPgetObjSepa(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa                /**< cut separator */

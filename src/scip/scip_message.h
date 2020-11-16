@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -36,25 +36,6 @@
 #include "scip/type_message.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,7 +85,7 @@ extern "C" {
  *
  *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetMessagehdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler to install, or NULL to suppress all output */
@@ -114,27 +95,27 @@ SCIP_RETCODE SCIPsetMessagehdlr(
  *
  *  @return the currently installed message handler, or NULL if messages are currently suppressed
  */
-EXTERN
+SCIP_EXPORT
 SCIP_MESSAGEHDLR* SCIPgetMessagehdlr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the log file name for the currently installed message handler */
-EXTERN
+SCIP_EXPORT
 void SCIPsetMessagehdlrLogfile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of log file, or NULL (no log) */
    );
 
 /** sets the currently installed message handler to be quiet (or not) */
-EXTERN
+SCIP_EXPORT
 void SCIPsetMessagehdlrQuiet(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             quiet               /**< should screen messages be suppressed? */
    );
 
 /** prints a warning message via the message handler */
-EXTERN
+SCIP_EXPORT
 void SCIPwarningMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -142,7 +123,7 @@ void SCIPwarningMessage(
    );
 
 /** prints a debug message */
-EXTERN
+SCIP_EXPORT
 void SCIPprintDebugMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           sourcefile,         /**< name of the source file that called the function */
@@ -152,7 +133,7 @@ void SCIPprintDebugMessage(
    );
 
 /** prints a debug message without precode */
-EXTERN
+SCIP_EXPORT
 void SCIPdebugMessagePrint(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -160,7 +141,7 @@ void SCIPdebugMessagePrint(
    );
 
 /** prints a dialog message that requests user interaction or is a direct response to a user interactive command */
-EXTERN
+SCIP_EXPORT
 void SCIPdialogMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -169,7 +150,7 @@ void SCIPdialogMessage(
    );
 
 /** prints a message */
-EXTERN
+SCIP_EXPORT
 void SCIPinfoMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
@@ -178,7 +159,7 @@ void SCIPinfoMessage(
    );
 
 /** prints a message depending on the verbosity level */
-EXTERN
+SCIP_EXPORT
 void SCIPverbMessage(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VERBLEVEL        msgverblevel,       /**< verbosity level of this message */
@@ -193,7 +174,7 @@ void SCIPverbMessage(
  *
  *  @see \ref SCIP_VerbLevel "SCIP_VERBLEVEL" for a list of all verbosity levels
  */
-EXTERN
+SCIP_EXPORT
 SCIP_VERBLEVEL SCIPgetVerbLevel(
    SCIP*                 scip                /**< SCIP data structure */
    );

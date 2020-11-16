@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,7 +41,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -59,42 +59,34 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
  */
 
 /** dialog execution method for the count command */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
 
 /** dialog execution method for the count command */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
 
 /** execution method of dialog for writing all solutions */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
 
 /** execute counting */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcount(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-#if 0
-/* returns TRUE if the counting process was correct; otherwise FALSE */
-EXTERN
-SCIP_Bool SCIPisCountValid(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-#endif
-
 /** returns number of feasible solutions found as SCIP_Longint; if the number does not fit into
  *  a SCIP_Longint the valid flag is set to FALSE
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNCountedSols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            valid               /**< pointer to store if the return value is valid */
    );
 
 /** returns number of counted solutions as string */
-EXTERN
+SCIP_EXPORT
 void SCIPgetNCountedSolsstr(
    SCIP*                 scip,               /**< SCIP data structure */
    char**                buffer,             /**< buffer to store the number for counted solutions */
@@ -103,7 +95,7 @@ void SCIPgetNCountedSolsstr(
    );
 
 /** returns number of counted feasible subtrees */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPgetNCountedFeasSubtrees(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -116,7 +108,7 @@ SCIP_Longint SCIPgetNCountedFeasSubtrees(
  *        during presolving. For none active variables the value has to be computed depending on their aggregation
  *        type. See for more details about that \ref COLLECTALLFEASEBLES.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPgetCountedSparseSols(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR***           vars,               /**< pointer to variable array defining to variable order */
@@ -126,14 +118,14 @@ void SCIPgetCountedSparseSols(
    );
 
 /** setting SCIP parameters for such that a valid counting process is possible */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

@@ -16,7 +16,7 @@ def remove_prefix(p,s):
 
 def get_headerset(file):
     idx = clang.cindex.Index.create()
-    tu = idx.parse(file, args= map(lambda x: '-I' + x, includedirs) + ['-DWITH_ZLIB'])
+    tu = idx.parse(file, args= map(lambda x: '-I' + x, includedirs) + ['-DSCIP_WITH_ZLIB'])
 
     headers = set()
     for idx, c in enumerate(tu.cursor.walk_preorder()):

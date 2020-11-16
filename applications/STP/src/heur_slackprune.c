@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -63,7 +63,6 @@
 #define SLACK_MAXTOTNEDGES 5000
 
 #ifdef WITH_UG
-extern
 int getUgRank(void);
 #endif
 
@@ -1043,8 +1042,8 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRunPcMw(
          if( soledge[e] == CONNECT )
             graph_sol_setNodeList(g, nodearrchar, ancestors[e]);
 
-         /* calculate objective value of solution */
-         objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
+      /* calculate objective value of solution */
+      objorg = graph_sol_getObj(prunegraph->cost, soledge, offsetnew, nedges);
 
       /* compute new solution on heuristically reduced graph */
 

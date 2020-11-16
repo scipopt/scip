@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -61,8 +61,8 @@ void setup(void)
 
    /* create mapping between variables and 0,..,SCIPgetNVars(scip)-1 */
    SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), 2) );
-   SCIP_CALL( SCIPhashmapInsert(varindex, (void*)x, (void*)(size_t)0) );
-   SCIP_CALL( SCIPhashmapInsert(varindex, (void*)y, (void*)(size_t)1) );
+   SCIP_CALL( SCIPhashmapInsertInt(varindex, (void*)x, 0) );
+   SCIP_CALL( SCIPhashmapInsertInt(varindex, (void*)y, 1) );
 
    SCIP_CALL( SCIPreleaseVar(scip, &origx) );
    SCIP_CALL( SCIPreleaseVar(scip, &origy) );

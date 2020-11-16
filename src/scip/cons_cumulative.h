@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -48,7 +48,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -82,7 +82,7 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
  */
 
 /** creates and captures a cumulative constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -138,7 +138,7 @@ SCIP_RETCODE SCIPcreateConsBasicCumulative(
    );
 
 /** set the left bound of effective horizon */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPsetHminCumulative(
    );
 
 /** returns the left bound of the effective horizon */
-EXTERN
+SCIP_EXPORT
 int SCIPgetHminCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -154,7 +154,7 @@ int SCIPgetHminCumulative(
 
 
 /** set the right bound of the effective horizon */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetHmaxCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
@@ -162,42 +162,42 @@ SCIP_RETCODE SCIPsetHmaxCumulative(
    );
 
 /** returns the right bound of effective horizon */
-EXTERN
+SCIP_EXPORT
 int SCIPgetHmaxCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** returns the start time variables of the cumulative constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the number of start time variables of the cumulative constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVarsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the capacity of the cumulative constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetCapacityCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the durations of the cumulative constraint */
-EXTERN
+SCIP_EXPORT
 int* SCIPgetDurationsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** returns the demands of the cumulative constraint */
-EXTERN
+SCIP_EXPORT
 int* SCIPgetDemandsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -206,7 +206,7 @@ int* SCIPgetDemandsCumulative(
 /** check for the given starting time variables with their demands and durations if the cumulative conditions for the
  *  given solution is satisfied
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPcheckCumulativeCondition(
    );
 
 /** normalize cumulative condition */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -236,7 +236,7 @@ SCIP_RETCODE SCIPnormalizeCumulativeCondition(
    );
 
 /** searches for a time point within the cumulative condition were the cumulative condition can be split */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsplitCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of variables (jobs) */
@@ -250,7 +250,7 @@ SCIP_RETCODE SCIPsplitCumulativeCondition(
    );
 
 /** presolve cumulative condition w.r.t. effective horizon by detecting irrelevant variables */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpresolveCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -268,7 +268,7 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
    );
 
 /** propagate the given cumulative condition */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLTIMING     presoltiming,       /**< current presolving timing */
@@ -287,7 +287,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    );
 
 /** resolve propagation w.r.t. the cumulative condition */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPrespropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nvars,              /**< number of start time variables (activities) */
@@ -307,7 +307,7 @@ SCIP_RETCODE SCIPrespropCumulativeCondition(
    );
 
 /** this method visualizes the cumulative structure in GML format */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPvisualizeConsCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< cumulative constraint */
@@ -350,7 +350,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
       SCIP_Bool* solved, SCIP_Bool* infeasible, SCIP_Bool* unbounded, SCIP_Bool* error)
 
 /** sets method to solve an individual cumulative condition */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsetSolveCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DECL_SOLVECUMULATIVE((*solveCumulative)) /**< method to use an individual cumulative condition */
@@ -362,7 +362,7 @@ SCIP_RETCODE SCIPsetSolveCumulative(
  *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
  *        solver was interrupted.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPsolveCumulative(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   njobs,              /**< number of jobs (activities) */
@@ -386,7 +386,7 @@ SCIP_RETCODE SCIPsolveCumulative(
 /** creates the worst case resource profile, that is, all jobs are inserted with the earliest start and latest
  *  completion time
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateWorstCaseProfile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< resource profile */
@@ -397,7 +397,7 @@ SCIP_RETCODE SCIPcreateWorstCaseProfile(
    );
 
 /** computes w.r.t. the given worst case resource profile the first time point where the given capacity can be violated */
-EXTERN
+SCIP_EXPORT
 int SCIPcomputeHmin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< worst case resource profile */
@@ -405,7 +405,7 @@ int SCIPcomputeHmin(
    );
 
 /** computes w.r.t. the given worst case resource profile the first time point where the given capacity is satisfied for sure */
-EXTERN
+SCIP_EXPORT
 int SCIPcomputeHmax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE*         profile,            /**< worst case profile */
@@ -413,9 +413,9 @@ int SCIPcomputeHmax(
    );
 
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

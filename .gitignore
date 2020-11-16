@@ -12,6 +12,7 @@ bin/
 lib/
 obj/
 TAGS
+debug/
 release/
 check/results/
 check/results*/
@@ -30,6 +31,8 @@ doc/**/*.tmp
 .cproject
 .project
 .vscode/
+.idea/
+cmake-build-debug/
 .settings/
 hooks/
 build/
@@ -53,7 +56,7 @@ localhooks/
 src/scip/githash.c
 src/scip/buildflags.c
 settings/
-!coverage/settings
+!check/coverage/settings
 unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh

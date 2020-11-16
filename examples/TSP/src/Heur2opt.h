@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,13 +31,12 @@ namespace tsp
 /** C++ wrapper */
 class Heur2opt : public scip::ObjHeur
 {
-   GRAPH*             graph_;             /**< the underlying graph of the TSP */
-   int                ncalls_;            /**< number of calls of the heuristic since the last solution was found */
-   SCIP_SOL*          sol_;               /**< current solution */
-   GRAPHEDGE**        tour_;              /**< tour induced by sol */
+   GRAPH*                graph_;             /**< the underlying graph of the TSP */
+   int                   ncalls_;            /**< number of calls of the heuristic since the last solution was found */
+   SCIP_SOL*             sol_;               /**< current solution */
+   GRAPHEDGE**           tour_;              /**< tour induced by sol */
 
 public:
-
 
    /** default constructor */
    Heur2opt(
@@ -50,7 +49,6 @@ public:
       tour_(NULL)
    {
    }
-
 
    /** destructor */
    virtual ~Heur2opt()

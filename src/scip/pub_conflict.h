@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -40,63 +40,63 @@ extern "C" {
  */
 
 /** compares two conflict handlers w. r. to their priority */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
 
 /** comparison method for sorting conflict handler w.r.t. to their name */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrCompName);
 
 /** gets user data of conflict handler */
-EXTERN
+SCIP_EXPORT
 SCIP_CONFLICTHDLRDATA* SCIPconflicthdlrGetData(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** sets user data of conflict handler; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT
 void SCIPconflicthdlrSetData(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_CONFLICTHDLRDATA* conflicthdlrdata   /**< new conflict handler user data */
    );
 
 /** gets name of conflict handler */
-EXTERN
+SCIP_EXPORT
 const char* SCIPconflicthdlrGetName(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets description of conflict handler */
-EXTERN
+SCIP_EXPORT
 const char* SCIPconflicthdlrGetDesc(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets priority of conflict handler */
-EXTERN
+SCIP_EXPORT
 int SCIPconflicthdlrGetPriority(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** is conflict handler initialized? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPconflicthdlrIsInitialized(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets time in seconds used in this conflict handler for setting up for next stages */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPconflicthdlrGetSetupTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
 /** gets time in seconds used in this conflict handler */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

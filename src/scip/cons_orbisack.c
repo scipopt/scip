@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbisack.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for orbisack constraints
  * @author Christopher Hojny
  *
@@ -46,6 +47,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_message.h"
 #include "scip/pub_var.h"
+#include "scip/scip.h"
 #include "scip/scip_branch.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
@@ -58,6 +60,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry.h"
 #include <string.h>
 
 /* constraint handler properties */
@@ -84,9 +87,8 @@
 
 /* default parameters for constraints */
 #define DEFAULT_COEFFBOUND               1000000.0     /**< maximum size of coefficients in orbisack inequalities */
-
 #define DEFAULT_PPORBISACK         TRUE /**< whether we allow upgrading to packing/partitioning orbisacks */
-#define DEFAULT_CHECKALWAYSFEAS    TRUE /**< whether check routine returns always SCIP_FEASIBLE */
+#define DEFAULT_FORCECONSCOPY     FALSE /**< whether orbisack constraints should be forced to be copied to sub SCIPs */
 
 
 /*
@@ -100,8 +102,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             orbiseparation;     /**< whether orbisack as well as cover inequalities should be separated */
    SCIP_Real             coeffbound;         /**< maximum size of coefficients in orbisack inequalities */
    SCIP_Bool             checkpporbisack;    /**< whether we allow upgrading to packing/partitioning orbisacks */
-   SCIP_Bool             checkalwaysfeas;    /**< whether check routine returns always SCIP_FEASIBLE */
    int                   maxnrows;           /**< maximal number of rows in an orbisack constraint */
+   SCIP_Bool             forceconscopy;      /**< whether orbisack constraints should be forced to be copied to sub SCIPs */
 };
 
 /** constraint data for orbisack constraints */
@@ -110,6 +112,7 @@ struct SCIP_ConsData
    SCIP_VAR**            vars1;              /**< first column of variable matrix */
    SCIP_VAR**            vars2;              /**< second column of variable matrix */
    int                   nrows;              /**< number of rows of variable matrix */
+   SCIP_Bool             ismodelcons;        /**< whether the orbisack is a model constraint */
 };
 
 
@@ -146,7 +149,8 @@ SCIP_RETCODE consdataCreate(
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data */
    SCIP_VAR*const*       vars1,              /**< first column of variable matrix */
    SCIP_VAR*const*       vars2,              /**< second column of variable matrix */
-   int                   nrows               /**< number of rows in variable matrix */
+   int                   nrows,              /**< number of rows in variable matrix */
+   SCIP_Bool             ismodelcons         /**< whether the orbisack is a model constraint */
    )
 {
    int i;
@@ -169,6 +173,7 @@ SCIP_RETCODE consdataCreate(
 #endif
 
    (*consdata)->nrows = nrows;
+   (*consdata)->ismodelcons = ismodelcons;
 
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
@@ -200,12 +205,9 @@ SCIP_RETCODE packingUpgrade(
    SCIP_Bool*            isparttype          /**< memory address to store whether upgraded orbisack is partitioning orbisack */
    )
 {
-   SCIP_CONSHDLR* setppcconshdlr;
-   SCIP_CONS** setppcconss;
-   SCIP_Bool* rowcovered;
-   int nsetppcconss;
+   SCIP_VAR*** vars;
+   SCIP_ORBITOPETYPE type;
    int i;
-   int c;
 
    assert( scip != NULL );
    assert( vars1 != NULL );
@@ -214,150 +216,31 @@ SCIP_RETCODE packingUpgrade(
    assert( isparttype != NULL );
 
    *success = FALSE;
+   *isparttype = FALSE;
 
-   /* get data of setppc conshdlr */
-   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
-   if ( setppcconshdlr == NULL )
-   {
-      SCIPwarningMessage(scip, "Check for upgrading orbisacks to packing/partitioning orbisacks not possible - setppc constraint handler not found.\n");
-      return SCIP_OKAY;
-   }
-   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
-   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
-
-   /* upgrade cannot be successful */
-   if ( nsetppcconss == 0 )
-      return SCIP_OKAY;
-   assert( setppcconss != NULL );
-
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowcovered, nrows) );
-
-   /* iterate over orbisack rows and check whether rows are contained in partitioning constraints */
-   *success = TRUE;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nrows) );
    for (i = 0; i < nrows; ++i)
    {
-      /* iterate over constraints */
-      for (c = 0; c < nsetppcconss; ++c)
-      {
-         int nsetppcvars;
-         SCIP_VAR** setppcvars;
-         SCIP_VAR* var;
-         int varidx1;
-         int varidx2;
-
-         /* check type */
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING ||
-              SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING )
-            continue;
-         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING );
-
-         /* get set packing/partitioning variables */
-         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
-
-         /* partitioning constraint contains too much variables */
-         if ( nsetppcvars != 2 )
-            continue;
-         assert( nsetppcvars == 2 );
-
-         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
-         assert( setppcvars != NULL );
-
-         /* check whether i-th row is contained in partitioning constraint */
-         var = setppcvars[0];
-         if ( SCIPvarIsNegated(var) )
-            continue;
-
-         varidx1 = SCIPvarGetProbindex(var);
-
-         var = setppcvars[1];
-         if ( SCIPvarIsNegated(var) )
-            continue;
-
-         varidx2 = SCIPvarGetProbindex(var);
-
-         if ( (varidx1 == SCIPvarGetProbindex(vars1[i]) && varidx2 == SCIPvarGetProbindex(vars2[i])) ||
-              (varidx2 == SCIPvarGetProbindex(vars1[i]) && varidx1 == SCIPvarGetProbindex(vars2[i])))
-         {
-            rowcovered[i] = TRUE;
-            break;
-         }
-      }
-
-      /* no partitioning constraint corresponds to row i */
-      if ( c >= nsetppcconss )
-         *success = FALSE;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], 2) );
+      vars[i][0] = vars1[i];
+      vars[i][1] = vars2[i];
    }
 
-   if ( *success )
+   SCIP_CALL( SCIPisPackingPartitioningOrbitope(scip, vars, nrows, 2, NULL, NULL, &type) );
+
+   if ( type == SCIP_ORBITOPETYPE_PACKING )
+      *success = TRUE;
+   else if ( type == SCIP_ORBITOPETYPE_PARTITIONING )
    {
+      *success = TRUE;
       *isparttype = TRUE;
-      SCIPfreeBufferArray(scip, &rowcovered);
-
-      return SCIP_OKAY;
    }
 
-   /* Iterate over orbisack rows and check whether rows are contained in packing constraints.
-    * In particular, it is possible that variables in row i form a subset of variables in the
-    * a packing/partitioning constraint. */
-   *success = TRUE;
-   for (i = 0; i < nrows; ++i)
+   for (i = nrows - 1; i >= 0; --i)
    {
-      /* skip already covered rows */
-      if ( rowcovered[i] )
-         continue;
-
-      /* iterate over constraints */
-      for (c = 0; c < nsetppcconss; ++c)
-      {
-         SCIP_VAR** setppcvars;
-         SCIP_VAR* var;
-         int nsetppcvars;
-         int varidx;
-         int nfound = 0;
-         int j;
-
-         /* check type */
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
-            continue;
-         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING ||
-            SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING );
-
-         /* get set packing/partitioning variables */
-         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
-
-         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
-         assert( setppcvars != NULL );
-
-         /* check whether all variables of the cycle are contained in setppc constraint */
-         for (j = 0; j < nsetppcvars && nfound < 2; ++j)
-         {
-            var = setppcvars[j];
-
-            if ( SCIPvarIsNegated(var) )
-               continue;
-
-            varidx = SCIPvarGetProbindex(var);
-
-            if ( varidx == SCIPvarGetProbindex(vars1[i]) || varidx == SCIPvarGetProbindex(vars2[i]) )
-               ++nfound;
-         }
-
-         if ( nfound == 2 )
-            break;
-      }
-
-      /* row i is not contained in an setppc constraint */
-      if ( c >= nsetppcconss )
-         *success = FALSE;
+      SCIPfreeBufferArray(scip, &vars[i]);
    }
-
-   /* we have found a packing orbisack */
-   if ( *success )
-      *isparttype = FALSE;
-
-   SCIPfreeBufferArray(scip, &rowcovered);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -399,7 +282,7 @@ SCIP_RETCODE initLP(
    tmpvars[0] = vars1[0];
    tmpvars[1] = vars2[0];
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisack0#0", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisack0#0", -SCIPinfinity(scip), 0.0, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, tmpvars[0], -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, tmpvars[1], 1.0) );
 
@@ -440,7 +323,7 @@ SCIP_RETCODE addOrbisackCover(
 
    *infeasible = FALSE;
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
    for (i = 0; i < nrows; ++i)
    {
@@ -592,7 +475,7 @@ SCIP_RETCODE addOrbisackInequality(
 
    *infeasible = FALSE;
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, cons, "orbisack", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
    for (i = 0; i < nrows; ++i)
@@ -1012,6 +895,22 @@ SCIP_RETCODE separateInequalities(
  *--------------------------------- SCIP functions -------------------------------------------
  *--------------------------------------------------------------------------------------------*/
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbisack)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrOrbisack(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteOrbisack)
@@ -1069,12 +968,16 @@ SCIP_DECL_CONSTRANS(consTransOrbisack)
    assert( sourcedata->vars1 != NULL );
    assert( sourcedata->vars2 != NULL );
 
+   if ( !sourcedata->ismodelcons )
+      return SCIP_OKAY;
+
    /* create transformed constraint data (copy data where necessary) */
    nrows = sourcedata->nrows;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
    consdata->nrows = nrows;
+   consdata->ismodelcons = sourcedata->ismodelcons;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars1, nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars2, nrows) );
@@ -1328,6 +1231,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbisack)
          /* get data of constraint */
          assert( conss[c] != 0 );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          /* get solution */
          assert( consdata->nrows <= nvals );
@@ -1392,6 +1300,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbisack)
       assert( consdata->vars1 != NULL );
       assert( consdata->vars2 != NULL );
 
+      /* do not enforce non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
+
       SCIP_CALL( SCIPcheckSolutionOrbisack(scip, NULL, consdata->vars1, consdata->vars2, consdata->nrows, FALSE, &feasible) );
 
       if ( ! feasible )
@@ -1448,6 +1360,11 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbisack)
          /* get data of constraint */
          assert( conss[c] != 0 );
          consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         /* do not enforce non-model constraints */
+         if ( !consdata->ismodelcons )
+            continue;
 
          /* get solution */
          assert( consdata->nrows <= nvals );
@@ -1486,7 +1403,6 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbisack)
 {  /*lint --e{715}*/
    SCIP_Bool feasible = TRUE;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
 
@@ -1496,12 +1412,6 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
    assert( result != NULL );
 
    *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   if ( conshdlrdata->checkalwaysfeas )
-      return SCIP_OKAY;
 
    /* loop through constraints */
    for (c = 0; c < nconss; ++c)
@@ -1515,6 +1425,10 @@ SCIP_DECL_CONSCHECK(consCheckOrbisack)
       assert( consdata->vars2 != NULL );
 
       SCIPdebugMsg(scip, "Check method for orbisack constraint <%s> (%d rows) ...\n", SCIPconsGetName(conss[c]), consdata->nrows);
+
+      /* do not check non-model constraints */
+      if ( !consdata->ismodelcons )
+         continue;
 
       SCIP_CALL( SCIPcheckSolutionOrbisack(scip, sol, consdata->vars1, consdata->vars2, consdata->nrows, printreason, &feasible) );
 
@@ -1720,6 +1634,95 @@ SCIP_DECL_CONSLOCK(consLockOrbisack)
 }
 
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyOrbisack)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* sourcedata;
+   SCIP_VAR** sourcevars1;
+   SCIP_VAR** sourcevars2;
+   SCIP_VAR** vars1;
+   SCIP_VAR** vars2;
+   int nrows;
+   int i;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( sourcescip != NULL );
+   assert( sourceconshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
+   assert( sourcecons != NULL );
+   assert( varmap != NULL );
+   assert( valid != NULL );
+
+   *valid = TRUE;
+
+   SCIPdebugMsg(scip, "Copying method for orbisack constraint handler.\n");
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert( sourcedata != NULL );
+   assert( sourcedata->vars1 != NULL );
+   assert( sourcedata->vars2 != NULL );
+   assert( sourcedata->nrows > 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* do not copy non-model constraints */
+   if ( !sourcedata->ismodelcons && !conshdlrdata->forceconscopy )
+   {
+      *valid = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   sourcevars1 = sourcedata->vars1;
+   sourcevars2 = sourcedata->vars2;
+   nrows = sourcedata->nrows;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars1, nrows) );
+
+   for (i = 0; i < nrows && *valid; ++i)
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars1[i], &(vars1[i]), varmap, consmap, global, valid) );
+      assert( !(*valid) || vars1[i] != NULL );
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if ( !(*valid) )
+   {
+      SCIPfreeBufferArray(scip, &vars1);
+
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars2, nrows) );
+
+   for (i = 0; i < nrows && *valid; ++i)
+   {
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars2[i], &(vars2[i]), varmap, consmap, global, valid) );
+      assert( !(*valid) || vars2[i] != NULL );
+   }
+
+   /* only create the target constraint, if all variables could be copied */
+   if ( *valid )
+   {
+      /* create copied constraint */
+      if ( name == NULL )
+         name = SCIPconsGetName(sourcecons);
+
+      SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, FALSE, FALSE, sourcedata->ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &vars2);
+   SCIPfreeBufferArray(scip, &vars1);
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint display method of constraint handler
  *
  *  The constraint handler should output a representation of the constraint into the given text file.
@@ -1818,112 +1821,6 @@ SCIP_RETCODE SCIPcheckSolutionOrbisack(
 }
 
 
-/** separate orbisack cover inequalities for a given solution */
-SCIP_RETCODE SCIPseparateCoversOrbisack(
-   SCIP*                 scip,               /**< pointer to scip */
-   SCIP_CONS*            cons,               /**< pointer to constraint for which cover inequality should be added */
-   SCIP_SOL*             sol,                /**< solution to be separated */
-   SCIP_VAR**            vars1,              /**< variables of first columns */
-   SCIP_VAR**            vars2,              /**< variables of second columns */
-   int                   nrows,              /**< number of rows */
-   SCIP_Bool*            infeasible,         /**< memory address to store whether we detected infeasibility */
-   int*                  ngen                /**< memory address to store number of generated cuts */
-   )
-{
-   SCIP_ROW* row;
-   SCIP_Real rhs = 0.0;
-   SCIP_Real lhs = 0.0;
-   SCIP_Real* solvals1;
-   SCIP_Real* solvals2;
-   SCIP_Real* coeff1;
-   SCIP_Real* coeff2;
-   int i;
-   int j;
-
-   assert( scip != NULL );
-   assert( vars1 != NULL );
-   assert( vars2 != NULL );
-   assert( nrows > 0 );
-   assert( infeasible != NULL );
-   assert( ngen != NULL );
-
-   *infeasible = FALSE;
-   *ngen = 0;
-
-   /* allocate memory for inequality coefficients */
-   SCIP_CALL( SCIPallocBufferArray(scip, &coeff1, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coeff2, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &solvals1, nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &solvals2, nrows) );
-
-   /* initialize coefficient matrix and solution values */
-   for (i = 0; i < nrows; ++i)
-   {
-      coeff1[i] = 0.0;
-      coeff2[i] = 0.0;
-   }
-   SCIP_CALL( SCIPgetSolVals(scip, sol, nrows, vars1, solvals1) );
-   SCIP_CALL( SCIPgetSolVals(scip, sol, nrows, vars2, solvals2) );
-
-   /* detect violated covers */
-   for (i = 0; i < nrows; ++i)
-   {
-      /* cover inequality is violated */
-      if ( SCIPisEfficacious(scip, -solvals1[i] + solvals2[i] + lhs - rhs) )
-      {
-         /* set coefficients for inequality */
-         coeff1[i] = -1.0;
-         coeff2[i] = 1.0;
-
-         /* add inequality */
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(cons), "orbisackcover", -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
-         SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-         for (j = 0; j < nrows; ++j)
-         {
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars1[j], coeff1[j]) );
-            SCIP_CALL( SCIPaddVarToRow(scip, row, vars2[j], coeff2[j]) );
-         }
-         SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-#ifdef SCIP_DEBUG
-         SCIP_CALL( SCIPprintRow(scip, row, NULL) );
-#endif
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-
-         ++(*ngen);
-         if ( *infeasible )
-            break;
-
-         /* reset coefficients for next inequality */
-         coeff1[i] = 0.0;
-         coeff2[i] = 0.0;
-      }
-
-      /* add argmax( 1 - solvals[i][0], solvals[i][1] ) as coefficient */
-      if ( SCIPisEfficacious(scip, 1.0 - solvals1[i] - solvals2[i]) )
-      {
-         coeff1[i] = -1.0;
-         lhs = lhs - solvals1[i];
-      }
-      else
-      {
-         coeff2[i] = 1.0;
-         rhs += 1.0;
-         lhs = lhs + solvals2[i];
-      }
-   }
-
-   /* free coefficient matrix */
-   SCIPfreeBufferArray(scip, &solvals2);
-   SCIPfreeBufferArray(scip, &solvals1);
-   SCIPfreeBufferArray(scip, &coeff2);
-   SCIPfreeBufferArray(scip, &coeff1);
-
-   return SCIP_OKAY;
-}
-
-
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
 SCIP_DECL_CONSGETVARS(consGetVarsOrbisack)
@@ -1993,6 +1890,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
    assert( conshdlr != NULL );
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOrbisack, consCopyOrbisack) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOrbisack) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOrbisack) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOrbisack) );
@@ -2025,9 +1923,9 @@ SCIP_RETCODE SCIPincludeConshdlrOrbisack(
          "Upgrade orbisack constraints to packing/partioning orbisacks?",
          &conshdlrdata->checkpporbisack, TRUE, DEFAULT_PPORBISACK, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkalwaysfeas",
-         "Whether check routine returns always SCIP_FEASIBLE.",
-         &conshdlrdata->checkalwaysfeas, TRUE, DEFAULT_CHECKALWAYSFEAS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/forceconscopy",
+         "Whether orbisack constraints should be forced to be copied to sub SCIPs.",
+         &conshdlrdata->forceconscopy, TRUE, DEFAULT_FORCECONSCOPY, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2050,6 +1948,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    int                   nrows,              /**< number of rows in variable matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
    SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             ismodelcons,        /**< whether the orbisack is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -2120,8 +2019,8 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
       else
          orbitopetype = SCIP_ORBITOPETYPE_PACKING;
 
-      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, orbitopetype, nrows, 2, TRUE, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable, stickingatnode) );
+      SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, "pporbisack", vars, orbitopetype, nrows, 2, TRUE, ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
       for (i = 0; i < nrows; ++i)
          SCIPfreeBufferArray(scip, &vars[i]);
@@ -2130,7 +2029,7 @@ SCIP_RETCODE SCIPcreateConsOrbisack(
    else
    {
       /* create constraint data */
-      SCIP_CALL( consdataCreate(scip, &consdata, vars1, vars2, nrows) );
+      SCIP_CALL( consdataCreate(scip, &consdata, vars1, vars2, nrows, ismodelcons) );
 
       SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
@@ -2154,10 +2053,11 @@ SCIP_RETCODE SCIPcreateConsBasicOrbisack(
    SCIP_VAR**            vars2,              /**< second column of matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows in constraint matrix */
    SCIP_Bool             ispporbisack,       /**< whether the orbisack is a packing/partitioning orbisack */
-   SCIP_Bool             isparttype          /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             isparttype,         /**< whether the orbisack is a partitioning orbisack */
+   SCIP_Bool             ismodelcons         /**< whether the orbisack is a model constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype,
+   SCIP_CALL( SCIPcreateConsOrbisack(scip, cons, name, vars1, vars2, nrows, ispporbisack, isparttype, ismodelcons,
          TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr_largestrepr.c
+ * @ingroup OTHER_CFILES
  * @brief  largestrepr tree compression
  * @author Jakob Witzig
  */
@@ -24,6 +25,7 @@
 #include "scip/compr_largestrepr.h"
 #include "scip/pub_compr.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_reopt.h"
 #include "scip/pub_var.h"
 #include "scip/scip_compr.h"
@@ -73,18 +75,18 @@ struct SCIP_ComprData
  * Local methods
  */
 
-/** calculate a signature of variables fixed to 0 and 1 by using binary shift
- *  and or operations. we calculate the signature on the basis of SCIPvarGetProbindex() % 64
+/** calculate a bit signature of variables fixed to 0 and 1 on the basis of SCIPvarGetProbindex()
  */
 static
 void calcSignature(
    SCIP_VAR**            vars,               /**< variable array */
    SCIP_Real*            vals,               /**< value array */
    int                   nvars,              /**< number of variables */
-   SCIP_Longint*         signature0,         /**< pointer to store the signatures of variables fixed to 0 */
-   SCIP_Longint*         signature1          /**< pointer to store the signatures of variables fixed to 1 */
+   uint64_t*             signature0,         /**< pointer to store the signatures of variables fixed to 0 */
+   uint64_t*             signature1          /**< pointer to store the signatures of variables fixed to 1 */
    )
 {
+   uint64_t varsignature;
    int v;
 
    (*signature0) = 0;
@@ -92,10 +94,11 @@ void calcSignature(
 
    for( v = nvars - 1; v >= 0; --v )
    {
-      if( vals[v] == 0 )
-         (*signature0) |= ((unsigned int)1 << ((unsigned int)SCIPvarGetProbindex(vars[v]) % 64)); /*lint !e647*/
+      varsignature = SCIPhashSignature64(SCIPvarGetProbindex(vars[v]));
+      if( vals[v] < 0.5 )
+         (*signature0) |= varsignature;
       else
-         (*signature1) |= ((unsigned int)1 << ((unsigned int)SCIPvarGetProbindex(vars[v]) % 64)); /*lint !e647*/
+         (*signature1) |= varsignature;
    }
 
    return;
@@ -130,8 +133,8 @@ SCIP_RETCODE constructCompression(
    const char** varnames;
    SCIP_Real score;
    int nreps;
-   SCIP_Longint* signature0;
-   SCIP_Longint* signature1;
+   uint64_t* signature0;
+   uint64_t* signature1;
    int* common_vars;
    unsigned int* leaveids;
    int* nvars;
@@ -435,7 +438,7 @@ SCIP_RETCODE constructCompression(
        * 2. check if we need to reallocate the memory
        * 3. set the new representation
        */
-      if( SCIPisSumGT(scip, score, comprdata->score) )
+      if( nreps > 0 && SCIPisSumGT(scip, score, comprdata->score) )
       {
          /* reset the current representation */
          SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );

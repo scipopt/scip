@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -80,7 +80,7 @@ extern "C" {
 /** adds a generalized variable bound to the genvbounds propagator; if there is already a genvbound for the bound
  *  "boundtype" of variable "var", it will be replaced
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            genvboundprop,      /**< genvbound propagator */
@@ -93,14 +93,14 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    SCIP_BOUNDTYPE        boundtype           /**< type of bound provided by the genvbound */
    );
 
-/* @} */
+/** @} */
 
 
 /** creates the genvbounds propagator and includes it in SCIP
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );

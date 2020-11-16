@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 
-#ifdef WITH_ZLIB
+#ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
 
 #define FOPEN(file, mode)    gzopen(file, mode)
@@ -53,7 +53,7 @@ extern "C" {
 #define FGETS(buf, len, fp)  fgets(buf, len, fp)
 #define FREAD(buf, len, fp)  fread(buf, 1, len, fp)
 #define FPTYPE               FILE*
-#endif /* WITH_ZLIB */
+#endif /* SCIP_WITH_ZLIB */
 
 
 #ifndef ALLOC_ABORT

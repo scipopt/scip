@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -164,6 +164,7 @@ struct SCIP_Set
    SCIP_Bool             benderssorted;      /**< are the Benders' algorithms sorted by activity and priority? */
    SCIP_Bool             bendersnamesorted;  /**< are the Benders' algorithms sorted by name? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
+   SCIP_Bool             subscipsoff;        /**< marks whether the sub-SCIPs have been deactivated */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */
@@ -172,6 +173,8 @@ struct SCIP_Set
                                               *   in sum score function */
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
+   SCIP_Real             branch_midpull;     /**< fraction by which to move branching point of a continuous variable towards the middle of the domain; a value of 1.0 leads to branching always in the middle of the domain */
+   SCIP_Real             branch_midpullreldomtrig; /**< multiply midpull by relative domain width if the latter is below this value */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
    SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
@@ -249,6 +252,7 @@ struct SCIP_Set
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
+   SCIP_Bool             conf_uselocalrows;  /**< use local rows to construct infeasibility proofs */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -265,6 +269,9 @@ struct SCIP_Set
    SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
    SCIP_Bool             disp_allviols;      /**< display all violations of the best solution after the solving process finished? */
    SCIP_Bool             disp_relevantstats; /**< should the relevant statistics be displayed at the end of solving? */
+
+   /* heuristics settings */
+   SCIP_Bool             heur_useuctsubscip; /**< should setting of common subscip parameters include the activation of the UCT node selector? */
 
    /* history settings */
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
@@ -318,6 +325,7 @@ struct SCIP_Set
    SCIP_Bool             lp_cleanuprowsroot; /**< should new basic rows be removed after root LP solving? */
    SCIP_Bool             lp_checkstability;  /**< should LP solver's return status be checked for stability? */
    SCIP_Real             lp_conditionlimit;  /**< maximum condition number of LP basis counted as stable (-1.0: no check) */
+   SCIP_Real             lp_markowitz;       /**< minimal Markowitz threshold to control sparsity/stability in LU factorization */
    SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkfarkas;     /**< should infeasibility proofs from the LP be checked? */
@@ -375,7 +383,9 @@ struct SCIP_Set
    SCIP_Bool             misc_allowstrongdualreds; /**< should strong dual reductions be allowed in propagation and presolving? */
    SCIP_Bool             misc_allowweakdualreds;  /**< should weak dual reductions be allowed in propagation and presolving? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
-   int                   misc_usesymmetry;   /**< used symmetry handling technique (0: off; 1: polyhedral; 2: orbital fixing) */
+   int                   misc_usesymmetry;   /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
+                                              *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
+                                              *   symresacks) */
    char*                 misc_debugsol;      /**< path to a debug solution */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 
@@ -398,7 +408,7 @@ struct SCIP_Set
    SCIP_Real             num_feastol;        /**< feasibility tolerance for constraints */
    SCIP_Real             num_checkfeastolfac;/**< factor to change the feasibility tolerance when testing the best
                                               *   solution for feasibility (after solving process) */
-   SCIP_Real             num_lpfeastol;      /**< primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
+   SCIP_Real             num_lpfeastolfactor;/**< factor w.r.t. primal feasibility tolerance that determines default (and maximal) primal feasibility tolerance of LP solver (user parameter, see also num_relaxfeastol) */
    SCIP_Real             num_dualfeastol;    /**< feasibility tolerance for reduced costs */
    SCIP_Real             num_barrierconvtol; /**< convergence tolerance used in barrier algorithm */
    SCIP_Real             num_boundstreps;    /**< minimal improve for strengthening bounds */
@@ -414,6 +424,7 @@ struct SCIP_Set
    SCIP_Real             presol_abortfac;    /**< abort presolve, if l.t. this frac of the problem was changed in last round */
    int                   presol_maxrounds;   /**< maximal number of presolving rounds (-1: unlimited) */
    int                   presol_maxrestarts; /**< maximal number of restarts (-1: unlimited) */
+   SCIP_Real             presol_clqtablefac; /**< limit on number of entries in clique table relative to number of problem nonzeros */
    SCIP_Real             presol_restartfac;  /**< fraction of integer variables that were fixed in the root node
                                               *   triggering a restart with preprocessing after root node evaluation */
    SCIP_Real             presol_immrestartfac;/**< fraction of integer variables that were fixed in the root node triggering an
@@ -433,6 +444,13 @@ struct SCIP_Set
                                               *   in case they are not present in the LP anymore? */
    SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
                                               *   in case they are not present in the LP anymore? */
+
+   /* Decomposition settings */
+   SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
+                                                *   decomposition */
+   SCIP_Bool             decomp_applybenders;  /**< if a decomposition exists, should Benders' decomposition be applied*/
+   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation, or -1 for no limit */
+
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
    SCIP_Bool             benders_cutlpsol;   /**< should cuts be generated from the solution to the LP relaxation? */

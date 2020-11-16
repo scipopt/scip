@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -43,7 +43,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -54,7 +54,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
  */
 
 /** computes a minimal set of covering variables */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  coversize,          /**< size of the computed cover */
@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPcomputeCoverUndercover(
    SCIP_Bool*            success             /**< feasible cover found? */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

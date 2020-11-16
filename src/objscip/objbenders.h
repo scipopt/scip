@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -267,7 +267,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyBenders is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjBenders*     objbenders,         /**< Benders' decomposition object */
@@ -275,14 +275,14 @@ SCIP_RETCODE SCIPincludeObjBenders(
    );
 
 /** returns the benders object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjBenders* SCIPfindObjBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of Benders' decomposition */
    );
 
 /** returns the benders object for the given constraint handler */
-EXTERN
+SCIP_EXPORT
 scip::ObjBenders* SCIPgetObjBenders(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERS*         benders             /**< Benders' decomposition */

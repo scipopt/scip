@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,30 +36,24 @@ extern "C" {
 #endif
 
 /** creates the epsilon greedy bandit algorithm includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeBanditvtableEpsgreedy(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** callback to free bandit specific data structures */
-extern
 SCIP_DECL_BANDITFREE(SCIPbanditFreeEpsgreedy);
 
 /** selection callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy);
 
 /** update callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITUPDATE(SCIPbanditUpdateEpsgreedy);
 
 /** reset callback for bandit algorithm */
-extern
 SCIP_DECL_BANDITRESET(SCIPbanditResetEpsgreedy);
 
 
 /** internal method to create and reset epsilon greedy bandit algorithm */
-extern
 SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */

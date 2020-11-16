@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -59,8 +59,19 @@ enum SCIP_BendersSubStatus
 };
 typedef enum SCIP_BendersSubStatus SCIP_BENDERSSUBSTATUS;
 
+enum SCIP_BendersSubType
+{
+   SCIP_BENDERSSUBTYPE_CONVEXCONT      = 0,  /**< the subproblem has convex constraints and continuous variables */
+   SCIP_BENDERSSUBTYPE_CONVEXDIS       = 1,  /**< the subproblem has convex constraints and discrete variables */
+   SCIP_BENDERSSUBTYPE_NONCONVEXCONT   = 2,  /**< the subproblem has non-convex constraints and continuous variables */
+   SCIP_BENDERSSUBTYPE_NONCONVEXDIS    = 3,  /**< the subproblem has non-convex constraints and discrete variables */
+   SCIP_BENDERSSUBTYPE_UNKNOWN         = 4,  /**< the default type before the type is known */
+};
+typedef enum SCIP_BendersSubType SCIP_BENDERSSUBTYPE;
+
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
+typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solving statistics of the subproblems */
 
 
 /** copy method for Benders' decomposition plugins (called when SCIP copies plugins). If there is an active Benders'
@@ -70,8 +81,9 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition itself
+ *  - threadsafe      : must the Benders' decomposition copy be thread safe
  */
-#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
+#define SCIP_DECL_BENDERSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool threadsafe)
 
 /** destructor of Benders' decomposition to free user data (called when SCIP is exiting)
  *
@@ -152,7 +164,9 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  created within a reader or probdata and then registered with the Benders' decomposition core during the call of this
  *  callback. If there are any settings required for solving the subproblems, then they should be set here. However,
  *  some settings will be overridden by the standard solving method included in the Benders' decomposition framework.
- *  If a special solving method is desired, the user can implement the bendersSolvesubXyz callback.
+ *  If a special solving method is desired, the user can implement the bendersSolvesubXyz callback. In this latter case,
+ *  it is possible to provide a NULL pointer to SCIPaddBendersSubproblem. This will ensure that no internal solving
+ *  methods available within the Benders' decomposition core are invoked during the solving process.
  *
  *  If the user defines a subproblem solving method, then in BENDERSCREATESUB, the user must specify whether the
  *  subproblem is convex. This is necessary because the dual solutions from convex problems can be used to generate cuts.
@@ -178,6 +192,8 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
  *  - type            : the enforcement type that called the Benders' decomposition solve.
  *  - checkint        : should the integer subproblems be checked.
+ *  - infeasible      : flag to return whether the master problem in infeasible with respect to the added cuts
+ *  - auxviol         : set to TRUE only if the solution is feasible but the aux vars are violated
  *  - skipsolve       : flag to return whether the current subproblem solving loop should be skipped
  *  - result          : a result to be returned to the Benders' constraint handler if the solve is skipped. If the
  *                      solve is not skipped, then the returned result is ignored.
@@ -190,7 +206,8 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders
  *  - SCIP_INFEASIBLE : infeasibility of the solution is reported to SCIP. No other decompositions will be checked.
  */
 #define SCIP_DECL_BENDERSPRESUBSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol,\
-   SCIP_BENDERSENFOTYPE type, SCIP_Bool checkint, SCIP_Bool* skipsolve,  SCIP_RESULT* result)
+   SCIP_BENDERSENFOTYPE type, SCIP_Bool checkint, SCIP_Bool* infeasible, SCIP_Bool* auxviol, SCIP_Bool* skipsolve,\
+   SCIP_RESULT* result)
 
 /** the solving method for a convex Benders' decomposition subproblem. This call back is provided to solve problems
  *  for which the dual soluitons are used to generate Benders' decomposition cuts. In the classical Benders'

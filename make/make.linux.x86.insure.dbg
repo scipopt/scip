@@ -1,6 +1,6 @@
 CC		=	insure gcc
 CXX		=	insure g++
-FLAGS		+=	-DROUNDING_FE
+FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

@@ -3,20 +3,20 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_sparsify.h
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint
@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /** creates the sparsify presolver and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP*                 scip                /**< SCIP data structure */
    );

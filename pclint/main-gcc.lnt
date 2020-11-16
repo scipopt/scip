@@ -1,0 +1,26 @@
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//*                                                                           */
+//*                  This file is part of the program and library             */
+//*         SCIP --- Solving Constraint Integer Programs                      */
+//*                                                                           */
+//*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+//*                            fuer Informationstechnik Berlin                */
+//*                                                                           */
+//*  SCIP is distributed under the terms of the ZIB Academic License.         */
+//*                                                                           */
+//*  You should have received a copy of the ZIB Academic License              */
+//*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+//*                                                                           */
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+pclint/co-gcc.lnt
+
+pclint/scip.lnt
+
+// =========================================================
+// enable preprocessor warnings:
++ppw(warning)
+
+// Generally useful suppressions:
+-e686         // suppress warnings when using -wlib(0)
+-wlib(0)      // turn off all warnings/errors from libraries

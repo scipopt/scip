@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -47,13 +47,20 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
 {
    /* no output nor warnings */
    /* @todo reset output to previous level! */
-   SCIP_CALL( SCIPsetParam(scip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 0) );
 
-   /* needs one node selector to call SCIPtransformProb, which is also
-    * called by SCIP(pre)solve */
-   SCIP_CALL( SCIPincludeNodeselDfs(scip) );
-   /* we need to include integral conshdlr to supress a warning */
-   SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+   /* make sure that at least DFS is included; we need one node selector to call SCIPtransformProb, which is also called
+    * by SCIP(pre)solve */
+   if ( SCIPfindNodesel(scip, "dfs") == NULL )
+   {
+      SCIP_CALL( SCIPincludeNodeselDfs(scip) );
+   }
+
+   /* make sure that we have included the integral conshdlr to supress a warning */
+   if ( SCIPfindConshdlr(scip, "integral") == NULL )
+   {
+      SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+   }
 
    switch( stage )
    {

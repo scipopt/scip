@@ -1,4 +1,4 @@
-FLAGS		+=	-DROUNDING_FE
+FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-fullwarn -g
 CFLAGS		+=	
 CXXFLAGS	+=	

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,117 +41,117 @@ extern "C" {
 
 
 /** compares two relaxation handlers w. r. to their priority */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPrelaxComp);
 
 /** comparison method for sorting relaxators w.r.t. to their name */
-EXTERN
+SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPrelaxCompName);
 
 /** gets user data of relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_RELAXDATA* SCIPrelaxGetData(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** sets user data of relaxation handler; user has to free old data in advance! */
-EXTERN
+SCIP_EXPORT
 void SCIPrelaxSetData(
    SCIP_RELAX*           relax,              /**< relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< new relaxation handler user data */
    );
 
 /** gets name of relaxation handler */
-EXTERN
+SCIP_EXPORT
 const char* SCIPrelaxGetName(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets description of relaxation handler */
-EXTERN
+SCIP_EXPORT
 const char* SCIPrelaxGetDesc(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets priority of relaxation handler */
-EXTERN
+SCIP_EXPORT
 int SCIPrelaxGetPriority(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets frequency of relaxation handler */
-EXTERN
+SCIP_EXPORT
 int SCIPrelaxGetFreq(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets time in seconds used in this relaxator for setting up for next stages */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPrelaxGetSetupTime(
    SCIP_RELAX*           relax               /**< relaxator */
    );
 
 /** gets time in seconds used in this relaxation handler */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler was called */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNCalls(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler cut off a node */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNCutoffs(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler improved a node's lower bound */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNImprovedLowerbound(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the time in seconds spent for the execution of the relaxation handler when a node's lower bound could be improved (or a cutoff was found) */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPrelaxGetImprovedLowerboundTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler added constraints */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNAddedConss(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler reduced variable domains */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNReducedDomains(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** gets the total number of times the relaxation handler separated cutting planes */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPrelaxGetNSeparatedCuts(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** is relaxation handler initialized? */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPrelaxIsInitialized(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
 /** marks the current relaxation unsolved, s.t. the relaxation handler is called again in the next solving round */
-EXTERN
+SCIP_EXPORT
 void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

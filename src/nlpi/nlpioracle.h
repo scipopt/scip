@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,46 +36,46 @@ extern "C" {
 typedef struct SCIP_NlpiOracle SCIP_NLPIORACLE; /**< NLPI oracle data structure */
 
 /** creates an NLPIORACLE data structure */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NLPIORACLE**     oracle              /**< pointer to store NLPIORACLE data structure */
    );
 
 /** frees an NLPIORACLE data structure */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleFree(
    SCIP_NLPIORACLE**     oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** sets the value for infinity */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleSetInfinity(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real             infinity            /**< value to use for infinity */
    );
 
 /** gets the value for infinity */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPnlpiOracleGetInfinity(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** sets the problem name (used for printing) */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleSetProblemName(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const char*           name                /**< name of problem */
    );
 
 /** gets the problem name, or NULL if none set */
-extern
+SCIP_EXPORT
 const char* SCIPnlpiOracleGetProblemName(
    SCIP_NLPIORACLE*     oracle               /**< pointer to NLPIORACLE data structure */
    );
 
 /** adds variables */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleAddVars(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nvars,              /**< number of variables to add */
@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
  *  linear coefficients: row(=constraint) oriented matrix;
  *  quadratic coefficients: row oriented matrix for each constraint
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nconss,             /**< number of constraints to add */
@@ -112,7 +112,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
  * 
  *  May change sparsity pattern.
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleSetObjective(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real       constant,           /**< constant part of objective */
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    );
 
 /** change variable bounds */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nvars,              /**< number of variables to change bounds */
@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    );
 
 /** change constraint sides */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nconss,             /**< number of constraints to change sides */
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
    );
 
 /** deletes a set of variables */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int*                  delstats            /**< array with deletion status of vars in input (1 if var should be deleted, 0 if not); 
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    );
 
 /** deletes a set of constraints */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int*                  delstats            /**< array with deletion status of rows in input (1 if row should be deleted, 0 if not); 
@@ -162,7 +162,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    );
 
 /** changes (or adds) linear coefficients in one constraint or objective */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where linear coefficients should be changed, or -1 for objective */
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    );
 
 /** changes (or adds) coefficients in the quadratic part of one constraint or objective */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
@@ -181,7 +181,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    );
 
 /** replaces expression tree of one constraint or objective */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgExprtree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where expression tree should be changed, or -1 for objective */
@@ -191,7 +191,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExprtree(
 
 /** changes one parameter of expression tree of one constraint or objective
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgExprParam(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where parameter should be changed in expression tree, or -1 for objective */
@@ -201,38 +201,38 @@ SCIP_RETCODE SCIPnlpiOracleChgExprParam(
 
 /** changes the constant value in the objective function
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgObjConstant(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real             objconstant         /**< new value for objective constant */
    );
 
 /** gives the current number of variables */
-extern
+SCIP_EXPORT
 int SCIPnlpiOracleGetNVars(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** gives the current number of constraints */
-extern
+SCIP_EXPORT
 int SCIPnlpiOracleGetNConstraints(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** gives the variables lower bounds */
-extern
+SCIP_EXPORT
 const SCIP_Real* SCIPnlpiOracleGetVarLbs(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** gives the variables upper bounds */
-extern
+SCIP_EXPORT
 const SCIP_Real* SCIPnlpiOracleGetVarUbs(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** gives the variables names, or NULL if not set */
-extern
+SCIP_EXPORT
 char** SCIPnlpiOracleGetVarNames(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
@@ -240,7 +240,7 @@ char** SCIPnlpiOracleGetVarNames(
 /** Gives maximum degree of a variable w.r.t. objective and all constraints.
  *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
  */ 
-extern
+SCIP_EXPORT
 int SCIPnlpiOracleGetVarDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   varidx              /**< the variable for which the degree is returned */
@@ -249,27 +249,27 @@ int SCIPnlpiOracleGetVarDegree(
 /** Gives maximum degree of all variables w.r.t. objective and all constraints.
  *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
  */ 
-extern
+SCIP_EXPORT
 int* SCIPnlpiOracleGetVarDegrees(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** gives left-hand side of a constraint */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPnlpiOracleGetConstraintLhs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< constraint index */
    );
 
 /** gives right-hand side of a constraint */
-extern
+SCIP_EXPORT
 SCIP_Real SCIPnlpiOracleGetConstraintRhs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< constraint index */
    );
 
 /** gives name of a constraint, may be NULL */
-extern
+SCIP_EXPORT
 char* SCIPnlpiOracleGetConstraintName(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< constraint index */
@@ -278,7 +278,7 @@ char* SCIPnlpiOracleGetConstraintName(
 /** gives maximum degree of a constraint or objective
  *  The degree is the maximal degree of all summands,, and is infinity for nonpolynomial terms.
  */ 
-extern
+SCIP_EXPORT
 int SCIPnlpiOracleGetConstraintDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
@@ -290,19 +290,19 @@ int SCIPnlpiOracleGetConstraintDegree(
  * If it returns 2, then its a QP, QCP, or QCQP.
  * And if it returns > 2, then it is an NLP.
  */
-extern
+SCIP_EXPORT
 int SCIPnlpiOracleGetMaxDegree(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** Gives the evaluation capabilities that are shared among all expression trees in the problem. */
-extern
+SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** evaluates the objective function in a given point */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -310,7 +310,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    );
 
 /** evaluates one constraint function in a given point */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint to evaluate */
@@ -319,7 +319,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    );
 
 /** evaluates all constraint functions in a given point */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -330,7 +330,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
  *
  * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -343,7 +343,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
  *
  * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int             considx,            /**< index of constraint to compute gradient for */
@@ -358,7 +358,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
  *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
  *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary. 
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
@@ -373,7 +373,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
  *
  *  @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -388,7 +388,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
  *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  *  Only elements of the lower left triangle and the diagonal are counted.
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
@@ -404,7 +404,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
  *
  * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -415,7 +415,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    );
 
 /** prints the problem to a file. */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -427,7 +427,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
  * This is to make it easier to identify variables solution output in the listing file.
  * Names with more than 64 characters are shorten to 64 letters due to GAMS limits.
  */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */

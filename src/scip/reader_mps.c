@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_mps.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
@@ -283,19 +284,6 @@ const char* mpsinputField5(
 
    return mpsi->f5;
 }
-
-#if 0
-/** returns the problem name */
-static
-const char* mpsinputProbname(
-   const MPSINPUT*       mpsi                /**< mps input structure */
-   )
-{
-   assert(mpsi != NULL);
-
-   return mpsi->probname;
-}
-#endif
 
 /** returns the objective name */
 static
@@ -965,10 +953,13 @@ SCIP_RETCODE readCols(
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
+   SCIP_Bool     usevartable;
 
    SCIPdebugMsg(scip, "read columns\n");
 
    var = NULL;
+   SCIP_CALL( SCIPgetBoolParam(scip, "misc/usevartable", &usevartable) );
+
    while( mpsinputReadLine(mpsi) )
    {
       if( mpsinputField0(mpsi) != 0 )
@@ -1001,7 +992,16 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-	 (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+         (void)SCIPmemccpy(colname, mpsinputField1(mpsi), '\0', MPS_MAX_NAMELEN - 1);
+
+         /* check whether we have seen this variable before, this would not allowed */
+         if( usevartable && SCIPfindVar(scip, colname) != NULL )
+         {
+            SCIPerrorMessage("Coeffients of column <%s> don't appear consecutively (line: %d)\n",
+               colname, mpsi->lineno);
+
+            return SCIP_READERROR;
+         }
 
          /* if the file type is a cor file, the the variable name must be stored */
          SCIP_CALL( addVarNameToStorage(scip, varnames, varnamessize, nvarnames, colname) );
@@ -1034,6 +1034,12 @@ SCIP_RETCODE readCols(
             mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPisZero(scip, val) )
          {
+            /* warn the user in case the coefficient is infinite */
+            if( SCIPisInfinity(scip, REALABS(val)) )
+            {
+               SCIPwarningMessage(scip, "Coefficient of variable <%s> in constraint <%s> contains infinite value <%e>,"
+                  " consider adjusting SCIP infinity.\n", SCIPvarGetName(var), SCIPconsGetName(cons), val);
+            }
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
@@ -1123,7 +1129,7 @@ SCIP_RETCODE readRhs(
          if( cons == NULL )
          {
             /* the rhs of the objective row is treated as objective constant */
-            if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+            if( strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) == 0 )
             {
                val = atof(mpsinputField3(mpsi));
                SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
@@ -1166,9 +1172,9 @@ SCIP_RETCODE readRhs(
             if( cons == NULL )
             {
                /* the rhs of the objective row is treated as objective constant */
-               if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+               if( strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) == 0 )
                {
-                  val = atof(mpsinputField3(mpsi));
+                  val = atof(mpsinputField5(mpsi));
                   SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
                }
                else
@@ -1514,8 +1520,7 @@ SCIP_RETCODE readBounds(
           */
          if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
          {
-            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER
-               && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY);
+            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY); /*lint !e506*/
             /* relaxing variable type */
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
          }
@@ -1881,6 +1886,7 @@ SCIP_RETCODE readSOS(
             case 2: 
                SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) );
                break;
+            /* coverity[dead_error_begin] */
             default: 
                SCIPerrorMessage("unknown SOS type: <%d>\n", type); /* should not happen */
                SCIPABORT();
@@ -2515,7 +2521,7 @@ SCIP_RETCODE readIndicators(
       SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
 
       /* correct linear constraint and create new name */
-      if ( ! SCIPisInfinity(scip, -lhs) )
+      if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
       {
          /* we have added lhs above and only need the rhs */
          SCIP_CALL( SCIPchgLhsLinear(scip, lincons, -SCIPinfinity(scip) ) );
@@ -3342,7 +3348,8 @@ void printRhsSection(
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Real*            rhss,               /**< right hand side array */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   SCIP_Real             objoffset           /**< objective offset */
    )
 {
    int recordcnt = 0;
@@ -3363,6 +3370,12 @@ void printRhsSection(
       assert(consnames[c] != NULL);
 
       printEntry(scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen);
+   }
+
+   if( ! SCIPisZero(scip, objoffset) )
+   {
+      /* write objective offset (-1 because it is moved to the rhs) */
+      printEntry(scip, file, "RHS", "Obj", -objoffset, &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -4038,8 +4051,6 @@ SCIP_RETCODE SCIPwriteMps(
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
 
    /* print NAME of the problem */
    SCIPinfoMessage(scip, file, "%-14s%s\n", "NAME", name);
@@ -4072,7 +4083,7 @@ SCIP_RETCODE SCIPwriteMps(
       {
          assert( matrix->nentries < matrix->sentries );
 
-         matrix->values[matrix->nentries] = value;
+         matrix->values[matrix->nentries] = objscale * value;
          matrix->columns[matrix->nentries] = var;
          matrix->rows[matrix->nentries] = "Obj";
          matrix->nentries++;
@@ -4423,6 +4434,7 @@ SCIP_RETCODE SCIPwriteMps(
                rowvals[1] = -1.0;
 
                /* compute maximal length for rowname */
+               /* coverity[negative_returns] */
                n = (int) log10((double)nrowvars) + 1 + l;
 
                /* assure maximal allowed value */
@@ -4668,7 +4680,7 @@ SCIP_RETCODE SCIPwriteMps(
    printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
 
    /* output RHS section */
-   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen);
+   printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);
 
    /* output RANGES section */
    if( needRANGES )

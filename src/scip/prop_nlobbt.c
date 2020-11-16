@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_nlobbt.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  nlobbt propagator
  * @author Benjamin Mueller
  */
@@ -72,13 +73,10 @@
  * Data structures
  */
 
-/** status of bound candidates */
-enum BoundStatus
-{
-   UNSOLVED = 1,                             /**< did not solve LB or UB problem */
-   SOLVEDLB = 2,                             /**< solved LB problem */
-   SOLVEDUB = 4                              /**< solved UB problem */
-};
+/* status of bound candidates */
+#define UNSOLVED                      1      /**< did not solve LB or UB problem */
+#define SOLVEDLB                      2      /**< solved LB problem */
+#define SOLVEDUB                      4      /**< solved UB problem */
 
 /** propagator data */
 struct SCIP_PropData
@@ -89,8 +87,7 @@ struct SCIP_PropData
    SCIP_VAR**            nlpivars;           /**< array containing all variables of the nlpi */
    int                   nlpinvars;          /**< total number of nlpi variables */
    SCIP_Real*            nlscore;            /**< score for each nonlinear variable */
-   int*                  status;             /**< array containing a bound status for each candidate (type int* is
-                                              *   necessary to use sort functions) */
+   int*                  status;             /**< array containing a bound status for each candidate */
    SCIP_PROP*            genvboundprop;      /**< genvbound propagator */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             skipprop;           /**< should the propagator be skipped? */
@@ -518,7 +515,7 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
       SCIP_CALL( SCIPcreateNlpiProb(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            propdata->nlpiprob, propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+            propdata->nlpiprob, propdata->var2nlpiidx, NULL, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* initialize bound status; perturb nlscores by a factor which ensures that zero scores remain zero */
       assert(propdata->randnumgen != NULL);

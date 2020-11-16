@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -36,7 +36,12 @@
 #include "scip/type_branch.h"
 #include "scip/pub_event.h"
 
+/* In optimized mode, some function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms. For this, we need to include struct_event.h.
+ */
+#ifdef NDEBUG
 #include "scip/struct_event.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,14 +52,12 @@ extern "C" {
  */
 
 /** copies the given event handler to a new scip */
-extern
 SCIP_RETCODE SCIPeventhdlrCopyInclude(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** creates an event handler */
-extern
 SCIP_RETCODE SCIPeventhdlrCreate(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -72,42 +75,36 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    );
 
 /** calls destructor and frees memory of event handler */
-extern
 SCIP_RETCODE SCIPeventhdlrFree(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** initializes event handler */
-extern
 SCIP_RETCODE SCIPeventhdlrInit(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler for this event */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls exit method of event handler */
-extern
 SCIP_RETCODE SCIPeventhdlrExit(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler for this event */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs event handler that the branch and bound process is being started */
-extern
 SCIP_RETCODE SCIPeventhdlrInitsol(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs event handler that the branch and bound process data is being freed */
-extern
 SCIP_RETCODE SCIPeventhdlrExitsol(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls execution method of event handler */
-extern
 SCIP_RETCODE SCIPeventhdlrExec(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -119,56 +116,48 @@ SCIP_RETCODE SCIPeventhdlrExec(
  * callback setter methods of event handlers
  */
 /** sets copy callback for all events of this event handler */
-extern
 void SCIPeventhdlrSetCopy(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTCOPY   ((*eventcopy))      /**< copy callback for events */
    );
 
 /** sets destructor callback of this event handler */
-extern
 void SCIPeventhdlrSetFree(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTFREE   ((*eventfree))      /**< destructor callback of event handler */
    );
 
 /** sets initialization callback of this event handler */
-extern
 void SCIPeventhdlrSetInit(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit))      /**< initialization callback of event handler */
    );
 
 /** sets deinitialization callback of this event handler */
-extern
 void SCIPeventhdlrSetExit(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit))      /**< deinitialization callback of event handler */
    );
 
 /** sets solving process initialization callback of this event handler */
-extern
 void SCIPeventhdlrSetInitsol(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTINITSOL((*eventinitsol))   /**< solving process initialization callback of event handler */
    );
 
 /** sets solving process deinitialization callback of this event handler */
-extern
 void SCIPeventhdlrSetExitsol(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTEXITSOL((*eventexitsol))   /**< solving process deinitialization callback of event handler */
    );
 
 /** sets callback to free specific event data */
-extern
 void SCIPeventhdlrSetDelete(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_DECL_EVENTDELETE ((*eventdelete))    /**< callback to free specific event data */
    );
 
 /** enables or disables all clocks of \p eventhdlr, depending on the value of the flag */
-extern
 void SCIPeventhdlrEnableOrDisableClocks(
    SCIP_EVENTHDLR*       eventhdlr,          /**< the event handler for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the event handler be enabled? */
@@ -179,14 +168,12 @@ void SCIPeventhdlrEnableOrDisableClocks(
  */
 
 /** creates a synchronization event */
-extern
 SCIP_RETCODE SCIPeventCreateSync(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates an event for an addition of a variable to the problem */
-extern
 SCIP_RETCODE SCIPeventCreateVarAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -194,7 +181,6 @@ SCIP_RETCODE SCIPeventCreateVarAdded(
    );
 
 /** creates an event for a deletion of a variable from the problem */
-extern
 SCIP_RETCODE SCIPeventCreateVarDeleted(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -202,7 +188,6 @@ SCIP_RETCODE SCIPeventCreateVarDeleted(
    );
 
 /** creates an event for a fixing of a variable */
-extern
 SCIP_RETCODE SCIPeventCreateVarFixed(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -210,7 +195,6 @@ SCIP_RETCODE SCIPeventCreateVarFixed(
    );
 
 /** creates an event for a change in the number of locks of a variable down to zero or one */
-extern
 SCIP_RETCODE SCIPeventCreateVarUnlocked(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -218,7 +202,6 @@ SCIP_RETCODE SCIPeventCreateVarUnlocked(
    );
 
 /** creates an event for a change in the objective value of a variable */
-extern
 SCIP_RETCODE SCIPeventCreateObjChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -228,7 +211,6 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    );
 
 /** creates an event for a change in the global lower bound of a variable */
-extern
 SCIP_RETCODE SCIPeventCreateGlbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -238,7 +220,6 @@ SCIP_RETCODE SCIPeventCreateGlbChanged(
    );
 
 /** creates an event for a change in the global upper bound of a variable */
-extern
 SCIP_RETCODE SCIPeventCreateGubChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -248,7 +229,6 @@ SCIP_RETCODE SCIPeventCreateGubChanged(
    );
 
 /** creates an event for a change in the lower bound of a variable */
-extern
 SCIP_RETCODE SCIPeventCreateLbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -258,7 +238,6 @@ SCIP_RETCODE SCIPeventCreateLbChanged(
    );
 
 /** creates an event for a change in the upper bound of a variable */
-extern
 SCIP_RETCODE SCIPeventCreateUbChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -304,15 +283,22 @@ SCIP_RETCODE SCIPeventCreateLholeRemoved(
    );
 
 /** creates an event for an addition to the variable's implications list, clique or variable bounds information */
-extern
 SCIP_RETCODE SCIPeventCreateImplAdded(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var                 /**< variable that was fixed */
    );
 
+/** creates an event for a changeing the type of a variable */
+SCIP_RETCODE SCIPeventCreateTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VARTYPE          oldtype,            /**< old variable type */
+   SCIP_VARTYPE          newtype             /**< new variable type */
+   );
+
 /** creates an event for the addition of a linear row to the separation storage */
-extern
 SCIP_RETCODE SCIPeventCreateRowAddedSepa(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -320,7 +306,6 @@ SCIP_RETCODE SCIPeventCreateRowAddedSepa(
    );
 
 /** creates an event for the deletion of a linear row from the separation storage */
-extern
 SCIP_RETCODE SCIPeventCreateRowDeletedSepa(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -328,7 +313,6 @@ SCIP_RETCODE SCIPeventCreateRowDeletedSepa(
    );
 
 /** creates an event for the addition of a linear row to the LP */
-extern
 SCIP_RETCODE SCIPeventCreateRowAddedLP(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -336,7 +320,6 @@ SCIP_RETCODE SCIPeventCreateRowAddedLP(
    );
 
 /** creates an event for the deletion of a linear row from the LP */
-extern
 SCIP_RETCODE SCIPeventCreateRowDeletedLP(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -344,7 +327,6 @@ SCIP_RETCODE SCIPeventCreateRowDeletedLP(
    );
 
 /** creates an event for the change of a coefficient in a linear row */
-extern
 SCIP_RETCODE SCIPeventCreateRowCoefChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -355,7 +337,6 @@ SCIP_RETCODE SCIPeventCreateRowCoefChanged(
    );
 
 /** creates an event for the change of a constant in a linear row */
-extern
 SCIP_RETCODE SCIPeventCreateRowConstChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -365,7 +346,6 @@ SCIP_RETCODE SCIPeventCreateRowConstChanged(
    );
 
 /** creates an event for the change of a side of a linear row */
-extern
 SCIP_RETCODE SCIPeventCreateRowSideChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -376,42 +356,36 @@ SCIP_RETCODE SCIPeventCreateRowSideChanged(
    );
 
 /** frees an event */
-extern
 SCIP_RETCODE SCIPeventFree(
    SCIP_EVENT**          event,              /**< event to free */
    BMS_BLKMEM*           blkmem              /**< block memory buffer */
    );
 
 /** sets type of event */
-extern
 SCIP_RETCODE SCIPeventChgType(
    SCIP_EVENT*           event,              /**< event */
    SCIP_EVENTTYPE        eventtype           /**< new event type */
    );
 
 /** sets variable for a variable event */
-extern
 SCIP_RETCODE SCIPeventChgVar(
    SCIP_EVENT*           event,              /**< event */
    SCIP_VAR*             var                 /**< new variable */
    );
 
 /** sets node for a node or LP event */
-extern
 SCIP_RETCODE SCIPeventChgNode(
    SCIP_EVENT*           event,              /**< event */
    SCIP_NODE*            node                /**< new node */
    );
 
 /** sets solution for a primal solution event */
-extern
 SCIP_RETCODE SCIPeventChgSol(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SOL*             sol                 /**< new primal solution */
    );
 
 /** processes event by calling the appropriate event handlers */
-extern
 SCIP_RETCODE SCIPeventProcess(
    SCIP_EVENT*           event,              /**< event */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -428,14 +402,12 @@ SCIP_RETCODE SCIPeventProcess(
  */
 
 /** creates an event filter */
-extern
 SCIP_RETCODE SCIPeventfilterCreate(
    SCIP_EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    BMS_BLKMEM*           blkmem              /**< block memory buffer */
    );
 
 /** frees an event filter and the associated event data entries */
-extern
 SCIP_RETCODE SCIPeventfilterFree(
    SCIP_EVENTFILTER**    eventfilter,        /**< pointer to store the event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -443,7 +415,6 @@ SCIP_RETCODE SCIPeventfilterFree(
    );
 
 /** adds element to event filter */
-extern
 SCIP_RETCODE SCIPeventfilterAdd(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -455,7 +426,6 @@ SCIP_RETCODE SCIPeventfilterAdd(
    );
 
 /** deletes element from event filter */
-extern
 SCIP_RETCODE SCIPeventfilterDel(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -467,7 +437,6 @@ SCIP_RETCODE SCIPeventfilterDel(
    );
 
 /** processes the event with all event handlers with matching filter setting */
-extern
 SCIP_RETCODE SCIPeventfilterProcess(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -481,19 +450,16 @@ SCIP_RETCODE SCIPeventfilterProcess(
  */
 
 /** creates an event queue */
-extern
 SCIP_RETCODE SCIPeventqueueCreate(
    SCIP_EVENTQUEUE**     eventqueue          /**< pointer to store the event queue */
    );
 
 /** frees event queue; there must not be any unprocessed events in the queue! */
-extern
 SCIP_RETCODE SCIPeventqueueFree(
    SCIP_EVENTQUEUE**     eventqueue          /**< pointer to the event queue */
    );
 
 /** processes event or adds event to the event queue */
-extern
 SCIP_RETCODE SCIPeventqueueAdd(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -506,13 +472,11 @@ SCIP_RETCODE SCIPeventqueueAdd(
    );
 
 /** marks queue to delay incoming events until a call to SCIPeventqueueProcess() */
-extern
 SCIP_RETCODE SCIPeventqueueDelay(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** processes all events in the queue */
-extern
 SCIP_RETCODE SCIPeventqueueProcess(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -524,7 +488,6 @@ SCIP_RETCODE SCIPeventqueueProcess(
    );
 
 /** returns TRUE iff events of the queue are delayed until the next SCIPeventqueueProcess() call */
-extern
 SCIP_Bool SCIPeventqueueIsDelayed(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );

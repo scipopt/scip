@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_twoopt.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic to improve incumbent solution by flipping pairs of variables
  * @author Timo Berthold
  * @author Gregor Hendel
@@ -44,7 +45,7 @@
 
 #define HEUR_NAME             "twoopt"
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
-#define HEUR_DISPCHAR         'B'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_ITERATIVE
 #define HEUR_PRIORITY         -20100
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -54,13 +55,13 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 /* default parameter values */
-#define DEFAULT_INTOPT                FALSE /**< optional integer optimization is applied by default */
-#define DEFAULT_WAITINGNODES              0 /**< default number of nodes to wait after current best solution before calling heuristic */
-#define DEFAULT_MATCHINGRATE            0.5 /**< default percentage by which two variables have to match in their LP-row set to be
-                                             *   associated as pair by heuristic */
-#define DEFAULT_MAXNSLAVES              199 /**< default number of slave candidates for a master variable */
-#define DEFAULT_ARRAYSIZE                10 /**< the default array size for temporary arrays */
-#define DEFAULT_RANDSEED                 37 /**< initial random seed */
+#define DEFAULT_INTOPT                FALSE  /**< optional integer optimization is applied by default */
+#define DEFAULT_WAITINGNODES              0  /**< default number of nodes to wait after current best solution before calling heuristic */
+#define DEFAULT_MATCHINGRATE            0.5  /**< default percentage by which two variables have to match in their LP-row set to be
+                                              *   associated as pair by heuristic */
+#define DEFAULT_MAXNSLAVES              199  /**< default number of slave candidates for a master variable */
+#define DEFAULT_ARRAYSIZE                10  /**< the default array size for temporary arrays */
+#define DEFAULT_RANDSEED                 37  /**< initial random seed */
 
 /*
  * Data structures

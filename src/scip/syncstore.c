@@ -3,20 +3,20 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   syncstore.c
  * @ingroup PARALLEL
  * @brief  the function definitions of the synchronization store
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stephen J. Maher
  */
 
@@ -47,6 +47,7 @@ int getNSyncdata(
    )
 {
    int maxnsyncdelay;
+
    SCIP_CALL_ABORT( SCIPgetIntParam(scip, "concurrent/sync/maxnsyncdelay", &maxnsyncdelay) );
 
    return 2 * (maxnsyncdelay + 1);
@@ -179,8 +180,8 @@ SCIP_RETCODE SCIPsyncstoreInit(
       /* in deterministic mode use the number of non-zeros and the number of variables to get a good
        * syncdelay and maximum syncfreq
        */
-      syncstore->minsyncdelay *= 0.01 * (SCIPgetNNZs(scip) * SCIPgetNVars(scip));
-      syncstore->syncfreqmax *= 0.01 * (SCIPgetNNZs(scip) * SCIPgetNVars(scip));
+      syncstore->minsyncdelay *= 0.01 * (SCIPgetNNZs(scip) * SCIPgetNVars(scip)); /*lint !e790*/
+      syncstore->syncfreqmax *= 0.01 * (SCIPgetNNZs(scip) * SCIPgetNVars(scip));  /*lint !e790*/
    }
 
    return SCIP_OKAY;
@@ -334,7 +335,7 @@ SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
    assert(syncstore != NULL);
    assert(syncstore->initialized);
 
-   j = syncnum % syncstore->nsyncdata;
+   j = (int) syncnum % syncstore->nsyncdata;
 
    /* check if requested syncnumber still exists if in debug mode */
    assert(syncstore->syncdata[j].syncnum == syncnum);
@@ -440,7 +441,7 @@ SCIP_RETCODE SCIPsyncstoreStartSync(
       return SCIP_OKAY;
    }
 
-   i = syncnum % syncstore->nsyncdata;
+   i = syncnum % syncstore->nsyncdata; /*lint !e712*/
    *syncdata = &syncstore->syncdata[i];
    assert(*syncdata != NULL);
 
@@ -545,7 +546,6 @@ int SCIPsyncstoreGetNSolvers(
 
    return syncstore->nsolvers;
 }
-
 
 /** read amount total memory used from synchronization data */
 SCIP_Longint SCIPsyncdataGetMemTotal(
@@ -705,8 +705,8 @@ void SCIPsyncdataGetSolutionBuffer(
                                               *   if the buffer is not NULL */
    )
 {
-   int                  pos;
-   int                  i;
+   int pos;
+   int i;
 
    assert(syncstore != NULL);
    assert(syncstore->initialized);

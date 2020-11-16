@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit_ucb.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for UCB bandit selection
  * @author Gregor Hendel
  */
@@ -345,7 +346,7 @@ SCIP_RETCODE SCIPcreateBanditUcb(
    }
 
    SCIP_CALL( SCIPbanditCreateUcb(SCIPblkmem(scip), SCIPbuffer(scip), vtable, ucb,
-         priorities, alpha, nactions, SCIPinitializeRandomSeed(scip, (int)(initseed % INT_MAX))) );
+         priorities, alpha, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }

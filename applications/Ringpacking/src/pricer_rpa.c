@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -76,11 +76,11 @@
 #define PRICER_DELAY           TRUE          /* only call pricer if all problem variables have non-negative reduced costs */
 
 /* default values of pricing parameters */
-#define DEFAULT_PRICING_NLPTILIM             120.0     /**< time limit for each pricing NLP */
-#define DEFAULT_PRICING_NLPNODELIM           SCIP_LONGINT_MAX /**< node limit for each pricing NLP */
-#define DEFAULT_PRICING_HEURTILIM            60.0      /**< time limit for each heuristic pricing */
+#define DEFAULT_PRICING_NLPTILIM             1e+20     /**< time limit for each pricing NLP */
+#define DEFAULT_PRICING_NLPNODELIM           1000L     /**< node limit for each pricing NLP */
+#define DEFAULT_PRICING_HEURTILIM            1e+20     /**< time limit for each heuristic pricing */
 #define DEFAULT_PRICING_HEURITERLIM          1000      /**< iteration limit for each heuristic pricing */
-#define DEFAULT_PRICING_TOTALTILIM           3600.0    /**< total time limit for all pricing NLPs and heuristic calls */
+#define DEFAULT_PRICING_TOTALTILIM           1e+20     /**< total time limit for all pricing NLPs and heuristic calls */
 
 /**@} */
 

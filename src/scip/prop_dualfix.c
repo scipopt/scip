@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_dualfix.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -41,7 +42,7 @@
 #define PROP_PRIORITY               +8000000 /**< propagation priority */
 #define PROP_FREQ                          0 /**< propagation frequency */
 #define PROP_DELAY                     FALSE /**< should propagation method be delayed, if other propagators found
-                                             *   reductions? */
+                                              *   reductions? */
 #define PROP_PRESOL_PRIORITY        +8000000 /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of propving rounds the propver participates in (-1: no limit) */
 #define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */
@@ -87,8 +88,8 @@ SCIP_RETCODE performDualfix(
       if( SCIPvarIsDeleted(var) )
          continue;
 
-      /* ignore already fixed variables (use feasibility tolerance since this is used in SCIPfixVar() */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      /* ignore already fixed variables */
+      if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          continue;
 
       obj = SCIPvarGetObj(var);
@@ -199,8 +200,11 @@ SCIP_RETCODE performDualfix(
          return SCIP_OKAY;
       }
 
-      assert(fixed || (SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
-            && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
+      /* SCIPfixVar only changes bounds if not already feaseq.
+       * Only if in presolve and not probing, variables will always be fixed.
+       */
+      assert(fixed || (SCIPisFeasEQ(scip, bound, SCIPvarGetLbLocal(var))
+         && SCIPisFeasEQ(scip, bound, SCIPvarGetUbLocal(var))));
       (*nfixedvars)++;
    }
 

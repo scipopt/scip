@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2357,6 +2357,7 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
    return SCIP_OKAY;
 }
 
+/**@} */
 
 
 
@@ -2382,7 +2383,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -3171,7 +3172,6 @@ SCIP_RETCODE SCIPlpiSetBase(
 
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
-extern
 SCIP_RETCODE SCIPlpiGetBasisInd(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
@@ -3301,7 +3301,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3335,7 +3335,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */

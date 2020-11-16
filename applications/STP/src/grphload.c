@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -527,7 +527,7 @@ static int open_file(
    /* reading in the main file? */
    if( main_file )
    {
-      char fillname_gr[MAX_STRING_LEN];
+      char fillname_gr[MAX_PATH_LEN + 3];
 
       (void)sprintf(fillname_gr, "%s.%s",
             curf->filename, "gr");
@@ -541,7 +541,7 @@ static int open_file(
       else
       {
          /* try to open .stp */
-         char fillname_stp[MAX_STRING_LEN];
+         char fillname_stp[MAX_PATH_LEN + 4];
          (void) sprintf(fillname_stp, "%s.%s", curf->filename, "stp");
 
          if ((curf->fp = fopen(fillname_stp, "r")) == NULL)

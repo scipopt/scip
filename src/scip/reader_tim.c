@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_tim.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  TIM file reader - the stage information for a stochastic programming instance in SMPS format
  * @author Stephen J. Maher
  */
@@ -1010,6 +1011,7 @@ int SCIPtimFindStage(
    SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
    int i;
+   int stagenum;
 
    reader = SCIPfindReader(scip, READER_NAME);
 
@@ -1019,13 +1021,23 @@ int SCIPtimFindStage(
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
+   stagenum = -1;
    for( i = 0; i < readerdata->nstages; i++ )
    {
       if( strcmp(readerdata->stagenames[i], stage) == 0 )
-         return i;
+      {
+         stagenum = i;
+         break;
+      }
    }
 
-   return -1;
+   if( stagenum < 0 )
+   {
+      SCIPerrorMessage("Stage <%s> was not found in the TIM file. Check the SMPS files (COR, TIM and STO)\n", stage);
+      SCIPABORT();
+   }
+
+   return stagenum;
 }
 
 /* returns the array of variables for a given stage */

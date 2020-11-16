@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,7 +65,7 @@ static
 void visualizeSolutionMatplotlib(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< solution to plot */
-)
+   )
 {
 #if _POSIX_C_SOURCE < 2
    SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
@@ -127,7 +127,7 @@ static
 void visualizeSolutionGnuplot(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< solution to plot */
-)
+   )
 {
 #if _POSIX_C_SOURCE < 2
    SCIPinfoMessage(scip, NULL, "No POSIX version 2. Try http://distrowatch.com/.");
@@ -185,7 +185,7 @@ static
 SCIP_RETCODE visualizeSolutionAscii(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< solution to plot */
-)
+   )
 {
    SCIP_Real wval;
    SCIP_Real hval;
@@ -310,7 +310,7 @@ SCIP_DECL_EVENTEXEC(eventExecDispsol)
 static
 SCIP_RETCODE includeEventHdlrDispsol(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_EVENTHDLR* eventhdlr = NULL;
 
@@ -331,7 +331,7 @@ static SCIP_RETCODE setupProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             fixwidth,           /**< a given fixed width for the rectangle, or SCIP_INVALID if not fixed */
    SCIP_Real             fixheight           /**< a given fixed height for the rectangle, or SCIP_INVALID if not fixed */
-)
+   )
 {
    char name[SCIP_MAXSTRLEN];
    SCIP_CONS* cons;
@@ -533,16 +533,16 @@ static SCIP_RETCODE setupProblem(
    return SCIP_OKAY;
 }
 
-/* run circle packing example
+/** run circle packing example
  *
- * Sets up SCIP and the SCIP problem, solves the problem, and shows the solution.
+ *  Sets up SCIP and the SCIP problem, solves the problem, and shows the solution.
  */
 static SCIP_RETCODE runPacking(
    SCIP_Real             fixwidth,           /**< a given fixed width for the rectangle, or SCIP_INVALID if not fixed */
    SCIP_Real             fixheight,          /**< a given fixed height for the rectangle, or SCIP_INVALID if not fixed */
    SCIP_Bool             dognuplot,          /**< whether to draw best solution with gnuplot */
    SCIP_Bool             domatplotlib        /**< whether to draw best solution with python/matplotlib */
-)
+   )
 {
    SCIP* scip;
    int i;
@@ -613,10 +613,10 @@ static SCIP_RETCODE runPacking(
 
 /** main method starting SCIP */
 int main(
-   int                        argc,          /**< number of arguments from the shell */
-   char**                     argv           /**< array of shell arguments */
-)  /*lint --e{715}*/
-{
+   int                   argc,               /**< number of arguments from the shell */
+   char**                argv                /**< array of shell arguments */
+   )
+{  /*lint --e{715}*/
    SCIP_RETCODE retcode;
    SCIP_Bool dognuplot = FALSE;
    SCIP_Bool domatplotlib = FALSE;

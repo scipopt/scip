@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,14 +28,23 @@
 #include "objscip/objscip.h"
 #include "GomoryHuTree.h"
 
+/** epsilon value for numerical comparisons */
 #define  EPS  1.0E-10
 
-static GRAPHNODE **active;
-static long *number;
-static long max_dist, bound;
+/* static variables */
+static GRAPHNODE** active;
+static long* number;
+static long max_dist;
+static long bound;
 static SCIP_Bool co_check;
 
-SCIP_Bool create_graph (int n, int m, GRAPH** gr)
+
+/** create a graph */
+SCIP_Bool create_graph(
+   int                   n,                  /**< number of nodes */
+   int                   m,                  /**< number of edges */
+   GRAPH**               gr                  /**< pointer to store graph */
+   )
 {
    assert( gr != NULL );
 
@@ -43,14 +52,14 @@ SCIP_Bool create_graph (int n, int m, GRAPH** gr)
    if( *gr == NULL )
       return FALSE;
 
-   BMSallocMemoryArray( &(*gr)->nodes, n );
+   BMSallocMemoryArray(&(*gr)->nodes, n);
    if( (*gr)->nodes == NULL )
    {
       BMSfreeMemory(gr);
       return FALSE;
    }
 
-   BMSallocMemoryArray( &(*gr)->edges, m );
+   BMSallocMemoryArray(&(*gr)->edges, m);
    if( (*gr)->edges == NULL )
    {
       BMSfreeMemoryArray(&(*gr)->nodes);
@@ -61,84 +70,112 @@ SCIP_Bool create_graph (int n, int m, GRAPH** gr)
    (*gr)->nnodes = n;
    (*gr)->nedges = m/2;
    (*gr)->nedgesnonzero = m/2;
+
    return TRUE;
 }
 
-static 
-void free_graph (GRAPH** gr)
+/** free a graph */
+static
+void free_graph(
+   GRAPH**               gr                  /**< pointer a graph */
+   )
 {
    assert(gr != NULL);
    assert(*gr != NULL);
    assert((*gr)->nuses == 0);
+
    BMSfreeMemory(&(*gr)->nodes);
    BMSfreeMemory(&(*gr)->edges);
    BMSfreeMemory(gr);
 }
 
-void capture_graph (GRAPH* gr)
+/** capture graph */
+void capture_graph(
+   GRAPH*                gr                  /**< graph */
+   )
 {
    assert(gr != NULL);
-   gr->nuses++;
+
+   ++gr->nuses;
 }
 
-void release_graph (GRAPH** gr)
+/** release graph */
+void release_graph(
+   GRAPH**               gr                  /**< graph */
+   )
 {
    assert(gr != NULL);
    assert(*gr != NULL);
-   (*gr)->nuses--;
+
+   --(*gr)->nuses;
+
    if( (*gr)->nuses == 0 )
       free_graph(gr);
    *gr = NULL;
 }
 
-SCIP_Bool init_maxflow (long n)
+/** initialize maximum flow computation */
+static
+SCIP_Bool init_maxflow(
+   long                  n                   /**< number of nodes */
+   )
 {
-   active = (GRAPHNODE **) malloc ((n+1L) * sizeof (GRAPHNODE *));
-   /* holds stacks of active nodes arranged by distances */ 
+   active = (GRAPHNODE**) malloc((n+1L) * sizeof (GRAPHNODE*));
+
+   /* holds stacks of active nodes arranged by distances */
    if ( active == (GRAPHNODE **) 0 )
-   { 
+   {
       printf ("Unable to allocate memory\n");
       return FALSE;
    }
+
    number = (long *) malloc ((n+1L) * sizeof (long));
-   /* counts occurences of node distances in set 
-      of alive nodes, i.e. nodes not contained in
-      the set of nodes disconnected from the sink */ 
+
+   /* counts occurences of node distances in set of alive nodes, i.e., nodes not contained in the set of nodes
+    * disconnected from the sink */
    if ( number == (long *) 0 )
-   { 
+   {
       printf ("Unable to allocate memory\n");
       return FALSE;
    }
    co_check = TRUE;
+
    return TRUE;
+}
 
-} /* init_maxflow */
-
-
-void fini_maxflow ()
+/** free initialization data structures */
+static
+void fini_maxflow(void)
 {
-   free (active);
-   free (number);
+   free(active);
+   free(number);
+}
 
-} /* fini_maxflow */
-
-
-void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
-{ 
-   /* breadth first search to get exact distance labels
-      from sink with reordering of stack of active nodes */
-
-   GRAPHNODE *front, *rear, *nptr, **ptr;
-   GRAPHEDGE *eptr;
-   long n, level, count, i;
+/** global relabel operation */\
+static
+void global_relabel(
+   GRAPH*                gr,                 /**< graph */
+   GRAPHNODE*            tptr                /**< node to be relabeled */
+   )
+{
+   /* breadth first search to get exact distance labels from sink with reordering of stack of active nodes */
+   GRAPHNODE* front;
+   GRAPHNODE* rear;
+   GRAPHNODE* nptr;
+   GRAPHNODE** ptr;
+   GRAPHEDGE* eptr;
+   long n;
+   long level;
+   long count;
+   long i;
 
    n = gr->nnodes;
    for ( nptr = &(gr->nodes[n-1L]); nptr >= gr->nodes; nptr-- )
-   { 
+   {
       nptr->unmarked = TRUE;
       nptr->stack_link = NULL;
       nptr->scan_ptr = nptr->first_edge;
-      while( nptr->scan_ptr != NULL && nptr->scan_ptr->cap <= EPS ) 
+      while( nptr->scan_ptr != NULL && nptr->scan_ptr->cap <= EPS )
          nptr->scan_ptr = nptr->scan_ptr->next;
    }
    tptr->unmarked = FALSE;
@@ -146,8 +183,10 @@ void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
    /* initialize stack of active nodes */
    for ( ptr = &(active[n]); ptr >= active; ptr-- )
       *ptr = NULL;
+
    for ( i = 0L; i <= n; i++ )
       number[i] = 0L;
+
    max_dist = 0L;
    count = 1L;     /* number of alive nodes */
    front = tptr;
@@ -159,16 +198,18 @@ void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
    while ( eptr != NULL )
    {
       nptr = eptr->adjac;
-      if ( nptr->alive && nptr->unmarked && eptr->back->rcap > EPS ) 
+      if ( nptr->alive && nptr->unmarked && eptr->back->rcap > EPS )
       {
          assert(eptr->cap > EPS);
          assert(eptr->back->cap > EPS);
+
          nptr->unmarked = FALSE;
          nptr->dist = (int) level;
          ++count;
          ++number[level];
+
          if ( nptr->excess > EPS )
-         { 
+         {
             nptr->stack_link = active[level];
             active[level] = nptr;
             max_dist = level;
@@ -178,18 +219,18 @@ void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
       }
       eptr = eptr->next;
    }
+
    if ( front == rear )
       goto bfs_ready;
-       
+
    rear = rear->bfs_link;
    goto bfs_next;
 
- bfs_ready: 
+ bfs_ready:
 
    if ( count < bound )
    {
-      /* identify nodes that are marked alive but have
-         not been reached by BFS and mark them as dead  */
+      /* identify nodes that are marked alive but have not been reached by BFS and mark them as dead */
       for ( nptr = &(gr->nodes[n-1L]); nptr >= gr->nodes; nptr-- )
       {
          if ( nptr->unmarked && nptr->alive )
@@ -200,42 +241,49 @@ void global_relabel (GRAPH *gr, GRAPHNODE *tptr)
       }
       bound = count;
    }
+}
 
-} /* global_relabel */
-
-
-double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
+/** compute maximum flow
+ *
+ * Determines maximum flow and minimum cut between nodes s (= *s_ptr) and t (= *t_ptr) in an undirected graph
+ *
+ * References:
+ * A. Goldberg/ E. Tarjan: "A New Approach to the Maximum Flow Problem", in Proc. 18th ACM Symp. on Theory of Computing, 1986.
+ */
+static
+double maxflow(
+   GRAPH*                gr,                 /**< graph */
+   GRAPHNODE*            s_ptr,              /**< start node */
+   GRAPHNODE*            t_ptr               /**< target node */
+   )
 {
-   /* Determines maximum flow and minimum cut between nodes
-      s (= *s_ptr) and t (= *t_ptr) in an undirected graph  
-
-      References:
-      ----------
-      A. Goldberg/ E. Tarjan: "A New Approach to the
-      Maximum Flow Problem", in Proc. 18th ACM Symp. 
-      on Theory of Computing, 1986.
-   */
-   GRAPHNODE *aptr, *nptr, *q_front, *q_rear;
-   GRAPHEDGE *eptr;
-   long n, m, m0, level, i, n_discharge;
+   GRAPHNODE* aptr;
+   GRAPHNODE* nptr;
+   GRAPHNODE* q_front;
+   GRAPHNODE* q_rear;
+   GRAPHEDGE* eptr;
+   long n;
+   long m;
+   long m0;
+   long level;
+   long i;
+   long n_discharge;
    double incre;
    long dmin;
    double cap;
-   
-   /* node ids range from 1 to n, node array indices  
-      range from 0 to n-1                             */
 
+   /* node ids range from 1 to n, node array indices range from 0 to n-1 */
    n = gr->nnodes;
    for ( nptr = &(gr->nodes[n-1L]); nptr >= gr->nodes; nptr-- )
-   {  
+   {
       nptr->scan_ptr = nptr->first_edge;
-      while( nptr->scan_ptr != NULL && nptr->scan_ptr->cap <= EPS ) 
+      while( nptr->scan_ptr != NULL && nptr->scan_ptr->cap <= EPS )
          nptr->scan_ptr = nptr->scan_ptr->next;
-      
+
       if ( nptr->scan_ptr == NULL )
-      { 
-         fprintf (stderr, "isolated node in input graph\n");
-         return (FALSE);
+      {
+         fprintf(stderr, "isolated node in input graph\n");
+         return FALSE;
       }
 
       nptr->excess = 0.0L;
@@ -248,25 +296,26 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
    m0 = gr->nedges;
    for ( eptr = &(gr->edges[m-1L]); eptr >= gr->edges; eptr-- )
       eptr->rcap = eptr->cap;
+
    for ( eptr = &(gr->edges[m0+m-1L]); eptr >= &(gr->edges[m0]); eptr-- )
       eptr->rcap = eptr->cap;
-      
+
    for ( i = n; i >= 0L; i-- )
-   { 
+   {
       number[i] = 0L;
       active[i] = NULL;
    }
    t_ptr->dist = 0L;
 
-   /* breadth first search to get exact distances 
-      from sink and for test of graph connectivity */
-
-   t_ptr->unmarked = FALSE; 
+   /* breadth first search to get exact distances from sink and for test of graph connectivity */
+   t_ptr->unmarked = FALSE;
    q_front = t_ptr;
    q_rear = q_front;
+
  bfs_next:
    level = q_rear->dist + 1L;
    eptr = q_rear->first_edge;
+
    while ( eptr != NULL )
    {
       assert(eptr->back->cap == eptr->back->rcap); /*lint !e777*/
@@ -281,6 +330,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
       }
       eptr = eptr->next;
    }
+
    if ( q_rear == q_front )
       goto bfs_ready;
 
@@ -289,7 +339,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
 
  bfs_ready:
    if ( co_check )
-   { 
+   {
       co_check = FALSE;
       for ( nptr = &(gr->nodes[n-1]); nptr >= gr->nodes; --nptr )
       {
@@ -302,14 +352,13 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
    t_ptr->dist = 0L;
    t_ptr->excess = 1.0L;  /* to be subtracted again */
 
-
    /* initial preflow push from source node */
-
    max_dist = 0L;  /* = max_dist of active nodes */
    eptr = s_ptr->first_edge;
+
    while ( eptr != NULL )
    {
-      if( eptr->cap > EPS ) 
+      if( eptr->cap > EPS )
       {
          nptr = eptr->adjac;
          cap = eptr->rcap;
@@ -318,10 +367,9 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
          eptr->back->rcap += cap;
          eptr->rcap = 0.0L;
 
-         if ( nptr != t_ptr && nptr->excess <= cap + EPS ) 
-         { 
-            /* push node nptr onto stack for nptr->dist,
-               but only once in case of double edges     */
+         if ( nptr != t_ptr && nptr->excess <= cap + EPS )
+         {
+            /* push node nptr onto stack for nptr->dist, but only once in case of double edges */
             nptr->stack_link = active[nptr->dist];
             active[nptr->dist] = nptr;
             if ( nptr->dist > max_dist )
@@ -332,13 +380,12 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
    }
 
    s_ptr->alive = FALSE;
-   bound = n; 
+   bound = n;
    n_discharge = 0L;
 
    /* main loop */
-
    do
-   { 
+   {
       /* get maximum distance active node */
       aptr = active[max_dist];
       while ( aptr != NULL )
@@ -356,51 +403,57 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
 
          nptr = eptr->adjac;
          assert(nptr != NULL);
-         if ( nptr->dist == aptr->dist - 1L && eptr->rcap > EPS ) 
-         { 
+         if ( nptr->dist == aptr->dist - 1L && eptr->rcap > EPS )
+         {
             incre = aptr->excess;
             if ( incre <= eptr->rcap )
-            { 
+            {
                /* perform a non saturating push */
                eptr->rcap -= incre;
                eptr->back->rcap += incre;
                aptr->excess = 0.0L;
                nptr->excess += incre;
+
                if ( nptr->excess <= incre + EPS )
                {
                   /* push nptr onto active stack */
                   nptr->stack_link = active[nptr->dist];
                   active[nptr->dist] = nptr;
                }
+
                assert(eptr->cap > EPS);
                aptr->scan_ptr = eptr;
+
                goto node_ready;
             }
             else
             {
                /* perform a saturating push */
                incre = eptr->rcap;
-               eptr->back->rcap += incre; 
+               eptr->back->rcap += incre;
                aptr->excess -= incre;
                nptr->excess += incre;
                eptr->rcap = 0.0L;
+
                if ( nptr->excess <= incre + EPS )
                {
                   /* push nptr onto active stack */
                   nptr->stack_link = active[nptr->dist];
                   active[nptr->dist] = nptr;
                }
+
                if ( aptr->excess <= EPS )
                {
                   assert(eptr->cap > EPS);
                   aptr->scan_ptr = eptr;
+
                   goto node_ready;
                }
             }
          }
 
          /* go to the next non-zero edge */
-         do 
+         do
          {
             eptr = eptr->next;
          }
@@ -408,23 +461,19 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
 
          if ( eptr == NULL )
          {
-            /* all incident arcs scanned, but node still
-               has positive excess, check if for all nptr       
-               nptr->dist != aptr->dist                  */
-
+            /* all incident arcs scanned, but node still has positive excess, check if for all nptr
+             * nptr->dist != aptr->dist */
             if ( number[aptr->dist] == 1L )
             {
-               /* put all nodes v with dist[v] >= dist[a] 
-                  into the set of "dead" nodes since they
-                  are disconnected from the sink          */
-                     
+               /* put all nodes v with dist[v] >= dist[a] into the set of "dead" nodes since they are disconnected from
+                * the sink */
                for ( nptr = &(gr->nodes[n-1L]); nptr >= gr->nodes; nptr-- )
                {
                   if ( nptr->alive && nptr->dist > aptr->dist )
-                  { 
+                  {
                      --number[nptr->dist];
-                     active[nptr->dist] = NULL; 
-                     nptr->alive = FALSE; 
+                     active[nptr->dist] = NULL;
+                     nptr->alive = FALSE;
                      nptr->dist = (int) n;
                      --bound;
                   }
@@ -434,6 +483,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                aptr->alive = FALSE;
                aptr->dist = (int) n;
                --bound;
+
                goto node_ready;
             }
             else
@@ -446,7 +496,7 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                {
                   assert(eptr->rcap <= EPS || eptr->cap > EPS);
                   if ( eptr->adjac->dist < dmin && eptr->rcap > EPS )
-                  { 
+                  {
                      assert(eptr->cap > EPS);
                      dmin = eptr->adjac->dist;
                      if ( aptr->scan_ptr == NULL )
@@ -454,9 +504,9 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                   }
                   eptr = eptr->next;
                }
-               
+
                if ( ++dmin < bound )
-               { 
+               {
                   /* ordinary relabel operation */
                   --number[aptr->dist];
                   aptr->dist = (int) dmin;
@@ -465,54 +515,73 @@ double maxflow (GRAPH *gr, GRAPHNODE *s_ptr, GRAPHNODE *t_ptr)
                   eptr = aptr->scan_ptr;
                   assert(eptr != NULL);
                   assert(eptr->cap > EPS);
+
                   goto edge_scan;
                }
                else
-               { 
+               {
                   aptr->alive = FALSE;
                   --number[aptr->dist];
                   aptr->dist = (int) n;
                   --bound;
+
                   goto node_ready;
                }
             }
          }
          else
             goto edge_scan;
-         
 
-      node_ready: 
+      node_ready:
          ++n_discharge;
          if ( n_discharge == n )
-         { 
+         {
             n_discharge = 0L;
             global_relabel (gr, t_ptr);
          }
          aptr = active[max_dist];
-      } /* aptr != NULL */ 
+      }
       --max_dist;
-   } 
-   while ( max_dist > 0L );  
+   }
+   while ( max_dist > 0L );
 
    return (int) (t_ptr->excess - 1.0L);
 }
 
-SCIP_Bool nodeOnRootPath(GRAPH* gr, int i, int j)
+/** determine whether node i is on the path to the root starting from j */
+static
+SCIP_Bool nodeOnRootPath(
+   GRAPH*                gr,                 /**< graph */
+   int                   i,                  /**< node to search for */
+   int                   j                   /**< starting node */
+   )
 {
    while( i != j && j != 0 )
    {
       j = gr->nodes[j].parent->id;
    }
-   if( i == j ) 
+
+   if( i == j )
       return TRUE;
    else
       return FALSE;
 }
 
-// constructs a list of cuts for a TSP relaxation polytope from a Gomory Hu Tree 
-void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
+/** constructs a list of cuts for a TSP relaxation polytope from a Gomory Hu Tree
+ *
+ *  If the non-zero-edges of a TSP relaxation induce a non-connected graph, an according cut is generated, using
+ *  information from BFS in method maxflow.
+ */
+static
+void constructCutList(
+   GRAPH*                gr,                 /**< graph */
+   SCIP_Bool**           cuts,               /**< array of arrays to store cuts */
+   int*                  ncuts,              /**< pointer to store number of cuts */
+   double                minviol             /**< minimal violation of a cut to be returned */
+   )
 {
    int k = 0;
+
    for( int i = 1; i < gr->nnodes; i++ )
    {
       if( gr->nodes[i].mincap < 2.0 - minviol )
@@ -526,43 +595,49 @@ void constructCutList(GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
    *ncuts = k;
 }
 
-// if the non-zero-edges of a TSP relaxation induce a non-connected graph, 
-// an according cut is generated, using information from BFS in method maxflow
-void constructSingleCut(GRAPH *gr, SCIP_Bool** cuts)
+/** construct a single cut */
+static
+void constructSingleCut(
+   GRAPH*                gr,                 /**< graph */
+   SCIP_Bool**           cuts                /**< array of arrays to store cuts */
+   )
 {
    cuts[0][0] = FALSE;
    for( int i = 1; i < gr->nnodes; i++ )
       cuts[0][i]=gr->nodes[i].unmarked;
 }
 
-SCIP_Bool ghc_tree (GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
+/** Determines Gomory/Hu cut tree for input graph with capacitated edges
+ *
+ * The tree structures is represented by parent pointers which are part of the node structure, the capacity of a tree
+ * edge is stored at the child node, the root of the cut tree is the first node in the list of graph nodes
+ * (&gr->nodes[0]). The implementation is described in [1].
+ *
+ * References:
+ * 1) D. Gusfield: "Very Simple Algorithms and Programs for  All Pairs Network Flow Analysis",
+ *    Computer Science Division, University of California, Davis, 1987.
+ *
+ * 2) R.E. Gomory and T.C. Hu: "Multi-Terminal Network Flows",
+ *    SIAM J. Applied Math. 9 (1961), 551-570.
+ */
+SCIP_Bool ghc_tree(
+   GRAPH*                gr,                 /**< graph */
+   SCIP_Bool**           cuts,               /**< array of arrays to store cuts */
+   int*                  ncuts,              /**< pointer to store number of cuts */
+   double                minviol             /**< minimal violation of a cut to be returned */
+   )
 {
-   /* Determines Gomory/Hu cut tree for input graph with
-      capacitated edges, the tree structures is represented
-      by parent pointers which are part of the node structure,
-      the capacity of a tree edge is stored at the child node,
-      the root of the cut tree is the first node in the list
-      of graph nodes (&gr->nodes[0]). The implementation is
-      described in [1].
-     
-      References:
-      ----------
-      1) D. Gusfield: "Very Simple Algorithms and Programs for
-      All Pairs Network Flow Analysis", Computer Science Di-
-      vision, University of California, Davis, 1987.
-     
-      2) R.E. Gomory and T.C. Hu: "Multi-Terminal Network Flows",
-      SIAM J. Applied Math. 9 (1961), 551-570.
-
-   */
-
-   GRAPHNODE *nptr, *nptr1, *nptrn, *sptr, *tptr;
-   long n;
+   GRAPHNODE* nptr;
+   GRAPHNODE* nptr1;
+   GRAPHNODE* nptrn;
+   GRAPHNODE* sptr;
+   GRAPHNODE* tptr;
    double maxfl;
+   long n;
 
    n = gr->nnodes;
-   
-   if ( ! init_maxflow (n) )
+
+   if ( ! init_maxflow(n) )
       return FALSE;
 
    nptr1 = gr->nodes;
@@ -571,33 +646,36 @@ SCIP_Bool ghc_tree (GRAPH *gr, SCIP_Bool** cuts, int* ncuts, double minviol)
       nptr->parent = nptr1;
 
    for ( sptr = &(gr->nodes[1L]); sptr <= nptrn; sptr++ )
-   { 
+   {
       tptr = sptr->parent;
       maxfl = maxflow(gr, sptr, tptr);
 
-      //maxfl < 0 <=> graph is not connected => generate cut
+      /* maxfl < 0 <=> graph is not connected => generate cut */
       if ( maxfl < 0L )
       {
          constructSingleCut(gr,cuts);
          *ncuts = 1;
-	 fini_maxflow ();
+	 fini_maxflow();
          return TRUE;
       }
-           
+
       sptr->mincap = maxfl;
       for ( nptr = &(gr->nodes[1L]); nptr <= nptrn; nptr++ )
+      {
          if ( nptr != sptr && ! nptr->alive && nptr->parent == tptr )
             nptr->parent = sptr;
+      }
+
       if ( ! tptr->parent->alive )
-      { 
+      {
          sptr->parent = tptr->parent;
          tptr->parent = sptr;
          sptr->mincap = tptr->mincap;
          tptr->mincap = maxfl;
       }
    }
-   fini_maxflow ();
-   constructCutList(gr,cuts,ncuts,minviol);
-   
+   fini_maxflow();
+   constructCutList(gr, cuts, ncuts, minviol);
+
    return TRUE;
-} /* ghc_tree */
+}

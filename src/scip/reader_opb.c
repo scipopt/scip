@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_opb.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  pseudo-Boolean file reader (opb format)
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -192,6 +193,7 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
+   assert(scip != NULL);
    assert(opbinput != NULL);
 
    SCIPerrorMessage("Syntax error in line %d: %s found <%s>\n", opbinput->linenumber, msg, opbinput->token);
@@ -1206,6 +1208,10 @@ SCIP_RETCODE setObjective(
 
          for( t = 0; t < ntermcoefs; ++t )
          {
+            assert(terms != NULL);  /* for lint */
+            assert(ntermvars != NULL);
+            assert(termcoefs != NULL);
+
             vars = terms[t];
             nvars = ntermvars[t];
             assert(vars != NULL);
@@ -1342,7 +1348,10 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
-	 if( SCIPvarIsNegated(linvars[v]) )
+         assert(linvars != NULL); /* for lint */
+         assert(coefs != NULL);
+
+         if( SCIPvarIsNegated(linvars[v]) )
 	 {
 	    SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
 
@@ -1436,6 +1445,7 @@ SCIP_RETCODE readConstraints(
          else
          {
             assert(nlincoefs == 1);
+            assert(lincoefs != NULL);
             opbinput->topcost = lincoefs[0];
          }
          SCIPdebugMsg(scip, "Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
@@ -1482,7 +1492,7 @@ SCIP_RETCODE readConstraints(
    }
 
    /* assign the left and right hand side, depending on the constraint sense */
-   switch( sense )
+   switch( sense ) /*lint !e530*/
    {
    case OPB_SENSE_GE:
       lhs = sidevalue;
@@ -1570,7 +1580,10 @@ SCIP_RETCODE readConstraints(
 
    /* free memory */
    for( t = ntermcoefs - 1; t >= 0; --t )
+   {
+      assert(terms != NULL);  /* for lint */
       SCIPfreeBufferArrayNull(scip, &(terms[t]));
+   }
 
    SCIPfreeBufferArrayNull(scip, &ntermvars);
    SCIPfreeBufferArrayNull(scip, &termcoefs);
@@ -1998,8 +2011,11 @@ SCIP_RETCODE computeAndConstraintInfos(
          ++ncontainedands;
          v = 0;
 
+         assert(*nandvars != NULL);
          while( v < (*nandvars)[r] )
          {
+            assert(*andvars != NULL);
+            assert(*resvars != NULL);
             if( SCIPsortedvecFindPtr((void**)(*resvars), SCIPvarComp, (*andvars)[r][v], *nresvars, &pos) )
             {
                /* check if the found position "pos" is equal to an already visited and resultant in this constraint,
@@ -2098,6 +2114,7 @@ void writeBuffer(
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
+   assert( 0 <= *linecnt && *linecnt < OPB_MAX_LINELEN );
 
    if( (*linecnt) > 0 )
    {
@@ -2123,11 +2140,11 @@ void appendBuffer(
    assert(linecnt != NULL);
    assert(extension != NULL);
 
-   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN - 1 )
+   if( (*linecnt) + (int) strlen(extension) >= OPB_MAX_LINELEN - 1 )
       writeBuffer(scip, file, linebuffer, linecnt);
 
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
+   (void) strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 
@@ -2211,7 +2228,8 @@ SCIP_RETCODE writeOpbObjective(
             if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetRhsLinear(scip, topcostcons));
             else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
-               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetCapacityKnapsack(scip, topcostcons));
+               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %SCIP_LONGINT_FORMAT;\n",
+                  SCIPgetCapacityKnapsack(scip, topcostcons));
             else if( strcmp(SCIPconshdlrGetName(conshdlr), "setppc") == 0 )
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: 1;\n");
             else
@@ -2325,7 +2343,8 @@ SCIP_RETCODE writeOpbObjective(
 
                      if( topcostfound )
                      {
-                        (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetCapacityKnapsack(scip, cons));
+                        (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %SCIP_LONGINT_FORMAT;\n",
+                           SCIPgetCapacityKnapsack(scip, cons));
                         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
                         writeBuffer(scip, file, linebuffer, &linecnt);
                         printed = TRUE;
@@ -2454,7 +2473,7 @@ SCIP_RETCODE writeOpbObjective(
 
          assert( linecnt != 0 );
 
-         if( SCIPvarGetObj(var) * mult > SCIP_LONGINT_MAX )
+         if( SCIPvarGetObj(var) * mult > (SCIP_Real)SCIP_LONGINT_MAX )
          {
             SCIPerrorMessage("Integral objective value to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", mult, SCIPvarGetObj(var), SCIPvarGetObj(var) * mult, (SCIP_Longint) SCIPround(scip, SCIPvarGetObj(var) * mult));
          }
@@ -2593,7 +2612,7 @@ SCIP_RETCODE printNLRow(
 
 	 negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
 
-         if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
+         if( vals[v] * (*mult) > (SCIP_Real)SCIP_LONGINT_MAX )
          {
             SCIPerrorMessage("Integral coefficient to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
          }
@@ -2804,7 +2823,7 @@ SCIP_RETCODE printRow(
 
       negated = SCIPvarIsNegated(var);
 
-      if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
+      if( vals[v] * (*mult) > (SCIP_Real)SCIP_LONGINT_MAX )
       {
          SCIPerrorMessage("Integral coefficient to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
       }
@@ -3172,6 +3191,7 @@ SCIP_RETCODE printPseudobooleanCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
+         /* coverity[var_deref_model] */
          retcode = printPBRow(scip, file, ">=", activelinvars, activelinvals, nactivelinvars, activetermvars,
             ntermvars, termvals, ntermvals, negatedarrays, indvar, rhs - activelinconstant, &mult, multisymbol);
       }
@@ -3890,6 +3910,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
       /* print fixed and-resultants */
       if( lb > 0.5 || ub < 0.5 )
       {
+         /* coverity[copy_paste_error] */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &var, &neg) );
 
          assert(SCIPisFeasIntegral(scip, lb));
@@ -4187,6 +4208,9 @@ SCIP_RETCODE SCIPreadOpb(
    SCIP_RETCODE retcode;
    int i;
 
+   assert(scip != NULL);  /* for lint */
+   assert(reader != NULL);
+
    /* initialize OPB input data */
    opbinput.file = NULL;
    opbinput.linebuf[0] = '\0';
@@ -4293,6 +4317,7 @@ SCIP_RETCODE SCIPwriteOpb(
       int v;
 
       /* computes all and-resultants and their corresponding constraint variables */
+      /* coverity[leaked_storage] */
       SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
 
       if( genericnames )
@@ -4356,6 +4381,7 @@ SCIP_RETCODE SCIPwriteOpb(
             for( v = nfixedvars - 1; v >= 0; --v )
                if( !existands || !SCIPsortedvecFindPtr((void**)resvars, SCIPvarComp, vars[v], nresvars, &pos) )
                {
+                  /* coverity[secure_coding] */
                   if( sscanf(SCIPvarGetName(fixedvars[v]), transformed ? "t_x%d" : "x%d", &idx) != 1 && strstr(SCIPvarGetName(fixedvars[v]), INDICATORVARNAME) == NULL && strstr(SCIPvarGetName(fixedvars[v]), INDICATORSLACKVARNAME) == NULL )
                   {
                      SCIPwarningMessage(scip, "At least following variable name isn't allowed in opb format.\n");

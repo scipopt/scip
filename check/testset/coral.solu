@@ -193,7 +193,7 @@
 =opt= neos-633273           6.9968411e+09
 =best= neos-641591                 184385
 =opt= neos-655508                63015042
-=best= neos-662469                 184385
+=opt= neos-662469                  184380
 =opt= neos-686190                    6730
 =best= neos-691058                     297
 =best= neos-691073                     297
@@ -263,7 +263,7 @@
 =opt= neos-880324                  108.67
 =opt= neos-881765                       0
 =opt= neos-885086                    -243
-=best= neos-885524               12329.201
+=opt= neos-885524               12320.092
 =opt= neos-886822                   28755
 =opt= neos-892255                      14
 =opt= neos-905856                      -6

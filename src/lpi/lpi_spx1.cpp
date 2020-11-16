@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,7 +25,7 @@
  * different pricing methods can be chosen and an autopricing strategy (start with devex and switch to steepest edge
  * after too many iterations) is implemented directly. Scaler and simplifier may be applied if solving from scratch.
  *
- * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
+ * For debugging purposes, the SoPlex results can be double checked with CPLEX if SCIP_WITH_LPSCHECK is defined. This may
  * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
  */
 
@@ -38,7 +38,7 @@
                                               *   branching time and iterations */
 
 /* in this case the SoPlex results are double checked using CPLEX */
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
 #include <cplex.h>
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
@@ -262,7 +262,7 @@ class SPxSCIP : public SPxSolver
    SPxOut                m_spxout;
 #endif
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    int                   m_checknum;
    bool                  m_doublecheck;
    CPXENVptr             m_cpxenv;           /**< CPLEX memory environment */
@@ -318,7 +318,7 @@ public:
       m_lpiopttol = SPxSolver::delta();
 #endif
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       int cpxstat;
       m_cpxenv = CPXopenCPLEX(&cpxstat);
       assert(m_cpxenv != NULL);
@@ -347,7 +347,7 @@ public:
          spx_free(m_colnames); /*lint !e1551*/
       }
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
       (void) CPXcloseCPLEX(&m_cpxenv);
 #endif
@@ -571,7 +571,7 @@ public:
       }
    }
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    bool getDoubleCheck()
    {
       m_checknum++;
@@ -734,7 +734,7 @@ public:
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
       if( getDoubleCheck() )
          writeState("spxcheck", NULL, NULL);
@@ -766,7 +766,7 @@ public:
             m_stat = ABORT_VALUE;
       }
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       /* if SoPlex gave a definite answer, we double check if it is consistent with CPLEX's answer */
       if( getDoubleCheck() && (m_stat == SPxSolver::OPTIMAL || m_stat == SPxSolver::UNBOUNDED || m_stat == SPxSolver::INFEASIBLE || m_stat == SPxSolver::ABORT_VALUE) )
       {
@@ -1650,13 +1650,13 @@ const char* SCIPlpiGetSolverDesc(
 {
 #if (SOPLEX_VERSION >= 160)
    snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]"
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
      " - including CPLEX double check"
 #endif
    , getGitHash());
 #else
    snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
      " - including CPLEX double check"
 #endif
    );
@@ -2894,7 +2894,7 @@ SCIP_RETCODE spxSolve(
    lpi->spx->setRep(rep);
    lpi->spx->setType(type);
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
 #endif
 
@@ -3118,7 +3118,7 @@ SCIP_RETCODE lpiStrongbranch(
       spx->setIterationLimit(itlim);
       do
       {
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
          status = spx->solve();
@@ -3195,7 +3195,7 @@ SCIP_RETCODE lpiStrongbranch(
          spx->setIterationLimit(itlim);
          do
          {
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
             status = spx->solve();
@@ -3446,7 +3446,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -4699,7 +4699,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -4758,7 +4758,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */

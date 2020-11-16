@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.3)
 
 project(SCIPampl)
 
@@ -14,7 +14,7 @@ add_executable(scipampl
    src/cmain.c
    src/reader_nl.c)
 
-target_link_libraries(scipampl ${SCIP_LIBRARIES} ${LIBM} ${PROJECT_SOURCE_DIR}/solvers/amplsolver.a)
+target_link_libraries(scipampl ${SCIP_LIBRARIES} ${PROJECT_SOURCE_DIR}/solvers/amplsolver.a ${LIBM})
 
 if(CMAKE_DL_LIBS)
     target_link_libraries(scipampl ${CMAKE_DL_LIBS})

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_mpec.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  mpec primal heuristic
  * @author Felipe Serrano
  * @author Benjamin Mueller
@@ -50,7 +51,7 @@
 
 #define HEUR_NAME             "mpec"
 #define HEUR_DESC             "regularization heuristic for convex and nonconvex MINLPs"
-#define HEUR_DISPCHAR         'W'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -2050000
 #define HEUR_FREQ             50
 #define HEUR_FREQOFS          0
@@ -142,7 +143,7 @@ SCIP_RETCODE createNLP(
    SCIP_CALL( SCIPnlpiCreateProblem(heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPcreateNlpiProb(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-         heurdata->nlpiprob, heurdata->var2idx, NULL, cutoff, TRUE, FALSE) );
+         heurdata->nlpiprob, heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -150,7 +151,6 @@ SCIP_RETCODE createNLP(
 /** frees the data structures for the NLP relaxation */
 static
 SCIP_RETCODE freeNLP(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
@@ -709,7 +709,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    /* call MPEC method */
    SCIP_CALL( createNLP(scip, heurdata) );
    SCIP_CALL( heurExec(scip, heur, heurdata, result) );
-   SCIP_CALL( freeNLP(scip, heurdata) );
+   SCIP_CALL( freeNLP(heurdata) );
 
    /* update number of unsuccessful calls */
    heurdata->nunsucc = (*result == SCIP_FOUNDSOL) ? 0 : heurdata->nunsucc + 1;

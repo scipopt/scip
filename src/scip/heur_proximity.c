@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_proximity.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  improvement heuristic which uses an auxiliary objective instead of the original objective function which
  *         is itself added as a constraint to a sub-SCIP instance. The heuristic was presented by Matteo Fischetti
  *         and Michele Monaci.
@@ -55,7 +56,7 @@
 
 #define HEUR_NAME             "proximity"
 #define HEUR_DESC             "heuristic trying to improve the incumbent by an auxiliary proximity objective function"
-#define HEUR_DISPCHAR         'P'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
 #define HEUR_PRIORITY         -2000000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -229,6 +230,7 @@ SCIP_RETCODE createNewSol(
    int        ncontvars;                     /* the original problem's number of continuous variables */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+   int i;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -239,14 +241,16 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
 
-   /* The sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP. */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      if( subvars[i] == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvars[i]);
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -845,6 +849,9 @@ SCIP_RETCODE SCIPapplyProximity(
 
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
+         if( subvars[i] == NULL )
+            continue;
+
          SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
 
          lb = SCIPvarGetLbGlobal(subvars[i]);
@@ -899,6 +906,9 @@ SCIP_RETCODE SCIPapplyProximity(
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
    {
       SCIP_Real solval;
+
+      if( subvars[i] == NULL )
+         continue;
 
       /* objective coefficients are only set for binary variables of the problem */
       assert(SCIPvarIsBinary(subvars[i]));

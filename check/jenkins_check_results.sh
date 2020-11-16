@@ -14,6 +14,7 @@
 
 echo "This is jenkins_check_results.sh running."
 export PSMESSAGE=$PSMESSAGE
+export IDENT=$IDENT
 
 # set up environment for jenkins_failcheck.sh
 export TESTSET=$1
@@ -46,7 +47,13 @@ export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 export GITBRANCH=`echo ${GIT_BRANCH} | cut -d / -f 2`
 if [ "${GITBRANCH}" = "" ];
 then
-  export GITBRANCH=`git show -s --pretty=%D | cut -d , -f 2 | cut -d / -f 2 `
+  export GITBRANCH=$(git show -s --pretty=%D |grep -Fo 'origin/master,
+origin/v60-bugfix,
+origin/consexpr' | cut -s -d , -f 1 | cut -d / -f 2)
+  if [ "${GITBRANCH}" = "" ];
+  then
+    export GITBRANCH=`git show -s --pretty=%D | cut -s -d , -f 2 | cut -d / -f 2 `
+  fi
 fi
 
 export OPT=`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
@@ -75,4 +82,4 @@ jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh
+sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt --account=scip check/jenkins_failcheck.sh

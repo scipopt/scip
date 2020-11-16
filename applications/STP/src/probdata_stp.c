@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,9 +20,9 @@
  * @author Michael Winkler
  * @author Daniel Rehfeldt
  *
- * This file implements the problem data for Steiner problems. For more details see \ref PROBLEMDATA page.
+ * This file implements the problem data for Steiner problems. For more details see \ref STP_PROBLEMDATA page.
  *
- * @page PROBLEMDATA Main problem data
+ * @page STP_PROBLEMDATA Main problem data
  *
  * The problem data is accessible in all plugins.
  *
@@ -77,11 +77,9 @@
 
 
 #ifdef WITH_UG
-extern
 const char*
 getBranchLinearConsName(const char* names, int i);
 
-extern
 const char*
 getBranchSetppcConsName(const char* names, int i);
 #endif
@@ -3684,3 +3682,4 @@ void initReceivedSubproblem(
    assert(0 && "only call me when using UG");
 #endif
 }
+/**@} */

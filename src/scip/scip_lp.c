@@ -3,22 +3,23 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_lp.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for the LP relaxation, rows and columns
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -32,81 +33,15 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
-
-
+#include "blockmemshell/memory.h"
 #include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
-#include "scip/benders.h"
-#include "scip/benderscut.h"
-#include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
-#include "scip/clock.h"
-#include "scip/compr.h"
-#include "scip/concsolver.h"
-#include "scip/concurrent.h"
 #include "scip/conflict.h"
-#include "scip/conflictstore.h"
-#include "scip/cons.h"
-#include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
-#include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
-#include "scip/history.h"
-#include "scip/implics.h"
-#include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
-#include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
-#include "scip/pricestore.h"
-#include "scip/primal.h"
 #include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
-#include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
+#include "scip/pub_lp.h"
+#include "scip/pub_message.h"
+#include "scip/pub_tree.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
@@ -114,20 +49,18 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-
-#include "scip/pub_lp.h"
-#include "scip/pub_message.h"
-#include "scip/pub_tree.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
+#include "scip/set.h"
+#include "scip/solve.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_primal.h"
+#include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_tree.h"
+#include "scip/tree.h"
+#include "scip/var.h"
 
 /** returns, whether the LP was or is to be solved in the current node
  *
@@ -480,6 +413,40 @@ SCIP_Real SCIPgetLPRootLooseObjval(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPRootLooseObjval", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIPlpGetRootLooseObjval(scip->lp);
+}
+
+/** gets current primal feasibility tolerance of LP */
+SCIP_Real SCIPgetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLPFeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpGetFeastol(scip->lp);
+}
+
+/** sets primal feasibility tolerance of LP */
+void SCIPsetLPFeastol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             newfeastol          /**< new primal feasibility tolerance for LP */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetLPFeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPlpSetFeastol(scip->lp, scip->set, newfeastol);
+}
+
+/** resets primal feasibility tolerance of LP
+ *
+ * Sets primal feasibility tolerance to min of numerics/lpfeastolfactor * numerics/feastol and relaxfeastol.
+ */
+void SCIPresetLPFeastol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPresetLPFeastol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPlpResetFeastol(scip->lp, scip->set);
 }
 
 /** gets current LP columns along with the current number of LP columns
@@ -1201,7 +1168,7 @@ void SCIPmarkColNotRemovableLocal(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPcreateRowCons(
+SCIP_RETCODE SCIPcreateRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
@@ -1218,10 +1185,44 @@ SCIP_RETCODE SCIPcreateRowCons(
 {
    assert(conshdlr != NULL);
 
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowConshdlr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONSHDLR, (void*) conshdlr, local, modifiable, removable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row from a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONS*            cons,               /**< constraint that creates the row */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COL**            cols,               /**< array with columns of row entries */
+   SCIP_Real*            vals,               /**< array with coefficients of row entries */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   assert(cons != NULL);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-         name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) conshdlr, local, modifiable, removable) );
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) cons, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }
@@ -1254,7 +1255,7 @@ SCIP_RETCODE SCIPcreateRowSepa(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1285,7 +1286,7 @@ SCIP_RETCODE SCIPcreateRowUnspec(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1300,7 +1301,7 @@ SCIP_RETCODE SCIPcreateRowUnspec(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPcreateRowCons() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
  */
 SCIP_RETCODE SCIPcreateRow(
@@ -1333,7 +1334,7 @@ SCIP_RETCODE SCIPcreateRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPcreateEmptyRowCons(
+SCIP_RETCODE SCIPcreateEmptyRowConshdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            row,                /**< pointer to row */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler that creates the row */
@@ -1345,10 +1346,43 @@ SCIP_RETCODE SCIPcreateEmptyRowCons(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
+   assert(conshdlr != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowConshdlr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONSHDLR, (void*) conshdlr, local, modifiable, removable) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an LP row without any coefficients from a constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateEmptyRowCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< pointer to row */
+   SCIP_CONS*            cons,               /**< constraint that creates the row */
+   const char*           name,               /**< name of row */
+   SCIP_Real             lhs,                /**< left hand side of row */
+   SCIP_Real             rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
+   SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
+   )
+{
+   assert(cons != NULL);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
-         name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) conshdlr, local, modifiable, removable) );
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+         name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) cons, local, modifiable, removable) );
 
    return SCIP_OKAY;
 }
@@ -1376,7 +1410,7 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1404,7 +1438,7 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -1419,7 +1453,7 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @deprecated Please use SCIPcreateEmptyRowCons() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
+ *  @deprecated Please use SCIPcreateEmptyRowConshdlr() or SCIPcreateEmptyRowSepa() when calling from a constraint handler or separator in order
  *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateEmptyRowUnspec().
  */
 SCIP_RETCODE SCIPcreateEmptyRow(
@@ -1598,6 +1632,11 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *        creating the column, changes the solution value (variable than has status SCIP_VARSTATUS_COLUMN, and the
  *        initialization sets the lp solution value) to 0.0. (This leads to the conclusion that, if a constraint was
  *        violated, the linear relaxation might not be violated anymore.)
+ *
+ *  @note If the variable being added is FIXED (as given by the status SCIP_VARSTATUS_FIXED), then the variable is not
+ *        added to the row, but the corresponding constant is added. Similarly, if the input variable is aggregated (as
+ *        given by the status SCIP_VARSTATUS_AGGREGATED), then the input variable is substituted with its aggregation.
+ *        For other cases, and to better understand the function behavior, please check the code of SCIPvarAddToRow.
  */
 SCIP_RETCODE SCIPaddVarToRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2081,6 +2120,25 @@ SCIP_Real SCIPgetRowSolFeasibility(
       return SCIProwGetPseudoFeasibility(row, scip->set, scip->stat);
 }
 
+/** returns the parallelism of row with objective function
+ *
+ *  @return 1 is returned if the row is parallel to the objective function and 0 if it is orthogonal
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Real SCIPgetRowObjParallelism(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowObjParallelism", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return SCIProwGetObjParallelism(row, scip->set, scip->lp);
+}
+
 /** output row to file stream via the message handler system
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -2204,8 +2262,8 @@ SCIP_RETCODE SCIPendDive(
     */
    if( scip->tree->cutoffdelayed )
    {
-      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-            scip->lp, scip->primal->cutoffbound) );
+      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
+            scip->eventqueue, scip->lp, scip->primal->cutoffbound) );
    }
 
    /* if a relaxation was stored before diving, restore it now */
@@ -2663,4 +2721,27 @@ SCIP_Bool SCIPinDive(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPinDive", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return SCIPlpDiving(scip->lp);
+}
+
+/** computes two measures for dual degeneracy (dual degeneracy rate and variable-constraint ratio)
+ *  based on the changes applied when reducing the problem to the optimal face
+ *
+ *  returns the dual degeneracy rate, i.e., the share of nonbasic variables with reduced cost 0
+ *  and the variable-constraint ratio, i.e., the number of unfixed variables in relation to the basis size
+ */
+SCIP_RETCODE SCIPgetLPDualDegeneracy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            degeneracy,         /**< pointer to store the dual degeneracy rate */
+   SCIP_Real*            varconsratio        /**< pointer to store the variable-constraint ratio */
+   )
+{
+   assert(scip != NULL);
+   assert(degeneracy != NULL);
+   assert(varconsratio != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetLPDualDegeneracy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPlpGetDualDegeneracy(scip->lp, scip->set, scip->stat, degeneracy, varconsratio) );
+
+   return SCIP_OKAY;
 }

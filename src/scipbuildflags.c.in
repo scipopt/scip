@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,5 +27,30 @@ const char* SCIPgetBuildFlags(
    void
    )
 {
-   return " ARCH=@CMAKE_SYSTEM@_@CMAKE_SYSTEM_PROCESSOR@\n COMP=@CMAKE_C_COMPILER_ID@ @CMAKE_C_COMPILER_VERSION@\n BUILD=@CMAKE_BUILD_TYPE@\n";
+   return " ARCH=@CMAKE_SYSTEM_PROCESSOR@\n\
+ OSTYPE=@CMAKE_SYSTEM@\n\
+ COMP=@CMAKE_C_COMPILER_ID@ @CMAKE_C_COMPILER_VERSION@\n\
+ BUILD=@CMAKE_BUILD_TYPE@\n\
+ DEBUGSOL=@DEBUGSOL@\n\
+ EXPRINT=@EXPRINT@\n\
+ SYM=@SYM@\n\
+ GMP=@GMP@\n\
+ IPOPT=@IPOPT@\n\
+ WORHP=@WORHP@\n\
+ LPS=@LPS@\n\
+ LPSCHECK=@LPSCHECK@\n\
+ NOBLKBUFMEM=@NOBLKBUFMEM@\n\
+ NOBLKMEM=@NOBLKMEM@\n\
+ NOBUFMEM=@NOBUFMEM@\n\
+ THREADSAFE=@THREADSAFE@\n\
+ READLINE=@READLINE@\n\
+ SANITIZE_ADDRESS=@SANITIZE_ADDRESS@\n\
+ SANITIZE_MEMORY=@SANITIZE_MEMORY@\n\
+ SANITIZE_UNDEFINED=@SANITIZE_UNDEFINED@\n\
+ SANITIZE_THREAD=@SANITIZE_THREAD@\n\
+ SHARED=@SHARED@\n\
+ VERSION=@SCIP_VERSION_MAJOR@.@SCIP_VERSION_MINOR@.@SCIP_VERSION_PATCH@.@SCIP_VERSION_SUB@\n\
+ API_VERSION=@SCIP_VERSION_API@\n\
+ ZIMPL=@ZIMPL@\n\
+ ZLIB=@ZLIB@";
 }

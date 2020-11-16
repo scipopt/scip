@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_mcf.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
  * @author Christian Raack
@@ -1196,6 +1197,7 @@ SCIP_RETCODE extractCapacityRows(
 
          c = SCIPcolGetLPPos(rowcols[i]);
          assert(0 <= c && c < SCIPgetNLPCols(scip));
+         assert(colcommodity != NULL);  /* for lint */
 
          /* check if this is a flow variable */
          k = colcommodity[c];
@@ -1266,6 +1268,7 @@ SCIP_RETCODE extractCapacityRows(
          /* calculate mean commodity excess: in the (un)directed case there should be exactly */
          /* one (two) flow variable per commodity. in this case commodityexcessratio = 0   */
          assert(ncoveredcommodities > 0);
+         /* coverity[divide_by_zero] */
          commodityexcessratio =
                ABS((nposflowcoefs + nnegflowcoefs)/(SCIP_Real)ncoveredcommodities - maxcolspercommoditylimit);
 
@@ -2303,6 +2306,11 @@ SCIP_RETCODE extractCapacities(
       assert(0 <= r && r < nrows );
       capacityrow = rows[r];
 
+      assert(capacityrowsigns != NULL); /* for lint */
+      assert(capacityrowscores != NULL);
+      assert(rowcommodity != NULL);
+      assert(flowrowsigns != NULL);
+
       /* row must be a capacity candidate */
       assert((capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0);
       assert((capacityrowsigns[r] & DISCARDED) == 0);
@@ -2325,6 +2333,7 @@ SCIP_RETCODE extractCapacities(
       {
          c = SCIPcolGetLPPos(rowcols[k]);
          assert(0 <= c && c < ncols);
+         assert(colcommodity != NULL); /* for lint */
 
          assert(-1 <= colcommodity[c] && colcommodity[c] < mcfdata->ncommodities);
          assert(-1 <= colarcid[c] && colarcid[c] < mcfdata->narcs);
@@ -2386,6 +2395,7 @@ SCIP_RETCODE extractCapacities(
       {
          int rowc = SCIPcolGetLPPos(rowcols[k]);
          assert(0 <= rowc && rowc < ncols);
+         assert(colcommodity != NULL); /* for lint */
 
          /* due to aggregations in preprocessing it may happen that a flow variable appears in multiple capacity constraints;
           * in this case, assign it to the first that has been found
@@ -2766,6 +2776,7 @@ SCIP_RETCODE extractNodes(
       assert(flowcands != NULL);
       r = flowcands[n];
       assert(0 <= r && r < nrows);
+      assert(rowcommodity != NULL);
 
       /* ignore rows that are not used as flow conservation constraint */
       basecommodity = rowcommodity[r];
@@ -2800,6 +2811,9 @@ SCIP_RETCODE extractNodes(
       rowcols = SCIProwGetCols(rows[r]);
       rowvals = SCIProwGetVals(rows[r]);
       rowlen = SCIProwGetNLPNonz(rows[r]);
+
+      assert(commoditysigns != NULL);
+
       if( (flowrowsigns[r] & RHSASSIGNED) != 0 )
          rowscale = +1;
       else
@@ -2857,6 +2871,7 @@ SCIP_RETCODE extractNodes(
          int collen;
          int j;
 
+         assert(newcols != NULL);
          c = newcols[i];
          assert(0 <= c && c < ncols);
          assert(mcfdata->colcommodity[c] >= 0);
@@ -2961,7 +2976,6 @@ SCIP_RETCODE extractNodes(
 /** if there are still undecided commodity signs, fix them to +1 */
 static
 void fixCommoditySigns(
-   SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
@@ -4329,6 +4343,7 @@ SCIP_RETCODE mcfnetworkExtract(
    if( !failed )
    {
       /* 3. extract network structure of flow conservation constraints. */
+      /* coverity[var_deref_model] */
       SCIP_CALL( extractFlow(scip, &mcfdata, MAXFLOWVARFLOWROWRATIO, &failed) );
       assert(mcfdata.plusflow != NULL);
       assert(mcfdata.minusflow != NULL);
@@ -4370,7 +4385,7 @@ SCIP_RETCODE mcfnetworkExtract(
 
       /* 8. postprocessing */
       /* 8.a if there are still undecided commodity signs, fix them to +1 */
-      fixCommoditySigns(scip, &mcfdata);
+      fixCommoditySigns(&mcfdata);
 
       /* 8.b clean up the network: get rid of commodities without arcs or with at most one node */
       SCIP_CALL( cleanupNetwork(scip, &mcfdata) );
@@ -4456,6 +4471,7 @@ SCIP_RETCODE mcfnetworkExtract(
             SCIP_CALL( mcfnetworkFill(scip, mcfnetwork, &mcfdata, compnodeid, compnodes, ncompnodes, comparcs, ncomparcs) );
 
             /* insert in sorted network list */
+            assert(*mcfnetworks != NULL);
             for( i = *nmcfnetworks; i > 0 && mcfnetwork->nnodes > (*mcfnetworks)[i-1]->nnodes; i-- )
                (*mcfnetworks)[i] = (*mcfnetworks)[i-1];
             (*mcfnetworks)[i] = mcfnetwork;
@@ -4841,7 +4857,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValNodepairs)
    assert(target >=0 && target < mcfnetwork->nnodes);
    assert(source <= target);
 
-   hashval = (source << 16) + target; /*lint !e701*/
+   hashval = (unsigned)((source << 16) + target); /*lint !e701*/
 
    return hashval;
 }
@@ -5072,7 +5088,7 @@ SCIP_RETCODE nodepairqueueCreate(
 #endif
 
    /* initialize priority queue */
-   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compNodepairs) );
+   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compNodepairs, NULL) );
 
    /* fill priority queue using array nodepairs */
    for( n = 0; n < nnodepairs; n++ )
@@ -5268,7 +5284,6 @@ SCIP_RETCODE nodepartitionCreate(
       NODEPAIRENTRY* nodepair;
       int node1;
       int node2;
-      SCIP_Real weight;
       int node1rep;
       int node2rep;
 
@@ -5277,7 +5292,6 @@ SCIP_RETCODE nodepartitionCreate(
       assert(nodepair != NULL);
       node1 = nodepair->node1;
       node2 = nodepair->node2;
-      SCIPdebug( weight = nodepair->weight; )
 
       assert(node1 >= 0 && node1 < mcfnetwork->nnodes);
       assert(node2 >= 0 && node2 < mcfnetwork->nnodes);
@@ -5294,7 +5308,7 @@ SCIP_RETCODE nodepartitionCreate(
 
       /* shrink nodepair by joining the two clusters */
       SCIPdebugMsg(scip, "shrinking nodepair (%d,%d) with weight %g: join representatives %d and %d\n",
-                       node1, node2, weight, node1rep, node2rep);
+                       node1, node2, nodepair->weight, node1rep, node2rep);
       nodepartitionJoin(*nodepartition, node1rep, node2rep);
       nclustersleft--;
    }
@@ -5807,7 +5821,7 @@ SCIP_RETCODE addCut(
    }
 
    /* create the cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%" SCIP_LONGINT_FORMAT "_%d", SCIPgetNLPs(scip), *ncuts);
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE,
          sepadata->dynamiccuts) );
 

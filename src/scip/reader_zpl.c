@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_zpl.c
+ * @ingroup DEFPLUGINS_READER
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -23,7 +24,7 @@
 
 #include "scip/reader_zpl.h"
 
-#ifdef WITH_ZIMPL
+#ifdef SCIP_WITH_ZIMPL
 
 #include <unistd.h>
 #include <stdbool.h>
@@ -59,6 +60,7 @@ extern "C" {
 /* @Note: Due to dependencies we need the following order. */
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/ratlptypes.h"
+#include "zimpl/lint.h"
 #include "zimpl/mme.h"
 
 #include "zimpl/numb.h"
@@ -161,7 +163,7 @@ void xlp_free(
    /* nothing to be done here */
 }
 
-/** does there already exists a constraint with the given name? */ 
+/** does there already exists a constraint with the given name? */
 bool xlp_conname_exists(
    const Lps*            data,               /**< pointer to reader data */
    const char*           name                /**< constraint name to check */
@@ -1597,16 +1599,18 @@ SCIP_DECL_READERREAD(readerReadZpl)
  * reader specific interface methods
  */
 
-/** includes the zpl file reader in SCIP */
+/** includes the zpl file reader in SCIP */ /*lint --e{715}*/
 SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    )
-{
-#ifdef WITH_ZIMPL
+{ /*lint --e{715}*/
+#ifdef SCIP_WITH_ZIMPL
 #if (ZIMPL_VERSION >= 320)
    SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
    char extcodename[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
 
    /* create zpl reader data */
    readerdata = NULL;
@@ -1632,6 +1636,8 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    (void) SCIPsnprintf(extcodename, SCIP_MAXSTRLEN, "ZIMPL %d.%d.%d", ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10); /*lint !e778*/
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, extcodename, "Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)"));
 #else
+   assert(scip != NULL);
+
    SCIPwarningMessage(scip, "SCIP does only support ZIMPL 3.2.0 and higher. Please update your ZIMPL version %d.%d.%d\n",
       ZIMPL_VERSION/100, (ZIMPL_VERSION%100)/10, ZIMPL_VERSION%10);
 #endif

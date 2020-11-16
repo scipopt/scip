@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,12 +35,12 @@ using namespace std;
 /** method finding the edge going from the node with id index1 to the node with id index2 */
 static
 GRAPHEDGE* findEdge(
-   GRAPHNODE*         nodes,              /**< all nodes of the graph */
-   GRAPHNODE*         node1,              /**< id of the node where the searched edge starts */
-   GRAPHNODE*         node2               /**< id of the node where the searched edge ends */
+   GRAPHNODE*            nodes,              /**< all nodes of the graph */
+   GRAPHNODE*            node1,              /**< id of the node where the searched edge starts */
+   GRAPHNODE*            node2               /**< id of the node where the searched edge ends */
    )
-{
-   GRAPHEDGE* edge =  node1->first_edge;
+{  /*lint --e{715}*/
+   GRAPHEDGE* edge = node1->first_edge;
 
    // regard every outgoing edge of node index1 and stop if adjacent to node index2
    while( edge != NULL )
@@ -49,29 +49,29 @@ GRAPHEDGE* findEdge(
          break;
       edge = edge->next;
    }
-   return edge;   
-} /*lint !e715*/
+   return edge;
+}
 
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 SCIP_DECL_HEURFREE(Heur2opt::scip_free)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 SCIP_DECL_HEURINIT(Heur2opt::scip_init)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 SCIP_DECL_HEUREXIT(Heur2opt::scip_exit)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin)
@@ -81,7 +81,7 @@ SCIP_DECL_HEUREXIT(Heur2opt::scip_exit)
  *
  */
 SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
-{
+{  /*lint --e{715}*/
    ProbDataTSP* probdata = dynamic_cast<ProbDataTSP*>(SCIPgetObjProbData(scip));
    graph_ = probdata->getGraph(); /*lint !e613*/
    capture_graph(graph_);
@@ -89,18 +89,18 @@ SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
    ncalls_ = 0;
    sol_ = NULL;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &tour_, graph_->nnodes) );
-   
-   return SCIP_OKAY;
-} /*lint !e715*/
 
-   
+   return SCIP_OKAY;
+}
+
+
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed)
  *
  *  This method is called before the branch and bound process is freed.
  *  The primal heuristic should use this call to clean up its branch and bound data.
  */
 SCIP_DECL_HEUREXITSOL(Heur2opt::scip_exitsol)
-{
+{  /*lint --e{715}*/
    assert( graph_ != 0 );
    assert( tour_ != 0 );
 
@@ -108,14 +108,17 @@ SCIP_DECL_HEUREXITSOL(Heur2opt::scip_exitsol)
    release_graph(&graph_);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 
 /** execution method of primal heuristic 2-Opt */
 SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
-{  
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( result != NULL );
    assert( heur != NULL );
-   SCIP_SOL* sol = SCIPgetBestSol( scip );
+
+   SCIP_SOL* sol = SCIPgetBestSol(scip);
    bool newsol;
 
    // check whether a new solution was found meanwhile
@@ -128,7 +131,7 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
    else
       newsol = false;
 
-   ncalls_++;
+   ++ncalls_;
 
    int nnodes = graph_->nnodes; /*lint !e613*/
 
@@ -149,24 +152,24 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
       GRAPHEDGE* edge;
       GRAPHEDGE* lastedge = NULL;
       GRAPHNODE* node = &nodes[0];
-      int i = 0; 
+      int i = 0;
 
       do
       {
-         edge = node->first_edge;      
+         edge = node->first_edge;
          while( edge != NULL )
          {
-            // find the next edge of the tour 
+            // find the next edge of the tour
             if( edge->back != lastedge && SCIPgetSolVal(scip, sol, edge->var) > 0.5 )
             {
                node = edge->adjac;
                lastedge = edge;
 
                int j;
-               // shift edge through the (sorted) array 
+               // shift edge through the (sorted) array
                for(j = i; j > 0 && tour_[j-1]->length < edge->length; j-- ) /*lint !e613*/
                   tour_[j] = tour_[j-1]; /*lint !e613*/
-                               
+
                // and insert the edge at the right position
                tour_[j] = edge; /*lint !e613*/
 
@@ -174,37 +177,34 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
                break;
             }
             edge = edge->next;
-
          }
-      }while ( node != &nodes[0] );
+      }
+      while ( node != &nodes[0] );
       assert( i == nnodes );
-
    }
 
    GRAPHEDGE** edges2test = NULL;
-   SCIP_CALL( SCIPallocBufferArray(scip, &edges2test, 4) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges2test, 4) );
 
-   // test current edge with all 'longer' edges for improvement 
-   // if swapping with crossing edges (though do 2Opt for one edge)
+   /* test current edge with all 'longer' edges for improvement if swapping with crossing edges (though do 2Opt for one edge) */
    for( int i = 0; i < ncalls_ && *result != SCIP_FOUNDSOL; i++ )
    {
       edges2test[0] = tour_[ncalls_]; /*lint !e613*/
       edges2test[1] = tour_[i]; /*lint !e613*/
-      edges2test[2] = findEdge( nodes, edges2test[0]->back->adjac, edges2test[1]->back->adjac );  
+      edges2test[2] = findEdge( nodes, edges2test[0]->back->adjac, edges2test[1]->back->adjac );
       edges2test[3] = findEdge( nodes, edges2test[0]->adjac, edges2test[1]->adjac );
       assert( edges2test[2] != NULL );
       assert( edges2test[3] != NULL );
-             
-      // if the new solution is better and variables are not fixed, update and end
-      if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length 
-         &&  SCIPvarGetLbGlobal(edges2test[0]->var) == 0.0
-         &&  SCIPvarGetLbGlobal(edges2test[1]->var) == 0.0
-         &&  SCIPvarGetUbGlobal(edges2test[2]->var) == 1.0
-         &&  SCIPvarGetUbGlobal(edges2test[3]->var) == 1.0 )
-      {
 
+      // if the new solution is better and variables are not fixed, update and end
+      if( edges2test[0]->length + edges2test[1]->length > edges2test[2]->length + edges2test[3]->length
+         && SCIPvarGetLbGlobal(edges2test[0]->var) < 0.5
+         && SCIPvarGetLbGlobal(edges2test[1]->var) < 0.5
+         && SCIPvarGetUbGlobal(edges2test[2]->var) > 0.5
+         && SCIPvarGetUbGlobal(edges2test[3]->var) > 0.5 )
+      {
          SCIP_Bool success;
-         SCIP_SOL* swapsol; // copy of sol with 4 edges swapped 
+         SCIP_SOL* swapsol; // copy of sol with 4 edges swapped
 
          SCIP_CALL( SCIPcreateSol(scip, &swapsol, heur) );
 
@@ -222,15 +222,15 @@ SCIP_DECL_HEUREXEC(Heur2opt::scip_exec)
          SCIP_CALL( SCIPaddSolFree(scip, &swapsol, &success) );
 
          assert(success);
-         *result = SCIP_FOUNDSOL;                   
+         *result = SCIP_FOUNDSOL;
          ncalls_ = 0;
-
       }
    }
    SCIPfreeBufferArray(scip, &edges2test);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
+
 
 /** clone method which will be used to copy a objective plugin */
 SCIP_DECL_HEURCLONE(scip::ObjCloneable* Heur2opt::clone) /*lint !e665*/

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_convexproj.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  convexproj separator
  * @author Felipe Serrano
  *
@@ -34,6 +35,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_nlp.h"
 #include "scip/pub_sepa.h"
+#include "scip/pub_var.h"
 #include "scip/scip_cut.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
@@ -851,7 +853,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) ); /*lint !e666*/
 
       SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* add rows of the LP @todo is it valid to use the depth callback parameter for this check? */
       if( depth == 0 )

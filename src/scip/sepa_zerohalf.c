@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_zerohalf.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  {0,1/2}-cuts separator
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Manuel Kutschka
  * @author Kati Wolter
  *
@@ -47,7 +48,6 @@
 #include "string.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipdefplugins.h"
-#include "scip/struct_lp.h"
 
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
@@ -364,12 +364,15 @@ SCIP_RETCODE transformNonIntegralRow(
    /* first add all integral variables to the transformed row and remember their positions in the row */
    for( i = 0; i < rowlen; ++i )
    {
+      int probindex;
+
       if( !SCIPcolIsIntegral(rowcols[i]) )  /*lint !e613*/
          continue;
 
-      transrowvars[transrowlen] = rowcols[i]->var_probindex; /*lint !e613*/
-      transrowvals[transrowlen] = sign * rowvals[i]; /*lint !e613*/
-      intvarpos[rowcols[i]->var_probindex] = ++transrowlen; /*lint !e613*/
+      probindex = SCIPcolGetVarProbindex(rowcols[i]);
+      transrowvars[transrowlen] = probindex;
+      transrowvals[transrowlen] = sign * rowvals[i];
+      intvarpos[probindex] = ++transrowlen;
    }
 
    /* now loop over the non-integral columns of the row and project them out using simple or variable bounds */
@@ -512,7 +515,7 @@ SCIP_RETCODE transformNonIntegralRow(
 
       SCIP_VAR** vars = SCIPgetVars(scip);
 
-      *success = !SCIPcutsTightenCoefficients(scip, local, transrowvals, &transrowrhs, transrowvars, &transrowlen, &nchgcoefs);
+      *success = ! SCIPcutsTightenCoefficients(scip, local, transrowvals, &transrowrhs, transrowvars, &transrowlen, &nchgcoefs);
 
       mindelta = -SCIPepsilon(scip);
       maxdelta = SCIPsumepsilon(scip);
@@ -520,81 +523,81 @@ SCIP_RETCODE transformNonIntegralRow(
       if( *success )
       {
          SCIP_CALL( SCIPcalcIntegralScalar(transrowvals, transrowlen, mindelta, maxdelta, MAXDNOM, MAXSCALE, &intscalar, success) );
-      }
-
-      if( *success )
-      {
-         SCIP_Real floorrhs;
-         SCIP_Real slack;
-
-         transrowrhs *= intscalar; /*lint !e644*/
-
-         /* slack is initialized to zero since the transrowrhs can still change due to bound usage in the loop below;
-          * the floored right hand side is then added afterwards
-          */
-         slack = 0.0;
-         for( i = 0; i < transrowlen; ++i )
-         {
-            SCIP_Real solval = SCIPgetSolVal(scip, sol, vars[transrowvars[i]]);
-            SCIP_Real intval;
-            SCIP_Real newval;
-
-            getIntegralScalar(transrowvals[i], intscalar, mindelta, maxdelta, &newval, &intval);
-
-            if( !SCIPisEQ(scip, intval, newval) )
-            {
-               if( intval < newval )
-               {
-                  SCIP_Real lb = local ? SCIPvarGetLbLocal(vars[transrowvars[i]]) : SCIPvarGetLbGlobal(vars[transrowvars[i]]);
-
-                  if( SCIPisInfinity(scip, -lb) )
-                  {
-                     *success = FALSE;
-                     break;
-                  }
-
-                  transrowrhs += (intval - newval) * lb;
-               }
-               else
-               {
-                  SCIP_Real ub = local ? SCIPvarGetUbLocal(vars[transrowvars[i]]) : SCIPvarGetUbGlobal(vars[transrowvars[i]]);
-
-                  if( SCIPisInfinity(scip, ub) )
-                  {
-                     *success = FALSE;
-                     break;
-                  }
-
-                  transrowrhs += (intval - newval) * ub;
-               }
-            }
-
-            slack -= solval * intval;
-            transrowvals[i] = intval;
-         }
 
          if( *success )
          {
-            floorrhs = SCIPfeasFloor(scip, transrowrhs);
-            slack += floorrhs;
+            SCIP_Real floorrhs;
+            SCIP_Real slack;
 
-            if( slack <= maxslack )
+            transrowrhs *= intscalar; /*lint !e644*/
+
+            /* slack is initialized to zero since the transrowrhs can still change due to bound usage in the loop below;
+             * the floored right hand side is then added afterwards
+             */
+            slack = 0.0;
+            for( i = 0; i < transrowlen; ++i )
             {
-               introw->rhs = floorrhs;
-               introw->slack = slack;
-               introw->vals = transrowvals;
-               introw->varinds = transrowvars;
-               introw->len = transrowlen;
-               introw->size = rowlen;
-               introw->local = local;
-               introw->rank = rank;
+               SCIP_Real solval = SCIPgetSolVal(scip, sol, vars[transrowvars[i]]);
+               SCIP_Real intval;
+               SCIP_Real newval;
 
-               if( !SCIPisEQ(scip, floorrhs, transrowrhs) )
-                  introw->rank += 1;
+               getIntegralScalar(transrowvals[i], intscalar, mindelta, maxdelta, &newval, &intval);
+
+               if( !SCIPisEQ(scip, intval, newval) )
+               {
+                  if( intval < newval )
+                  {
+                     SCIP_Real lb = local ? SCIPvarGetLbLocal(vars[transrowvars[i]]) : SCIPvarGetLbGlobal(vars[transrowvars[i]]);
+
+                     if( SCIPisInfinity(scip, -lb) )
+                     {
+                        *success = FALSE;
+                        break;
+                     }
+
+                     transrowrhs += (intval - newval) * lb;
+                  }
+                  else
+                  {
+                     SCIP_Real ub = local ? SCIPvarGetUbLocal(vars[transrowvars[i]]) : SCIPvarGetUbGlobal(vars[transrowvars[i]]);
+
+                     if( SCIPisInfinity(scip, ub) )
+                     {
+                        *success = FALSE;
+                        break;
+                     }
+
+                     transrowrhs += (intval - newval) * ub;
+                  }
+               }
+
+               slack -= solval * intval;
+               transrowvals[i] = intval;
             }
-            else
+
+            if( *success )
             {
-               *success = FALSE;
+               floorrhs = SCIPfeasFloor(scip, transrowrhs);
+               slack += floorrhs;
+
+               if( slack <= maxslack )
+               {
+                  introw->rhs = floorrhs;
+                  introw->slack = slack;
+                  introw->vals = transrowvals;
+                  introw->varinds = transrowvars;
+                  introw->len = transrowlen;
+                  introw->size = rowlen;
+                  introw->local = local;
+                  introw->rank = rank;
+
+                  if( !SCIPisEQ(scip, floorrhs, transrowrhs) )
+                     introw->rank += 1;
+               }
+               else
+               {
+                  *success = FALSE;
+               }
             }
          }
       }
@@ -730,7 +733,8 @@ SCIP_RETCODE mod2MatrixAddCol(
    mod2matrix->cols[col->pos] = col;
 
    /* create mapping of problem variable to mod 2 column with its right hand side offset */
-   SCIP_CALL( SCIPhashmapInsert(origvar2col, (void*) origvar, COLINFO_CREATE(col, rhsoffset)) );
+   assert(rhsoffset >= 0);
+   SCIP_CALL( SCIPhashmapInsert(origvar2col, (void*) origvar, COLINFO_CREATE(col, rhsoffset)) ); /*lint !e571*/
 
    return SCIP_OKAY;
 }
@@ -1061,7 +1065,7 @@ SCIP_RETCODE buildMod2Matrix(
       lbsol = MAX(0.0, primsol - lb);
       if( SCIPisZero(scip, lbsol) )
       {
-         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) vars[i], COLINFO_CREATE(NULL, mod2(scip, lb))) );
+         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) vars[i], COLINFO_CREATE(NULL, mod2(scip, lb))) ); /*lint !e571*/
          continue;
       }
 
@@ -1069,7 +1073,7 @@ SCIP_RETCODE buildMod2Matrix(
       ubsol = MAX(0.0, ub - primsol);
       if( SCIPisZero(scip, ubsol) )
       {
-         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) vars[i], COLINFO_CREATE(NULL, mod2(scip, ub))) );
+         SCIP_CALL( SCIPhashmapInsert(origcol2col, (void*) vars[i], COLINFO_CREATE(NULL, mod2(scip, ub))) ); /*lint !e571*/
          continue;
       }
 
@@ -1085,11 +1089,15 @@ SCIP_RETCODE buildMod2Matrix(
       if( useub )
       {
          assert(ubsol > 0.0);
+
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddCol(scip, mod2matrix, origcol2col, vars[i], ubsol, mod2(scip, ub)) );
       }
       else
       {
          assert(lbsol > 0.0);
+
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddCol(scip, mod2matrix, origcol2col, vars[i], lbsol, mod2(scip, lb)) );
       }
    }
@@ -1147,11 +1155,13 @@ SCIP_RETCODE buildMod2Matrix(
             assert(SCIPisEQ(scip, lhs, rhs));
 
             /* use rhs */
+            /* coverity[var_deref_model] */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
          else
          {
             /* use both */
+            /* coverity[var_deref_model] */
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
             SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
          }
@@ -1159,11 +1169,13 @@ SCIP_RETCODE buildMod2Matrix(
       else if( rhsslack <= maxslack )
       {
          /* use rhs */
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], rhsslack, ORIG_RHS, rhsmod2) );
       }
       else if( lhsslack <= maxslack )
       {
          /* use lhs */
+         /* coverity[var_deref_model] */
          SCIP_CALL( mod2MatrixAddOrigRow(scip, blkmem, mod2matrix, origcol2col, rows[i], lhsslack, ORIG_LHS, lhsmod2) );
       }
    }
@@ -1454,33 +1466,42 @@ void addOrigRow(
 {
    int i;
    SCIP_Real weight = 0.5 * sign;
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   int rowlen;
 
-   for( i = 0; i < row->len; ++i )
+   rowlen = SCIProwGetNNonz(row);
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   for( i = 0; i < rowlen; ++i )
    {
-      int probindex = row->cols[i]->var_probindex;
-      SCIP_Real val = tmpcoefs[probindex];
+      SCIP_Real val;
+      int probindex;
 
+      probindex = SCIPcolGetVarProbindex(rowcols[i]);
+      val = tmpcoefs[probindex];
       if( val == 0.0 )
       {
          nonzeroinds[(*nnz)++] = probindex;
       }
 
-      val += weight * row->vals[i];
+      val += weight * rowvals[i];
       tmpcoefs[probindex] = NONZERO(val);
    }
 
    if( sign == +1 )
    {
-      *cutrhs += weight * SCIPfeasFloor(scip, row->rhs - row->constant);
+      *cutrhs += weight * SCIPfeasFloor(scip, SCIProwGetRhs(row) - SCIProwGetConstant(row));
    }
    else
    {
       assert(sign == -1);
-      *cutrhs += weight * SCIPfeasCeil(scip, row->lhs - row->constant);
+      *cutrhs += weight * SCIPfeasCeil(scip, SCIProwGetLhs(row) - SCIProwGetConstant(row));
    }
 
-   *cutrank = MAX(*cutrank, row->rank);
-   *cutislocal = *cutislocal || row->local;
+   if( SCIProwGetRank(row) > *cutrank )
+      *cutrank = SCIProwGetRank(row);
+   *cutislocal = *cutislocal || SCIProwIsLocal(row);
 }
 
 /** add transformed integral row to aggregation with weight 0.5 */
@@ -1785,7 +1806,7 @@ SCIP_RETCODE generateZerohalfCut(
          assert(allowlocal || !cutislocal);
 
          /* create the cut */
-         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
+         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), row->index);
 
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
@@ -1825,8 +1846,8 @@ SCIP_RETCODE generateZerohalfCut(
    }
 
   TERMINATE:
-   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeCleanBufferArray(scip, &tmpcoefs);
 
    return SCIP_OKAY;

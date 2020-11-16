@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -62,7 +62,7 @@ extern "C" {
  *
  * @note The variables in the lpcands array must have a fractional value in the current LP solution
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP_VAR**            pseudocands,        /**< branching candidates                                */
@@ -81,7 +81,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    );
 
 /** creates the all variables full strong LP branching rule and includes it in SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );

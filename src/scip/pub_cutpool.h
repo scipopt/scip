@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,13 +38,13 @@ extern "C" {
  */
 
 /** gets the row of the cut */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPcutGetRow(
    SCIP_CUT*             cut                 /**< cut */
    );
 
 /** gets the age of the cut: the number of consecutive cut pool separation rounds where the cut was neither in the LP nor violated */
-EXTERN
+SCIP_EXPORT
 int SCIPcutGetAge(
    SCIP_CUT*             cut                 /**< cut */
    );
@@ -54,48 +54,48 @@ int SCIPcutGetAge(
  *
  *  @see SCIPcutGetAge() to get the age of a cut
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcutGetLPActivityQuot(
    SCIP_CUT*             cut                 /**< cut */
    );
 
 /** gets array of cuts in the cut pool */
-EXTERN
+SCIP_EXPORT
 SCIP_CUT** SCIPcutpoolGetCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
 /** get number of cuts in the cut pool */
-EXTERN
+SCIP_EXPORT
 int SCIPcutpoolGetNCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
 /** get maximum number of cuts that were stored in the cut pool at the same time */
-EXTERN
+SCIP_EXPORT
 int SCIPcutpoolGetMaxNCuts(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
 /** gets time in seconds used for separating cuts from the pool */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPcutpoolGetTime(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
 /** get number of times, the cut pool was separated */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPcutpoolGetNCalls(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
 /** get total number of cuts that were separated from the cut pool */
-EXTERN
+SCIP_EXPORT
 SCIP_Longint SCIPcutpoolGetNCutsFound(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

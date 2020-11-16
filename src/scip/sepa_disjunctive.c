@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_disjunctive.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  disjunctive cut separator
  * @author Tobias Fischer
  * @author Marc Pfetsch
@@ -382,7 +383,7 @@ SCIP_RETCODE generateDisjCutSOS1(
    }
 
    /* create cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%d_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
 
    /* @todo is it valid to use the depth callback parameter for this check? */
    if ( SCIPgetDepth(scip) == 0 )
@@ -579,6 +580,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    /* get conflict graph and number of conflict graph edges (note that the digraph arcs were added in both directions) */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+   if( conflictgraph == NULL )
+      return SCIP_OKAY;
+
    nedges = (int)SCIPceil(scip, (SCIP_Real)SCIPdigraphGetNArcs(conflictgraph)/2);
 
    /* if too many conflict graph edges, the separator can be slow: delay it until no other cuts have been found */
@@ -868,11 +872,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIPfreeBufferArrayNull(scip, &coef);
    SCIPfreeBufferArrayNull(scip, &binvrow);
    SCIPfreeBufferArrayNull(scip, &basisrow);
+   SCIPfreeBufferArrayNull(scip, &rowsmaxval);
+   SCIPfreeBufferArrayNull(scip, &varrank);
    SCIPfreeBufferArrayNull(scip, &fixings2);
    SCIPfreeBufferArrayNull(scip, &fixings1);
    SCIPfreeBufferArrayNull(scip, &edgearray);
-   SCIPfreeBufferArrayNull(scip, &rowsmaxval);
-   SCIPfreeBufferArrayNull(scip, &varrank);
 
    return SCIP_OKAY;
 }

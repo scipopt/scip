@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -32,19 +32,19 @@ extern "C" {
 #include "symmetry/struct_symmetry.h"
 
 /** return whether symmetry can be computed */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SYMcanComputeSymmetry(void);
 
 /** return name of external program used to compute generators */
-EXTERN
+SCIP_EXPORT
 const char* SYMsymmetryGetName(void);
 
 /** return description of external program used to compute generators */
-EXTERN
+SCIP_EXPORT
 const char* SYMsymmetryGetDesc(void);
 
 /** compute generators of symmetry group */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */

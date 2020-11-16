@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -42,7 +42,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurRens(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -53,7 +53,7 @@ SCIP_RETCODE SCIPincludeHeurRens(
  */
 
 /** main procedure of the RNS heuristic, creates and solves a sub-SCIP */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

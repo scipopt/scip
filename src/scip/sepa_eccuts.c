@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_eccuts.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  edge concave cut separator
  * @author Benjamin Müller
  */
@@ -358,7 +359,6 @@ SCIP_RETCODE nlrowaggrStoreQuadraticVars(
 /** adds a remaining bilinear term to a given nonlinear row aggregation */
 static
 SCIP_RETCODE nlrowaggrAddRemBilinTerm(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
@@ -369,6 +369,9 @@ SCIP_RETCODE nlrowaggrAddRemBilinTerm(
    assert(x != NULL);
    assert(y != NULL);
    assert(coef != 0.0);
+   assert(nlrowaggr->remtermcoefs != NULL);
+   assert(nlrowaggr->remtermvars1 != NULL);
+   assert(nlrowaggr->remtermvars2 != NULL);
 
    nlrowaggr->remtermcoefs[ nlrowaggr->nremterms ] = coef;
    nlrowaggr->remtermvars1[ nlrowaggr->nremterms ] = x;
@@ -527,7 +530,7 @@ SCIP_RETCODE nlrowaggrCreate(
       }
       else
       {
-         SCIP_CALL( nlrowaggrAddRemBilinTerm(scip, *nlrowaggr, x, y, coef) );
+         SCIP_CALL( nlrowaggrAddRemBilinTerm(*nlrowaggr, x, y, coef) );
          SCIPdebugMsg(scip, "add term %e *%d*%d to the remaining part\n", coef, quadelem->idx1, quadelem->idx2);
       }
    }
@@ -1905,8 +1908,8 @@ SCIP_Real evalCorner(
       assert(idx1 >= 0 && idx1 < ecaggr->nvars);
       assert(idx2 >= 0 && idx2 < ecaggr->nvars);
 
-      bound1 = ((poweroftwo[idx1]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx1]) : SCIPvarGetUbLocal(ecaggr->vars[idx1]);
-      bound2 = ((poweroftwo[idx2]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx2]) : SCIPvarGetUbLocal(ecaggr->vars[idx2]);
+      bound1 = ((poweroftwo[idx1]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx1]) : SCIPvarGetUbLocal(ecaggr->vars[idx1]); /*lint !e661*/
+      bound2 = ((poweroftwo[idx2]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx2]) : SCIPvarGetUbLocal(ecaggr->vars[idx2]); /*lint !e661*/
 
       val += coef * bound1 * bound2;
    }

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   bandit.c
+ * @ingroup OTHER_CFILES
  * @brief  internal API of bandit algorithms and bandit virtual function tables
  * @author Gregor Hendel
  */
@@ -25,7 +26,7 @@
 #include "scip/bandit.h"
 #include "scip/pub_bandit.h"
 #include "scip/struct_bandit.h"
-#include "struct_set.h"
+#include "scip/struct_set.h"
 #include "scip/set.h"
 
 /** creates and resets bandit algorithm */

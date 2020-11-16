@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricestore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing priced variables
  * @author Tobias Achterberg
  */
@@ -448,10 +449,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                   SCIPsetDebugMsg(set, "  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
 
-               /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns
-                * we must add variables with negative feasibility, but in order to not get a too large lower bound
-                * due to missing columns, we better also add variables, that have a very small feasibility
-                */
+               /* add variable if feasibility is negative, i.e., the reduced costs are negative */
                if( !SCIPsetIsPositive(set, feasibility) )
                {
                   SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, -feasibility / (col->len+1), root) );

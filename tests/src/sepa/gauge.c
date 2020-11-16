@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -312,8 +312,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    SCIP_SOL* boundary_sol;
    POSITION position;
    SCIP_Real feas;
-   int nlrowsidx[2] = {0, 1};
+   int nlrowsidx[] = {0, 1};
    int nnlrowsidx = 2;
+   SCIP_NLROW* nlrows[2];
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -322,7 +323,9 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    /* create the nl rows */
    createNlRow1(convexsides[0]);
    createNlRow2(convexsides[1]);
-   SCIP_NLROW* nlrows[2] = {nlrow1, nlrow2};
+   nlrows[0] = nlrow1;
+   nlrows[1] = nlrow2;
+
 
    /** first point active only on nlrow1 **/
    /* set interior point */
@@ -424,6 +427,7 @@ Test(evaluation, gradient_cut_convex)
    SCIP_EXPRINT* exprint;
    SCIP_Bool convex = TRUE;
    SCIP_Real* coefs;
+   SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -441,7 +445,8 @@ Test(evaluation, gradient_cut_convex)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow1, convex, gradcut) );
+   SCIP_CALL( generateCut(scip, x0, exprint, nlrow1, convex, gradcut, &success) );
+   cr_assert(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
@@ -462,6 +467,7 @@ Test(evaluation, gradient_cut_concave)
    SCIP_EXPRINT* exprint;
    SCIP_Bool convex = FALSE;
    SCIP_Real* coefs;
+   SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -479,7 +485,8 @@ Test(evaluation, gradient_cut_concave)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow1, convex, gradcut) );
+   SCIP_CALL( generateCut(scip, x0, exprint, nlrow1, convex, gradcut, &success) );
+   cr_assert(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
@@ -500,6 +507,7 @@ Test(evaluation, gradient_complicated_convex)
    SCIP_EXPRINT* exprint;
    SCIP_Bool convex = TRUE;
    SCIP_Real* coefs;
+   SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -517,7 +525,8 @@ Test(evaluation, gradient_complicated_convex)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow3, convex, gradcut) );
+   SCIP_CALL( generateCut(scip, x0, exprint, nlrow3, convex, gradcut, &success) );
+   cr_assert(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);
@@ -538,6 +547,7 @@ Test(evaluation, gradient_complicated_concave)
    SCIP_EXPRINT* exprint;
    SCIP_Bool convex = FALSE;
    SCIP_Real* coefs;
+   SCIP_Bool success = FALSE;
 
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
@@ -555,7 +565,8 @@ Test(evaluation, gradient_complicated_concave)
    SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &gradcut, "gradcut", -SCIPinfinity(scip), SCIPinfinity(scip),
             FALSE, FALSE , FALSE) );
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &exprint) );
-   SCIP_CALL( generateCut(scip, x0, exprint, nlrow3, convex, gradcut) );
+   SCIP_CALL( generateCut(scip, x0, exprint, nlrow3, convex, gradcut, &success) );
+   cr_assert(success);
 
    /* check coefficients */
    coefs = SCIProwGetVals(gradcut);

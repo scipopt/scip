@@ -1,7 +1,7 @@
 #! /bin/bash -x
 
 # Usage:
-# make testcluster | TESTSET=testset SETTINGS=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERF=performance check/jenkins_check_results_cmake.sh
+# make testcluster | TESTSET=testset SETTINGS=setting PERMUTE=permutations EXECUTABLE=build/bin/scip PERFORMANCE=performance check/jenkins_check_results_cmake.sh
 # or export the above mentioned variables and simply run
 # make testcluster | check/jenkins_check_results_cmake.sh
 
@@ -9,10 +9,13 @@
 # This script reads stdout from make testcluster, parses the slurm job ids, and queues jenkins_failcheck_cmake.sh
 # to run after the make testcluster jobs finish. The jenkins_failcheck script waits for 5 seconds, then
 # runs ./evalcheck_cluster.sh and greps for fails, among other things
-# optional: EXECUTABLE specifies the scip binary which should be used, PERF=performance enables rubberband support in jenkins_failcheck_cmake.sh.
+# optional: EXECUTABLE specifies the scip binary which should be used, PERFORMANCE=performance enables rubberband support in jenkins_failcheck_cmake.sh.
 # The results are uploaded to rubberband with rbcli and if there are fails, an email is sent to the admin.
 
 echo "This is jenkins_check_results_cmake.sh running."
+
+export PSMESSAGE=${PSMESSAGE}
+export IDENT=${IDENT}
 
 # set up environment for jenkins_failcheck_cmake.sh
 TESTSET=${TEST}
@@ -32,6 +35,9 @@ if [ "${EXECUTABLE}" == "" ]; then
   EXECUTABLE=bin/scip
   echo "No executable provided, defaulting to '${EXECUTABLE}'."
 fi
+if [ "${SLURMACCOUNT}" == "" ]; then
+  echo "No slurmaccount provided, omitting"
+fi
 echo "Using executable '${EXECUTABLE}'."
 
 # exporting the variables to the environment for check/jenkins_failcheck_cmake.sh to use
@@ -41,20 +47,23 @@ export SETTINGS
 export EXECUTABLE
 export GITBRANCH
 export MODE
+export OPT
 
-# get some relevant information
-# process optional variables
-if [ "${PERF}" != "" ]; then
-  export PERFORMANCE=${PERF}
+# if SEEDS is not a number, set it to 0
+re='^[0-9]+$'
+if ! [[ $SEEDS =~ $re ]] ; then
+  SEEDS="0"
 fi
-
+export SEEDS
 # if PERMUTE is not a number, set it to 0
 re='^[0-9]+$'
 if ! [[ $PERMUTE =~ $re ]] ; then
   PERMUTE="0"
 fi
 export PERMUTE
-export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+export STARTPERM
+export GLBSEEDSHIFT
+export GITHASH=$(git describe --always --dirty  | sed -re 's/^.+-g//')
 
 # read from stdin
 # OUTPUTDIR identifies a testrun uniquely
@@ -75,11 +84,17 @@ echo "To cancel the jobs run"
 echo 'for jobid in `cat '$CANCEL_FILE'`; do scancel $jobid; done'
 echo "This is an experimental feature, use with caution. In particular, make sure no two jobs have the same TESTSET, SETTINGS and LPS combination!"
 
-env
+# apparently `set` prints (almost) all environment vars
+# whereas `env` only prints exported ones
+set | sort > ${OUTPUTDIR}_envinfo.txt
 
 # build job ids string for sbatch dependency
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
 # execute checker after all jobs completed
-sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=mip-dbg --account=mip check/jenkins_failcheck_cmake.sh
+if [ "${SLURMACCOUNT}" == "" ]; then
+  sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt check/jenkins_failcheck_cmake.sh
+else
+  sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=4000 --time=500 --partition=opt --account=${SLURMACCOUNT} check/jenkins_failcheck_cmake.sh
+fi

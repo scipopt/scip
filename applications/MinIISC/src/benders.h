@@ -3,17 +3,17 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   benders.h
+/**@file   MinIISC/src/benders.h
  * @brief  run Benders algorithm
  * @author Marc Pfetsch
  *
@@ -63,7 +63,6 @@ typedef struct BENDERS_Data BENDERS_DATA;    /**< user defined data to pass to t
 
 
 /** run Benders algorithm using an oracle for the subproblems */
-extern
 SCIP_RETCODE runBenders(
    SCIP*                 masterscip,         /**< master SCIP instance */
    BENDERS_CUTORACLE((*Oracle)),             /**< oracle for the Benders subproblem */

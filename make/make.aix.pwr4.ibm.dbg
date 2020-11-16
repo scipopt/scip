@@ -1,4 +1,4 @@
-FLAGS		+=	-DROUNDING_FE
+FLAGS		+=	-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g -q64 -qmaxmem=-1 -bnoquiet -qsuppress=1506-732 -qflttrap -qcheck=all
 CFLAGS		+=	
 CXXFLAGS	+=	
