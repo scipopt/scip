@@ -291,6 +291,14 @@ SCIP_RETCODE extreduce_spgCheck3ComponentSimple(
       starcost += graph->cost[edge];
    }
 
+   if( graph_pc_isPc(graph) )
+   {
+	  assert(GE(graph->prize[node], 0.0));
+	  starcost -= graph->prize[node];
+
+	  assert(GE(starcost, 0.0));
+   }
+
    *isPseudoDeletable = spg3StarNeighborRuleOut(scip, graph, starcost, node, allowEquality, neighbors, distdata);
 
    return SCIP_OKAY;
