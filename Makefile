@@ -539,6 +539,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_linear.o \
 			scip/cons_linking.o \
 			scip/cons_logicor.o \
+			scip/cons_nonlinear.o \
 			scip/cons_or.o \
 			scip/cons_orbisack.o \
 			scip/cons_orbitope.o \

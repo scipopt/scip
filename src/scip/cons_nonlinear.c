@@ -309,45 +309,6 @@ typedef struct
  * Local methods
  */
 
-/** callback that creates data that this conshdlr wants to store in an expression */
-static
-SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(ownerdata != NULL);
-
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, ownerdata) );
-
-   (*ownerdata)->nenfos = -1;
-
-   return SCIP_OKAY;
-}
-
-/** callback that frees data that this conshdlr stored in an expression */
-static
-SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(ownerdata != NULL);
-   assert(*ownerdata != NULL);
-
-   /* expression should not be locked anymore */
-   assert((*ownerdata)->nlockspos == 0);
-   assert((*ownerdata)->nlocksneg == 0);
-
-   SCIP_CALL( freeEnfoData(scip, expr, TRUE) );
-
-   /* expression should not be enforced anymore */
-   assert((*ownerdata)->nenfos == 0);
-   assert((*ownerdata)->auxvar == NULL);
-
-   SCIPfreeBlockMemory(scip, ownerdata);
-
-   return SCIP_OKAY;
-}
-
 /** frees auxiliary variables of expression, if any */
 static
 SCIP_RETCODE freeAuxVar(
@@ -409,7 +370,7 @@ SCIP_RETCODE freeEnfoData(
       mydata->nactivityusessepa = 0;
       mydata->nauxvaruses = 0;
    }
-
+#if !1  // FIXME
    /* free data stored by nonlinear handlers */
    for( e = 0; e < mydata->nenfos; ++e )
    {
@@ -437,12 +398,52 @@ SCIP_RETCODE freeEnfoData(
       /* free enfo data */
       SCIPfreeBlockMemory(scip, &mydata->enfos[e]);
    }
-
+#endif
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &mydata->enfos, mydata->nenfos);
 
    /* we need to look at this expression in detect again */
    mydata->nenfos = -1;
+
+   return SCIP_OKAY;
+}
+
+/** callback that frees data that this conshdlr stored in an expression */
+static
+SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(ownerdata != NULL);
+   assert(*ownerdata != NULL);
+
+   /* expression should not be locked anymore */
+   assert((*ownerdata)->nlockspos == 0);
+   assert((*ownerdata)->nlocksneg == 0);
+
+   SCIP_CALL( freeEnfoData(scip, expr, TRUE) );
+
+   /* expression should not be enforced anymore */
+   assert((*ownerdata)->nenfos == 0);
+   assert((*ownerdata)->auxvar == NULL);
+
+   SCIPfreeBlockMemory(scip, ownerdata);
+
+   return SCIP_OKAY;
+}
+
+/** callback that creates data that this conshdlr wants to store in an expression */
+static
+SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(ownerdata != NULL);
+
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, ownerdata) );
+   (*ownerdata)->nenfos = -1;
+
+   *ownerdatafree = exprownerdataFree;
 
    return SCIP_OKAY;
 }
@@ -484,6 +485,7 @@ SCIP_RETCODE createExprVar(
    return SCIP_OKAY;
 }
 
+#if !1
 static
 SCIP_DECL_EXPR_MAPVAR(transformVar)
 {   /*lint --e{715}*/
@@ -500,6 +502,7 @@ SCIP_DECL_EXPR_MAPVAR(transformVar)
 
    return SCIP_OKAY;
 }
+#endif
 
 static
 SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
@@ -513,8 +516,11 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
    assert(mapexprdata != NULL);
 
    /* do not provide map if not variable */
-   if( !SCIPisExprVar(sourceexpr) )
-      return NULL;
+   if( !SCIPisExprVar(sourcescip, sourceexpr) )
+   {
+      *targetexpr = NULL;
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPexprGetVarExprVar(sourceexpr)) );
 
@@ -588,7 +594,7 @@ SCIP_RETCODE createCons(
    if( copyexpr )
    {
       /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
-      SCIP_CALL( SCIPduplicateExpr(scip, scip, expr, &consdata->expr, NULL, NULL, mapexprvar, conshdlr, exprownerdataCreate, NULL, exprownerdataFree) );
+      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerdataCreate, NULL) );
    }
    else
    {
@@ -1170,9 +1176,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_EXPR*            expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -1193,11 +1197,8 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
                                               *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node?
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsNonlinear() call, if you don't need all the information */
@@ -1222,7 +1223,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
+         local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1236,15 +1237,126 @@ SCIP_RETCODE SCIPcreateConsBasicNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_EXPR*            expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, name, expr, lhs, rhs,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
+}
+
+
+
+// dummy implementations to resolve symbols
+
+/** includes an expression constraint upgrade method into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading nonlinear constraint, or NULL */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
+   )
+{
+   // TODO
+   return SCIP_ERROR;
+}
+
+/** returns the expression of the given nonlinear constraint */
+SCIP_EXPR* SCIPgetExprConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   // TODO
+   return NULL;
+}
+
+/** gets the left hand side of a nonlinear constraint */
+SCIP_Real SCIPgetLhsConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   // TODO
+   return 0.0;
+}
+
+/** gets the right hand side of a nonlinear constraint */
+SCIP_Real SCIPgetRhsConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   // TODO
+   return 0.0;
+}
+
+/** gets the nonlinear constraint as a nonlinear row representation. */
+SCIP_RETCODE SCIPgetNlRowConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
+   )
+{
+   // TODO
+   return SCIP_ERROR;
+}
+
+/** returns the root curvature of the given nonlinear constraint
+ *
+ * @note The curvature information are computed during CONSINITSOL.
+ */
+SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   // TODO
+   return SCIP_EXPRCURV_UNKNOWN;
+}
+
+/** returns representation of the expression of the given expression constraint as quadratic form, if possible
+ *
+ * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
+ * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
+ * \ref SCIPexprGetVarExprVar() can be used to retrieve the variable.
+ */
+SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
+   SCIP*                    scip,               /**< SCIP data structure */
+   SCIP_CONS*               cons,               /**< constraint data */
+   SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
+   )
+{
+   // TODO
+   return SCIP_ERROR;
+}
+
+/** adds coef * var to expression constraint
+ *
+ * @attention This method can only be called in the problem stage.
+ */
+SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             coef,               /**< coefficient */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   // TODO
+   return SCIP_ERROR;
+}
+
+/** returns an equivalent linear constraint if possible */
+SCIP_RETCODE SCIPgetLinearConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
+   )
+{
+   // TODO
+   return SCIP_ERROR;
 }
