@@ -1558,8 +1558,14 @@ SCIP_Bool solstp_isValid(
       countpseudo = TRUE;
       nterms = graph_pc_nProperPotentialTerms(graph);
 
-      if( !graph_pc_isRootedPcMw(graph) )
+      if( graph_pc_isRootedPcMw(graph) )
+      {
+         nterms += graph_pc_nFixedTerms(graph);
+      }
+      else
+      {
          nterms++;
+      }
    }
    else
    {
