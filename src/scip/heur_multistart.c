@@ -563,15 +563,13 @@ SCIP_Real getRelDistance(
 
    assert(x != NULL);
    assert(y != NULL);
-   assert(SCIPgetNVars(scip) > 0);
 
    vars = SCIPgetVars(scip);
    distance = 0.0;
 
-   /* SCIPgetNvars() only returns 0 if it is called at a wrong stage. Here, we are always in SOLVED,
-    * so it should never return 0
-    */
-   /* coverity[zero_return] */
+   if( SCIPgetNVars(scip) == 0 )
+      return 0.0;
+
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
       lb = SCIPvarGetLbLocal(vars[i]);
@@ -601,10 +599,6 @@ SCIP_Real getRelDistance(
       distance += REALABS(solx - soly) / MAX(1.0, ub - lb);
    }
 
-   /* SCIPgetNvars() only returns 0 if it is called at a wrong stage. Here, we are always in SOLVED,
-    * so it should never return 0
-    */
-   /* coverity[divide_by_zero] */
    return distance / SCIPgetNVars(scip);
 }
 
