@@ -2834,7 +2834,7 @@ SCIP_RETCODE SCIPsetFree(
    {
       SCIP_CALL( SCIPexprhdlrFree(&(*set)->exprhdlrs[i], *set, blkmem) );
    }
-   BMSfreeMemoryArrayNull(&(*set)->nexprhdlrs);
+   BMSfreeMemoryArrayNull(&(*set)->exprhdlrs);
    (*set)->exprhdlrvar = NULL;
    (*set)->exprhdlrval = NULL;
    (*set)->exprhdlrsum = NULL;
