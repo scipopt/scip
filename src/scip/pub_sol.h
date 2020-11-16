@@ -195,6 +195,10 @@ SCIP_Real SCIPsolGetRelConsViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** compare two solutions by their objective value */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPsolComp);
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
