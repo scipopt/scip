@@ -1363,6 +1363,7 @@ void extreduce_distDataRecomputeDirtyPaths(
    {
       if( pathroot_isdirty[i] && isMarked[i] )
       {
+         assert(g->grad[i] > 0);
          distDataRecomputeNormalDist(scip, g, i, distdata);
          pathroot_isdirty[i] = FALSE;
       }

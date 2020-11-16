@@ -265,7 +265,7 @@ SCIP_RETCODE extreduce_spgCheck3ComponentSimple(
    assert(scip && graph && distdata && isPseudoDeletable);
    assert(*isPseudoDeletable == FALSE);
    assert(graph_knot_isInRange(graph, node));
-   assert(!Is_term(graph->term[node]));
+   assert(!Is_term(graph->term[node]) || graph_pc_isPc(graph));
    /* NOTE: because the component has been reverted... */
    assert(extcomp->nextleaves == 1);
    assert(extcomp->ncompedges == 3);
