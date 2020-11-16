@@ -652,6 +652,12 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
    return exprhdlr->reverseprop != NULL;
 }
 
+/** compares two expression handler w.r.t. their name */
+SCIP_DECL_SORTPTRCOMP(SCIPexprhdlrComp)
+{
+   return strcmp(((SCIP_EXPRHDLR*)elem1)->name, ((SCIP_EXPRHDLR*)elem2)->name);
+}
+
 /** increments the branching score count of an expression handler */
 void SCIPexprhdlrIncrementNBranchScore(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
