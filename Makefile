@@ -359,8 +359,7 @@ endif
 # NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
-NLPILIBCOBJ	=
-#NLPILIBCOBJ	= 	nlpi/nlpi.o \
+NLPILIBCOBJ	= 	nlpi/nlpi.o
 #			nlpi/nlpi_all.o \
 #			nlpi/nlpioracle.o
 
