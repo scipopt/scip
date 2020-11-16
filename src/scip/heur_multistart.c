@@ -452,7 +452,9 @@ SCIP_RETCODE improvePoint(
       for( i = 0; i < nvars; ++i )
       {
          /* adjust point */
-         /* nviolnlrows != 0, this gets asserted before */
+         /* nviolnlrows denotes the number of violated constraints. Since the point is not feasible (this is checked
+          * at the beginning of the function), we have nviolnlrows > 0
+          */
          /* coverity[divide_by_zero] */
          updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
          updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
