@@ -740,6 +740,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
 			scip/lp.o \
+			scip/nlp.o \
 			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
@@ -777,6 +778,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_lp.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \
+			scip/scip_nlp.o \
 			scip/scip_nodesel.o \
 			scip/scip_nonlinear.o \
 			scip/scip_numerics.o \
@@ -824,8 +826,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
 
-#			scip/nlp.o \
-#			scip/scip_nlp.o \
 
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)

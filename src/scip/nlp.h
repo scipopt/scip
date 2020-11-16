@@ -74,10 +74,6 @@ SCIP_RETCODE SCIPnlrowCreate(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   int                   nquadvars,          /**< number variables in quadratic terms */
-   SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int                   nquadelems,         /**< number of entries in quadratic term matrix */
-   SCIP_QUADELEM*        quadelems,          /**< elements of quadratic term matrix, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        exprtree,           /**< expression tree, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */

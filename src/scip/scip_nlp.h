@@ -681,10 +681,6 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   int                   nquadvars,          /**< number of variables in quadratic term */
-   SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int                   nquadelems,         /**< number of elements in quadratic term */
-   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
@@ -869,6 +865,7 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    SCIP_Real             coef                /**< new value of coefficient */
    );
 
+#if !1
 /** adds quadratic variable to the nonlinear row
  *
  *  After adding a quadratic variable, it can be used to add quadratic elements.
@@ -966,6 +963,7 @@ SCIP_RETCODE SCIPchgNlRowQuadElement(
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
    );
+#endif
 
 /** sets or deletes expression tree in the nonlinear row
  *
@@ -982,41 +980,6 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
    SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
-   );
-
-/** sets a parameter of expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNlRowExprtreeParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   paramidx,           /**< index of parameter in expression tree */
-   SCIP_Real             paramval            /**< new value of parameter in expression tree */
-   );
-
-/** sets parameters of expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNlRowExprtreeParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_Real*            paramvals           /**< new values of parameter in expression tree */
    );
 
 /** recalculates the activity of a nonlinear row in the last NLP solution

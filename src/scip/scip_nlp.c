@@ -1199,10 +1199,6 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   int                   nquadvars,          /**< number variables in quadratic terms */
-   SCIP_VAR**            quadvars,           /**< variables in quadratic terms, or NULL if nquadvars == 0 */
-   int                   nquadelems,         /**< number of elements in quadratic term */
-   SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
@@ -1212,7 +1208,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, constant, nlinvars, linvars, lincoefs, nquadvars, quadvars, nquadelems, quadelems, expression, lhs, rhs, curvature) );
+         name, constant, nlinvars, linvars, lincoefs, expression, lhs, rhs, curvature) );
 
    return SCIP_OKAY;
 }
@@ -1238,7 +1234,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, 0.0, 0, NULL, NULL, 0, NULL, 0, NULL, NULL, lhs, rhs, SCIP_EXPRCURV_UNKNOWN) );
+         name, 0.0, 0, NULL, NULL, NULL, lhs, rhs, SCIP_EXPRCURV_UNKNOWN) );
 
    return SCIP_OKAY;
 }
@@ -1467,6 +1463,7 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    return SCIP_OKAY;
 }
 
+#if !1
 /** adds quadratic variable to the nonlinear row
  *
  *  After adding a quadratic variable, it can be used to add quadratic elements.
@@ -1617,6 +1614,7 @@ SCIP_RETCODE SCIPchgNlRowQuadElement(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** sets or deletes expression tree in the nonlinear row
  *
@@ -1640,53 +1638,6 @@ SCIP_RETCODE SCIPsetNlRowExprtree(
 
    /* invalidate curvature */
    SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);
-
-   return SCIP_OKAY;
-}
-
-/** sets a parameter of expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNlRowExprtreeParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   paramidx,           /**< index of parameter in expression tree */
-   SCIP_Real             paramval            /**< new value of parameter in expression tree */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExprtreeParam", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowChgExprtreeParam(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, paramidx, paramval) );
-
-   return SCIP_OKAY;
-}
-
-/** sets parameters of expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPsetNlRowExprtreeParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_Real*            paramvals           /**< new values of parameter in expression tree */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExprtreeParams", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPnlrowChgExprtreeParams(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, paramvals) );
 
    return SCIP_OKAY;
 }

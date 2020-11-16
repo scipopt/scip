@@ -396,8 +396,7 @@ SCIP_RETCODE addLinearConstraints(
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
-            0, NULL, 0, NULL, NULL,
+            SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]), NULL,
             SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i]),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -455,8 +454,7 @@ SCIP_RETCODE addVarboundConstraints(
       coefs[1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            2, vars, coefs,
-            0, NULL, 0, NULL, NULL,
+            2, vars, coefs, NULL,
             SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i]),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -522,8 +520,7 @@ SCIP_RETCODE addLogicOrConstraints(
 
       /* logic or constraints: 1 == sum_j x_j */
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
-            0, NULL, 0, NULL, NULL,
+            nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs, NULL,
             1.0, SCIPinfinity(scip),
             SCIP_EXPRCURV_LINEAR) );
 
@@ -615,8 +612,7 @@ SCIP_RETCODE addSetppcConstraints(
       }
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
-            0, NULL, 0, NULL, NULL,
+            nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs, NULL,
             lhs, rhs,
             SCIP_EXPRCURV_LINEAR) );
 
@@ -687,8 +683,7 @@ SCIP_RETCODE addKnapsackConstraints(
          coefs[j] = (SCIP_Real)weights[j];  /*lint !e613*/
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
-            nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
-            0, NULL, 0, NULL, NULL,
+            nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs, NULL,
             -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i]),
             SCIP_EXPRCURV_LINEAR) );
 
