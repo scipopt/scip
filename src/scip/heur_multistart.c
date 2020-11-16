@@ -447,15 +447,16 @@ SCIP_RETCODE improvePoint(
          for( j = 0; j < nvars; ++j )
             updatevec[j] += scale * grad[j];
       }
-      assert(nviolnlrows > 0);
+
+      /* if there are no violated rows, stop since start point is feasible */
+      if( nviolnlrows == 0 )
+         return SCIP_OKAY;
 
       for( i = 0; i < nvars; ++i )
       {
+         assert(updatevec[i] != 0.0);
+
          /* adjust point */
-         /* nviolnlrows denotes the number of violated constraints. Since the point is not feasible (this is checked
-          * at the beginning of the function), we have nviolnlrows > 0
-          */
-         /* coverity[divide_by_zero] */
          updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
          updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
          updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i])); /*lint !e666*/
