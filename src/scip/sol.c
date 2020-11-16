@@ -3769,9 +3769,9 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
 /** comparison method for sorting variables by non-decreasing index */
 SCIP_DECL_SORTPTRCOMP(SCIPsolComp)
 {
-   if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj > 0 )
+   if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj < 0 )
       return 1;
-   else if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj < 0 )
+   else if( ((SCIP_SOL*)elem1)->obj - ((SCIP_SOL*)elem2)->obj > 0 )
       return -1;
    else
       return 0;

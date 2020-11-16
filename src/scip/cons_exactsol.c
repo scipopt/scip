@@ -200,6 +200,7 @@ void solCreateSolAssignment(
    }
 
    (*assignment)->len = solsize;
+   assert(solsize == SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
 }
 
 /*
@@ -357,8 +358,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIPdebugMessage("rejecting solution that was already checked \n");
       SCIPdebug(SCIPprintSol(scip, sol, NULL, 0));
 
-      SCIPfreeBlockMemoryArray(scip, &assignment->idx, SCIPgetNIntVars(scip));
-      SCIPfreeBlockMemoryArray(scip, &assignment->vals, SCIPgetNIntVars(scip));
+      SCIPfreeBlockMemoryArray(scip, &assignment->idx, assignment->len);
+      SCIPfreeBlockMemoryArray(scip, &assignment->vals, assignment->len);
       SCIPfreeBlockMemory(scip, &assignment);
       *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
@@ -391,7 +392,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    /* start exact diving */
    SCIP_CALL( SCIPstartExactDive(scip) );
 
-   /* sort solubuffer by objva; try to repair best solutions first */
+   /* sort solubuffer by objval try to repair best solutions first */
    SCIPsortPtr((void**)conshdlrdata->solubuffer, SCIPsolComp, conshdlrdata->nbufferedsols);
 
    while( conshdlrdata->nbufferedsols > 0 && !foundsol )
@@ -499,6 +500,11 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             SCIPfreeSol(scip, &worksol);
             conshdlrdata->nbufferedsols--;
          }
+      }
+      else
+      {
+         SCIPfreeSol(scip, &worksol);
+         conshdlrdata->nbufferedsols--;
       }
    }
 
