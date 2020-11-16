@@ -2714,8 +2714,6 @@ SCIP_RETCODE nlpDelVarPos(
          for( j = 0; j < nlrow->nlinvars; ++j )
             assert( nlrow->linvars[j] != var );
 
-      assert( SCIPnlrowSearchQuadVar(nlrow, var) == -1);
-
       assert(nlrow->exprtree == NULL || SCIPexprtreeFindVar(nlrow->exprtree, var) == -1);
    }
 #endif

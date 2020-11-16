@@ -164,7 +164,7 @@ SCIP_Bool isNlobbtApplicable(
 
    for( i = 0; i < nnlrows; ++i )
    {
-      if( SCIPnlrowGetNQuadElems(nlrows[i]) == 0 && SCIPnlrowGetExprtree(nlrows[i]) == NULL )
+      if( SCIPnlrowGetExprtree(nlrows[i]) == NULL )
          ++nlinearnlrows;
       else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX )
       {

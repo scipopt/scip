@@ -508,6 +508,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/benderscut_feasalt.o \
 			scip/benderscut_int.o \
 			scip/benderscut_nogood.o \
+			scip/benderscut_opt.o \
 			scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
@@ -534,6 +535,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
+			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \
 			scip/cons_linear.o \
@@ -694,8 +696,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
-#			scip/benderscut_opt.o \
-#			scip/cons_indicator.o \
 #			scip/prop_obbt.o \
 #			scip/reader_osil.o \
 #			scip/reader_pip.o \

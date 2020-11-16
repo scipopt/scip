@@ -5283,6 +5283,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
        */
       if ( SCIPisNLPConstructed(scip) && SCIPconsIsChecked(conss[c]) )
       {
+#if !1 //FIXME
          SCIP_NLROW* nlrow;
          SCIP_VAR* quadvars[2];
          SCIP_QUADELEM quadelem;
@@ -5300,6 +5301,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          /* add row to NLP and forget about it */
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
+#endif
       }
    }
 
@@ -7510,7 +7512,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
       SCIP_Real val = 1.0;
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
    else
@@ -7690,7 +7692,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorLinCons(
       SCIP_Real val = 1.0;
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
-      SCIP_CALL( SCIPcreateConsExprQuadratic(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
+      SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvar, &slackvar, &val, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    }
    else

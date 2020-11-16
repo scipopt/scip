@@ -31,7 +31,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 {
    SCIP_NLPI* nlpi;
 
-   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
+//   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
@@ -64,12 +64,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderMps(scip) );
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderSol(scip) );
-   SCIP_CALL( SCIPincludeReaderOsil(scip) );
+//   SCIP_CALL( SCIPincludeReaderOsil(scip) );
    SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
-   SCIP_CALL( SCIPincludeReaderPip(scip) );
+//   SCIP_CALL( SCIPincludeReaderPip(scip) );
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
@@ -190,7 +190,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
-   SCIP_CALL( SCIPincludePropObbt(scip) );
+//   SCIP_CALL( SCIPincludePropObbt(scip) );
    SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
@@ -204,16 +204,16 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaAggregation(scip) );
    SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
-   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
+//   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaGauge(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
-   SCIP_CALL( SCIPincludeSepaMinor(scip) );
+//   SCIP_CALL( SCIPincludeSepaMinor(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
-   SCIP_CALL( SCIPincludeSepaRlt(scip) );
+//   SCIP_CALL( SCIPincludeSepaRlt(scip) );
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
@@ -254,11 +254,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
    }
 
-   SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-   }
+//   SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
+//   if( nlpi != NULL )
+//   {
+//      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+//   }
 
 #ifdef TPI_TNYC
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );

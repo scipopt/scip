@@ -467,11 +467,8 @@ SCIP_RETCODE createExprVar(
    if( *expr == NULL )
    {
       /* create a new variable expression; this also captures the expression */
-      SCIP_CALL( SCIPcreateExprVar(scip, conshdlr, expr, var) );
+      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerdataCreate, NULL) );
       assert(*expr != NULL);
-
-      /* create data of conshdlr for new expr */
-      SCIP_CALL( SCIPcreateExprOwnerData(scip, *expr, exprownerdataCreate, NULL, exprownerdataFree) );
 
       /* store the variable expression in the hashmap */
       SCIP_CALL( SCIPhashmapInsert(SCIPconshdlrGetData(conshdlr)->var2expr, (void*) var, (void*) *expr) );

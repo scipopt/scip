@@ -1076,46 +1076,6 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       *dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
    }
 
-   /* quadratic part */
-   for( i = 0; i < SCIPnlrowGetNQuadElems(nlrow); i++ )
-   {
-      SCIP_VAR* var1;
-      SCIP_VAR* var2;
-      SCIP_VAR* mastervar1;
-      SCIP_VAR* mastervar2;
-      SCIP_Real coef1;
-      SCIP_Real coef2;
-
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx1 < SCIPnlrowGetNQuadVars(nlrow));
-      assert(SCIPnlrowGetQuadElems(nlrow)[i].idx2 < SCIPnlrowGetNQuadVars(nlrow));
-
-      var1  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx1];
-      var2  = SCIPnlrowGetQuadVars(nlrow)[SCIPnlrowGetQuadElems(nlrow)[i].idx2];
-
-      /* retrieving the master problem variables for the given subproblem variables. */
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var1, &mastervar1) );
-      SCIP_CALL( SCIPgetBendersMasterVar(masterprob, benders, var2, &mastervar2) );
-
-      coef1 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * getNlpVarSol(var2, primalvals, var2idx);
-      coef2 = mult * SCIPnlrowGetQuadElems(nlrow)[i].coef * getNlpVarSol(var1, primalvals, var2idx);
-
-      /* adding the variable to the storage */
-      if( mastervar1 != NULL )
-      {
-         SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar1, coef1, nvars, varssize) );
-      }
-      if( mastervar2 != NULL )
-      {
-         SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar2, coef2, nvars, varssize) );
-      }
-
-      if( mastervar1 != NULL )
-         *dirderiv += coef1 * getNlpVarSol(var1, primalvals, var2idx);
-
-      if( mastervar2 != NULL )
-         *dirderiv += coef2 * getNlpVarSol(var2, primalvals, var2idx);
-   }
-
    /* tree part */
    tree = SCIPnlrowGetExprtree(nlrow);
    if( tree != NULL )

@@ -819,7 +819,6 @@ SCIP_RETCODE applyHeur(
    for( i = 0; i < nnlrows; ++i )
    {
       nlrowgradcosts[i] = GRADCOSTFAC_LINEAR * SCIPnlrowGetNLinearVars(nlrows[i])
-         + GRADCOSTFAC_QUAD * SCIPnlrowGetNQuadElems(nlrows[i])
          + GRADCOSTFAC_NONLINEAR * getExprtreeSize(SCIPnlrowGetExprtree(nlrows[i]));
    }
 

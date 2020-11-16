@@ -3180,13 +3180,12 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       nnlrows = SCIPgetNNLPNlRows(scip);
       nlrows = SCIPgetNLPNlRows(scip);
 
-      /* check for an nlrow with nontrivial expression tree or quadratic terms; start from 0 since we expect the linear
+      /* check for an nlrow with nontrivial expression tree; start from 0 since we expect the linear
        * nlrows at the end */
       for( i = nnlrows-1; i >= 0 && !run; i-- )
       {
          assert(nlrows[i] != NULL);
          run = SCIPnlrowGetExprtree(nlrows[i]) != NULL && SCIPexprtreeGetNVars(SCIPnlrowGetExprtree(nlrows[i])) > 0;
-         run = run || SCIPnlrowGetNQuadVars(nlrows[i]) > 0;
       }
    }
 

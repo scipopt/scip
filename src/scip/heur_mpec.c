@@ -369,7 +369,6 @@ SCIP_RETCODE heurExec(
       assert(nlrow != NULL);
 
       nlpcostperiter += 1.0 * SCIPnlrowGetNLinearVars(nlrow)
-               + 2.0 * SCIPnlrowGetNQuadElems(nlrow)
                + 3.0 * getExprtreeSize(SCIPnlrowGetExprtree(nlrow));
    }
 

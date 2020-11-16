@@ -1316,7 +1316,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       userhs = FALSE;
 
       /* check curvature together with constraint sides of a nonlinear row */
-      if( SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL )
+      if( SCIPnlrowGetExprtree(nlrow) == NULL )
       {
          uselhs = TRUE;
          userhs = TRUE;

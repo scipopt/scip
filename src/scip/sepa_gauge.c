@@ -154,8 +154,7 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
       assert(nlrow != NULL);
 
       /* linear case */
-      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR ||
-            (SCIPnlrowGetNQuadElems(nlrow) == 0 && SCIPnlrowGetExprtree(nlrow) == NULL) )
+      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR || SCIPnlrowGetExprtree(nlrow) == NULL )
          continue;
 
       /* nonlinear case */

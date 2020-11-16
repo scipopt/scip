@@ -3657,3 +3657,33 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 }
 
 /**@} */
+
+
+// some dummy function implementations to resolve symbols
+#define DUMMYIMPL(x)  int x(void); int x(void) { return 0; }
+DUMMYIMPL(SCIPcreateConsQuadraticNonlinear)
+DUMMYIMPL(SCIPhasConsExprExprCurvature)
+DUMMYIMPL(SCIPexprtreeGetRoot)
+DUMMYIMPL(SCIPexprtreeGetVars)
+DUMMYIMPL(SCIPexprtreeGetNVars)
+DUMMYIMPL(SCIPexprtreeEvalInt)
+DUMMYIMPL(SCIPexprtreeEval)
+DUMMYIMPL(SCIPexprtreeFree)
+DUMMYIMPL(SCIPexprtreeFindVar)
+DUMMYIMPL(SCIPexprtreeCopy)
+DUMMYIMPL(SCIPexprtreePrintWithNames)
+DUMMYIMPL(SCIPexprtreeRemoveFixedVars)
+DUMMYIMPL(SCIPexprtreeGetInterpreterData)
+DUMMYIMPL(SCIPgetExprHdlrExponential)
+DUMMYIMPL(SCIPcreateConsExprExprExp)
+DUMMYIMPL(SCIPcreateConsExprExprAbs)
+DUMMYIMPL(SCIPgetExprHdlrSignPower)
+DUMMYIMPL(SCIPcreateConsExprExprEntropy)
+DUMMYIMPL(SCIPcomputeFacetVertexPolyhedralNonlinear)
+DUMMYIMPL(SCIPgetNlRowConsExpr)
+DUMMYIMPL(SCIPgetLinvarMayIncreaseNonlinear)
+DUMMYIMPL(SCIPgetLinvarMayDecreaseNonlinear)
+DUMMYIMPL(SCIPgetExprAuxVarNonlinear)
+DUMMYIMPL(SCIPnlpiOracleGetNVars)
+DUMMYIMPL(SCIPnlpiOracleGetNConstraints)
+DUMMYIMPL(SCIPnlpiOracleGetConstraintDegree)

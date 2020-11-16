@@ -1366,6 +1366,39 @@ SCIP_Bool SCIPisExprValue(
    return SCIPexprIsValue(scip->set, expr);
 }
 
+/** returns whether an expression is a sum expression */
+SCIP_Bool SCIPisExprSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPexprIsSum(scip->set, expr);
+}
+
+/** returns whether an expression is a product expression */
+SCIP_Bool SCIPisExprProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPexprIsProduct(scip->set, expr);
+}
+
+/** returns whether an expression is a power expression */
+SCIP_Bool SCIPisExprPower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+
+   return SCIPexprIsPower(scip->set, expr);
+}
+
 /** print an expression as info-message */
 SCIP_RETCODE SCIPprintExpr(
    SCIP*                 scip,               /**< SCIP data structure */
