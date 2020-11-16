@@ -1268,6 +1268,7 @@ SCIP_RETCODE extractCapacityRows(
          /* calculate mean commodity excess: in the (un)directed case there should be exactly */
          /* one (two) flow variable per commodity. in this case commodityexcessratio = 0   */
          assert(ncoveredcommodities > 0);
+         /* coverity[divide_by_zero] */
          commodityexcessratio =
                ABS((nposflowcoefs + nnegflowcoefs)/(SCIP_Real)ncoveredcommodities - maxcolspercommoditylimit);
 
