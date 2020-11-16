@@ -763,6 +763,82 @@ SCIP_Bool SCIPexpriterIsEnd(
 
 /** @} */
 
+/**@name Expression Curvature methods */
+/**@{ */
+
+/** gives curvature for a sum of two functions with given curvature */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvAdd(
+   SCIP_EXPRCURV         curv1,              /**< curvature of first summand */
+   SCIP_EXPRCURV         curv2               /**< curvature of second summand */
+   );
+
+#ifdef NDEBUG
+#define SCIPexprcurvAdd(curv1, curv2)  ((SCIP_EXPRCURV) ((curv1) & (curv2)))
+#endif
+
+/** gives the curvature for the negation of a function with given curvature */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvNegate(
+   SCIP_EXPRCURV         curvature           /**< curvature of function */
+   );
+
+/** gives curvature for a functions with given curvature multiplied by a constant factor */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvMultiply(
+   SCIP_Real             factor,             /**< constant factor */
+   SCIP_EXPRCURV         curvature           /**< curvature of other factor */
+   );
+
+/** gives curvature for base^exponent for given bounds and curvature of base-function and constant exponent */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvPower(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_EXPRCURV         basecurv,           /**< curvature of base function */
+   SCIP_Real             exponent            /**< exponent */
+   );
+
+/** gives required curvature for base so that base^exponent has given curvature under given bounds on base and constant exponent
+ * returns curvature unknown if expected curvature cannot be obtained
+ */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvPowerInv(
+   SCIP_INTERVAL         basebounds,         /**< bounds on base function */
+   SCIP_Real             exponent,           /**< exponent, must not be 0 */
+   SCIP_EXPRCURV         powercurv           /**< expected curvature for power */
+   );
+
+/** gives curvature for a monomial with given curvatures and bounds for each factor */
+SCIP_EXPORT
+SCIP_EXPRCURV SCIPexprcurvMonomial(
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   int*                  factoridxs,         /**< indices of factors, or NULL if identity mapping */
+   SCIP_EXPRCURV*        factorcurv,         /**< curvature of each factor */
+   SCIP_INTERVAL*        factorbounds        /**< bounds of each factor */
+   );
+
+/** for a monomial with given bounds for each factor, gives condition on the curvature of each factor, so that monomial has a requested curvature, if possible
+ *
+ * @return whether monomialcurv can be achieved
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPexprcurvMonomialInv(
+   SCIP_EXPRCURV         monomialcurv,       /**< desired curvature */
+   int                   nfactors,           /**< number of factors in monomial */
+   SCIP_Real*            exponents,          /**< exponents in monomial, or NULL if all 1.0 */
+   SCIP_INTERVAL*        factorbounds,       /**< bounds of each factor */
+   SCIP_EXPRCURV*        factorcurv          /**< buffer to store required curvature of each factor */
+   );
+
+/** gives name as string for a curvature */
+SCIP_EXPORT
+const char* SCIPexprcurvGetName(
+   SCIP_EXPRCURV         curv                /**< curvature */
+   );
+
+/**@} */
+
 #ifdef __cplusplus
 }
 #endif
