@@ -590,6 +590,8 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    heurdata->ndivesets = 0;
    heurdata->divesetssize = -1;
 
+   /* heurdata->randnumgen is initialized and allocated in SCIPcreateRandom() */
+   /* coverity[leaked_storage] */
    SCIP_CALL_TERMINATE( retcode, SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE), TERMINATE );
 
    /* include adaptive diving primal heuristic */

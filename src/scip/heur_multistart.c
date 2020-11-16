@@ -452,6 +452,8 @@ SCIP_RETCODE improvePoint(
       for( i = 0; i < nvars; ++i )
       {
          /* adjust point */
+         /* nviolnlrows != 0, this gets asserted before */
+         /* coverity[divide_by_zero] */
          updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
          updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
          updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i])); /*lint !e666*/
@@ -564,6 +566,10 @@ SCIP_Real getRelDistance(
    vars = SCIPgetVars(scip);
    distance = 0.0;
 
+   /* SCIPgetNvars() only returns 0 if it is called at a wrong stage. Here, we are always in SOLVED,
+    * so it should never return 0
+    */
+   /* coverity[zero_return] */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
       lb = SCIPvarGetLbLocal(vars[i]);
@@ -593,6 +599,10 @@ SCIP_Real getRelDistance(
       distance += REALABS(solx - soly) / MAX(1.0, ub - lb);
    }
 
+   /* SCIPgetNvars() only returns 0 if it is called at a wrong stage. Here, we are always in SOLVED,
+    * so it should never return 0
+    */
+   /* coverity[divide_by_zero] */
    return distance / SCIPgetNVars(scip);
 }
 
