@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "scip/expr.h"
+#include "scip/pub_misc.h"
 #include "scip/struct_expr.h"
 #include "scip/struct_stat.h"
 

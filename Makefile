@@ -730,6 +730,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/event.o \
 			scip/expr.o \
 			scip/exprcurv.o \
+			scip/expriter.o \
 			scip/fileio.o \
 			scip/heur.o \
 			scip/heuristics.o \
