@@ -374,7 +374,7 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/rbtree.o
 
 ifeq ($(EXPRINT),none)
-#NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
+NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
 #NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
