@@ -57,7 +57,6 @@ SCIP_Bool mst3StarNeighborRuleOut(
    const SCIP_Real       dists_def[3],
    const SCIP_Real       dists_bias[3],
    SCIP_Real             starcost,           /**< cost of the star */
-   int                   node,               /**< the node */
    SCIP_Bool             allowEquality       /**< allow equality? */
 )
 {
@@ -100,6 +99,75 @@ SCIP_Bool mst3StarNeighborRuleOut(
 }
 
 
+/** gets biased SDs between leaves */
+static inline
+void mst3LeafTreeGetSds(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   EXTDATA*              extdata,            /**< extension data */
+   SCIP_Real             sds_def[3],         /**< array to store the SDs */
+   SCIP_Real             sds_bias[3]         /**< array to store the SDs */
+   )
+{
+   const int* const leaves = extdata->tree_leaves;
+   const REDDATA* const reddata = extdata->reddata;
+   const MLDISTS* const sds_vertical = reddata->sds_vertical;
+   const MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
+   const int* const extstack_data = extdata->extstack_data;
+   const int stackpos = extStackGetPosition(extdata);
+   const int topedges_start = extStackGetTopOutEdgesStart(extdata, stackpos);
+   const int topedges_end = extStackGetTopOutEdgesEnd(extdata, stackpos);
+   const int ntopleaves = topedges_end - topedges_start;
+   const int topedge1 = extstack_data[topedges_start];
+   int topsibling1 = graph->head[topedge1];
+
+   assert(1 <= ntopleaves && ntopleaves <= 2);
+
+   if( ntopleaves == 2 )
+   {
+      const MLDISTS* const sds_horizontal = reddata->sds_horizontal;
+      const MLDISTS* const sdsbias_horizontal = reddata->sdsbias_horizontal;
+      const int topedge2 = extstack_data[topedges_start + 1];
+      int topsibling2 = graph->head[topedge2];
+
+      assert(graph->tail[topedge1] == graph->tail[topedge2]);
+      assert(topsibling1 != topsibling2);
+      assert(topsibling1 != leaves[0] && topsibling2 != leaves[0]);
+
+      if( topsibling1 == leaves[2]  )
+      {
+         SWAP_INTS(topsibling1, topsibling2);
+      }
+
+      assert(topsibling1 == leaves[1] && topsibling2 == leaves[2]);
+
+      /* SDs from root to siblings */
+      sds_def[0] = extreduce_mldistsTopTargetDists(sds_vertical, topsibling1)[0];
+      sds_bias[0] = extreduce_mldistsTopTargetDists(sdsbias_vertical, topsibling1)[0];
+      sds_def[1] = extreduce_mldistsTopTargetDists(sds_vertical, topsibling2)[0];
+      sds_bias[1] = extreduce_mldistsTopTargetDists(sdsbias_vertical, topsibling2)[0];
+
+      /* SDs between siblings */
+      sds_def[2] = extreduce_mldistsTopTargetDist(sds_horizontal, topsibling1, topsibling2);
+      sds_bias[2] = extreduce_mldistsTopTargetDist(sdsbias_horizontal, topsibling1, topsibling2);
+   }
+   else
+   {
+      DISTDATA* const distdata_default = extdata->distdata;
+      DISTDATA* const distdata_biased = extdata->distdata_biased;
+      assert(topsibling1 == leaves[2]);
+
+      sds_def[0] = extreduce_distDataGetSdDouble(scip, graph, leaves[0], leaves[1], distdata_default);
+      sds_bias[0] = extreduce_distDataGetSdDouble(scip, graph, leaves[0], leaves[1], distdata_biased);
+
+      sds_def[1] = extreduce_mldistsTopTargetDists(sds_vertical, topsibling1)[0];
+      sds_bias[1] = extreduce_mldistsTopTargetDists(sdsbias_vertical, topsibling1)[0];
+
+      sds_def[2] = extreduce_mldistsTopTargetDists(sds_vertical, topsibling1)[1];
+      sds_bias[2] = extreduce_mldistsTopTargetDists(sdsbias_vertical, topsibling1)[1];
+   }
+}
+
 
 /**@} */
 
@@ -108,6 +176,50 @@ SCIP_Bool mst3StarNeighborRuleOut(
  * @{
  */
 
+
+
+/** can current 3-leaf tree be ruled-out? */
+SCIP_Bool extreduce_mstbiased3LeafTreeRuleOut(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   SCIP_Real             tree_cost,          /**< tree cost */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Bool ruledOut = FALSE;
+   SCIP_Real dists_def[3];
+   SCIP_Real dists_bias[3];
+
+   assert(scip && graph && extdata);
+   assert(GE(tree_cost, 0.0));
+   assert(extdata->tree_nleaves == 3);
+
+   mst3LeafTreeGetSds(scip, graph, extdata, dists_def, dists_bias);
+
+#ifndef NDEBUG
+   {
+      DISTDATA* distdata_default = extdata->distdata;
+      DISTDATA* distdata_biased = extdata->distdata_biased;
+      const int* const leaves = extdata->tree_leaves;
+
+      assert(EQ(dists_def[0], extreduce_distDataGetSdDouble(scip, graph, leaves[0], leaves[1], distdata_default)));
+      assert(EQ(dists_def[1], extreduce_distDataGetSdDouble(scip, graph, leaves[0], leaves[2], distdata_default)));
+      assert(EQ(dists_def[2], extreduce_distDataGetSdDouble(scip, graph, leaves[1], leaves[2], distdata_default)));
+
+      assert(EQ(dists_bias[0], extreduce_distDataGetSdDouble(scip, graph, leaves[0], leaves[1], distdata_biased)));
+      assert(EQ(dists_bias[1], extreduce_distDataGetSdDouble(scip, graph, leaves[0], leaves[2], distdata_biased)));
+      assert(EQ(dists_bias[2], extreduce_distDataGetSdDouble(scip, graph, leaves[1], leaves[2], distdata_biased)));
+   }
+#endif
+
+   if( mst3StarNeighborRuleOut(scip, dists_def, dists_bias, tree_cost, FALSE) )
+   {
+      SCIPdebugMessage("biased 3-leaf MST rule-out \n");
+      ruledOut = TRUE;
+   }
+
+   return ruledOut;
+}
 
 
 /** checks node of degree 3 for possible pseudo-elimination by using bias bottleneck Steiner distance */
@@ -153,7 +265,7 @@ SCIP_RETCODE extreduce_mstbiasedCheck3NodeSimple(
    dists_bias[1] = extreduce_distDataGetSdDouble(scip, graph, neighbors[0], neighbors[2], distdata_biased);
    dists_bias[2] = extreduce_distDataGetSdDouble(scip, graph, neighbors[1], neighbors[2], distdata_biased);
 
-   *isPseudoDeletable = mst3StarNeighborRuleOut(scip, dists_def, dists_bias, starcost, node, TRUE);
+   *isPseudoDeletable = mst3StarNeighborRuleOut(scip, dists_def, dists_bias, starcost, TRUE);
 
    return SCIP_OKAY;
 }

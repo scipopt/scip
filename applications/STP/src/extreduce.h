@@ -148,6 +148,7 @@ extern SCIP_Bool       extreduce_spg3LeafTreeRuleOut(SCIP*, const GRAPH*, SCIP_R
 /* extreduce_extmstbiased.c
  */
 extern SCIP_RETCODE    extreduce_mstbiasedCheck3NodeSimple(SCIP*, const GRAPH*, int, DISTDATA*, DISTDATA*, SCIP_Bool*);
+extern SCIP_Bool       extreduce_mstbiased3LeafTreeRuleOut(SCIP*, const GRAPH*, SCIP_Real, EXTDATA*);
 
 
 /* extreduce_bottleneck.c

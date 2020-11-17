@@ -31,6 +31,23 @@
 extern "C" {
 #endif
 
+#define SWAP_INTS(int1, int2)  \
+   do                                  \
+   {                                   \
+      const int _tmp_ = int1;           \
+      int1 = int2;                     \
+      int2 = _tmp_;                     \
+   } while(0)
+
+
+#define SWAP_REALS(real1, real2)  \
+   do                                  \
+   {                                   \
+      const SCIP_Real _tmp_ = real1;     \
+      real1 = real2;                     \
+      real2 = _tmp_;                     \
+   } while(0)
+
 
 /** graph node structure storing number and distance */
 typedef struct Graph_Node

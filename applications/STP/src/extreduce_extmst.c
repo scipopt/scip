@@ -1345,7 +1345,13 @@ SCIP_Bool mstCompRuleOut(
    {
       if( extdata->tree_nleaves == 3 && extInitialCompIsEdge(extdata) )
       {
+         assert(!extReddataHasBiasedSds(reddata));
          ruledOut = extreduce_spg3LeafTreeRuleOut(scip, graph, tree_cost, extdata);
+      }
+      else if( extdata->tree_nleaves == 3 && extReddataHasBiasedSds(reddata) )
+      {
+         assert(!extInitialCompIsEdge(extdata));
+         ruledOut = extreduce_mstbiased3LeafTreeRuleOut(scip, graph, tree_cost, extdata);
       }
    }
    else

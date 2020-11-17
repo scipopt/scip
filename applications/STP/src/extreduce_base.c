@@ -1337,33 +1337,20 @@ SCIP_RETCODE pseudodeleteExecute(
             {
                extperma->redcostEqualAllow = (extpseudo->useSolForEq && !extpseudo->nodeInSol[i]);
 
-               // todo!
-               if( !extperma->useSdBias )
-               {
+               if( extperma->useSdBias && degree == 3 )
+                  SCIP_CALL( extreduce_mstbiasedCheck3NodeSimple(scip, graph, i, distdata_default, extperma->distdata_biased, &nodeisDeletable) );
+
+               if( !nodeisDeletable )
                   SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, extperma, &nodeisDeletable) );
-
-               }
-               else
-               {
-                  if( graph->grad[i] == 3 )
-                   SCIP_CALL(  extreduce_mstbiasedCheck3NodeSimple(scip, graph, i, distdata_default, extperma->distdata_biased, &nodeisDeletable) );
-
-                  if( !nodeisDeletable )
-                     SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, i, stardata, extperma, &nodeisDeletable) );
-               }
             }
          }
-
-//         assert(0);
 
          if( !nodeisDeletable )
             continue;
 
-         // todo maybe does not work with biased!
          SCIP_CALL( pseudodeleteDeleteNode(scip, i, redcostdata,
-         //      extperma->useSdBias ? extperma->distdata_biased :
-                     distdata_default,
-               graph, extpseudo, &isReplaced) );
+         //   todo   extperma->useSdBias ? extperma->distdata_biased :
+                     distdata_default, graph, extpseudo, &isReplaced) );
 
          if( isReplaced )
             extpseudo->nelims_extended++;
