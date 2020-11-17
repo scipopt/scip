@@ -1782,7 +1782,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
             if( SCIPvarGetStatus(nlhdlrexprdata->vars[v]) == SCIP_VARSTATUS_FIXED )
                continue;
 
-            scvdata = getSCVarDataInd(nlhdlrdata->scvars, rowprep->vars[v], indicator, &pos);
+            scvdata = getSCVarDataInd(nlhdlrdata->scvars, nlhdlrexprdata->vars[v], indicator, &pos);
 
             /* a non-semicontinuous variable must be linear in expr; skip it */
             if( scvdata == NULL )
