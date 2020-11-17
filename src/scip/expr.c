@@ -713,8 +713,6 @@ SCIP_RETCODE SCIPexprhdlrPrintExpr(
    assert(expr != NULL);
    assert(expr->exprhdlr == exprhdlr);
    assert(messagehdlr != NULL);
-   assert(currentchild >= 0);
-   assert(currentchild < expr->nchildren);
 
    if( SCIPexprhdlrHasPrint(exprhdlr) )
    {
@@ -737,6 +735,8 @@ SCIP_RETCODE SCIPexprhdlrPrintExpr(
 
          case SCIP_EXPRITER_VISITEDCHILD :
          {
+            assert(currentchild >= 0);
+            assert(currentchild < expr->nchildren);
             if( currentchild < expr->nchildren-1 )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, ", ");
