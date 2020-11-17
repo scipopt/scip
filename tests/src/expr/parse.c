@@ -20,48 +20,12 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_product.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_iterator.h"
-#include "scip/struct_cons_expr.h"
-
-static SCIP_CONSHDLR* conshdlr;
-
-static
-SCIP_RETCODE check_nuses(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   rootexpr            /**< expression from which to check number of uses */
-   )
-{
-   SCIP_CONSEXPR_ITERATOR* it;
-   SCIP_CONSEXPR_EXPR* expr;
-
-   assert(scip != NULL);
-   assert(rootexpr != NULL);
-   assert(conshdlr != NULL);
-
-   SCIP_CALL( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
-   SCIP_CALL( SCIPexpriteratorInit(it, rootexpr, SCIP_CONSEXPRITERATOR_DFS, FALSE) );
-
-   for( expr = rootexpr; !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
-   {
-      if( expr->nuses != 1 )
-      {
-         printf("following expression is captured too many times (%d, expected 1)\n", expr->nuses);
-         SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
-         SCIPinfoMessage(scip, NULL, "\n");
-         assert(expr->nuses == 1);
-      }
-   }
-
-   SCIPexpriteratorFree(&it);
-
-   return SCIP_OKAY;
-}
-
+#include "scip/scipdefplugins.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_product.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_var.h"
+#include "scip/struct_expr.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -70,16 +34,40 @@ static SCIP_VAR* y;
 static SCIP_VAR* z;
 
 static
+SCIP_RETCODE check_nuses(
+   SCIP_EXPR*            rootexpr            /**< expression from which to check number of uses */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+
+   assert(scip != NULL);
+   assert(rootexpr != NULL);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, FALSE) );
+
+   for( expr = rootexpr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      if( expr->nuses != 1 )
+      {
+         printf("following expression is captured too many times (%d, expected 1)\n", expr->nuses);
+         SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
+         assert(expr->nuses == 1);
+      }
+   }
+
+   SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
+static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -108,64 +96,66 @@ TestSuite(parse, .init = setup, .fini = teardown);
 
 Test(parse, simple)
 {
-   SCIP_CONSEXPR_EXPR* expr_xy5;
+   SCIP_EXPR* expr_xy5;
    const char* input = "<x>[C] / <y>[I] *(-5)";
 
    /* create expression for product of -5, x, and y */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr_xy5), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr_xy5, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr_xy5, NULL) );
+   SCIP_CALL( SCIPprintExpr(scip, expr_xy5, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* check that the expression is captured correctly */
-   SCIP_CALL( check_nuses(scip, expr_xy5) );
+   SCIP_CALL( check_nuses(expr_xy5) );
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr_xy5) );
 }
 
 Test(parse, simple2)
 {
-   SCIP_CONSEXPR_EXPR* crazyexpr;
+   SCIP_EXPR* crazyexpr;
    const char* input = "-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &crazyexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, crazyexpr, NULL) );
+   SCIP_CALL( SCIPprintExpr(scip, crazyexpr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
 }
 
+#if !1
 Test(parse, signpower)
 {
-   SCIP_CONSEXPR_EXPR* crazyexpr;
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* crazyexpr;
+   SCIP_EXPR* child;
    const char* input = "signpower(<x>^2   , 2.5)";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &crazyexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
-   cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(crazyexpr)), "signpower") == 0);
-   cr_assert_eq(SCIPgetConsExprExprPowExponent(crazyexpr), 2.5);
+   cr_assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(crazyexpr)), "signpower") == 0);
+   cr_assert_eq(SCIPexprGetExponentExprPow(crazyexpr), 2.5);
 
-   child = SCIPgetConsExprExprChildren(crazyexpr)[0];
-   cr_assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "pow") == 0);
-   cr_assert_eq(SCIPgetConsExprExprPowExponent(child), 2.0);
+   child = SCIPexprGetChildren(crazyexpr)[0];
+   cr_assert(SCIPisExprPower(scip, child));
+   cr_assert_eq(SCIPexprGetExponentExprPow(child), 2.0);
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
 }
+#endif
 
 Test(parse, eval)
 {
-   SCIP_CONSEXPR_EXPR* crazyexpr;
+   SCIP_EXPR* crazyexpr;
    SCIP_SOL* crazysol;
    const char* input = "<x>*<y>^2/<x>^4 - 2*<x>*(3+5*<x>-2*<y>)*(<x>+<y>)^(-3.5)";
    const SCIP_Real vals[3][2] = { {1.0, 2.0}, {0.0, 0.0}, {42.0, 17.0} };
@@ -174,11 +164,11 @@ Test(parse, eval)
 #define CRAZYEVAL(x, y) ((x)*pow(y,2)/pow(x,4) - 2*(x)*(3+5*(x)-2*(y)) * pow((x)+(y), -3.5))
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &crazyexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, crazyexpr, NULL) );
+   SCIP_CALL( SCIPprintExpr(scip, crazyexpr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* test expression by evaluating it */
@@ -191,16 +181,16 @@ Test(parse, eval)
       SCIP_CALL( SCIPsetSolVal(scip, crazysol, x, vals[p][0]) );
       SCIP_CALL( SCIPsetSolVal(scip, crazysol, y, vals[p][1]) );
 
-      SCIP_CALL( SCIPevalConsExprExpr(scip, conshdlr, crazyexpr, crazysol, 0) );
-      SCIPinfoMessage(scip, NULL, "value for x=%g y=%g is %g, expected: %g\n", vals[p][0], vals[p][1], SCIPgetConsExprExprValue(crazyexpr), expvalue);
-      if( SCIPgetConsExprExprValue(crazyexpr) == SCIP_INVALID )
+      SCIP_CALL( SCIPevalExpr(scip, crazyexpr, crazysol, 0) );
+      SCIPinfoMessage(scip, NULL, "value for x=%g y=%g is %g, expected: %g\n", vals[p][0], vals[p][1], SCIPexprGetEvalValue(crazyexpr), expvalue);
+      if( SCIPexprGetEvalValue(crazyexpr) == SCIP_INVALID )
          cr_expect(!SCIPisFinite(expvalue));
       else
-         cr_expect(SCIPisEQ(scip, SCIPgetConsExprExprValue(crazyexpr), expvalue));
+         cr_expect(SCIPisEQ(scip, SCIPexprGetEvalValue(crazyexpr), expvalue));
    }
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
 
    /* release solution */
    SCIP_CALL( SCIPfreeSol(scip, &crazysol) );
@@ -208,29 +198,30 @@ Test(parse, eval)
 
 Test(parse, unusual_var_name)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "(<x> - <y>) /   <z(  >^2";
 
    /* parse */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* print expression */
    SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
-   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* check that the expression is capture correctly */
-   SCIP_CALL( check_nuses(scip, expr) );
+   SCIP_CALL( check_nuses(expr) );
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if !1
 Test(parse, constraint_with_spaces)
 {
       SCIP_CONS* consexpr_xy5;
       SCIP_Bool success;
-      const char* input = "[expr] <test1>: <x>[C] / <y>[I] *(5) >= 1;";
+      const char* input = "[nonlinear] <test1>: <x>[C] / <y>[I] *(5) >= 1;";
 
       /* parse constraint */
       success = FALSE;
@@ -251,7 +242,7 @@ Test(parse, constraint_with_sides)
 {
       SCIP_CONS* cons;
       SCIP_Bool success;
-      const char* input = "[expr] <test2>: 1 <= <x>[C] / <y>[I] *(5) - <x> <= 2;";
+      const char* input = "[nonlinear] <test2>: 1 <= <x>[C] / <y>[I] *(5) - <x> <= 2;";
 
       /* parse constraint */
       success = FALSE;
@@ -267,24 +258,25 @@ Test(parse, constraint_with_sides)
       /* release constraint */
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+#endif
 
 Test(parse, invalid_expressions)
 {
-   SCIP_CONSEXPR_EXPR* e;
+   SCIP_EXPR* e;
 
    SCIPmessageSetErrorPrinting(NULL, NULL);
 
    /* there is no variable with name "xx" */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<xx>", NULL, &e), SCIP_READERROR);
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"5/<donothave> ", NULL, &e), SCIP_READERROR);
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +-*5 ", NULL, &e), SCIP_READERROR);
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> / (<y>-5 ", NULL, &e), SCIP_READERROR);
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"donothave(<x>) ", NULL, &e), SCIP_READERROR);
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"donothave(<x> ", NULL, &e), SCIP_READERROR);
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"val(1) ", NULL, &e), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<xx>", NULL, NULL, NULL), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"5/<donothave> ", NULL, NULL, NULL), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x> +-*5 ", NULL, NULL, NULL), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x> / (<y>-5 ", NULL, NULL, NULL), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"donothave(<x>) ", NULL, NULL, NULL), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"donothave(<x> ", NULL, NULL, NULL), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"val(1) ", NULL, NULL, NULL), SCIP_READERROR);
 
 #ifdef FAILING_TESTS
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>+2<y> ", NULL, &e), SCIP_READERROR);
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x>+2<y> ", NULL, NULL, NULL), SCIP_READERROR);
 #endif
 
    SCIPmessageSetErrorPrintingDefault();
@@ -292,25 +284,25 @@ Test(parse, invalid_expressions)
 
 Test(parse, misc)
 {
-   SCIP_CONSEXPR_EXPR* e;
+   SCIP_EXPR* e;
 
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"-5+3*<x>", NULL, &e), SCIP_OKAY);
-   cr_expect_eq(SCIPgetConsExprExprHdlr(e), SCIPgetConsExprExprHdlrSum(conshdlr));
-   cr_expect_eq(SCIPgetConsExprExprSumConstant(e), -5.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(e)[0], 3.0);
-   cr_expect_eq(SCIPgetConsExprExprNChildren(e), 1);
-   cr_expect_eq(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(e)[0]), SCIPgetConsExprExprHdlrVar(conshdlr));
-   cr_expect_eq(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(e)[0]), x);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"-5+3*<x>", NULL, NULL, NULL), SCIP_OKAY);
+   cr_expect(SCIPisExprSum(scip, e));
+   cr_expect_eq(SCIPexprGetConstantExprSum(e), -5.0);
+   cr_expect_eq(SCIPexprGetCoefsExprSum(e)[0], 3.0);
+   cr_expect_eq(SCIPexprGetNChildren(e), 1);
+   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(e)[0]));
+   cr_expect_eq(SCIPexprGetVarExprVar(SCIPexprGetChildren(e)[0]), x);
+   SCIP_CALL( SCIPreleaseExpr(scip, &e) );
 
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>", NULL, &e), SCIP_OKAY);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +5*<y>", NULL, &e), SCIP_OKAY);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> + <x>*5*<y>", NULL, &e), SCIP_OKAY);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +5", NULL, &e), SCIP_OKAY);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +5 + <y>", NULL, &e), SCIP_OKAY);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x>", NULL, NULL, NULL), SCIP_OKAY);
+   SCIP_CALL( SCIPreleaseExpr(scip, &e) );
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x> +5*<y>", NULL, NULL, NULL), SCIP_OKAY);
+   SCIP_CALL( SCIPreleaseExpr(scip, &e) );
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x> + <x>*5*<y>", NULL, NULL, NULL), SCIP_OKAY);
+   SCIP_CALL( SCIPreleaseExpr(scip, &e) );
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x> +5", NULL, NULL, NULL), SCIP_OKAY);
+   SCIP_CALL( SCIPreleaseExpr(scip, &e) );
+   cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x> +5 + <y>", NULL, NULL, NULL), SCIP_OKAY);
+   SCIP_CALL( SCIPreleaseExpr(scip, &e) );
 }
