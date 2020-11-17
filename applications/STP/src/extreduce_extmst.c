@@ -101,14 +101,32 @@ SCIP_Real extGetSdDouble(
 )
 {
    SCIP_Real sd = extreduce_distDataGetSdDouble(scip, g, vertex1, vertex2, extdata->distdata);
-   const PCDATA* const pcdata = extdata->pcdata;
 
-   assert((pcdata->pcSdToNode != NULL) == graph_pc_isPcMw(g));
+   if( extProbIsPc(g, extdata) )
+      extGetSdPcUpdate(g, extdata->pcdata, vertex1, vertex2, &sd);
 
-   if( pcdata->pcSdToNode )
-   {
-      extGetSdPcUpdate(g, pcdata, vertex1, vertex2, &sd);
-   }
+   assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
+
+   return sd;
+}
+
+
+
+/** As above, but with given distance data */
+static inline
+SCIP_Real extGetSdDoubleFromDistdata(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   vertex1,            /**< first vertex */
+   int                   vertex2,            /**< second vertex */
+   DISTDATA*             distdata,           /**< distance data */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   SCIP_Real sd = extreduce_distDataGetSdDouble(scip, g, vertex1, vertex2, distdata);
+
+   if( extProbIsPc(g, extdata) )
+      extGetSdPcUpdate(g, extdata->pcdata, vertex1, vertex2, &sd);
 
    assert(SCIPisEQ(scip, sd, -1.0) || SCIPisGE(scip, sd, 0.0));
 
@@ -374,6 +392,9 @@ void baseMstInitExtComp(
 {
    const MLDISTS* const sds_vertical = reddata->sds_vertical;
    const int parentcomp_level = extreduce_mldistsTopLevel(sds_vertical) - 1;
+
+   assert(!extReddataHasBiasedSds(reddata) ||
+      extreduce_mldistsTopLevel(sds_vertical) == extreduce_mldistsTopLevel(reddata->sdsbias_vertical) );
 
    mstextcomp->mst_parent = mst_parent;
    mstextcomp->mst_new = mst_new;
@@ -824,7 +845,6 @@ void mstAddRootLevelMsts(
 /** helper; adds SDs */
 static
 void mstAddRootLevelSDs(
-   SCIP*                 scip,               /**< SCIP */
    int                   root,               /**< the root of the extension tree */
    EXTDATA*              extdata             /**< extension data */
 )
@@ -833,15 +853,14 @@ void mstAddRootLevelSDs(
    MLDISTS* const sds_vertical = reddata->sds_vertical;
    MLDISTS* const sds_horizontal = reddata->sds_horizontal;
 
-   extreduce_mldistsLevelAddTop(1, 0, sds_vertical);
-   extreduce_mldistsEmptySlotSetBase(root, sds_vertical);
-   extreduce_mldistsEmptySlotSetFilled(sds_vertical);
-   extreduce_mldistsLevelCloseTop(sds_vertical);
+   extreduce_mldistsLevelAddAndCloseRoot(root, sds_vertical);
+   extreduce_mldistsLevelAddAndCloseRoot(root, sds_horizontal);
 
-   extreduce_mldistsLevelAddTop(1, 0, sds_horizontal);
-   extreduce_mldistsEmptySlotSetBase(root, sds_horizontal);
-   extreduce_mldistsEmptySlotSetFilled(sds_horizontal);
-   extreduce_mldistsLevelCloseTop(sds_horizontal);
+   if( extReddataHasBiasedSds(reddata) )
+   {
+      extreduce_mldistsLevelAddAndCloseRoot(root, reddata->sdsbias_vertical);
+      extreduce_mldistsLevelAddAndCloseRoot(root, reddata->sdsbias_horizontal);
+   }
 
    SCIPdebugMessage("initialized first MST level (%d) \n", extreduce_mldistsTopLevel(sds_vertical));
 }
@@ -888,6 +907,127 @@ SCIP_Bool mstEqComp3RuleOut(
    return FALSE;
 }
 
+
+
+/** Is bottleneck rule out with biased SDs from leaf of top tree component to siblings possible?
+ *  NOTE: Only restricted bottleneck tests are performed! */
+static inline
+SCIP_Bool mstCompLeafToSiblingsBiasedRuleOut(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2top,           /**< edge to the top component leaf */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   const MLDISTS* const sdsbias_horizontal = extdata->reddata->sdsbias_horizontal;
+   const int* const extstack_data = extdata->extstack_data;
+   const int* const ghead = graph->head;
+   const int stackpos = extStackGetPosition(extdata);
+   const int topedges_start = extStackGetTopOutEdgesStart(extdata, stackpos);
+   const int topedges_end = extStackGetTopOutEdgesEnd(extdata, stackpos);
+   const int topleaf = ghead[edge2top];
+   SCIP_Bool hitTopLeaf = FALSE;
+
+#ifndef NDEBUG
+   {
+      assert(extreduce_sdshorizontalInSync(scip, graph, topleaf, extdata));
+      assert(topedges_start <= topedges_end);
+      assert(!extIsAtInitialGenStar(extdata));
+   }
+#endif
+
+   for( int i = topedges_start, j = 0; i != topedges_end; i++, j++ )
+   {
+      SCIP_Real sdbiased;
+      const int edge2sibling = extstack_data[i];
+      const int sibling = ghead[edge2sibling];
+
+      assert(extreduce_nodeIsInStackTop(graph, extdata, sibling));
+      assert(extdata->tree_deg[sibling] == 1);
+      assert(graph->tail[edge2top] == graph->tail[edge2sibling]);
+
+      if( sibling == topleaf )
+      {
+         assert(!hitTopLeaf);
+         hitTopLeaf = TRUE;
+         continue;
+      }
+
+      /* only make bottleneck test for 'right' siblings to avoid double checks */
+      if( !hitTopLeaf )
+      {
+         continue;
+      }
+
+      sdbiased = extreduce_mldistsTopTargetDist(sdsbias_horizontal, topleaf, sibling);
+
+      if( extreduce_bottleneckToSiblingIsDominatedBiased(scip, graph, edge2top, edge2sibling, sdbiased, extdata) )
+      {
+         SCIPdebugMessage("---biased bottleneck rule-out component (siblings test)---\n");
+         return TRUE;
+      }
+   }
+
+   assert(hitTopLeaf);
+
+   return FALSE;
+}
+
+
+/** Is bottleneck rule out with biased SDs from leaf of top tree component to ancestors possible?
+ *  NOTE: Only restricted bottleneck tests are performed! */
+static inline
+SCIP_Bool mstCompLeafToAncestorsBiasedRuleOut(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   edge2leaf,          /**< edge to the top component leaf */
+   int                   nleaves_ancestors,  /**< number of leaves to ancestors */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   const MLDISTS* const sdsbias_vertical = extdata->reddata->sdsbias_vertical;
+   const int topleaf = graph->head[edge2leaf];
+   const SCIP_Real* const adjedgecosts = extreduce_mldistsTopTargetDists(sdsbias_vertical, topleaf);
+   const SCIP_Bool hasSiblings = (extStackGetTopSize(extdata) > 1);
+   SCIP_Bool leafRuledOut = FALSE;
+
+#ifndef NDEBUG
+   assert(!graph_pc_isPc(graph));
+   assert(nleaves_ancestors >= 1);
+   assert(extreduce_mldistsLevelNTopTargets(sdsbias_vertical) == nleaves_ancestors);
+   assert(!extIsAtInitialGenStar(extdata));
+#endif
+
+   /* if there are no siblings, then there is a chance to find a non-trivial bottleneck rule-out */
+   if( !hasSiblings )
+   {
+      const int* const leaves = extdata->tree_leaves;
+
+      extreduce_bottleneckMarkRootPath(graph, topleaf, extdata);
+
+      /* get the SDs to the ancestor (lower) leafs and try bottleneck rule out */
+      for( int j = 0; j < nleaves_ancestors; j++ )
+      {
+         const int leaf = leaves[j];
+         const SCIP_Real sd = adjedgecosts[j];
+         const SCIP_Real specialDistBiased = EQ(sd, FARAWAY) ? -1.0 : sd;
+
+         assert(EQ(specialDistBiased,
+            extGetSdDoubleFromDistdata(scip, graph, topleaf, leaf, extdata->distdata_biased, extdata)));
+
+         if( extreduce_bottleneckIsDominatedBiased(scip, graph, topleaf, leaf, specialDistBiased, extdata) )
+         {
+            SCIPdebugMessage("---biased bottleneck rule-out component (standard test)---\n");
+            leafRuledOut = TRUE;
+            break;
+         }
+      }
+
+      extreduce_bottleneckUnmarkRootPath(graph, topleaf, extdata);
+   }
+
+   return leafRuledOut;
+}
 
 /** Gets SDs from leaf of top tree component to siblings for MST calculation.
  *  Returns early (with leafRuledOut == TRUE) if extension via 'edge2leaf' can be ruled out already.
@@ -1075,6 +1215,7 @@ void mstCompLeafGetSDs(
    SCIP_Bool*            leafRuledOut        /**< could the extension already by ruled out */
    )
 {
+   const SCIP_Bool hasSdsBiased = extReddataHasBiasedSds(extdata->reddata);
    const int nleaves_ancestors = extGetNancestorLeaves(extdata);
 #ifndef NDEBUG
    const int compleaf = graph->head[edge2leaf];
@@ -1093,6 +1234,12 @@ void mstCompLeafGetSDs(
       return;
    }
 
+   if( hasSdsBiased && mstCompLeafToSiblingsBiasedRuleOut(scip, graph, edge2leaf, extdata) )
+   {
+      *leafRuledOut = TRUE;
+      return;
+   }
+
    /* fill in the first part of the sds array */
    mstCompLeafGetSDsToAncestors(scip, graph, edge2leaf, nleaves_ancestors, extdata, sds, leafRuledOut);
 
@@ -1100,6 +1247,12 @@ void mstCompLeafGetSDs(
    {
       /* NOTE: does the following not need to hold in case of equality rule out! */
       assert(!extInitialCompIsStar(extdata) || dbgBottleneckFromLeafIsDominated(scip, graph, compleaf, FALSE, edge2leaf, extdata));
+      return;
+   }
+
+   if( hasSdsBiased && mstCompLeafToAncestorsBiasedRuleOut(scip, graph, edge2leaf, nleaves_ancestors, extdata) )
+   {
+      *leafRuledOut = TRUE;
       return;
    }
 
@@ -1251,9 +1404,11 @@ void mstCompBuildMst(
 }
 
 
-/** computes SDs from head of extension edge to all leaves of the tree */
+/** Computes and stores SDs from head of extension edge to all leaves of the tree.
+ *  Also computes biased special distances if existing
+ *  NOTE: ugly, but  should be more efficient, because bottleneck distances can be reused! */
 static inline
-void mstLevelLeafSetVerticalSDs(
+void mstLevelLeafSetVerticalSDsBoth(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
    int                   edge2neighbor,      /**< the edge from the tree to the neighbor */
@@ -1261,15 +1416,20 @@ void mstLevelLeafSetVerticalSDs(
    SCIP_Bool*            ruledOut            /**< early rule out? */
 )
 {
-   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
+   MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
    SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_vertical);
    const int* const leaves = extdata->tree_leaves;
+   const SCIP_Bool hasBiasedSds = extReddataHasBiasedSds(reddata);
+   SCIP_Real* const adjedgecostsBiased = hasBiasedSds ? extreduce_mldistsEmptySlotTargetDists(sdsbias_vertical) : NULL;
    const int nleaves = extdata->tree_nleaves;
    const int neighbor = graph->head[edge2neighbor];
    const int neighbor_base = graph->tail[edge2neighbor];
 
 #ifndef NDEBUG
    int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_vertical);
+   int* const adjidsBiased = hasBiasedSds ? extreduce_mldistsEmptySlotTargetIds(sdsbias_vertical) : NULL;
 #endif
 
    assert(adjedgecosts && leaves && ruledOut);
@@ -1286,7 +1446,7 @@ void mstLevelLeafSetVerticalSDs(
 
       specialDist = extGetSd(scip, graph, neighbor, leaf, extdata);
 
-      adjedgecosts[j] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+      adjedgecosts[j] = extSdGetProper(specialDist);
 #ifndef NDEBUG
       adjids[j] = leaf;
 #endif
@@ -1295,10 +1455,27 @@ void mstLevelLeafSetVerticalSDs(
       {
          SCIPdebugMessage("---bottleneck rule-out (%d->%d)---\n", neighbor, leaf);
          assert(*ruledOut == FALSE);
-
          *ruledOut = TRUE;
-
          break;
+      }
+
+      if( hasBiasedSds )
+      {
+         assert(adjedgecostsBiased);
+
+         specialDist = extGetSdDoubleFromDistdata(scip, graph, neighbor, leaf, extdata->distdata_biased, extdata);
+         adjedgecostsBiased[j] = extSdGetProper(specialDist);
+#ifndef NDEBUG
+         adjidsBiased[j] = leaf;
+#endif
+
+         if( extreduce_bottleneckWithExtedgeIsDominatedBiased(scip, graph, edge2neighbor, neighbor_base, leaf, specialDist, extdata) )
+         {
+            SCIPdebugMessage("---bottleneck implied SD rule-out (%d->%d)---\n", neighbor, leaf);
+            assert(*ruledOut == FALSE);
+            *ruledOut = TRUE;
+            break;
+         }
       }
    }
 }
@@ -1308,7 +1485,7 @@ void mstLevelLeafSetVerticalSDs(
 static inline
 void mstLevelLeafAdjustVerticalSDs(
    int                   neighbor_base,      /**< the edge from the tree to the neighbor */
-   REDDATA*              reddata,            /**< reduction data */
+   MLDISTS*              sds_vertical,       /**< SD storage, possibly biased! */
    EXTDATA*              extdata             /**< extension data */
 )
 {
@@ -1325,7 +1502,6 @@ void mstLevelLeafAdjustVerticalSDs(
   {
      /* shift the adjacent cost to remove the neighbor base */
 
-     MLDISTS* const sds_vertical = reddata->sds_vertical;
      SCIP_Real* const dists = extreduce_mldistsEmptySlotTargetDistsDirty(sds_vertical);
      const int leaves_pos = extLeafFindPos(extdata, neighbor_base);
 
@@ -1365,12 +1541,16 @@ void mstLevelLeafInit(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   MLDISTS* const sds_vertical = extdata->reddata->sds_vertical;
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_vertical = reddata->sds_vertical;
    const SCIP_Bool isPc = (extdata->pcdata->pcSdToNode != NULL);
 
    assert(graph_pc_isPc(graph) == isPc);
 
    extreduce_mldistsEmptySlotSetBase(neighbor, sds_vertical);
+
+   if( extReddataHasBiasedSds(reddata) )
+      extreduce_mldistsEmptySlotSetBase(neighbor, reddata->sdsbias_vertical);
 
    /* Initialization for bottleneck. We start from the base of the neighbor! */
    extreduce_bottleneckMarkRootPath(graph, neighbor_base, extdata);
@@ -1394,18 +1574,28 @@ void mstLevelLeafExit(
 {
    REDDATA* const reddata = extdata->reddata;
    MLDISTS* const sds_vertical = reddata->sds_vertical;
+   MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
+
    const SCIP_Bool isPc = graph_pc_isPc(graph);
 
    if( ruledOut )
    {
       extreduce_mldistsEmptySlotReset(sds_vertical);
+
+      if( extReddataHasBiasedSds(reddata) )
+         extreduce_mldistsEmptySlotReset(sdsbias_vertical);
    }
    else
    {
       /* remove the neighbor base SD entry (which we don't need for further extensions from the neighbor base) */
-      mstLevelLeafAdjustVerticalSDs(neighbor_base, reddata, extdata);
-
+      mstLevelLeafAdjustVerticalSDs(neighbor_base, sds_vertical, extdata);
       extreduce_mldistsEmptySlotSetFilled(sds_vertical);
+
+      if( extReddataHasBiasedSds(reddata) )
+      {
+         mstLevelLeafAdjustVerticalSDs(neighbor_base, sdsbias_vertical, extdata);
+         extreduce_mldistsEmptySlotSetFilled(sdsbias_vertical);
+      }
    }
 
    extreduce_bottleneckUnmarkRootPath(graph, neighbor_base, extdata);
@@ -1514,6 +1704,78 @@ void mstLevelBuildBaseMstRoot(
 }
 
 
+/** Compute and store horizontal SDs in given ML storage */
+static
+void mstLevelHorizontalAddSds(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   nextedges,          /**< number of edges for extension */
+   const int*            extedges,           /**< array of edges for extension */
+   EXTDATA*              extdata,            /**< extension data */
+   DISTDATA*             distdata,           /**< distance data (possibly biased!) */
+   MLDISTS*              sds_horizontal      /**< horizontal multi-level distances (possibly biased!) */
+)
+{
+   const int* const ghead = graph->head;
+   const SCIP_Bool isPc = extProbIsPc(graph, extdata);
+
+   assert(nextedges > 0);
+
+   extreduce_mldistsLevelAddTop(nextedges, nextedges - 1, sds_horizontal);
+
+   /* tree has not yet been extended, so sds_horizontal is ahead */
+   assert(extdata->tree_depth == extreduce_mldistsTopLevel(sds_horizontal) - 1);
+   assert(extreduce_mldistsEmptySlotExists(sds_horizontal));
+
+   for( int i = 0; i < nextedges; ++i )
+   {
+      int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_horizontal);
+      SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_horizontal);
+      const int ext_edge = extedges[i];
+      const int ext_head = ghead[ext_edge];
+
+      extreduce_mldistsEmptySlotSetBase(ext_head, sds_horizontal);
+
+      if( isPc )
+         pcSdToNodeMark(graph, ext_head, extdata);
+
+      /* for left siblings: use SDs that have already been computed*/
+      for( int j = 0; j < i; ++j )
+      {
+         const int sibling_left = ghead[extedges[j]];
+         const SCIP_Real specialDist = extreduce_mldistsTopTargetDist(sds_horizontal, sibling_left, ext_head);
+
+#ifndef NDEBUG
+         if( !graph_pc_isPc(graph) )
+         {
+            const SCIP_Real sd_new = extGetSdDoubleFromDistdata(scip, graph, ext_head, sibling_left, distdata, extdata);
+            assert(EQ(specialDist, sd_new) || (EQ(specialDist, FARAWAY) && EQ(sd_new, -1.0)));
+         }
+#endif
+
+         adjedgecosts[j] = specialDist;
+         adjids[j] = sibling_left;
+      }
+
+      /* for right siblings: compute new SDs */
+      for( int j = i + 1; j < nextedges; ++j )
+      {
+         const int sibling_right = ghead[extedges[j]];
+         const SCIP_Real specialDist = extGetSdDoubleFromDistdata(scip, graph, ext_head, sibling_right, distdata, extdata);
+
+         adjedgecosts[j - 1] = (specialDist >= -0.5) ? specialDist : FARAWAY;
+         adjids[j - 1] = sibling_right;
+      }
+
+      if( isPc )
+         pcSdToNodeUnmark(graph, ext_head, extdata);
+
+      extreduce_mldistsEmptySlotSetFilled(sds_horizontal);
+   }
+
+   assert(!extreduce_mldistsEmptySlotExists(sds_horizontal));
+}
+
 /** Can current tree be peripherally ruled out by using MST based arguments? */
 SCIP_Bool extreduce_mstRuleOutPeriph(
    SCIP*                 scip,               /**< SCIP */
@@ -1556,7 +1818,7 @@ void extreduce_mstAddRootLevel(
    assert(root >= 0);
 
    mstAddRootLevelMsts(scip, extdata);
-   mstAddRootLevelSDs(scip, root, extdata);
+   mstAddRootLevelSDs(root, extdata);
 }
 
 
@@ -1587,6 +1849,7 @@ void extreduce_mstLevelInit(
 )
 {
    MLDISTS* const sds_vertical = reddata->sds_vertical;
+   MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
 
    /* Reserve space for the SDs from each potential vertex of the new level to all leaves
     * of the tree except for the extending vertex.
@@ -1595,16 +1858,23 @@ void extreduce_mstLevelInit(
    {
       assert(extdata->tree_nleaves == 1);
       extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sds_vertical);
+
+      if( extReddataHasBiasedSds(reddata) )
+         extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sdsbias_vertical);
    }
    else
    {
       extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sds_vertical);
+
+      if( extReddataHasBiasedSds(reddata) )
+         extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sdsbias_vertical);
    }
 
    SCIPdebugMessage("init MST level %d \n", extreduce_mldistsTopLevel(sds_vertical));
 
    /* tree has not yet been extended, so sds_vertical is ahead */
    assert(extdata->tree_depth == extreduce_mldistsTopLevel(sds_vertical) - 1);
+   assert(!sdsbias_vertical || extreduce_mldistsTopLevel(sdsbias_vertical) == extreduce_mldistsTopLevel(sds_vertical));
 }
 
 
@@ -1635,7 +1905,7 @@ void extreduce_mstLevelVerticalAddLeaf(
 
    /* compute and store SDs to all leaves;
     * also check for bottleneck rule-out! */
-   mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
+   mstLevelLeafSetVerticalSDsBoth(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
    /* if not yet ruled out, check whether extending the SD MST helps */
    if( !(*leafRuledOut) )
@@ -1685,7 +1955,7 @@ void extreduce_mstLevelVerticalAddLeafInitial(
 
    /* compute and store SDs to all leaves;
     * also check for bottleneck rule-out! */
-   mstLevelLeafSetVerticalSDs(scip, graph, edge2neighbor, extdata, leafRuledOut);
+   mstLevelLeafSetVerticalSDsBoth(scip, graph, edge2neighbor, extdata, leafRuledOut);
 
    mstLevelLeafExit(graph, neighbor_base, neighbor, *leafRuledOut, extdata);
 }
@@ -1700,6 +1970,14 @@ void extreduce_mstLevelVerticalClose(
 
    extreduce_mldistsLevelCloseTop(sds_vertical);
 
+   if( extReddataHasBiasedSds(reddata) )
+   {
+      MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
+
+      extreduce_mldistsLevelCloseTop(sdsbias_vertical);
+      assert(extreduce_mldistsTopLevel(sdsbias_vertical) == extreduce_mldistsTopLevel(sds_vertical));
+   }
+
 #ifdef SCIP_DEBUG
    {
       const int toplevel = extreduce_mldistsTopLevel(sds_vertical);
@@ -1712,9 +1990,7 @@ void extreduce_mstLevelVerticalClose(
 }
 
 
-/** Compute and store horizontal SDs */
-// todo we might also check for bottleneck conflicts here!
-// and store them in antipairs_start, antipairs_edges
+/** Compute and store horizontal SDs  */
 void extreduce_mstLevelHorizontalAdd(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
@@ -1723,68 +1999,22 @@ void extreduce_mstLevelHorizontalAdd(
    EXTDATA*              extdata             /**< extension data */
 )
 {
-   MLDISTS* const sds_horizontal = extdata->reddata->sds_horizontal;
-   const int* const ghead = graph->head;
-   const SCIP_Bool isPc = (extdata->pcdata->pcSdToNode != NULL);
+   REDDATA* const reddata = extdata->reddata;
+   MLDISTS* const sds_horizontal = reddata->sds_horizontal;
 
-   assert(nextedges > 0);
-   assert(isPc == graph_pc_isPc(graph));
+   assert(!(extReddataHasBiasedSds(reddata) && graph_pc_isPc(graph)));
 
-   extreduce_mldistsLevelAddTop(nextedges, nextedges - 1, sds_horizontal);
+   SCIPdebugMessage("add horizontal level %d \n", extreduce_mldistsTopLevel(sds_horizontal) + 1);
+   mstLevelHorizontalAddSds(scip, graph, nextedges, extedges, extdata, extdata->distdata, sds_horizontal);
 
-   /* tree has not yet been extended, so sds_horizontal is ahead */
-   assert(extdata->tree_depth == extreduce_mldistsTopLevel(sds_horizontal) - 1);
-   assert(extreduce_mldistsEmptySlotExists(sds_horizontal));
-
-   SCIPdebugMessage("added horizontal level %d \n", extreduce_mldistsTopLevel(sds_horizontal));
-
-   for( int i = 0; i < nextedges; ++i )
+   if( extReddataHasBiasedSds(reddata) )
    {
-      int* const adjids = extreduce_mldistsEmptySlotTargetIds(sds_horizontal);
-      SCIP_Real* const adjedgecosts = extreduce_mldistsEmptySlotTargetDists(sds_horizontal);
-      const int ext_edge = extedges[i];
-      const int ext_head = ghead[ext_edge];
+      MLDISTS* const sdsbias_horizontal = reddata->sdsbias_horizontal;
 
-      extreduce_mldistsEmptySlotSetBase(ext_head, sds_horizontal);
+      mstLevelHorizontalAddSds(scip, graph, nextedges, extedges, extdata, extdata->distdata_biased, sdsbias_horizontal);
 
-      if( isPc )
-         pcSdToNodeMark(graph, ext_head, extdata);
-
-      /* for left siblings: use SDs that have already been computed*/
-      for( int j = 0; j < i; ++j )
-      {
-         const int sibling_left = ghead[extedges[j]];
-         const SCIP_Real specialDist = extreduce_mldistsTopTargetDist(sds_horizontal, sibling_left, ext_head);
-
-#ifndef NDEBUG
-         if( !graph_pc_isPc(graph) )
-         {
-            const SCIP_Real sd_new = extGetSdDouble(scip, graph, ext_head, sibling_left, extdata);
-            assert(EQ(specialDist, sd_new) || (EQ(specialDist, FARAWAY) && EQ(sd_new, -1.0)));
-         }
-#endif
-
-         adjedgecosts[j] = specialDist;
-         adjids[j] = sibling_left;
-      }
-
-      /* for right siblings: compute new SDs */
-      for( int j = i + 1; j < nextedges; ++j )
-      {
-         const int sibling_right = ghead[extedges[j]];
-         const SCIP_Real specialDist = extGetSdDouble(scip, graph, ext_head, sibling_right, extdata);
-
-         adjedgecosts[j - 1] = (specialDist >= -0.5) ? specialDist : FARAWAY;
-         adjids[j - 1] = sibling_right;
-      }
-
-      if( isPc )
-         pcSdToNodeUnmark(graph, ext_head, extdata);
-
-      extreduce_mldistsEmptySlotSetFilled(sds_horizontal);
+      assert(extreduce_mldistsTopLevel(sds_horizontal) == extreduce_mldistsTopLevel(sdsbias_horizontal));
    }
-
-   assert(!extreduce_mldistsEmptySlotExists(sds_horizontal));
 }
 
 
@@ -1799,6 +2029,13 @@ void extreduce_mstLevelVerticalRemove(
    SCIPdebugMessage("remove vertical MST level %d \n", extreduce_mldistsNlevels(sds_vertical));
 
    extreduce_mldistsLevelRemoveTop(sds_vertical);
+
+   if( extReddataHasBiasedSds(reddata) )
+   {
+      MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
+      extreduce_mldistsLevelRemoveTop(sdsbias_vertical);
+      assert(extreduce_mldistsNlevels(sds_vertical) == extreduce_mldistsNlevels(sdsbias_vertical));
+   }
 }
 
 
@@ -1858,12 +2095,19 @@ void extreduce_mstLevelRemove(
       SCIPdebugMessage("remove horizontal level %d \n", horizontal_nlevels - 1);
 
       extreduce_mldistsLevelRemoveTop(sds_horizontal);
+
+      if( extReddataHasBiasedSds(reddata) )
+         extreduce_mldistsLevelRemoveTop(reddata->sdsbias_horizontal);
+
       graph_csrdepo_removeTop(msts_levelbase);
    }
 
    assert(graph_csrdepo_getNcsrs(msts_levelbase) == extreduce_mldistsNlevels(sds_horizontal));
 
    extreduce_mldistsLevelRemoveTop(sds_vertical);
+
+   if( extReddataHasBiasedSds(reddata) )
+      extreduce_mldistsLevelRemoveTop(reddata->sdsbias_vertical);
 }
 
 

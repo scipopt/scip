@@ -588,6 +588,23 @@ void extreduce_mldistsLevelAddTop(
 }
 
 
+/** adds root level of slots */
+void extreduce_mldistsLevelAddAndCloseRoot(
+   int                   base,               /**< the base */
+   MLDISTS*              mldists             /**< multi-level distances */
+)
+{
+   assert(mldists);
+   assert(base >= 0);
+
+   extreduce_mldistsLevelAddTop(1, 0, mldists);
+   extreduce_mldistsEmptySlotSetBase(base, mldists);
+   extreduce_mldistsEmptySlotSetFilled(mldists);
+   extreduce_mldistsLevelCloseTop(mldists);
+}
+
+
+
 /** closes the top level for further extensions */
 void extreduce_mldistsLevelCloseTop(
    MLDISTS*              mldists             /**< multi-level distances */

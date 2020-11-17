@@ -51,10 +51,10 @@ extern void            extreduce_treeRecompCosts(SCIP*, const GRAPH*, EXTDATA*);
 
 /* extreduce_core.c
  */
-extern SCIP_RETCODE    extreduce_checkComponent(SCIP*, const GRAPH*, const REDCOST*, EXTCOMP*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, DISTDATA*, EXTPERMA*, SCIP_Bool*);
-extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, STAR*, DISTDATA*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkComponent(SCIP*, const GRAPH*, const REDCOST*, EXTCOMP*, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkArc(SCIP*, const GRAPH*, REDCOST*, int, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkEdge(SCIP*, const GRAPH*, const REDCOST*, int, EXTPERMA*, SCIP_Bool*);
+extern SCIP_RETCODE    extreduce_checkNode(SCIP*, const GRAPH*, const REDCOST*, int, STAR*, EXTPERMA*, SCIP_Bool*);
 
 /* extreduce_util.c
  */
@@ -100,6 +100,7 @@ extern void               extreduce_mldistsEmptySlotReset(MLDISTS*);
 extern void               extreduce_mldistsEmptySlotSetFilled(MLDISTS*);
 extern void               extreduce_mldistsLevelAddTop(int, int, MLDISTS*);
 extern void               extreduce_mldistsLevelCloseTop(MLDISTS*);
+extern void               extreduce_mldistsLevelAddAndCloseRoot(int, MLDISTS*);
 extern void               extreduce_mldistsLevelRemoveTop(MLDISTS*);
 extern void               extreduce_mldistsLevelRemoveTopNonClosed(MLDISTS*);
 extern int                extreduce_mldistsLevelNTargets(const MLDISTS*, int);
@@ -154,8 +155,11 @@ extern SCIP_RETCODE    extreduce_mstbiasedCheck3NodeSimple(SCIP*, const GRAPH*, 
 extern void            extreduce_bottleneckMarkRootPath(const GRAPH*, int, EXTDATA*);
 extern void            extreduce_bottleneckUnmarkRootPath(const GRAPH*, int, EXTDATA*);
 extern SCIP_Bool       extreduce_bottleneckIsDominated(SCIP*, const GRAPH*, int, int, SCIP_Real, int, EXTDATA*);
+extern SCIP_Bool       extreduce_bottleneckIsDominatedBiased(SCIP*, const GRAPH*, int, int, SCIP_Real, EXTDATA*);
 extern SCIP_Bool       extreduce_bottleneckWithExtedgeIsDominated(SCIP*, const GRAPH*, int, int, int, SCIP_Real, EXTDATA*);
+extern SCIP_Bool       extreduce_bottleneckWithExtedgeIsDominatedBiased(SCIP*, const GRAPH*, int, int, int, SCIP_Real, EXTDATA*);
 extern SCIP_Bool       extreduce_bottleneckToSiblingIsDominated(SCIP*, const GRAPH*, int, int, SCIP_Real, EXTDATA*);
+extern SCIP_Bool       extreduce_bottleneckToSiblingIsDominatedBiased(SCIP*, const GRAPH*, int, int, SCIP_Real, EXTDATA*);
 extern void            extreduce_bottleneckCheckNonLeaves_pc(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
 extern void            extreduce_bottleneckCheckNonLeaves(SCIP*, const GRAPH*, int, EXTDATA*, SCIP_Bool*);
 
@@ -174,6 +178,7 @@ extern SCIP_Bool       extreduce_redcostRuleOutPeriph(const GRAPH*, EXTDATA*);
 
 void                      extreduce_extCompClean(SCIP*, const GRAPH*, const EXTCOMP*, SCIP_Bool, EXTDATA*);
 extern SCIP_RETCODE       extreduce_extPermaInit(SCIP*, const GRAPH*, STP_Bool*, EXTPERMA**);
+extern SCIP_RETCODE       extreduce_extPermaAddMLdistsbiased(SCIP*, EXTPERMA*);
 extern SCIP_Bool          extreduce_extPermaIsClean(const GRAPH*, const EXTPERMA*);
 extern void               extreduce_extPermaFree(SCIP*, EXTPERMA**);
 extern void               extreduce_extdataClean(EXTDATA*);

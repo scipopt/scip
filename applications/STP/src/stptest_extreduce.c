@@ -65,9 +65,10 @@ SCIP_RETCODE extCheckArc(
    }
 
    extpermanent->redcostEqualAllow = equality;
+   extpermanent->distdata_default = distdata;
 
    /* actual test */
-   SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, edge, distdata, extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkArc(scip, graph, redcostdata, edge, extpermanent, deletable) );
 
    /* clean up */
    extreduce_extPermaFree(scip, &extpermanent);
@@ -98,9 +99,10 @@ SCIP_RETCODE extCheckEdge(
    SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeleted, &extpermanent) );
 
    extpermanent->redcostEqualAllow = allowEquality;
+   extpermanent->distdata_default = distdata;
 
    /* actual test */
-   SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, edge, distdata, extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkEdge(scip, graph, redcostdata, edge, extpermanent, deletable) );
 
    /* clean up */
    extreduce_extPermaFree(scip, &extpermanent);
@@ -133,9 +135,10 @@ SCIP_RETCODE extCheckNode(
    SCIP_CALL( reduce_starInit(scip, graph->grad[node], &star) );
 
    extpermanent->redcostEqualAllow = allowEquality;
+   extpermanent->distdata_default = distdata;
 
    /* actual test */
-   SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, node, star, distdata, extpermanent, deletable) );
+   SCIP_CALL( extreduce_checkNode(scip, graph, redcostdata, node, star, extpermanent, deletable) );
 
    /* clean up */
    reduce_starFree(scip, &star);
@@ -146,6 +149,45 @@ SCIP_RETCODE extCheckNode(
    return SCIP_OKAY;
 }
 
+
+
+/** base method for extended edge reduction tests (with biased SDs) */
+static
+SCIP_RETCODE extDeleteNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< the graph */
+   REDCOST*              redcostdata,        /**< reduced cost data */
+   SCIP_Bool             allowEquality
+)
+{
+   DISTDATA* distdata;
+   EXTPERMA* extpermanent;
+   int ndeleted;
+
+   SCIP_CALL( graph_init_dcsr(scip, graph) );
+   SCIP_CALL( extreduce_distDataInit(scip, graph, STPTEST_EXT_MAXNCLOSENODES, FALSE, FALSE, &distdata) );
+   SCIP_CALL( extreduce_extPermaInit(scip, graph, NULL, &extpermanent) );
+
+   assert(!extpermanent->distdata_default);
+
+   extpermanent->distdata_default = distdata;
+   extpermanent->redcostdata = redcostdata;
+   extpermanent->redcostEqualAllow = allowEquality;
+
+   SCIP_CALL( extreduce_pseudoDeleteNodes(scip, NULL, NULL, extpermanent, graph, NULL, &ndeleted) );
+
+   /* clean up */
+   extreduce_distDataFree(scip, graph, &distdata);
+
+   if( extpermanent->distdata_biased )
+      extreduce_distDataFree(scip, graph, &(extpermanent->distdata_biased));
+
+   extreduce_extPermaFree(scip, &extpermanent);
+
+   graph_free_dcsr(scip, graph);
+
+   return SCIP_OKAY;
+}
 
 /** initializes to default */
 static
@@ -1285,9 +1327,9 @@ SCIP_RETCODE testNode3PseudoDeletedByContraction(
 }
 
 
-/** tests that node can be deleted */
+/** tests that node can be pseudo-deleted */
 static
-SCIP_RETCODE testNode3PseudoDeletedBySdBiased(
+SCIP_RETCODE testNode3PseudoDeletedBySdBiasedSimple(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
@@ -1349,6 +1391,69 @@ SCIP_RETCODE testNode3PseudoDeletedBySdBiased(
 
    return SCIP_OKAY;
 }
+
+
+
+/** tests that node can be pseudo-deleted */
+static
+SCIP_RETCODE testNode3PseudoDeletedBySdBiased(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   REDCOST* redcostdata;
+   GRAPH* graph;
+   const int nnodes = 10;
+   const int nedges = 22;
+   const int root = 0;
+   SCIP_Real cutoff = 100.0;
+   int testnode = 0;
+
+   assert(scip);
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   /* build tree */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 0 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 1 */
+   graph_knot_add(graph, STP_TERM_NONE);  /* node 2 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 3 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 4 */
+   graph_knot_add(graph, STP_TERM);       /* node 5 */
+   graph_knot_add(graph, STP_TERM);       /* node 6 */
+   graph_knot_add(graph, STP_TERM_NONE);       /* node 7 */
+   graph_knot_add(graph, STP_TERM);       /* node 8 */
+   graph_knot_add(graph, STP_TERM);       /* node 9 */
+
+   graph->source = 5;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0);
+   graph_edge_addBi(scip, graph, 0, 7, 1.0);
+   graph_edge_addBi(scip, graph, 7, 2, 1.0);
+   graph_edge_addBi(scip, graph, 0, 3, 1.0);
+   graph_edge_addBi(scip, graph, 2, 4, 1.5);
+   graph_edge_addBi(scip, graph, 3, 4, 1.5);
+   graph_edge_addBi(scip, graph, 4, 5, 1.0);
+
+   /* dummy */
+   graph_edge_addBi(scip, graph, 5, 6, 12.0);
+   graph_edge_addBi(scip, graph, 1, 8, 1.0);
+   graph_edge_addBi(scip, graph, 3, 9, 1.0);
+   graph_edge_addBi(scip, graph, 2, 6, 2.1);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+   SCIP_CALL( redcosts_init(scip, graph->knots, graph->edges, cutoff, root, &redcostdata) );
+   extInitRedCostArrays(graph, redcostdata);
+
+   SCIP_CALL( extDeleteNodes(scip, graph, redcostdata, TRUE) );
+
+   STPTEST_ASSERT_MSG(graph->grad[testnode] == 0, "node was not deleted! \n");
+
+   stptest_extreduceTearDown(scip, graph, &redcostdata);
+
+   return SCIP_OKAY;
+}
+
 
 /** tests that node can be deleted */
 static
@@ -2143,7 +2248,11 @@ SCIP_RETCODE stptest_extreduce(
    assert(scip);
 
 
+
    SCIP_CALL( testNode3PseudoDeletedBySdBiased(scip) );
+
+
+   SCIP_CALL( testNode3PseudoDeletedBySdBiasedSimple(scip) );
 
 
    SCIP_CALL( testNode3PseudoDeletedByContraction(scip) );

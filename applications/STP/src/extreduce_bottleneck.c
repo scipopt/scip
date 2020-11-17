@@ -474,7 +474,7 @@ SCIP_Bool extreduce_bottleneckIsDominated(
    )
 {
    SCIP_Real bottleneckDist;
-   const SCIP_Bool hasSpecialDist = sdIsNonTrivial(specialDist);
+   const SCIP_Bool hasSpecialDist = extSdIsNonTrivial(specialDist);
 
    assert(graph_knot_isInRange(graph, vertex_pathmarked));
    assert(graph_knot_isInRange(graph, vertex_unmarked));
@@ -518,6 +518,44 @@ SCIP_Bool extreduce_bottleneckIsDominated(
 }
 
 
+/** As above, but for biased special distance */
+SCIP_Bool extreduce_bottleneckIsDominatedBiased(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
+   int                   vertex_unmarked,    /**< second vertex */
+   SCIP_Real             specialDistBiased,  /**< best computed special distance approximation (-1.0 if unknown) */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   SCIP_Real bottleneckDist;
+   const SCIP_Bool hasSpecialDist = extSdIsNonTrivial(specialDistBiased);
+
+   assert(graph_knot_isInRange(graph, vertex_pathmarked));
+   assert(graph_knot_isInRange(graph, vertex_unmarked));
+
+   if( !hasSpecialDist || vertex_pathmarked == vertex_unmarked )
+   {
+      return FALSE;
+   }
+
+#ifndef NDEBUG
+   bottleneckDist = bottleneckGetDist(graph, extdata, vertex_pathmarked, vertex_unmarked);
+#else
+   bottleneckDist = bottleneckGetDist(graph, extdata, vertex_unmarked);
+#endif
+
+   SCIPdebugMessage("biased domination test %d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDistBiased, bottleneckDist);
+
+   if( LT(specialDistBiased, bottleneckDist) )
+   {
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
 /** Does a special distance approximation dominate the tree bottleneck distance of
  *  extension edge (i.e. its edge cost) or bottleneck distance between vertex_pathmarked
  *  and vertex_unmarked in the current tree.
@@ -525,7 +563,7 @@ SCIP_Bool extreduce_bottleneckIsDominated(
 SCIP_Bool extreduce_bottleneckWithExtedgeIsDominated(
    SCIP*                 scip,               /**< SCIP */
    const GRAPH*          graph,              /**< graph data structure */
-   int                   extedge,            /**< edge along which we want to extend the tree, or -1 */
+   int                   extedge,            /**< edge along which we want to extend the tree */
    int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
    int                   vertex_unmarked,    /**< second vertex */
    SCIP_Real             specialDist,        /**< best computed special distance approximation (-1.0 if unknown) */
@@ -533,8 +571,9 @@ SCIP_Bool extreduce_bottleneckWithExtedgeIsDominated(
    )
 {
    SCIP_Real bottleneckDist;
-   const SCIP_Bool hasSpecialDist = sdIsNonTrivial(specialDist);
+   const SCIP_Bool hasSpecialDist = extSdIsNonTrivial(specialDist);
 
+   assert(graph_edge_isInRange(graph, extedge));
    assert(vertex_pathmarked == graph->tail[extedge]);
 
    if( !hasSpecialDist )
@@ -594,6 +633,47 @@ SCIP_Bool extreduce_bottleneckWithExtedgeIsDominated(
          return TRUE;
       }
    }
+
+   return FALSE;
+}
+
+
+/** as above, but for biased special distance */
+SCIP_Bool extreduce_bottleneckWithExtedgeIsDominatedBiased(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extedge,            /**< edge along which we want to extend the tree */
+   int                   vertex_pathmarked,  /**< vertex for which bottleneck path to root has been marked */
+   int                   vertex_unmarked,    /**< second vertex */
+   SCIP_Real             specialDistBiased,  /**< best computed biased special distance approximation (-1.0 if unknown) */
+   EXTDATA*              extdata             /**< extension data */
+   )
+{
+   SCIP_Real bottleneckDist;
+   const SCIP_Bool hasSpecialDist = extSdIsNonTrivial(specialDistBiased);
+
+   assert(graph_edge_isInRange(graph, extedge));
+   assert(vertex_pathmarked == graph->tail[extedge]);
+
+   if( !hasSpecialDist )
+      return FALSE;
+
+   if( LT(specialDistBiased, graph->cost[extedge]) )
+      return TRUE;
+
+   if( vertex_pathmarked == vertex_unmarked )
+      return FALSE;
+
+#ifndef NDEBUG
+   bottleneckDist = bottleneckGetDist(graph, extdata, vertex_pathmarked, vertex_unmarked);
+#else
+   bottleneckDist = bottleneckGetDist(graph, extdata, vertex_unmarked);
+#endif
+
+   SCIPdebugMessage("extedge biased domination test %d->%d: sd=%f bottleneck=%f \n", vertex_pathmarked, vertex_unmarked, specialDistBiased, bottleneckDist);
+
+   if( LT(specialDistBiased, bottleneckDist) )
+      return TRUE;
 
    return FALSE;
 }
@@ -663,6 +743,42 @@ SCIP_Bool extreduce_bottleneckToSiblingIsDominated(
             return TRUE;
          }
       }
+   }
+
+   return FALSE;
+}
+
+
+/** as above, but for biased special distance */
+SCIP_Bool extreduce_bottleneckToSiblingIsDominatedBiased(
+   SCIP*                 scip,               /**< SCIP */
+   const GRAPH*          graph,              /**< graph data structure */
+   int                   extedge,            /**< edge for extension */
+   int                   edge2sibling,       /**< edge to sibling of extedge head */
+   SCIP_Real             specialDistBiased,  /**< best computed special distance approximation (FARAWAY if unknown) */
+   EXTDATA*              extdata             /**< extension data */
+)
+{
+   const SCIP_Bool hasSpecialDist = LT(specialDistBiased, FARAWAY);
+
+   assert(GE(specialDistBiased, 0.0));
+   assert(extedge >= 0 && edge2sibling >= 0);
+   assert(extedge != edge2sibling);
+   assert(graph->tail[extedge] == graph->tail[edge2sibling]);
+
+   if( !hasSpecialDist )
+   {
+      return FALSE;
+   }
+   else
+   {
+      const SCIP_Real* const edgecost = graph->cost;
+
+      if( LT(specialDistBiased, edgecost[edge2sibling]) )
+         return TRUE;
+
+      if( LT(specialDistBiased, edgecost[extedge]) )
+         return TRUE;
    }
 
    return FALSE;

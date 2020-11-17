@@ -138,6 +138,12 @@ void extreduce_extCompClean(
    postCleanSDs(sds_vertical);
    postCleanSDs(sds_horizontal);
 
+   if( extReddataHasBiasedSds(reddata) )
+   {
+      postCleanSDs(reddata->sdsbias_vertical);
+      postCleanSDs(reddata->sdsbias_horizontal);
+   }
+
    postCleanMSTs(msts_comp);
    postCleanMSTs(msts_levelbase);
 
@@ -206,6 +212,8 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( extreduce_contractionInit(scip, STP_EXT_MAXDFSDEPTH,
          STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->contration)) );
 
+   extperm->sdsbias_horizontal = NULL;
+   extperm->sdsbias_vertical = NULL;
    extperm->distdata_default = NULL;
    extperm->distdata_biased = NULL;
    extperm->redcostdata = NULL;
@@ -244,6 +252,32 @@ SCIP_RETCODE extreduce_extPermaInit(
    }
 
    assert(extreduce_extPermaIsClean(graph, extperm));
+
+   return SCIP_OKAY;
+}
+
+
+/** adds biased ML distances containers */
+SCIP_RETCODE extreduce_extPermaAddMLdistsbiased(
+   SCIP*                 scip,               /**< SCIP */
+   EXTPERMA*             extpermanent        /**< (initialized) extension data */
+)
+{
+   const int msts_maxn = STP_EXT_MAXDFSDEPTH + 1;
+#ifndef NDEBUG
+   const SCIP_Bool sds_vertical_useids = TRUE;
+#else
+   const SCIP_Bool sds_vertical_useids = FALSE;
+#endif
+
+   assert(scip && extpermanent);
+   assert(!extpermanent->sdsbias_vertical && !extpermanent->sdsbias_horizontal);
+
+   SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
+         STP_EXTTREE_MAXNLEAVES_GUARD, 1, sds_vertical_useids, &(extpermanent->sdsbias_vertical)) );
+
+   SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
+         STP_EXT_MAXGRAD, 1, TRUE, &(extpermanent->sdsbias_horizontal)) );
 
    return SCIP_OKAY;
 }
@@ -302,6 +336,18 @@ SCIP_Bool extreduce_extPermaIsClean(
       return FALSE;
    }
 
+   if( extperm->sdsbias_vertical && !extreduce_mldistsIsEmpty(extperm->sdsbias_vertical) )
+   {
+      SCIPdebugMessage("sdsbias_vertical not empty! size=%d \n", extreduce_mldistsNlevels(extperm->sds_vertical));
+      return FALSE;
+   }
+
+   if( extperm->sdsbias_horizontal && !extreduce_mldistsIsEmpty(extperm->sdsbias_horizontal) )
+   {
+      SCIPdebugMessage("sdsbias_horizontal not empty! \n");
+      return FALSE;
+   }
+
    for( int i = 0; i < nnodes; i++ )
    {
       if( !(tree_deg[i] == 0 || tree_deg[i] == -1) )
@@ -329,6 +375,12 @@ void extreduce_extPermaFree(
    assert(scip && extpermanent);
 
    extperm = *extpermanent;
+
+   if( extperm->sdsbias_vertical )
+      extreduce_mldistsFree(scip, &(extperm->sdsbias_vertical));
+
+   if( extperm->sdsbias_horizontal )
+      extreduce_mldistsFree(scip, &(extperm->sdsbias_horizontal));
 
    extreduce_contractionFree(scip, &(extperm->contration));
    extreduce_mldistsFree(scip, &(extperm->sds_horizontal));

@@ -1826,7 +1826,6 @@ SCIP_RETCODE extreduce_checkComponent(
    const GRAPH*          graph,              /**< graph data structure */
    const REDCOST*        redcostdata,        /**< reduced cost data structures */
    EXTCOMP*              extcomp,            /**< component to be checked (might be reverted) */
-   DISTDATA*             distdata,           /**< data for distance computations */
    EXTPERMA*             extpermanent,       /**< extension data */
    SCIP_Bool*            compIsDeletable     /**< is component deletable? */
 )
@@ -1886,6 +1885,7 @@ SCIP_RETCODE extreduce_checkComponent(
          .dcmst = extpermanent->dcmst, .msts_comp = extpermanent->msts_comp,
          .msts_levelbase = extpermanent->msts_levelbase,
          .sds_horizontal = extpermanent->sds_horizontal, .sds_vertical = extpermanent->sds_vertical,
+         .sdsbias_horizontal = extpermanent->sdsbias_horizontal, .sdsbias_vertical = extpermanent->sdsbias_vertical,
          .edgedeleted = extpermanent->edgedeleted, .pseudoancestor_mark = pseudoancestor_mark,
          .nodes_implications = extpermanent->nodes_implications,
          .redcost_treenodeswaps = redcost_treenodeswaps, .redcost_treecosts = redcost_treecosts,
@@ -1904,7 +1904,8 @@ SCIP_RETCODE extreduce_checkComponent(
          .tree_innerNodes = tree_innerNodes, .tree_ninnerNodes = 0,
          .tree_maxdepth = extpermanent->tree_maxdepth,
          .tree_maxnleaves = extpermanent->tree_maxnleaves,
-         .tree_maxnedges = extpermanent->tree_maxnedges, .node_isterm = isterm, .reddata = &reddata, .distdata = distdata };
+         .tree_maxnedges = extpermanent->tree_maxnedges, .node_isterm = isterm, .reddata = &reddata,
+         .distdata = extpermanent->distdata_default, .distdata_biased = extpermanent->distdata_biased };
 
 #ifdef STP_DEBUG_EXT
       extreduce_extdataCleanArraysDbg(graph, &extdata);

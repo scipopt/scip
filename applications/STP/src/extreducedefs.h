@@ -101,6 +101,8 @@ typedef struct extension_data_permanent
    CSRDEPO*              msts_levelbase;     /**< storage for MSTs without extending node of the level below */
    MLDISTS*              sds_horizontal;     /**< SDs from deepest leaves to remaining ones */
    MLDISTS*              sds_vertical;       /**< SDs between leaves of same depth */
+   MLDISTS*              sdsbias_horizontal; /**< as above, but for biased SDs; can be NULL */
+   MLDISTS*              sdsbias_vertical;   /**< as above, but for biased SDs; can be NULL */
    STP_Bool*             edgedeleted;        /**< (non-owned!) edge array to mark which directed edge can be removed */
    SCIP_Bool*            isterm;             /**< marks whether node is a terminal (or proper terminal for PC) */
    SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
@@ -127,6 +129,8 @@ typedef struct reduction_data
    CSRDEPO* const msts_levelbase;
    MLDISTS* const sds_horizontal;
    MLDISTS* const sds_vertical;
+   MLDISTS* const sdsbias_horizontal;      /**< can be NULL */
+   MLDISTS* const sdsbias_vertical;        /**< can be NULL */
    const STP_Bool* const edgedeleted;
    int* const pseudoancestor_mark;
    STP_Vectype(int)* nodes_implications;
@@ -166,6 +170,7 @@ typedef struct extension_data
    const SCIP_Bool* const node_isterm;          /**< marks whether node is a terminal (or proper terminal for PC) */
    REDDATA* const reddata;
    DISTDATA* const distdata;
+   DISTDATA* const distdata_biased;       /**< can be NULL */
    const REDCOST* const redcostdata;
    PCDATA* const pcdata;
    SCIP_Bool* const sdeq_edgesIsForbidden;
@@ -207,6 +212,20 @@ typedef struct initial_extension_component
 
 /* inline methods
  */
+
+
+/** prize-collecting problem? */
+static inline
+SCIP_Bool extProbIsPc(
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTDATA*        extdata             /**< extension data */
+)
+{
+   assert(graph && extdata);
+   assert(graph_pc_isPc(graph) == (extdata->pcdata->pcSdToNode != NULL));
+
+   return (extdata->pcdata->pcSdToNode != NULL);
+}
 
 
 /** currently at initial component? */
@@ -442,7 +461,7 @@ SCIP_Real extSdGetProper(
 
 /** is given SD non-trivial? */
 static inline
-SCIP_Real sdIsNonTrivial(
+SCIP_Real extSdIsNonTrivial(
    SCIP_Real             specialDist         /**< SD */
   )
 {
@@ -453,6 +472,16 @@ SCIP_Real sdIsNonTrivial(
 }
 
 
+/** does reduction data have biased SD information? */
+static inline
+SCIP_Bool extReddataHasBiasedSds(
+   const REDDATA*        reddata             /**< reduction data */
+)
+{
+   assert(reddata);
+   assert((reddata->sdsbias_vertical != NULL) == (reddata->sdsbias_horizontal != NULL));
 
+   return (reddata->sdsbias_vertical != NULL);
+}
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCEDEFS_H_ */
