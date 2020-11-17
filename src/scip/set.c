@@ -4950,15 +4950,15 @@ SCIP_RETCODE SCIPsetIncludeExprhdlr(
    set->nexprhdlrs++;
    set->exprhdlrssorted = FALSE;
 
-   if( set->exprhdlrvar != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0 )
+   if( set->exprhdlrvar == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "var") == 0 )
       set->exprhdlrvar = exprhdlr;
-   else if( set->exprhdlrval != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0 )
+   else if( set->exprhdlrval == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "val") == 0 )
       set->exprhdlrval = exprhdlr;
-   else if( set->exprhdlrsum != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0 )
+   else if( set->exprhdlrsum == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "sum") == 0 )
       set->exprhdlrsum = exprhdlr;
-   else if( set->exprhdlrproduct != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "prod") == 0 )
+   else if( set->exprhdlrproduct == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "prod") == 0 )
       set->exprhdlrproduct = exprhdlr;
-   else if( set->exprhdlrpow != NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0 )
+   else if( set->exprhdlrpow == NULL && strcmp(SCIPexprhdlrGetName(exprhdlr), "pow") == 0 )
       set->exprhdlrpow = exprhdlr;
 
    return SCIP_OKAY;
