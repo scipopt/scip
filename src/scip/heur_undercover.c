@@ -1081,12 +1081,12 @@ SCIP_RETCODE createCoveringProblem(
       }
    }
 
-   /* go through all expr constraints in the original problem
+   /* go through all nonlinear constraints in the original problem
     * @todo: some expr constraints might be SOC and these only need to have all but one variable fixed in order to be
     * linear; however, by just looking at the nlrow representation of a soc constraint, processNlRow doesn't realize
     * this. if more specific information is accessible from expr constrains, then this can be improved
     */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    if( conshdlr != NULL )
    {
       int c;
@@ -1101,7 +1101,7 @@ SCIP_RETCODE createCoveringProblem(
          assert(exprcons != NULL);
 
          /* get nlrow representation and store it in hash map */
-         SCIP_CALL( SCIPgetNlRowConsExpr(scip, exprcons, &nlrow) );
+         SCIP_CALL( SCIPgetNlRowConsNonlinear(scip, exprcons, &nlrow) );
          assert(nlrow != NULL);
 
          /* process nlrow */
