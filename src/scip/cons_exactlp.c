@@ -964,6 +964,7 @@ SCIP_RETCODE consdataCreate(
    }
 
    (*consdata)->row = NULL;
+   (*consdata)->rowexact = NULL;
    SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
    SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
    (*consdata)->lhsreal = lhsrel;
@@ -3472,16 +3473,16 @@ SCIP_RETCODE chgLhs(
    }
 
    /* set new left hand side and update constraint data */
-   consdata->lhs = lhs;
+   RatSet(consdata->lhs, lhs);
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
    consdata->rangedrowpropagated = 0;
 
    /* update the lhs of the LP row */
-   if( consdata->row != NULL )
+   if( consdata->rowexact != NULL )
    {
-      // todo: exip SCIP_CALL( SCIPchgRowLhs(scip, consdata->row, lhs) );
+      SCIP_CALL( SCIPchgRowExactLhs(scip, consdata->rowexact, lhs) );
    }
 
    return SCIP_OKAY;
@@ -3606,7 +3607,7 @@ SCIP_RETCODE chgRhs(
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
    {
-      // todo: exip SCIP_CALL( SCIPchgRowRhs(scip, consdata->row, rhs) );
+      SCIP_CALL( SCIPchgRowExactRhs(scip, consdata->rowexact, rhs) );
    }
 
    return SCIP_OKAY;

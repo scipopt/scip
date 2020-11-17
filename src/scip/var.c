@@ -2132,31 +2132,66 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    return SCIP_OKAY;
 }
 
-/** create and set the exact variable bounds and objective value */
+/** create and set the exact variable bounds and objective value, if a value is NULL, the floating-point data is used */
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational*        lb,                 /**< lower bound of variable */
-   SCIP_Rational*        ub,                 /**< upper bound of variable */
-   SCIP_Rational*        obj                 /**< objective function value */
+   SCIP_Rational*        lb,                 /**< lower bound of variable, or NULL to use floating point data */
+   SCIP_Rational*        ub,                 /**< upper bound of variable, or NULL to use floating point data  */
+   SCIP_Rational*        obj                 /**< objective function value, or NULL to use floating point data  */
    )
 {
    assert(var != NULL);
    assert(blkmem != NULL);
 
-   assert(var->glbdom.ub == RatRoundReal(ub, SCIP_ROUND_UPWARDS));
-   assert(var->glbdom.lb == RatRoundReal(lb, SCIP_ROUND_DOWNWARDS));
+   assert(ub == NULL || var->glbdom.ub == RatRoundReal(ub, SCIP_ROUND_UPWARDS));
+   assert(lb == NULL || var->glbdom.lb == RatRoundReal(lb, SCIP_ROUND_DOWNWARDS));
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(var->exactdata)) );
 
-   SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.lb, lb) );
-   SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.ub, ub) );
+   if( lb != NULL )
+   {
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.lb, lb) );
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.lb, lb) );
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
+   }
+   else
+   {
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->glbdom.lb) );
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->locdom.lb) );
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->origdom.lb) );
 
-   SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.lb, lb) );
-   SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.ub, ub) );
+      RatSetReal(var->exactdata->glbdom.lb, var->glbdom.lb);
+      RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
+      RatSetReal(var->exactdata->origdom.lb, var->glbdom.lb);
+   }
 
-   SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
-   SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
+   if( ub != NULL )
+   {
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.ub, ub) );
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.ub, ub) );
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
+   }
+   else
+   {
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->glbdom.ub) );
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->locdom.ub) );
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->origdom.ub) );
+
+      RatSetReal(var->exactdata->glbdom.ub, var->glbdom.ub);
+      RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
+      RatSetReal(var->exactdata->origdom.ub, var->glbdom.ub);
+   }
+
+   if( obj != NULL )
+   {
+      SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
+   }
+   else
+   {
+      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->obj) );
+      RatSetReal(var->exactdata->obj, var->obj);
+   }
 
    var->exactdata->colexact = NULL;
    var->exactdata->varstatusexact = var->varstatus;
@@ -2165,11 +2200,6 @@ SCIP_RETCODE SCIPvarAddExactData(
    var->exactdata->multaggr.constant = NULL;
    var->exactdata->aggregate.constant = NULL;
    var->exactdata->aggregate.scalar = NULL;
-
-   if( obj != NULL )
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
-   else
-      SCIP_CALL( RatCreateBlock(blkmem, &var->exactdata->obj) );
 
    return SCIP_OKAY;
 }
