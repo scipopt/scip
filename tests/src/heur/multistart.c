@@ -118,7 +118,7 @@ Test(heuristic, sampleRandomPoints, .init = setup, .fini = teardown,
    SCIPfreeBufferArray(scip, &rndpoints);
 }
 
-
+#if !1
 Test(heuristic, computeGradient, .init = setup, .fini = teardown,
    .description = "check computeGradient subroutine of the multi-start heuristic"
    )
@@ -273,6 +273,7 @@ Test(heuristic, improvePoint, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[1]) );
    SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[0]) );
 }
+#endif
 
 Test(heuristic, filterPoints, .init = setup, .fini = teardown,
    .description = "check filterPoints subroutine of the multi-start heuristic"
