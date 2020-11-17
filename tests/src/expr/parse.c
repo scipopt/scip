@@ -216,7 +216,7 @@ Test(parse, unusual_var_name)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
+#if !1  // FIXME move into test for cons_nonlinear
 Test(parse, constraint_with_spaces)
 {
       SCIP_CONS* consexpr_xy5;
