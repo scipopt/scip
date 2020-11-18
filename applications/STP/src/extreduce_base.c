@@ -999,14 +999,45 @@ SCIP_Bool pseudodeleteAllStarsChecked(
 /** is biased SD extension promising? */
 static inline
 SCIP_Bool pseudodeleteBiasedIsPromising(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g                   /**< graph data structure  */
 )
 {
-   int todo;
+
+   SDPROFIT* sdprofit;
+
    if( graph_pc_isPc(g) )
    {
       return FALSE;
    }
+   else
+   {
+#ifdef SCIP_DEISABLED
+      double profitsratio;
+      int nprofits = 0;
+      const int nnodes = graph_get_nNodes(g);
+      const int nterms = g->terms;
+// might also computde proper sd first..and give to routine
+      SCIP_CALL_ABORT( reduce_sdprofitInit1stOnly(scip, g, g->cost, &sdprofit));
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) )
+            continue;
+
+         if( GT(sdprofit->nodes_bias[i], 0.0) )
+         {
+            nprofits++;
+         }
+      }
+
+      profitsratio = (double) nprofits / (double) nterms;
+
+      printf("profitsratio=%f \n", profitsratio);
+      reduce_sdprofitFree(scip, &sdprofit);
+#endif
+   }
+
 
    // check whether at least 10 % of terminals have a simple profit!
 
@@ -1606,7 +1637,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, &extpseudo) );
 
-   if( pseudodeleteBiasedIsPromising(graph) )
+   if( pseudodeleteBiasedIsPromising(scip, graph) )
    {
       assert(!extperma->distdata_biased);
       extperma->useSdBias = TRUE;
