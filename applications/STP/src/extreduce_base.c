@@ -1633,7 +1633,10 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    isExtendedOrg = graph->extended;
    if( graph_pc_isPc(graph) )
+   {
       graph_pc_2orgcheck(scip, graph);
+      reduce_removeDeg0NonLeafTerms(scip, graph, offsetp);
+   }
 
    SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, &extpseudo) );
 
