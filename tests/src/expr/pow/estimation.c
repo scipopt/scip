@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation_prod.c
- * @brief  tests separation of power expressions
+/**@file   estimation.c
+ * @brief  tests estimation of power expressions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_pow.c"
-#include "separation.h"
+#include "scip/expr_pow.c"
+#include "../estimation.h"
 
 /* test computeTangent */
 Test(estimation, tangent, .description = "test computation of tangent")
@@ -681,23 +681,25 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
+   SCIP_Real xval;
    SCIP_Real constant;
    SCIP_Real slope;
    SCIP_Bool islocal;
    SCIP_Bool branchcand;
    SCIP_Bool success;
 
-   SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &expr, xexpr, 2.0) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &expr, xexpr, 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPevalExprActivity(scip, expr) );
 
    /*
     * compute underestimator for x^2 with x* = 1.0
     * this should result in an gradient estimator
     */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
+   xval = 1.0;
 
    branchcand = TRUE;
-   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimatePow(scip, expr, &xval, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -1.0, SCIPepsilon(scip));
@@ -709,10 +711,10 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
     * compute overestimator for x^2 with x* = 1.0
     * this should result in a secant estimator
     */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1.0) );
+   xval = 1.0;
 
    branchcand = TRUE;
-   SCIP_CALL( estimatePow(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimatePow(scip, expr, &xval, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
    cr_assert(success);
    cr_assert_float_eq(constant, 5.0, SCIPepsilon(scip));
    cr_assert_float_eq(slope, 4.0, SCIPepsilon(scip));
@@ -720,5 +722,5 @@ Test(separation, convexsquare, .init = setup, .fini = teardown,
    cr_assert(branchcand);
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }

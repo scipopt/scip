@@ -13,22 +13,20 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   exprhdlr_pow.c
- * @brief  tests expression handler functions of xzy an expression
+/**@file   pow.c
+ * @brief  tests expression handler functions of pow expression
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_value.h"
-
+#include "scip/scipdefplugins.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_var.h"
+#include "scip/expr_value.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
@@ -38,13 +36,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -115,32 +107,30 @@ Test(pow, hash, .description = "Tests the expression hash.")
 
 Test(pow, simplify, .description = "Tests the expression simplification.")
 {
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* simplified;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* simplified;
    SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
 
    /* binary variable to positive exponent */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>^17.43", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
-
+   SCIP_CALL( SCIPparseExpr(scip, &expr, "<x>^17.43", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
    cr_expect(changed);
-   cr_assert_not(infeasible);
-   cr_assert_eq(SCIPgetConsExprExprHdlr(expr), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_assert_eq(SCIPgetConsExprExprHdlr(simplified), SCIPgetConsExprExprHdlrVar(conshdlr));
-   cr_assert_eq(x, SCIPgetConsExprExprVarVar(simplified));
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+   cr_expect_not(infeasible);
+   cr_expect(SCIPisExprPower(scip, expr));
+   cr_expect(SCIPisExprVar(scip, simplified));
+   cr_expect_eq(x, SCIPexprGetVarExprVar(simplified));
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
 
    /* binary variable to negative exponent -> nothing happens */
    changed = FALSE;
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x>^(-1.43)", NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
-
+   SCIP_CALL( SCIPparseExpr(scip, &expr, "<x>^(-1.43)", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
    cr_expect_not(changed);
-   cr_assert_not(infeasible);
-   cr_assert_eq(SCIPgetConsExprExprHdlr(expr), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_assert_eq(SCIPgetConsExprExprHdlr(simplified), SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
+   cr_expect_not(infeasible);
+   cr_expect(SCIPisExprPower(scip, expr));
+   cr_expect(SCIPisExprPower(scip, simplified));
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
 }

@@ -13,39 +13,28 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation.h
- * @brief  setup and teardown of separation methods
+/**@file   estimation.h
+ * @brief  setup and teardown of estimation methods
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
-#include "scip/nodesel_bfs.h"
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
 
-/* needed to add auxiliary variables */
-#include "scip/struct_cons_expr.h"
+#include <strings.h>
+#include <math.h>
+
+#include "scip/scip.h"
+#include "scip/scipdefplugins.h"
+#include "scip/expr_var.h"
 
 /* needed to manipulate the stages */
-#include <strings.h>
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 
 #include "include/scip_test.h"
 
-#ifndef M_PI
-#define M_PI           3.14159265358979323846
-#endif
-#ifndef M_PI_2
-#define M_PI_2         1.57079632679489661923
-#endif
-#ifndef M_PI_4
-#define M_PI_4         0.785398163397448309616
-#endif
-
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
@@ -53,11 +42,11 @@ static SCIP_VAR* w;
 static SCIP_VAR* v;
 static SCIP_VAR* auxvar;
 static SCIP_SOL* sol;
-static SCIP_CONSEXPR_EXPR* xexpr;
-static SCIP_CONSEXPR_EXPR* yexpr;
-static SCIP_CONSEXPR_EXPR* zexpr;
-static SCIP_CONSEXPR_EXPR* wexpr;
-static SCIP_CONSEXPR_EXPR* vexpr;
+static SCIP_EXPR* xexpr;
+static SCIP_EXPR* yexpr;
+static SCIP_EXPR* zexpr;
+static SCIP_EXPR* wexpr;
+static SCIP_EXPR* vexpr;
 
 static SCIP_RANDNUMGEN* randnumgen; /* needs it for the multilinear separation */
 
@@ -66,16 +55,10 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -93,14 +76,14 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, v) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &vexpr, v) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &vexpr, v, NULL, NULL) );
 
    /* get SCIP into SOLVING stage */
-   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+//   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -116,11 +99,11 @@ void teardown(void)
    /* release solution */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &vexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &vexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &v) );
    SCIP_CALL( SCIPreleaseVar(scip, &w) );
