@@ -1813,6 +1813,8 @@ SCIP_RETCODE SCIPreplaceCommonSubexpressions(
    assert(nexprs >= 0);
    assert(replacedroot != NULL);
 
+   *replacedroot = FALSE;
+
    if( nexprs == 0 )
       return SCIP_OKAY;
 
