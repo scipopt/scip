@@ -49,7 +49,7 @@ SCIP_Real getConsExprExprPartialDiff(
 
    /* we need to sum-up the derivative value from all expr that represent variable var; but only visit each expr once */
    for( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
-      if( SCIPisExprVar(scip, expr) && SCIPexprGetVarExprVar(expr) == var )
+      if( SCIPisExprVar(scip, expr) && SCIPgetVarExprVar(expr) == var )
          deriv += SCIPexprGetDerivative(expr);
 
    SCIPfreeExpriter(&it);

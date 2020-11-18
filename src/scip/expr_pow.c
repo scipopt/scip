@@ -1296,8 +1296,8 @@ SCIP_DECL_EXPRCOMPARE(comparePow)
    if( compareresult != 0 )
       return compareresult;
 
-   expo1 = SCIPexprGetExponentExprPow(expr1);
-   expo2 = SCIPexprGetExponentExprPow(expr2);
+   expo1 = SCIPgetExponentExprPow(expr1);
+   expo2 = SCIPgetExponentExprPow(expr2);
 
    return expo1 == expo2 ? 0 : expo1 < expo2 ? -1 : 1; /*lint !e777*/
 }
@@ -1320,7 +1320,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
    base = SCIPexprGetChildren(expr)[0];
    assert(base != NULL);
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
 
    SCIPdebugPrintf("[simplifyPow] simplifying power with expo %g\n", exponent);
 
@@ -1329,7 +1329,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
    {
       SCIPdebugPrintf("[simplifyPow] POW1\n");
       /* TODO: more checks? */
-      assert(!SCIPisExprValue(scip, base) || SCIPexprGetValueExprValue(base) != 0.0);
+      assert(!SCIPisExprValue(scip, base) || SCIPgetValueExprValue(base) != 0.0);
       SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, 1.0, ownerdatacreate, ownerdatacreatedata) );
       return SCIP_OKAY;
    }
@@ -1349,7 +1349,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_Real baseval;
 
       SCIPdebugPrintf("[simplifyPow] POW3\n");
-      baseval = SCIPexprGetValueExprValue(base);
+      baseval = SCIPgetValueExprValue(base);
 
       /* TODO check if those are all important asserts */
       assert(baseval >= 0.0 || fmod(exponent, 1.0) == 0.0);
@@ -1397,7 +1397,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_VAR* basevar;
 
       SCIPdebugPrintf("[simplifyPow] POW10\n");
-      basevar = SCIPexprGetVarExprVar(base);
+      basevar = SCIPgetVarExprVar(base);
 
       assert(basevar != NULL);
 
@@ -1456,17 +1456,17 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
        * notes: - since base is simplified and its constant is 0, then coef != 1.0 (SS7)
        *        - n is an integer (excluding 1 and 0; see POW1-2 above)
        */
-      if( SCIPisExprSum(scip, base) && SCIPexprGetNChildren(base) == 1 && SCIPexprGetConstantExprSum(base) == 0.0 )
+      if( SCIPisExprSum(scip, base) && SCIPexprGetNChildren(base) == 1 && SCIPgetConstantExprSum(base) == 0.0 )
       {
          SCIP_Real newcoef;
 
          SCIPdebugPrintf("[simplifyPow] seeing a sum with one term, exponent %g\n", exponent);
          /* assert SS7 holds */
-         assert(SCIPexprGetCoefsExprSum(base)[0] != 1.0);
+         assert(SCIPgetCoefsExprSum(base)[0] != 1.0);
 
          /* create (pow n expr) and simplify it
           * note: we call simplifyPow directly, since we know that `expr` is simplified */
-         newcoef = pow(SCIPexprGetCoefsExprSum(base)[0], exponent);
+         newcoef = pow(SCIPgetCoefsExprSum(base)[0], exponent);
          SCIP_CALL( SCIPcreateExprPow(scip, &aux, SCIPexprGetChildren(base)[0], exponent, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( simplifyPow(scip, aux, &simplifiedaux, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
@@ -1514,7 +1514,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
             for( j = 0; j < i; ++j )
             {
                prodchildren[1] = SCIPexprGetChildren(base)[j];
-               coefs[i*(i+1)/2 + j] = 2 * SCIPexprGetCoefsExprSum(base)[i] * SCIPexprGetCoefsExprSum(base)[j];
+               coefs[i*(i+1)/2 + j] = 2 * SCIPgetCoefsExprSum(base)[i] * SCIPgetCoefsExprSum(base)[j];
 
                SCIP_CALL( SCIPcreateExprProduct(scip, &expansionchild, 2, prodchildren, 1.0, ownerdatacreate, ownerdatacreatedata) );
                SCIP_CALL( SCIPsimplifyExprShallow(scip, expansionchild, &expandedchildren[i*(i+1)/2 + j], ownerdatacreate, ownerdatacreatedata) ); /* this calls simplifyProduct */
@@ -1522,7 +1522,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
             }
             /* create and simplify expr_i * expr_i */
             prodchildren[1] = SCIPexprGetChildren(base)[i];
-            coefs[i*(i+1)/2 + i] = SCIPexprGetCoefsExprSum(base)[i] * SCIPexprGetCoefsExprSum(base)[i];
+            coefs[i*(i+1)/2 + i] = SCIPgetCoefsExprSum(base)[i] * SCIPgetCoefsExprSum(base)[i];
 
             SCIP_CALL( SCIPcreateExprProduct(scip, &expansionchild, 2, prodchildren, 1.0, ownerdatacreate, ownerdatacreatedata) );
             SCIP_CALL( SCIPsimplifyExprShallow(scip, expansionchild, &expandedchildren[i*(i+1)/2 + i], ownerdatacreate, ownerdatacreatedata) ); /* this calls simplifyProduct */
@@ -1531,11 +1531,11 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          /* create const * alpha_i expr_i */
          for( i = 0; i < nchildren; ++i )
          {
-            coefs[i + nexpandedchildren - nchildren] = 2 * SCIPexprGetConstantExprSum(base) * SCIPexprGetCoefsExprSum(base)[i];
+            coefs[i + nexpandedchildren - nchildren] = 2 * SCIPgetConstantExprSum(base) * SCIPgetCoefsExprSum(base)[i];
             expandedchildren[i + nexpandedchildren - nchildren] = SCIPexprGetChildren(base)[i];
          }
 
-         constant = SCIPexprGetConstantExprSum(base);
+         constant = SCIPgetConstantExprSum(base);
          constant *= constant;
          /* create sum of all the above and simplify it with simplifySum since all of its children are simplified! */
          SCIP_CALL( SCIPcreateExprSum(scip, &expansion, nexpandedchildren, expandedchildren, coefs, constant, ownerdatacreate, ownerdatacreatedata) );
@@ -1562,8 +1562,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
        */
       if( SCIPexprGetNChildren(base) == 1
          && SCIPisExprSum(scip, base)
-         && SCIPexprGetConstantExprSum(base) == 0.0
-         && SCIPexprGetCoefsExprSum(base)[0] >= 0.0 )
+         && SCIPgetConstantExprSum(base) == 0.0
+         && SCIPgetCoefsExprSum(base)[0] >= 0.0 )
       {
          SCIP_EXPR* simplifiedaux;
          SCIP_EXPR* aux;
@@ -1571,7 +1571,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          SCIPdebugPrintf("[simplifyPow] seeing a sum with one term, exponent %g\n", exponent);
          /* assert SS7 holds */
-         assert(SCIPexprGetCoefsExprSum(base)[0] != 1.0);
+         assert(SCIPgetCoefsExprSum(base)[0] != 1.0);
 
          /* create (pow n expr) and simplify it
           * note: we call simplifyPow directly, since we know that `expr` is simplified */
@@ -1581,7 +1581,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          /* create (sum (pow n expr)) and simplify it
           * this calls simplifySum directly, since we know its child is simplified! */
-         newcoef = pow(SCIPexprGetCoefsExprSum(base)[0], exponent);
+         newcoef = pow(SCIPgetCoefsExprSum(base)[0], exponent);
          SCIP_CALL( SCIPcreateExprSum(scip, &aux, 1, &simplifiedaux, &newcoef, 0.0, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPsimplifyExprShallow(scip, aux, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
@@ -1601,7 +1601,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_Real newexponent;
       SCIP_Real baseexponent;
 
-      baseexponent = SCIPexprGetExponentExprPow(base);
+      baseexponent = SCIPgetExponentExprPow(base);
       newexponent = baseexponent * exponent;
 
       /* some checks (see POW8 definition in cons_expr.c) to make sure we don't loose an
@@ -1728,7 +1728,7 @@ SCIP_DECL_EXPRPRINT(printPow)
 
       case SCIP_EXPRITER_LEAVEEXPR :
       {
-         SCIP_Real exponent = SCIPexprGetExponentExprPow(expr);
+         SCIP_Real exponent = SCIPgetExponentExprPow(expr);
 
          /* print closing parenthesis */
          if( exponent >= 0.0 )
@@ -1758,7 +1758,7 @@ SCIP_DECL_EXPREVAL(evalPow)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    base = SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]);
 
    *val = pow(base, exponent);
@@ -1792,7 +1792,7 @@ SCIP_DECL_EXPRFWDIFF(fwdiffPow)
    assert(!SCIPisExprValue(scip, child));
    assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 1.0 && exponent != 0.0);
 
    /* x^exponent is not differentiable for x = 0 and exponent in ]0,1[ */
@@ -1825,7 +1825,7 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffPow)
    assert(!SCIPisExprValue(scip, child));
    assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 1.0 && exponent != 0.0);
 
    /* x^exponent is not twice differentiable for x = 0 and exponent in ]0,2[ */
@@ -1856,7 +1856,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffPow)
    childval = SCIPexprGetEvalValue(child);
    assert(childval != SCIP_INVALID); /*lint !e777*/
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 1.0 && exponent != 0.0);
 
    /* x^exponent is not differentiable for x = 0 and exponent in ]0,1[ */
@@ -1880,7 +1880,7 @@ SCIP_DECL_EXPRINTEVAL(intevalPow)
 
    childinterval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
 
    if( exponent < 0.0 )
    {
@@ -1968,7 +1968,7 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%.15g\n", overestimate ? "over" : "under", SCIPexprGetExponentExprPow(expr), *refpoint);
+   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%.15g\n", overestimate ? "over" : "under", SCIPgetExponentExprPow(expr), *refpoint);
 
    /* we can not generate a cut at +/- infinity */
    if( SCIPisInfinity(scip, REALABS(*refpoint)) )
@@ -2021,7 +2021,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropPow)
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    child = childrenbounds[0];
 
    SCIPdebugMsg(scip, "reverseprop x^%g in [%.15g,%.15g], x = [%.15g,%.15g]", exponent, bounds.inf, bounds.sup, child.inf, child.sup);
@@ -2214,7 +2214,7 @@ SCIP_DECL_EXPRCURVATURE(curvaturePow)
    assert(success != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
@@ -2251,7 +2251,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityPow)
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);
    sup = SCIPintervalGetSup(interval);
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
    if( expisint )
@@ -2313,7 +2313,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
    if( !SCIPexprIsIntegral(child) )
       return SCIP_OKAY;
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 0.0);
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
@@ -2340,7 +2340,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
    base = SCIPexprGetChildren(expr)[0];
    assert(base != NULL);
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    SCIPdebugPrintf("[simplifySignpower] simplifying power with expo %g\n", exponent);
    assert(exponent >= 1.0);
 
@@ -2359,7 +2359,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       SCIP_Real baseval;
 
       SCIPdebugPrintf("[simplifySignpower] POW3\n");
-      baseval = SCIPexprGetValueExprValue(base);
+      baseval = SCIPgetValueExprValue(base);
 
       SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SIGN(baseval) * pow(REALABS(baseval), exponent), ownerdatacreate, ownerdatacreatedata) );
 
@@ -2420,7 +2420,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       SCIP_VAR* basevar;
 
       SCIPdebugPrintf("[simplifySignpower] POW10\n");
-      basevar = SCIPexprGetVarExprVar(base);
+      basevar = SCIPgetVarExprVar(base);
 
       assert(basevar != NULL);
 
@@ -2451,7 +2451,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
 
       assert(((int)exponent) % 2 == 0 ); /* odd case should have been handled by SPOW6 */
 
-      newexponent = SCIPexprGetExponentExprPow(base) * exponent;
+      newexponent = SCIPgetExponentExprPow(base) * exponent;
       SCIP_CALL( SCIPcreateExprSignpower(scip, &aux, SCIPexprGetChildren(base)[0], newexponent, ownerdatacreate, ownerdatacreatedata) );
       SCIP_CALL( simplifySignpower(scip, aux, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
 
@@ -2463,7 +2463,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
    /* enforces SPOW9 */
    if( SCIPisExprSum(scip, base)
       && SCIPexprGetNChildren(base) == 1
-      && SCIPexprGetConstantExprSum(base) == 0.0 )
+      && SCIPgetConstantExprSum(base) == 0.0 )
    {
       SCIP_EXPR* simplifiedaux;
       SCIP_EXPR* aux;
@@ -2471,12 +2471,12 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
 
       SCIPdebugPrintf("[simplifySignpower] seeing a sum with one term, exponent %g\n", exponent);
       /* assert SS7 holds */
-      assert(SCIPexprGetCoefsExprSum(base)[0] != 1.0);
+      assert(SCIPgetCoefsExprSum(base)[0] != 1.0);
 
       /* create (signpow n expr) and simplify it
        * note: we call simplifySignpower directly, since we know that `expr` is simplified */
       SCIP_CALL( SCIPcreateExprSignpower(scip, &aux, SCIPexprGetChildren(base)[0], exponent, ownerdatacreate, ownerdatacreatedata) );
-      newcoef = SIGN(SCIPexprGetCoefsExprSum(base)[0]) * pow(REALABS(SCIPexprGetCoefsExprSum(base)[0]), exponent);
+      newcoef = SIGN(SCIPgetCoefsExprSum(base)[0]) * pow(REALABS(SCIPgetCoefsExprSum(base)[0]), exponent);
       SCIP_CALL( simplifySignpower(scip, aux, &simplifiedaux, ownerdatacreate, ownerdatacreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
 
@@ -2527,7 +2527,7 @@ SCIP_DECL_EXPRPRINT(printSignpower)
 
       case SCIP_EXPRITER_LEAVEEXPR :
       {
-         SCIPinfoMessage(scip, file, ",%g)", SCIPexprGetExponentExprPow(expr));
+         SCIPinfoMessage(scip, file, ",%g)", SCIPgetExponentExprPow(expr));
          break;
       }
 
@@ -2598,7 +2598,7 @@ SCIP_DECL_EXPREVAL(evalSignpower)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    base = SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]);
 
    *val = SIGN(base) * pow(REALABS(base), exponent);
@@ -2631,7 +2631,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffSignpower)
    childval = SCIPexprGetEvalValue(child);
    assert(childval != SCIP_INVALID); /*lint !e777*/
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
    assert(exponent >= 1.0);
 
    *val = exponent * pow(REALABS(childval), exponent - 1.0);
@@ -2655,7 +2655,7 @@ SCIP_DECL_EXPRINTEVAL(intevalSignpower)
       return SCIP_OKAY;
    }
 
-   SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, SCIPexprGetExponentExprPow(expr));
+   SCIPintervalSignPowerScalar(SCIP_INTERVAL_INFINITY, interval, childinterval, SCIPgetExponentExprPow(expr));
 
    return SCIP_OKAY;
 }
@@ -2690,7 +2690,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-   SCIPdebugMsg(scip, "%sestimation of signed x^%g at x=%g\n", overestimate ? "over" : "under", SCIPexprGetExponentExprPow(expr), *refpoint);
+   SCIPdebugMsg(scip, "%sestimation of signed x^%g at x=%g\n", overestimate ? "over" : "under", SCIPgetExponentExprPow(expr), *refpoint);
 
    /* we can not generate a cut at +/- infinity */
    if( SCIPisInfinity(scip, REALABS(*refpoint)) )
@@ -2860,7 +2860,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropSignpower)
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
 
-   exponent = SCIPexprGetExponentExprPow(expr);
+   exponent = SCIPgetExponentExprPow(expr);
 
    SCIPdebugMsg(scip, "reverseprop signpow(x,%g) in [%.15g,%.15g]", exponent, bounds.inf, bounds.sup);
 
@@ -3071,7 +3071,7 @@ SCIP_RETCODE SCIPcreateExprSignpower(
 /* from pub_expr.h */
 
 /** gets the exponent of a power or signed power expression */
-SCIP_Real SCIPexprGetExponentExprPow(
+SCIP_Real SCIPgetExponentExprPow(
    SCIP_EXPR*   expr                /**< expression */
    )
 {

@@ -332,7 +332,7 @@ SCIP_RETCODE simplifyFactor(
    if( SCIPisExprValue(scip, factor) )
    {
       *changed = TRUE;
-      *simplifiedcoef *= SCIPexprGetValueExprValue(factor);
+      *simplifiedcoef *= SCIPgetValueExprValue(factor);
       return SCIP_OKAY;
    }
 
@@ -342,7 +342,7 @@ SCIP_RETCODE simplifyFactor(
       *changed = TRUE;
 
       /* assert SP8 */
-      assert(SCIPexprGetCoefExprProduct(factor) == 1.0);
+      assert(SCIPgetCoefExprProduct(factor) == 1.0);
       debugSimplify("[simplifyFactor] seeing a product: include its children\n");
 
       SCIP_CALL( createExprlistFromExprs(scip, SCIPexprGetChildren(factor), SCIPexprGetNChildren(factor), simplifiedfactor) );
@@ -351,16 +351,16 @@ SCIP_RETCODE simplifyFactor(
    }
 
    /* enforces SP13: a sum with a unique child and no constant -> take the coefficient and use its child as factor */
-   if( SCIPisExprSum(scip, factor) && SCIPexprGetNChildren(factor) == 1 && SCIPexprGetConstantExprSum(factor) == 0.0 )
+   if( SCIPisExprSum(scip, factor) && SCIPexprGetNChildren(factor) == 1 && SCIPgetConstantExprSum(factor) == 0.0 )
    {
       *changed = TRUE;
 
       /* assert SS8 and SS7 */
-      assert(SCIPexprGetCoefsExprSum(factor)[0] != 0.0 && SCIPexprGetCoefsExprSum(factor)[0] != 1.0);
+      assert(SCIPgetCoefsExprSum(factor)[0] != 0.0 && SCIPgetCoefsExprSum(factor)[0] != 1.0);
       debugSimplify("[simplifyFactor] seeing a sum of the form coef * child : take coef and child apart\n");
 
       SCIP_CALL( createExprlistFromExprs(scip, SCIPexprGetChildren(factor), 1, simplifiedfactor) );
-      *simplifiedcoef *= SCIPexprGetCoefsExprSum(factor)[0];
+      *simplifiedcoef *= SCIPgetCoefsExprSum(factor)[0];
 
       return SCIP_OKAY;
    }
@@ -504,13 +504,13 @@ SCIP_RETCODE mergeProductExprlist(
       if( SCIPisExprPower(scip, current->expr) )
       {
          base1 = SCIPexprGetChildren(current->expr)[0];
-         expo1 = SCIPexprGetExponentExprPow(current->expr);
+         expo1 = SCIPgetExponentExprPow(current->expr);
          issignpower1 = FALSE;
       }
       else if( SCIPexprGetHdlr(current->expr) == SCIPgetExprHdlrSignPower(scip) )
       {
          base1 = SCIPexprGetChildren(current->expr)[0];
-         expo1 = SCIPexprGetExponentExprPow(current->expr);
+         expo1 = SCIPgetExponentExprPow(current->expr);
          issignpower1 = TRUE;
       }
       else
@@ -522,13 +522,13 @@ SCIP_RETCODE mergeProductExprlist(
       if( SCIPisExprPower(scip, tomergenode->expr) )
       {
          base2 = SCIPexprGetChildren(tomergenode->expr)[0];
-         expo2 = SCIPexprGetExponentExprPow(tomergenode->expr);
+         expo2 = SCIPgetExponentExprPow(tomergenode->expr);
          issignpower2 = FALSE;
       }
       else if( SCIPexprGetHdlr(tomergenode->expr) == SCIPgetExprHdlrSignPower(scip) )
       {
          base2 = SCIPexprGetChildren(tomergenode->expr)[0];
-         expo2 = SCIPexprGetExponentExprPow(tomergenode->expr);
+         expo2 = SCIPgetExponentExprPow(tomergenode->expr);
          issignpower2 = TRUE;
       }
       else
@@ -906,8 +906,8 @@ SCIP_RETCODE enforceSP12(
    if( SCIPisExprSum(scip, finalchildren->expr) && SCIPisExprSum(scip, finalchildren->next->expr) )
    {
       SCIP_EXPR* expanded = NULL;
-      SCIP_Real c1 = SCIPexprGetConstantExprSum(finalchildren->expr);
-      SCIP_Real c2 = SCIPexprGetConstantExprSum(finalchildren->next->expr);
+      SCIP_Real c1 = SCIPgetConstantExprSum(finalchildren->expr);
+      SCIP_Real c2 = SCIPgetConstantExprSum(finalchildren->next->expr);
       int nchildren1 = SCIPexprGetNChildren(finalchildren->expr);
       int nchildren2 = SCIPexprGetNChildren(finalchildren->next->expr);
       int j;
@@ -934,7 +934,7 @@ SCIP_RETCODE enforceSP12(
             SCIP_EXPR* term;
 
             term = SCIPexprGetChildren(finalchildren->next->expr)[i];
-            SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, term, SCIPexprGetCoefsExprSum(finalchildren->next->expr)[i] * c1 * simplifiedcoef) );
+            SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, term, SCIPgetCoefsExprSum(finalchildren->next->expr)[i] * c1 * simplifiedcoef) );
             /* we are just re-using a child here, so do not release term! */
 #ifdef SIMPLIFY_DEBUG
             debugSimplify("Multiplying %f * summand2_i\n", c1);
@@ -954,7 +954,7 @@ SCIP_RETCODE enforceSP12(
             SCIP_EXPR* term;
 
             term = SCIPexprGetChildren(finalchildren->expr)[i];
-            SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, term, SCIPexprGetCoefsExprSum(finalchildren->expr)[i] * c2 * simplifiedcoef) );
+            SCIP_CALL( SCIPappendExprSumExpr(scip, expanded, term, SCIPgetCoefsExprSum(finalchildren->expr)[i] * c2 * simplifiedcoef) );
             /* we are just re-using a child here, so do not release term! */
 #ifdef SIMPLIFY_DEBUG
             debugSimplify("Multiplying summand1_i * %f\n", c2);
@@ -970,7 +970,7 @@ SCIP_RETCODE enforceSP12(
          SCIP_EXPR* factors[2];
          SCIP_Real coef1;
 
-         coef1 = SCIPexprGetCoefsExprSum(finalchildren->expr)[j];
+         coef1 = SCIPgetCoefsExprSum(finalchildren->expr)[j];
          factors[0] = SCIPexprGetChildren(finalchildren->expr)[j];
          for( k = 0; k < nchildren2; ++k )
          {
@@ -980,7 +980,7 @@ SCIP_RETCODE enforceSP12(
             SCIP_EXPR* term = NULL;
             SCIP_Bool dummy;
 
-            coef2 = SCIPexprGetCoefsExprSum(finalchildren->next->expr)[k];
+            coef2 = SCIPgetCoefsExprSum(finalchildren->next->expr)[k];
             factors[1] = SCIPexprGetChildren(finalchildren->next->expr)[k];
 
 #ifdef SIMPLIFY_DEBUG
@@ -1062,7 +1062,7 @@ SCIP_RETCODE enforceSP12(
          sum = finalchildren->next->expr;
          factors[0] = finalchildren->expr;
       }
-      constant = simplifiedcoef * SCIPexprGetConstantExprSum(sum);
+      constant = simplifiedcoef * SCIPgetConstantExprSum(sum);
       nchildren = SCIPexprGetNChildren(sum);
 
       SCIP_CALL( SCIPcreateExprSum(scip, &expanded, 1, &factors[0], &constant, 0.0, ownerdatacreate, ownerdatacreatedata) );
@@ -1076,7 +1076,7 @@ SCIP_RETCODE enforceSP12(
          EXPRNODE* finalfactors;
          SCIP_EXPR* term = NULL;
 
-         coef = SCIPexprGetCoefsExprSum(sum)[j];
+         coef = SCIPgetCoefsExprSum(sum)[j];
          factors[1] = SCIPexprGetChildren(sum)[j];
 
          termcoef = coef;
@@ -1192,7 +1192,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
 
-   simplifiedcoef = SCIPexprGetCoefExprProduct(expr);
+   simplifiedcoef = SCIPgetCoefExprProduct(expr);
 
 #ifdef SIMPLIFY_DEBUG
    debugSimplify("Simplifying expr:\n");
@@ -1288,9 +1288,9 @@ SCIP_DECL_EXPRCOMPARE(compareProduct)
 
    /* everything is equal, use coefficient as tie-breaker */
    assert(i == -1 && j == -1);
-   if( SCIPexprGetCoefExprProduct(expr1) < SCIPexprGetCoefExprProduct(expr2) )
+   if( SCIPgetCoefExprProduct(expr1) < SCIPgetCoefExprProduct(expr2) )
       return -1;
-   if( SCIPexprGetCoefExprProduct(expr1) > SCIPexprGetCoefExprProduct(expr2) )
+   if( SCIPgetCoefExprProduct(expr1) > SCIPgetCoefExprProduct(expr2) )
       return 1;
 
    /* they are equal */
@@ -2020,7 +2020,7 @@ SCIP_DECL_EXPRCURVATURE(curvatureProduct)
 
    if( SCIPexprGetNChildren(expr) == 1 )
    {
-      *childcurv = SCIPexprcurvMultiply(SCIPexprGetCoefExprProduct(expr), exprcurvature);
+      *childcurv = SCIPexprcurvMultiply(SCIPgetCoefExprProduct(expr), exprcurvature);
       *success = TRUE;
    }
    else
@@ -2046,7 +2046,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicityProduct)
    assert(childidx >= 0);
    assert(childidx < SCIPexprGetNChildren(expr));
 
-   coef = SCIPexprGetCoefExprProduct(expr);
+   coef = SCIPgetCoefExprProduct(expr);
 
    /* count the number of negative children (except for childidx); if some children changes sign -> monotonicity unknown */
    nneg = 0;
@@ -2169,7 +2169,7 @@ SCIP_RETCODE SCIPcreateExprProduct(
 /* from pub_expr.h */
 
 /** gets the constant coefficient of a product expression */
-SCIP_Real SCIPexprGetCoefExprProduct(
+SCIP_Real SCIPgetCoefExprProduct(
    SCIP_EXPR*            expr                /**< product expression */
    )
 {

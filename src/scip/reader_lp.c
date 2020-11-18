@@ -2724,7 +2724,7 @@ SCIP_RETCODE printRow(
          assert(linexprs != NULL && linexprs[v] != NULL);
          assert(SCIPisExprVar(scip, linexprs[v]));
 
-         activevars[v] = SCIPexprGetVarExprVar(linexprs[v]);
+         activevars[v] = SCIPgetVarExprVar(linexprs[v]);
          assert(activevars[v] != NULL);
       }
 
@@ -2773,7 +2773,7 @@ SCIP_RETCODE printRow(
          assert(expr != NULL);
          assert(SCIPisExprVar(scip, expr));
 
-         var = SCIPexprGetVarExprVar(expr);
+         var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
 
          if( lincoef == 0.0 )
@@ -2804,7 +2804,7 @@ SCIP_RETCODE printRow(
          assert(expr != NULL);
          assert(SCIPisExprVar(scip, expr));
 
-         var = SCIPexprGetVarExprVar(expr);
+         var = SCIPgetVarExprVar(expr);
          assert(var != NULL);
 
          if( sqrcoef == 0.0 )
@@ -2836,9 +2836,9 @@ SCIP_RETCODE printRow(
          assert(expr2 != NULL);
          assert(SCIPisExprVar(scip, expr2));
 
-         var1 = SCIPexprGetVarExprVar(expr1);
+         var1 = SCIPgetVarExprVar(expr1);
          assert(var1 != NULL);
-         var2 = SCIPexprGetVarExprVar(expr2);
+         var2 = SCIPgetVarExprVar(expr2);
          assert(var2 != NULL);
 
          /* we start a new line; therefore we tab this line */

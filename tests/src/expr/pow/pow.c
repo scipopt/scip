@@ -119,7 +119,7 @@ Test(pow, simplify, .description = "Tests the expression simplification.")
    cr_expect_not(infeasible);
    cr_expect(SCIPisExprPower(scip, expr));
    cr_expect(SCIPisExprVar(scip, simplified));
-   cr_expect_eq(x, SCIPexprGetVarExprVar(simplified));
+   cr_expect_eq(x, SCIPgetVarExprVar(simplified));
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
 

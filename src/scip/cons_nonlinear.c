@@ -519,7 +519,7 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPexprGetVarExprVar(sourceexpr)) );
+   SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPgetVarExprVar(sourceexpr)) );
 
    return SCIP_OKAY;
 }
@@ -1320,7 +1320,7 @@ SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
  *
  * Only sets *isquadratic to TRUE if the whole expression is quadratic (in the non-extended formulation) and non-linear.
  * That is, the expr in each SCIP_QUADEXPR_QUADTERM will be a variable expressions and
- * \ref SCIPexprGetVarExprVar() can be used to retrieve the variable.
+ * \ref SCIPgetVarExprVar() can be used to retrieve the variable.
  */
 SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    SCIP*                    scip,               /**< SCIP data structure */

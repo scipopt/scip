@@ -76,7 +76,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
 
-   var = SCIPexprGetVarExprVar(expr);
+   var = SCIPgetVarExprVar(expr);
    assert(var != NULL);
 
    /* if var is active then there is nothing to simplify */
@@ -150,8 +150,8 @@ SCIP_DECL_EXPRCOMPARE(compareVar)
    int index1;
    int index2;
 
-   index1 = SCIPvarGetIndex(SCIPexprGetVarExprVar(expr1));
-   index2 = SCIPvarGetIndex(SCIPexprGetVarExprVar(expr2));
+   index1 = SCIPvarGetIndex(SCIPgetVarExprVar(expr1));
+   index2 = SCIPvarGetIndex(SCIPgetVarExprVar(expr2));
 
    return index1 < index2 ? -1 : index1 == index2 ? 0 : 1;
 }
@@ -176,7 +176,7 @@ SCIP_DECL_EXPRCOPYDATA(copydataVar)
    /* copying into a different SCIP should be handled on the SCIPexprCopy() level (via mapexpr) */
    assert(targetscip == sourcescip);
 
-   (*targetexprdata)->var = SCIPexprGetVarExprVar(sourceexpr);
+   (*targetexprdata)->var = SCIPgetVarExprVar(sourceexpr);
 
    SCIP_CALL( SCIPcaptureVar(targetscip, (*targetexprdata)->var) );
 
@@ -219,11 +219,11 @@ static
 SCIP_DECL_EXPRPRINT(printVar)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPexprGetVarExprVar(expr) != NULL);
+   assert(SCIPgetVarExprVar(expr) != NULL);
 
    if( stage == SCIP_EXPRITER_ENTEREXPR )
    {
-      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(SCIPexprGetVarExprVar(expr)));
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(SCIPgetVarExprVar(expr)));
    }
 
    return SCIP_OKAY;
@@ -234,9 +234,9 @@ static
 SCIP_DECL_EXPREVAL(evalVar)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPexprGetVarExprVar(expr) != NULL);
+   assert(SCIPgetVarExprVar(expr) != NULL);
 
-   *val = SCIPgetSolVal(scip, sol, SCIPexprGetVarExprVar(expr));
+   *val = SCIPgetSolVal(scip, sol, SCIPgetVarExprVar(expr));
 
    return SCIP_OKAY;
 }
@@ -246,7 +246,7 @@ static
 SCIP_DECL_EXPRBWDIFF(bwdiffVar)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPexprGetVarExprVar(expr) != NULL);
+   assert(SCIPgetVarExprVar(expr) != NULL);
 
    /* this should never happen because variable expressions do not have children */
    return SCIP_INVALIDCALL;
@@ -283,7 +283,7 @@ SCIP_DECL_EXPRINTEVAL(intevalVar)
 
    assert(expr != NULL);
 
-   var = SCIPexprGetVarExprVar(expr);
+   var = SCIPgetVarExprVar(expr);
    assert(var != NULL);
 
    if( intevalvar != NULL )
@@ -315,7 +315,7 @@ SCIP_DECL_EXPRHASH(hashVar)
    assert(SCIPexprGetNChildren(expr) == 0);
    assert(hashkey != NULL);
 
-   var = SCIPexprGetVarExprVar(expr);
+   var = SCIPgetVarExprVar(expr);
    assert(var != NULL);
 
    *hashkey = EXPRHDLR_HASHKEY;
@@ -361,7 +361,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
    assert(expr != NULL);
    assert(isintegral != NULL);
 
-   *isintegral = SCIPvarIsIntegral(SCIPexprGetVarExprVar(expr));
+   *isintegral = SCIPvarIsIntegral(SCIPgetVarExprVar(expr));
 
    return SCIP_OKAY;
 }
@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPcreateExprVar(
 /* from pub_expr.h */
 
 /** gets the variable of a variable expression */
-SCIP_VAR* SCIPexprGetVarExprVar(
+SCIP_VAR* SCIPgetVarExprVar(
    SCIP_EXPR*            expr                /**< variable expression */
    )
 {

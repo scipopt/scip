@@ -1310,8 +1310,8 @@ SCIP_RETCODE presolveAddKKTQuadBilinearTerms(
       assert(expr1 != NULL && SCIPisExprVar(scip, expr1));
       assert(expr2 != NULL && SCIPisExprVar(scip, expr2));
 
-      bilvar1 = SCIPexprGetVarExprVar(expr1);
-      bilvar2 = SCIPexprGetVarExprVar(expr2);
+      bilvar1 = SCIPgetVarExprVar(expr1);
+      bilvar2 = SCIPgetVarExprVar(expr2);
       assert(bilvar1 != NULL && bilvar2 != NULL && bilvar1 != bilvar2);
 
       /* quadratic matrix has to be symmetric; therefore, split bilinear terms into two parts */
@@ -1383,7 +1383,7 @@ SCIP_RETCODE presolveAddKKTQuadQuadraticTerms(
       /* get variable of the quadratic term */
       SCIPexprGetQuadraticQuadTerm(quadexpr, j, &expr, NULL, &sqrcoef, NULL, NULL, NULL);
       assert(expr != NULL && SCIPisExprVar(scip, expr));
-      quadvar = SCIPexprGetVarExprVar(expr);
+      quadvar = SCIPgetVarExprVar(expr);
       assert(quadvar != NULL);
 
       /* create/get dual constraint associated to variable 'bilvar1';
@@ -1450,7 +1450,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
       assert(linexprs[j] != NULL);
       assert(SCIPisExprVar(scip, linexprs[j]));
 
-      var = SCIPexprGetVarExprVar(linexprs[j]);
+      var = SCIPgetVarExprVar(linexprs[j]);
       assert(var != NULL);
       coef = lincoefs[j];
 
@@ -1487,7 +1487,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
       assert(expr != NULL);
       assert(SCIPisExprVar(scip, expr));
 
-      var = SCIPexprGetVarExprVar(expr);
+      var = SCIPgetVarExprVar(expr);
       assert(var != NULL && var != objvar);
 
       /* get dual constraint associated to variable (has already been created in function

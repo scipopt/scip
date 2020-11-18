@@ -142,11 +142,11 @@ Test(parse, signpower)
    cr_expect_eq(SCIPparseExpr(scip, &crazyexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    cr_assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(crazyexpr)), "signpower") == 0);
-   cr_assert_eq(SCIPexprGetExponentExprPow(crazyexpr), 2.5);
+   cr_assert_eq(SCIPgetExponentExprPow(crazyexpr), 2.5);
 
    child = SCIPexprGetChildren(crazyexpr)[0];
    cr_assert(SCIPisExprPower(scip, child));
-   cr_assert_eq(SCIPexprGetExponentExprPow(child), 2.0);
+   cr_assert_eq(SCIPgetExponentExprPow(child), 2.0);
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
@@ -288,11 +288,11 @@ Test(parse, misc)
 
    cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"-5+3*<x>", NULL, NULL, NULL), SCIP_OKAY);
    cr_expect(SCIPisExprSum(scip, e));
-   cr_expect_eq(SCIPexprGetConstantExprSum(e), -5.0);
-   cr_expect_eq(SCIPexprGetCoefsExprSum(e)[0], 3.0);
+   cr_expect_eq(SCIPgetConstantExprSum(e), -5.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(e)[0], 3.0);
    cr_expect_eq(SCIPexprGetNChildren(e), 1);
    cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(e)[0]));
-   cr_expect_eq(SCIPexprGetVarExprVar(SCIPexprGetChildren(e)[0]), x);
+   cr_expect_eq(SCIPgetVarExprVar(SCIPexprGetChildren(e)[0]), x);
    SCIP_CALL( SCIPreleaseExpr(scip, &e) );
 
    cr_expect_eq(SCIPparseExpr(scip, &e, (char*)"<x>", NULL, NULL, NULL), SCIP_OKAY);

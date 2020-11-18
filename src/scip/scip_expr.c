@@ -82,7 +82,7 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
 
    data = (COPY_MAPEXPR_DATA*)mapexprdata;
 
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, SCIPexprGetVarExprVar(sourceexpr), &targetvar, data->varmap, data->consmap, data->global, &valid) );
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, SCIPgetVarExprVar(sourceexpr), &targetvar, data->varmap, data->consmap, data->global, &valid) );
    assert(targetvar != NULL);
 
    /* if copy was not valid, store so in mapvar data */
@@ -538,7 +538,7 @@ SCIP_RETCODE parseExpr(
       if( SCIPexprIsValue(scip->set, termtree) )
       {
          /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
-         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 0, NULL, NULL, sign * SCIPexprGetValueExprValue(termtree), ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 0, NULL, NULL, sign * SCIPgetValueExprValue(termtree), ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
       else
@@ -2200,7 +2200,7 @@ SCIP_Real SCIPevalExprQuadratic(
    for( i = 0; i < nlinexprs; ++i ) /* linear exprs */
    {
       assert(SCIPexprIsVar(scip->set, linexprs[i]));
-      auxvalue += lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPexprGetVarExprVar(linexprs[i]));
+      auxvalue += lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetVarExprVar(linexprs[i]));
    }
 
    for( i = 0; i < nquadexprs; ++i ) /* quadratic terms */
@@ -2214,7 +2214,7 @@ SCIP_Real SCIPevalExprQuadratic(
 
       assert(SCIPexprIsVar(scip->set, quadexprterm));
 
-      solval = SCIPgetSolVal(scip, sol, SCIPexprGetVarExprVar(quadexprterm));
+      solval = SCIPgetSolVal(scip, sol, SCIPgetVarExprVar(quadexprterm));
       auxvalue += (lincoef + sqrcoef * solval) * solval;
    }
 
@@ -2228,7 +2228,7 @@ SCIP_Real SCIPevalExprQuadratic(
 
       assert(SCIPexprIsVar(scip->set, expr1));
       assert(SCIPexprIsVar(scip->set, expr2));
-      auxvalue += coef * SCIPgetSolVal(scip, sol, SCIPexprGetVarExprVar(expr1)) * SCIPgetSolVal(scip, sol, SCIPexprGetVarExprVar(expr2));
+      auxvalue += coef * SCIPgetSolVal(scip, sol, SCIPgetVarExprVar(expr1)) * SCIPgetSolVal(scip, sol, SCIPgetVarExprVar(expr2));
    }
 
    return auxvalue;

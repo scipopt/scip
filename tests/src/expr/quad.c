@@ -100,7 +100,7 @@ Test(quad, detectandfree1, .init = setup, .fini = teardown)
 
    quad = expr->quaddata->quadexprterms[0];
    cr_assert_not_null(quad.expr);
-   var = SCIPexprGetVarExprVar(quad.expr);
+   var = SCIPgetVarExprVar(quad.expr);
    cr_expect_eq(var, x, "Expecting var %s in quad term, got %s\n", SCIPvarGetName(x), SCIPvarGetName(var));
    cr_expect_eq(1.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 1.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
@@ -155,8 +155,8 @@ Test(quad, detectandfree2, .init = setup, .fini = teardown)
    /* x var */
    quad = expr->quaddata->quadexprterms[0];
    cr_assert_not_null(quad.expr);
-   cr_expect_eq(x, SCIPexprGetVarExprVar(quad.expr), "Expecting var %s in quad term, got %s\n",
-         SCIPvarGetName(x), SCIPvarGetName(SCIPexprGetVarExprVar(quad.expr)));
+   cr_expect_eq(x, SCIPgetVarExprVar(quad.expr), "Expecting var %s in quad term, got %s\n",
+         SCIPvarGetName(x), SCIPvarGetName(SCIPgetVarExprVar(quad.expr)));
    cr_expect_eq(0.0, quad.lincoef, "Expecting lincoef %g in quad term, got %g\n", 0.0, quad.lincoef);
    cr_expect_eq(1.0, quad.sqrcoef, "Expecting sqrcoef %g in quad term, got %g\n", 1.0, quad.sqrcoef);
 
@@ -170,8 +170,8 @@ Test(quad, detectandfree2, .init = setup, .fini = teardown)
    bilin = expr->quaddata->bilinexprterms[0];
    cr_assert_not_null(bilin.expr1);
    cr_assert_not_null(bilin.expr2);
-   cr_expect_eq(SCIPexprGetVarExprVar(bilin.expr1), x, "Expecting expr's auxvar %s in bilin term, got %s\n",
-         SCIPvarGetName(x), SCIPvarGetName(SCIPexprGetVarExprVar(bilin.expr1)));
+   cr_expect_eq(SCIPgetVarExprVar(bilin.expr1), x, "Expecting expr's auxvar %s in bilin term, got %s\n",
+         SCIPvarGetName(x), SCIPvarGetName(SCIPgetVarExprVar(bilin.expr1)));
    cr_expect_eq(bilin.expr2, cosexpr);
    cr_expect_eq(2.0, bilin.coef, "Expecting bilinear coef of %g, got %g\n", 2.0, bilin.coef);
    cr_expect_eq(bilin.pos2, 1);  /* because quaddata->quadexprterms[1].expr == cosexpr */
