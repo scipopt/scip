@@ -23,7 +23,6 @@
 #include "scip/scipdefplugins.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_product.h"
-//#include "scip/cons_expr_abs.h"
 #include "scip/expr_var.h"
 #include "scip/expr_value.h"
 #include "include/scip_test.h"
