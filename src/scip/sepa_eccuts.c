@@ -2397,7 +2397,6 @@ SCIP_RETCODE computeCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   int                   depth,              /**< current depth */
    SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
    SCIP_SOL*             sol,                /**< current solution (might be NULL) */
    SCIP_Bool*            separated,          /**< pointer to store if we could separate the current solution */
@@ -2423,7 +2422,8 @@ SCIP_RETCODE computeCut(
 
    *separated = FALSE;
    *cutoff = FALSE;
-   islocalcut = depth != 0;
+   /* we use SCIPgetDepth because we add the cut to the global cut pool if cut is globally valid */
+   islocalcut = SCIPgetDepth(scip) != 0;
 
    /* create the cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "ec");
@@ -2658,7 +2658,7 @@ SCIP_RETCODE separateCuts(
       SCIPdebugMsg(scip, "try to compute a cut for nonlinear row aggregation %d\n", i);
 
       /* compute and add cut */
-      SCIP_CALL( computeCut(scip, sepa, sepadata, depth, nlrowaggr, sol, &separated, &cutoff) );
+      SCIP_CALL( computeCut(scip, sepa, sepadata, nlrowaggr, sol, &separated, &cutoff) );
       SCIPdebugMsg(scip, "found a cut: %s cutoff: %s\n", separated ? "yes" : "no", cutoff ? "yes" : "no");
 
       /* stop if the current node gets cut off */

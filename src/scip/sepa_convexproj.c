@@ -819,9 +819,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
    }
 
-   /* recompute convex NLP relaxation if the variable set changed and we are still at the root node
-    * @todo: does it make sense to do this??? */
-   if( sepadata->nlpiprob != NULL && SCIPgetNVars(scip) != sepadata->nlpinvars  && depth == 0 )
+   /* recompute convex NLP relaxation if the variable set changed and we are still at the root node */
+   if( sepadata->nlpiprob != NULL && SCIPgetNVars(scip) != sepadata->nlpinvars  && SCIPgetDepth(scip) == 0 )
    {
       SCIP_CALL( sepadataClear(scip, sepadata) );
       assert(sepadata->nlpiprob == NULL);
@@ -855,8 +854,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
             sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
-      /* add rows of the LP @todo is it valid to use the depth callback parameter for this check? */
-      if( depth == 0 )
+      /* add rows of the LP
+       * we do not sue the depth argument of the callback because we want to build a globally valid initia lrelaxation
+       */
+      if( SCIPgetDepth(scip) == 0 )
       {
          SCIP_CALL( SCIPaddNlpiProbRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
                   SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );

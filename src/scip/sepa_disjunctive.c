@@ -385,11 +385,8 @@ SCIP_RETCODE generateDisjCutSOS1(
    /* create cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d", SCIPsepaGetName(sepa), SCIPgetNLPs(scip), ndisjcuts);
 
-   /* @todo is it valid to use the depth callback parameter for this check? */
-   if ( SCIPgetDepth(scip) == 0 )
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
-   else
-      SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+   /* we create the cut as locally valid, SCIP will make it globally valid if we are at the root node */
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
    for (c = 0; c < ncols; ++c)
