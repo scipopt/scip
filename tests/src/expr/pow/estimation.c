@@ -677,7 +677,7 @@ Test(estimation, root, .description = "test computation of estimators for roots 
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-Test(separation, convexsquare, .init = setup, .fini = teardown,
+Test(estimation, convexsquare, .init = setup, .fini = teardown,
    .description = "test separation for a convex square expression"
    )
 {

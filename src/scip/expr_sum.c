@@ -822,6 +822,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSum)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(islocal != NULL);
    assert(success != NULL);
    assert(branchcand != NULL);
 
@@ -830,6 +831,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSum)
 
    BMScopyMemoryArray(coefs, exprdata->coefficients, SCIPexprGetNChildren(expr));
    *constant = exprdata->constant;
+   *islocal = FALSE;
    *success = TRUE;
 
    /* for none of our children, branching would improve the underestimator, so set branchcand[i]=FALSE everywhere
