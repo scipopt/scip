@@ -13,17 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   duplicate.c
+/**@file   copy.c
  * @brief  tests duplication of expressions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr.h"
+#include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
@@ -32,13 +32,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -64,20 +58,20 @@ void teardown(void)
 
 Test(duplicate, duplicate, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* duplicate;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* duplicate;
    const char* input = "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3";
 
    /* create expression from input string */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL) );
 
    /* duplicate expression */
-   SCIP_CALL( SCIPduplicateConsExprExpr(scip, conshdlr, expr, &duplicate, TRUE) );
+   SCIP_CALL( SCIPduplicateExpr(scip, expr, &duplicate, NULL, NULL, NULL, NULL) );
 
    /* check that they are the same */
-   cr_assert_eq(SCIPcompareConsExprExprs(expr, duplicate), 0);
+   cr_assert_eq(SCIPcompareExpr(scip, expr, duplicate), 0);
 
    /* release expressions */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &duplicate) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &duplicate) );
 }
