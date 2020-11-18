@@ -21,7 +21,6 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-
 #include "scip/expr_var.h"
 #include "scip/expr_value.h"
 #include "scip/expr_sum.h"
