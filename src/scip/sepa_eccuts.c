@@ -2422,6 +2422,7 @@ SCIP_RETCODE computeCut(
 
    *separated = FALSE;
    *cutoff = FALSE;
+   /* we use SCIPgetDepth because we add the cut to the global cut pool if cut is globally valid */
    islocalcut = SCIPgetDepth(scip) != 0;
 
    /* create the cut */
@@ -2614,6 +2615,7 @@ SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   depth,              /**< current depth */
    SCIP_SOL*             sol,                /**< current solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -2634,7 +2636,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* get the maximal number of cuts allowed in a separation round */
-   nmaxcuts = SCIPgetDepth(scip) == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
+   nmaxcuts = depth == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
    ncuts = 0;
 
    /* try to compute cuts for each nonlinear row independently */
@@ -2744,7 +2746,6 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-   int depth;
    int ncalls;
 
    sepadata = SCIPsepaGetData(sepa);
@@ -2769,8 +2770,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       SCIPdebugMsg(scip, "Skip since NLP is not constructed yet.\n");
       return SCIP_OKAY;
    }
-
-   depth = SCIPgetDepth(scip);
 
    /* only call separator up to a maximum depth */
    if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
@@ -2801,7 +2800,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
    }
 
    /* search for edge-concave cuts */
-   SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sepadata, depth, NULL, result) );
 
    return SCIP_OKAY;
 }

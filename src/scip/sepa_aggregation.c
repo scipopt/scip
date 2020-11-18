@@ -1052,6 +1052,7 @@ SCIP_RETCODE separateCuts(
    SCIP_SEPA*            sepa,               /**< the c-MIR separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             allowlocal,         /**< should local cuts be allowed */
+   int                   depth,              /**< current depth */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -1077,7 +1078,6 @@ SCIP_RETCODE separateCuts(
    int nnonzrows;
    int ntries;
    int nfails;
-   int depth;
    int ncalls;
    int maxtries;
    int maxfails;
@@ -1097,7 +1097,6 @@ SCIP_RETCODE separateCuts(
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    /* only call the cmir cut separator a given number of times at each node */
@@ -1469,7 +1468,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpAggregation)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, result) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, allowlocal, depth, result) );
 
    return SCIP_OKAY;
 }
@@ -1482,7 +1481,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolAggregation)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sol, allowlocal, depth, result) );
 
    return SCIP_OKAY;
 }

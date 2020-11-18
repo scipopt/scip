@@ -28,6 +28,10 @@ Examples and applications
 Interface changes
 -----------------
 ### New and changed callbacks
+
+- extend SEPAEXEC{LP,SOL} callbacks by parameter "depth", which should be used within separation instead of SCIPgetCurrentDepth()
+- extend SCIPseparateSolCutpool() by parameter "pretendroot", which is passed to SCIPcutpoolSeparate() instead of SCIPtreeGetCurrentDepth(scip->tree) == 0
+
 ### Deleted and changed API methods
 
 - If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
@@ -518,6 +522,9 @@ Interface changes
   + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
   - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
+
+### New API functions
+=======
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
   and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
 
