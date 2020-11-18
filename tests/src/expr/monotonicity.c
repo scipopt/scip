@@ -41,11 +41,6 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* disable relaxing variable bounds in activity evaluation
-    * (relaxes a bound M_PI to M_PI + epsilon, which weakens monotonicity computations
-    */
-//   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
-
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
 
