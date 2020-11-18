@@ -20,18 +20,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_value.h"
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_iterator.h"
-
+#include "scip/scipdefplugins.h"
+#include "scip/expr_value.h"
+#include "scip/expr_var.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_pow.h"
 #include "include/scip_test.h"
 
-
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
@@ -42,21 +38,21 @@ static SCIP_RANDNUMGEN* rndgen;
 /* give derivative in expr that belongs to var */
 static
 SCIP_Real getConsExprExprPartialDiff(
-   SCIP_CONSEXPR_EXPR* expr,
+   SCIP_EXPR* expr,
    SCIP_VAR*           var
    )
 {
-   SCIP_CONSEXPR_ITERATOR* it;
+   SCIP_EXPRITER* it;
    SCIP_Real deriv = 0.0;
 
-   SCIP_CALL_ABORT( SCIPexpriteratorCreate(&it, conshdlr, SCIPblkmem(scip)) );
+   SCIP_CALL_ABORT( SCIPcreateExpriter(scip, &it) );
 
    /* we need to sum-up the derivative value from all expr that represent variable var; but only visit each expr once */
-   for( SCIPexpriteratorInit(it, expr, SCIP_CONSEXPRITERATOR_DFS, FALSE); !SCIPexpriteratorIsEnd(it); expr = SCIPexpriteratorGetNext(it) )
-      if( SCIPisConsExprExprVar(expr) && SCIPgetConsExprExprVarVar(expr) == var )
-         deriv += SCIPgetConsExprExprDerivative(expr);
+   for( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      if( SCIPisExprVar(scip, expr) && SCIPexprGetVarExprVar(expr) == var )
+         deriv += SCIPexprGetDerivative(expr);
 
-   SCIPexpriteratorFree(&it);
+   SCIPfreeExpriter(&it);
 
    return deriv;
 }
@@ -66,13 +62,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -107,180 +97,182 @@ TestSuite(derivative, .init = setup, .fini = teardown);
 
 Test(derivative, value)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
 
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr, 1.0) );
+   SCIP_CALL( SCIPcreateExprValue(scip, &expr, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 0.0);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, var)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
 
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr, x) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &expr, x, NULL, NULL) );
 
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 1.0);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, sum)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "5*<x>[C] -2.2 * <y>[I]";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 5.0);
    cr_expect_eq(getConsExprExprPartialDiff(expr, y), -2.2);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, product)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "<x>[C] * <y>[I] * <z>[I]";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* set solution values */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, -3.5) );
 
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 4.0 * 3.5);
    cr_expect_eq(getConsExprExprPartialDiff(expr, y), -2.3 * 3.5);
    cr_expect_eq(getConsExprExprPartialDiff(expr, z), -2.3 * 4.0);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, pow)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "<x>[C]^(-3)";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), -3.0 * pow(2.3, -4));
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
-   cr_expect_eq(SCIPgetConsExprExprDerivative(expr), SCIP_INVALID);
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
+   cr_expect_eq(SCIPexprGetDerivative(expr), SCIP_INVALID);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if !1
 Test(derivative, signpow)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "signpower(<x>[C],2.5)";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    /* try positive */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 2.5 * pow(2.3, 1.5));
 
    /* try 0 */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 0.0);
 
    /* try negative */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.42) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 2.5 * pow(1.42, 1.5));
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, exp)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "exp(<x>[C])";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), exp(-2.0));
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, log)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "log(<x>[C])";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 0.5);
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
-   cr_expect_eq(SCIPgetConsExprExprDerivative(expr), SCIP_INVALID);
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
+   cr_expect_eq(SCIPexprGetDerivative(expr), SCIP_INVALID);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 Test(derivative, abs)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "abs(<x>[C])";
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -5.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), -1.0);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 5.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect_eq(getConsExprExprPartialDiff(expr, x), 1.0);
 
    /* for x = 0 the gradient should can be everything in [-1,1] */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
    cr_expect(getConsExprExprPartialDiff(expr, x) >= -1.0);
    cr_expect(getConsExprExprPartialDiff(expr, x) <= 1.0);
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
+#endif
 
 Test(derivative, quadratic)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "3.0*<x>[C]^2 -4.0*<y>[C] * <x>[C] + <z>[C] * <x>[C] -7.0*<z>[C]";
    int i;
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    for( i = 0; i < 100; ++i )
    {
@@ -294,23 +286,24 @@ Test(derivative, quadratic)
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, yval) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
 
-      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+      SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
       cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), 6.0 * xval - 4.0 * yval + zval));
       cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, y), -4.0 * xval));
       cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, z), xval - 7.0));
    }
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if !1
 Test(derivative, complex1)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "<x>[C] * <y>[C] * exp(<x>[C]^2 + <z>[C]^2 - 5)";
    int i;
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    for( i = 0; i < 100; ++i )
    {
@@ -324,23 +317,24 @@ Test(derivative, complex1)
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, yval) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
 
-      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+      SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
       cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), (yval + 2*pow(xval,2) * yval) * exp(pow(xval,2) + pow(zval,2) -5)));
       cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, y), xval * exp(pow(xval,2) + pow(zval,2) - 5)));
       cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, z), 2*xval*yval*zval*exp(pow(xval,2) + pow(zval,2) - 5)));
    }
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
+#endif
 
 Test(derivative, complex2)
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    const char* input = "-2*<x>[C] * (<x>[C]^2 - 9)^(-2)";
    int i;
 
    /* create expression */
-   cr_expect_eq(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr), SCIP_OKAY);
+   cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    for( i = 0; i < 100; ++i )
    {
@@ -350,7 +344,7 @@ Test(derivative, complex2)
 
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, xval) );
 
-      SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, expr, sol, 0) );
+      SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
 
       if( xval == 3.0 )
          cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), SCIP_INVALID));
@@ -358,24 +352,18 @@ Test(derivative, complex2)
          cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3)), "expected %g, got %g", (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3), getConsExprExprPartialDiff(expr, x));
    }
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 static const int K = 40;
 Test(performance, rosenbrock)
 {
    SCIP_VAR* vars[K];
-   SCIP_CONSEXPR_EXPR* exprx[K];
-   SCIP_CONSEXPR_EXPR* rosenbrock;
+   SCIP_EXPR* exprx[K];
+   SCIP_EXPR* rosenbrock;
 
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -389,52 +377,52 @@ Test(performance, rosenbrock)
       SCIP_CALL( SCIPaddVar(scip, vars[i]) );
    }
 
-   SCIP_CONSEXPR_EXPR* sum;
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sum, 0, NULL, NULL, 0.0) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprx[0], vars[0]) );
+   SCIP_EXPR* sum;
+   SCIP_CALL( SCIPcreateExprSum(scip, &sum, 0, NULL, NULL, 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &exprx[0], vars[0], NULL, NULL) );
    for( int i = 1; i < K; ++i )
    {
-      SCIP_CONSEXPR_EXPR* sqr;
-      SCIP_CONSEXPR_EXPR* pow1;
-      SCIP_CONSEXPR_EXPR* pow2;
-      SCIP_CONSEXPR_EXPR* diff1;
-      SCIP_CONSEXPR_EXPR* diff2;
+      SCIP_EXPR* sqr;
+      SCIP_EXPR* pow1;
+      SCIP_EXPR* pow2;
+      SCIP_EXPR* diff1;
+      SCIP_EXPR* diff2;
 
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprx[i], vars[i]) );
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &sqr, exprx[i-1], 2.0) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &exprx[i], vars[i], NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &sqr, exprx[i-1], 2.0, NULL, NULL) );
 
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &diff1, 0, NULL, NULL, 0.0) );
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &diff2, 0, NULL, NULL, 0.0) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &diff1, 0, NULL, NULL, 0.0, NULL, NULL) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &diff2, 0, NULL, NULL, 0.0, NULL, NULL) );
 
       /* diff1 = x_i - x_{i-1}^2 */
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, diff1, exprx[i], 1.0) );
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, diff1, sqr, -1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(scip, diff1, exprx[i], 1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(scip, diff1, sqr, -1.0) );
 
       /* pow1 = (x_i - x_{i-1}^2)^2 */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &pow1, diff1, 2.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &pow1, diff1, 2.0, NULL, NULL) );
 
       /* diff2 = 1 - x_{i-1} */
-      SCIPsetConsExprExprSumConstant(diff2, 1.0);
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, diff2, exprx[i-1], -1.0) );
+      SCIPsetConstantExprSum(diff2, 1.0);
+      SCIP_CALL( SCIPappendExprSumExpr(scip, diff2, exprx[i-1], -1.0) );
 
       /* pow2 = (1 - x_{i-1})^2 */
-      SCIP_CALL( SCIPcreateConsExprExprPow(scip, conshdlr, &pow2, diff2, 2.0) );
+      SCIP_CALL( SCIPcreateExprPow(scip, &pow2, diff2, 2.0, NULL, NULL) );
 
       /* sum += 100(x_i - x_{i-1}^2)^2 + (1 - x_{i-1})^2 */
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sum, pow1, 100.0) );
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sum, pow2, 1.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(scip, sum, pow1, 100.0) );
+      SCIP_CALL( SCIPappendExprSumExpr(scip, sum, pow2, 1.0) );
 
       /* release */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sqr) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &pow1) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &pow2) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &diff1) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &diff2) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &sqr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &pow1) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &pow2) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &diff1) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &diff2) );
    }
 
    /* simplify is incredibly slow for large k! */
-   //SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, sum, &rosenbrock) );
-   //SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sum) );
+   //SCIP_CALL( SCIPsimplifyExpr(scip, conshdlr, sum, &rosenbrock) );
+   //SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
    rosenbrock = sum;
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -443,7 +431,7 @@ Test(performance, rosenbrock)
       SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], (SCIP_Real)i) );
    }
 
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, rosenbrock, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, rosenbrock, sol, 0) );
 
    for( int i = 1; i < K - 1; ++i )
    {
@@ -461,7 +449,7 @@ Test(performance, rosenbrock)
       SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], 0.0) );
    }
 
-   SCIP_CALL( SCIPcomputeConsExprExprGradient(scip, conshdlr, rosenbrock, sol, 0) );
+   SCIP_CALL( SCIPevalExprGradient(scip, rosenbrock, sol, 0) );
 
    for( int i = 0; i < K - 1; ++i )
    {
@@ -472,13 +460,13 @@ Test(performance, rosenbrock)
       }
    }
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rosenbrock) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &rosenbrock) );
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    for( int i = 0; i < K; ++i )
    {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprx[i]) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &exprx[i]) );
       SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
    }
    SCIP_CALL( SCIPfree(&scip) );
