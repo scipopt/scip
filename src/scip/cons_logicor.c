@@ -3235,7 +3235,11 @@ SCIP_RETCODE shortenConss(
             nfixedvars, &redundant, &glbinfeas, TRUE) );
 
       if( glbinfeas )
+      {
+         /* reset redundants array to FALSE */
+         BMSclearMemoryArray(redundants, nbinprobvars);
          goto TERMINATE;
+      }
 
       /* remove redundant constraint */
       if( redundant )

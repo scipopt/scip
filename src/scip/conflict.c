@@ -2432,6 +2432,9 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
          goto TERMINATE;
       }
 
