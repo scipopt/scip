@@ -1402,6 +1402,7 @@ SCIP_RETCODE SCIPexprCreate(
 
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
+   (*expr)->activitytag = -1;  /* to be less than initial domchgcount */
    (*expr)->curvature = SCIP_EXPRCURV_UNKNOWN;
 
    /* initialize activity to entire interval */
