@@ -1051,8 +1051,6 @@ SCIP_RETCODE buildPowEstimator(
    }
    else if( exponent > 1.0 && childlb >= 0.0 )
    {
-      SCIP_Real glb;
-
       /* make sure we linearize in convex region (if we will linearize) */
       if( refpoint < 0.0 )
          refpoint = 0.0;
@@ -1950,13 +1948,13 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Real exponent;
-   SCIP_Real refpoint;
    SCIP_Bool isinteger;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), POWEXPRHDLR_NAME) == 0);
+   assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
@@ -1970,12 +1968,10 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-//FIXME   refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%.15g\n", overestimate ? "over" : "under", SCIPexprGetExponentExprPow(expr), refpoint);
+   SCIPdebugMsg(scip, "%sestimation of x^%g at x=%.15g\n", overestimate ? "over" : "under", SCIPexprGetExponentExprPow(expr), *refpoint);
 
    /* we can not generate a cut at +/- infinity */
-   if( SCIPisInfinity(scip, REALABS(refpoint)) )
+   if( SCIPisInfinity(scip, REALABS(*refpoint)) )
       return SCIP_OKAY;
 
 //   childlb = SCIPvarGetLbLocal(childvar);
@@ -2004,11 +2000,10 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
        */
       assert(SCIPisFeasZero(scip, childlb));
       childlb = 0.0;
-      refpoint = MAX(refpoint, 0.0);
    }
    assert(isinteger || childlb >= 0.0);
 
-   SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, SCIPexprIsIntegral(child), refpoint, exponent, coefs,
+   SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, SCIPexprIsIntegral(child), MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
 
    return SCIP_OKAY;
@@ -2676,12 +2671,12 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    SCIP_Real childglb;
    SCIP_Real childgub;
    SCIP_Real exponent;
-   SCIP_Real refpoint;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "signpower") == 0);
+   assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
@@ -2695,12 +2690,10 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-//FIXME   refpoint = SCIPgetSolVal(scip, sol, childvar);
-
-   SCIPdebugMsg(scip, "%sestimation of signed x^%g at x=%g\n", overestimate ? "over" : "under", SCIPexprGetExponentExprPow(expr), refpoint);
+   SCIPdebugMsg(scip, "%sestimation of signed x^%g at x=%g\n", overestimate ? "over" : "under", SCIPexprGetExponentExprPow(expr), *refpoint);
 
    /* we can not generate a cut at +/- infinity */
-   if( SCIPisInfinity(scip, REALABS(refpoint)) )
+   if( SCIPisInfinity(scip, REALABS(*refpoint)) )
       return SCIP_OKAY;
 
    childlb = SCIPexprGetActivity(child).inf;
@@ -2720,11 +2713,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
 
    if( childlb >= 0.0 )
    {
-      /* make sure we linearize in convex region */
-      if( refpoint < 0.0 )
-         refpoint = 0.0;
-
-      estimateParabola(scip, exponent, overestimate, childlb, childub, refpoint, constant, coefs, islocal, success);
+      estimateParabola(scip, exponent, overestimate, childlb, childub, MAX(0.0, *refpoint), constant, coefs, islocal, success);
 
       *branchcand = *islocal;
 
@@ -2739,7 +2728,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
             {
                SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
             }
-            *islocal = refpoint < exprdata->root * (-childglb);
+            *islocal = *refpoint < exprdata->root * (-childglb);
          }
       }
    }
@@ -2750,7 +2739,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
       {
          SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
       }
-      estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, refpoint,
+      estimateSignedpower(scip, exponent, exprdata->root, overestimate, childlb, childub, *refpoint,
          childglb, childgub, constant, coefs, islocal, branchcand, success);
    }
 

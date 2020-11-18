@@ -1674,10 +1674,9 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_EXPRDATA*        exprdata,           /**< expression data */
-   SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_Real*            refpoint,           /**< reference point where to estimate, or NULL if called from initestimates */
    SCIP_Bool             overestimate,       /**< should estimator overestimate expr (TRUE) or underestimate (FALSE) */
    SCIP_Real             targetvalue,        /**< no need to compute facet if value in xstar would be worse than target value */
-   SCIP_Bool             initial,            /**< is this called from initsepa or enforcement? */
    SCIP_Real*            coefs,              /**< array to store cut coefficients */
    SCIP_Real*            constant,           /**< pointer to store cut constant */
    SCIP_Bool*            success             /**< pointer to store whether estimation was successful */
@@ -1713,7 +1712,7 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
       box[2*i] = childbnds.inf;
       box[2*i+1] = childbnds.sup;
 
-//FIXME      xstar[i] = initial ? 0.5 * (box[2*i] + box[2*i+1]) : SCIPgetSolVal(scip, sol, var);
+      xstar[i] = refpoint != NULL ? refpoint[i] : 0.5 * (box[2*i] + box[2*i+1]);
 
       if( SCIPisRelEQ(scip, box[2*i], box[2*i+1]) )
          ++nfixed;
@@ -1725,7 +1724,7 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
          overestimate, prodfunction, &exprdata->coefficient, xstar, box, nchildren, targetvalue, success, coefs, constant) );
    }
 
-   CLEANUP:
+CLEANUP:
    SCIPfreeBufferArray(scip, &xstar);
    SCIPfreeBufferArray(scip, &box);
 
@@ -1752,6 +1751,7 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
@@ -1829,8 +1829,8 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
       *constant = 0.0;
       *success = TRUE;
 
-// FIXME      refpointx = SCIPgetSolVal(scip, sol, x);
-// FIXME      refpointy = SCIPgetSolVal(scip, sol, y);
+      refpointx = refpoint[0];
+      refpointy = refpoint[1];
 
       /* adjust the reference points */
       refpointx = MIN(MAX(refpointx, bndx.inf), bndx.sup); /*lint !e666*/
@@ -1844,7 +1844,7 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
    }
    else
    {
-      SCIP_CALL( estimateVertexPolyhedralProduct(scip, expr, exprdata, sol, overestimate, targetvalue, FALSE,
+      SCIP_CALL( estimateVertexPolyhedralProduct(scip, expr, exprdata, refpoint, overestimate, targetvalue,
             coefs, constant, success) );
    }
 
@@ -1914,7 +1914,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesProduct)
    else
    {
       SCIP_CALL( estimateVertexPolyhedralProduct(scip, expr, exprdata, NULL, overestimate,
-         overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), TRUE, coefs[0], constant[0], &success) );
+         overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), coefs[0], constant[0], &success) );
    }
 
    if( success )

@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to be estimated */
-   SCIP_SOL*             sol,                /**< solution at which to estimate (NULL for the LP solution) */
+   SCIP_Real*            refpoint,           /**< children values for the reference point where to estimate */
    SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
    SCIP_Real             targetvalue,        /**< a value that the estimator shall exceed, can be +/-infinity */
    SCIP_Real*            coefs,              /**< array to store coefficients of estimator */

@@ -484,8 +484,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 /** expression under/overestimation callback
  *
  * The method tries to compute a linear under- or overestimator that is as tight as possible
- * at a given point by using auxiliary variables stored in all children.
- * If the value of the estimator in the solution is smaller (larger) than targetvalue
+ * at a given point.
+ * If the value of the estimator in the reference point is smaller (larger) than targetvalue
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
@@ -496,7 +496,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression
- *  - sol  : solution at which to estimate (NULL for the LP solution)
+ *  - refpoint : children values for the reference point where to estimate
  *  - overestimate : whether the expression needs to be over- or underestimated
  *  - targetvalue : a value that the estimator shall exceed, can be +/-infinity
  *  - coefs : array to store coefficients of estimator
@@ -508,7 +508,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 #define SCIP_DECL_EXPRESTIMATE(x) SCIP_RETCODE x (\
    SCIP*      scip, \
    SCIP_EXPR* expr, \
-   SCIP_SOL*  sol, \
+   SCIP_Real* refpoint, \
    SCIP_Bool  overestimate, \
    SCIP_Real  targetvalue, \
    SCIP_Real* coefs, \
