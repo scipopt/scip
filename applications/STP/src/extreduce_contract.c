@@ -348,6 +348,13 @@ void addComponentUpdateTreeCosts(
       treecost -= graph->cost[edge];
    }
 
+   if( extProbIsPc(graph, extdata) )
+   {
+      assert(extdata->pcdata);
+      treecost -= extdata->pcdata->tree_innerPrize;
+      assert(GE(treecost, 0.0));
+   }
+
    SCIPdebugMessage("tree cost for level %d: %f \n", level - 1, treecost);
    contraction->level_treecost[level - 1] = treecost;
 }
