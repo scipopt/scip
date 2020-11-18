@@ -1789,8 +1789,8 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
                continue;
 
             SCIP_CALL( SCIPsetSolVal(scip, soladj, nlhdlrexprdata->vars[v],
-                  (SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]) - scvdata->vals0[pos]) / indval)
-                  + scvdata->vals0[pos]);
+                  (SCIPgetSolVal(scip, solcopy, nlhdlrexprdata->vars[v]) - scvdata->vals0[pos]) / indval
+                  + scvdata->vals0[pos]) );
          }
          for( v = 0; v < nlhdlrexprdata->nindicators; ++v )
          {
