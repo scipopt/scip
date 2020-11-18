@@ -1228,7 +1228,7 @@ SCIP_RETCODE extreduce_distDataInit(
    {
       if( useBias )
       {
-         SCIP_CALL( reduce_sdInitBiased(scip, g, &(dist->sdistdata)) );
+         SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &(dist->sdistdata)) );
       }
       else
       {

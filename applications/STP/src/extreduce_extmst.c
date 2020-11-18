@@ -928,13 +928,10 @@ SCIP_Bool mstCompLeafToSiblingsBiasedRuleOut(
    const int topleaf = ghead[edge2top];
    SCIP_Bool hitTopLeaf = FALSE;
 
-#ifndef NDEBUG
-   {
-      assert(extreduce_sdshorizontalInSync(scip, graph, topleaf, extdata));
-      assert(topedges_start <= topedges_end);
-      assert(!extIsAtInitialGenStar(extdata));
-   }
-#endif
+   assert(extreduce_sdshorizontalInSync(scip, graph, topleaf, extdata));
+   assert(topedges_start <= topedges_end);
+   assert(!extIsAtInitialGenStar(extdata));
+   assert(extReddataHasBiasedSds(extdata->reddata));
 
    for( int i = topedges_start, j = 0; i != topedges_end; i++, j++ )
    {
@@ -1856,6 +1853,7 @@ void extreduce_mstLevelInit(
 {
    MLDISTS* const sds_vertical = reddata->sds_vertical;
    MLDISTS* const sdsbias_vertical = reddata->sdsbias_vertical;
+   const SCIP_Bool hasBiasedSd = extReddataHasBiasedSds(reddata);
 
    /* Reserve space for the SDs from each potential vertex of the new level to all leaves
     * of the tree except for the extending vertex.
@@ -1865,14 +1863,14 @@ void extreduce_mstLevelInit(
       assert(extdata->tree_nleaves == 1);
       extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sds_vertical);
 
-      if( extReddataHasBiasedSds(reddata) )
+      if( hasBiasedSd )
          extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves, sdsbias_vertical);
    }
    else
    {
       extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sds_vertical);
 
-      if( extReddataHasBiasedSds(reddata) )
+      if( hasBiasedSd )
          extreduce_mldistsLevelAddTop(STP_EXT_MAXGRAD, extdata->tree_nleaves - 1, sdsbias_vertical);
    }
 
@@ -1880,7 +1878,7 @@ void extreduce_mstLevelInit(
 
    /* tree has not yet been extended, so sds_vertical is ahead */
    assert(extdata->tree_depth == extreduce_mldistsTopLevel(sds_vertical) - 1);
-   assert(!sdsbias_vertical || extreduce_mldistsTopLevel(sdsbias_vertical) == extreduce_mldistsTopLevel(sds_vertical));
+   assert(!hasBiasedSd || extreduce_mldistsTopLevel(sdsbias_vertical) == extreduce_mldistsTopLevel(sds_vertical));
 }
 
 

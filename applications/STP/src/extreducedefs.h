@@ -139,6 +139,7 @@ typedef struct reduction_data
    SCIP_Real* const redcost_treenodeswaps; /* for each level and each node */
    const int redcost_nlevels;
    const SCIP_Bool redcost_allowEquality;
+   const SCIP_Bool sdsbias_use;
 } REDDATA;
 
 
@@ -480,8 +481,9 @@ SCIP_Bool extReddataHasBiasedSds(
 {
    assert(reddata);
    assert((reddata->sdsbias_vertical != NULL) == (reddata->sdsbias_horizontal != NULL));
+   assert(!reddata->sdsbias_use || (reddata->sdsbias_vertical != NULL));
 
-   return (reddata->sdsbias_vertical != NULL);
+   return (reddata->sdsbias_use);
 }
 
 #endif /* APPLICATIONS_STP_SRC_EXTREDUCEDEFS_H_ */

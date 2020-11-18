@@ -1890,7 +1890,8 @@ SCIP_RETCODE extreduce_checkComponent(
          .nodes_implications = extpermanent->nodes_implications,
          .redcost_treenodeswaps = redcost_treenodeswaps, .redcost_treecosts = redcost_treecosts,
          .redcost_noReversedTree = redcost_noReversedTree,
-         .redcost_nlevels = redcosts_nlevels, .redcost_allowEquality = extpermanent->redcostEqualAllow };
+         .redcost_nlevels = redcosts_nlevels, .redcost_allowEquality = extpermanent->redcostEqualAllow,
+         .sdsbias_use = extpermanent->useSdBias };
       EXTDATA extdata = { .extstack_data = extstack_data, .extstack_start = extstack_start,
          .extstack_state = extstack_state, .extstack_ncomponents = 0, .tree_leaves = tree_leaves,
          .tree_edges = tree_edges, .tree_deg = extpermanent->tree_deg, .tree_nleaves = 0,
