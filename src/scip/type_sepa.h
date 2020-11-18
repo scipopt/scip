@@ -107,7 +107,12 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sepa            : the separator itself
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
- *  - depth           : actual depth of current node
+ *  - depth           : preteneded depth of current node
+ *
+ *  @note The depth argument shouldn't be use to determine whether the cut is globally valid or not.  The value of depth
+ *  could be 0 even though we are not in the root node! The purpose of depth is to control the behavior of the
+ *  separator. Usually separators will have different limits on the number of cuts to be applied in the root node, etc.
+ *  These limits should be checked against depth and not against the actual depth of the current node.
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
@@ -132,7 +137,12 @@ typedef struct SCIP_SepaData SCIP_SEPADATA;       /**< locally defined separator
  *  - sol             : primal solution that should be separated
  *  - result          : pointer to store the result of the separation call
  *  - allowlocal      : should the separator allow local cuts?
- *  - depth           : actual depth of current node
+ *  - depth           : preteneded depth of current node
+ *
+ *  @note The depth argument shouldn't be use to determine whether the cut is globally valid or not.  The value of depth
+ *  could be 0 even though we are not in the root node! The purpose of depth is to control the behavior of the
+ *  separator. Usually separators will have different limits on the number of cuts to be applied in the root node, etc.
+ *  These limits should be checked against depth and not against the actual depth of the current node.
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
