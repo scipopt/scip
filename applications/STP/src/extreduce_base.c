@@ -43,6 +43,8 @@
 #define GENSTAR_NODE_HEAD  2
 #define GENSTAR_NODE_COMBI 3
 
+#define EXT_PROFIT_MINRATIO 0.1
+
 
 enum EXTPSEUDO_MODE { delete_all = 0, delete_profits = 1, delete_nonprofits = 2 };
 
@@ -1003,21 +1005,18 @@ SCIP_Bool pseudodeleteBiasedIsPromising(
    const GRAPH*          g                   /**< graph data structure  */
 )
 {
-
-   SDPROFIT* sdprofit;
-
    if( graph_pc_isPc(g) )
    {
       return FALSE;
    }
    else
    {
-#ifdef SCIP_DEISABLED
+      SDPROFIT* sdprofit;
       double profitsratio;
       int nprofits = 0;
       const int nnodes = graph_get_nNodes(g);
       const int nterms = g->terms;
-// might also computde proper sd first..and give to routine
+      // todo might also computde proper sd first..and give to routine
       SCIP_CALL_ABORT( reduce_sdprofitInit1stOnly(scip, g, g->cost, &sdprofit));
 
       for( int i = 0; i < nnodes; i++ )
@@ -1032,14 +1031,17 @@ SCIP_Bool pseudodeleteBiasedIsPromising(
       }
 
       profitsratio = (double) nprofits / (double) nterms;
+      SCIPdebugMessage("profitsratio=%f \n", profitsratio);
 
-      printf("profitsratio=%f \n", profitsratio);
       reduce_sdprofitFree(scip, &sdprofit);
-#endif
+
+      if( profitsratio <  EXT_PROFIT_MINRATIO )
+      {
+         SCIPdebugMessage("biased SD for extension not promising: %f < %f \n", profitsratio, EXT_PROFIT_MINRATIO);
+
+         return FALSE;
+      }
    }
-
-
-   // check whether at least 10 % of terminals have a simple profit!
 
    return TRUE;
 }
