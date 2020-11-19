@@ -50,6 +50,8 @@ typedef struct special_distance_neighbors SDN;
 /** link-cut tree for bottleneck operations */
 typedef struct bottleneck_link_cut_tree BLCTREE;
 
+enum EXTRED_MODE { extred_none = 0, extred_fast = 1, extred_full = 2 };
+
 
 /** Stores data for computation of special distance/bottleneck distance computations  */
 typedef struct special_distance_storage
@@ -92,8 +94,8 @@ typedef struct reduction_parameters
 typedef struct reduce_costs_reduction_parameters
 {
    int                   prevrounds;         /**< number of reduction rounds that have been performed already */
+   enum EXTRED_MODE      extredMode;         /**< mode of extended reductions */
    SCIP_Bool             useRec;             /**< use recombination heuristic? */
-   SCIP_Bool             useExtRed;          /**< use extended tests? */
    SCIP_Bool             useSlackPrune;      /**< use slack-prune heuristic? */
    SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
    /* PC/MW only values: */

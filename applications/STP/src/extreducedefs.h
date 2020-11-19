@@ -115,6 +115,7 @@ typedef struct extension_data_permanent
    int                   tree_maxnedges;
    SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
    SCIP_Bool             useSdBias;          /**< use biased bottleneck Steiner distance? (only for pseudo-elimination) */
+   enum EXTRED_MODE      mode;               /**< mode */
 } EXTPERMA;
 
 

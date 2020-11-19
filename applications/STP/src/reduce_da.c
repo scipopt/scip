@@ -1645,7 +1645,7 @@ SCIP_RETCODE daRedcostsInit(
    RCPARAMS rcparams = { .cutoff = -1.0, .nLevels = 1, .nCloseTerms = 3,
                          .nnodes = nnodes, .nedges = nedges, .redCostRoot = UNKNOWN };
 
-   if( paramsda->useExtRed )
+   if( paramsda->extredMode != extred_none )
    {
       rcparams.nLevels = nLevels;
    }
@@ -2405,7 +2405,7 @@ SCIP_RETCODE reduce_da(
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
    STP_Bool* arcsdeleted;
-   SCIP_Bool useExtRed = paramsda->useExtRed;
+   SCIP_Bool useExtRed = (paramsda->extredMode != extred_none);
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
 
@@ -2531,6 +2531,7 @@ SCIP_RETCODE reduce_da(
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
             int nextfixed = 0;
             SCIP_CALL( extreduce_init(scip, useSd, graph, redcostdata, arcsdeleted, &extpermanent) );
+            extpermanent->mode = paramsda->extredMode;
             SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, extpermanent, graph, &nextfixed) );
             ndeletions_run += nextfixed;
          }

@@ -170,19 +170,16 @@ void removeEdge(
    int                   e                   /**< the edge to be removed */
    )
 {
-   int    i;
-   int    head;
-   int    tail;
+   int i;
+   const int head = g->head[e];
+   const int tail = g->tail[e];
 
-   assert(g          != NULL);
-   assert(e          >= 0);
-   assert(e          <  g->edges);
-
-   head = g->head[e];
-   tail = g->tail[e];
+   assert(graph_edge_isInRange(g, e));
 
    if( g->inpbeg[head] == e )
+   {
       g->inpbeg[head] = g->ieat[e];
+   }
    else
    {
       if( g->rootedgeprevs != NULL && head == g->source )
@@ -193,13 +190,20 @@ void removeEdge(
             g->rootedgeprevs[g->ieat[e]] = i;
       }
       else
+      {
          for( i = g->inpbeg[head]; g->ieat[i] != e; i = g->ieat[i] )
+         {
             assert(i >= 0);
+         }
+      }
 
       g->ieat[i] = g->ieat[e];
    }
+
    if( g->outbeg[tail] == e )
+   {
       g->outbeg[tail] = g->oeat[e];
+   }
    else
    {
       if( g->rootedgeprevs != NULL && tail == g->source )
@@ -210,8 +214,12 @@ void removeEdge(
             g->rootedgeprevs[g->oeat[e]] = i;
       }
       else
+      {
          for( i = g->outbeg[tail]; g->oeat[i] != e; i = g->oeat[i] )
+         {
             assert(i >= 0);
+         }
+      }
 
       g->oeat[i] = g->oeat[e];
    }

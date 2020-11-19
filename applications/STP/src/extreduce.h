@@ -41,7 +41,7 @@ extern SCIP_RETCODE    extreduce_deleteArcs(SCIP*, REDCOST*, const int*, GRAPH*,
 extern SCIP_RETCODE    extreduce_deleteEdges(SCIP*, const int*, EXTPERMA*, GRAPH*, int*);
 extern SCIP_RETCODE    extreduce_pseudoDeleteNodes(SCIP*, const int*, const SCIP_Bool*, EXTPERMA*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    extreduce_deleteGeneralStars(SCIP*, REDCOST*, const int*, GRAPH*, STP_Bool*, int*);
-extern int             extreduce_getMaxTreeDepth(const GRAPH*);
+extern int             extreduce_getMaxTreeDepth(const GRAPH*, const EXTPERMA*);
 extern int             extreduce_getMaxStackSize(void);
 extern int             extreduce_getMaxStackNcomponents(const GRAPH*);
 extern int             extreduce_getMaxStackNedges(const GRAPH*);

@@ -43,7 +43,7 @@
 #define GENSTAR_NODE_HEAD  2
 #define GENSTAR_NODE_COMBI 3
 
-#define EXT_PROFIT_MINRATIO 0.1
+#define EXT_PROFIT_MINRATIO 0.05
 
 
 enum EXTPSEUDO_MODE { delete_all = 0, delete_profits = 1, delete_nonprofits = 2 };
@@ -1002,6 +1002,7 @@ SCIP_Bool pseudodeleteAllStarsChecked(
 static inline
 SCIP_Bool pseudodeleteBiasedIsPromising(
    SCIP*                 scip,               /**< SCIP data structure */
+   const EXTPERMA*       extperma,           /**< extension data */
    const GRAPH*          g                   /**< graph data structure  */
 )
 {
@@ -1642,7 +1643,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    SCIP_CALL( pseudodeleteInit(scip, result, graph, offsetp, &extpseudo) );
 
-   if( pseudodeleteBiasedIsPromising(scip, graph) )
+   if( pseudodeleteBiasedIsPromising(scip, extperma, graph) )
    {
       assert(!extperma->distdata_biased);
       extperma->useSdBias = TRUE;
@@ -1843,6 +1844,9 @@ SCIP_RETCODE extreduce_checkNode(
 
    SCIP_CALL( pseudodeleteInitStar(scip, graph, node, stardata, &compedges, &extleaves) );
 
+   if( graph->grad[node] == 3 )
+      extpermanent->tree_maxdepth++;
+
    /* check all stars of degree >= 3, as long as they can be ruled-out */
    while ( *isPseudoDeletable )
    {
@@ -1865,6 +1869,9 @@ SCIP_RETCODE extreduce_checkNode(
       if( pseudodeleteAllStarsChecked(stardata) )
          break;
    }
+
+   if( graph->grad[node] == 3 )
+        extpermanent->tree_maxdepth--;
 
    pseudodeleteFreeStar(scip, &compedges, &extleaves);
 
@@ -2008,7 +2015,8 @@ int extreduce_getMaxStackNcomponents(
 
 /** get maximum allowed depth for extended tree in given graph */
 int extreduce_getMaxTreeDepth(
-   const GRAPH*          graph               /**< graph data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const EXTPERMA*       extpermanent         /**< extension data */
 )
 {
    int nedges;
@@ -2028,6 +2036,11 @@ int extreduce_getMaxTreeDepth(
    {
       assert(nedges <= STP_EXT_DEPTH_MIDNEDGES);
       maxdepth = STP_EXT_MAXDFSDEPTH;
+   }
+
+   if( extpermanent->mode == extred_fast )
+   {
+      maxdepth--;
    }
 
    assert(maxdepth > 0);
