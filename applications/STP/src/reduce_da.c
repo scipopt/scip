@@ -2535,7 +2535,8 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, extpermanent, graph, &nextfixed) );
             ndeletions_run += nextfixed;
          }
-         else if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
+
+         if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
          {
             SCIP_CALL( updateNodeReplaceBounds(scip, redcostdata, graph, nodereplacebounds, upperbound, (run == 0), FALSE));
          }
