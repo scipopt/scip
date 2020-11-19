@@ -1267,6 +1267,7 @@ SCIP_RETCODE readColsExact(
 
       SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &val) );
       RatSetString(val, mpsinputField3(mpsi));
+      RatCanonicalize(val);
 
       if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
@@ -1293,6 +1294,7 @@ SCIP_RETCODE readColsExact(
          assert(mpsinputField4(mpsi) != NULL);
 
          RatSetString(val, mpsinputField5(mpsi));
+         RatCanonicalize(val);
 
          if( !strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) )
          {
@@ -1587,6 +1589,7 @@ SCIP_RETCODE readRhsExact(
             else
             {
                RatSetString(valexact, mpsinputField5(mpsi));
+               RatCanonicalize(valexact);
 
                /* find out the row sense */
                lhs = SCIPgetLhsExactLinear(scip, cons);
@@ -1834,6 +1837,7 @@ SCIP_RETCODE readRangesExact(
          else
          {
             RatSetString(val, mpsinputField3(mpsi));
+            RatCanonicalize(val);
 
             /* find out the row sense */
             lhs = SCIPgetLhsExactLinear(scip, cons);
@@ -1876,6 +1880,7 @@ SCIP_RETCODE readRangesExact(
             else
             {
                RatSetString(val, mpsinputField5(mpsi));
+               RatCanonicalize(val);
 
                /* find out the row sense */
                lhs = SCIPgetLhsExactLinear(scip, cons);
@@ -2429,7 +2434,10 @@ SCIP_RETCODE readBoundsExact(
          if( mpsinputField4(mpsi) == NULL )
             RatSetReal(val, 0.0);
          else
+         {
             RatSetString(val, mpsinputField4(mpsi));
+            RatCanonicalize(val);
+         }
 
          /* remember variable type */
          oldvartype = SCIPvarGetType(var);

@@ -9075,7 +9075,10 @@ SCIP_RETCODE SCIPvarChgLbOriginalExact(
          var->name, var->exactdata->origdom.lb, newbound);
 
       if( RatIsEqual(var->exactdata->origdom.lb, newbound) )
+      {
+         RatFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
+      }
 
       /* change the bound */
       RatSet(var->exactdata->origdom.lb, newbound);
@@ -9204,7 +9207,10 @@ SCIP_RETCODE SCIPvarChgUbOriginalExact(
          var->name, var->exactdata->origdom.ub, newbound);
 
       if( RatIsEqual(var->exactdata->origdom.ub, newbound) )
+      {
+         RatFreeBuffer(set->buffer, &tmpval);
          return SCIP_OKAY;
+      }
 
       /* change the bound */
       RatSet(var->exactdata->origdom.ub, newbound);
