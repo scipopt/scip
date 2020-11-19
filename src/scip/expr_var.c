@@ -36,11 +36,6 @@
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
-/** expression data */
-struct SCIP_ExprData
-{
-   SCIP_VAR*             var;                /**< SCIP variable that this constraint represents */
-};
 
 /** simplifies a variable expression
  *
@@ -160,17 +155,20 @@ SCIP_DECL_EXPRCOPYHDLR(copyhdlrVar)
 static
 SCIP_DECL_EXPRCOPYDATA(copydataVar)
 {  /*lint --e{715}*/
+   SCIP_VAR* var;
+
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
-
-   SCIP_CALL( SCIPallocClearBlockMemory(targetscip, targetexprdata) );
 
    /* copying into a different SCIP should be handled on the SCIPexprCopy() level (via mapexpr) */
    assert(targetscip == sourcescip);
 
-   (*targetexprdata)->var = SCIPgetVarExprVar(sourceexpr);
+   var = SCIPgetVarExprVar(sourceexpr);
+   assert(var != NULL);
 
-   SCIP_CALL( SCIPcaptureVar(targetscip, (*targetexprdata)->var) );
+   *targetexprdata = (SCIP_EXPRDATA*)var;
+
+   SCIP_CALL( SCIPcaptureVar(targetscip, var) );
 
    return SCIP_OKAY;
 }
@@ -184,12 +182,9 @@ SCIP_DECL_EXPRFREEDATA(freedataVar)
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
-   assert(exprdata->var != NULL);
 
-   SCIP_CALL( SCIPreleaseVar(scip, &exprdata->var) );
+   SCIP_CALL( SCIPreleaseVar(scip, (SCIP_VAR**)&exprdata) );
 
-   /* free expression data */
-   SCIPfreeBlockMemory(scip, &exprdata);
    SCIPexprSetData(expr, NULL);
 
    return SCIP_OKAY;
@@ -388,8 +383,7 @@ SCIP_RETCODE SCIPcreateExprVar(
    /* capture the variable so that it doesn't disappear while the expr still points to it */
    SCIP_CALL( SCIPcaptureVar(scip, var) );
 
-   SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprdata) );
-   exprdata->var = var;
+   exprdata = (SCIP_EXPRDATA*)var;
 
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
 
@@ -407,7 +401,7 @@ SCIP_VAR* SCIPgetVarExprVar(
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(SCIPexprGetData(expr) != NULL);
 
-   return SCIPexprGetData(expr)->var;
+   return (SCIP_VAR*)SCIPexprGetData(expr);
 }
 
 #if !1  // FIXME move into cons_nonlinear
