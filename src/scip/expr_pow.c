@@ -2668,7 +2668,7 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "signpower") == 0);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0);
    assert(refpoint != NULL);
    assert(coefs != NULL);
    assert(constant != NULL);
@@ -2754,7 +2754,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "signpower") == 0);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0);
 
    childlb = bounds[0].inf;
    childub = bounds[0].sup;
