@@ -10907,73 +10907,9 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   SCIP_CALL( includeConshdlrExprBasic(scip) );
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* include and remember handler for variable expression */
-   SCIP_CALL( SCIPincludeExprHdlrVar(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "var") == 0);
-   conshdlrdata->exprvarhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include and remember handler for constant value expression */
-   SCIP_CALL( SCIPincludeExprHdlrValue(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "val") == 0);
-   conshdlrdata->exprvalhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include and remember handler for sum expression */
-   SCIP_CALL( SCIPincludeExprHdlrSum(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "sum") == 0);
-   conshdlrdata->exprsumhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include and remember handler for product expression */
-   SCIP_CALL( SCIPincludeExprHdlrProduct(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "prod") == 0);
-   conshdlrdata->exprprodhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include handler for exponential expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "exp") == 0);
-   conshdlrdata->exprexphdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include handler for logarithmic expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrLog(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "log") == 0);
-   conshdlrdata->exprloghdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include handler for absolute expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "abs") == 0);
-
-   /* include handler for power expression */
-   SCIP_CALL( SCIPincludeExprHdlrPow(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
-   conshdlrdata->exprpowhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include handler for signed power expression */
-   SCIP_CALL( SCIPincludeExprHdlrSignpower(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "signpower") == 0);
-   conshdlrdata->exprsignpowhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
-
-   /* include handler for entropy expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrEntropy(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "entropy") == 0);
-
-   /* include handler for sine expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "sin") == 0);
-
-   /* include handler for cosine expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrCos(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "cos") == 0);
-
-   /* include handler for error function expression */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrErf(scip, conshdlr) );
-   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "erf") == 0);
 
    /* include default nonlinear handler */
    SCIP_CALL( SCIPincludeConsExprNlhdlrDefault(scip, conshdlr) );
@@ -10998,85 +10934,6 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* include nonlinear handler for quotient expressions */
    SCIP_CALL( SCIPincludeConsExprNlhdlrQuotient(scip, conshdlr) );
-
-   return SCIP_OKAY;
-}
-
-/** includes an expression constraint upgrade method into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading expression constraint, or NULL */
-   int                   priority,           /**< priority of upgrading method */
-   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
-   const char*           conshdlrname        /**< name of the constraint handler */
-   )
-{
-   SCIP_CONSHDLR*        conshdlr;
-   SCIP_CONSHDLRDATA*    conshdlrdata;
-   CONSUPGRADE* exprconsupgrade;
-   char                  paramname[SCIP_MAXSTRLEN];
-   char                  paramdesc[SCIP_MAXSTRLEN];
-   int                   i;
-
-   assert(conshdlrname != NULL );
-
-   /* ignore empty upgrade functions */
-   if( exprconsupgd == NULL )
-      return SCIP_OKAY;
-
-   /* find the expression constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if( conshdlr == NULL )
-   {
-      SCIPerrorMessage("nonlinear constraint handler not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* check whether upgrade method exists already */
-   for( i = conshdlrdata->nexprconsupgrades - 1; i >= 0; --i )
-   {
-      if( conshdlrdata->exprconsupgrades[i]->exprconsupgd == exprconsupgd )
-      {
-#ifdef SCIP_DEBUG
-         SCIPwarningMessage(scip, "Try to add already known upgrade method %p for constraint handler <%s>.\n", exprconsupgd, conshdlrname); /*lint !e611*/
-#endif
-         return SCIP_OKAY;
-      }
-   }
-
-   /* create an expression constraint upgrade data object */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &exprconsupgrade) );
-   exprconsupgrade->exprconsupgd = exprconsupgd;
-   exprconsupgrade->priority   = priority;
-   exprconsupgrade->active     = active;
-
-   /* insert expression constraint upgrade method into constraint handler data */
-   assert(conshdlrdata->nexprconsupgrades <= conshdlrdata->exprconsupgradessize);
-   if( conshdlrdata->nexprconsupgrades+1 > conshdlrdata->exprconsupgradessize )
-   {
-      int newsize;
-
-      newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nexprconsupgrades+1);
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->exprconsupgrades, conshdlrdata->nexprconsupgrades, newsize) );
-      conshdlrdata->exprconsupgradessize = newsize;
-   }
-   assert(conshdlrdata->nexprconsupgrades+1 <= conshdlrdata->exprconsupgradessize);
-
-   for( i = conshdlrdata->nexprconsupgrades; i > 0 && conshdlrdata->exprconsupgrades[i-1]->priority < exprconsupgrade->priority; --i )
-      conshdlrdata->exprconsupgrades[i] = conshdlrdata->exprconsupgrades[i-1];
-   assert(0 <= i && i <= conshdlrdata->nexprconsupgrades);
-   conshdlrdata->exprconsupgrades[i] = exprconsupgrade;
-   conshdlrdata->nexprconsupgrades++;
-
-   /* adds parameter to turn on and off the upgrading step */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/" CONSHDLR_NAME "/upgrade/%s", conshdlrname);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable expression upgrading for constraint handler <%s>", conshdlrname);
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         paramname, paramdesc,
-         &exprconsupgrade->active, FALSE, active, NULL, NULL) );
 
    return SCIP_OKAY;
 }

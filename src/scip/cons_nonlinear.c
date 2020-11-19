@@ -1587,14 +1587,69 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 /** includes an expression constraint upgrade method into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading nonlinear constraint, or NULL */
+   SCIP_DECL_NONLINCONSUPGD((*nlconsupgd)),  /**< method to call for upgrading nonlinear constraint */
    int                   priority,           /**< priority of upgrading method */
    SCIP_Bool             active,             /**< should the upgrading method by active by default? */
    const char*           conshdlrname        /**< name of the constraint handler */
    )
 {
-   // TODO
-   return SCIP_ERROR;
+   SCIP_CONSHDLR*     conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   CONSUPGRADE*       consupgrade;
+   char               paramname[SCIP_MAXSTRLEN];
+   char               paramdesc[SCIP_MAXSTRLEN];
+   int                i;
+
+   assert(conshdlrname != NULL );
+   assert(nlconsupgd != NULL);
+
+   /* find the expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("nonlinear constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* check whether upgrade method exists already */
+   for( i = conshdlrdata->nconsupgrades - 1; i >= 0; --i )
+   {
+      if( conshdlrdata->consupgrades[i]->consupgd == nlconsupgd )
+      {
+#ifdef SCIP_DEBUG
+         SCIPwarningMessage(scip, "Try to add already known upgrade method %p for constraint handler <%s>.\n", (void*)nlconsupgd, conshdlrname);
+#endif
+         return SCIP_OKAY;
+      }
+   }
+
+   /* create an expression constraint upgrade data object */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &consupgrade) );
+   consupgrade->consupgd = nlconsupgd;
+   consupgrade->priority = priority;
+   consupgrade->active   = active;
+
+   /* insert expression constraint upgrade method into constraint handler data */
+   SCIPensureBlockMemoryArray(scip, &conshdlrdata->consupgrades, &conshdlrdata->consupgradessize, conshdlrdata->nconsupgrades+1);
+   assert(conshdlrdata->nconsupgrades+1 <= conshdlrdata->consupgradessize);
+
+   for( i = conshdlrdata->nconsupgrades; i > 0 && conshdlrdata->consupgrades[i-1]->priority < consupgrade->priority; --i )
+      conshdlrdata->consupgrades[i] = conshdlrdata->consupgrades[i-1];
+   assert(0 <= i && i <= conshdlrdata->nconsupgrades);
+   conshdlrdata->consupgrades[i] = consupgrade;
+   conshdlrdata->nconsupgrades++;
+
+   /* adds parameter to turn on and off the upgrading step */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/" CONSHDLR_NAME "/upgrade/%s", conshdlrname);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable nonlinear upgrading for constraint handler <%s>", conshdlrname);
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         paramname, paramdesc,
+         &consupgrade->active, FALSE, active, NULL, NULL) );
+
+   return SCIP_OKAY;
 }
 
 /** creates and captures a nonlinear constraint

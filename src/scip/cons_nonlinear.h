@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading nonlinear constraint, or NULL */
+   SCIP_DECL_NONLINCONSUPGD((*nlconsupgd)),  /**< method to call for upgrading nonlinear constraint */
    int                   priority,           /**< priority of upgrading method */
    SCIP_Bool             active,             /**< should the upgrading method by active by default? */
    const char*           conshdlrname        /**< name of the constraint handler */
