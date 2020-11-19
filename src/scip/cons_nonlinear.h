@@ -164,7 +164,7 @@ typedef unsigned int  SCIP_CONSNONLINEAR_EXPRENFO_METHOD; /**< exprenfo bitflags
 /** creates the handler for nonlinear constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP*                 scip                /**< SCIP data structure */
