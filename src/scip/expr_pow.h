@@ -64,6 +64,13 @@ SCIP_RETCODE SCIPincludeExprHdlrSignpower(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** indicates whether expression is of signpower-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprSignpower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 #ifdef __cplusplus
 }
 #endif

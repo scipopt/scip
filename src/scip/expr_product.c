@@ -32,8 +32,8 @@
 #include "scip/pub_expr.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
+#include "scip/expr_pow.h"
 #include "scip/expr_value.h"
-//#include "scip/cons_expr_pow.h"
 //#include "scip/cons_expr_exp.h"
 //#include "scip/cons_expr_entropy.h"
 //#include "scip/cons_expr_abs.h"
@@ -507,7 +507,7 @@ SCIP_RETCODE mergeProductExprlist(
          expo1 = SCIPgetExponentExprPow(current->expr);
          issignpower1 = FALSE;
       }
-      else if( SCIPexprGetHdlr(current->expr) == SCIPgetExprHdlrSignPower(scip) )
+      else if( SCIPisExprSignpower(scip, current->expr) )
       {
          base1 = SCIPexprGetChildren(current->expr)[0];
          expo1 = SCIPgetExponentExprPow(current->expr);
@@ -525,7 +525,7 @@ SCIP_RETCODE mergeProductExprlist(
          expo2 = SCIPgetExponentExprPow(tomergenode->expr);
          issignpower2 = FALSE;
       }
-      else if( SCIPexprGetHdlr(tomergenode->expr) == SCIPgetExprHdlrSignPower(scip) )
+      else if( SCIPisExprSignpower(scip, tomergenode->expr) )
       {
          base2 = SCIPexprGetChildren(tomergenode->expr)[0];
          expo2 = SCIPgetExponentExprPow(tomergenode->expr);

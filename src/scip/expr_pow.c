@@ -2426,7 +2426,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       }
    }
 
-   /* TODO if( SCIPexprGetHdlr(base) == SCIPgetConsExprExprHdlrSignpower(conshdlr) ) ... */
+   /* TODO if( SCIPisExprSignpower(scip, base) ... */
 
    /* enforces SPOW8
     * given (signpow n (pow expo expr)) we distribute the exponent:
@@ -3044,6 +3044,17 @@ SCIP_RETCODE SCIPcreateExprSignpower(
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, SIGNPOWEXPRHDLR_NAME), exprdata, 1, &child, ownerdatacreate, ownerdatacreatedata) );
 
    return SCIP_OKAY;
+}
+
+/** indicates whether expression is of signpower-type */
+SCIP_Bool SCIPisExprSignpower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), SIGNPOWEXPRHDLR_NAME) == 0;
 }
 
 /* from pub_expr.h */
