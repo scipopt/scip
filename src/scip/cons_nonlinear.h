@@ -638,14 +638,6 @@ int SCIPcompareIndexConsNonlinear(
    void*                 cons2
    );
 
-/** returns an equivalent linear constraint if possible */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetLinearConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
-   );
-
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetLinvarMayDecreaseNonlinear(

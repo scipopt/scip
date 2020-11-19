@@ -55,6 +55,7 @@
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
+#include "scip/pub_expr.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -17378,29 +17379,56 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
 static
 SCIP_DECL_NONLINCONSUPGD(upgradeConsNonlinear)
 {
-   SCIP_CONSDATA* upgdconsdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int i;
 
    assert(nupgdconss != NULL);
    assert(upgdconss != NULL);
    assert(upgdconsssize > 0);
 
-   /* ask for an equivalent linear constraint */
-   SCIP_CALL( SCIPgetLinearConsNonlinear(scip, cons, &upgdconss[0]) );
+   expr = SCIPgetExprConsNonlinear(cons);
+   assert(expr != NULL);
 
-   /* check whether upgrade was successful */
-   if( upgdconss[0] != NULL )
+   /* not a linear constraint if the root expression is not a sum */
+   if( !SCIPisExprSum(scip, expr) )
+      return SCIP_OKAY;
+
+   /* if at least one child is not a variable, then not a linear constraint */
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+      if( !SCIPisExprVar(scip, SCIPexprGetChildren(expr)[i]) )
+         return SCIP_OKAY;
+
+   /* consider constant part of the sum expression */
+   lhs = SCIPisInfinity(scip, -SCIPgetLhsConsNonlinear(cons)) ? -SCIPinfinity(scip) : (SCIPgetLhsConsNonlinear(cons) - SCIPgetConstantExprSum(expr));
+   rhs = SCIPisInfinity(scip,  SCIPgetRhsConsNonlinear(cons)) ?  SCIPinfinity(scip) : (SCIPgetRhsConsNonlinear(cons) - SCIPgetConstantExprSum(expr));
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, &upgdconss[0], SCIPconsGetName(cons),
+         0, NULL, NULL, lhs, rhs,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+   assert(upgdconss[0] != NULL);
+
+   consdata = SCIPconsGetData(upgdconss[0]);
+
+   /* add linear terms */
+   SCIP_CALL( consdataEnsureVarsSize(scip, consdata, SCIPexprGetNChildren(expr)) );
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
-      *nupgdconss = 1;
-
-      upgdconsdata = SCIPconsGetData(upgdconss[0]);
-      assert(upgdconsdata != NULL);
-
-      /* check violation of this linear constraint with absolute tolerances, to be consistent with the original expression constraint */
-      upgdconsdata->checkabsolute = TRUE;
-
-      SCIPdebugMsg(scip, "created linear constraint:\n");
-      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+      SCIP_CALL( addCoef(scip, upgdconss[0], SCIPgetVarExprVar(SCIPexprGetChildren(expr)[i]), SCIPgetCoefsExprSum(expr)[i]) );
    }
+
+   /* check violation of this linear constraint with absolute tolerances, to be consistent with the original expression constraint */
+   consdata->checkabsolute = TRUE;
+
+   *nupgdconss = 1;
+
+   SCIPdebugMsg(scip, "created linear constraint:\n");
+   SCIPdebugPrintCons(scip, upgdconss[0], NULL);
 
    return SCIP_OKAY;
 } /*lint !e715*/

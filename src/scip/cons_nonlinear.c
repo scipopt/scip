@@ -43,7 +43,6 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
-#include "scip/cons_linear.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
@@ -383,7 +382,7 @@ SCIP_RETCODE freeEnfoData(
       mydata->nactivityusessepa = 0;
       mydata->nauxvaruses = 0;
    }
-#if !1  // FIXME
+
    /* free data stored by nonlinear handlers */
    for( e = 0; e < mydata->nenfos; ++e )
    {
@@ -397,7 +396,7 @@ SCIP_RETCODE freeEnfoData(
       if( mydata->enfos[e]->issepainit )
       {
          /* call the separation deinitialization callback of the nonlinear handler */
-         SCIP_CALL( SCIPcallNlhdlrExitSepaNonlinear(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
+//FIXME         SCIP_CALL( SCIPcallNlhdlrExitSepaNonlinear(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
          mydata->enfos[e]->issepainit = FALSE;
       }
 
@@ -411,7 +410,7 @@ SCIP_RETCODE freeEnfoData(
       /* free enfo data */
       SCIPfreeBlockMemory(scip, &mydata->enfos[e]);
    }
-#endif
+
    /* free array with enfo data */
    SCIPfreeBlockMemoryArrayNull(scip, &mydata->enfos, mydata->nenfos);
 
@@ -2044,64 +2043,6 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
    /* not sure we care about any of these flags for original constraints */
    consdata->issimplified = FALSE;
    consdata->ispropagated = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** returns an equivalent linear constraint if possible */
-SCIP_RETCODE SCIPgetLinearConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_EXPR* expr;
-   SCIP_VAR** vars;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   int i;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(lincons != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   expr = consdata->expr;
-   assert(expr != NULL);
-
-   *lincons = NULL;
-
-   /* not a linear constraint if the root expression is not a sum */
-   if( !SCIPisExprSum(scip, expr) )
-      return SCIP_OKAY;
-
-   /* if at least one child is not a variable, then not a linear constraint */
-   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
-      if( !SCIPisExprVar(scip, SCIPexprGetChildren(expr)[i]) )
-         return SCIP_OKAY;
-
-   /* collect all variables */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPexprGetNChildren(expr)) );
-   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
-      vars[i] = SCIPgetVarExprVar(SCIPexprGetChildren(expr)[i]);
-
-   /* consider constant part of the sum expression */
-   lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - SCIPgetConstantExprSum(expr));
-   rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - SCIPgetConstantExprSum(expr));
-
-   SCIP_CALL( SCIPcreateConsLinear(scip, lincons, SCIPconsGetName(cons),
-         SCIPexprGetNChildren(expr), vars, SCIPgetCoefsExprSum(expr),
-         lhs, rhs,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-         SCIPconsIsStickingAtNode(cons)) );
-
-   /* free memory */
-   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
