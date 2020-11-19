@@ -13,39 +13,46 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation_prod.c
- * @brief  tests separation of products
+/**@file   estimation.c
+ * @brief  tests estimation of products
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_product.h"
-#include "separation.h"
+#include "scip/expr_product.c"
+#include "../estimation.h"
 
-Test(separation, bilinear, .init = setup, .fini = teardown,
-   .description = "test separation for a bilinear expression"
+Test(estimation, bilinear, .init = setup, .fini = teardown,
+   .description = "test estimation for a bilinear expression"
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    SCIP_Real coefs[2];
    SCIP_Real constant;
+   SCIP_INTERVAL bnds[2];
+   SCIP_Real ref[2];
    SCIP_Bool islocal;
    SCIP_Bool branchcand = TRUE;
    SCIP_Bool success;
 
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 0, NULL, 1.5) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, xexpr) );
-   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, yexpr) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, &expr, 0, NULL, 1.5, NULL, NULL) );
+   SCIP_CALL( SCIPappendExprChild(scip, expr, xexpr) );
+   SCIP_CALL( SCIPappendExprChild(scip, expr, yexpr) );
 
    /*
     * compute an overestimator for 1.5*x*y with x* = 0, y* = -4
     * together with the bounds this should result in an estimator of the form
     *    -4.5x - 1.5y - 4.5
     */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
+   ref[0] = 0.0;
+   ref[1] = -4.0;
 
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
+   bnds[0].inf = SCIPvarGetLbLocal(x);
+   bnds[0].sup = SCIPvarGetUbLocal(x);
+   bnds[1].inf = SCIPvarGetLbLocal(y);
+   bnds[1].sup = SCIPvarGetUbLocal(y);
+
+   SCIP_CALL( estimateProduct(scip, expr, bnds, bnds, ref, TRUE, SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -4.5, SCIPepsilon(scip));
@@ -60,10 +67,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
     * together with the bounds this should result in en estimator of the form
     *    -9x - 1.5y - 9
     */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
-
-   SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimateProduct(scip, expr, bnds, bnds, ref, FALSE, -SCIPinfinity(scip), coefs, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -9.0, SCIPepsilon(scip));
@@ -73,7 +77,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
    cr_assert(branchcand);
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 
@@ -115,23 +119,22 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
  * violation = (hrepre.A[argmax,:]' * [0.2, -4.0, 1.1, zstar, tstar] - hrepre.b[argmax])/ hrepre.A[argmax,end]
  * */
 
-Test(separation, quadrilinear,
+Test(estimation, quadrilinear,
    .description = "test separation for a quadrilinear expression"
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    SCIP_Bool islocal;
    SCIP_Bool branchcand = TRUE;
    SCIP_Bool success;
    SCIP_Real facetcoefs[4];
    SCIP_Real facetconstant;
-   SCIP_Bool infeas;
-   SCIP_Bool fixed;
    int i;
    int round;
 
    SCIP_VAR* vars[4];
-   SCIP_CONSEXPR_EXPR* varexprs[4];
+   SCIP_EXPR* varexprs[4];
+   SCIP_INTERVAL bnds[4];
    const char* names[4] = { "x", "y", "w", "z" };
    SCIP_Real lb[] = {-0.2, -10.0, 1.0, 0.09};
    SCIP_Real ub[] = { 0.7,   8.0, 1.3,  2.1};
@@ -144,9 +147,7 @@ Test(separation, quadrilinear,
    for( round = 0; round < 2 ; ++round )
    {
       SCIP_CALL( SCIPcreate(&scip) );
-      SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-      conshdlr = SCIPfindConshdlr(scip, "expr");
-      assert(conshdlr != NULL);
+      SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
       /* create problem */
       SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -155,15 +156,12 @@ Test(separation, quadrilinear,
       {
          SCIP_CALL( SCIPcreateVarBasic(scip, &vars[i], names[i], lb[i], ub[i], 1.0, SCIP_VARTYPE_CONTINUOUS) );
          SCIP_CALL( SCIPaddVar(scip, vars[i]) );
-         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &varexprs[i], vars[i]) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexprs[i], vars[i], NULL, NULL) );
+         bnds[i].inf = lb[i];
+         bnds[i].sup = ub[i];
       }
 
-      /* get SCIP into SOLVING stage */
-      SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-
-      /* create solution */
-      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-      SCIP_CALL( SCIPsetSolVals(scip, sol, 4, vars, solval) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, &expr, 4, varexprs, -0.7, NULL, NULL) );
 
       /* round 0:
        * compute an overestimator for -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18
@@ -179,13 +177,12 @@ Test(separation, quadrilinear,
        */
       if( round == 1 )
       {
-         SCIP_CALL( SCIPfixVar(scip, vars[3], 1.0, &infeas, &fixed) );
-         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[3], 1.0) );
+         bnds[3].inf = 1.0;
+         bnds[3].sup = 1.0;
+         solval[3] = 1.0;
       }
 
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 4, varexprs, -0.7) );
-
-      SCIP_CALL( SCIPestimateConsExprExprHdlr(scip, conshdlr, expr, sol, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success, &branchcand) );
+      SCIP_CALL( estimateProduct(scip, expr, bnds, bnds, solval, round == 0, (round == 0 ? SCIPinfinity(scip) : -SCIPinfinity(scip)), facetcoefs, &facetconstant, &islocal, &success, &branchcand) );
 
       cr_assert(success);
       cr_assert(islocal);
@@ -197,11 +194,10 @@ Test(separation, quadrilinear,
       cr_expect_float_eq(facetconstant, exact_facet[round][i], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet[round][i]);
 
       /* release and free everything */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
       for( i = 0; i < 4; ++i )
       {
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
+         SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
          SCIP_CALL( SCIPreleaseVar(scip, &vars[i]) );
       }
       SCIP_CALL( SCIPfree(&scip) );
