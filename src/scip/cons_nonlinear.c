@@ -1584,6 +1584,19 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    return SCIP_OKAY;
 }
 
+/** includes an expression constraint upgrade method into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading nonlinear constraint, or NULL */
+   int                   priority,           /**< priority of upgrading method */
+   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
+   const char*           conshdlrname        /**< name of the constraint handler */
+   )
+{
+   // TODO
+   return SCIP_ERROR;
+}
+
 /** creates and captures a nonlinear constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -1618,12 +1631,7 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsNonlinear() call, if you don't need all the information */
-
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527} --e{715}*/
 
    /* find the nonlinear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -1633,13 +1641,9 @@ SCIP_RETCODE SCIPcreateConsNonlinear(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
-
    /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, FALSE) );
+   SCIP_CALL( createCons(scip, conshdlr, cons, name, expr, lhs, rhs, TRUE,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
    return SCIP_OKAY;
 }
@@ -1664,22 +1668,73 @@ SCIP_RETCODE SCIPcreateConsBasicNonlinear(
    return SCIP_OKAY;
 }
 
+/** creates and captures a quadratic nonlinear constraint */
+SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part */
+   int                   nquadterms,         /**< number of quadratic terms */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are separated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPR* expr;
+
+   assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
+   assert(nquadterms == 0 || (quadvars1 != NULL && quadvars2 != NULL && quadcoefs != NULL));
+
+   /* get expression constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("nonlinear constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create quadratic expression */
+   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, NULL, NULL) );
+   assert(expr != NULL);
+
+   /* create expression constraint */
+   /* TODO call with copy=FALSE if passing ownerdatacreate to SCIPcreateExprQuadratic */
+   SCIP_CALL( createCons(scip, conshdlr, cons, name, expr, lhs, rhs, TRUE,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+
+   /* release quadratic expression */
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+
+   return SCIP_OKAY;
+}
 
 
 // dummy implementations to resolve symbols
-
-/** includes an expression constraint upgrade method into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsUpgradeNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DECL_NONLINCONSUPGD((*exprconsupgd)),  /**< method to call for upgrading nonlinear constraint, or NULL */
-   int                   priority,           /**< priority of upgrading method */
-   SCIP_Bool             active,             /**< should the upgrading method by active by default? */
-   const char*           conshdlrname        /**< name of the constraint handler */
-   )
-{
-   // TODO
-   return SCIP_ERROR;
-}
 
 /** returns the expression of the given nonlinear constraint */
 SCIP_EXPR* SCIPgetExprConsNonlinear(
