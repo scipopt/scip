@@ -3115,83 +3115,6 @@ SCIP_RETCODE chooseOrderOfGenerators(
    return SCIP_OKAY;
 }
 
-/** checks whether given graph is acyclic.
- *
- *  Note: The graph has to be undirected, i.e., each edge has to exist in both directions.
- */
-static
-SCIP_RETCODE isAcyclicGraph(
-   SCIP*                 scip,               /**< SCIP instance */
-   SCIP_DIGRAPH*         graph,              /**< the graph to be checked */
-   SCIP_Bool*            result              /**< pointer to store whether the graph is acyclic */
-   )
-{
-   SCIP_QUEUE* queue;
-   SCIP_Bool* visited;
-   int* pred;
-   int nnodes;
-   int i;
-
-   assert( graph != NULL );
-   assert( result != NULL );
-
-   nnodes = SCIPdigraphGetNNodes(graph);
-
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nnodes) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &pred, nnodes) );
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes / 2, 2.0) );
-
-   /* we need this enclosing loop for unconnected graphs */
-   for (i = 0; i < nnodes; ++i)
-   {
-      if ( visited[i] )
-         continue;
-
-      SCIP_CALL( SCIPqueueInsertUInt(queue, (unsigned int) i) );
-      pred[i] = -1;
-
-      while ( ! SCIPqueueIsEmpty(queue) )
-      {
-         int* successors;
-         int currnode;
-         int j;
-
-         currnode = (int) SCIPqueueRemoveUInt(queue);
-         successors = SCIPdigraphGetSuccessors(graph, currnode);
-
-         for (j = 0; j < SCIPdigraphGetNSuccessors(graph, currnode); ++j)
-         {
-            /* don't go back to node that we came from */
-            if ( successors[j] == pred[currnode] )
-               continue;
-
-            /* if a node is encountered for the second time, we found a cycle */
-            if ( visited[successors[j]] )
-            {
-               SCIPfreeBufferArray(scip, &pred);
-               SCIPfreeBufferArray(scip, &visited);
-
-               *result = FALSE;
-               return SCIP_OKAY;
-            }
-
-            /* add successor of the current node to queue */
-            SCIP_CALL( SCIPqueueInsertUInt(queue, (unsigned int) successors[j]) );
-
-            pred[successors[j]] = currnode;
-            visited[successors[j]] = TRUE;
-         }
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &pred);
-   SCIPfreeBufferArray(scip, &visited);
-   SCIPqueueFree(&queue);
-
-   *result = TRUE;
-
-   return SCIP_OKAY;
-}
 
 /** builds the graph for symmetric subgroup detection from the given permutation of generators
  *
@@ -3220,7 +3143,6 @@ SCIP_RETCODE buildSubgroupGraph(
 {
    SCIP_DISJOINTSET* vartocomponent;
    SCIP_DISJOINTSET* comptocolor;
-   SCIP_DIGRAPH* graph;
    int** perms;
    int* components;
    int* componentbegins;
@@ -3266,7 +3188,6 @@ SCIP_RETCODE buildSubgroupGraph(
 
    SCIP_CALL( SCIPcreateDisjointset(scip, &vartocomponent, npermvars) );
    SCIP_CALL( SCIPcreateDisjointset(scip, &comptocolor, npermvars) );
-   SCIP_CALL( SCIPcreateDigraph(scip, &graph, npermvars) );
    SCIP_CALL( SCIPallocBufferArray( scip, &componentslastperm, npermvars) );
 
    for (k = 0; k < npermvars; ++k)
@@ -3276,7 +3197,6 @@ SCIP_RETCODE buildSubgroupGraph(
    {
       int* perm;
       int firstcolor = -1;
-      SCIP_Bool isacyclic;
 
       /* use given order of generators */
       perm = perms[components[componentbegins[compidx] + genorder[j]]];
@@ -3300,10 +3220,18 @@ SCIP_RETCODE buildSubgroupGraph(
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
          comp2 = SCIPdisjointsetFind(vartocomponent, img);
 
-         /* if both variables are in the same component or it is the second time that the
-          * component is used for this generator, it would create a cycle, so skip it
+         if ( comp1 == comp2 )
+         {
+            assert( firstcolor >= 0 );
+
+            componentslastperm[comp1] = j;
+            continue;
+         }
+
+         /* if it is the second time that the component is used for this generator,
+          * it is not guaranteed that the group acts like the symmetric group, so skip it
           */
-         if ( comp1 == comp2 || componentslastperm[comp1] == j || componentslastperm[comp2] == j )
+         if ( componentslastperm[comp1] == j || componentslastperm[comp2] == j )
             break;
 
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
@@ -3318,39 +3246,11 @@ SCIP_RETCODE buildSubgroupGraph(
 
          if ( firstcolor < 0 )
             firstcolor = color1;
-
-         /* add the edges for this swap to the graph */
-         SCIP_CALL( SCIPdigraphAddArc(graph, k, img, NULL) );
-         SCIP_CALL( SCIPdigraphAddArc(graph, img, k, NULL) );
       }
 
-      /* we only need to check for acyclicity if all swaps are valid */
-      if ( k == npermvars )
-      {
-         SCIP_CALL( isAcyclicGraph(scip, graph, &isacyclic) );
-      }
-
-      /* if the generator is invalid or the new graph is not acyclic, delete the newly added edges */
-      if ( k < npermvars || ! isacyclic )
-      {
-         int img;
-         int l;
-
-         for (l = 0; l < k; ++l)
-         {
-            img = perm[l];
-
-            if ( img > l )
-            {
-               SCIP_CALL( SCIPdigraphSetNSuccessors(graph, l, SCIPdigraphGetNSuccessors(graph, l) - 1) );
-               SCIP_CALL( SCIPdigraphSetNSuccessors(graph, img, SCIPdigraphGetNSuccessors(graph, img) - 1) );
-            }
-         }
-
-         /* go to next generator */
+      /* if the generator is invalid, delete the newly added edges, go to next generator */
+      if ( k < npermvars )
          continue;
-      }
-
       assert( firstcolor > -1 );
 
       /* check whether we need to resize */
@@ -3386,7 +3286,9 @@ SCIP_RETCODE buildSubgroupGraph(
          comp1 = SCIPdisjointsetFind(vartocomponent, k);
          comp2 = SCIPdisjointsetFind(vartocomponent, img);
 
-         assert( comp1 != comp2 );
+         /* components and colors don't have to be updated if the components are the same */
+         if ( comp1 == comp2 )
+            continue;
 
          color1 = SCIPdisjointsetFind(comptocolor, comp1);
          color2 = SCIPdisjointsetFind(comptocolor, comp2);
@@ -3473,7 +3375,6 @@ SCIP_RETCODE buildSubgroupGraph(
    SCIPfreeBufferArray(scip, &(graphcompvartype.colors));
    SCIPfreeBufferArray(scip, &(graphcompvartype.components));
    SCIPfreeBufferArray(scip, &componentslastperm);
-   SCIPdigraphFree(&graph);
    SCIPfreeDisjointset(scip, &comptocolor);
    SCIPfreeDisjointset(scip, &vartocomponent);
 
@@ -4381,7 +4282,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIPdebugMsg(scip, "    color %d has %d components with overall %d variables\n", j, compcolorbegins[j+1] - compcolorbegins[j],
             graphcompbegins[compcolorbegins[j+1]] - graphcompbegins[compcolorbegins[j]]);
 
-         /* check whether components of this color build an orbitope (with > 2 columns) */
+         /* check whether components of this color might build an orbitope (with > 2 columns) */
          for (k = compcolorbegins[j]; k < compcolorbegins[j+1]; ++k)
          {
             SCIP_VAR* firstvar;
