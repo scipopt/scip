@@ -4099,7 +4099,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_Bool useorbitope;
+      SCIP_Bool useorbitope = FALSE;
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
@@ -4210,7 +4210,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
       SCIPdebugMsg(scip, "  number of different colors in the graph: %d\n", ncompcolors);
 
-      if ( propdata->addweaksbcs )
+      if ( propdata->addstrongsbcs || propdata->addweaksbcs )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &chosencomppercolor, ncompcolors) );
          SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercolor, ncompcolors) );
@@ -4219,11 +4219,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
       norbitopesincomp = getNOrbitopesInComp(propdata->permvars, graphcomponents, graphcompbegins, compcolorbegins,
          ncompcolors, nvarsincomponent[i]);
 
-      /* if no usable orbitope could be found, do not handle suborbitopes */
-      if ( norbitopesincomp == 0 )
-         goto FREELOOPMEMORY;
       /* if there is just one orbitope satisfying the requirements, handle the full component by symresacks */
-      else if ( norbitopesincomp == 1 )
+      if ( norbitopesincomp == 1 )
       {
          int k;
 
@@ -4335,9 +4332,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
          /* only use the orbitope if there are binary rows */
-         if ( nbinarycomps == 0 )
-            useorbitope = FALSE;
-         else
+         if ( norbitopesincomp > 0 && nbinarycomps == 0 )
             useorbitope = TRUE;
 
          if ( isorbitope && useorbitope )
