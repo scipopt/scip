@@ -3462,6 +3462,19 @@ SCIP_Longint SCIPexprGetActivityTag(
    return expr->activitytag;
 }
 
+/** set the activity with tag for an expression */
+void SCIPexprSetActivity(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_INTERVAL         activity,           /**< new activity */
+   SCIP_Longint          activitytag         /**< tag associated with activity */
+   )
+{
+   assert(expr != NULL);
+
+   expr->activity = activity;
+   expr->activitytag = activitytag;
+}
+
 /** returns the curvature of an expression
  *
  *  @note Call SCIPcomputeExprCurvature before calling this function.
@@ -3686,5 +3699,3 @@ DUMMYIMPL(SCIPgetExprAuxVarNonlinear)
 DUMMYIMPL(SCIPnlpiOracleGetNVars)
 DUMMYIMPL(SCIPnlpiOracleGetNConstraints)
 DUMMYIMPL(SCIPnlpiOracleGetConstraintDegree)
-DUMMYIMPL(SCIPexprSetActivity)
-DUMMYIMPL(SCIPexprSetActivityTag)

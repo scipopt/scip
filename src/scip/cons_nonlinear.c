@@ -226,9 +226,9 @@ struct SCIP_ConshdlrData
 
    /* tags and counters */
    int                   auxvarid;           /**< unique id for the next auxiliary variable */
-   unsigned int          curboundstag;       /**< tag indicating current variable bounds */
-   unsigned int          lastboundrelax;     /**< tag when bounds where most recently relaxed */
-   unsigned int          lastvaractivitymethodchange; /**< tag when method used to evaluate activity of variables changed last */
+   SCIP_Longint          curboundstag;       /**< tag indicating current variable bounds */
+   SCIP_Longint          lastboundrelax;     /**< tag when bounds where most recently relaxed */
+   SCIP_Longint          lastvaractivitymethodchange; /**< tag when method used to evaluate activity of variables changed last */
    unsigned int          enforound;          /**< total number of enforcement calls, including current one */
    int                   lastconsindex;      /**< last used consindex, plus one */
 
@@ -804,8 +804,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", activity.inf, activity.sup);
 #endif
-      SCIPexprSetActivity(expr, activity);
-      SCIPexprSetActivityTag(expr, conshdlrdata->curboundstag);
+      SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
    }
 
    return SCIP_OKAY;

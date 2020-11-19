@@ -337,6 +337,14 @@ SCIP_Longint SCIPexprGetActivityTag(
    SCIP_EXPR*            expr                /**< expression */
    );
 
+/** set the activity with tag for an expression */
+SCIP_EXPORT
+void SCIPexprSetActivity(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_INTERVAL         activity,           /**< new activity */
+   SCIP_Longint          activitytag         /**< tag associated with activity */
+   );
+
 /** returns the curvature of an expression
  *
  *  @note Call SCIPcomputeExprCurvature before calling this function.
