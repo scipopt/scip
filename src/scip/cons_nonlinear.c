@@ -1726,7 +1726,7 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
 /* TODO: Implement all necessary constraint handler methods. The methods with #if SCIP_DISABLED_CODE ... #else #define ... are optional */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 {  /*lint --e{715}*/
@@ -1740,27 +1740,80 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONSFREE(consFreeNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_NLHDLR* nlhdlr;
+
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      if( nlhdlr->freehdlrdata != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->freehdlrdata)(scip, nlhdlr, &nlhdlr->data) );
+      }
+
+      /* free clocks */
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->detecttime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->enfotime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
+      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
+
+      SCIPfreeMemory(scip, &nlhdlr->name);
+      SCIPfreeMemoryNull(scip, &nlhdlr->desc);
+
+      SCIPfreeMemory(scip, &nlhdlr);
+   }
+
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
+   conshdlrdata->nlhdlrssize = 0;
+
+   /* free upgrade functions */
+   for( i = 0; i < conshdlrdata->nconsupgrades; ++i )
+   {
+      assert(conshdlrdata->consupgrades[i] != NULL);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->consupgrades[i]);
+   }
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->consupgrades, conshdlrdata->consupgradessize);
+
+   SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->canonicalizetime) );
+
+   SCIPqueueFree(&conshdlrdata->reversepropqueue);
+
+#if !1 //FIXME
+   assert(conshdlrdata->vp_randnumgen == NULL);
+#ifndef NDEBUG
+   for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
+      assert(conshdlrdata->vp_lp[i] == NULL);
+#endif
+#endif
+   assert(conshdlrdata->branchrandnumgen == NULL);
+
+   assert(SCIPhashmapGetNElements(conshdlrdata->var2expr) == 0);
+   SCIPhashmapFree(&conshdlrdata->var2expr);
+
+   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeNonlinear NULL
-#endif
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSINIT(consInitNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -1770,12 +1823,12 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSEXIT(consExitNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -1785,12 +1838,12 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -1800,12 +1853,12 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -1815,12 +1868,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -1830,12 +1883,12 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -1845,7 +1898,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 
 
 /** frees specific constraint data */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 {  /*lint --e{715}*/
@@ -1860,7 +1913,7 @@ SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 
 
 /** transforms constraint data into data belonging to the transformed problem */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSTRANS(consTransNonlinear)
 {  /*lint --e{715}*/
@@ -1875,7 +1928,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {  /*lint --e{715}*/
@@ -1890,7 +1943,7 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
 
 /** separation method of constraint handler for LP solutions */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 {  /*lint --e{715}*/
@@ -1905,7 +1958,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
 {  /*lint --e{715}*/
@@ -1964,7 +2017,7 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
 
 
 /** domain propagation method of constraint handler */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSPROP(consPropNonlinear)
 {  /*lint --e{715}*/
@@ -1979,7 +2032,7 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
 
 
 /** presolving method of constraint handler */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 {  /*lint --e{715}*/
@@ -2094,7 +2147,7 @@ SCIP_DECL_CONSDELVARS(consDelvarsNonlinear)
 
 
 /** constraint display method of constraint handler */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintNonlinear)
 {  /*lint --e{715}*/
@@ -2109,7 +2162,7 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
 
 
 /** constraint copying method of constraint handler */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyNonlinear)
 {  /*lint --e{715}*/
@@ -2124,7 +2177,7 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
 
 
 /** constraint parsing method of constraint handler */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSPARSE(consParseNonlinear)
 {  /*lint --e{715}*/
@@ -2139,7 +2192,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 {  /*lint --e{715}*/
@@ -2153,7 +2206,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 #endif
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#if SCIP_DISABLED_CODE
+#if 1
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
 {  /*lint --e{715}*/
