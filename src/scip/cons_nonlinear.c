@@ -1834,15 +1834,14 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    }
 
    /* create quadratic expression */
-   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
    assert(expr != NULL);
 
    /* create expression constraint */
-   /* TODO call with copy=FALSE if passing ownerdatacreate to SCIPcreateExprQuadratic */
-   SCIP_CALL( createCons(scip, conshdlr, cons, name, expr, lhs, rhs, TRUE,
+   SCIP_CALL( createCons(scip, conshdlr, cons, name, expr, lhs, rhs, FALSE,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
 
-   /* release quadratic expression */
+   /* release quadratic expression (captured by constraint now) */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
    return SCIP_OKAY;
