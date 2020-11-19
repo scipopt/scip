@@ -10515,44 +10515,6 @@ SCIP_HASHMAP* SCIPgetVarExprHashmapNonlinear(
    return SCIPconshdlrGetData(consexprhdlr)->var2expr;
 }
 
-/** notifies conshdlr that a variable expression is to be freed
- *
- * the conshdlr will then update its var2expr hashmap
- *
- * @note To be called only by var-exprhdlr.
- * @note Temporary method that will be replaced by ownerdata-free
- */
-SCIP_RETCODE SCIPnotifyExprVarFreedNonlinear(
-   SCIP*                      scip,           /**< SCIP data structure */
-   SCIP_CONSHDLR*             consexprhdlr,   /**< expression constraint handler */
-   SCIP_EXPR*        varexpr         /**< variable expression to be freed */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_VAR* var;
-
-   assert(scip != NULL);
-   assert(consexprhdlr != NULL);
-   assert(varexpr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(consexprhdlr);
-   assert(conshdlrdata != NULL);
-
-   var = SCIPgetVarExprVar(varexpr);
-   assert(var != NULL);
-
-   /* if no variable-expression stored for var hashmap, then the var hasn't been used in any constraint, so do nothing
-    * if variable-expression stored for var is different, then also do nothing
-    */
-   if( SCIPhashmapGetImage(conshdlrdata->var2expr, var) != (void*)varexpr )
-      return SCIP_OKAY;
-
-   /* remove var -> varexpr map from hashmap */
-   SCIP_CALL( SCIPhashmapRemove(conshdlrdata->var2expr, var) );
-
-   return SCIP_OKAY;
-}
-
 /** collects all bilinear terms for a given set of constraints
  *
  * @note This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),

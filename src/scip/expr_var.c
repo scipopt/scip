@@ -40,13 +40,6 @@
 struct SCIP_ExprData
 {
    SCIP_VAR*             var;                /**< SCIP variable that this constraint represents */
-
-   SCIP_CONS**           conss;              /**< constraints in which this variable appears */
-   int                   nconss;             /**< current number of constraints in conss */
-   int                   consssize;          /**< length of conss array */
-   SCIP_Bool             consssorted;        /**< is the array of constraints sorted */
-
-   int                   filterpos;          /**< position of eventdata in SCIP's event filter, -1 if not catching events */
 };
 
 /** simplifies a variable expression
@@ -171,7 +164,6 @@ SCIP_DECL_EXPRCOPYDATA(copydataVar)
    assert(sourceexpr != NULL);
 
    SCIP_CALL( SCIPallocClearBlockMemory(targetscip, targetexprdata) );
-   (*targetexprdata)->filterpos = -1;
 
    /* copying into a different SCIP should be handled on the SCIPexprCopy() level (via mapexpr) */
    assert(targetscip == sourcescip);
@@ -193,22 +185,10 @@ SCIP_DECL_EXPRFREEDATA(freedataVar)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
    assert(exprdata->var != NULL);
-   /* there should be no constraints left that still use this variable */
-   assert(exprdata->nconss == 0);
-   /* thus, there should also be no variable event catched (via this exprhdlr) */
-   assert(exprdata->filterpos == -1);
-
-#if !1  // FIXME move into cons_nonlinear
-   /* let cons_expr know that this variable expression is freed so that it can update its var2expr hashmap
-    * at some point, there will be an ownerdata-free call here, which will take care of this
-    */
-   SCIP_CALL( SCIPnotifyExprVarFreedNonlinear(scip, SCIPfindConshdlr(scip, "expr"), expr) );
-#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &exprdata->var) );
 
    /* free expression data */
-   SCIPfreeBlockMemoryArrayNull(scip, &exprdata->conss, exprdata->consssize);
    SCIPfreeBlockMemory(scip, &exprdata);
    SCIPexprSetData(expr, NULL);
 
@@ -410,7 +390,6 @@ SCIP_RETCODE SCIPcreateExprVar(
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprdata) );
    exprdata->var = var;
-   exprdata->filterpos = -1;
 
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
 

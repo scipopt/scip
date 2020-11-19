@@ -49,7 +49,6 @@
 #include "scip/debug.h"
 #include "scip/struct_nlhdlr.h"
 
-
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
 #define CONSHDLR_DESC          "handler for nonlinear constraints specified by algebraic expressions"
@@ -121,6 +120,8 @@ typedef struct
 /** data stored by constraint handler in an expression that belongs to a nonlinear constraint */
 struct SCIP_Expr_OwnerData
 {
+   SCIP_CONSHDLR*        conshdlr;           /** nonlinear constraint handler */
+
    /* locks */
    int                   nlockspos;          /**< positive locks counter */
    int                   nlocksneg;          /**< negative locks counter */
@@ -144,6 +145,14 @@ struct SCIP_Expr_OwnerData
    SCIP_Real             violscoremax;       /**< max of violation scores for branching stored for this expression */
    int                   nviolscores;        /**< number of violation scores stored for this expression */
    unsigned int          violscoretag;       /**< tag to decide whether a violation score of an expression needs to be initialized */
+
+   /* additional data for variable expressions (TODO move into sub-struct?) */
+   SCIP_CONS**           conss;              /**< constraints in which this variable appears */
+   int                   nconss;             /**< current number of constraints in conss */
+   int                   consssize;          /**< length of conss array */
+   SCIP_Bool             consssorted;        /**< is the array of constraints sorted */
+
+   int                   filterpos;          /**< position of eventdata in SCIP's event filter, -1 if not catching events */
 };
 
 /** constraint data for nonlinear constraints */
@@ -429,6 +438,35 @@ SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
    assert((*ownerdata)->nenfos == 0);
    assert((*ownerdata)->auxvar == NULL);
 
+   if( SCIPisExprVar(scip, expr) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_VAR* var;
+
+      /* there should be no constraints left that still use this variable */
+      assert((*ownerdata)->nconss == 0);
+      /* thus, there should also be no variable event catched (via this exprhdlr) */
+      assert((*ownerdata)->filterpos == -1);
+
+      SCIPfreeBlockMemoryArrayNull(scip, &(*ownerdata)->conss, (*ownerdata)->consssize);
+
+      /* update var2expr hashmap in conshdlrdata */
+      conshdlrdata = SCIPconshdlrGetData((*ownerdata)->conshdlr);
+      assert(conshdlrdata != NULL);
+
+      var = SCIPgetVarExprVar(expr);
+      assert(var != NULL);
+
+      /* if no variable-expression stored for var hashmap, then the var hasn't been used in any constraint, so do nothing
+       * if variable-expression stored for var is different, then also do nothing
+       */
+      if( SCIPhashmapGetImage(conshdlrdata->var2expr, var) != (void*)expr )
+         return SCIP_OKAY;
+
+      /* remove var -> varexpr map from hashmap */
+      SCIP_CALL( SCIPhashmapRemove(conshdlrdata->var2expr, var) );
+   }
+
    SCIPfreeBlockMemory(scip, ownerdata);
 
    return SCIP_OKAY;
@@ -444,6 +482,33 @@ SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, ownerdata) );
    (*ownerdata)->nenfos = -1;
+   (*ownerdata)->conshdlr = (SCIP_CONSHDLR*)ownerdatacreatedata;
+
+   if( SCIPisExprVar(scip, expr) )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_VAR* var;
+
+      (*ownerdata)->filterpos = -1;
+
+      /* add to var2expr hashmap if not having expr for var yet */
+
+      conshdlrdata = SCIPconshdlrGetData((*ownerdata)->conshdlr);
+      assert(conshdlrdata != NULL);
+
+      var = SCIPgetVarExprVar(expr);
+
+      if( !SCIPhashmapExists(conshdlrdata->var2expr, (void*)var) )
+      {
+         /* store the variable expression in the hashmap */
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->var2expr, (void*)var, (void*)expr) );
+      }
+      else
+      {
+         /* if expr was just created, then it shouldn't already be stored as image of var */
+         assert(SCIPhashmapGetImage(conshdlrdata->var2expr, (void*)var) !=  (void*)expr);
+      }
+   }
 
    *ownerdatafree = exprownerdataFree;
 
@@ -469,11 +534,10 @@ SCIP_RETCODE createExprVar(
    if( *expr == NULL )
    {
       /* create a new variable expression; this also captures the expression */
-      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerdataCreate, NULL) );
+      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
       assert(*expr != NULL);
-
-      /* store the variable expression in the hashmap */
-      SCIP_CALL( SCIPhashmapInsert(SCIPconshdlrGetData(conshdlr)->var2expr, (void*) var, (void*) *expr) );
+      /* exprownerdataCreate should have added var->expr to var2expr */
+      assert(SCIPhashmapGetImage(SCIPconshdlrGetData(conshdlr)->var2expr, (void*)var) == (void*)*expr);
    }
    else
    {
@@ -815,7 +879,7 @@ SCIP_RETCODE createCons(
    if( copyexpr )
    {
       /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
-      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerdataCreate, NULL) );
+      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
    }
    else
    {
