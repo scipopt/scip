@@ -1599,14 +1599,14 @@ SCIP_RETCODE extreduce_deleteEdges(
 
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
-/*
+
    if( extperma->mode == extred_full )
    {
       int ngenstarelims = 0;
       SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, extperma, graph, distdata, &ngenstarelims) );
       *nelims += ngenstarelims;
    }
-*/
+
 
    assert(graphmarkIsClean(redcostdata, graph));
 

@@ -175,7 +175,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    const int nnodes = graph_get_nNodes(graph);
    const int msts_datasize = STP_EXT_MAXDFSDEPTH * STP_EXTTREE_MAXNLEAVES_GUARD * 2;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-   const int msts_maxn = STP_EXT_MAXDFSDEPTH + 1;
+   const int msts_maxn = STP_EXT_MAXDFSDEPTH_GUARD;
 
 #ifndef NDEBUG
    const SCIP_Bool sds_vertical_useids = TRUE;
@@ -209,7 +209,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    SCIP_CALL( extreduce_mldistsInit(scip, msts_maxn, STP_EXT_MAXGRAD,
          STP_EXT_MAXGRAD, 1, TRUE, &(extperm->sds_horizontal)) );
 
-   SCIP_CALL( extreduce_contractionInit(scip, STP_EXT_MAXDFSDEPTH,
+   SCIP_CALL( extreduce_contractionInit(scip, STP_EXT_MAXDFSDEPTH_GUARD,
          STP_EXTTREE_MAXNLEAVES_GUARD, &(extperm->contration)) );
 
    extperm->sdsbias_horizontal = NULL;
@@ -264,7 +264,7 @@ SCIP_RETCODE extreduce_extPermaAddMLdistsbiased(
    EXTPERMA*             extpermanent        /**< (initialized) extension data */
 )
 {
-   const int msts_maxn = STP_EXT_MAXDFSDEPTH + 1;
+   const int msts_maxn = STP_EXT_MAXDFSDEPTH_GUARD;
 #ifndef NDEBUG
    const SCIP_Bool sds_vertical_useids = TRUE;
 #else
