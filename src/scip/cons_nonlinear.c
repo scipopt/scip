@@ -1731,7 +1731,8 @@ static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }

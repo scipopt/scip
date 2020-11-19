@@ -1520,8 +1520,9 @@ int getNSymhandableConss(
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
    conshdlr = SCIPfindConshdlr(scip, "bounddisjunction");
    nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   if( conshdlr != NULL )
+      nhandleconss += SCIPconshdlrGetNActiveConss(conshdlr);
 
    return nhandleconss;
 }
