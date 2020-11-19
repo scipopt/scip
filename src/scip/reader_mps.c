@@ -4311,7 +4311,7 @@ SCIP_RETCODE SCIPwriteMps(
          /* store constraint */
          consQuadratic[nConsQuadratic++] = cons;
 
-         expr = SCIPgetExprConsNonlinear(scip, cons);
+         expr = SCIPgetExprConsNonlinear(cons);
 
          /* collect linear coefficients of quadratic part */
          SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, NULL,
@@ -4329,8 +4329,8 @@ SCIP_RETCODE SCIPwriteMps(
             quadvars[j] = SCIPgetVarExprVar(qexpr);
          }
 
-         lhs = SCIPgetLhsConsNonlinear(scip, cons);
-         rhs = SCIPgetRhsConsNonlinear(scip, cons);
+         lhs = SCIPgetLhsConsNonlinear(cons);
+         rhs = SCIPgetRhsConsNonlinear(cons);
 
          /* correct side by constant */
          lhs -= SCIPisInfinity(scip, -lhs) ? 0.0 : constant;
@@ -4758,7 +4758,7 @@ SCIP_RETCODE SCIPwriteMps(
          SCIP_EXPR* expr;
 
          cons = consQuadratic[c];
-         expr = SCIPgetExprConsNonlinear(scip, cons);
+         expr = SCIPgetExprConsNonlinear(cons);
 
          SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nconsvars, &nbilin, NULL, NULL);
 

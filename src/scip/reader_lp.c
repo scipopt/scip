@@ -3891,8 +3891,8 @@ SCIP_RETCODE SCIPwriteLp(
             return SCIP_OKAY;
          }
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprConsNonlinear(scip, cons),
-            SCIPgetLhsConsNonlinear(scip, cons), SCIPgetRhsConsNonlinear(scip, cons), transformed) );
+         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprConsNonlinear(cons),
+            SCIPgetLhsConsNonlinear(cons), SCIPgetRhsConsNonlinear(cons), transformed) );
 
          consExpr[nConsExpr++] = cons;
       }

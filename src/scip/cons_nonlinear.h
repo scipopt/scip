@@ -298,20 +298,6 @@ SCIP_HASHMAP* SCIPgetVarExprHashmapNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
-/** notifies conshdlr that a variable expression is to be freed
- *
- * the conshdlr will then update its var2expr hashmap
- *
- * @note To be called only by var-exprhdlr.
- * @note Temporary method that will be replaced by ownerdata-free
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnotifyExprVarFreedNonlinear(
-   SCIP*                 scip,           /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,       /**< nonlinear constraint handler */
-   SCIP_EXPR*            varexpr         /**< variable expression to be freed */
-   );
-
 /** collects all bilinear terms for a given set of constraints
  *
  * @note This method should only be used for unit tests that depend on SCIPgetBilinTermsNonlinear(),
@@ -544,21 +530,18 @@ SCIP_RETCODE SCIPcomputeFacetVertexPolyhedralNonlinear(
 /** returns the expression of the given nonlinear constraint */
 SCIP_EXPORT
 SCIP_EXPR* SCIPgetExprConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the left hand side of a nonlinear constraint */
 SCIP_EXPORT
 SCIP_Real SCIPgetLhsConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the right hand side of a nonlinear constraint */
 SCIP_EXPORT
 SCIP_Real SCIPgetRhsConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
@@ -576,7 +559,6 @@ SCIP_RETCODE SCIPgetNlRowConsNonlinear(
  */
 SCIP_EXPORT
 SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 

@@ -42,6 +42,8 @@
 
 #include "scip/cons_nonlinear.h"
 #include "scip/expr_var.h"
+#include "scip/expr_sum.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/heur_subnlp.h"
@@ -1847,37 +1849,52 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    return SCIP_OKAY;
 }
 
-
-// dummy implementations to resolve symbols
-
 /** returns the expression of the given nonlinear constraint */
 SCIP_EXPR* SCIPgetExprConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   // TODO
-   return NULL;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->expr;
 }
 
 /** gets the left hand side of a nonlinear constraint */
 SCIP_Real SCIPgetLhsConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   // TODO
-   return 0.0;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->lhs;
 }
 
 /** gets the right hand side of a nonlinear constraint */
 SCIP_Real SCIPgetRhsConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   // TODO
-   return 0.0;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->rhs;
 }
 
 /** gets the nonlinear constraint as a nonlinear row representation. */
@@ -1887,8 +1904,23 @@ SCIP_RETCODE SCIPgetNlRowConsNonlinear(
    SCIP_NLROW**          nlrow               /**< pointer to store nonlinear row */
    )
 {
-   // TODO
-   return SCIP_ERROR;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons  != NULL);
+   assert(nlrow != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->nlrow == NULL )
+   {
+//FIXME      SCIP_CALL( createNlRow(scip, cons) );
+   }
+   assert(consdata->nlrow != NULL);
+   *nlrow = consdata->nlrow;
+
+   return SCIP_OKAY;
 }
 
 /** returns the root curvature of the given nonlinear constraint
@@ -1896,12 +1928,18 @@ SCIP_RETCODE SCIPgetNlRowConsNonlinear(
  * @note The curvature information are computed during CONSINITSOL.
  */
 SCIP_EXPRCURV SCIPgetCurvatureConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    )
 {
-   // TODO
-   return SCIP_EXPRCURV_UNKNOWN;
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->curv;
 }
 
 /** returns representation of the expression of the given expression constraint as quadratic form, if possible
@@ -1916,8 +1954,25 @@ SCIP_RETCODE SCIPcheckQuadraticConsNonlinear(
    SCIP_Bool*               isquadratic         /**< buffer to store whether constraint is quadratic */
    )
 {
-   // TODO
-   return SCIP_ERROR;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(isquadratic != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* check whether constraint expression is quadratic in extended formulation */
+   SCIP_CALL( SCIPcheckExprQuadratic(scip, consdata->expr, isquadratic) );
+
+   /* if not quadratic in non-extended formulation, then do indicate quadratic */
+   if( *isquadratic )
+      *isquadratic = SCIPexprAreQuadraticExprsVariables(consdata->expr);
+
+   return SCIP_OKAY;
 }
 
 /** adds coef * var to expression constraint
@@ -1931,8 +1986,66 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
    SCIP_VAR*             var                 /**< variable */
    )
 {
-   // TODO
-   return SCIP_ERROR;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* varexpr;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIPerrorMessage("SCIPaddLinearTermConsNonlinear can only be called in problem stage.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* we should have an original constraint */
+   assert(SCIPconsIsOriginal(cons));
+
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* we should not have collected additional data for it
+    * if some of these asserts fail, we may have to remove it and add some code to keep information uptodate
+    */
+   assert(consdata->nvarexprs == 0);
+   assert(consdata->varexprs == NULL);
+   assert(!consdata->catchedevents);
+
+   SCIP_CALL( createExprVar(scip, conshdlr, &varexpr, var) );
+
+   /* append to sum, if consdata->expr is sum and not used anywhere else */
+   if( SCIPexprGetNUses(consdata->expr) == 1 && SCIPisExprSum(scip, consdata->expr) )
+   {
+      SCIP_CALL( SCIPappendExprSumExpr(scip, consdata->expr, varexpr, coef) );
+   }
+   else
+   {
+      /* create new expression = 1 * consdata->expr + coef * var */
+      SCIP_EXPR* children[2] = { consdata->expr, varexpr };
+      SCIP_Real coefs[2] = { 1.0, coef };
+
+      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+
+      /* release old root expr */
+      SCIP_CALL( SCIPreleaseExpr(scip, &children[0]) );
+   }
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
+
+   /* not sure we care about any of these flags for original constraints */
+   consdata->issimplified = FALSE;
+   consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
 }
 
 /** returns an equivalent linear constraint if possible */
@@ -1942,6 +2055,53 @@ SCIP_RETCODE SCIPgetLinearConsNonlinear(
    SCIP_CONS**           lincons             /**< buffer to store linear constraint data */
    )
 {
-   // TODO
-   return SCIP_ERROR;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   SCIP_VAR** vars;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(lincons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   expr = consdata->expr;
+   assert(expr != NULL);
+
+   *lincons = NULL;
+
+   /* not a linear constraint if the root expression is not a sum */
+   if( !SCIPisExprSum(scip, expr) )
+      return SCIP_OKAY;
+
+   /* if at least one child is not a variable, then not a linear constraint */
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+      if( !SCIPisExprVar(scip, SCIPexprGetChildren(expr)[i]) )
+         return SCIP_OKAY;
+
+   /* collect all variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPexprGetNChildren(expr)) );
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+      vars[i] = SCIPgetVarExprVar(SCIPexprGetChildren(expr)[i]);
+
+   /* consider constant part of the sum expression */
+   lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : (consdata->lhs - SCIPgetConstantExprSum(expr));
+   rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : (consdata->rhs - SCIPgetConstantExprSum(expr));
+
+   SCIP_CALL( SCIPcreateConsLinear(scip, lincons, SCIPconsGetName(cons),
+         SCIPexprGetNChildren(expr), vars, SCIPgetCoefsExprSum(expr),
+         lhs, rhs,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
 }

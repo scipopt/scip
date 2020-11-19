@@ -1443,7 +1443,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             assert(permutedcons != NULL);
 
             /* simplify permuted expr in order to guarantee sorted variables */
-            permutedexpr = SCIPgetExprConsNonlinear(scip, permutedcons);
+            permutedexpr = SCIPgetExprConsNonlinear(permutedcons);
             SCIP_CALL( SCIPsimplifyExpr(scip, permutedexpr, &permutedexpr, &success, &infeasible, NULL, NULL) );
             assert(!infeasible);
 
@@ -1454,9 +1454,9 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
 
                cons2 = SCIPconshdlrGetConss(exprconshdlr)[j];
 
-               if( SCIPisEQ(scip, SCIPgetRhsConsNonlinear(scip, cons2), SCIPgetRhsConsNonlinear(scip, permutedcons))
-                  && SCIPisEQ(scip, SCIPgetLhsConsNonlinear(scip, cons2), SCIPgetLhsConsNonlinear(scip, permutedcons))
-                  && (SCIPcompareExpr(scip, SCIPgetExprConsNonlinear(scip, cons2), permutedexpr) == 0) )
+               if( SCIPisEQ(scip, SCIPgetRhsConsNonlinear(cons2), SCIPgetRhsConsNonlinear(permutedcons))
+                  && SCIPisEQ(scip, SCIPgetLhsConsNonlinear(cons2), SCIPgetLhsConsNonlinear(permutedcons))
+                  && (SCIPcompareExpr(scip, SCIPgetExprConsNonlinear(cons2), permutedexpr) == 0) )
                {
                   found = TRUE;
                   break;
@@ -2153,7 +2153,7 @@ SCIP_RETCODE computeSymmetryGroup(
       else if ( strcmp(conshdlrname, "expr") == 0 )
       {
          SCIP_EXPR* expr;
-         SCIP_EXPR* rootexpr = SCIPgetExprConsNonlinear(scip, cons);
+         SCIP_EXPR* rootexpr = SCIPgetExprConsNonlinear(cons);
 
          /* for expression constraints, only collect auxiliary variables for now */
          SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
