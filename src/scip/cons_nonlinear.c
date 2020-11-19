@@ -1788,13 +1788,18 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
 
    SCIPqueueFree(&conshdlrdata->reversepropqueue);
 
-#if !1 //FIXME
-   assert(conshdlrdata->vp_randnumgen == NULL);
-#ifndef NDEBUG
+   if( conshdlrdata->vp_randnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->vp_randnumgen);
+
+   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
    for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
-      assert(conshdlrdata->vp_lp[i] == NULL);
-#endif
-#endif
+   {
+      if( conshdlrdata->vp_lp[i] != NULL )
+      {
+         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
+      }
+   }
+
    assert(conshdlrdata->branchrandnumgen == NULL);
 
    assert(SCIPhashmapGetNElements(conshdlrdata->var2expr) == 0);
