@@ -259,8 +259,8 @@ SCIP_RETCODE createProbLinear1(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success);
 
@@ -324,8 +324,8 @@ SCIP_RETCODE createProbLinear2(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success);
 
@@ -389,8 +389,8 @@ SCIP_RETCODE createProbKnapsack(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success);
 
@@ -449,8 +449,8 @@ SCIP_RETCODE createProbSetppc(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success);
 
@@ -504,8 +504,8 @@ SCIP_RETCODE createProbLogicor(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -1 * <z> + 1 * <x>^2 -1 * <y>^2 - 2 * <z>^2 + 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -1 * <z> + 1 * <x>^2 -1 * <y>^2 - 2 * <z>^2 + 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success);
 
@@ -560,8 +560,8 @@ SCIP_RETCODE createProbVarbound(
    SCIP_CALL( SCIPaddVar(scip, zvar) );
    SCIP_CALL( SCIPaddVar(scip, objvar) );
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[expr] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <c>: <objvar> -3 * <z> + 2 * <x>^2 -1 * <y>^2 + 1 * <z>^2 - 2 * <x> * <y> + 1 * <x> * <z> + 1 * <y> * <z> == 2;",
       TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_expect(success);
 

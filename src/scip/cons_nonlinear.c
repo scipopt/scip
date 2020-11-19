@@ -39,6 +39,7 @@
 /*lint -e528*/
 
 #include <assert.h>
+#include <ctype.h>
 
 #include "scip/cons_nonlinear.h"
 #include "scip/expr_var.h"
@@ -2153,18 +2154,36 @@ SCIP_DECL_CONSDELVARS(consDelvarsNonlinear)
 
 
 /** constraint display method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPRINT(consPrintNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   /* print left hand side for ranged constraints */
+   if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+   {
+      SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
+   }
+
+   /* print expression */
+   SCIP_CALL( SCIPprintExpr(scip, consdata->expr, file) );
+
+   /* print right hand side */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);
+   else if( !SCIPisInfinity(scip, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " <= %.15g", consdata->rhs);
+   else if( !SCIPisInfinity(scip, -consdata->lhs) )
+      SCIPinfoMessage(scip, file, " >= %.15g", consdata->lhs);
+   else
+      SCIPinfoMessage(scip, file, " [free]");
 
    return SCIP_OKAY;
 }
-#else
-#define consPrintNonlinear NULL
-#endif
 
 
 /** constraint copying method of constraint handler */
@@ -2183,18 +2202,140 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
 
 
 /** constraint parsing method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPARSE(consParseNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_Real  lhs;
+   SCIP_Real  rhs;
+   const char* endptr;
+   SCIP_EXPR* consexprtree;
+
+   SCIPdebugMsg(scip, "cons_nonlinear::consparse parsing %s\n", str);
+
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
+
+   *success = FALSE;
+
+   /* return if string empty */
+   if( !*str )
+      return SCIP_OKAY;
+
+   endptr = str;
+
+   /* set left and right hand side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs =  SCIPinfinity(scip);
+
+   /* parse constraint to get lhs, rhs, and expression in between (from cons_linear.c::consparse, but parsing whole string first, then getting expression) */
+
+   /* check for left hand side */
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   {
+      /* there is a number coming, maybe it is a left-hand-side */
+      if( !SCIPstrToRealValue(str, &lhs, (char**)&endptr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
+         return SCIP_READERROR;
+      }
+
+      /* ignore whitespace */
+      while( isspace((unsigned char)*endptr) )
+         ++endptr;
+
+      if( endptr[0] != '<' || endptr[1] != '=' )
+      {
+         /* no '<=' coming, so it was the beginning of the expression and not a left-hand-side */
+         lhs = -SCIPinfinity(scip);
+      }
+      else
+      {
+         /* it was indeed a left-hand-side, so continue parsing after it */
+         str = endptr + 2;
+
+         /* ignore whitespace */
+         while( isspace((unsigned char)*str) )
+            ++str;
+      }
+   }
+
+   SCIPdebugMsg(scip, "str should start at beginning of expr: %s\n", str);
+
+   /* parse expression: so far we did not allocate memory, so can just return in case of readerror */
+   SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+
+   /* check for left or right hand side */
+   while( isspace((unsigned char)*str) )
+      ++str;
+
+   /* check for free constraint */
+   if( strncmp(str, "[free]", 6) == 0 )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIPerrorMessage("cannot have left hand side and [free] status \n");
+         SCIP_CALL( SCIPreleaseExpr(scip, &consexprtree) );
+         return SCIP_OKAY;
+      }
+      *success = TRUE;
+   }
+   else
+   {
+      switch( *str )
+      {
+         case '<':
+            *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+            break;
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               SCIP_CALL( SCIPreleaseExpr(scip, &consexprtree) );
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
+               lhs = rhs;
+            }
+            break;
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               SCIP_CALL( SCIPreleaseExpr(scip, &consexprtree) );
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &lhs, (char**)&endptr);
+               break;
+            }
+         case '\0':
+            *success = TRUE;
+            break;
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *str);
+            SCIP_CALL( SCIPreleaseExpr(scip, &consexprtree) );
+            return SCIP_OKAY;
+      }
+   }
+
+   /* create constraint */
+   SCIP_CALL( createCons(scip, conshdlr, cons, name,
+      consexprtree, lhs, rhs, FALSE,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+   assert(*cons != NULL);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &consexprtree) );
+
+   SCIPdebugMsg(scip, "created nonlinear constraint: <%s>\n", SCIPconsGetName(*cons));
 
    return SCIP_OKAY;
 }
-#else
-#define consParseNonlinear NULL
-#endif
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
