@@ -722,10 +722,9 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {  /*lint --e{715}*/
-#if !1  //FIXME
    SCIP_EVENTTYPE eventtype;
-   SCIP_CONSHDLR* conshdlr;
    SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    eventtype = SCIPeventGetType(event);
    assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED));
@@ -739,10 +738,11 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          SCIPvarGetLbLocal(SCIPeventGetVar(event)), SCIPvarGetUbLocal(SCIPeventGetVar(event)),
          SCIPvarGetLbGlobal(SCIPeventGetVar(event)), SCIPvarGetUbGlobal(SCIPeventGetVar(event)));
 
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
    /* we only catch varevents for variables in constraints, so there should be constraints */
-   assert(SCIPgetConsExprExprVarNConss(expr) > 0);
-   conshdlr = SCIPconsGetHdlr(SCIPgetConsExprExprVarConss(expr)[0]);  /*lint !e613*/
-   assert(conshdlr != NULL);
+   assert(ownerdata->nconss > 0);
+   assert(ownerdata->conss != NULL);
 
    /* notify constraints that use this variable expression (expr) to repropagate and possibly resimplify
     * - propagation can only find something new if a bound was tightened
@@ -752,18 +752,12 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    if( eventtype & (SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED) )
    {
       SCIP_CONSDATA* consdata;
-      SCIP_CONS** conss;
-      int nconss;
       int c;
 
-      nconss = SCIPgetConsExprExprVarNConss(expr);
-      conss = SCIPgetConsExprExprVarConss(expr);
-      assert(conss != NULL || nconss == 0);
-
-      for( c = 0; c < nconss; ++c )
+      for( c = 0; c < ownerdata->nconss; ++c )
       {
-         assert(conss[c] != NULL);  /*lint !e613*/
-         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+         assert(ownerdata->conss[c] != NULL);
+         consdata = SCIPconsGetData(ownerdata->conss[c]);
 
          /* if boundtightening, then mark constraints to be propagated again
           * TODO we could try be more selective here and only trigger a propagation if a relevant bound has changed,
@@ -773,14 +767,14 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
          if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
          {
             consdata->ispropagated = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+            SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(ownerdata->conss[c]));
          }
 
          /* if still in presolve (but not probing), then mark constraints to be unsimplified */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !SCIPinProbing(scip) )
          {
             consdata->issimplified = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for simplify\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+            SCIPdebugMsg(scip, "  marked <%s> for simplify\n", SCIPconsGetName(ownerdata->conss[c]));
          }
       }
    }
@@ -789,8 +783,9 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_INTERVAL activity;
 
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
       assert(conshdlrdata != NULL);
 
       /* increase tag on bounds */
@@ -804,13 +799,14 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       /* update the activity of the var-expr here immediately
        * (we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated)
        */
-      SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &expr->activity, conshdlrdata->intevalvar, conshdlrdata) );
+      SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
-      SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", expr->exprhdlr->name, expr->activity.inf, expr->activity.sup);
+      SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", activity.inf, activity.sup);
 #endif
-      expr->activitytag = conshdlrdata->curboundstag;
+      SCIPexprSetActivity(expr, activity);
+      SCIPexprSetActivityTag(expr, conshdlrdata->curboundstag);
    }
-#endif
+
    return SCIP_OKAY;
 }
 
