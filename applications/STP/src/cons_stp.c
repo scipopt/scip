@@ -1816,7 +1816,9 @@ const int* SCIPStpGetPcImplStarts(
    conshdlr = SCIPfindConshdlr(scip, "stp");
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata);
-   assert(conshdlrdata->pcimplications);
+
+   if( !(conshdlrdata->pcimplications) )
+      return NULL;
 
    return sepaspecial_pcimplicationsGetStarts(conshdlrdata->pcimplications);
 }
@@ -1833,7 +1835,9 @@ int SCIPStpGetPcImplNstarts(
    conshdlr = SCIPfindConshdlr(scip, "stp");
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata);
-   assert(conshdlrdata->pcimplications);
+
+   if( !(conshdlrdata->pcimplications) )
+      return 0;
 
    return sepaspecial_pcimplicationsGetNstarts(conshdlrdata->pcimplications);
 }
@@ -1850,7 +1854,9 @@ const int* SCIPStpGetPcImplVerts(
    conshdlr = SCIPfindConshdlr(scip, "stp");
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata);
-   assert(conshdlrdata->pcimplications);
+
+   if( !(conshdlrdata->pcimplications) )
+      return NULL;
 
    return sepaspecial_pcimplicationsGetVerts(conshdlrdata->pcimplications);
 }
