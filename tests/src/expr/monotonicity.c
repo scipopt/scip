@@ -267,7 +267,7 @@ Test(monotonicity, pow)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
    SCIP_CALL( chgBounds(x, -1.0, 1.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
-#if !1
+
    SCIP_CALL( createExpr("signpower(<x>,2)", "signpower") );
 
    SCIP_CALL( chgBounds(x, 0.0, SCIPinfinity(scip)) );
@@ -276,7 +276,6 @@ Test(monotonicity, pow)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
    SCIP_CALL( chgBounds(x, -1.0, 1.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
-#endif
 }
 
 /* check for product expression with two factors */

@@ -155,7 +155,6 @@ Test(curvature, power)
    SCIP_CALL( checkCurvature("(<z>[C])^(-3)", "pow", SCIP_EXPRCURV_CONCAVE) );
 }
 
-#if !1
 /* check for signpower expression */
 Test(curvature, signpower)
 {
@@ -170,7 +169,6 @@ Test(curvature, signpower)
    SCIP_CALL( checkCurvature("signpower(<z>[C],2)", "signpower", SCIP_EXPRCURV_CONCAVE) );
    SCIP_CALL( checkCurvature("signpower(<z>[C],2.5)", "signpower", SCIP_EXPRCURV_CONCAVE) );
 }
-#endif
 
 /* check for product expression */
 Test(curvature, product)

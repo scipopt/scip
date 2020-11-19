@@ -177,7 +177,6 @@ Test(derivative, pow)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 Test(derivative, signpow)
 {
    SCIP_EXPR* expr;
@@ -204,6 +203,7 @@ Test(derivative, signpow)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if !1
 Test(derivative, exp)
 {
    SCIP_EXPR* expr;

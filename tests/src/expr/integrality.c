@@ -136,13 +136,11 @@ Test(integrality, pow)
    SCIP_CALL( checkIntegrality("<y>^(-2)", FALSE) );
 }
 
-#if !1
 Test(integrality, signpower)
 {
    SCIP_CALL( checkIntegrality("signpower(<x>,2)", TRUE) );
    SCIP_CALL( checkIntegrality("signpower(<y>,2.2)", FALSE) );
 }
-#endif
 
 Test(integrality, product)
 {

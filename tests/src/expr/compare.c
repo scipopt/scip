@@ -97,7 +97,7 @@ void setup(void)
    SCIP_CALL( SCIPcreateExprPow(scip, &expr_sqrx, expr_x, 2.0, NULL, NULL) );
 
    /* create expression signsqrx: signpower(x,2) */
-//FIXME   SCIP_CALL( SCIPcreateExprSignpower(scip, &expr_signsqrx, expr_x, 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSignpower(scip, &expr_signsqrx, expr_x, 2.0, NULL, NULL) );
 
    /* create expression half_srqx: 0.5*x^2 */
    aux = 0.5;

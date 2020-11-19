@@ -318,7 +318,6 @@ Test(evalexpr, power, .description = "Tests expression evaluation for power expr
    SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
 }
 
-#if !1
 Test(evalexpr, signpower, .description = "Tests expression evaluation for signpower expressions.")
 {
    SCIP_EXPR* expr;
@@ -362,7 +361,6 @@ Test(evalexpr, signpower, .description = "Tests expression evaluation for signpo
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
 }
-#endif
 
 /* creates expression for f(x,y) = 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2*x + 1)^(-1) ) */
 static

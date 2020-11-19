@@ -131,7 +131,6 @@ Test(parse, simple2)
    SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
 }
 
-#if !1
 Test(parse, signpower)
 {
    SCIP_EXPR* crazyexpr;
@@ -141,7 +140,7 @@ Test(parse, signpower)
    /* create expression */
    cr_expect_eq(SCIPparseExpr(scip, &crazyexpr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
-   cr_assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(crazyexpr)), "signpower") == 0);
+   cr_assert(SCIPisExprSignpower(scip, crazyexpr));
    cr_assert_eq(SCIPgetExponentExprPow(crazyexpr), 2.5);
 
    child = SCIPexprGetChildren(crazyexpr)[0];
@@ -151,7 +150,6 @@ Test(parse, signpower)
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &crazyexpr) );
 }
-#endif
 
 Test(parse, eval)
 {
