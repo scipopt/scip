@@ -3557,7 +3557,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "suborbitope_%d_%d", graphcoloridx, propdata->norbitopes);
 
    SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, orbitopevarmatrix,
-         SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, TRUE, FALSE, mayinteract, propdata->conssaddlp,
+         SCIP_ORBITOPETYPE_FULL, nrows, ncols, FALSE, mayinteract, FALSE, FALSE, propdata->conssaddlp,
          TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
