@@ -24,6 +24,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/struct_expr.h"
+#include "nlpi/nlpi_ipopt.h" /* to check whether LAPACK is around */
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -224,7 +225,8 @@ Test(quad, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPhashmapInsert(assumevarfixed, (void*)z, NULL) );
 
    SCIP_CALL( SCIPcomputeExprQuadraticCurvature(scip, expr, &curv, assumevarfixed, FALSE) );
-   cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
+   if( SCIPisIpoptAvailableIpopt() )  /* currently check only with Ipopt; curvaturechecked isn't set if assumevarfixed is set */
+      cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIPhashmapFree(&assumevarfixed);
 
