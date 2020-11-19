@@ -1216,6 +1216,8 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to be estimated */
+   SCIP_INTERVAL*        localbounds,        /**< current bounds for children */
+   SCIP_INTERVAL*        globalbounds,       /**< global bounds for children */
    SCIP_Real*            refpoint,           /**< children values for the reference point where to estimate */
    SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
    SCIP_Real             targetvalue,        /**< a value that the estimator shall exceed, can be +/-infinity */
@@ -1239,7 +1241,7 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    if( exprhdlr->estimate != NULL )
    {
       SCIPclockStart(exprhdlr->estimatetime, set);
-      SCIP_CALL( exprhdlr->estimate(set->scip, expr, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
+      SCIP_CALL( exprhdlr->estimate(set->scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
       SCIPclockStop(exprhdlr->estimatetime, set);
 
       /* update statistics */
@@ -1257,10 +1259,10 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to be estimated */
+   SCIP_INTERVAL*        bounds,             /**< bounds for children */
    SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
    SCIP_Real*            coefs[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store coefficients of computed estimators */
    SCIP_Real*            constant[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store constant of computed estimators */
-   SCIP_Bool*            islocal[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to return whether estimator validity depends on children activity */
    int*                  nreturned           /**< buffer to store number of estimators that have been computed */
    )
 {
@@ -1275,7 +1277,7 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
    if( exprhdlr->initestimates )
    {
       SCIPclockStart(expr->exprhdlr->estimatetime, set);
-      SCIP_CALL( exprhdlr->initestimates(set->scip, expr, overestimate, coefs, constant, islocal, nreturned) );
+      SCIP_CALL( exprhdlr->initestimates(set->scip, expr, bounds, overestimate, coefs, constant, nreturned) );
       SCIPclockStop(expr->exprhdlr->estimatetime, set);
 
       ++exprhdlr->nestimatecalls;

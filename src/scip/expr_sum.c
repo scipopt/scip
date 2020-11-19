@@ -800,7 +800,6 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
 
    assert(coefs[0] != NULL);
    assert(constant[0] != NULL);
-   assert(islocal[0] != NULL);
    assert(nreturned != NULL);
 
    exprdata = SCIPexprGetData(expr);
@@ -808,7 +807,6 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
 
    BMScopyMemoryArray(coefs[0], exprdata->coefficients, SCIPexprGetNChildren(expr));
    *constant[0] = exprdata->constant;
-   *islocal[0] = FALSE;
    *nreturned = 1;
 
    return SCIP_OKAY;

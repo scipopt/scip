@@ -991,22 +991,22 @@ SCIP_RETCODE buildPowEstimator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRDATA*        exprdata,           /**< expression data */
    SCIP_Bool             overestimate,       /**< is this an overestimator? */
-   SCIP_Real             childlb,            /**< lower bound on the child */
-   SCIP_Real             childub,            /**< upper bound on the child */
+   SCIP_Real             childlb,            /**< local lower bound on the child */
+   SCIP_Real             childub,            /**< local upper bound on the child */
+   SCIP_Real             childglb,           /**< global lower bound on the child */
+   SCIP_Real             childgub,           /**< global upper bound on the child */
    SCIP_Bool             childintegral,      /**< whether child is integral */
    SCIP_Real             refpoint,           /**< reference point */
    SCIP_Real             exponent,           /**< esponent */
    SCIP_Real*            coef,               /**< pointer to store the coefficient of the estimator */
    SCIP_Real*            constant,           /**< pointer to store the constant of the estimator */
    SCIP_Bool*            success,            /**< pointer to store whether the estimator was built successfully */
-   SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is local */
+   SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is valid w.r.t. local bounds only */
    SCIP_Bool*            branchcand          /**< pointer to indicate whether to consider child for branching (initialized to TRUE) */
 )
 {
    SCIP_Bool isinteger;
    SCIP_Bool iseven;
-   SCIP_Real childglb;
-   SCIP_Real childgub;
 
    assert(scip != NULL);
    assert(exprdata != NULL);
@@ -1015,10 +1015,6 @@ SCIP_RETCODE buildPowEstimator(
    assert(success != NULL);
    assert(islocal != NULL);
    assert(branchcand != NULL);
-
-   // FIXME
-   childglb = -SCIPinfinity(scip);
-   childgub =  SCIPinfinity(scip);
 
    isinteger = EPSISINT(exponent, 0.0);
    iseven = isinteger && EPSISINT(exponent / 2.0, 0.0);
@@ -1974,10 +1970,8 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    if( SCIPisInfinity(scip, REALABS(*refpoint)) )
       return SCIP_OKAY;
 
-//   childlb = SCIPvarGetLbLocal(childvar);
-//   childub = SCIPvarGetUbLocal(childvar);
-   childlb = SCIPexprGetActivity(child).inf;
-   childub = SCIPexprGetActivity(child).sup;
+   childlb = localbounds[0].inf;
+   childub = localbounds[0].sup;
 
    /* if child is essentially constant, then there should be no point in separation */
    if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
@@ -2003,7 +1997,7 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    }
    assert(isinteger || childlb >= 0.0);
 
-   SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, SCIPexprIsIntegral(child), MAX(childlb, *refpoint), exponent, coefs,
+   SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, globalbounds[0].inf, globalbounds[0].sup, SCIPexprIsIntegral(child), MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
 
    return SCIP_OKAY;
@@ -2114,6 +2108,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
    SCIP_Bool isinteger;
    SCIP_Bool branchcand = TRUE;
    SCIP_Bool success;
+   SCIP_Bool islocal;
    SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Bool overest[6] = {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
@@ -2122,12 +2117,11 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
    assert(scip != NULL);
    assert(expr != NULL);
 
-   /* get aux variables: we over- and/or underestimate childvar^exponent  */
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-   childlb = SCIPexprGetActivity(child).inf;
-   childub = SCIPexprGetActivity(child).sup;
+   childlb = bounds[0].inf;
+   childub = bounds[0].sup;
 
    /* if child is essentially constant, then there should be no point in separation */
    if( SCIPisEQ(scip, childlb, childub) )
@@ -2172,8 +2166,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
 
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
-      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, SCIPexprIsIntegral(child), refpoint, exponent,
-            coefs[*nreturned], constant[*nreturned], &success, islocal[*nreturned], &branchcand) );
+      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, SCIPexprIsIntegral(child), refpoint, exponent,
+            coefs[*nreturned], constant[*nreturned], &success, &islocal, &branchcand) );
 
       if( success )
          ++*nreturned;
@@ -2665,7 +2659,6 @@ static
 SCIP_DECL_EXPRESTIMATE(estimateSignpower)
 {  /*lint --e{715}*/
    SCIP_EXPRDATA* exprdata;
-   SCIP_EXPR* child;
    SCIP_Real childlb;
    SCIP_Real childub;
    SCIP_Real childglb;
@@ -2686,26 +2679,21 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
 
    *success = FALSE;
 
-   /* get aux variables: we over- or underestimate signpower(childvar,exponent)  */
-   child = SCIPexprGetChildren(expr)[0];
-   assert(child != NULL);
-
    SCIPdebugMsg(scip, "%sestimation of signed x^%g at x=%g\n", overestimate ? "over" : "under", SCIPgetExponentExprPow(expr), *refpoint);
 
    /* we can not generate a cut at +/- infinity */
    if( SCIPisInfinity(scip, REALABS(*refpoint)) )
       return SCIP_OKAY;
 
-   childlb = SCIPexprGetActivity(child).inf;
-   childub = SCIPexprGetActivity(child).sup;
+   childlb = localbounds[0].inf;
+   childub = localbounds[0].sup;
 
    /* if child is essentially constant, then there should be no point in separation */
    if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
       return SCIP_OKAY;
 
-   // FIXME
-   childglb = -SCIPinfinity(scip);
-   childgub = SCIPinfinity(scip);
+   childglb = globalbounds[0].inf;
+   childgub = globalbounds[0].sup;
 
    exprdata = SCIPexprGetData(expr);
    exponent = exprdata->exponent;
@@ -2750,15 +2738,13 @@ SCIP_DECL_EXPRESTIMATE(estimateSignpower)
 static
 SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
 {
-   SCIP_EXPR* child;
+   SCIP_EXPRDATA* exprdata;
    SCIP_Real childlb;
    SCIP_Real childub;
-   SCIP_Real childglb;
-   SCIP_Real childgub;
-   SCIP_EXPRDATA* exprdata;
    SCIP_Real exponent;
    SCIP_Bool branchcand;
    SCIP_Bool success;
+   SCIP_Bool islocal;
    SCIP_Real refpointsunder[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Bool overest[6] = {FALSE, FALSE, FALSE, TRUE, TRUE, TRUE};
@@ -2770,16 +2756,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
    assert(SCIPexprGetNChildren(expr) == 1);
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "signpower") == 0);
 
-   /* get aux variables: we over- and/or underestimate signpower(childvar,exponent) */
-   child = SCIPexprGetChildren(expr)[0];
-   assert(child != NULL);
-
-   childlb = SCIPexprGetActivity(child).inf;
-   childub = SCIPexprGetActivity(child).sup;
-
-   // FIXME
-   childglb = -SCIPinfinity(scip);
-   childgub = SCIPinfinity(scip);
+   childlb = bounds[0].inf;
+   childub = bounds[0].sup;
 
    /* if child is essentially constant, then there should be no point in separation */
    if( SCIPisEQ(scip, childlb, childub) )
@@ -2826,18 +2804,18 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
       if( childlb >= 0 )
       {
          estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, constant[*nreturned], coefs[*nreturned],
-               islocal[*nreturned], &success);
+               &islocal, &success);
       }
       else
       {
          /* compute root if not known yet; only needed if mixed sign (global child ub > 0) */
-         if( exprdata->root == SCIP_INVALID && childgub > 0.0 )
+         if( exprdata->root == SCIP_INVALID && childub > 0.0 )
          {
             SCIP_CALL( computeSignpowerRoot(scip, &exprdata->root, exponent) );
          }
          branchcand = TRUE;
          estimateSignedpower(scip, exponent, exprdata->root, overest[i], childlb, childub, refpoint,
-               childglb, childgub, constant[*nreturned], coefs[*nreturned], islocal[*nreturned],
+               childlb, childub, constant[*nreturned], coefs[*nreturned], &islocal,
                &branchcand, &success);
       }
 

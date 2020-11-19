@@ -28,6 +28,7 @@ Test(estimation, sum, .init = setup, .fini = teardown,
 {
    SCIP_EXPR* expr;
    SCIP_Real refpoint[2] = { 0., 0. };
+   SCIP_INTERVAL bounds[2];
    SCIP_Real coefs[2];
    SCIP_Real constant;
    SCIP_Bool islocal;
@@ -38,7 +39,7 @@ Test(estimation, sum, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr, xexpr, 2.3) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr, yexpr, -5.1) );
 
-   SCIP_CALL( estimateSum(scip, expr, refpoint, TRUE, SCIP_INVALID, coefs, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimateSum(scip, expr, bounds, bounds, refpoint, TRUE, SCIP_INVALID, coefs, &constant, &islocal, &success, &branchcand) );
 
    cr_expect(success);
    cr_expect_eq(coefs[0], 2.3);

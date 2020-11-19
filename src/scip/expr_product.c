@@ -1668,12 +1668,16 @@ SCIP_DECL_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
-/** computes an estimator for a product expression as a vertex polyhedral function */
+/** computes an estimator for a product as a vertex polyhedral function
+ *
+ * Since the product is multilinear, its convex and concave envelopes are piecewise linear.
+ */
 static
 SCIP_RETCODE estimateVertexPolyhedralProduct(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_EXPRDATA*        exprdata,           /**< expression data */
+   int                   nfactors,           /**< number of factors */
+   SCIP_INTERVAL*        bounds,             /**< bound for each factor */
+   SCIP_Real             constantfactor,     /**< another constant factor */
    SCIP_Real*            refpoint,           /**< reference point where to estimate, or NULL if called from initestimates */
    SCIP_Bool             overestimate,       /**< should estimator overestimate expr (TRUE) or underestimate (FALSE) */
    SCIP_Real             targetvalue,        /**< no need to compute facet if value in xstar would be worse than target value */
@@ -1682,35 +1686,34 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
    SCIP_Bool*            success             /**< pointer to store whether estimation was successful */
    )
 {
-   SCIP_INTERVAL childbnds;
    SCIP_Real* box;
    SCIP_Real* xstar;
-   int i;
    int nfixed;
-   SCIP_EXPR* child;
-   int nchildren;
+   int i;
 
-   nchildren = SCIPexprGetNChildren(expr);
-
-   /* Since the product is multilinear, its convex and concave envelopes are piecewise linear.*/
+   assert(nfactors > 0);
+   assert(bounds != NULL);
+   assert(constantfactor != 0.0);
+   assert(refpoint != NULL);
+   assert(coefs != NULL);
+   assert(constant != NULL);
+   assert(success != NULL);
 
    /* assemble box, check for unbounded variables, assemble xstar */
-   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nchildren) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nchildren) );
-   for( i = 0, nfixed = 0; i < nchildren; ++i )
+   SCIP_CALL( SCIPallocBufferArray(scip, &box, 2*nfactors) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &xstar, nfactors) );
+   for( i = 0, nfixed = 0; i < nfactors; ++i )
    {
-      child = SCIPexprGetChildren(expr)[i];
-      childbnds = SCIPexprGetActivity(child);  // FIXME was auxiliary variable bounds intersected with activity if valid
-      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childbnds));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bounds[i]));
 
-      if( SCIPisInfinity(scip, -childbnds.inf) || SCIPisInfinity(scip, childbnds.sup) )
+      if( SCIPisInfinity(scip, -bounds[i].inf) || SCIPisInfinity(scip, bounds[i].sup) )
       {
          SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
          goto CLEANUP;
       }
 
-      box[2*i] = childbnds.inf;
-      box[2*i+1] = childbnds.sup;
+      box[2*i] = bounds[i].inf;
+      box[2*i+1] = bounds[i].sup;
 
       xstar[i] = refpoint != NULL ? refpoint[i] : 0.5 * (box[2*i] + box[2*i+1]);
 
@@ -1718,10 +1721,10 @@ SCIP_RETCODE estimateVertexPolyhedralProduct(
          ++nfixed;
    }
 
-   if( nfixed < nchildren && nchildren - nfixed <= SCIP_MAXVERTEXPOLYDIM )
+   if( nfixed < nfactors && nfactors - nfixed <= SCIP_MAXVERTEXPOLYDIM )
    {
       SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"),
-         overestimate, prodfunction, &exprdata->coefficient, xstar, box, nchildren, targetvalue, success, coefs, constant) );
+         overestimate, prodfunction, &constantfactor, xstar, box, nfactors, targetvalue, success, coefs, constant) );
    }
 
 CLEANUP:
@@ -1745,7 +1748,6 @@ static
 SCIP_DECL_EXPRESTIMATE(estimateProduct)
 {
    SCIP_EXPRDATA* exprdata;
-   SCIP_EXPR* child;
    int nchildren;
 
    assert(scip != NULL);
@@ -1776,15 +1778,12 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
       for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
       {
          child = SCIPexprGetChildren(expr)[c];
-         var = SCIPgetExprAuxVarNonlinear(child);
-         assert(var != NULL);
-         SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
-               SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPdebugMsg(scip, "child %d = %g in [%g, %g]\n", c, refpoint[c], localbounds[c].inf, localbounds[c].sup);
 
-         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(localbounds[c].sup)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(localbounds[c].inf)) )
          {
             SCIPdebugMsg(scip, "unbounded factor related to\n");
-            SCIP_CALL( SCIPdismantleExpr(scip, NULL, child) );
+            SCIP_CALL( SCIPdismantleExpr(scip, NULL, SCIPexprGetChildren(expr)[0]) );
          }
       }
    }
@@ -1793,50 +1792,29 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
    /* bilinear term */
    if( nchildren == 2 )
    {
-//      SCIP_VAR* x;
-//      SCIP_VAR* y;
       SCIP_Real refpointx;
       SCIP_Real refpointy;
       SCIP_INTERVAL bndx;
       SCIP_INTERVAL bndy;
 
       /* collect first variable */
-      child = SCIPexprGetChildren(expr)[0];
-//      x = SCIPgetExprAuxVarNonlinear(child);
-//      assert(x != NULL);
-
-//      bndx.inf = SCIPvarGetLbLocal(x);
-//      bndx.sup = SCIPvarGetUbLocal(x);
-//      if( SCIPexprGetActivityTag(child) >= SCIPgetLastBoundRelaxTagNonlinear(conshdlr) )
-//         SCIPintervalIntersectEps(&bndx, SCIPfeastol(scip), bndx, SCIPexprGetActivity(scip, child));
-      bndx = SCIPexprGetActivity(child);
+      refpointx = refpoint[0];
+      bndx = localbounds[0];
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bndx));
 
       /* collect second variable */
-      child = SCIPexprGetChildren(expr)[1];
-//      y = SCIPgetExprAuxVarNonlinear(child);
-//      assert(y != NULL);
-
-//      bndy.inf = SCIPvarGetLbLocal(y);
-//      bndy.sup = SCIPvarGetUbLocal(y);
-//      if( SCIPexprGetActivityTag(child) >= SCIPgetLastBoundRelaxTagNonlinear(conshdlr) )
-//         SCIPintervalIntersectEps(&bndy, SCIPfeastol(scip), bndy, SCIPexprGetActivity(scip, child));
-      bndy = SCIPexprGetActivity(child);
+      refpointy = refpoint[1];
+      bndy = localbounds[1];
       assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bndy));
+
+      /* adjust the reference points */
+      refpointx = MIN(MAX(refpointx, bndx.inf), bndx.sup);
+      refpointy = MIN(MAX(refpointy, bndy.inf), bndy.sup);
 
       coefs[0] = 0.0;
       coefs[1] = 0.0;
       *constant = 0.0;
       *success = TRUE;
-
-      refpointx = refpoint[0];
-      refpointy = refpoint[1];
-
-      /* adjust the reference points */
-      refpointx = MIN(MAX(refpointx, bndx.inf), bndx.sup); /*lint !e666*/
-      refpointy = MIN(MAX(refpointy, bndy.inf), bndy.sup); /*lint !e666*/
-//      assert(SCIPisLE(scip, refpointx, SCIPvarGetUbLocal(x)) && SCIPisGE(scip, refpointx, SCIPvarGetLbLocal(x)));
-//      assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
 
       SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, refpointx,
             bndy.inf, bndy.sup, refpointy, overestimate, &coefs[0], &coefs[1], constant,
@@ -1844,8 +1822,8 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
    }
    else
    {
-      SCIP_CALL( estimateVertexPolyhedralProduct(scip, expr, exprdata, refpoint, overestimate, targetvalue,
-            coefs, constant, success) );
+      SCIP_CALL( estimateVertexPolyhedralProduct(scip, nchildren, localbounds, exprdata->coefficient, refpoint, overestimate,
+         targetvalue, coefs, constant, success) );
    }
 
    return SCIP_OKAY;
@@ -1858,7 +1836,6 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesProduct)
    SCIP_EXPRDATA* exprdata;
    SCIP_Bool success = TRUE;
    int nchildren;
-   int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -1867,61 +1844,30 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesProduct)
 
    nchildren = SCIPexprGetNChildren(expr);
 
-   for( i = 0; i < nchildren; ++i )
-   {
-      SCIP_INTERVAL bnd;
-//      SCIP_VAR* childvar;
-
-//      childvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
-//      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(childvar)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(childvar)) )
-//         return SCIP_OKAY;
-      bnd = SCIPexprGetActivity(expr);
-      if( bnd.inf <= -SCIP_INTERVAL_INFINITY || bnd.sup >= SCIP_INTERVAL_INFINITY )
-         return SCIP_OKAY;
-   }
-
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
    if( nchildren == 2 )
    {
-//      SCIP_VAR* x;
-//      SCIP_VAR* y;
-      SCIP_INTERVAL bndx;
-      SCIP_INTERVAL bndy;
-
-      /* collect variables */
-//      x = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
-//      assert(x != NULL);
-//      bndx.inf = SCIPvarGetLbLocal(x);
-//      bndx.sup = SCIPvarGetUbLocal(x);
-      bndx = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
-
-//      y = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
-//      assert(y != NULL);
-//      bndy.inf = SCIPvarGetLbLocal(y);
-//      bndy.sup = SCIPvarGetUbLocal(y);
-      bndy = SCIPexprGetActivity(SCIPexprGetChildren(expr)[1]);
+      SCIP_INTERVAL bndx = bounds[0];
+      SCIP_INTERVAL bndy = bounds[1];
 
       coefs[0][0] = 0.0;
       coefs[0][1] = 0.0;
 
       /* build estimator */
-      SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, (bndx.inf + bndx.sup) / 2.0, bndy.inf,
-         bndy.sup, (bndy.inf + bndy.sup ) / 2.0, overestimate, &coefs[0][0], &coefs[0][1],
+      SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, (bndx.inf + bndx.sup) / 2.0,
+         bndy.inf, bndy.sup, (bndy.inf + bndy.sup ) / 2.0, overestimate, &coefs[0][0], &coefs[0][1],
          constant[0], &success);
    }
    else
    {
-      SCIP_CALL( estimateVertexPolyhedralProduct(scip, expr, exprdata, NULL, overestimate,
+      SCIP_CALL( estimateVertexPolyhedralProduct(scip, nchildren, bounds, exprdata->coefficient, NULL, overestimate,
          overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), coefs[0], constant[0], &success) );
    }
 
    if( success )
-   {
       *nreturned = 1;
-      *islocal[0] = TRUE;
-   }
 
    return SCIP_OKAY;
 }

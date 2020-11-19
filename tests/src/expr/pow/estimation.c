@@ -688,9 +688,11 @@ Test(estimation, convexsquare, .init = setup, .fini = teardown,
    SCIP_Bool islocal;
    SCIP_Bool branchcand;
    SCIP_Bool success;
+   SCIP_INTERVAL bnd;
 
    SCIP_CALL( SCIPcreateExprPow(scip, &expr, xexpr, 2.0, NULL, NULL) );
    SCIP_CALL( SCIPevalExprActivity(scip, expr) );
+   bnd = SCIPexprGetActivity(xexpr);
 
    /*
     * compute underestimator for x^2 with x* = 1.0
@@ -699,7 +701,7 @@ Test(estimation, convexsquare, .init = setup, .fini = teardown,
    xval = 1.0;
 
    branchcand = TRUE;
-   SCIP_CALL( estimatePow(scip, expr, &xval, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimatePow(scip, expr, &bnd, &bnd, &xval, FALSE, SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, -1.0, SCIPepsilon(scip));
@@ -714,7 +716,7 @@ Test(estimation, convexsquare, .init = setup, .fini = teardown,
    xval = 1.0;
 
    branchcand = TRUE;
-   SCIP_CALL( estimatePow(scip, expr, &xval, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
+   SCIP_CALL( estimatePow(scip, expr, &bnd, &bnd, &xval, TRUE, -SCIPinfinity(scip), &slope, &constant, &islocal, &success, &branchcand) );
    cr_assert(success);
    cr_assert_float_eq(constant, 5.0, SCIPepsilon(scip));
    cr_assert_float_eq(slope, 4.0, SCIPepsilon(scip));

@@ -484,19 +484,23 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 /** expression under/overestimation callback
  *
  * The method tries to compute a linear under- or overestimator that is as tight as possible
- * at a given point.
+ * at a given point. The estimator must be valid w.r.t. the bounds given by localbounds.
  * If the value of the estimator in the reference point is smaller (larger) than targetvalue
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that targetvalue can be infinite if any estimator will be accepted.
  * If successful, it shall store the coefficient of the i-th child in entry coefs[i] and
  * the constant part in \par constant.
+ * If the estimator is also valid w.r.t. the bounds given by globalbounds, then *islocal shall
+ * be set to FALSE.
  * The callback shall set branchcand[i] to FALSE if branching in the i-th child would not
  * improve the estimator. That is, branchcand[i] will be initialized to TRUE for all children.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression
- *  - refpoint : children values for the reference point where to estimate
+ *  - localbounds: current bounds for children
+ *  - globalbounds: global bounds for children
+ *  - refpoint : values for children in the reference point where to estimate
  *  - overestimate : whether the expression needs to be over- or underestimated
  *  - targetvalue : a value that the estimator shall exceed, can be +/-infinity
  *  - coefs : array to store coefficients of estimator
@@ -508,6 +512,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 #define SCIP_DECL_EXPRESTIMATE(x) SCIP_RETCODE x (\
    SCIP*      scip, \
    SCIP_EXPR* expr, \
+   SCIP_INTERVAL* localbounds, \
+   SCIP_INTERVAL* globalbounds, \
    SCIP_Real* refpoint, \
    SCIP_Bool  overestimate, \
    SCIP_Real  targetvalue, \
@@ -520,33 +526,31 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 /** expression initial under/overestimation callback
  *
  * The method tries to compute a few linear under- or overestimator that approximate the
- * behavior of the expression w.r.t. current activity on children. These estimators may
- * be used to initialize a linear relaxation.
+ * behavior of the expression. The estimator must be valid w.r.t. the bounds given by bounds.
+ * These estimators may be used to initialize a linear relaxation.
  * The callback shall return the number of computed estimators in nreturned,
  * store the coefficient of the i-th child for the j-th estimator in entry coefs[j][i],
- * store the constant part for the j-th estimator in *constant[j], and
- * indicate whether the estimator is valid w.r.t. children activity only in islocal[j].
+ * and store the constant part for the j-th estimator in *constant[j].
  *
  *  input:
- *  - scip            : SCIP main data structure
- *  - expr            : expression
- *  - overestimate    : whether the expression shall be overestimated or underestimated
+ *  - scip         : SCIP main data structure
+ *  - expr         : expression
+ *  - bounds       : bounds for children
+ *  - overestimate : whether the expression shall be overestimated or underestimated
  *
  *  output:
  *  - coefs     : buffer to store coefficients of computed estimators
  *  - constant  : buffer to store constant of computed estimators
- *  - islocal   : buffer to return whether estimator validity depends on children activity
  *  - nreturned : buffer to store number of estimators that have been computed
  */
 #define SCIP_DECL_EXPRINITESTIMATES(x) SCIP_RETCODE x (\
    SCIP*      scip, \
    SCIP_EXPR* expr, \
+   SCIP_INTERVAL* bounds, \
    SCIP_Bool  overestimate, \
    SCIP_Real* coefs[SCIP_EXPR_MAXINITESTIMATES], \
    SCIP_Real* constant[SCIP_EXPR_MAXINITESTIMATES], \
-   SCIP_Bool* islocal[SCIP_EXPR_MAXINITESTIMATES], \
-   int*       nreturned \
-   )
+   int*       nreturned)
 
 /** expression simplify callback
  *
