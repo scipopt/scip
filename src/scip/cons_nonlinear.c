@@ -551,25 +551,7 @@ SCIP_RETCODE createExprVar(
    return SCIP_OKAY;
 }
 
-#if !1
-static
-SCIP_DECL_EXPR_MAPVAR(transformVar)
-{   /*lint --e{715}*/
-   assert(sourcevar != NULL);
-   assert(targetvar != NULL);
-   assert(sourcescip == targetscip);
-
-   /* transform variable (does not capture target variable) */
-   SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcevar, targetvar) );
-   assert(*targetvar != NULL);
-
-   /* caller assumes that target variable has been captured */
-   SCIP_CALL( SCIPcaptureVar(sourcescip, *targetvar) );
-
-   return SCIP_OKAY;
-}
-#endif
-
+/* map var exprs to var-expr from var2expr hashmap */
 static
 SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
 {
@@ -589,6 +571,38 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprvar)
    }
 
    SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, SCIPgetVarExprVar(sourceexpr)) );
+
+   return SCIP_OKAY;
+}
+
+/* map var exprs to var-expr from var2expr hashmap corresponding to transformed var */
+static
+SCIP_DECL_EXPR_MAPEXPR(mapexprtransvar)
+{
+   SCIP_CONSHDLR* conshdlr = (SCIP_CONSHDLR*)mapexprdata;
+   SCIP_VAR* var;
+
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+   assert(mapexprdata != NULL);
+
+   /* do not provide map if not variable */
+   if( !SCIPisExprVar(sourcescip, sourceexpr) )
+   {
+      *targetexpr = NULL;
+      return SCIP_OKAY;
+   }
+
+   var = SCIPgetVarExprVar(sourceexpr);
+   assert(var != NULL);
+
+   /* transform variable */
+   SCIP_CALL( SCIPgetTransformedVar(sourcescip, var, &var) );
+   assert(var != NULL);
+
+   SCIP_CALL( createExprVar(targetscip, conshdlr, targetexpr, var) );
 
    return SCIP_OKAY;
 }
@@ -1920,18 +1934,32 @@ SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 
 
 /** transforms constraint data into data belonging to the transformed problem */
-#if 1
 static
 SCIP_DECL_CONSTRANS(consTransNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_EXPR* targetexpr;
+   SCIP_CONSDATA* sourcedata;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   /* get a copy of sourceexpr with transformed vars */
+   SCIP_CALL( SCIPduplicateExpr(scip, sourcedata->expr, &targetexpr, mapexprtransvar, conshdlr, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+   assert(targetexpr != NULL);  /* SCIPduplicateExpr cannot fail */
+
+   /* create transformed cons (only captures targetexpr, no need to copy again) */
+   SCIP_CALL( createCons(scip, conshdlr, targetcons, SCIPconsGetName(sourcecons),
+      targetexpr, sourcedata->lhs, sourcedata->rhs, FALSE,
+      SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+      SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+      SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
+      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
+
+   /* release target expr */
+   SCIP_CALL( SCIPreleaseExpr(scip, &targetexpr) );
 
    return SCIP_OKAY;
 }
-#else
-#define consTransNonlinear NULL
-#endif
 
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */

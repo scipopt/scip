@@ -7867,36 +7867,6 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    return SCIP_OKAY;
 }
 
-
-/** transforms constraint data into data belonging to the transformed problem */
-static
-SCIP_DECL_CONSTRANS(consTransExpr)
-{  /*lint --e{715}*/
-   SCIP_EXPR* targetexpr;
-   SCIP_CONSDATA* sourcedata;
-
-   sourcedata = SCIPconsGetData(sourcecons);
-   assert(sourcedata != NULL);
-
-   /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( copyExpr(scip, scip, conshdlr, sourcedata->expr, &targetexpr, transformVar, NULL) );
-   assert(targetexpr != NULL);  /* copyExpr cannot fail if source and target scip are the same */
-
-   /* create transformed cons (only captures targetexpr, no need to copy again) */
-   SCIP_CALL( createConsExpr(scip, conshdlr, targetcons, SCIPconsGetName(sourcecons),
-      targetexpr, sourcedata->lhs, sourcedata->rhs, FALSE,
-      SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
-      SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
-      SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
-      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons)) );
-
-   /* release target expr */
-   SCIP_CALL( SCIPreleaseExpr(scip, &targetexpr) );
-
-   return SCIP_OKAY;
-}
-
-
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
