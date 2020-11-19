@@ -452,6 +452,7 @@ SCIP_RETCODE SCIPconcsolverSync(
             progress = 0.0;
 
          /* should not be negative */
+         progress = MAX(progress, 0.0);
          assert(SCIPsetIsGE(set, progress, 0.0));
 
          if( progress < 0.5 * set->concurrent_targetprogress )

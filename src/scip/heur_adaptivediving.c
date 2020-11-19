@@ -578,6 +578,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
 
@@ -589,7 +590,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    heurdata->ndivesets = 0;
    heurdata->divesetssize = -1;
 
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE), TERMINATE );
 
    /* include adaptive diving primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -637,6 +638,14 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/bestsolweight",
          "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
          &heurdata->bestsolweight, FALSE, DEFAULT_BESTSOLWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfreeMemory(scip, &heurdata);
+      return retcode;
+   }
 
    return SCIP_OKAY;
 }

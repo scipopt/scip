@@ -11938,7 +11938,7 @@ SCIP_RETCODE simplifyInequalities(
 
          /* get new constraint data */
          nvars = consdata->nvars;
-         assert(nvars >= 2);
+         assert(nvars > 0);
 
          allcoefintegral = TRUE;
 

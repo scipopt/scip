@@ -203,6 +203,7 @@ struct SCIP_Tree
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Real*            probdiverelaxsol;   /**< array with stored original relaxation solution during diving or probing */
+   int                   nprobdiverelaxsol;  /**< size of probdiverelaxsol */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
    SCIP_Longint          lastbranchparentid; /**< last node id/number of branching parent */
    int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */

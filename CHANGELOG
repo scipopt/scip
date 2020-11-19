@@ -12,6 +12,8 @@ Features
   which is able to handle symmetries of arbitrary kinds of variables.
 - The symmetry code can now heuristically search for orbitopes that do not completely handle
   a symmetry component and add certain Schreier Sims cuts to such components.
+- The LPIs for Gurobi and Mosek are thread-safe now.
+- The complete code is now thread-safe by default.
 
 Performance improvements
 ------------------------
@@ -20,6 +22,7 @@ Performance improvements
 - Separate lifted cover cuts based on newer lifting function of Letchford and Souli (2019) in sepa_aggregation.c
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 - improved upgrade of orbisacks to packing/partitioning orbitopes
+- Improved running time of symresack cover separation.
 
 Examples and applications
 -------------------------
@@ -27,6 +30,10 @@ Examples and applications
 Interface changes
 -----------------
 ### New and changed callbacks
+
+- extend SEPAEXEC{LP,SOL} callbacks by parameter "depth", which should be used within separation instead of SCIPgetCurrentDepth()
+- extend SCIPseparateSolCutpool() by parameter "pretendroot", which is passed to SCIPcutpoolSeparate() instead of SCIPtreeGetCurrentDepth(scip->tree) == 0
+
 ### Deleted and changed API methods
 
 - If SCIPvarMarkRelaxationOnly() is called for a variable, then this now need to happen before the
@@ -42,6 +49,9 @@ Interface changes
 - internal function SCIPgetPropertiesPerm() has been replaced by SCIPisInvolutionPerm()
 - internal function SCIPgenerateOrbitopeVarsMatrix() has new arguments "storelexorder", "lexorder",
   "nvarsorder", "maxnvarsorder" to compute and store the lexicographic order defined by an orbitope
+- renamed SCIPcomputeArraysIntersection() and SCIPcomputeArraysSetminus() to
+  SCIPcomputeArraysIntersectionInt() and SCIPcomputeArraysSetminusInt(), respectively, and changed
+  their return type from SCIP_RETCODE (which _always_ was SCIP_OKAY) to void
 
 ### New API functions
 
@@ -55,6 +65,8 @@ Interface changes
 - new internal function SCIPisPackingPartitioningOrbitope() to check whether an orbitope is of
   packing or partitioning type
 - new internal function SCIPcomputeOrbitVar() to compute the symmetry orbit of a variable
+- added SCIPcalcFibHash(SCIP_Real) to hash a floating-point value to an unsigned integer
+- added SCIPcomputeArraysIntersectionPtr() to compute intersection of two sorted arrays of pointers
 
 ### Command line interface
 ### Interfaces to external software
@@ -113,7 +125,12 @@ Testing
 Build system
 ------------
 ### Cmake
+
+- replace flag PARASCIP by THREADSAFE
+	
 ### Makefile
+	
+- replace flag PARASCIP by THREADSAFE
 
 Fixed bugs
 ----------
@@ -127,6 +144,7 @@ Miscellaneous
 - Avoid redundant calls to LP solver when LP is already flushed and solved
 - In SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg() strip directory from filename.
 - Recompute activity of rows when checking LP solutions instead of trusting the value given by the LP solver
+- The define NPARASCIP has been replaced by SCIP_THREADSAFE
 
 Known bugs
 ----------
@@ -140,6 +158,10 @@ Features
 --------
 
 - Extended check for valid variable and constraint names in PIP writer.
+- Indicator constraints now write the name of the linear constraint in CIP format. This avoids a complicated
+  name matching during parsing. The old format is still supported.
+- The objective scale and offset are now taken into account when reading/writing problems in lp/mps/fzn/pip format.
+  This often changes the behavior when writing transformed problems.
 
 Performance improvements
 ------------------------
@@ -159,6 +181,7 @@ Interface changes
 ### New API functions
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
+- added new sorting functions SCIPsortPtrRealRealBoolBool()
 
 ### Command line interface
 
@@ -192,7 +215,7 @@ Fixed bugs
 - Fixed a sign bug occuring for some cases in the computation of the directed cutoff distance
 - Fixed overflow in inference information of cumulative constraint handler
 - Fixed problem with propfreq == 0 in cons_linear.c
-- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested
+- Fixed aggregation heuristic in sepa_aggregation.c to not use local rows when that is requested nor modifiable rows
 - Fixed problem with incompatibility of symmetry handling in Benders decomposition
 - Fixed parsing of small number in CIP format of nonlinear constraint
 - Fixed problem in upgrading full orbitopes to partitioning orbitopes
@@ -205,6 +228,8 @@ Fixed bugs
 - Improved separation for SOC constraint with multiaggregated variable on right-hand-side.
 - Fixed bug in presol_boundshift: do not shift non-active variables
 - Fixed bug in domain propagation for SOC constraints with negative coefficient for variable on right-hand-side.
+- Fixed bug with multi-aggregated integer variables in cons_xor.
+- Fixed bug with changed number of variables in storing relaxation solution in probing/diving.
 
 Miscellaneous
 -------------
@@ -519,6 +544,9 @@ Interface changes
   + arguments of functions SCIPbendersSolveSubproblemLP(), SCIPbendersSolveSubproblemCIP(), and SCIPbendersOnlyCheckConvexRelax() changed
   - removed SCIPbenderscutGetNAddedCuts() and SCIPbenderscutGetAddedCutData()
 
+
+### New API functions
+=======
 - new argument "onlyifcomplete" in SCIPmatrixCreate() to skip matrix creation right after detecting unsupported constraint types
   and new arguments to count statistics when doing a clean-up of inactive variables in the constraints before building the matrix
 

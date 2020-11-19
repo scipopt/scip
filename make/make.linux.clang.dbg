@@ -7,7 +7,7 @@ CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 #
 # The default (SANITIZE=true) is to enable nothing. #only the LeakSanitizer.
 # If SANITIZE=full is specified, then the UndefinedBehaviorSanitzer and
-# either the ThreadSanitizer (PARASCIP=true) or the AddressSanitizer (PARASCIP=false)
+# either the ThreadSanitizer (THREADSAFE=true) or the AddressSanitizer (THREADSAFE=false)
 # are enabled (neither LeakSanitizer nor AddressSanitizer can be used together
 # with ThreadSanitizer).
 #
@@ -19,7 +19,7 @@ CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 SANITIZE = true
 ifeq ($(SANITIZE),full)
 
-ifeq ($(PARASCIP),true)
+ifeq ($(THREADSAFE),true)
 # enable ThreadSanitizer (http://clang.llvm.org/docs/ThreadSanitizer.html)
 SANITIZERFLAGS = -fsanitize=thread
 
