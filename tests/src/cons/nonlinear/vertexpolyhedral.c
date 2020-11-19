@@ -19,8 +19,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr.c"
-#include "separation.h"
+#include "scip/cons_nonlinear.c"
+#include "../../expr/estimation.h"
 
 /*
  * the following test builds the matrices used to compute facets of convex/concave envelope from size 0 to 8 (otherwise
@@ -28,7 +28,7 @@
  * the matrices in matrices.sol
  */
 
-#include "matrices.sol"
+#include "vertexpolyhedral_matrices.sol"
 
 /* specify parameters of parameterized test */
 ParameterizedTestParameters(separation, multilinearLP)
@@ -40,7 +40,7 @@ ParameterizedTestParameters(separation, multilinearLP)
 }
 
 static
-void printMatrix(int size)
+SCIP_RETCODE printMatrix(int size)
 {
    int i, j, nrows, ncols;
    SCIP_LPI* lp;
@@ -69,6 +69,8 @@ void printMatrix(int size)
    SCIP_CALL( SCIPlpiFree(&lp) );
    SCIP_CALL( SCIPfree(&scip) );
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
+
+   return SCIP_OKAY;
 }
 
 static
@@ -88,7 +90,7 @@ SCIP_DECL_VERTEXPOLYFUN(prodfunction)
 /* generates matrix of size *size and prints it; checks it is the expected matrix */
 ParameterizedTest(const int* size, separation, multilinearLP)
 {
-   printMatrix(*size);
+   SCIP_CALL_ABORT( printMatrix(*size) );
 }
 
 /*
@@ -121,7 +123,7 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
    xstar[0] = 0.0;
    xstar[1] = -4.0;
 
-   SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, TRUE /* overestimate */, prodfunction, &prodcoef, xstar, box, 2, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
+   SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), TRUE /* overestimate */, prodfunction, &prodcoef, xstar, box, 2, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
    cr_assert(success);
    cr_expect_float_eq(facetcoefs[0], -4.5, SCIPepsilon(scip));
@@ -136,7 +138,7 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
     * TODO reuse a previous LP
     */
 
-   SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, FALSE /* underestimate */, prodfunction, &prodcoef, xstar, box, 2, -SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
+   SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), FALSE /* underestimate */, prodfunction, &prodcoef, xstar, box, 2, -SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
    cr_assert(success);
    cr_expect_float_eq(facetcoefs[0], -9.0, SCIPepsilon(scip));
@@ -196,19 +198,13 @@ Test(separation, multilinearseparation)
    int i;
 
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
 
    /* compute an overestimator for -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18
     * together with the bounds x,y,w,z \in [-0.2, 0.7], [-10, 8], [1, 1.3], [0.09, 2.1]
     * -> 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
     */
-   SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, TRUE /* overestimate */, prodfunction, &prodcoef, solval, box, 4, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
+   SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), TRUE /* overestimate */, prodfunction, &prodcoef, solval, box, 4, SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
    cr_assert(success);
 
@@ -220,19 +216,18 @@ Test(separation, multilinearseparation)
    cr_expect_float_eq(facetconstant, exact_facet1[4], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet1[i]);
 
    /* the code below assumes that we do the same permutations as before, so recreate scip to reset random number generator */
-   SCIP_CALL( consExitExpr(scip, conshdlr, NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
+   SCIP_CALL( consExitNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
    SCIP_CALL( SCIPfree(&scip) );
+
    SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
 
    /* compute an underestimator for the same function as before, but now z is fixed to 1 and we underestimate
     *   -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1
     * together with the bounds x,y,w \in [-0.2, 0.7], [-10, 8], [1, 1.3]
     * -> -49/100 * (-100/7 x + y + 8w + 2)
     */
-   SCIP_CALL( SCIPcomputeFacetVertexPolyhedral(scip, conshdlr, FALSE /* underestimate */, prodfunction, &prodcoef, solval, box, 3, -SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
+   SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), FALSE /* underestimate */, prodfunction, &prodcoef, solval, box, 3, -SCIPinfinity(scip), &success, facetcoefs, &facetconstant) );
 
    cr_assert(success);
 
@@ -244,7 +239,7 @@ Test(separation, multilinearseparation)
    cr_expect_float_eq(facetconstant, exact_facet2[3], SCIPfeastol(scip), "constant: received %g instead of %g\n", facetconstant, exact_facet2[i]);
 
    /* free SCIP */
-   SCIP_CALL( consExitExpr(scip, conshdlr, NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
+   SCIP_CALL( consExitNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
    SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
@@ -336,7 +331,7 @@ void test_vertexpolyhedral(
 
    targetval = overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip);
 
-   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedral(scip, SCIPfindConshdlr(scip, "expr"), overestimate,
+   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), overestimate,
       function, functiondata, xstar, box, dim, targetval, &success, facetcoefs, &facetconstant) );
 
    cr_assert(success);
@@ -378,7 +373,7 @@ void test_vertexpolyhedral(
    for( j = 0; j < dim; ++j )
       facetval += facetcoefs[j] * xstar[j];
 
-   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedral(scip, SCIPfindConshdlr(scip, "expr"), overestimate,
+   SCIP_CALL_ABORT( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), overestimate,
       function, functiondata, xstar, box, dim, targetval, &success, facetcoefs, &facetconstant) );
 
    /* if target couldn't be reached before, it should not have been reached now, so method should not have succeeded
@@ -401,7 +396,7 @@ Test(separation, vertexpolyhedral,
    int i;
 
    SCIP_CALL_ABORT( SCIPcreate(&scip) );
-   SCIP_CALL_ABORT( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL_ABORT( SCIPincludeConshdlrNonlinear(scip) );
 
    SCIP_CALL_ABORT( SCIPcreateRandom(scip, &randnumgen, 20181106, FALSE) );
 
@@ -441,7 +436,7 @@ Test(separation, vertexpolyhedral,
    }
 
    SCIPfreeRandom(scip, &randnumgen);
-   SCIP_CALL( consExitExpr(scip, SCIPfindConshdlr(scip, "expr"), NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
+   SCIP_CALL( consExitNonlinear(scip, SCIPfindConshdlr(scip, "nonlinear"), NULL, 0) );  /* to free vp_ data in conshdlr, not called otherwise */
    SCIP_CALL_ABORT( SCIPfree(&scip) );
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
