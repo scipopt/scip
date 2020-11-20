@@ -61,6 +61,13 @@ SCIP_RETCODE SCIPexprhdlrCopyInclude(
    SCIP_SET*             targetset           /**< SCIP_SET of SCIP to copy to */
    );
 
+/** initialization of expression handler (reset statistics) */
+SCIP_EXPORT
+void SCIPexprhdlrInit(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** calls the print callback of an expression handler
  *
  * the method prints an expression

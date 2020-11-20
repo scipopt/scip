@@ -5203,6 +5203,10 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPtableInit(set->tables[i], set) );
    }
 
+   /* expression handler */
+   for( i = 0; i < set->nexprhdlrs; ++i )
+      SCIPexprhdlrInit(set->exprhdlrs[i], set);
+
    return SCIP_OKAY;
 }
 

@@ -607,6 +607,72 @@ SCIP_DECL_EXPR_MAPEXPR(mapexprtransvar)
    return SCIP_OKAY;
 }
 
+/** stores all variable expressions into a given constraint */
+static
+SCIP_RETCODE storeVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_CONSDATA*          consdata          /**< constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   /* skip if we have stored the variable expressions already */
+   if( consdata->varexprs != NULL )
+      return SCIP_OKAY;
+
+   assert(consdata->varexprs == NULL);
+   assert(consdata->nvarexprs == 0);
+
+   /* create array to store all variable expressions; the number of variable expressions is bounded by SCIPgetNTotalVars() */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip)) );
+
+   SCIP_CALL( SCIPgetExprVarExprs(scip, consdata->expr, consdata->varexprs, &(consdata->nvarexprs)) );
+   assert(SCIPgetNTotalVars(scip) >= consdata->nvarexprs);
+
+   /* realloc array if there are less variable expression than variables */
+   if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
+   {
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** frees all variable expression stored in storeVarExprs() */
+static
+SCIP_RETCODE freeVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSDATA*          consdata          /**< constraint data */
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+
+   /* skip if we have stored the variable expressions already*/
+   if( consdata->varexprs == NULL )
+      return SCIP_OKAY;
+
+   assert(consdata->varexprs != NULL);
+   assert(consdata->nvarexprs >= 0);
+
+   /* release variable expressions */
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      assert(consdata->varexprs[i] != NULL);
+      SCIP_CALL( SCIPreleaseExpr(scip, &consdata->varexprs[i]) );
+      assert(consdata->varexprs[i] == NULL);
+   }
+
+   /* free variable expressions */
+   SCIPfreeBlockMemoryArrayNull(scip, &consdata->varexprs, consdata->nvarexprs);
+   consdata->varexprs = NULL;
+   consdata->nvarexprs = 0;
+
+   return SCIP_OKAY;
+}
+
 /** interval evaluation of variables as used in bound tightening
  *
  * Returns slightly relaxed local variable bounds of a variable as interval.
@@ -735,6 +801,72 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
    return interval;
 }
 
+#if !1
+/** returns whether the variable events on variable are catched */
+SCIP_Bool SCIPisConsExprExprVarEventCatched(
+   SCIP_EXPR*   expr                /**< variable expression */
+   )
+{
+   SCIP_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->filterpos >= 0;
+}
+
+/** gives number of constraints for which the expression catches bound change events on the variable */
+int SCIPgetConsExprExprVarNConss(
+   SCIP_EXPR*   expr                /**< variable expression */
+   )
+{
+   SCIP_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->nconss;
+}
+
+/** gives constraints for which the expression catches bound change events on the variable */
+SCIP_CONS** SCIPgetConsExprExprVarConss(
+   SCIP_EXPR*   expr                /**< variable expression */
+   )
+{
+   SCIP_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->conss;
+}
+#endif
+
+/** compares two expression constraints by its index
+ *
+ * Usable as compare operator in array sort functions.
+ */
+static
+SCIP_DECL_SORTPTRCOMP(compIndexConsNonlinear)
+{
+   SCIP_CONSDATA* consdata1 = SCIPconsGetData((SCIP_CONS*)elem1);
+   SCIP_CONSDATA* consdata2 = SCIPconsGetData((SCIP_CONS*)elem2);
+
+   assert(consdata1 != NULL);
+   assert(consdata2 != NULL);
+
+   return consdata1->consindex - consdata2->consindex;
+}
+
 /** processes variable fixing or bound change event */
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
@@ -826,6 +958,232 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
+/** registers event handler to catch variable events on variable
+ *
+ * Additionally, the given constraint is stored in the data of the variable-expression.
+ * When an event occurs, all stored constraints are notified.
+ */
+static
+SCIP_RETCODE catchVarEvent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_EXPR*            expr,               /**< variable expression */
+   SCIP_CONS*            cons                /**< nonlinear constraint */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   assert(eventhdlr != NULL);
+   assert(expr != NULL);
+   assert(SCIPisExprVar(scip, expr));
+   assert(cons != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+#ifndef NDEBUG
+   /* assert that constraint does not double-catch variable */
+   {
+      int i;
+      for( i = 0; i < ownerdata->nconss; ++i )
+         assert(ownerdata->conss[i] != cons);
+   }
+#endif
+
+   /* append cons to ownerdata->conss */
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ownerdata->conss, &ownerdata->consssize, ownerdata->nconss + 1) );
+   ownerdata->conss[ownerdata->nconss++] = cons;
+   /* we're not capturing the constraint here to avoid circular references */
+
+   /* updated sorted flag */
+   if( ownerdata->nconss <= 1 )
+      ownerdata->consssorted = TRUE;
+   else if( ownerdata->consssorted )
+      ownerdata->consssorted = compIndexConsNonlinear(ownerdata->conss[ownerdata->nconss-2], ownerdata->conss[ownerdata->nconss-1]) > 0;
+
+   /* catch variable events, if not done so yet (first constraint) */
+   if( ownerdata->filterpos < 0 )
+   {
+      SCIP_EVENTTYPE eventtype;
+
+      assert(ownerdata->nconss == 1);
+
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+
+      SCIP_CALL( SCIPcatchVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, &ownerdata->filterpos) );
+      assert(ownerdata->filterpos >= 0);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** catch variable events */
+static
+SCIP_RETCODE catchVarEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   int i;
+
+   assert(eventhdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->varexprs != NULL);
+   assert(consdata->nvarexprs >= 0);
+
+   /* check if we have catched variable events already */
+   if( consdata->catchedevents )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+
+   SCIPdebugMsg(scip, "catchVarEvents for %s\n", SCIPconsGetName(cons));
+
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      expr = consdata->varexprs[i];
+
+      assert(expr != NULL);
+      assert(SCIPisExprVar(scip, expr));
+
+      SCIP_CALL( catchVarEvent(scip, eventhdlr, expr, cons) );
+
+      /* from now on, activity of var-expr will usually be updated in processVarEvent if variable bound is changing
+       * since we just registered this eventhdlr, we should make sure that the activity is also uptodate now
+       */
+      if( SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag )
+      {
+         SCIP_INTERVAL activity;
+         SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
+         SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, "var-exprhdlr::inteval for var <%s> = [%.20g, %.20g]\n", SCIPvarGetName(SCIPgetVarExprVar(expr)), activity.inf, activity.sup);
+#endif
+      }
+   }
+
+   consdata->catchedevents = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** unregisters event handler to catch variable events on variable
+ *
+ * The given constraint is removed from the constraints array in the data of the variable-expression.
+ * If this was the last constraint, then the event handler is unregistered for this variable.
+ */
+static
+SCIP_RETCODE dropVarEvent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_EXPR*            expr,               /**< variable expression */
+   SCIP_CONS*            cons                /**< expr constraint */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   int pos;
+
+   assert(eventhdlr != NULL);
+   assert(expr != NULL);
+   assert(SCIPisExprVar(scip, expr));
+   assert(cons != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+   assert(ownerdata->nconss > 0);
+
+   if( ownerdata->conss[ownerdata->nconss-1] == cons )
+   {
+      pos = ownerdata->nconss-1;
+   }
+   else
+   {
+      if( !ownerdata->consssorted )
+      {
+         SCIPsortPtr((void**)ownerdata->conss, compIndexConsNonlinear, ownerdata->nconss);
+         ownerdata->consssorted = TRUE;
+      }
+
+      if( !SCIPsortedvecFindPtr((void**)ownerdata->conss, compIndexConsNonlinear, cons, ownerdata->nconss, &pos) )
+      {
+         SCIPerrorMessage("Constraint <%s> not in constraint array of expression for variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(SCIPgetVarExprVar(expr)));
+         return SCIP_ERROR;
+      }
+      assert(pos >= 0 && pos < ownerdata->nconss);
+   }
+   assert(ownerdata->conss[pos] == cons);
+
+   /* move last constraint into position of removed constraint */
+   if( pos < ownerdata->nconss-1 )
+   {
+      ownerdata->conss[pos] = ownerdata->conss[ownerdata->nconss-1];
+      ownerdata->consssorted = FALSE;
+   }
+   --ownerdata->nconss;
+
+   /* drop variable events if that was the last constraint */
+   if( ownerdata->nconss == 0 )
+   {
+      SCIP_EVENTTYPE eventtype;
+
+      assert(ownerdata->filterpos >= 0);
+
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+
+      SCIP_CALL( SCIPdropVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, ownerdata->filterpos) );
+      ownerdata->filterpos = -1;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** drop variable events */
+static
+SCIP_RETCODE dropVarEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONS*            cons                /**< constraint for which to drop bound change events */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(eventhdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check if we have catched variable events already */
+   if( !consdata->catchedevents )
+      return SCIP_OKAY;
+
+   assert(consdata->varexprs != NULL);
+   assert(consdata->nvarexprs >= 0);
+
+   SCIPdebugMsg(scip, "dropVarEvents for %s\n", SCIPconsGetName(cons));
+
+   for( i = consdata->nvarexprs - 1; i >= 0; --i )
+   {
+      assert(consdata->varexprs[i] != NULL);
+
+      SCIP_CALL( dropVarEvent(scip, eventhdlr, consdata->varexprs[i], cons) );
+   }
+
+   consdata->catchedevents = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures a nonlinear constraint
  *
  * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr
@@ -908,6 +1266,31 @@ SCIP_RETCODE createCons(
          local, modifiable, dynamic, removable, FALSE) );
 
    return SCIP_OKAY;
+}
+
+/** compares nonlinear handler by detection priority
+ *
+ * if handlers have same detection priority, then compare by name
+ */
+static
+int nlhdlrCmp(
+   void*                 hdlr1,              /**< first handler */
+   void*                 hdlr2               /**< second handler */
+   )
+{
+   SCIP_NLHDLR* h1;
+   SCIP_NLHDLR* h2;
+
+   assert(hdlr1 != NULL);
+   assert(hdlr2 != NULL);
+
+   h1 = (SCIP_NLHDLR*)hdlr1;
+   h2 = (SCIP_NLHDLR*)hdlr2;
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
 }
 
 /** print statistics for nonlinear handlers */
@@ -1777,6 +2160,8 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
       }
    }
 
+   *valid = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -1854,42 +2239,153 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 1
 static
 SCIP_DECL_CONSINIT(consInitNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-//   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_NLHDLR* nlhdlr;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* make sure current activity tags in expressions are invalid, because we start catching variable events only now */
+   conshdlrdata->lastboundrelax = ++conshdlrdata->curboundstag;
+   /* set to 1 so it is larger than initial value of lastenforound in exprs */
+   conshdlrdata->enforound = 1;
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CALL( storeVarExprs(scip, conshdlr, SCIPconsGetData(conss[i])) );
+      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+   }
+
+   /* sort nonlinear handlers by detection priority, in decreasing order */
+   if( conshdlrdata->nnlhdlrs > 1 )
+      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
+
+   /* get heuristics for later use */
+   conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
+   conshdlrdata->trysolheur = SCIPfindHeur(scip, "trysol");
+
+   /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      nlhdlr->nenfocalls = 0;
+      nlhdlr->nintevalcalls = 0;
+      nlhdlr->npropcalls = 0;
+      nlhdlr->nseparated = 0;
+      nlhdlr->ncutoffs = 0;
+      nlhdlr->ndomreds = 0;
+      nlhdlr->nbranchscores = 0;
+      nlhdlr->ndetections = 0;
+      nlhdlr->ndetectionslast = 0;
+
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
+      SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
+
+      if( nlhdlr->init != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
+      }
+   }
+
+   /* reset statistics in constraint handler */
+   conshdlrdata->nweaksepa = 0;
+   conshdlrdata->ntightenlp = 0;
+   conshdlrdata->ndesperatebranch = 0;
+   conshdlrdata->ndesperatecutoff = 0;
+   conshdlrdata->ndesperatetightenlp = 0;
+   conshdlrdata->nforcelp = 0;
+   SCIP_CALL( SCIPresetClock(scip, conshdlrdata->canonicalizetime) );
+
+#ifdef ENFOLOGFILE
+   ENFOLOG( enfologfile = fopen(ENFOLOGFILE, "w"); )
+#endif
 
    return SCIP_OKAY;
 }
-#else
-#define consInitNonlinear NULL
-#endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#if 1
 static
 SCIP_DECL_CONSEXIT(consExitNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-//   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS** consssorted;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( nconss > 0 )
+   {
+      /* for better performance of dropVarEvents, we sort by index, descending */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &consssorted, conss, nconss) );
+      SCIPsortDownPtr((void**)consssorted, compIndexConsNonlinear, nconss);
+
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, consssorted[i]) );
+         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(consssorted[i])) );
+      }
+
+      SCIPfreeBufferArray(scip, &consssorted);
+   }
+
+   conshdlrdata->subnlpheur = NULL;
+   conshdlrdata->trysolheur = NULL;
+
+   if( conshdlrdata->vp_randnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->vp_randnumgen);
+
+   /* free LPs used to construct facets of envelops of vertex-polyhedral functions */
+   for( i = 0; i <= SCIP_MAXVERTEXPOLYDIM; ++i )
+   {
+      if( conshdlrdata->vp_lp[i] != NULL )
+      {
+         SCIP_CALL( SCIPlpiFree(&conshdlrdata->vp_lp[i]) );
+      }
+   }
+
+   if( conshdlrdata->branchrandnumgen != NULL )
+      SCIPfreeRandom(scip, &conshdlrdata->branchrandnumgen);
+
+   /* deinitialize nonlinear handlers */
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_NLHDLR* nlhdlr;
+
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      if( nlhdlr->exit != NULL )
+      {
+         SCIP_CALL( nlhdlr->exit(scip, nlhdlr) );
+      }
+   }
+
+   ENFOLOG(
+   if( enfologfile != NULL )
+   {
+      fclose(enfologfile);
+      enfologfile = NULL;
+   })
 
    return SCIP_OKAY;
 }
-#else
-#define consExitNonlinear NULL
-#endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 1
+#if SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-//   SCIPABORT(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }

@@ -616,28 +616,6 @@ SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
    SCIP_Real*            viol                /**< buffer to store computed violation */
    );
 
-/** gives the unique index of an expression constraint
- *
- * Each expression constraint gets an index assigned when it is created.
- * This index never changes and is unique among all expression constraints
- * within the same SCIP instance.
- * Thus, it can be used to sort a set of expression constraints.
- */
-SCIP_EXPORT
-int SCIPgetIndexConsNonlinear(
-   SCIP_CONS*            cons                /**< constraint data */
-   );
-
-/** compares two expression constraints by its index
- *
- * Usable as compare operator in array sort functions.
- */
-SCIP_EXPORT
-int SCIPcompareIndexConsNonlinear(
-   void*                 cons1,
-   void*                 cons2
-   );
-
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetLinvarMayDecreaseNonlinear(

@@ -692,6 +692,33 @@ SCIP_RETCODE SCIPexprhdlrCopyInclude(
    return SCIP_OKAY;
 }
 
+/** initialization of expression handler (reset statistics) */
+void SCIPexprhdlrInit(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   if( set->misc_resetstat )
+   {
+      exprhdlr->nestimatecalls = 0;
+      exprhdlr->nintevalcalls = 0;
+      exprhdlr->npropcalls = 0;
+      exprhdlr->ncutsfound = 0;
+      exprhdlr->ncutoffs = 0;
+      exprhdlr->ndomreds = 0;
+      exprhdlr->nbranchscores = 0;
+      exprhdlr->nsimplifycalls = 0;
+      exprhdlr->nsimplified = 0;
+
+      SCIPclockReset(exprhdlr->estimatetime);
+      SCIPclockReset(exprhdlr->proptime);
+      SCIPclockReset(exprhdlr->intevaltime);
+      SCIPclockReset(exprhdlr->simplifytime);
+   }
+}
+
 /** calls the print callback of an expression handler
  *
  * the method prints an expression
