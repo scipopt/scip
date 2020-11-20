@@ -1925,7 +1925,7 @@ void extreduce_mstLevelVerticalAddLeaf(
 
 #if 1
    /* if not yet ruled out, try bottleneck distances to non-leaves of the tree */
-   if( !(*leafRuledOut) )
+   if( !(*leafRuledOut) && !extInitialCompIsGenStar(extdata) )
    {
       extreduce_bottleneckCheckNonLeaves(scip, graph, edge2neighbor, extdata, leafRuledOut);
    }
