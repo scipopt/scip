@@ -33,14 +33,8 @@ static SCIP_SOL* sol;
 static
 void setup(void)
 {
-   SCIP_CONSHDLR* conshdlr;
-
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   assert(conshdlr != NULL);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
