@@ -14,12 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   copy.c
- * @brief  tests copy of expressions when SCIP copies itself
+ * @brief  tests copy of nonlinear constraint when SCIP copies itself
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/pub_expr.h"
+#include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
@@ -59,20 +59,20 @@ void teardown(void)
 Test(copy, copy, .init = setup, .fini = teardown)
 {
    SCIP* subscip;
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    const char* input = "[nonlinear] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 == 2";
    SCIP_Bool success;
    SCIP_Bool valid;
 
    /* create constraint from input string */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
    /* add constraint to SCIP and release it */
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* goto transformed stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_TRANSFORMED, FALSE) );
@@ -94,7 +94,7 @@ Test(copy, copy, .init = setup, .fini = teardown)
 
    fflush(stdout);
 
-   cr_assert_stdout_eq_str("  [expr] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
+   cr_assert_stdout_eq_str("  [nonlinear] <test>: 1.1*<t_x>*<t_y>*(<t_z>)^(-1)+3.2*(<t_x>)^2*(<t_y>)^(-5)*<t_z>+0.5*(<t_z>)^3 == 2\n");
 
    /* release the copy of SCIP */
    SCIP_CALL( SCIPfree(&subscip) );
