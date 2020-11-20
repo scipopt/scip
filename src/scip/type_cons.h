@@ -374,7 +374,6 @@ typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
  *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
  *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
- *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
  */
 #define SCIP_DECL_CONSENFORELAX(x) SCIP_RETCODE x (SCIP* scip, SCIP_SOL* sol, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
       SCIP_Bool solinfeasible, SCIP_RESULT* result)
