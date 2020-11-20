@@ -1797,8 +1797,8 @@ SCIP_RETCODE SCIPexprRelease(
    if( (*rootexpr)->ownerdatafree != NULL )
    {
       SCIP_CALL( (*rootexpr)->ownerdatafree(set->scip, *rootexpr, &(*rootexpr)->ownerdata) );
+      assert((*rootexpr)->ownerdata == NULL);
    }
-   assert((*rootexpr)->ownerdata == NULL);
 
    /* free quadratic info */
    quadFree(blkmem, *rootexpr);
@@ -1845,9 +1845,9 @@ SCIP_RETCODE SCIPexprRelease(
             /* free child's quaddata, ownerdata, and exprdata when entering child */
             if( child->ownerdatafree != NULL )
             {
-               SCIP_CALL( (*rootexpr)->ownerdatafree(set->scip, child, &child->ownerdata) );
+               SCIP_CALL( child->ownerdatafree(set->scip, child, &child->ownerdata) );
+               assert(child->ownerdata == NULL);
             }
-            assert(child->ownerdata == NULL);
 
             /* free quadratic info */
             quadFree(blkmem, child);

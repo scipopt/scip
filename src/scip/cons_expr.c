@@ -7308,50 +7308,6 @@ SCIP_DECL_CONSDELVARS(consDelvarsExpr)
 #endif
 
 
-/** constraint copying method of constraint handler */
-static
-SCIP_DECL_CONSCOPY(consCopyExpr)
-{  /*lint --e{715}*/
-   COPY_MAPVAR_DATA mapvardata;
-   SCIP_EXPR* targetexpr;
-   SCIP_CONSDATA* sourcedata;
-
-   assert(cons != NULL);
-
-   sourcedata = SCIPconsGetData(sourcecons);
-   assert(sourcedata != NULL);
-
-   mapvardata.varmap = varmap;
-   mapvardata.consmap = consmap;
-   mapvardata.global = global;
-   mapvardata.valid = TRUE; /* hope the best */
-
-   /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( copyExpr(sourcescip, scip, sourceconshdlr, sourcedata->expr, &targetexpr, copyVar, &mapvardata) );
-
-   if( targetexpr == NULL )
-   {
-      *cons = NULL;
-      *valid = FALSE;
-
-      return SCIP_OKAY;
-   }
-
-   /* validity depends only on the SCIPgetVarCopy() returns from copyVar, which are accumulated in mapvardata.valid */
-   *valid = mapvardata.valid;
-
-   /* create copy (only capture targetexpr, no need to copy again) */
-   SCIP_CALL( createConsExpr(scip, SCIPfindConshdlr(scip, CONSHDLR_NAME), cons, name != NULL ? name : SCIPconsGetName(sourcecons),
-      targetexpr, sourcedata->lhs, sourcedata->rhs, FALSE,
-      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
-
-   /* release target expr */
-   SCIP_CALL( SCIPreleaseExpr(scip, &targetexpr) );
-
-   return SCIP_OKAY;
-}
-
-
 /** constraint method of constraint handler which returns the variables (if possible) */
 static
 SCIP_DECL_CONSGETVARS(consGetVarsExpr)

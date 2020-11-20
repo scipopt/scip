@@ -462,14 +462,14 @@ SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
       var = SCIPgetVarExprVar(expr);
       assert(var != NULL);
 
-      /* if no variable-expression stored for var hashmap, then the var hasn't been used in any constraint, so do nothing
-       * if variable-expression stored for var is different, then also do nothing
+      /* remove var -> expr map from hashmap if present
+       *  (if no variable-expression stored for var hashmap, then the var hasn't been used in any constraint, so do nothing
+       *   if variable-expression stored for var is different, then also do nothing)
        */
-      if( SCIPhashmapGetImage(conshdlrdata->var2expr, var) != (void*)expr )
-         return SCIP_OKAY;
-
-      /* remove var -> varexpr map from hashmap */
-      SCIP_CALL( SCIPhashmapRemove(conshdlrdata->var2expr, var) );
+      if( SCIPhashmapGetImage(conshdlrdata->var2expr, var) == (void*)expr )
+      {
+         SCIP_CALL( SCIPhashmapRemove(conshdlrdata->var2expr, var) );
+      }
    }
 
    SCIPfreeBlockMemory(scip, ownerdata);
@@ -3405,18 +3405,43 @@ SCIP_DECL_CONSPRINT(consPrintNonlinear)
 
 
 /** constraint copying method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-//   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLR* targetconshdlr;
+   SCIP_EXPR* targetexpr = NULL;
+   SCIP_CONSDATA* sourcedata;
+
+   assert(cons != NULL);
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   targetconshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(targetconshdlr != NULL);
+
+   SCIP_CALL( SCIPcopyExpr(sourcescip, scip, sourcedata->expr, &targetexpr, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)targetconshdlr, varmap, consmap, global, valid) );
+
+   if( targetexpr == NULL )
+      *valid = FALSE;
+
+   *cons = NULL;
+   if( *valid )
+   {
+      /* create copy (only capture targetexpr, no need to copy again) */
+      SCIP_CALL( createCons(scip, targetconshdlr, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+         targetexpr, sourcedata->lhs, sourcedata->rhs, FALSE,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+   }
+
+   if( targetexpr != NULL )
+   {
+      /* release target expr */
+      SCIP_CALL( SCIPreleaseExpr(scip, &targetexpr) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consCopyNonlinear NULL
-#endif
 
 
 /** constraint parsing method of constraint handler */
