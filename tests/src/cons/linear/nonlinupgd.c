@@ -13,21 +13,19 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   linconsupg.c
- * @brief  tests linear constraint upgrade of linear expression constraints
+/**@file   nonlinupgd.c
+ * @brief  tests linear constraint upgrade of linear nonlinear constraints
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_linear.h"
-
+#include "scip/scipdefplugins.h"
+#include "scip/cons_linear.c"
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
@@ -36,14 +34,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include expression and linear constraint handlers; the expression constraint handler needs to be added first */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
-
-   /* get expression constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -67,30 +58,31 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(linconsupg, .init = setup, .fini = teardown);
+TestSuite(nonlinupgd, .init = setup, .fini = teardown);
 
-/* upgrades a linear expression constraint to a linear constraint */
-Test(linconsupg, linear)
+/* upgrades a linear nonlinear constraint to a linear constraint */
+Test(nonlinupgd, linear)
 {
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONS* lincons;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* simplified;
+   SCIP_CONS* lincons = NULL;
    SCIP_CONS* cons;
    SCIP_Bool changed;
    SCIP_Bool infeasible;
+   int nupgdconss = 0;
    int i;
 
    const char* input = "1.0 * <x> + 2.0 * <y> - 3.0 * <z> + 0.5";
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "test", simplified, -2.0, 2.0) );
 
-   /* get an equivalent linear constraint */
-   SCIP_CALL( SCIPgetLinearConsExpr(scip, cons, &lincons) );
+   SCIP_CALL( upgradeConsNonlinear(scip, cons, 3, &nupgdconss, &lincons, 1) );
 
-   cr_assert(lincons != NULL);
+   cr_assert_eq(nupgdconss, 1);
+   cr_assert_not_null(lincons);
    cr_expect(SCIPgetNVarsLinear(scip, lincons) == 3);
    cr_expect(SCIPgetLhsLinear(scip, lincons) == -2.5);
    cr_expect(SCIPgetRhsLinear(scip, lincons) == 1.5);
@@ -112,33 +104,35 @@ Test(linconsupg, linear)
    /* release constraints and expressions */
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
 /* tries to upgrade a quadratic expression constraint to a linear constraint, which should fail */
-Test(linconsupg, quadratic)
+Test(nonlinupgd, quadratic)
 {
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* simplified;
-   SCIP_CONS* lincons;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* simplified;
+   SCIP_CONS* lincons = NULL;
    SCIP_CONS* cons;
    SCIP_Bool changed;
    SCIP_Bool infeasible;
+   int nupgdconss = 0;
 
    const char* input = "<x>^2 + <y>";
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, expr, &simplified, &changed, &infeasible) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "test", simplified, -2.0, 2.0) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "test", simplified, -2.0, 2.0) );
 
-   /* get an equivalent linear constraint, which should not be possible  */
-   SCIP_CALL( SCIPgetLinearConsExpr(scip, cons, &lincons) );
-   cr_assert(lincons == NULL);
+   SCIP_CALL( upgradeConsNonlinear(scip, cons, 2, &nupgdconss, &lincons, 1) );
+
+   cr_assert_eq(nupgdconss, 0);
+   cr_assert_null(lincons);
 
    /* release constraints and expressions */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplified) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
