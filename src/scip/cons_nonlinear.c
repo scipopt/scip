@@ -125,9 +125,11 @@ struct SCIP_Expr_OwnerData
 {
    SCIP_CONSHDLR*        conshdlr;           /** nonlinear constraint handler */
 
-   /* locks */
+   /* locks and monotonicity */
    int                   nlockspos;          /**< positive locks counter */
    int                   nlocksneg;          /**< negative locks counter */
+   SCIP_MONOTONE*        monotonicity;       /**< array containing monotonicity of expression w.r.t. each child */
+   int                   monotonicitysize;   /**< length of monotonicity array */
 
    /* propagation (in addition to activity that is stored in expr) */
    SCIP_INTERVAL         propbounds;         /**< bounds to propagate in reverse propagation */
@@ -1583,6 +1585,205 @@ SCIP_RETCODE proposeFeasibleSolution(
    }
 
    SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+
+   return SCIP_OKAY;
+}
+
+/** propagates variable locks through expression and adds lock to variables */
+static
+SCIP_RETCODE propagateLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   nlockspos,          /**< number of positive locks */
+   int                   nlocksneg           /**< number of negative locks */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_EXPRITER* it;
+   SCIP_EXPRITER_USERDATA ituserdata;
+
+   assert(expr != NULL);
+
+   /* if no locks, then nothing to do, then do nothing */
+   if( nlockspos == 0 && nlocksneg == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+   assert(SCIPexpriterGetCurrent(it) == expr); /* iterator should not have moved */
+
+   /* store locks in root node */
+   ituserdata.intvals[0] = nlockspos;
+   ituserdata.intvals[1] = nlocksneg;
+   SCIPexpriterSetCurrentUserData(it, ituserdata);
+
+   while( !SCIPexpriterIsEnd(it) )
+   {
+      /* collect locks */
+      ituserdata = SCIPexpriterGetCurrentUserData(it);
+      nlockspos = ituserdata.intvals[0];
+      nlocksneg = ituserdata.intvals[1];
+
+      ownerdata = SCIPexprGetOwnerData(expr);
+
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_ENTEREXPR:
+         {
+            if( SCIPisExprVar(scip, expr) )
+            {
+               /* if a variable, then also add nlocksneg/nlockspos via SCIPaddVarLocks() */
+               SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetVarExprVar(expr), nlocksneg, nlockspos) );
+            }
+
+            /* add locks to expression */
+            ownerdata->nlockspos += nlockspos;
+            ownerdata->nlocksneg += nlocksneg;
+
+            /* add monotonicity information if expression has been locked for the first time */
+            if( ownerdata->nlockspos == nlockspos && ownerdata->nlocksneg == nlocksneg && SCIPexprGetNChildren(expr) > 0
+               && SCIPexprhdlrHasMonotonicity(SCIPexprGetHdlr(expr)) )
+            {
+               int i;
+
+               assert(ownerdata->monotonicity == NULL);
+               assert(ownerdata->monotonicitysize == 0);
+
+               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ownerdata->monotonicity, SCIPexprGetNChildren(expr)) );
+               ownerdata->monotonicitysize = SCIPexprGetNChildren(expr);
+
+               /* store the monotonicity for each child */
+               for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+               {
+                  SCIP_CALL( SCIPgetExprMonotonicity(scip, expr, i, &ownerdata->monotonicity[i]) );
+               }
+            }
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR :
+         {
+
+            /* remove monotonicity information if expression has been unlocked */
+            if( ownerdata->nlockspos == 0 && ownerdata->nlocksneg == 0 && ownerdata->monotonicity != NULL )
+            {
+               assert(ownerdata->monotonicitysize > 0);
+               /* keep this assert for checking whether someone changed an expression without updating locks properly */
+               assert(ownerdata->monotonicitysize == SCIPexprGetNChildren(expr));
+
+               SCIPfreeBlockMemoryArray(scip, &ownerdata->monotonicity, ownerdata->monotonicitysize);
+               ownerdata->monotonicitysize = 0;
+            }
+            break;
+         }
+
+         case SCIP_EXPRITER_VISITINGCHILD :
+         {
+            SCIP_MONOTONE monotonicity;
+
+            /* get monotonicity of child */
+            /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
+             * SCIPgetExprMonotonicity
+             */
+            monotonicity = ownerdata->monotonicity != NULL ? ownerdata->monotonicity[SCIPexpriterGetChildIdxDFS(it)] : SCIP_MONOTONE_UNKNOWN;
+
+            /* compute resulting locks of the child expression */
+            switch( monotonicity )
+            {
+               case SCIP_MONOTONE_INC:
+                  ituserdata.intvals[0] = nlockspos;
+                  ituserdata.intvals[1] = nlocksneg;
+                  break;
+               case SCIP_MONOTONE_DEC:
+                  ituserdata.intvals[0] = nlocksneg;
+                  ituserdata.intvals[1] = nlockspos;
+                  break;
+               case SCIP_MONOTONE_UNKNOWN:
+                  ituserdata.intvals[0] = nlockspos + nlocksneg;
+                  ituserdata.intvals[1] = nlockspos + nlocksneg;
+                  break;
+               case SCIP_MONOTONE_CONST:
+                  ituserdata.intvals[0] = 0;
+                  ituserdata.intvals[1] = 0;
+                  break;
+            }
+            /* set locks in child expression */
+            SCIPexpriterSetChildUserData(it, ituserdata);
+
+            break;
+         }
+
+         default :
+            /* you should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriterGetNext(it);
+   }
+
+   SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
+/** main function for adding locks to expressions and variables; locks for an expression constraint are used to update
+ *  locks for all sub-expressions and variables; locks of expressions depend on the monotonicity of expressions
+ *  w.r.t. their children, e.g., consider the constraint x^2 <= 1 with x in [-2,-1] implies an up-lock for the root
+ *  expression (pow) and a down-lock for its child x because x^2 is decreasing on [-2,-1]; since the monotonicity (and thus
+ *  the locks) might also depend on variable bounds, the function remembers the computed monotonicity information ofcan
+ *  each expression until all locks of an expression have been removed, which implies that updating the monotonicity
+ *  information during the next locking of this expression does not break existing locks
+ *
+ *  @note when modifying the structure of an expression, e.g., during simplification, it is necessary to remove all
+ *        locks from an expression and repropagating them after the structural changes have been applied; because of
+ *        existing common sub-expressions, it might be necessary to remove the locks of all constraints to ensure
+ *        that an expression is unlocked (see canonicalizeConstraints() for an example)
+ */
+static
+SCIP_RETCODE addLocks(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   int                   nlockspos,          /**< number of positive rounding locks */
+   int                   nlocksneg           /**< number of negative rounding locks */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   if( nlockspos == 0 && nlocksneg == 0 )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* no constraint sides -> nothing to lock */
+   if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
+      return SCIP_OKAY;
+
+   /* remember locks */
+   consdata->nlockspos += nlockspos;
+   consdata->nlocksneg += nlocksneg;
+
+   assert(consdata->nlockspos >= 0);
+   assert(consdata->nlocksneg >= 0);
+
+   /* compute locks for lock propagation */
+   if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->lhs) )
+   {
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos + nlocksneg, nlockspos + nlocksneg));
+   }
+   else if( !SCIPisInfinity(scip, consdata->rhs) )
+   {
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos, nlocksneg));
+   }
+   else
+   {
+      assert(!SCIPisInfinity(scip, -consdata->lhs));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos));
+   }
 
    return SCIP_OKAY;
 }
@@ -3052,8 +3253,43 @@ SCIP_DECL_CONSRESPROP(consRespropNonlinear)
 static
 SCIP_DECL_CONSLOCK(consLockNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_Bool reinitsolve = FALSE;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(consdata->expr);
+
+   /* check whether we need to initSolve again because
+    * - we have enfo initialized (nenfos >= 0)
+    * - and locks appeared (going from zero to nonzero) or disappeared (going from nonzero to zero) now
+    */
+   if( ownerdata->nenfos >= 0 )
+   {
+      if( (consdata->nlockspos == 0) != (nlockspos == 0) )
+         reinitsolve = TRUE;
+      if( (consdata->nlocksneg == 0) != (nlocksneg == 0) )
+         reinitsolve = TRUE;
+   }
+
+   if( reinitsolve )
+   {
+//FIXME      SCIP_CALL( deinitSolve(scip, conshdlr, &cons, 1) );
+   }
+
+   /* add locks */
+   SCIP_CALL( addLocks(scip, cons, nlockspos, nlocksneg) );
+
+   if( reinitsolve )
+   {
+//FIXME      SCIP_CALL( initSolve(scip, conshdlr, &cons, 1) );
+   }
 
    return SCIP_OKAY;
 }

@@ -124,10 +124,6 @@ struct SCIP_Expr
    /* curvature information */
    SCIP_EXPRCURV         curvature;           /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
 
-   /* monotonicity information of each child */
-   SCIP_MONOTONE*        monotonicity;        /**< array containing monotonicity of expression w.r.t. each children */
-   int                   monotonicitysize;    /**< length of monotonicity array */
-
    /* integrality information */
    SCIP_Bool             isintegral;          /**< flag to store whether an expression is integral */
 

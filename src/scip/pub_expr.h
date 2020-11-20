@@ -204,6 +204,12 @@ SCIP_Bool SCIPexprhdlrHasCurvature(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
+/** returns whether expression handler implements the monotonicity callback */
+SCIP_EXPORT
+SCIP_Bool SCIPexprhdlrHasMonotonicity(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
 /** returns whether expression handler implements the reverse propagation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPexprhdlrHasReverseProp(

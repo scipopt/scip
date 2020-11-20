@@ -642,6 +642,16 @@ SCIP_Bool SCIPexprhdlrHasCurvature(
    return exprhdlr->curvature != NULL;
 }
 
+/** returns whether expression handler implements the monotonicity callback */
+SCIP_Bool SCIPexprhdlrHasMonotonicity(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->monotonicity != NULL;
+}
+
 /** returns whether expression handler implements the reverse propagation callback */
 SCIP_Bool SCIPexprhdlrHasReverseProp(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
@@ -1469,7 +1479,7 @@ SCIP_RETCODE SCIPexprAppendChild(
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(child != NULL);
-   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+//   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
 //   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
 //   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
    assert(expr->nchildren <= expr->childrensize);
@@ -1508,7 +1518,7 @@ SCIP_RETCODE SCIPexprReplaceChild(
    assert(newchild != NULL);
    assert(childidx >= 0);
    assert(childidx < expr->nchildren);
-   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+//   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
 //   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
 //   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
 
