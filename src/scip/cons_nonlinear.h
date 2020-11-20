@@ -587,7 +587,7 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
    SCIP_VAR*             var                 /**< variable */
    );
 
-/** gets absolute violation of expression constraint
+/** gets absolute violation of nonlinear constraint
  *
  * This function evaluates the constraints in the given solution.
  *
@@ -601,12 +601,13 @@ SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
    SCIP_Real*            viol                /**< buffer to store computed violation */
    );
 
-/** gets scaled violation of expression constraint
+#if SCIP_DISABLED_CODE
+/** gets scaled violation of nonlinear constraint
  *
  * This function evaluates the constraints in the given solution.
  *
  * The scaling that is applied to the absolute violation of the constraint
- * depends on the setting of parameter constraints/expr/violscale.
+ * depends on the setting of parameter constraints/nonlinear/violscale.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
@@ -615,6 +616,7 @@ SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
    SCIP_SOL*             sol,                /**< solution to check */
    SCIP_Real*            viol                /**< buffer to store computed violation */
    );
+#endif
 
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
 SCIP_EXPORT

@@ -264,7 +264,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             forcestrongcut;     /**< whether to force "strong" cuts in enforcement */
    SCIP_Real             enfoauxviolfactor;  /**< an expression will be enforced if the "auxiliary" violation is at least enfoauxviolfactor times the "original" violation */
    SCIP_Real             weakcutminviolfactor; /**< retry with weak cuts for constraints with violation at least this factor of maximal violated constraints */
-   char                  violscale;          /**< method how to scale violations to make them comparable (not used for feasibility check) */
+//   char                  violscale;          /**< method how to scale violations to make them comparable (not used for feasibility check) */
    char                  checkvarlocks;      /**< whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction) */
    int                   branchauxmindepth;  /**< from which depth on to allow branching on auxiliary variables */
    SCIP_Bool             branchexternal;     /**< whether to use external branching candidates for branching */
@@ -3740,9 +3740,9 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "retry enfo of constraint with weak cuts if violation is least this factor of maximal violated constraints",
          &conshdlrdata->weakcutminviolfactor, TRUE, 0.5, 0.0, 2.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
-         "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
-         &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
+//   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/violscale",
+//         "method how to scale violations to make them comparable (not used for feasibility check): (n)one, (a)ctivity and side, norm of (g)radient",
+//         &conshdlrdata->violscale, TRUE, 'n', "nag", NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/checkvarlocks",
          "whether variables contained in a single constraint should be forced to be at their lower or upper bounds ('d'isable, change 't'ype, add 'b'ound disjunction)",
@@ -4469,3 +4469,50 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
 
    return SCIP_OKAY;
 }
+
+/** gets absolute violation of nonlinear constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
+ */
+SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   )
+{
+   assert(cons != NULL);
+   assert(viol != NULL);
+
+   SCIP_CALL( computeViolation(scip, cons, sol, 0) );
+   *viol = getConsAbsViolation(cons);
+
+   return SCIP_OKAY;
+}
+
+#if SCIP_DISABLED_CODE
+/** gets scaled violation of nonlinear constraint
+ *
+ * This function evaluates the constraints in the given solution.
+ *
+ * The scaling that is applied to the absolute violation of the constraint
+ * depends on the setting of parameter constraints/nonlinear/violscale.
+ */
+SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to check */
+   SCIP_Real*            viol                /**< buffer to store computed violation */
+   )
+{
+   assert(cons != NULL);
+   assert(viol != NULL);
+
+   SCIP_CALL( computeViolation(scip, cons, sol, 0) );
+   SCIP_CALL( getConsRelViolation(scip, cons, viol, sol, 0) );
+
+   return SCIP_OKAY;
+}
+#endif

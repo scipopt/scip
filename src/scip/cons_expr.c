@@ -8874,51 +8874,6 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    return SCIP_OKAY;
 }
 
-/** gets absolute violation of expression constraint
- *
- * This function evaluates the constraints in the given solution.
- *
- * If this value is at most SCIPfeastol(scip), the constraint would be considered feasible.
- */
-SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution to check */
-   SCIP_Real*            viol                /**< buffer to store computed violation */
-   )
-{
-   assert(cons != NULL);
-   assert(viol != NULL);
-
-   SCIP_CALL( computeViolation(scip, cons, sol, 0) );
-   *viol = getConsAbsViolation(cons);
-
-   return SCIP_OKAY;
-}
-
-/** gets scaled violation of expression constraint
- *
- * This function evaluates the constraints in the given solution.
- *
- * The scaling that is applied to the absolute violation of the constraint
- * depends on the setting of parameter constraints/expr/violscale.
- */
-SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint */
-   SCIP_SOL*             sol,                /**< solution to check */
-   SCIP_Real*            viol                /**< buffer to store computed violation */
-   )
-{
-   assert(cons != NULL);
-   assert(viol != NULL);
-
-   SCIP_CALL( computeViolation(scip, cons, sol, 0) );
-   SCIP_CALL( getConsRelViolation(scip, cons, viol, sol, 0) );
-
-   return SCIP_OKAY;
-}
-
 /** gives the unique index of an expression constraint
  *
  * Each expression constraint gets an index assigned when it is created.

@@ -13,15 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conscheck.c
- * @brief  tests check
+/**@file   check.c
+ * @brief  tests check callback
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-
+#include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -37,12 +36,10 @@ void setup(void)
    SCIP_CONSHDLR* conshdlr;
 
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    /* create problem */
@@ -74,20 +71,20 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(conshdlr, conscheck, .init = setup, .fini = teardown,
-   .description = "test feasibility check of the cons_expr constraint handler."
+Test(conshdlr, check, .init = setup, .fini = teardown,
+   .description = "test feasibility check of the nonlinear constraint handler."
    )
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
-   const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
+   const char* input = "[nonlinear] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
 
 
    /* create an infeasible solution */
@@ -112,9 +109,10 @@ Test(conshdlr, conscheck, .init = setup, .fini = teardown,
    cr_expect_not(success, "undefined solution has been accepted");
 
    /* release constraints */
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
+#if SCIP_DISABLED_CODE
 static
 SCIP_Real getActivity(void)
 {
@@ -157,26 +155,26 @@ SCIP_Real getGradNorm(void)
       SQR(-1.1*xval*yval/(zval*zval) + 3.2*xval*xval*pow(yval,-5) + 1.5*zval*zval) );
 }
 
-Test(conshdlr, consrelviol_n, .init = setup, .fini = teardown,
-   .description = "test relative constraint violation of the cons_expr constraint handler for violscale=n."
+Test(conshdlr, relviol_n, .init = setup, .fini = teardown,
+   .description = "test relative constraint violation of the nonlinear constraint handler for violscale=n."
    )
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_Real activity;
    SCIP_Real absviol;
    SCIP_Real relviol;
-   const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
+   const char* input = "[nonlinear] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
 
    /* no scaling, relative should be equal to absolute violation */
-   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/violscale", 'n') );
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/violscale", 'n') );
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* create an infeasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
@@ -186,10 +184,10 @@ Test(conshdlr, consrelviol_n, .init = setup, .fini = teardown,
    cr_expect_not(success, "an infeasible solution has been accepted");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, activity-2.0, SCIPepsilon(scip), "activity: %g, rhs: 2.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
 
@@ -201,10 +199,10 @@ Test(conshdlr, consrelviol_n, .init = setup, .fini = teardown,
    cr_expect(success, "a feasible solution has been declined");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 0.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
 
@@ -217,21 +215,21 @@ Test(conshdlr, consrelviol_n, .init = setup, .fini = teardown,
 
    activity = getActivity();
    cr_expect_eq(activity, SCIP_INVALID);
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, SCIPinfinity(scip));
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
    /* release constraints */
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(conshdlr, consrelviol_a, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_a, .init = setup, .fini = teardown,
    .description = "test relative constraint violation of the cons_expr constraint handler for violscale=a."
    )
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_Real activity;
    SCIP_Real absviol;
@@ -239,14 +237,14 @@ Test(conshdlr, consrelviol_a, .init = setup, .fini = teardown,
    const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
 
    /* scale by max(activity, rhs) */
-   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/violscale", 'a') );
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/violscale", 'a') );
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* create an infeasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
@@ -256,10 +254,10 @@ Test(conshdlr, consrelviol_a, .init = setup, .fini = teardown,
    cr_expect_not(success, "an infeasible solution has been accepted");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, activity-2.0, SCIPepsilon(scip), "activity: %g, rhs: 2.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(activity, 2.0), SCIPepsilon(scip));
 
 
@@ -271,10 +269,10 @@ Test(conshdlr, consrelviol_a, .init = setup, .fini = teardown,
    cr_expect(success, "a feasible solution has been declined");
 
    activity = getActivity();
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 0.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(activity, 2.0), SCIPepsilon(scip));
 
 
@@ -287,21 +285,21 @@ Test(conshdlr, consrelviol_a, .init = setup, .fini = teardown,
 
    activity = getActivity();
    cr_expect_eq(activity, SCIP_INVALID);
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, SCIPinfinity(scip));
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
    /* release constraints */
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(conshdlr, consrelviol_g, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_g, .init = setup, .fini = teardown,
    .description = "test relative constraint violation of the cons_expr constraint handler for violscale=g."
    )
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_Real activity;
    SCIP_Real gradnorm;
@@ -310,14 +308,14 @@ Test(conshdlr, consrelviol_g, .init = setup, .fini = teardown,
    const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
 
    /* scale by norm of gradient */
-   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/violscale", 'g') );
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/violscale", 'g') );
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* create an infeasible solution */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
@@ -328,10 +326,10 @@ Test(conshdlr, consrelviol_g, .init = setup, .fini = teardown,
 
    activity = getActivity();
    gradnorm = getGradNorm();
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, activity-2.0, SCIPepsilon(scip), "activity: %g, rhs: 2.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(gradnorm, 1.0), SCIPepsilon(scip));
 
 
@@ -344,10 +342,10 @@ Test(conshdlr, consrelviol_g, .init = setup, .fini = teardown,
 
    activity = getActivity();
    gradnorm = getGradNorm();
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 0.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(gradnorm, 1.0), SCIPepsilon(scip));
 
 
@@ -360,21 +358,21 @@ Test(conshdlr, consrelviol_g, .init = setup, .fini = teardown,
 
    activity = getActivity();
    cr_expect_eq(activity, SCIP_INVALID);
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, SCIPinfinity(scip));
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_eq(relviol, absviol);
 
    /* release constraints */
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(conshdlr, consrelviol_g2, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_g2, .init = setup, .fini = teardown,
    .description = "test relative constraint violation of the cons_expr constraint handler for violscale=g."
    )
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_Real activity;
    SCIP_Real gradnorm;
@@ -384,14 +382,14 @@ Test(conshdlr, consrelviol_g2, .init = setup, .fini = teardown,
    /* dx: 0.5*sqrt(y/x)  dy: 0.5*sqrt(x/y) */
 
    /* scale by norm of gradient */
-   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/violscale", 'g') );
+   SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/violscale", 'g') );
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
 
    /* create an infeasible solution that can be evaluated and scaled */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.5) );
@@ -401,10 +399,10 @@ Test(conshdlr, consrelviol_g2, .init = setup, .fini = teardown,
 
    activity = sqrt(0.25);
    gradnorm = sqrt(SQR(0.5)+SQR(0.5));
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_float_eq(absviol, 1.0-activity, SCIPepsilon(scip), "activity: %g, lhs: 1.0, but absviol: %g", activity, absviol);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    cr_expect_float_eq(relviol, absviol / MAX(gradnorm, 1.0), SCIPepsilon(scip));
 
 
@@ -414,14 +412,15 @@ Test(conshdlr, consrelviol_g2, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, FALSE, FALSE, FALSE, &success) );
    cr_expect_not(success, "an infeasible solution has been accepted");
 
-   SCIP_CALL( SCIPgetAbsViolationConsExpr(scip, consexpr, sol, &absviol) );
+   SCIP_CALL( SCIPgetAbsViolationConsNonlinear(scip, cons, sol, &absviol) );
    cr_expect_eq(absviol, 1.0);
 
-   SCIP_CALL( SCIPgetRelViolationConsExpr(scip, consexpr, sol, &relviol) );
+   SCIP_CALL( SCIPgetRelViolationConsNonlinear(scip, cons, sol, &relviol) );
    /* if gradient cannot be evaluated, then no scaling should happen */
    cr_expect_eq(relviol, absviol);
 
 
    /* release constraints */
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+#endif
