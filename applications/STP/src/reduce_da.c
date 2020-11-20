@@ -2530,8 +2530,7 @@ SCIP_RETCODE reduce_da(
          {
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
             int nextfixed = 0;
-            SCIP_CALL( extreduce_init(scip, useSd, graph, redcostdata, arcsdeleted, &extpermanent) );
-            extpermanent->mode = paramsda->extredMode;
+            SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, arcsdeleted, &extpermanent) );
             SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, extpermanent, graph, &nextfixed) );
             ndeletions_run += nextfixed;
          }

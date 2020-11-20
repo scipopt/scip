@@ -284,7 +284,7 @@ SCIP_RETCODE extInit(
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
    SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, FALSE, distdata) );
-   SCIP_CALL( extreduce_extPermaInit(scip, graph, edgedeletable, extpermanent) );
+   SCIP_CALL( extreduce_extPermaInit(scip, extred_full, graph, edgedeletable, extpermanent) );
 
    return SCIP_OKAY;
 }
@@ -1402,6 +1402,7 @@ SCIP_RETCODE pseudodeleteExecute(
 SCIP_RETCODE extreduce_init(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             useSd,              /**< use special distance? */
+   enum EXTRED_MODE      mode,               /**< mode */
    GRAPH*                graph,              /**< graph data structure */
    REDCOST*              redcostdata,        /**> reduced costs data */
    STP_Bool*             edgedeletable,      /**< edge array to mark which (directed) edge can be removed or NULL */
@@ -1415,7 +1416,7 @@ SCIP_RETCODE extreduce_init(
 
    graph_mark(graph);
    SCIP_CALL( graph_init_dcsr(scip, graph) );
-   SCIP_CALL( extreduce_extPermaInit(scip, graph, NULL, extpermanent) );
+   SCIP_CALL( extreduce_extPermaInit(scip, mode, graph, NULL, extpermanent) );
    extperma = *extpermanent;
 
    SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, useSd, FALSE, &(extperma->distdata_default)) );
@@ -1566,6 +1567,8 @@ SCIP_RETCODE extreduce_deleteEdges(
    if( SCIPisZero(scip, redcosts_getCutoffTop(redcostdata)) )
       return SCIP_OKAY;
 
+   SCIPdebugMessage("run extreduce_deleteEdges with depth %d \n", extperma->tree_maxdepth);
+
    if( useSd )
    {
       assert(distdata->sdistdata);
@@ -1634,6 +1637,8 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    if( SCIPisZero(scip, redcosts_getCutoffTop(extperma->redcostdata)) )
       return SCIP_OKAY;
+
+   SCIPdebugMessage("run extreduce_pseudoDeleteNodes with depth %d \n", extperma->tree_maxdepth);
 
    isExtendedOrg = graph->extended;
    if( graph_pc_isPc(graph) )

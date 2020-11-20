@@ -161,6 +161,7 @@ void extreduce_extCompClean(
  *  NOTE: Sets distdata and reddata entries to NULL, since non-owned */
 SCIP_RETCODE extreduce_extPermaInit(
    SCIP*                 scip,               /**< SCIP */
+   enum EXTRED_MODE      mode,               /**< mode */
    const GRAPH*          graph,              /**< graph data structure */
    STP_Bool*             edgedeleted,        /**< edge array to mark which directed edge can be removed */
    EXTPERMA**            extpermanent        /**< (uninitialized) extension data */
@@ -184,6 +185,7 @@ SCIP_RETCODE extreduce_extPermaInit(
 #endif
 
    assert(scip && extpermanent);
+   assert(mode == extred_fast || mode == extred_full);
 
    SCIP_CALL( SCIPallocMemory(scip, extpermanent) );
    extperm = *extpermanent;
@@ -227,7 +229,7 @@ SCIP_RETCODE extreduce_extPermaInit(
    extperm->nnodes = nnodes;
    extperm->redcostEqualAllow = FALSE;
    extperm->useSdBias = FALSE;
-   extperm->mode = extred_full;
+   extperm->mode = mode;
    extperm->tree_maxdepth = extreduce_getMaxTreeDepth(graph, extperm);
    extperm->tree_maxnedges = STP_EXTTREE_MAXNEDGES;
    extperm->tree_maxnleaves = STP_EXTTREE_MAXNLEAVES;
