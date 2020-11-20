@@ -135,7 +135,7 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_sum_fracpow) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_halfx) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_sqrx) );
-//FIXME   SCIP_CALL( SCIPreleaseExpr(scip, &expr_signsqrx) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr_signsqrx) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_half_sqrx) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_sqrtx) );
 
@@ -203,7 +203,7 @@ Test(compare, exponents)
    cr_expect( SCIPcompareExpr(scip, expr_sum_fracpow, expr_sum_fracpow) == 0 );
 
    /* compare signed and unsigned power (same exponents) */
-//FIXME   cr_expect( SCIPcompareExpr(scip, expr_sqrx, expr_signsqrx) == -1 );
+   cr_expect( SCIPcompareExpr(scip, expr_sqrx, expr_signsqrx) == -1 );
 }
 
 Test(compare, sums_and_products)

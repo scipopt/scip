@@ -117,12 +117,14 @@ Test(integrality, entropy)
 {
    SCIP_CALL( checkIntegrality("entropy(<y>)", FALSE) );
 }
+#endif
 
 Test(integrality, exp)
 {
    SCIP_CALL( checkIntegrality("exp(<x>)", FALSE) );
 }
 
+#if !1
 Test(integrality, log)
 {
    SCIP_CALL( checkIntegrality("log(<x>)", FALSE) );

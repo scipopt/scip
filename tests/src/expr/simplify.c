@@ -81,7 +81,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(2*<x>)*(2*<x>) - 4 * <x>^2", "val"},
 //      {"abs(-3.0)", "val"},
 //      {"log(exp(1.0))", "val"},
-//      {"exp(-3.0)", "val"},
+      {"exp(-3.0)", "val"},
 //      {"log(abs(-3.0))", "val"},
 //      {"log(3.0)", "val"},
       {"((<x>^0.5)^0.5 + <y> + 1)*(<x> + (<x>^0.5)^0.5 + 2)", "sum"},
@@ -97,16 +97,16 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"2*<x>*(<x>+1)", "sum"},
       {"(<x>^0.5)^0.5*((<x>^0.5)^0.5+2) - 2*(<x>^0.5)^0.5 - <x>^0.5", "val"},
 //      {"(25.0 * <x>^2)^0.5", "sum"},
-//      {"exp(<x>)*exp(<y>)", "exp"},
-//      {"exp(<x>)*exp(-<x>)", "val"},
-//      {"exp(<x>^2)*<x>*exp(-<x>^2)", "var"},
-//      {"<x>*exp(<x>^2)*exp(-<x>^2)", "var"},
-//      {"<x>*exp(<x>^2)*exp(-<x>^2)*<x>", "pow"},
-//      {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
-//      {"exp(<x>)^2", "exp"},
-//      {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
+      {"exp(<x>)*exp(<y>)", "exp"},
+      {"exp(<x>)*exp(-<x>)", "val"},
+      {"exp(<x>^2)*<x>*exp(-<x>^2)", "var"},
+      {"<x>*exp(<x>^2)*exp(-<x>^2)", "var"},
+      {"<x>*exp(<x>^2)*exp(-<x>^2)*<x>", "pow"},
+      {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
+      {"exp(<x>)^2", "exp"},
+      {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
 //      {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
-//      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
+      {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
       /*TODO,
       {"<x>*abs(<x>)", "pow"}
       {"<x>*abs(<x>)^0.875", "pow"}*/
@@ -391,7 +391,6 @@ Test(simplify, remove_fix_variables)
    SCIP_CALL( SCIPfreeTransform(scip) ); /* why do I need to call this one before freeing the sols? */
 }
 
-#if !1
 /* further simplification tests */
 Test(simplify, more_simplification_tests)
 {
@@ -420,4 +419,3 @@ Test(simplify, more_simplification_tests)
    cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(simplified)[0]));
    SCIP_CALL( SCIPreleaseExpr(scip, &simplified) );
 }
-#endif

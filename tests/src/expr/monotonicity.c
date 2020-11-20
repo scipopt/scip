@@ -195,6 +195,7 @@ Test(monotonicity, entropy)
    SCIP_CALL( chgBounds(x, exp(-1.0), 10.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
+#endif
 
 /* check for exp expression */
 Test(monotonicity, exp)
@@ -205,6 +206,7 @@ Test(monotonicity, exp)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
 }
 
+#if !1
 /* check for log expression */
 Test(monotonicity, log)
 {

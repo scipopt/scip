@@ -203,7 +203,6 @@ Test(derivative, signpow)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 Test(derivative, exp)
 {
    SCIP_EXPR* expr;
@@ -219,6 +218,7 @@ Test(derivative, exp)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if !1
 Test(derivative, log)
 {
    SCIP_EXPR* expr;
@@ -295,7 +295,6 @@ Test(derivative, quadratic)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 Test(derivative, complex1)
 {
    SCIP_EXPR* expr;
@@ -325,7 +324,6 @@ Test(derivative, complex1)
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-#endif
 
 Test(derivative, complex2)
 {
