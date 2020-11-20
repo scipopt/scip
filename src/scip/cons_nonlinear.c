@@ -1738,22 +1738,47 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
  * Callback methods of constraint handler
  */
 
-/* TODO: Implement all necessary constraint handler methods. The methods with #if SCIP_DISABLED_CODE ... #else #define ... are optional */
-
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-//   SCIPABORT(); /*lint --e{527}*/
-   *valid = TRUE;
+   SCIP_CONSHDLR*     targetconshdlr;
+   SCIP_CONSHDLRDATA* targetconshdlrdata;
+   SCIP_CONSHDLRDATA* sourceconshdlrdata;
+   int                i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(valid != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* create basic data of constraint handler and include it to scip */
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
+
+   targetconshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(targetconshdlr != NULL);
+   assert(targetconshdlr != conshdlr);
+   targetconshdlrdata = SCIPconshdlrGetData(targetconshdlr);
+   assert(targetconshdlrdata != NULL);
+
+   sourceconshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(sourceconshdlrdata != NULL);
+
+   /* copy nonlinear handlers */
+   for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_NLHDLR* sourcenlhdlr;
+
+      /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
+      sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
+      if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
+      {
+         SCIP_CALL( sourcenlhdlr->copyhdlr(scip, targetconshdlr, conshdlr, sourcenlhdlr) );
+      }
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define conshdlrCopyNonlinear NULL
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static

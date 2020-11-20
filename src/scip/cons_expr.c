@@ -45,46 +45,6 @@
  */
 
 
-/** copy expression and nonlinear handlers from sourceconshdlr to (target's) scip consexprhdlr */
-static
-SCIP_RETCODE copyConshdlrExprExprHdlr(
-   SCIP*                 scip,               /**< (target) SCIP data structure */
-   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint expression handler */
-   SCIP_Bool*            valid               /**< was the copying process valid? */
-   )
-{
-   int                i;
-   SCIP_CONSHDLR*     conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLRDATA* sourceconshdlrdata;
-
-   assert(strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0);
-
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   assert(conshdlr != NULL);
-   assert(conshdlr != sourceconshdlr);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-   sourceconshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
-   assert(sourceconshdlrdata != NULL);
-
-   /* copy nonlinear handlers */
-   for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
-   {
-      SCIP_NLHDLR* sourcenlhdlr;
-
-      /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
-      sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
-      if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
-      {
-         SCIP_CALL( sourcenlhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourcenlhdlr) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 #ifdef SCIP_DISABLED_CODE
 /** compares nonlinear handler by enforcement priority
  *
@@ -7556,25 +7516,6 @@ SCIP_RETCODE presolSingleLockedVars(
 /*
  * Callback methods of constraint handler
  */
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExpr)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(valid != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-
-   /* create basic data of constraint handler and include it to scip */
-   SCIP_CALL( includeConshdlrExprBasic(scip) );
-
-   /* copy expression and nonlinear handlers */
-   SCIP_CALL( copyConshdlrExprExprHdlr(scip, conshdlr, valid) );
-
-   return SCIP_OKAY;
-}
-
 
 /** initialization method of constraint handler (called after problem was transformed) */
 static
