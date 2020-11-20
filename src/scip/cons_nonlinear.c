@@ -1268,6 +1268,325 @@ SCIP_RETCODE createCons(
    return SCIP_OKAY;
 }
 
+/** computes violation of a constraint */
+static
+SCIP_RETCODE computeViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real activity;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPevalExpr(scip, consdata->expr, sol, soltag) );
+   activity = SCIPexprGetEvalValue(consdata->expr);
+
+   /* consider constraint as violated if it is undefined in the current point */
+   if( activity == SCIP_INVALID ) /*lint !e777*/
+   {
+      consdata->lhsviol = SCIPinfinity(scip);
+      consdata->rhsviol = SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+
+   /* compute violations */
+   consdata->lhsviol = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : consdata->lhs  - activity;
+   consdata->rhsviol = SCIPisInfinity(scip,  consdata->rhs) ? -SCIPinfinity(scip) : activity - consdata->rhs;
+
+   return SCIP_OKAY;
+}
+
+/** returns absolute violation of a constraint
+ *
+ * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ */
+static
+SCIP_Real getConsAbsViolation(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return MAX3(0.0, consdata->lhsviol, consdata->rhsviol);
+}
+
+#if SCIP_DISABLED_CODE
+/** computes relative violation of a constraint
+ *
+ * @note This does not reevaluate the absolute violation, but assumes that @ref computeViolation has been called before.
+ */
+static
+SCIP_RETCODE getConsRelViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real*            viol,               /**< buffer to store violation */
+   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_Real scale;
+
+   assert(cons != NULL);
+   assert(viol != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *viol = getConsAbsViolation(cons);
+
+   if( conshdlrdata->violscale == 'n' )
+      return SCIP_OKAY;
+
+   if( SCIPisInfinity(scip, *viol) )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( conshdlrdata->violscale == 'a' )
+   {
+      scale = MAX(1.0, REALABS(SCIPexprGetEvalValue(consdata->expr)));  /*lint !e666*/
+
+      /* consider value of side that is violated for scaling, too */
+      if( consdata->lhsviol > 0.0 && REALABS(consdata->lhs) > scale )
+      {
+         assert(!SCIPisInfinity(scip, -consdata->lhs));
+         scale = REALABS(consdata->lhs);
+      }
+      else if( consdata->rhsviol > 0.0 && REALABS(consdata->rhs) > scale )
+      {
+         assert(!SCIPisInfinity(scip,  consdata->rhs));
+         scale = REALABS(consdata->rhs);
+      }
+
+      *viol /= scale;
+      return SCIP_OKAY;
+   }
+
+   /* if not 'n' or 'a', then it has to be 'g' at the moment */
+   assert(conshdlrdata->violscale == 'g');
+   if( soltag == 0 || consdata->gradnormsoltag != soltag )
+   {
+      /* we need the varexprs to conveniently access the gradient */
+      SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+      /* update cached value of norm of gradient */
+      consdata->gradnorm = 0.0;
+
+      /* compute gradient */
+      SCIP_CALL( SCIPevalExprGradient(scip, consdata->expr, sol, soltag) );
+
+      /* gradient evaluation error -> no scaling */
+      if( SCIPexprGetDerivative(consdata->expr) != SCIP_INVALID ) /*lint !e777*/
+      {
+         int i;
+         for( i = 0; i < consdata->nvarexprs; ++i )
+         {
+            SCIP_Real deriv;
+
+            assert(SCIPexprGetDiffTag(consdata->expr) == SCIPexprGetDiffTag(consdata->varexprs[i]));
+            deriv = SCIPexprGetDerivative(consdata->varexprs[i]);
+            if( deriv == SCIP_INVALID ) /*lint !e777*/
+            {
+               /* SCIPdebugMsg(scip, "gradient evaluation error for component %d\n", i); */
+               consdata->gradnorm = 0.0;
+               break;
+            }
+
+            consdata->gradnorm += deriv*deriv;
+         }
+      }
+      consdata->gradnorm = sqrt(consdata->gradnorm);
+      consdata->gradnormsoltag = soltag;
+   }
+
+   *viol /= MAX(1.0, consdata->gradnorm);
+
+   return SCIP_OKAY;
+}
+#endif
+
+/** returns whether constraint is currently violated
+ *
+ * @note This does not reevaluate the violation, but assumes that @ref computeViolation has been called before.
+ */
+static
+SCIP_Bool isConsViolated(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   return getConsAbsViolation(cons) > SCIPfeastol(scip);
+}
+
+/** Given a solution where every expression constraint is either feasible or can be made feasible by
+ *  moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
+ *
+ *  The method assumes that this is always possible and that not all constraints are feasible already.
+ */
+static
+SCIP_RETCODE proposeFeasibleSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to process */
+   SCIP_Bool*            success             /**< buffer to store whether we succeeded to construct a solution that satisfies all provided constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_SOL* newsol;
+   int c;
+
+   assert(scip  != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* don't propose new solutions if not in presolve or solving */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( sol != NULL )
+   {
+      SCIP_CALL( SCIPcreateSolCopy(scip, &newsol, sol) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateLPSol(scip, &newsol, NULL) );
+   }
+   SCIP_CALL( SCIPunlinkSol(scip, newsol) );
+   SCIPdebugMsg(scip, "attempt to make solution from <%s> feasible by shifting linear variable\n",
+      sol != NULL ? (SCIPsolGetHeur(sol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(sol)) : "tree") : "LP");
+
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
+      SCIP_Real viol = 0.0;
+      SCIP_Real delta;
+      SCIP_Real gap;
+
+      assert(consdata != NULL);
+
+      /* get absolute violation and sign */
+      if( consdata->lhsviol > SCIPfeastol(scip) )
+         viol = consdata->lhsviol; /* lhs - activity */
+      else if( consdata->rhsviol > SCIPfeastol(scip) )
+         viol = -consdata->rhsviol; /* rhs - activity */
+      else
+         continue; /* constraint is satisfied */
+
+      if( consdata->linvarincr != NULL &&
+         ((viol > 0.0 && consdata->linvarincrcoef > 0.0) || (viol < 0.0 && consdata->linvarincrcoef < 0.0)) )
+      {
+         SCIP_VAR* var = consdata->linvarincr;
+
+         /* compute how much we would like to increase var */
+         delta = viol / consdata->linvarincrcoef;
+         assert(delta > 0.0);
+
+         /* if var has an upper bound, may need to reduce delta */
+         if( !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+         {
+            gap = SCIPvarGetUbGlobal(var) - SCIPgetSolVal(scip, newsol, var);
+            delta = MIN(MAX(0.0, gap), delta);
+         }
+         if( SCIPisPositive(scip, delta) )
+         {
+            /* if variable is integral, round delta up so that it will still have an integer value */
+            if( SCIPvarIsIntegral(var) )
+               delta = SCIPceil(scip, delta);
+
+            SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n",
+               SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));  /*lint !e613*/
+
+            /* adjust constraint violation, if satisfied go on to next constraint */
+            viol -= consdata->linvarincrcoef * delta;
+            if( SCIPisZero(scip, viol) )
+               continue;
+         }
+      }
+
+      assert(viol != 0.0);
+      if( consdata->linvardecr != NULL &&
+         ((viol > 0.0 && consdata->linvardecrcoef < 0.0) || (viol < 0.0 && consdata->linvardecrcoef > 0.0)) )
+      {
+         SCIP_VAR* var = consdata->linvardecr;
+
+         /* compute how much we would like to decrease var */
+         delta = viol / consdata->linvardecrcoef;
+         assert(delta < 0.0);
+
+         /* if var has a lower bound, may need to reduce delta */
+         if( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+         {
+            gap = SCIPgetSolVal(scip, newsol, var) - SCIPvarGetLbGlobal(var);
+            delta = MAX(MIN(0.0, gap), delta);
+         }
+         if( SCIPisNegative(scip, delta) )
+         {
+            /* if variable is integral, round delta down so that it will still have an integer value */
+            if( SCIPvarIsIntegral(var) )
+               delta = SCIPfloor(scip, delta);
+            SCIP_CALL( SCIPincSolVal(scip, newsol, consdata->linvardecr, delta) );
+            /*lint --e{613} */
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n",
+               SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
+
+            /* adjust constraint violation, if satisfied go on to next constraint */
+            viol -= consdata->linvardecrcoef * delta;
+            if( SCIPisZero(scip, viol) )
+               continue;
+         }
+      }
+
+      /* still here... so probably we could not make constraint feasible due to variable bounds, thus give up */
+      break;
+   }
+
+   /* if we have a solution that should satisfy all quadratic constraints and has a better objective than the current upper bound,
+    * then pass it to the trysol heuristic
+    */
+   if( c == nconss && (SCIPisInfinity(scip, SCIPgetUpperbound(scip)) || SCIPisSumLT(scip, SCIPgetSolTransObj(scip, newsol), SCIPgetUpperbound(scip))) )
+   {
+      SCIPdebugMsg(scip, "pass solution with objective val %g to trysol heuristic\n", SCIPgetSolTransObj(scip, newsol));
+
+      assert(conshdlrdata->trysolheur != NULL);
+      SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, newsol) );
+
+      *success = TRUE;
+   }
+
+   SCIP_CALL( SCIPfreeSol(scip, &newsol) );
+
+   return SCIP_OKAY;
+}
+
 /** compares nonlinear handler by detection priority
  *
  * if handlers have same detection priority, then compare by name
@@ -2440,18 +2759,32 @@ SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 
 
 /** frees specific constraint data */
-#if 1
 static
 SCIP_DECL_CONSDELETE(consDeleteNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(consdata != NULL);
+   assert(*consdata != NULL);
+   assert((*consdata)->expr != NULL);
+
+   /* constraint locks should have been removed */
+   assert((*consdata)->nlockspos == 0);
+   assert((*consdata)->nlocksneg == 0);
+
+   /* free variable expressions */
+   SCIP_CALL( freeVarExprs(scip, *consdata) );
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &(*consdata)->expr) );
+
+   /* free nonlinear row representation */
+   if( (*consdata)->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
+   }
+
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }
-#else
-#define consDeleteNonlinear NULL
-#endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */
@@ -2565,8 +2898,106 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
 static
 SCIP_DECL_CONSCHECK(consCheckNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA*     consdata;
+   SCIP_Real          maxviol;
+   SCIP_Bool          maypropfeasible;
+   SCIP_Longint       soltag;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
+   soltag = SCIPgetExprNewSoltag(scip);
+   maxviol = 0.0;
+   maypropfeasible = conshdlrdata->trysolheur != NULL && SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED
+      && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING;
+
+   /* check nonlinear constraints for feasibility */
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL && conss[c] != NULL);
+      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
+
+      if( isConsViolated(scip, conss[c]) )
+      {
+         *result = SCIP_INFEASIBLE;
+         maxviol = MAX(maxviol, getConsAbsViolation(conss[c]));  /*lint !e666*/
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+
+         /* print reason for infeasibility */
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
+            if( consdata->lhsviol > SCIPfeastol(scip) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
+            }
+            if( consdata->rhsviol > SCIPfeastol(scip) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
+            }
+         }
+         else if( (conshdlrdata->subnlpheur == NULL || sol == NULL) && !maypropfeasible && !completely )
+         {
+            /* if we don't want to pass to subnlp heuristic and don't need to print reasons, then can stop checking here */
+            return SCIP_OKAY;
+         }
+
+         /* do not try to shift linear variables if violation is at infinity (leads to setting variable to infinity in solution, which is not allowed) */
+         if( maypropfeasible && SCIPisInfinity(scip, getConsAbsViolation(conss[c])) )
+            maypropfeasible = FALSE;
+
+         if( maypropfeasible )
+         {
+            if( consdata->lhsviol > SCIPfeastol(scip) )
+            {
+               /* check if there is a variable which may help to get the left hand side satisfied
+                * if there is no such variable, then we cannot get feasible
+                */
+               if( !(consdata->linvarincr != NULL && consdata->linvarincrcoef > 0.0) &&
+                   !(consdata->linvardecr != NULL && consdata->linvardecrcoef < 0.0) )
+                  maypropfeasible = FALSE;
+            }
+            else
+            {
+               assert(consdata->rhsviol > SCIPfeastol(scip));
+               /* check if there is a variable which may help to get the right hand side satisfied
+                * if there is no such variable, then we cannot get feasible
+                */
+               if( !(consdata->linvarincr != NULL && consdata->linvarincrcoef < 0.0) &&
+                   !(consdata->linvardecr != NULL && consdata->linvardecrcoef > 0.0) )
+                  maypropfeasible = FALSE;
+            }
+         }
+      }
+   }
+
+   if( *result == SCIP_INFEASIBLE && maypropfeasible )
+   {
+      SCIP_Bool success;
+
+      SCIP_CALL( proposeFeasibleSolution(scip, conshdlr, conss, nconss, sol, &success) );
+
+      /* do not pass solution to NLP heuristic if we made it feasible this way */
+      if( success )
+         return SCIP_OKAY;
+   }
+
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !SCIPisInfinity(scip, maxviol) )
+   {
+      SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
+   }
 
    return SCIP_OKAY;
 }
