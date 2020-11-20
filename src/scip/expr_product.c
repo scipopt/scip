@@ -34,7 +34,7 @@
 #include "scip/expr_sum.h"
 #include "scip/expr_pow.h"
 #include "scip/expr_value.h"
-//#include "scip/cons_expr_exp.h"
+#include "scip/expr_exp.h"
 //#include "scip/cons_expr_entropy.h"
 //#include "scip/cons_expr_abs.h"
 #include "scip/cons_nonlinear.h"
@@ -439,8 +439,7 @@ SCIP_RETCODE mergeProductExprlist(
        */
 
       /* if both are exponentials, create a new exponential with the sum of theirs children */
-      if( SCIPexprGetHdlr(current->expr) == SCIPgetExprHdlrExponential(scip) &&
-          SCIPexprGetHdlr(tomergenode->expr) == SCIPgetExprHdlrExponential(scip) )
+      if( SCIPisExprExp(scip, current->expr) && SCIPisExprExp(scip, tomergenode->expr) )
       {
          SCIP_EXPR* sum;
          SCIP_EXPR* simplifiedsum;

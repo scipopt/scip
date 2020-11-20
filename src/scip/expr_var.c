@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_var.c
+/**@file   expr_var.c
  * @brief  variable expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

@@ -31,7 +31,7 @@
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
 #include "scip/expr_product.h"
-//#include "scip/cons_expr_exp.h"
+#include "scip/expr_exp.h"
 
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
@@ -184,7 +184,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
          assert(child != NULL);
 
-         if( SCIPexprGetHdlr(child) == SCIPgetExprHdlrExponential(scip) )
+         if( SCIPisExprExp(scip, child) )
          {
             expchild = child;
             break;

@@ -32,7 +32,7 @@
 #include "scip/expr_value.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
-//#include "scip/cons_expr_exp.h"
+#include "scip/expr_exp.h"
 //#include "scip/cons_expr_abs.h"
 
 #define POWEXPRHDLR_NAME         "pow"
@@ -1359,7 +1359,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
    }
 
    /* enforces POW11 (exp(x)^n = exp(n*x)) */
-   if( SCIPexprGetHdlr(base) == SCIPgetExprHdlrExponential(scip) )
+   if( SCIPisExprExp(scip, base) )
    {
       SCIP_EXPR* child;
       SCIP_EXPR* prod;
@@ -2363,7 +2363,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
    /* enforces SPOW11 (exp(x)^n = exp(n*x))
     * since exp() is always nonnegative, we can treat signpower as normal power here
     */
-   if( SCIPexprGetHdlr(base) == SCIPgetExprHdlrExponential(scip) )
+   if( SCIPisExprExp(scip, base) )
    {
       SCIP_EXPR* child;
       SCIP_EXPR* prod;
