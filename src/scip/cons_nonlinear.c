@@ -440,7 +440,7 @@ SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
    SCIP_CALL( freeEnfoData(scip, expr, TRUE) );
 
    /* expression should not be enforced anymore */
-   assert((*ownerdata)->nenfos == 0);
+   assert((*ownerdata)->nenfos <= 0);
    assert((*ownerdata)->auxvar == NULL);
 
    if( SCIPisExprVar(scip, expr) )
@@ -950,7 +950,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       /* update the activity of the var-expr here immediately
        * (we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated)
        */
-      SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
+//FIXME      SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
+      activity = conshdlrdata->intevalvar(scip, SCIPgetVarExprVar(expr), conshdlrdata);
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", activity.inf, activity.sup);
 #endif
@@ -1065,7 +1066,8 @@ SCIP_RETCODE catchVarEvents(
       if( SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag )
       {
          SCIP_INTERVAL activity;
-         SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
+//FIXME         SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
+         activity = intEvalVarBoundTightening(scip, SCIPgetVarExprVar(expr), conshdlrdata);
          SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
 #ifdef DEBUG_PROP
          SCIPdebugMsg(scip, "var-exprhdlr::inteval for var <%s> = [%.20g, %.20g]\n", SCIPvarGetName(SCIPgetVarExprVar(expr)), activity.inf, activity.sup);
@@ -2915,7 +2917,7 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 {  /*lint --e{715}*/
@@ -2930,7 +2932,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 {  /*lint --e{715}*/
@@ -2945,7 +2947,7 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSEXITSOL(consExitsolNonlinear)
 {  /*lint --e{715}*/
@@ -3018,7 +3020,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
 
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 {  /*lint --e{715}*/
@@ -3067,7 +3069,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -3210,7 +3212,7 @@ static
 SCIP_DECL_CONSPROP(consPropNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -3220,7 +3222,7 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
 
 
 /** presolving method of constraint handler */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 {  /*lint --e{715}*/
@@ -3408,7 +3410,7 @@ static
 SCIP_DECL_CONSCOPY(consCopyNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
@@ -3555,7 +3557,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 {  /*lint --e{715}*/
@@ -3569,7 +3571,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 #endif
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#if 1
+#if !1
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
 {  /*lint --e{715}*/
