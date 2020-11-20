@@ -121,6 +121,7 @@ Test(curvature, cosine)
    SCIP_CALL(checkCurvature("cos(<z>[C])", "cos", SCIP_EXPRCURV_CONVEX));
    SCIP_CALL(checkCurvature("cos(<w>[C])", "cos", SCIP_EXPRCURV_CONCAVE));
 }
+#endif
 
 /* check for exponential expression */
 Test(curvature, exponential)
@@ -128,6 +129,7 @@ Test(curvature, exponential)
    SCIP_CALL( checkCurvature("exp(<x>[C])", "exp", SCIP_EXPRCURV_CONVEX) );
 }
 
+#if !1
 /* check for logarithm expression */
 Test(curvature, logarithm)
 {

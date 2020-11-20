@@ -225,7 +225,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
          /* create exponential with new child */
-         SCIP_CALL( SCIPcreateConsExprExprExp(scip, &exponential, simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprExp(scip, &exponential, simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */

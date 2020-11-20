@@ -459,7 +459,7 @@ SCIP_RETCODE mergeProductExprlist(
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
          /* create exponential */
-         SCIP_CALL( SCIPcreateConsExprExprExp(scip, &expexpr, simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprExp(scip, &expexpr, simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */

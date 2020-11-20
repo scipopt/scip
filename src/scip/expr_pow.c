@@ -1377,7 +1377,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_CALL( SCIPreleaseExpr(scip, &prod) );
 
       /* create exponential with new child */
-      SCIP_CALL( SCIPcreateConsExprExprExp(scip, &exponential, simplifiedprod, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprExp(scip, &exponential, simplifiedprod, ownerdatacreate, ownerdatacreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedprod) );
 
       /* the final simplified expression is the simplification of the just created exponential */
@@ -2381,7 +2381,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       SCIP_CALL( SCIPreleaseExpr(scip, &prod) );
 
       /* create exponential with new child */
-      SCIP_CALL( SCIPcreateConsExprExprExp(scip, &exponential, simplifiedprod, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprExp(scip, &exponential, simplifiedprod, ownerdatacreate, ownerdatacreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedprod) );
 
       /* the final simplified expression is the simplification of the just created exponential */

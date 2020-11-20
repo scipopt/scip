@@ -137,6 +137,7 @@ Test(evalexpr, absolute, .description = "Tests expression evaluation for absolut
    }
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
+#endif
 
 Test(evalexpr, exponential, .description = "Tests expression evaluation for exponential expressions.")
 {
@@ -196,6 +197,7 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
+#if !1
 Test(evalexpr, logarithm, .description = "Tests expression evaluation for logarithmic expressions.")
 {
       SCIP_EXPR* expr;
