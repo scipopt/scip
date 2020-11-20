@@ -384,7 +384,13 @@ SCIP_RETCODE SCIPevalExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
+/** returns a previously unused solution tag for expression evaluation */
+SCIP_EXPORT
+SCIP_Longint SCIPgetExprNewSoltag(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** @name Differentiation methods
@@ -487,7 +493,7 @@ SCIP_RETCODE SCIPevalExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
 /** evaluates Hessian-vector product of an expression for a given point and direction
@@ -502,7 +508,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
-   unsigned int          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
    SCIP_SOL*             direction         /**< direction */
    );
 

@@ -38,6 +38,7 @@
 #include "scip/pub_var.h"
 #include "scip/struct_scip.h"
 #include "scip/struct_mem.h"
+#include "scip/struct_stat.h"
 
 /* core expression handler plugins */
 #include "scip/expr_value.h"
@@ -1551,7 +1552,7 @@ SCIP_RETCODE SCIPevalExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
    assert(scip != NULL);
@@ -1560,6 +1561,17 @@ SCIP_RETCODE SCIPevalExpr(
    SCIP_CALL( SCIPexprEval(scip->set, scip->stat, scip->mem->probmem, expr, sol, soltag) );
 
    return SCIP_OKAY;
+}
+
+/** returns a previously unused solution tag for expression evaluation */
+SCIP_EXPORT
+SCIP_Longint SCIPgetExprNewSoltag(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   return ++(scip->stat->exprlastsoltag);
 }
 
 /** evaluates gradient of an expression for a given point
@@ -1573,7 +1585,7 @@ SCIP_RETCODE SCIPevalExprGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
    assert(scip != NULL);
@@ -1595,7 +1607,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
    SCIP*                 scip,             /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be differentiated */
    SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
-   unsigned int          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
    SCIP_SOL*             direction         /**< direction */
    )
 {

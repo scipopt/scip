@@ -2324,7 +2324,7 @@ SCIP_RETCODE SCIPexprEval(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
    SCIP_EXPRITER* it;
@@ -2415,14 +2415,14 @@ SCIP_RETCODE SCIPexprEvalGradient(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
-   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    )
 {
    SCIP_EXPRITER* it;
    SCIP_EXPR* expr;
    SCIP_EXPR* child;
    SCIP_Real derivative;
-   unsigned int difftag;
+   SCIP_Longint difftag;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -2520,7 +2520,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            rootexpr,           /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
-   unsigned int          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
    SCIP_SOL*             direction           /**< direction */
    )
 {
@@ -2532,7 +2532,7 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_EXPR* child;
    SCIP_Real derivative;
    SCIP_Real hessiandir;
-   unsigned int difftag;
+   SCIP_Longint difftag;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -3415,7 +3415,7 @@ SCIP_Real SCIPexprGetEvalValue(
 void SCIPexprSetEvalValue(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             value,              /**< value to set */
-   unsigned int          tag                 /**< tag of solution that was evaluated, or 0 */
+   SCIP_Longint          tag                 /**< tag of solution that was evaluated, or 0 */
    )
 {
    assert(expr != NULL);

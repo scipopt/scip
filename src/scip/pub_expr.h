@@ -291,7 +291,7 @@ SCIP_EXPORT
 void SCIPexprSetEvalValue(
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             value,              /**< value to set */
-   unsigned int          tag                 /**< tag of solution that was evaluated, or 0 */
+   SCIP_Longint          tag                 /**< tag of solution that was evaluated, or 0 */
    );
 
 /** gives the evaluation tag from the last evaluation, or 0 */
