@@ -3457,8 +3457,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastenfolpresult = *result;
 
          /* update statistics */
-         if( *result != SCIP_DIDNOTRUN )
-            conshdlr->nenfolpcalls++;
+         conshdlr->nenfolpcalls++;
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
