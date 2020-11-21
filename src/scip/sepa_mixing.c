@@ -425,6 +425,7 @@ SCIP_RETCODE separateCuts(
       /* add the variable with maximal coefficient to make sure the cut is strong enough */
       if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
+         /* do not update activity: either the corresponding solval is 0.0 or the cut will not become efficious */
          if( maxabssign )
          {
             cutcoefs[cutnnz] = lastcoef - maxabscoef;
@@ -545,7 +546,7 @@ SCIP_RETCODE separateCuts(
       activity = varlpsol - ub;
       lastcoef = 0.0;
 
-      for( j = 0; j < vubmixsize; j++  )
+      for( j = 0; j < vubmixsize; j++ )
       {
          SCIP_Real solval;
 
@@ -555,6 +556,7 @@ SCIP_RETCODE separateCuts(
             break;
          else
          {
+            /* skip if we have already added a variable with bigger coefficient */
             if( SCIPisLE(scip, vubmixcoefs[j], lastcoef) )
                continue;
             else
@@ -576,6 +578,7 @@ SCIP_RETCODE separateCuts(
       /* add the variable with maximal coefficient if needed */
       if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
+         /* do not update activity: either the corresponding solval is 0.0 or the cut will not become efficious */
          if( maxabssign )
          {
             cutcoefs[cutnnz] = lastcoef - maxabscoef;
