@@ -193,6 +193,7 @@ static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool*            cutoff,             /**< whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to store the number of generated cuts */
    )
@@ -266,7 +267,7 @@ SCIP_RETCODE separateCuts(
       SCIP_Real maxabscoef;
       SCIP_Real activity;
       SCIP_Real lastcoef;
-      SCIP_Real varlpsol;
+      SCIP_Real varsolval;
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Bool islocallb = FALSE;  /* Is it a local lower bound or global lower bound? */
@@ -288,8 +289,8 @@ SCIP_RETCODE separateCuts(
          continue;
 
       /* skip lower bound if the LP solution value is equal to the upper bound of the continuous variable */
-      varlpsol = SCIPvarGetLPSol(var);
-      if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), varlpsol) )
+      varsolval = SCIPgetSolVal(scip, sol, var);
+      if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), varsolval) )
          goto VUB;
 
       /* get variable lower variable bounds information */
@@ -357,7 +358,7 @@ SCIP_RETCODE separateCuts(
 
             vlbmixcoefs[vlbmixsize] = REALABS(coef);
             vlbmixinds[vlbmixsize] = SCIPvarGetProbindex(vlbvars[j]);
-            vlbmixsols[vlbmixsize] = (! vlbmixsigns[vlbmixsize]) ? SCIPvarGetLPSol(vlbvars[j]) : (1.0 - SCIPvarGetLPSol(vlbvars[j]));
+            vlbmixsols[vlbmixsize] = (! vlbmixsigns[vlbmixsize]) ? SCIPgetSolVal(scip, sol, vlbvars[j]) : (1.0 - SCIPgetSolVal(scip, sol, vlbvars[j]));
 
             /* update the maximal coefficient if needed */
             if( maxabscoef < vlbmixcoefs[vlbmixsize] )
@@ -376,10 +377,10 @@ SCIP_RETCODE separateCuts(
          goto VUB;
 
       /* stop if the current solution value of the transformed continuous variable is larger than the maximal coefficient */
-      if( SCIPisFeasGT(scip, varlpsol - lb, maxabscoef) )
+      if( SCIPisFeasGT(scip, varsolval - lb, maxabscoef) )
          goto VUB;
 
-      /* sort the lp solutions in non-increasing order */
+      /* sort the solution values in non-increasing order */
       SCIPsortDownRealRealIntInt(vlbmixsols, vlbmixcoefs, vlbmixinds, vlbmixsigns, vlbmixsize);
 
       /* add the continuous variable */
@@ -388,7 +389,7 @@ SCIP_RETCODE separateCuts(
       cutrhs = -lb;
       cutnnz++;
 
-      activity = -(varlpsol - lb);
+      activity = -(varsolval - lb);
       lastcoef = 0.0;
 
       /* loop over the variables and add the variable to the cut if its coefficient is larger than that of the last variable */
@@ -457,8 +458,8 @@ SCIP_RETCODE separateCuts(
       maxabsind = -1;
       maxabssign = 0;
 
-      /* stop if the lower bound is equal to the LP solution value of the continuous variable */
-      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), varlpsol) )
+      /* stop if the lower bound is equal to the solution value of the continuous variable */
+      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), varsolval) )
          goto CONFLICT;
 
       if( sepadata->uselocalbounds && SCIPisGT(scip, ub, SCIPvarGetUbLocal(var)) )
@@ -511,7 +512,7 @@ SCIP_RETCODE separateCuts(
 
             vubmixcoefs[vubmixsize] = REALABS(coef);
             vubmixinds[vubmixsize] = SCIPvarGetProbindex(vubvars[j]);
-            vubmixsols[vubmixsize] = (! vubmixsigns[vubmixsize]) ? SCIPvarGetLPSol(vubvars[j]): 1.0 - SCIPvarGetLPSol(vubvars[j]);
+            vubmixsols[vubmixsize] = (! vubmixsigns[vubmixsize]) ? SCIPgetSolVal(scip, sol, vubvars[j]): (1.0 - SCIPgetSolVal(scip, sol, vubvars[j]));
 
             /* update the maximal coefficient if needed */
             if( maxabscoef < vubmixcoefs[vubmixsize] )
@@ -530,10 +531,10 @@ SCIP_RETCODE separateCuts(
          goto CONFLICT;
 
       /* stop if the current solution value of transformed continuous variable is larger than the maximal coefficient */
-      if( SCIPisFeasGT(scip, ub - varlpsol, maxabscoef) )
+      if( SCIPisFeasGT(scip, ub - varsolval, maxabscoef) )
          goto CONFLICT;
 
-      /* sort the lp solutions in non-increasing order */
+      /* sort the solution values in non-increasing order */
       SCIPsortDownRealRealIntInt(vubmixsols, vubmixcoefs, vubmixinds, vubmixsigns, vubmixsize);
 
       /* add the continuous variables */
@@ -543,7 +544,7 @@ SCIP_RETCODE separateCuts(
       cutrhs = ub;
       cutnnz++;
 
-      activity = varlpsol - ub;
+      activity = varsolval - ub;
       lastcoef = 0.0;
 
       for( j = 0; j < vubmixsize; j++ )
@@ -730,7 +731,56 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
       return SCIP_OKAY;
 
    /* call the cut separation */
-   SCIP_CALL( separateCuts(scip, sepa, &cutoff, &ncuts) );
+   SCIP_CALL( separateCuts(scip, sepa, NULL, &cutoff, &ncuts) );
+
+   /* adjust result code */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( ncuts > 0 )
+   {
+      SCIPdebugMsg(scip, "mixing separator generated %d cuts.\n", ncuts);
+      *result = SCIP_SEPARATED;
+   }
+   else
+      *result = SCIP_DIDNOTFIND;
+
+   return SCIP_OKAY;
+}
+
+/** arbitrary primal solution separation method of separator */
+static
+SCIP_DECL_SEPAEXECSOL(sepaExecSolMixing)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+   SCIP_Bool cutoff;
+   int nbinvars;
+   int nvars;
+   int ncuts;
+   int ncalls;
+
+   assert(sepa != NULL);
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* only call the mixing cut separator a given number of times at each node */
+   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
+
+   /* gets numver of active problem variables and number of binary variables */
+   SCIP_CALL( SCIPgetVarsData(scip, NULL, &nvars, &nbinvars, NULL, NULL, NULL) );
+
+   /* if all the active problem variables are binary, stop */
+   if( nvars == nbinvars )
+      return SCIP_OKAY;
+
+   /* call the cut separation */
+   SCIP_CALL( separateCuts(scip, sepa, sol, &cutoff, &ncuts) );
 
    /* adjust result code */
    if( cutoff )
@@ -766,7 +816,7 @@ SCIP_RETCODE SCIPincludeSepaMixing(
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpMixing, NULL,
+         sepaExeclpMixing, sepaExecSolMixing,
          sepadata) );
    assert(sepa != NULL);
 
