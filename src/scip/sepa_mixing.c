@@ -239,11 +239,11 @@ SCIP_RETCODE separateCuts(
       /* only generate cuts based on continuous variables */
       firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    }
-   if ( firstvar == nvars )
-      return SCIP_OKAY;
-
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
+
+   if ( firstvar == nvars )
+      return SCIP_OKAY;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nvars) );
