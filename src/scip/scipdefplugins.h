@@ -77,6 +77,7 @@
 #include "scip/event_estim.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
+#include "scip/expr_abs.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
 #include "scip/expr_product.h"
