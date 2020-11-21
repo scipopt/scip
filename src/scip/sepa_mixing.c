@@ -288,6 +288,9 @@ SCIP_RETCODE separateCuts(
       if( SCIPvarGetProbindex(var) < 0 )
          continue;
 
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
       /* skip lower bound if the LP solution value is equal to the upper bound of the continuous variable */
       varsolval = SCIPgetSolVal(scip, sol, var);
       if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), varsolval) )
@@ -301,7 +304,6 @@ SCIP_RETCODE separateCuts(
       vlbvars = SCIPvarGetVlbVars(var);
       vlbcoefs = SCIPvarGetVlbCoefs(var);
       vlbconsts = SCIPvarGetVlbConstants(var);
-      lb = SCIPvarGetLbGlobal(var);
 
       maxabscoef = 0.0;
       maxabsind = -1;
@@ -452,7 +454,6 @@ SCIP_RETCODE separateCuts(
       vubvars = SCIPvarGetVubVars(var);
       vubcoefs = SCIPvarGetVubCoefs(var);
       vubconsts = SCIPvarGetVubConstants(var);
-      ub = SCIPvarGetUbGlobal(var);
 
       maxabscoef = 0.0;
       maxabsind = -1;
