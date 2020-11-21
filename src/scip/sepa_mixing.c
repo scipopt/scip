@@ -117,6 +117,7 @@ static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    int*                  cutinds,            /**< problem indices of variables in cut */
    int                   cutnnz,             /**< number of non-zeros in cut */
@@ -160,13 +161,13 @@ SCIP_RETCODE addCut(
    /* flush all changes before adding the cut */
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-   if ( SCIPisCutEfficacious(scip, NULL, cut) )
+   if ( SCIPisCutEfficacious(scip, sol, cut) )
    {
       /* set cut rank */
       SCIProwChgRank(cut, 1);
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "-> found cut: ");
+      SCIPdebugMsg(scip, "-> found cut (eff: %f): ", SCIPgetCutEfficacy(scip, sol, cut));
       SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
@@ -442,7 +443,7 @@ SCIP_RETCODE separateCuts(
       /* add the cut if the violtion is good enough and the number of nonzero coefficients is larger than 2 */
       if( SCIPisEfficacious(scip, activity) && cutnnz > 2 )
       {
-         SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocallb, cutoff, ncuts) );
+         SCIP_CALL( addCut(scip, sepa, sol, cutcoefs, cutinds, cutnnz, cutrhs, islocallb, cutoff, ncuts) );
       }
 
    VUB:
@@ -594,7 +595,7 @@ SCIP_RETCODE separateCuts(
       /* add the cut if the violtion is good enough and the number of nonzero coefficients is larger than 2 */
       if( SCIPisEfficacious(scip, activity) && cutnnz > 2 )
       {
-         SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocalub, cutoff, ncuts) );
+         SCIP_CALL( addCut(scip, sepa, sol, cutcoefs, cutinds, cutnnz, cutrhs, islocalub, cutoff, ncuts) );
       }
 
    CONFLICT:
@@ -634,7 +635,7 @@ SCIP_RETCODE separateCuts(
                   cutinds[1] = vubmixinds[k];
                   cutrhs = vlbmixsigns[j] ? (cutrhs - 1.0) : cutrhs;
                   cutrhs = vubmixsigns[k] ? (cutrhs - 1.0) : cutrhs;
-                  SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutislocal, cutoff, ncuts) );
+                  SCIP_CALL( addCut(scip, sepa, sol, cutcoefs, cutinds, cutnnz, cutrhs, cutislocal, cutoff, ncuts) );
                }
             }
             else
