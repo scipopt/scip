@@ -682,13 +682,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
    int nvars;
    int ncuts;
    int ncalls;
-   int depth;
 
    assert(sepa != NULL);
    assert(scip != NULL);
 
    *result = SCIP_DIDNOTRUN;
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
    sepadata = SCIPsepaGetData(sepa);
 
