@@ -222,8 +222,6 @@ SCIP_RETCODE separateCuts(
 
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
 
    /* get the index of the first considered variable */
    if( sepadata->iscutsonints )
@@ -236,6 +234,11 @@ SCIP_RETCODE separateCuts(
       /* only generate cuts based on continuous variables */
       firstvar = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    }
+   if ( firstvar == nvars )
+      return SCIP_OKAY;
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vlbmixcoefs, nvars) );
