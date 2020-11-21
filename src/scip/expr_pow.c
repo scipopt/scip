@@ -33,7 +33,7 @@
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_exp.h"
-//#include "scip/cons_expr_abs.h"
+#include "scip/expr_abs.h"
 
 #define POWEXPRHDLR_NAME         "pow"
 #define POWEXPRHDLR_DESC         "power expression"
@@ -1621,7 +1621,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
              */
             SCIP_EXPR* simplifiedaux;
 
-            SCIP_CALL( SCIPcreateConsExprExprAbs(scip, &aux, SCIPexprGetChildren(base)[0], ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPcreateExprAbs(scip, &aux, SCIPexprGetChildren(base)[0], ownerdatacreate, ownerdatacreatedata) );
             SCIP_CALL( SCIPsimplifyExprShallow(scip, aux, &simplifiedaux, ownerdatacreate, ownerdatacreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
             SCIP_CALL( SCIPcreateExprPow(scip, &aux, simplifiedaux, newexponent, ownerdatacreate, ownerdatacreatedata) );

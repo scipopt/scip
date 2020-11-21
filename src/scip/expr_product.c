@@ -36,7 +36,7 @@
 #include "scip/expr_value.h"
 #include "scip/expr_exp.h"
 //#include "scip/cons_expr_entropy.h"
-//#include "scip/cons_expr_abs.h"
+#include "scip/expr_abs.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 
@@ -575,7 +575,7 @@ SCIP_RETCODE mergeProductExprlist(
                   /* if expo2 is odd, then sign(x)^(1+expo2) = 1, so we have |x|^(expo1+expo2) */
                   SCIP_EXPR* absbase;
 
-                  SCIP_CALL( SCIPcreateConsExprExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
+                  SCIP_CALL( SCIPcreateExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
                   SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
                   SCIP_CALL( SCIPreleaseExpr(scip, &absbase) );
                }
@@ -602,7 +602,7 @@ SCIP_RETCODE mergeProductExprlist(
             {
                SCIP_EXPR* absbase;
 
-               SCIP_CALL( SCIPcreateConsExprExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
                SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
                SCIP_CALL( SCIPreleaseExpr(scip, &absbase) );
             }

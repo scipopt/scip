@@ -280,7 +280,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *  - scip : SCIP main data structure
  *  - expr : expression to check the curvature for
  *  - exprcurvature : desired curvature of this expression
- *  - success: buffer to store whether the desired curvature be obtained
+ *  - success: buffer to store whether the desired curvature was obtained
  *  - childcurv: array to store required curvature for each child
  */
 #define SCIP_DECL_EXPRCURVATURE(x) SCIP_RETCODE x (\
