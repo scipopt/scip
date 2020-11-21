@@ -806,7 +806,7 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
    assert(exprdata != NULL);
 
    BMScopyMemoryArray(coefs[0], exprdata->coefficients, SCIPexprGetNChildren(expr));
-   *constant[0] = exprdata->constant;
+   *constant = exprdata->constant;
    *nreturned = 1;
 
    return SCIP_OKAY;

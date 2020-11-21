@@ -262,7 +262,7 @@ SCIP_RETCODE computeCutsAbs(
    SCIP_INTERVAL*        bounds,             /**< bounds for children */
    SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
    SCIP_Real**           coefs,              /**< buffer to store coefficients of computed estimators */
-   SCIP_Real**           constant,           /**< buffer to store constant of computed estimators */
+   SCIP_Real*            constant,           /**< buffer to store constant of computed estimators */
    int*                  nreturned           /**< buffer to store number of estimators that have been computed */
    )
 {
@@ -276,7 +276,7 @@ SCIP_RETCODE computeCutsAbs(
    if( ! overestimate )
    {
       coefs[*nreturned][0] = -1.0;
-      constant[*nreturned][0] = 0.0;
+      constant[*nreturned] = 0.0;
       (*nreturned)++;
    }
 
@@ -284,7 +284,7 @@ SCIP_RETCODE computeCutsAbs(
    if( ! overestimate )
    {
       coefs[*nreturned][0] = -1.0;
-      constant[*nreturned][0] = 0.0;
+      constant[*nreturned] = 0.0;
       (*nreturned)++;
    }
 
@@ -304,14 +304,14 @@ SCIP_RETCODE computeCutsAbs(
          {
             /* z = -x, so add z <= -x here (-x <= z is the underestimator that is added above) */
             coefs[*nreturned][0] = -1.0;
-            constant[*nreturned][0] = 0.0;
+            constant[*nreturned] = 0.0;
             (*nreturned)++;
          }
          else if( !SCIPisNegative(scip, lb) )
          {
             /* z =  x, so add z <= x here (x <= z is the underestimator that is added above) */
             coefs[*nreturned][0] = 1.0;
-            constant[*nreturned][0] = 0.0;
+            constant[*nreturned] = 0.0;
             (*nreturned)++;
          }
          else
@@ -326,7 +326,7 @@ SCIP_RETCODE computeCutsAbs(
             alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
 
             coefs[*nreturned][0] = alpha;
-            constant[*nreturned][0] = REALABS(ub) - alpha * ub;
+            constant[*nreturned] = REALABS(ub) - alpha * ub;
             (*nreturned)++;
          }
       }

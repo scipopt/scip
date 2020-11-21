@@ -263,17 +263,17 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
       assert(overest[i] || (SCIPisLE(scip, refpointsunder[i], ub) && SCIPisGE(scip, refpointsunder[i], lb))); /*lint !e661*/
 
       coefs[*nreturned][0] = 0.0;
-      *(constant[*nreturned]) = 0.0;
+      constant[*nreturned] = 0.0;
 
       success = TRUE;
 
       if( !overest[i] )
       {
          assert(i < 3);
-         SCIPaddExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], constant[*nreturned], &success); /*lint !e661*/
+         SCIPaddExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else
-         SCIPaddExpSecant(scip, lb, ub, coefs[*nreturned], constant[*nreturned], &success);
+         SCIPaddExpSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
 
       if( success )
          ++*nreturned;

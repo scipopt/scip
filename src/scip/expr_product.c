@@ -1857,12 +1857,12 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesProduct)
       /* build estimator */
       SCIPaddBilinMcCormick(scip, exprdata->coefficient, bndx.inf, bndx.sup, (bndx.inf + bndx.sup) / 2.0,
          bndy.inf, bndy.sup, (bndy.inf + bndy.sup ) / 2.0, overestimate, &coefs[0][0], &coefs[0][1],
-         constant[0], &success);
+         constant, &success);
    }
    else
    {
       SCIP_CALL( estimateVertexPolyhedralProduct(scip, nchildren, bounds, exprdata->coefficient, NULL, overestimate,
-         overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), coefs[0], constant[0], &success) );
+         overestimate ? SCIPinfinity(scip) : -SCIPinfinity(scip), coefs[0], constant, &success) );
    }
 
    if( success )

@@ -2167,7 +2167,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, SCIPexprIsIntegral(child), refpoint, exponent,
-            coefs[*nreturned], constant[*nreturned], &success, &islocal, &branchcand) );
+            coefs[*nreturned], &constant[*nreturned], &success, &islocal, &branchcand) );
 
       if( success )
          ++*nreturned;
@@ -2803,7 +2803,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
 
       if( childlb >= 0 )
       {
-         estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, constant[*nreturned], coefs[*nreturned],
+         estimateParabola(scip, exponent, overest[i], childlb, childub, refpoint, &constant[*nreturned], coefs[*nreturned],
                &islocal, &success);
       }
       else
@@ -2815,7 +2815,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesSignpower)
          }
          branchcand = TRUE;
          estimateSignedpower(scip, exponent, exprdata->root, overest[i], childlb, childub, refpoint,
-               childlb, childub, constant[*nreturned], coefs[*nreturned], &islocal,
+               childlb, childub, &constant[*nreturned], coefs[*nreturned], &islocal,
                &branchcand, &success);
       }
 

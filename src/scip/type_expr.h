@@ -549,7 +549,7 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    SCIP_INTERVAL* bounds, \
    SCIP_Bool  overestimate, \
    SCIP_Real* coefs[SCIP_EXPR_MAXINITESTIMATES], \
-   SCIP_Real* constant[SCIP_EXPR_MAXINITESTIMATES], \
+   SCIP_Real  constant[SCIP_EXPR_MAXINITESTIMATES], \
    int*       nreturned)
 
 /** expression simplify callback
