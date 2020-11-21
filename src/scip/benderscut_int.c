@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_int.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a Laporte and Louveaux Benders' decomposition integer cut
  * @author Stephen J. Maher
  */
@@ -28,6 +29,7 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_paramset.h"
+#include "scip/pub_var.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_cut.h"
@@ -110,6 +112,38 @@ SCIP_RETCODE createBenderscutData(
  * Local methods
  */
 
+/** updates the cut constant for the given subproblem based upon the global bounds of the associated auxiliary variable */
+static
+void updateSubproblemCutConstant(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_BENDERSCUTDATA*  benderscutdata,     /**< the Benders' decomposition cut data */
+   int                   probnumber          /**< the index for the subproblem */
+   )
+{
+   SCIP_VAR* auxiliaryvar;
+
+   assert(masterprob != NULL);
+   assert(benders != NULL);
+   assert(benderscutdata != NULL);
+
+   auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders, probnumber);
+
+   /* checking if the subproblem lower bound has been updated. If it is has changed, then firstcut is set to TRUE.
+    * Otherwise, the constant remains the same.
+    */
+   if( SCIPisGT(masterprob, SCIPbendersGetSubproblemLowerbound(benders, probnumber),
+         benderscutdata->subprobconstant[probnumber]) )
+   {
+      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubproblemLowerbound(benders, probnumber);
+      benderscutdata->firstcut[probnumber] = TRUE;
+   }
+
+   /* updating the cut constant if the auxiliary variable global lower bound is greater than the current constant */
+   if( SCIPisGT(masterprob, SCIPvarGetLbGlobal(auxiliaryvar), benderscutdata->subprobconstant[probnumber]) )
+      benderscutdata->subprobconstant[probnumber] = SCIPvarGetLbGlobal(auxiliaryvar);
+}
+
 /** computes a standard Benders' optimality cut from the dual solutions of the LP */
 static
 SCIP_RETCODE computeStandardIntegerOptCut(
@@ -129,8 +163,7 @@ SCIP_RETCODE computeStandardIntegerOptCut(
    SCIP_Real subprobobj;   /* the objective function value of the subproblem */
    SCIP_Real lhs;          /* the left hand side of the cut */
    int i;
-   SCIP* subproblem;
-   SCIP_SOL* subprobsol;
+   SCIPdebug( SCIP* subproblem; )
 
 #ifndef NDEBUG
    SCIP_Real verifyobj = 0;
@@ -145,16 +178,12 @@ SCIP_RETCODE computeStandardIntegerOptCut(
 
    /* getting the best solution from the subproblem */
 
-#ifdef SCIP_DEBUG
-   subproblem = SCIPbendersSubproblem(benders, probnumber);
-   subprobsol = SCIPgetBestSol(subproblem);
-#endif
-
    subprobobj = SCIPbendersGetSubproblemObjval(benders, probnumber);
 
-   SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
-      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, subprobsol),
-      cutconstant);
+   SCIPdebug( subproblem = SCIPbendersSubproblem(benders, probnumber); )
+   SCIPdebug( SCIPdebugMsg(masterprob, "Subproblem %d - Objective Value: Stored - %g Orig Obj - %g Cut constant - %g\n",
+      probnumber, SCIPbendersGetSubproblemObjval(benders, probnumber), SCIPgetSolOrigObj(subproblem, SCIPgetBestSol(subproblem))*(int)SCIPgetObjsense(subproblem),
+      cutconstant); )
 
    nvars = SCIPgetNVars(masterprob);
    vars = SCIPgetVars(masterprob);
@@ -330,22 +359,18 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    {
       (*result) = SCIP_FEASIBLE;
       SCIPdebugMsg(masterprob, "No <%s> cut added. Current Master Problem Obj: %g\n", BENDERSCUT_NAME,
-         SCIPgetSolOrigObj(masterprob, NULL));
+         SCIPgetSolOrigObj(masterprob, NULL)*(int)SCIPgetObjsense(masterprob));
       return SCIP_OKAY;
    }
 
-   /* checking if the subproblem lower bound has been updated. If it is has changed, then firstcut is set to TRUE.
-    * Otherwise, the constant remains the same.
-    */
-   if( SCIPisLT(masterprob, benderscutdata->subprobconstant[probnumber],
-         SCIPbendersGetSubproblemLowerbound(benders, probnumber)) )
-   {
-      benderscutdata->subprobconstant[probnumber] = SCIPbendersGetSubproblemLowerbound(benders, probnumber);
-      benderscutdata->firstcut[probnumber] = TRUE;
-   }
+   /* checking whether the subproblem constant is less than the auxiliary variable global lower bound */
+   updateSubproblemCutConstant(masterprob, benders, benderscutdata, probnumber);
 
-   /* if no integer cuts have been previously generated, then an initial lower bounding cut is added */
-   if( benderscutdata->firstcut[probnumber] )
+   /* if no integer cuts have been previously generated and the bound on the auxiliary variable is -infinity,
+    * then an initial lower bounding cut is added
+    */
+   if( benderscutdata->firstcut[probnumber]
+      && SCIPisInfinity(masterprob, -SCIPvarGetLbGlobal(SCIPbendersGetAuxiliaryVar(benders, probnumber))) )
    {
       benderscutdata->firstcut[probnumber] = FALSE;
       SCIP_CALL( generateAndApplyBendersIntegerCuts(masterprob, benders, benderscut, sol, probnumber, type, result,
@@ -353,13 +378,13 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
    }
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "integeroptcut_%d_%d", probnumber,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "integeroptcut_%d_%" SCIP_LONGINT_FORMAT, probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
    /* creating an empty row or constraint for the Benders' cut */
    if( addcut )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
             FALSE, TRUE) );
    }
    else
@@ -434,9 +459,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
             SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
          }
 
-         /* storing the generated cut */
-         SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
-
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintRow(masterprob, row, NULL) );
          SCIPinfoMessage(masterprob, NULL, ";\n");
@@ -447,9 +469,6 @@ SCIP_RETCODE generateAndApplyBendersIntegerCuts(
       else
       {
          SCIP_CALL( SCIPaddCons(masterprob, cons) );
-
-         /* storing the generated cut */
-         SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
 
          SCIPdebugPrintCons(masterprob, cons, NULL);
 
@@ -538,13 +557,28 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 {  /*lint --e{715}*/
+   SCIP* subproblem;
+
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
 
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   if( subproblem == NULL )
+   {
+      SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
+         probnumber, BENDERSCUT_NAME);
+
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
+   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders))
+      && (!SCIPbendersMasterIsNonlinear(benders)
+         || SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders) - 1)) )
    {
       SCIPinfoMessage(scip, NULL, "The integer optimality cuts can only be applied to problems with a "
          "pure binary master problem. The integer optimality cuts will be disabled.\n");
@@ -556,7 +590,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 
    /* the integer subproblem could terminate early if the auxiliary variable value is much greater than the optimal
     * solution. As such, it is only necessary to generate a cut if the subproblem is OPTIMAL */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_OPTIMAL )
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersIntegerCuts(scip, benders, benderscut, sol, probnumber, type, result, FALSE) );

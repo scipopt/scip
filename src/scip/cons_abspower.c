@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_abspower.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  Constraint handler for absolute power constraints \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  */
@@ -1499,7 +1500,7 @@ SCIP_RETCODE tightenBounds(
             /* only check if new fixing value is consistent with variable bounds, otherwise cutoff */
             if( SCIPisLT(scip, bounds.sup, SCIPvarGetUbLocal(var)) || SCIPisGT(scip, bounds.inf, SCIPvarGetLbLocal(var)) )
             {
-               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.20g,%.20g] to [%.20g,%.20g]\n",
+               SCIPdebugMsg(scip, "found <%s> infeasible due to fixing fixed variable <%s>[%.15g,%.15g] to [%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bounds.inf, bounds.sup);
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
@@ -1629,7 +1630,7 @@ void computeBoundsZ(
          zbnds->sup = bnd / consdata->zcoef;
    }
 
-   SCIPdebugMsg(scip, "given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
+   SCIPdebugMsg(scip, "given x = [%.15g, %.15g], computed z = [%.15g, %.15g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *zbnds));
@@ -1682,7 +1683,7 @@ void computeBoundsX(
       xbnds->inf = bnd - consdata->xoffset;
    }
 
-   SCIPdebugMsg(scip, "given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
+   SCIPdebugMsg(scip, "given z = [%.15g, %.15g], computed x = [%.15g, %.15g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *xbnds));
@@ -3651,7 +3652,7 @@ SCIP_RETCODE generateSecantCut(
    /* ignore constraints with fixed x (should be removed soon) */
    if( SCIPisRelEQ(scip, xlb, xub) )
    {
-      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.20g,%.20g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
+      SCIPdebugMsg(scip, "skip secant cut because <%s> is fixed [%.15g,%.15g]\n", SCIPvarGetName(x), SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x));
       return SCIP_OKAY;
    }
 
@@ -3893,7 +3894,7 @@ SCIP_RETCODE generateCut(
       }
       else
       {
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+         SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -4253,6 +4254,7 @@ SCIP_RETCODE createNlRow(
 {
    SCIP_CONSDATA* consdata;
    SCIP_EXPRTREE* exprtree;
+   SCIP_EXPRCURV curv;
    SCIP_QUADELEM quadelem;
    SCIP_VAR* linvars[2];
    SCIP_Real lincoefs[2];
@@ -4282,13 +4284,22 @@ SCIP_RETCODE createNlRow(
    exprtree = NULL;
    constant = 0.0;
 
-   /* check if sign of x is fixed */
+   /* check if sign of x is fixed, determine curvature of abspower function */
    if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->x)+consdata->xoffset) )
+   {
       sign =  1;
+      curv = SCIP_EXPRCURV_CONVEX;
+   }
    else if( !SCIPisPositive(scip, SCIPvarGetUbGlobal(consdata->x)+consdata->xoffset) )
+   {
       sign = -1;
+      curv = SCIP_EXPRCURV_CONCAVE;
+   }
    else
+   {
       sign =  0;
+      curv = SCIP_EXPRCURV_UNKNOWN;
+   }
 
    /* check if exponent is integral */
    expisint = SCIPisIntegral(scip, consdata->exponent);
@@ -4388,7 +4399,7 @@ SCIP_RETCODE createNlRow(
          nlinvars, linvars, lincoefs,
          nquadvars, &quadvar, nquadelems, &quadelem,
          exprtree, consdata->lhs, consdata->rhs,
-         SCIP_EXPRCURV_UNKNOWN
+         curv
          ) );
 
    if( exprtree != NULL )
@@ -4951,7 +4962,8 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       if( exponent <= 1.0 )
          return SCIP_OKAY;
 
-      assert(SCIPexprgraphGetNodeBounds(SCIPexprgraphGetNodeChildren(node)[0]).inf >= 0.0);
+      child = SCIPexprgraphGetNodeChildren(node)[0];
+      assert(SCIPexprgraphGetNodeBounds(child).inf >= 0.0);
       break;
 
    case SCIP_EXPR_INTPOWER:
@@ -4963,7 +4975,8 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       if( exponent <= 1.0 )
          return SCIP_OKAY;
 
-      childbounds = SCIPexprgraphGetNodeBounds(SCIPexprgraphGetNodeChildren(node)[0]);
+      child = SCIPexprgraphGetNodeChildren(node)[0];
+      childbounds = SCIPexprgraphGetNodeBounds(child);
       if( (int)exponent % 2 == 0 && childbounds.inf < 0.0 && childbounds.sup > 0.0 )
          return SCIP_OKAY;
 
@@ -4979,7 +4992,8 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       /* check if child has fixed sign */
       SCIP_INTERVAL childbounds;
 
-      childbounds = SCIPexprgraphGetNodeBounds(SCIPexprgraphGetNodeChildren(node)[0]);
+      child = SCIPexprgraphGetNodeChildren(node)[0];
+      childbounds = SCIPexprgraphGetNodeBounds(child);
       if( childbounds.inf < 0.0 && childbounds.sup > 0.0 )
          return SCIP_OKAY;
 
@@ -4996,6 +5010,7 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       exponent = SCIPexprgraphGetNodeSignPowerExponent(node);
       if( exponent <= 1.0 )
          return SCIP_OKAY;
+      child = SCIPexprgraphGetNodeChildren(node)[0];
       break;
 
    case SCIP_EXPR_POLYNOMIAL:
@@ -5003,52 +5018,136 @@ SCIP_DECL_EXPRGRAPHNODEREFORM(exprgraphnodeReformAbspower)
       SCIP_EXPRDATA_MONOMIAL* monomial;
       SCIP_INTERVAL childbounds;
 
-      /* check if only one univariate monomial with exponent > 1.0 */
-      if( SCIPexprgraphGetNodeNChildren(node) > 1 )
-         return SCIP_OKAY;
-      assert(SCIPexprgraphGetNodeNChildren(node) == 1);
-
+      /* check if only one monomial */
       if( SCIPexprgraphGetNodePolynomialNMonomials(node) > 1 )
          return SCIP_OKAY;
       assert(SCIPexprgraphGetNodePolynomialNMonomials(node) == 1); /* assume simplified, i.e., no constant polynomial */
 
       monomial = SCIPexprgraphGetNodePolynomialMonomials(node)[0];
-      assert(SCIPexprGetMonomialNFactors(monomial) == 1); /* since we have only one children and assume simplified */
 
-      exponent = SCIPexprGetMonomialExponents(monomial)[0];
-      if( exponent <= 1.0 )
+      assert(SCIPexprgraphGetNodeNChildren(node) >= 1);
+      if( SCIPexprgraphGetNodeNChildren(node) == 1 )
+      {
+         /* handle univariate case with exponent > 1.0 */
+         assert(SCIPexprGetMonomialNFactors(monomial) == 1); /* since we have only one child and assume simplified */
+
+         exponent = SCIPexprGetMonomialExponents(monomial)[0];
+         if( exponent <= 1.0 )
+            return SCIP_OKAY;
+
+         /* if exponent is even integer and child has mixed sign, then cannot do
+          * if exponent is even integer and child is always negative, then can do via multiplication by -1.0 */
+         child = SCIPexprgraphGetNodeChildren(node)[0];
+         childbounds = SCIPexprgraphGetNodeBounds(child);
+         if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 0) && childbounds.inf < 0.0 )
+         {
+            if( childbounds.sup > 0.0 )
+               return SCIP_OKAY;
+            signpowcoef = -1.0;
+         }
+
+         constant = SCIPexprgraphGetNodePolynomialConstant(node);
+         signpowcoef *= SCIPexprGetMonomialCoef(monomial);
+      }
+      else if( SCIPexprgraphGetNodeNChildren(node) == 2 )
+      {
+         /* look for abs(x)^p * x or x * abs(x)^p */
+         SCIP_EXPRGRAPHNODE* child1;
+         SCIP_EXPRGRAPHNODE* child2;
+
+         assert(SCIPexprGetMonomialNFactors(monomial) == 2); /* since we have two children and assume simplified */
+
+         child1 = SCIPexprgraphGetNodeChildren(node)[SCIPexprGetMonomialChildIndices(monomial)[0]];
+         child2 = SCIPexprgraphGetNodeChildren(node)[SCIPexprGetMonomialChildIndices(monomial)[1]];
+
+         if( SCIPexprgraphGetNodeOperator(child1) == SCIP_EXPR_ABS && SCIPexprgraphGetNodeChildren(child1)[0] == child2 )
+         {
+            /* have abs(x)^p1 * x^p2; need p1 > 0, p2 = 1 */
+            if( SCIPexprGetMonomialExponents(monomial)[0] <= 0.0 || SCIPexprGetMonomialExponents(monomial)[1] != 1.0 )
+               return SCIP_OKAY;
+            exponent = 1.0 + SCIPexprGetMonomialExponents(monomial)[0];
+            child = child2;
+         }
+         else if( SCIPexprgraphGetNodeOperator(child2) == SCIP_EXPR_ABS && SCIPexprgraphGetNodeChildren(child2)[0] == child1 )
+         {
+            /* have x^p1 * abs(x)^p2; need p1 = 1, p2 > 0 */
+            if( SCIPexprGetMonomialExponents(monomial)[0] != 1.0 || SCIPexprGetMonomialExponents(monomial)[1] <= 0.0 )
+               return SCIP_OKAY;
+            exponent = 1.0 + SCIPexprGetMonomialExponents(monomial)[1];
+            child = child1;
+         }
+         else
+            return SCIP_OKAY;
+
+         constant = SCIPexprgraphGetNodePolynomialConstant(node);
+         signpowcoef = SCIPexprGetMonomialCoef(monomial);
+      }
+      else
          return SCIP_OKAY;
 
-      /* if exponent is even integer and child has mixed sign, then cannot do
-       * if exponent is even integer and child is always negative, then can do via multiplication by -1.0 */
-      childbounds = SCIPexprgraphGetNodeBounds(SCIPexprgraphGetNodeChildren(node)[0]);
-      if( SCIPisIntegral(scip, exponent) && ((int)SCIPround(scip, exponent) % 2 == 0) && childbounds.inf < 0.0 )
+      break;
+   }
+
+   case SCIP_EXPR_MUL:
+   {
+      /* look for abs(x) * x and x * abs(x) */
+      SCIP_EXPRGRAPHNODE* child1;
+      SCIP_EXPRGRAPHNODE* child2;
+
+      child1 = SCIPexprgraphGetNodeChildren(node)[0];
+      child2 = SCIPexprgraphGetNodeChildren(node)[1];
+
+      if( SCIPexprgraphGetNodeNChildren(child1) == 1 && SCIPexprgraphGetNodeOperator(child1) == SCIP_EXPR_ABS && SCIPexprgraphGetNodeChildren(child1)[0] == child2 )
       {
-         if( childbounds.sup > 0.0 )
-            return SCIP_OKAY;
-         signpowcoef = -1.0;
+         /* abs(x) * x */
+         exponent = 2.0;
+         child = child2;
+         break;
       }
 
-      constant = SCIPexprgraphGetNodePolynomialConstant(node);
-      signpowcoef *= SCIPexprGetMonomialCoef(monomial);
+      if( SCIPexprgraphGetNodeNChildren(child2) == 1 && SCIPexprgraphGetNodeOperator(child2) == SCIP_EXPR_ABS && SCIPexprgraphGetNodeChildren(child2)[0] == child1 )
+      {
+         /* x * abs(x) */
+         exponent = 2.0;
+         child = child1;
+         break;
+      }
 
-      break;
+      /* the cases below should not happening, because node will be of polynomial type after simplifty */
+#ifdef SCIP_DISABLED_CODE
+      if( SCIPexprgraphGetNodeNChildren(child1) == 1 && (SCIPexprgraphGetNodeOperator(child1) == SCIP_EXPR_INTPOWER || SCIPexprgraphGetNodeOperator(child1) == SCIP_EXPR_REALPOWER) &&
+         SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(child1)[0]) == SCIP_EXPR_ABS && SCIPexprgraphGetNodeChildren(SCIPexprgraphGetNodeChildren(child1)[0])[0] == child2 )
+      {
+         /* abs(x)^p * x */
+         exponent = 1.0 + SCIPexprgraphGetNodeOperator(child1) == SCIP_EXPR_INTPOWER ? SCIPexprgraphGetNodeIntPowerExponent(child1) : SCIPexprgraphGetNodeRealPowerExponent(child1);
+         child = child2;
+         break;
+      }
+
+      if( SCIPexprgraphGetNodeNChildren(child2) == 1 && (SCIPexprgraphGetNodeOperator(child2) == SCIP_EXPR_INTPOWER || SCIPexprgraphGetNodeOperator(child2) == SCIP_EXPR_REALPOWER) &&
+         SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(child2)[0]) == SCIP_EXPR_ABS && SCIPexprgraphGetNodeChildren(SCIPexprgraphGetNodeChildren(child2)[0])[0] == child1 )
+      {
+         /* x * abs(x)^p */
+         exponent = 1.0 + SCIPexprgraphGetNodeOperator(child2) == SCIP_EXPR_INTPOWER ? SCIPexprgraphGetNodeIntPowerExponent(child2) : SCIPexprgraphGetNodeRealPowerExponent(child2);
+         child = child1;
+         break;
+      }
+#endif
+      return SCIP_OKAY;
    }
 
    default:
       return SCIP_OKAY;
    }  /*lint !e788*/
-   assert(SCIPexprgraphGetNodeNChildren(node) == 1);
 
    if( SCIPexprgraphHasNodeNonlinearAncestor(node) )
       return SCIP_OKAY;
-   if( !SCIPexprgraphHasNodeSibling(node) )
+   if( SCIPexprgraphGetNodeNChildren(node) == 1 && !SCIPexprgraphHasNodeSibling(node) )  /* why did I require siblings??? */
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "reformulate node %p via signpower\n", (void*)node);
 
    /* get x and its offset */
-   child = SCIPexprgraphGetNodeChildren(node)[0];
    if( SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_VARIDX )
    {
       x = (SCIP_VAR*)SCIPexprgraphGetNodeVar(exprgraph, child);
@@ -5319,10 +5418,10 @@ SCIP_RETCODE enforceConstraint(
     */
    SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, sol, &nnotify) );
 
-   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPlpfeastol(scip) )
+   if( nnotify == 0 && !solinfeasible && SCIPfeastol(scip) > SCIPgetLPFeastol(scip) )
    {
       /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPlpfeastol(scip), TRUE, FALSE,
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, SCIPgetLPFeastol(scip), TRUE, FALSE,
             &success, &cutoff, &sepaefficacy) );
       if( cutoff )
       {
@@ -5568,7 +5667,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAbspower)
             SCIPerrorMessage("failed to compute root for exponent %g\n", consdata->exponent);
             return SCIP_ERROR;
          }
-         SCIPdebugMsg(scip, "root for %g is %.20g, certainty = %g\n", consdata->exponent, root, polyval);
+         SCIPdebugMsg(scip, "root for %g is %.15g, certainty = %g\n", consdata->exponent, root, polyval);
          /* @todo cache root value?? (they are actually really fast to compute...) */
 
          consdata->root = root;
@@ -5757,7 +5856,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
-                     SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                     SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
                      SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5781,7 +5880,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5808,7 +5907,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5838,7 +5937,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
-                     SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                     SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
                      SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5862,7 +5961,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -5889,7 +5988,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddRow(scip, row, FALSE /* forcecut */, infeasible) );
@@ -6845,13 +6944,14 @@ SCIP_DECL_CONSCOPY(consCopyAbspower)
    if( *valid )
    {
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, consdata->z, &z, varmap, consmap, global, valid) );
-   }
 
-   if( *valid )
-   {
-      SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
-            x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
-            initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
+      if( *valid )
+      {
+         assert(z != NULL); /* for lint */
+         SCIP_CALL( SCIPcreateConsAbspower(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+               x, z, consdata->exponent, consdata->xoffset, consdata->zcoef, consdata->lhs, consdata->rhs,
+               initial, separate, enforce, check, propagate, local, FALSE, dynamic, removable, stickingatnode) );  /*lint !e644*/
+      }
    }
 
    return SCIP_OKAY;
@@ -7316,7 +7416,7 @@ SCIP_RETCODE SCIPgetNlRowAbspower(
    return SCIP_OKAY;
 }
 
-/** gets nonlinear variable x in absolute power constraint */
+/** gets nonlinear variable x in absolute power constraint */  /*lint -e715*/
 SCIP_VAR* SCIPgetNonlinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
@@ -7333,7 +7433,7 @@ SCIP_VAR* SCIPgetNonlinearVarAbspower(
    return consdata->x;
 }
 
-/** gets linear variable z in absolute power constraint */
+/** gets linear variable z in absolute power constraint */  /*lint -e715*/
 SCIP_VAR* SCIPgetLinearVarAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
@@ -7355,7 +7455,7 @@ SCIP_Real SCIPgetExponentAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7372,7 +7472,7 @@ SCIP_Real SCIPgetOffsetAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7389,7 +7489,7 @@ SCIP_Real SCIPgetCoefLinearAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7406,7 +7506,7 @@ SCIP_Real SCIPgetLhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7423,7 +7523,7 @@ SCIP_Real SCIPgetRhsAbspower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< absolute power constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
@@ -7465,4 +7565,39 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIPdebugMsg(scip, "computing slack: linear: %f, power: %f, projected: %f\n", z_val, x_val, proj_val);
 
    return x_val - proj_val;
+}
+
+/** returns whether constraint is convex w.r.t. global bounds
+ *
+ * @note in difference to SCIPisConvexQuadratic, we put convexity/concavity of the constraint function in relation to the constraint sides here
+ */
+SCIP_Bool SCIPisConvexAbspower(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< absolute power constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real xlb;
+   SCIP_Real xub;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   xlb = SCIPvarGetLbGlobal(consdata->x);
+   xub = SCIPvarGetLbGlobal(consdata->x);
+
+   /* if mixed sign, then cannot be convex */
+   if( SCIPisNegative(scip, xlb + consdata->xoffset) && SCIPisPositive(scip, xub + consdata->xoffset) )
+      return FALSE;
+
+   /* if not negative, then constraint function is like x^n, n > 1, x >= 0, i.e., convex, thus need no lhs to be convex */
+   if( !SCIPisNegative(scip, xlb + consdata->xoffset) )
+      return SCIPisInfinity(scip, -consdata->lhs);
+
+   /* if not positive, then constraint function is like -|x|^n, n > 0, x <= 0, i.e., concave, thus need no rhs to be convex */
+   return SCIPisInfinity(scip, consdata->rhs);
 }

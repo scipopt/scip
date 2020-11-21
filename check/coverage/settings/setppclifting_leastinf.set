@@ -1,0 +1,27 @@
+# SCIP version 2.1.1.6
+
+#  should we try to lift variables into other clique constraints, fix variables, aggregate them, and also shrink the amount of variables in clique constraints
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/cliquelifting = TRUE
+
+# should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/addvariablesascliques = TRUE
+
+# SCIP version 2.1.1.6
+
+# should the real solving time be used instead of a time step counter in VBC output?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+visual/realtime = FALSE
+
+# should the node where solutions are found be visualized?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+visual/dispsols = TRUE
+
+# shall characters '#', '*', '+', '/', and '-' in variable and constraint names be replaced by '_'?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/gmsreader/replaceforbiddenchars = TRUE
+
+# priority of branching rule <leastinf>
+# [type: int, range: [-536870912,536870911], default: 50]
+branching/leastinf/priority = 10000000

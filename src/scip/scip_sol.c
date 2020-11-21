@@ -3,22 +3,23 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip_sol.c
+ * @ingroup OTHER_CFILES
  * @brief  public methods for solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -32,81 +33,28 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <assert.h>
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h> /*lint --e{766}*/
 #endif
 
-
-#include "lpi/lpi.h"
-#include "nlpi/exprinterpret.h"
-#include "nlpi/nlpi.h"
-#include "scip/benders.h"
-#include "scip/benderscut.h"
-#include "scip/branch.h"
-#include "scip/branch_nodereopt.h"
-#include "scip/clock.h"
-#include "scip/compr.h"
-#include "scip/concsolver.h"
-#include "scip/concurrent.h"
-#include "scip/conflict.h"
-#include "scip/conflictstore.h"
+#include "blockmemshell/memory.h"
+#include "nlpi/type_nlpi.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
-#include "scip/cutpool.h"
-#include "scip/cuts.h"
 #include "scip/debug.h"
-#include "scip/def.h"
-#include "scip/dialog.h"
-#include "scip/dialog_default.h"
-#include "scip/disp.h"
-#include "scip/event.h"
-#include "scip/heur.h"
-#include "scip/heur_ofins.h"
-#include "scip/heur_reoptsols.h"
-#include "scip/heur_trivialnegation.h"
-#include "scip/heuristics.h"
-#include "scip/history.h"
-#include "scip/implics.h"
-#include "scip/interrupt.h"
 #include "scip/lp.h"
-#include "scip/mem.h"
-#include "scip/message_default.h"
-#include "scip/misc.h"
 #include "scip/nlp.h"
-#include "scip/nodesel.h"
-#include "scip/paramset.h"
-#include "scip/presol.h"
-#include "scip/presolve.h"
-#include "scip/pricer.h"
-#include "scip/pricestore.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
-#include "scip/prop.h"
-#include "scip/reader.h"
+#include "scip/pub_cons.h"
+#include "scip/pub_fileio.h"
+#include "scip/pub_message.h"
+#include "scip/pub_misc.h"
+#include "scip/pub_sol.h"
+#include "scip/pub_var.h"
 #include "scip/relax.h"
-#include "scip/reopt.h"
-#include "scip/retcode.h"
-#include "scip/scipbuildflags.h"
-#include "scip/scipcoreplugins.h"
-#include "scip/scipgithash.h"
-#include "scip/sepa.h"
-#include "scip/sepastore.h"
-#include "scip/set.h"
-#include "scip/sol.h"
-#include "scip/solve.h"
-#include "scip/stat.h"
-#include "scip/syncstore.h"
-#include "scip/table.h"
-#include "scip/tree.h"
-#include "scip/var.h"
-#include "scip/visual.h"
-#include "xml/xml.h"
-
 #include "scip/scip_cons.h"
 #include "scip/scip_copy.h"
 #include "scip/scip_general.h"
@@ -120,23 +68,18 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_var.h"
-
-#include "scip/pub_cons.h"
-#include "scip/pub_fileio.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/pub_sol.h"
-#include "scip/pub_var.h"
-
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons)
- */
-#ifndef NDEBUG
+#include "scip/set.h"
+#include "scip/sol.h"
+#include "scip/struct_lp.h"
+#include "scip/struct_mem.h"
+#include "scip/struct_primal.h"
+#include "scip/struct_prob.h"
 #include "scip/struct_scip.h"
-#endif
+#include "scip/struct_set.h"
+#include "scip/struct_stat.h"
+#include "scip/struct_var.h"
+#include "scip/tree.h"
+#include "xml/xml.h"
 
 /** checks solution for feasibility in original problem without adding it to the solution store; to improve the
  *  performance we use the following order when checking for violations:
@@ -735,7 +678,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
          SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
          break;
       default:
-         assert(FALSE);
+         assert(FALSE); /*lint !e506*/
       }  /*lint !e788*/
    }
 
@@ -768,7 +711,7 @@ SCIP_RETCODE setupAndSolveFiniteSolSubscip(
 
    /* copy the original problem to the sub-SCIP */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), norigvars) );
-   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyOrig(scip, subscip, varmap, NULL, "removeinffixings", TRUE, FALSE, TRUE, &valid) );
 
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
 
@@ -2012,21 +1955,16 @@ SCIP_RETCODE SCIPgetDualSolVal(
    SCIP_CONS* transcons;
    int nvars;
    SCIP_Bool success;
-#ifndef NDEBUG
-   SCIP_CONSHDLR* conshdlr;
-#endif
 
    assert(scip != NULL);
    assert(cons != NULL);
    assert(dualsolval != NULL);
 
-#ifndef NDEBUG
-   conshdlr = SCIPconsGetHdlr(cons);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
-#endif
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear" ) == 0);
 
    SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+   assert(success);  /* is always successful, since we only have linear constraints */
 
    if( boundconstraint != NULL )
       *boundconstraint = (nvars == 1);
@@ -2040,22 +1978,15 @@ SCIP_RETCODE SCIPgetDualSolVal(
     * corresponding dual solution value would be zero. however, if the constraint contains exactly one variable we need
     * to check the reduced costs of the variable.
     */
-   if( nvars > 1 && transcons == NULL )
+   if( nvars == 0 || (nvars > 1 && transcons == NULL) )
       (*dualsolval) = 0.0;
    else
    {
-      if( !success )
-      {
-         SCIPABORT();
-         return SCIP_INVALIDCALL;
-      }
-
       if( nvars > 1 )
          (*dualsolval) = SCIPgetDualsolLinear(scip, transcons);
-
-      /* the constraint is a bound constraint */
       else
       {
+         /* the constraint is a bound constraint */
          SCIP_VAR** vars;
          SCIP_Real* vals;
          SCIP_Real activity;
@@ -2661,6 +2592,7 @@ SCIP_RETCODE readSolFile(
       char varname[SCIP_MAXSTRLEN];
       char valuestring[SCIP_MAXSTRLEN];
       char objstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real value;
       int nread;
@@ -2678,8 +2610,8 @@ SCIP_RETCODE readSolFile(
          continue;
 
       /* parse the line */
-      /* cppcheck-suppress invalidscanf */
-      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, valuestring, objstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);
@@ -2715,6 +2647,7 @@ SCIP_RETCODE readSolFile(
       }
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {
@@ -2876,6 +2809,7 @@ SCIP_RETCODE readXmlSolFile(
       }
       else
       {
+         /* coverity[secure_coding] */
          nread = sscanf(valuestring, "%lf", &value);
          if( nread != 1 )
          {
@@ -3261,7 +3195,19 @@ SCIP_RETCODE SCIPtrySol(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted solution not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3360,7 +3306,19 @@ SCIP_RETCODE SCIPtrySolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3402,7 +3360,19 @@ SCIP_RETCODE SCIPtryCurrentSol(
    if( *stored )
    {
       if( bestsol != SCIPgetBestSol(scip) )
+      {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+         SCIP_Bool feasible;
+         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+         if( ! feasible )
+         {
+            SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+            SCIPABORT();
+         }
+#endif
          SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -42,9 +42,11 @@ SETNAME=$7   # the name of the setting
 TSTNAME=$8   # the name of the testset
 CONTINUE=$9  # should test continue an existing run
 QUEUE=${10}  # the queue name
-p=${11}      # the index of the current permutation
+p=${11}      # shift of the global permutation seed
 s=${12}      # shift of the global random seed
 THREADS=${13} # the number of threads
+GLBSEEDSHIFT=${14} # the global seed shift
+STARTPERM=${15} # the starting permutation
 
 # common naming scheme for eval files
 EVALFILE=$SCIPPATH/$OUTPUTDIR/check.$TSTNAME.$BINID.$QUEUE.$SETNAME
@@ -63,9 +65,10 @@ then
 fi
 
 # if permutation is positive, add postfix
-if test $p -gt 0
+PERM=`expr $p + $STARTPERM`
+if test $PERM -gt 0
 then
-    EVALFILE=$EVALFILE"-p"$p
+    EVALFILE=$EVALFILE"-p"$PERM
 fi
 
 OUTFILE=$EVALFILE.out
@@ -80,7 +83,7 @@ then
     fname=$SCIPPATH/$OUTPUTDIR/`basename $EVALFILE .eval`.meta
     if ! test -e $fname
     then
-        echo @Permutation $p > $fname
+        echo @Permutation $PERM > $fname
         echo @Seed $SEED >> $fname
         echo @Settings $SETNAME >> $fname
         echo @TstName $TSTNAME >> $fname
@@ -91,6 +94,10 @@ then
         echo @FeasTol $FEASTOL >> $fname
         echo @Queue $QUEUE >> $fname
         echo @Exclusive $EXCLUSIVE >> $fname
+        if [ "${CLUSTERBENCHMARK}" == "yes" ]; then
+            echo @QueueNode $CB_QUEUENODE >> $fname
+            echo @ClusterBenchmarkID $CB_ID>> $fname
+        fi
     fi
 fi
 
@@ -125,7 +132,7 @@ fi
 
 # filter all parseable file format extensions
 SHORTPROBNAME=`basename $INSTANCE .gz`
-for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflist
+for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflist .cbf .dat-s
 do
     SHORTPROBNAME=`basename $SHORTPROBNAME $EXTENSION`
 done
@@ -171,9 +178,9 @@ then
 fi
 
 # if permutation is positive, add postfix
-if test $p -gt 0
+if test $PERM -gt 0
 then
-    FILENAME=$FILENAME"-p"$p
+    FILENAME=$FILENAME"-p"$PERM
 fi
 
 SKIPINSTANCE="false"
@@ -190,4 +197,4 @@ TMPFILE=$BASENAME.tmp
 SETFILE=$BASENAME.set
 
 # even if we decide to skip this instance, we write the basename to the eval file
-echo $BASENAME >> $EVALFILE
+echo ${OUTPUTDIR}/${FILENAME} >> $EVALFILE

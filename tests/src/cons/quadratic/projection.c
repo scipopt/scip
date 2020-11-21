@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -304,10 +304,11 @@ TestSuite(separation, .init = setup, .fini = teardown);
 Test(separation, projection_simple)
 {
    enum nquadterms {nquadterms = 2};
-
+   enum n {n = 2};
    SCIP_VAR* quadvars1[nquadterms];
    SCIP_VAR* quadvars2[nquadterms];
    SCIP_Real quadvals[nquadterms]  = {1.0, 1.0};
+   SCIP_Real expectedprojection[] = {1.0, 0.0};
 
    SCIP_Real lhs = -SCIPinfinity(scip);
    SCIP_Real rhs = 1.0;
@@ -318,8 +319,6 @@ Test(separation, projection_simple)
    SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, "cons",
             0, NULL, NULL, nquadterms, quadvars1, quadvars2, quadvals, lhs, rhs) );
 
-   enum n {n = 2};
-   SCIP_Real expectedprojection[n] = {1.0, 0.0};
 
    /* set point to project */
    SCIP_CALL( SCIPsetSolVal(scip, point, x, 5.0) );
@@ -341,6 +340,9 @@ Test(separation, projection_complex_strictly_convex)
    SCIP_VAR* quadvars2[nquadterms];
    SCIP_Real quadvals[nquadterms]  = {2829.0/2000, 5266.0/5321, 4166.0/3319, 441.0/1033, 2480.0/4413, 2093.0/1805, 1.0};
 
+   enum n {n = 4};
+   SCIP_Real expectedprojection[n] = {0.904237367218059, -0.375667504869449, -0.540802541465134, 0.529035034426650};
+
    SCIP_Real lhs = -SCIPinfinity(scip);
    SCIP_Real rhs = 1.0;
 
@@ -356,8 +358,6 @@ Test(separation, projection_complex_strictly_convex)
             0, NULL, NULL, nquadterms, quadvars1, quadvars2, quadvals, lhs, rhs) );
 
 
-   enum n {n = 4};
-   SCIP_Real expectedprojection[n] = {0.904237367218059, -0.375667504869449, -0.540802541465134, 0.529035034426650};
 
    /* set point to project */
    SCIP_CALL( SCIPsetSolVal(scip, point, x, 2.0) );
@@ -385,6 +385,9 @@ Test(separation, projection_complex_with_linear_part)
    SCIP_VAR* linvars[nlinvars];
    SCIP_Real linvals[nlinvars] = {1.0};
 
+   enum n {n = 4};
+   SCIP_Real expectedprojection[n-1] = {0.190585198986541, 0.543192501726410, 0.305475137359772};
+
    SCIP_Real lhs = -SCIPinfinity(scip);
    SCIP_Real rhs = 1.0;
 
@@ -401,8 +404,6 @@ Test(separation, projection_complex_with_linear_part)
             nlinvars, linvars, linvals, nquadterms, quadvars1, quadvars2, quadvals, lhs, rhs) );
 
 
-   enum n {n = 4};
-   SCIP_Real expectedprojection[n-1] = {0.190585198986541, 0.543192501726410, 0.305475137359772};
 
    /* set point to project */
    SCIP_CALL( SCIPsetSolVal(scip, point, x, 1.0) );
@@ -429,6 +430,9 @@ Test(separation, projection_complex_with_linear_terms)
    SCIP_VAR* quadvars2[nquadterms];
    SCIP_Real quadvals[nquadterms]  = {9,10,26,20,5,10,20,21,20,20};
 
+   enum n {n = 4};
+   SCIP_Real expectedprojection[n] = {0.520865712781762, 0.630362637727899, 0.364426436908240, 0.323315076692312};
+
    SCIP_VAR* linvars[nlinvars];
    SCIP_Real linvals[nlinvars] = {-1.0,2.0,-1.0};
 
@@ -454,8 +458,6 @@ Test(separation, projection_complex_with_linear_terms)
             nlinvars, linvars, linvals, nquadterms, quadvars1, quadvars2, quadvals, lhs, rhs) );
 
 
-   enum n {n = 4};
-   SCIP_Real expectedprojection[n] = {0.520865712781762, 0.630362637727899, 0.364426436908240, 0.323315076692312};
 
    /* set point to project */
    SCIP_CALL( SCIPsetSolVal(scip, point, x, 1.0) );
@@ -480,6 +482,9 @@ Test(separation, projection_complex_strictly_concave)
    SCIP_Real quadvals[nquadterms]  = {-2829.0/2000, -5266.0/5321, -4166.0/3319,
       -441.0/1033, -2480.0/4413, -2093.0/1805, -1.0};
 
+   enum n {n = 4};
+   SCIP_Real expectedprojection[n] = {0.904237367218059, -0.375667504869449, -0.540802541465134, 0.529035034426650};
+
    SCIP_Real lhs = -1.0;
    SCIP_Real rhs = SCIPinfinity(scip);
 
@@ -495,8 +500,6 @@ Test(separation, projection_complex_strictly_concave)
             0, NULL, NULL, nquadterms, quadvars1, quadvars2, quadvals, lhs, rhs) );
 
 
-   enum n {n = 4};
-   SCIP_Real expectedprojection[n] = {0.904237367218059, -0.375667504869449, -0.540802541465134, 0.529035034426650};
 
    /* set point to project */
    SCIP_CALL( SCIPsetSolVal(scip, point, y, 3.0) );
@@ -526,6 +529,9 @@ Test(separation, projection_complex_with_linear_part_and_terms)
    SCIP_VAR* linvars[nlinvars];
    SCIP_Real linvals[nlinvars] = {-600.0,200.0,12.0};
 
+   enum n {n = 4};
+   SCIP_Real expectedprojection[n-1] = {0.377889429089707, 0.111193729191078, 0.201511107483149};
+
    SCIP_Real lhs = -SCIPinfinity(scip);
    SCIP_Real rhs = -20.0;
 
@@ -544,8 +550,6 @@ Test(separation, projection_complex_with_linear_part_and_terms)
             nlinvars, linvars, linvals, nquadterms, quadvars1, quadvars2, quadvals, lhs, rhs) );
 
 
-   enum n {n = 4};
-   SCIP_Real expectedprojection[n-1] = {0.377889429089707, 0.111193729191078, 0.201511107483149};
 
    /* set point to project */
    SCIP_CALL( SCIPsetSolVal(scip, point, x, 1.0) );

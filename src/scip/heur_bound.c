@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_bound.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  heuristic which fixes all integer variables to a bound (lower/upper) and solves the remaining LP
  * @author Gerald Gamrath
  *
@@ -48,7 +49,7 @@
 
 #define HEUR_NAME             "bound"
 #define HEUR_DESC             "heuristic which fixes all integer variables to a bound and solves the remaining LP"
-#define HEUR_DISPCHAR         'H'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         -1107000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
@@ -185,11 +186,16 @@ SCIP_RETCODE applyBoundHeur(
    /* solve lp only if the problem is still feasible */
    if( !infeasible )
    {
+      char strbuf[SCIP_MAXSTRLEN];
       SCIP_LPSOLSTAT lpstatus;
       SCIP_Bool lperror;
 
       SCIPdebugMsg(scip, "starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
          SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
+
+      /* print probing stats before LP */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Heuristic " HEUR_NAME " probing LP: %s\n",
+         SCIPsnprintfProbingStats(scip, strbuf, SCIP_MAXSTRLEN));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
        * heuristic.  hence in optimized mode, the return code is caught and a warning is printed, only in debug mode,

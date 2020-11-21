@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_default.c
+ * @ingroup OTHER_CFILES
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -1506,6 +1507,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
    else
       idx = 0;
 
+   /* coverity[var_deref_model] */
    if ( nactivebenders == 1 || SCIPstrToIntValue(idxstr, &idx, &endstr) )
    {
       int nsubproblems;
@@ -1535,6 +1537,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
       else
          subidx = 0;
 
+      /* coverity[var_deref_model] */
       if ( nsubproblems == 1 || SCIPstrToIntValue(idxstr, &subidx, &endstr) )
       {
          SCIP* subproblem;
@@ -1557,9 +1560,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubproblem)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                SCIPdialogMessage(scip, NULL, "\n");
                SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
@@ -1650,6 +1652,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
    else
       idx = 0;
 
+   /* coverity[var_deref_model] */
    if ( nactivebenders == 1 || SCIPstrToIntValue(idxstr, &idx, &endstr) )
    {
       int nsubproblems;
@@ -1681,6 +1684,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
       else
          subidx = 0;
 
+      /* coverity[var_deref_model] */
       if ( nsubproblems == 1 || SCIPstrToIntValue(idxstr, &subidx, &endstr) )
       {
          SCIP* subproblem;
@@ -1707,16 +1711,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                subidx = i;
 
             subproblem = SCIPbendersSubproblem(benders[idx], subidx);
-            assert(subproblem != NULL);
 
-            if( SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
+            if( subproblem != NULL && SCIPgetStage(subproblem) >= SCIP_STAGE_PROBLEM )
             {
                /* setting up the subproblem with the best solution to the master problem */
-               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx) );
+               SCIP_CALL( SCIPsetupBendersSubproblem(scip, benders[idx], bestsol, subidx, SCIP_BENDERSENFOTYPE_CHECK) );
 
                /* solving the subproblem using the best solution to the master problem */
                SCIP_CALL( SCIPsolveBendersSubproblem(scip, benders[idx], bestsol, subidx, &infeasible,
-                     SCIP_BENDERSENFOTYPE_CHECK, TRUE, NULL) );
+                     TRUE, NULL) );
 
                if( infeasible )
                   SCIPdialogMessage(scip, NULL, "subproblem %d is infeasible.\n", subidx);
@@ -1724,8 +1727,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution)
                {
                   SCIPdialogMessage(scip, NULL, "\n");
                   SCIPdialogMessage(scip, NULL, "Subproblem %d\n", subidx);
-                  if( SCIPbendersSubproblemIsConvex(benders[idx], subidx) )
-                     SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                  if( SCIPbendersGetSubproblemType(benders[idx], subidx) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
+                  {
+                     /* need to check whether the subproblem is an NLP and solved as an NLP */
+                     if( SCIPisNLPConstructed(subproblem) && SCIPgetNNlpis(subproblem) > 0 )
+                     {
+                        SCIP_SOL* nlpsol;
+                        SCIP_CALL( SCIPcreateNLPSol(subproblem, &nlpsol, NULL) );
+                        SCIP_CALL( SCIPprintSol(subproblem, nlpsol, NULL, FALSE) );
+                        SCIP_CALL( SCIPfreeSol(subproblem, &nlpsol) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPprintSol(subproblem, NULL, NULL, printzeros) );
+                     }
+                  }
                   else
                      SCIP_CALL( SCIPprintBestSol(subproblem, NULL, printzeros) );
                   SCIPdialogMessage(scip, NULL, "\n");
@@ -2392,6 +2408,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    char charval;
    SCIP_Bool endoffile;
    SCIP_Bool error;
+   SCIP_RETCODE retcode;
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2425,8 +2442,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          assert(SCIPisBoolParamValid(scip, param, boolval));
 
-         SCIP_CALL( SCIPchgBoolParam(scip, param, boolval) );
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), boolval ? "TRUE" : "FALSE");
+         retcode = SCIPchgBoolParam(scip, param, boolval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for bool parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), SCIPparamGetBool(param) ? "TRUE" : "FALSE");
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, boolval ? "TRUE" : "FALSE", TRUE) );
       }
 
@@ -2453,8 +2480,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgIntParam(scip, param, intval) );
-         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), intval);
+         retcode = SCIPchgIntParam(scip, param, intval);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for int parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %d\n", SCIPparamGetName(param), SCIPparamGetInt(param));
       }
 
       break;
@@ -2480,8 +2518,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgLongintParam(scip, param, longintval) );
-         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
+         retcode = SCIPchgLongintParam(scip, param, longintval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for longint parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param),
+            SCIPparamGetLongint(param));
       }
       break;
 
@@ -2506,8 +2555,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgRealParam(scip, param, realval) );
-         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), realval);
+         retcode = SCIPchgRealParam(scip, param, realval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for real parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %.15g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
       }
       break;
 
@@ -2524,6 +2583,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
+      /* coverity[secure_coding] */
       if( sscanf(valuestr, "%c", &charval) != 1 || !SCIPisCharParamValid(scip, param, charval) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid char parameter value <%s>. Must be in set {%s}.\n\n",
@@ -2531,8 +2591,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       }
       else
       {
-         SCIP_CALL( SCIPchgCharParam(scip, param, charval) );
-         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), charval);
+         retcode = SCIPchgCharParam(scip, param, charval);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for char parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %c\n", SCIPparamGetName(param), SCIPparamGetChar(param));
       }
       break;
 
@@ -2549,14 +2619,24 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if ( !SCIPisStringParamValid(scip, param, valuestr) )
+      if( !SCIPisStringParamValid(scip, param, valuestr) )
       {
          SCIPdialogMessage(scip, NULL, "\nInvalid character in string parameter.\n\n");
       }
       else
       {
-         SCIP_CALL( SCIPchgStringParam(scip, param, valuestr) );
-         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), valuestr);
+         retcode = SCIPchgStringParam(scip, param, valuestr);
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            SCIPdialogMessage(scip, NULL, "\nWrong value <%s> for string parameter <%s>.\n\n",
+               valuestr, SCIPparamGetName(param));
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+
+         SCIPdialogMessage(scip, NULL, "%s = %s\n", SCIPparamGetName(param), SCIPparamGetString(param));
       }
       break;
 
@@ -2756,6 +2836,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt, FALSE) );
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%d", &direction) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
@@ -2831,6 +2912,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, prompt, FALSE) );
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%d", &priority) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
@@ -3084,6 +3166,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisOptimality)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set emphasis numerics command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetEmphasisNumerics)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   /* reset SCIP parameters */
+   SCIP_CALL( SCIPresetParams(scip) );
+
+   /* set parameters for problems to prove optimality fast */
+   SCIP_CALL( SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set limits objective command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 {  /*lint --e{715}*/
@@ -3114,6 +3212,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
+   /* coverity[secure_coding] */
    if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &objlim) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
@@ -3459,7 +3558,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3506,17 +3605,16 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
          if( sol == NULL )
          {
             SCIPdialogMessage(scip, NULL, "no mip start available\n");
-            fclose(file);
          }
          else
          {
             SCIP_CALL_FINALLY( SCIPprintMIPStart(scip, sol, file), fclose(file) );
 
             SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
-            fclose(file);
          }
+         fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3636,7 +3734,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
 
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3680,7 +3778,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
          SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
          fclose(file);
       }
-   }
+   } /*lint !e593*/
 
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -3762,7 +3860,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
          else if( ! SCIPparseReal(scip, refstrs[i], &refvals[i], &endptr) )
          {
             SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
-            --i;
+            --i; /*lint !e850*/
          }
       }
 
@@ -4209,7 +4307,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecDisplayReoptStatistics, NULL, NULL,
-            "reoptstatistics", "display reoptimitazion statistics", FALSE, NULL) );
+            "reoptstatistics", "display reoptimization statistics", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -5078,6 +5176,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       }
    }
 
+   /* set estimate */
+   if( !SCIPdialogHasEntry(setmenu, "estimation") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "estimation", "change parameters for restarts and tree size estimation", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {
@@ -5616,6 +5724,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisOptimality, NULL, NULL,
             "optimality", "predefined parameter settings for proving optimality fast", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* add "numerics" dialog to "set/emphasis" sub menu */
+   if( !SCIPdialogHasEntry(submenu, "numerics") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSetEmphasisNumerics, NULL, NULL,
+            "numerics", "predefined parameter settings for increased numerical stability", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

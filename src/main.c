@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   main.c
+/**@file   scip/src/main.c
+ * @ingroup OTHER_CFILES
  * @brief  main file for C compilation
  * @author Tobias Achterberg
  */
@@ -37,12 +38,15 @@
 #include "scip/scipshell.h"
 #include "scip/interrupt.h"
 
+/** callback function for handling signals */ /*lint -e715*/
 static
 void handleSigterm(
    int                   signum              /**< signal code */
    )
 { /*lint --e{715}*/
-   SCIPtryTerminate();
+   /* Calling the following function is not directly async-signal-safe, since it counts how often the function is
+    * called. For achieving the goal of terminating this seems unproblematic. */
+   SCIPtryTerminate(); /*lint !e2761*/
 }
 
 /** main method starting SCIP */

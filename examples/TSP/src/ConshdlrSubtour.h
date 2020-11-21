@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,7 +24,6 @@
 #define __TSPCONSHDLRSUBTOUR_H__
 
 #include "objscip/objscip.h"
-#include "GomoryHuTree.h"
 #include "ProbDataTSP.h"
 
 namespace tsp
@@ -33,7 +32,6 @@ namespace tsp
 /** C++ constraint handler for TSP subtour elimination constraints */
 class ConshdlrSubtour : public scip::ObjConshdlr
 {
-
 public:
    /** default constructor */
    ConshdlrSubtour(
@@ -50,11 +48,7 @@ public:
    {
    }
 
-   /** frees specific constraint data
-    *
-    *  WARNING! There may exist unprocessed events. For example, a variable's bound may have been already changed, but
-    *  the corresponding bound change event was not yet processed.
-    */
+   /** frees specific constraint data */
    virtual SCIP_DECL_CONSDELETE(scip_delete);
 
    /** transforms constraint data into data belonging to the transformed problem */
@@ -168,7 +162,7 @@ public:
    /** feasibility check method of constraint handler for primal solutions
     *
     *  The given solution has to be checked for feasibility.
-    *  
+    *
     *  The check methods of the active constraint handlers are called in decreasing order of their check
     *  priorities until the first constraint handler returned with the result SCIP_INFEASIBLE.
     *  The integrality constraint handler has a check priority of zero. A constraint handler which can
@@ -307,7 +301,6 @@ SCIP_RETCODE SCIPcreateConsSubtour(
    SCIP_Bool             dynamic,            /**< is constraint dynamic? */
    SCIP_Bool             removable           /**< should the constraint be removed from the LP due to aging or cleanup? */
    );
-
 }
 
 #endif

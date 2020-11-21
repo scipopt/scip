@@ -3,21 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepastore.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for storing separated cuts
  * @author Tobias Achterberg
  * @author Marc Pfetsch
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,6 +39,7 @@
 #include "scip/debug.h"
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/struct_event.h"
 #include "scip/struct_sepastore.h"
 #include "scip/misc.h"
 
@@ -239,8 +241,8 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
       return TRUE;
    }
 
-   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasGT(set, minactivity, rhs)) ||
-       (!SCIPsetIsInfinity(set, -lhs) &&  SCIPsetIsFeasLT(set, maxactivity, lhs) ))
+   if( (!SCIPsetIsInfinity(set,  rhs) && SCIPsetIsFeasPositive(set, minactivity - rhs)) ||
+       (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsFeasNegative(set, maxactivity - lhs)) )
    {
       SCIPsetDebugMsg(set, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
@@ -556,7 +558,7 @@ SCIP_RETCODE sepastoreApplyLb(
       /* apply the local bound change or detect a cutoff */
       if( SCIPsetIsGT(set, bound, SCIPvarGetLbLocal(var)) )
       {
-         SCIPsetDebugMsg(set, " -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> applying bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
 
          /* changing the lower bound to a value >= SCIPinfinity should result in a cutoff,
@@ -574,7 +576,7 @@ SCIP_RETCODE sepastoreApplyLb(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> ignoring bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> ignoring bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), bound, SCIPvarGetUbLocal(var));
       }
    }
@@ -583,7 +585,7 @@ SCIP_RETCODE sepastoreApplyLb(
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
       if( SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(var)) )
       {
-         SCIPsetDebugMsg(set, " -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> applying global bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
 
          /* changing the lower bound to a value >= SCIPinfinity should result in a cutoff,
@@ -605,7 +607,7 @@ SCIP_RETCODE sepastoreApplyLb(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> ignoring global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> ignoring global bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), bound, SCIPvarGetUbGlobal(var));
       }
    }
@@ -647,7 +649,7 @@ SCIP_RETCODE sepastoreApplyUb(
       /* apply the local bound change or detect a cutoff */
       if( SCIPsetIsLT(set, bound, SCIPvarGetUbLocal(var)) )
       {
-         SCIPsetDebugMsg(set, " -> applying bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> applying bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
 
          /* changing the upper bound to a value <= -SCIPinfinity should result in a cutoff,
@@ -665,7 +667,7 @@ SCIP_RETCODE sepastoreApplyUb(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> ignoring bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> ignoring bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var), bound);
       }
    }
@@ -674,7 +676,7 @@ SCIP_RETCODE sepastoreApplyUb(
       /* apply the global bound change or detect a global cutoff which means we can cutoff the root node */
       if( SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(var)) )
       {
-         SCIPsetDebugMsg(set, " -> applying global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> applying global bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
 
          /* changing the upper bound to a value <= -SCIPinfinity should result in a cutoff,
@@ -696,7 +698,7 @@ SCIP_RETCODE sepastoreApplyUb(
       }
       else
       {
-         SCIPsetDebugMsg(set, " -> ignoring global bound change: <%s>: [%.20g,%.20g] -> [%.20g,%.20g]\n",
+         SCIPsetDebugMsg(set, " -> ignoring global bound change: <%s>: [%.15g,%.15g] -> [%.15g,%.15g]\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPvarGetLbGlobal(var), bound);
       }
    }
@@ -831,9 +833,13 @@ SCIP_RETCODE sepastoreApplyCut(
          /* increase count of applied cuts for origins of row */
          switch ( cut->origintype )
          {
-         case SCIP_ROWORIGINTYPE_CONS:
+         case SCIP_ROWORIGINTYPE_CONSHDLR:
             assert( cut->origin != NULL );
             SCIPconshdlrIncNAppliedCuts((SCIP_CONSHDLR*) cut->origin);
+            break;
+         case SCIP_ROWORIGINTYPE_CONS:
+            assert( cut->origin != NULL );
+            SCIPconshdlrIncNAppliedCuts(SCIPconsGetHdlr((SCIP_CONS*)cut->origin));
             break;
          case SCIP_ROWORIGINTYPE_SEPA:
             assert( cut->origin != NULL );

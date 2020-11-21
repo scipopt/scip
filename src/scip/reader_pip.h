@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -47,7 +47,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderPip(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPincludeReaderPip(
  */
 
 /** reads problem from file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadPip(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPreadPip(
    );
 
 /** writes problem to file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwritePip(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
@@ -88,7 +88,7 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

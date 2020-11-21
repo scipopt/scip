@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_eccuts.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  edge concave cut separator
  * @author Benjamin Müller
  */
@@ -358,7 +359,6 @@ SCIP_RETCODE nlrowaggrStoreQuadraticVars(
 /** adds a remaining bilinear term to a given nonlinear row aggregation */
 static
 SCIP_RETCODE nlrowaggrAddRemBilinTerm(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROWAGGR*       nlrowaggr,          /**< nonlinear row aggregation */
    SCIP_VAR*             x,                  /**< first variable */
    SCIP_VAR*             y,                  /**< second variable */
@@ -369,6 +369,9 @@ SCIP_RETCODE nlrowaggrAddRemBilinTerm(
    assert(x != NULL);
    assert(y != NULL);
    assert(coef != 0.0);
+   assert(nlrowaggr->remtermcoefs != NULL);
+   assert(nlrowaggr->remtermvars1 != NULL);
+   assert(nlrowaggr->remtermvars2 != NULL);
 
    nlrowaggr->remtermcoefs[ nlrowaggr->nremterms ] = coef;
    nlrowaggr->remtermvars1[ nlrowaggr->nremterms ] = x;
@@ -527,7 +530,7 @@ SCIP_RETCODE nlrowaggrCreate(
       }
       else
       {
-         SCIP_CALL( nlrowaggrAddRemBilinTerm(scip, *nlrowaggr, x, y, coef) );
+         SCIP_CALL( nlrowaggrAddRemBilinTerm(*nlrowaggr, x, y, coef) );
          SCIPdebugMsg(scip, "add term %e *%d*%d to the remaining part\n", coef, quadelem->idx1, quadelem->idx2);
       }
    }
@@ -1905,8 +1908,8 @@ SCIP_Real evalCorner(
       assert(idx1 >= 0 && idx1 < ecaggr->nvars);
       assert(idx2 >= 0 && idx2 < ecaggr->nvars);
 
-      bound1 = ((poweroftwo[idx1]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx1]) : SCIPvarGetUbLocal(ecaggr->vars[idx1]);
-      bound2 = ((poweroftwo[idx2]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx2]) : SCIPvarGetUbLocal(ecaggr->vars[idx2]);
+      bound1 = ((poweroftwo[idx1]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx1]) : SCIPvarGetUbLocal(ecaggr->vars[idx1]); /*lint !e661*/
+      bound2 = ((poweroftwo[idx2]) & k) == 0 ? SCIPvarGetLbLocal(ecaggr->vars[idx2]) : SCIPvarGetUbLocal(ecaggr->vars[idx2]); /*lint !e661*/
 
       val += coef * bound1 * bound2;
    }
@@ -2419,6 +2422,7 @@ SCIP_RETCODE computeCut(
 
    *separated = FALSE;
    *cutoff = FALSE;
+   /* we use SCIPgetDepth because we add the cut to the global cut pool if cut is globally valid */
    islocalcut = SCIPgetDepth(scip) != 0;
 
    /* create the cut */
@@ -2611,6 +2615,7 @@ SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   depth,              /**< current depth */
    SCIP_SOL*             sol,                /**< current solution */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
@@ -2631,7 +2636,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* get the maximal number of cuts allowed in a separation round */
-   nmaxcuts = SCIPgetDepth(scip) == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
+   nmaxcuts = depth == 0 ? sepadata->maxsepacutsroot : sepadata->maxsepacuts;
    ncuts = 0;
 
    /* try to compute cuts for each nonlinear row independently */
@@ -2741,7 +2746,6 @@ static
 SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-   int depth;
    int ncalls;
 
    sepadata = SCIPsepaGetData(sepa);
@@ -2766,8 +2770,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       SCIPdebugMsg(scip, "Skip since NLP is not constructed yet.\n");
       return SCIP_OKAY;
    }
-
-   depth = SCIPgetDepth(scip);
 
    /* only call separator up to a maximum depth */
    if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
@@ -2798,7 +2800,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
    }
 
    /* search for edge-concave cuts */
-   SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
+   SCIP_CALL( separateCuts(scip, sepa, sepadata, depth, NULL, result) );
 
    return SCIP_OKAY;
 }

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -178,7 +178,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result, allowlocal) );
+   SCIP_CALL( sepadata->objsepa->scip_execlp(scip, sepa, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }
@@ -195,7 +195,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolObj)
    assert(sepadata->objsepa != NULL);
 
    /* call virtual method of sepa object */
-   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result, allowlocal) );
+   SCIP_CALL( sepadata->objsepa->scip_execsol(scip, sepa, sol, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }
@@ -261,6 +261,7 @@ scip::ObjSepa* SCIPgetObjSepa(
 {
    SCIP_SEPADATA* sepadata;
 
+   assert(scip != NULL);
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 

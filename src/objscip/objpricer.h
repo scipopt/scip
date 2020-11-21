@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -179,7 +179,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyPricer is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjPricer*      objpricer,          /**< variable pricer object */
@@ -187,14 +187,14 @@ SCIP_RETCODE SCIPincludeObjPricer(
    );
 
 /** returns the variable pricer object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjPricer* SCIPfindObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of variable pricer */
    );
 
 /** returns the variable pricer object for the given pricer */
-EXTERN
+SCIP_EXPORT
 scip::ObjPricer* SCIPgetObjPricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< pricer */

@@ -653,6 +653,19 @@ inline void reverse_powvp_op(
 	reverse_log_op(
 		d, i_z, arg[0], cap_order, taylor, nc_partial, partial
 	);
+
+    // For sake of this discussion, consider case where nc_partial = 1.
+    // There is a special case when partial[i_z + 2] != 0 and x <= 0.
+    // In this case partial[i_z] is zero and hence partial[i_z] * (1 / x)
+    // is zero, because reverse_log_op is using the azmul operator for the
+    // multiply. We only want absolute zero multiply when partia[i_z + 2] == 0.
+   Base zero(0);
+   if( partial[ (i_z + 2) * nc_partial ] != zero  )
+   {   if( ! GreaterThanZero( taylor[ size_t(arg[0]) * cap_order ] ) )
+            for(size_t k = 0; k < nc_partial; ++k)
+                partial[k + size_t(arg[0]) * nc_partial] =
+                    numeric_limits<Base>::quiet_NaN();
+   }
 }
 
 } } // END_CPPAD_LOCAL_NAMESPACE

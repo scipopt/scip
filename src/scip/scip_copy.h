@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,25 +38,6 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
-
-/* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
- * this structure except the interface methods in scip.c.
- * In optimized mode, the structure is included in scip.h, because some of the methods
- * are implemented as defines for performance reasons (e.g. the numerical comparisons).
- * Additionally, the internal "set.h" is included, such that the defines in set.h are
- * available in optimized mode.
- */
-#ifdef NDEBUG
-#include "scip/struct_scip.h"
-#include "scip/struct_stat.h"
-#include "scip/set.h"
-#include "scip/tree.h"
-#include "scip/misc.h"
-#include "scip/var.h"
-#include "scip/cons.h"
-#include "scip/solve.h"
-#include "scip/debug.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,7 +87,7 @@ extern "C" {
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyPlugins(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -134,6 +115,9 @@ SCIP_RETCODE SCIPcopyPlugins(
 /** copies all Benders' decomposition plugins
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note the 'threadsafe' parameter must be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -161,12 +145,14 @@ SCIP_RETCODE SCIPcopyPlugins(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyBenders(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
-                                              *   target variables; must not be NULL */
+                                              *   target variables; if NULL the transfer of cuts is not possible */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    );
 
@@ -209,7 +195,7 @@ SCIP_RETCODE SCIPcopyBenders(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyProb(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -251,7 +237,7 @@ SCIP_RETCODE SCIPcopyProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigProb(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -275,7 +261,7 @@ SCIP_RETCODE SCIPcopyOrigProb(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPenableConsCompression(
    SCIP*                 scip                /**< source SCIP data structure */
    );
@@ -303,14 +289,15 @@ SCIP_RETCODE SCIPenableConsCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_Bool SCIPisConsCompressionEnabled(
    SCIP*                 scip                /**< source SCIP data structure */
    );
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
- *  it is just returned as target variable; elsewise a new variable will be created and added to the target SCIP; this
- *  created variable is added to the variable hash map and returned as target variable
+ *  it is just returned as target variable; otherwise, if the variables it not marked as relaxation-only, a new variable
+ *  will be created and added to the target SCIP; this created variable is added to the variable hash map and returned as target variable;
+ *  relaxation-only variables are not copied and FALSE is returned in *success
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -344,7 +331,7 @@ SCIP_Bool SCIPisConsCompressionEnabled(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetVarCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -358,9 +345,12 @@ SCIP_RETCODE SCIPgetVarCopy(
    SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    );
 
-/** copies all active variables from source-SCIP and adds these variable to the target-SCIP; the mapping between these
- *  variables are stored in the variable hashmap, target-SCIP has to be in problem creation stage, fixed and aggregated
- *  variables do not get copied
+/** Copies all active (thus unfixed) variables from source-SCIP, except those that are marked as relaxation only,
+ *  and adds these variable to the target-SCIP.
+ *
+ *  The mapping between these variables are stored in the variable hashmap.
+ *
+ *  The target-SCIP has to be in problem creation stage.
  *
  *  @note the variables are added to the target-SCIP but not captured
  *
@@ -390,7 +380,7 @@ SCIP_RETCODE SCIPgetVarCopy(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -436,7 +426,7 @@ SCIP_RETCODE SCIPcopyVars(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -456,13 +446,45 @@ SCIP_RETCODE SCIPcopyOrigVars(
  *        \p targetscip denotes the original instance
  */
 
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPmergeVariableStatistics(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
-   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge, NULL entries are ignored */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge, NULL entries are ignored */
    int                   nvars               /**< number of variables in both variable arrays */
+   );
+
+/** translates a solution from a subscip to the main scip
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ *
+ * @note This method allocates a new solution of the main \p scip that needs to be freed by the user.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtranslateSubSol(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
+   );
+
+/** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
+ *
+ * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
+ * are represented as NULL entry in the \p subvars array.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPtranslateSubSols(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
+   SCIP_HEUR*            heur,               /**< heuristic that found the solution */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
+   int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
@@ -515,7 +537,7 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPgetConsCopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -549,6 +571,9 @@ SCIP_RETCODE SCIPgetConsCopy(
  *  the target-SCIP but not (user) captured; if the constraint hash map is not NULL the mapping
  *  between the constraints of the source and target-SCIP is stored
  *
+ *  *valid is set to TRUE iff all constraints that are marked as checked or enforced were copied successfully.
+ *  If other constraints could not be copied, *valid can still be set to TRUE.
+ *
  *  @note the constraints are added to the target-SCIP but are not (user) captured in the target SCIP. (If you mix
  *        SCIPgetConsCopy() with SCIPcopyConss() you should pay attention to what you add explicitly and what is already
  *        added.) You can check whether a constraint is added by calling SCIPconsIsAdded().
@@ -579,7 +604,7 @@ SCIP_RETCODE SCIPgetConsCopy(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -590,7 +615,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
                                               *   If TRUE, the modifiable flag of constraints will be copied. */
-   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   SCIP_Bool*            valid               /**< pointer to store whether all checked or enforced constraints were validly copied */
    );
 
 /** copies all original constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
@@ -630,7 +655,7 @@ SCIP_RETCODE SCIPcopyConss(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -663,7 +688,7 @@ SCIP_RETCODE SCIPcopyOrigConss(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPconvertCutsToConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
@@ -675,6 +700,8 @@ SCIP_RETCODE SCIPconvertCutsToConss(
    );
 
 /** copies all active cuts from cutpool of sourcescip to linear constraints in targetscip
+ *
+ *  Cuts that contain variables that are marked as relaxation-only are skipped.
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *  @note Do not change the source SCIP environment during the copying process
@@ -708,7 +735,7 @@ SCIP_RETCODE SCIPconvertCutsToConss(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyCuts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -754,7 +781,7 @@ SCIP_RETCODE SCIPcopyCuts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConflicts(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -804,7 +831,7 @@ SCIP_RETCODE SCIPcopyConflicts(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyImplicationsCliques(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -848,7 +875,7 @@ SCIP_RETCODE SCIPcopyImplicationsCliques(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyParamSettings(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
@@ -876,7 +903,7 @@ SCIP_RETCODE SCIPcopyParamSettings(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 int SCIPgetSubscipDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -890,7 +917,7 @@ int SCIPgetSubscipDepth(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 void SCIPsetSubscipDepth(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   newdepth            /**< new subscip depth */
@@ -900,7 +927,7 @@ void SCIPsetSubscipDepth(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those are marked as relaxation-only
  *  5) copy all constraints
  *
  *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
@@ -910,6 +937,9 @@ void SCIPsetSubscipDepth(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -936,7 +966,7 @@ void SCIPsetSubscipDepth(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopy(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -950,6 +980,8 @@ SCIP_RETCODE SCIPcopy(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -964,7 +996,7 @@ SCIP_RETCODE SCIPcopy(
  *  1) copy the plugins
  *  2) copy the settings
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables
+ *  4) copy all active variables except those are marked as relaxation-only
  *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
  *     b) enable constraint compression
  *  5) copy all constraints
@@ -979,6 +1011,9 @@ SCIP_RETCODE SCIPcopy(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1005,7 +1040,7 @@ SCIP_RETCODE SCIPcopy(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConsCompression(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1022,6 +1057,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1037,6 +1074,9 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1063,7 +1103,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrig(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1076,6 +1116,8 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1099,6 +1141,9 @@ SCIP_RETCODE SCIPcopyOrig(
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
  *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note the 'threadsafe' parameter should only be set to TRUE if you are absolutely certain that the source and target
+ *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
+ *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1125,7 +1170,7 @@ SCIP_RETCODE SCIPcopyOrig(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyOrigConsCompression(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
@@ -1141,6 +1186,8 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   plugins will be copied and activated, and the modifiable flag of
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
+   SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
+                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
@@ -1162,7 +1209,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcheckCopyLimits(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP_Bool*            success             /**< pointer to store whether there is time and memory left to copy the
@@ -1174,6 +1221,8 @@ SCIP_RETCODE SCIPcheckCopyLimits(
  *  @note time and memory limit are reduced by the amount already spent in the source SCIP before installing the limit
  *        in the target SCIP
  *  @note all other limits are disabled and need to be enabled afterwards, if needed
+ *
+ *  @see SCIPsetCommonSubscipParams() to set further working limits and other parameters commonly used for auxiliary problems
  *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1188,10 +1237,24 @@ SCIP_RETCODE SCIPcheckCopyLimits(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcopyLimits(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+
+/** sets the working limits as well as common search parameters for the auxiliary problem
+ *
+ *  @note memory and time limits are not affected, and must be set using SCIPcopyLimits() instead
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsetCommonSubscipParams(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */
+   SCIP_Longint          nsubnodes,          /**< nodelimit for subscip, or -1 for no limit */
+   SCIP_Longint          nstallnodes,        /**< stall node limit for subscip, or -1 for no limit */
+   int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */
    );
 
 

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -24,11 +24,13 @@
 # of each computer. Of course, the value depends on the specific computer/queue.
 #
 # To get the result files call "./evalcheck_cluster.sh
-# $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.eval in directory check/
+# $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.eval in directory check/
 # This leads to result files
-#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.out
-#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.res
-#  - $OUTPUTDIR/check.$TSTNAME.$BINNAME.$SETNAME.err
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.out
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.res
+#  - $OUTPUTDIR/check.$TSTNAME.$BINID.$SETNAME.err
+#
+# To get verbose output from Slurm, have SRUN_FLAGS="-v -v" set in your environment.
 
 TSTNAME=$1
 BINNAME=$2
@@ -52,16 +54,17 @@ EXCLUSIVE=${19}
 PERMUTE=${20}
 SEEDS=${21}
 GLBSEEDSHIFT=${22}
-DEBUGTOOL=${23}
-REOPT=${24}
-OPTCOMMAND=${25}
-SETCUTOFF=${26}
-VISUALIZE=${27}
-CLUSTERNODES=${28}
-SLURMACCOUNT=${29}
+STARTPERM=${23}
+DEBUGTOOL=${24}
+REOPT=${25}
+OPTCOMMAND=${26}
+SETCUTOFF=${27}
+VISUALIZE=${28}
+CLUSTERNODES=${29}
+SLURMACCOUNT=${30}
 
 # check if all variables defined (by checking the last one)
-if test -z $CLUSTERNODES
+if test -z $SLURMACCOUNT
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -86,16 +89,19 @@ then
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "STARTPERM     = $STARTPERM"
     echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
     echo "CLUSTERNODES  = $CLUSTERNODES"
+    echo "SLURMACCOUNT  = $SLURMACCOUNT"
     exit 1;
 fi
 
 # configure cluster-related environment variables
+# defines the following environment variables: NICE, ACCOUNT, CLUSTERQUEUE
 . ./configuration_cluster.sh $QUEUE $PPN $EXCLUSIVE $QUEUETYPE
 
 # the srun queue requires a format duration HH:MM:SS (and optionally days),
@@ -113,7 +119,6 @@ fi
 # defines the following environment variables: SCIPPATH, SETTINGSLIST, SOLUFILE, HARDMEMLIMIT, DEBUGTOOLCMD, INSTANCELIST,
 #                                              TIMELIMLIST, HARDTIMELIMLIST
 . ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
-
 
 # at the first time, some files need to be initialized. set to "" after the innermost loop
 # finished the first time
@@ -161,12 +166,23 @@ do
 		# infer the names of all involved files from the arguments
 		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
 		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
-		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s $THREADS $GLBSEEDSHIFT
+		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE \
+		                              $p $s $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		# skip instance if log file is present and we want to continue a previously launched test run
 		if test "$SKIPINSTANCE" = "true"
 		then
 		    continue
+		fi
+
+		# check if binary exists. The second condition checks whether there is a binary of that name directly available
+		# independent of whether it is a symlink, file in the working directory, or application in the path
+		if test -e $SCIPPATH/../$BINNAME
+		then
+		    EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
+		elif type $BINNAME >/dev/null 2>&1
+		then
+		    EXECNAME=${DEBUGTOOLCMD}$BINNAME
 		fi
 
 		# find out the solver that should be used
@@ -175,56 +191,50 @@ do
 		CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
 		# call tmp file configuration for the solver
+		# this may modify the EXECNAME environment variable
 		. ./${CONFFILE} $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
-
+                    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND \
+                    $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
 		JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
-
-                # check if binary exists. The second condition checks whether there is a binary of that name directly available
-                # independent of whether it is a symlink, file in the working directory, or application in the path
-        if test -e $SCIPPATH/../$BINNAME
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$SCIPPATH/../$BINNAME
-        elif type $BINNAME >/dev/null 2>&1
-        then
-           export EXECNAME=${DEBUGTOOLCMD}$BINNAME
-        fi
+		# additional environment variables needed by run.sh
+		export SOLVERPATH=$SCIPPATH
+		# this looks wrong but is totally correct
+		export BASENAME=$FILENAME
+		export FILENAME=$INSTANCE
+		export CLIENTTMPDIR
+		export OUTPUTDIR
+		export HARDTIMELIMIT
+		export HARDMEMLIMIT
+		export CHECKERPATH=$SCIPPATH/solchecker
+		export SETFILE
+		export TIMELIMIT
+                export EXECNAME
 
                 # check queue type
 		if test  "$QUEUETYPE" = "srun"
 		then
-		# additional environment variables needed by run.sh
-		    export SOLVERPATH=$SCIPPATH
-                    # this looks wrong but is totally correct
-		    export BASENAME=$FILENAME
-		    export FILENAME=$INSTANCE
-		    export CLIENTTMPDIR
-                    export OUTPUTDIR
-		    export HARDTIMELIMIT
-		    export HARDMEMLIMIT
-		    export CHECKERPATH=$SCIPPATH/solchecker
-		    export SETFILE
-		    export TIMELIMIT
-		    # the space at the end is necessary
-		    export SRUN="srun --cpu_bind=cores -v -v "
+		    if test "$CLUSTERQUEUE" != "moskito"
+		    then
+		       # the space at the end is necessary
+		       export SRUN="srun --cpu_bind=cores ${SRUN_FLAGS} "
+		    fi
 
-                    if test "$SLURMACCOUNT" == ""
+                    if test "$SLURMACCOUNT" == "default"
 	            then
-                                  SLURMACCOUNT=$ACCOUNT
+			SLURMACCOUNT=$ACCOUNT
                     fi
 
                     if test "$CLUSTERNODES" = "all"
 		    then
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		    else
-				  sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
+			sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $SLURMACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} -w $CLUSTERNODES --output=/dev/null run.sh
 		    fi
 		else
 		    # -V to copy all environment variables
-		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
-			-v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR,OUTPUTDIR=$OUTPUTDIR \
-			-V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+		    qsub -l walltime=$HARDTIMELIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
+			 -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
 		fi
 	    done # end for SETNAME
 	done # end for PERMUTE

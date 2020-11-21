@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_rootredcost.c
+ * @ingroup DEFPLUGINS_PROP
  * @brief  reduced cost strengthening using root node reduced costs and the cutoff bound
  * @author Tobias Achterberg
  * @author Stefan Heinz
@@ -105,7 +106,6 @@ struct SCIP_PropData
 /** reset structure memember of propagator data structure */
 static
 void propdataReset(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROPDATA*        propdata            /**< propagator data to reset */
    )
 {
@@ -160,7 +160,7 @@ SCIP_RETCODE propdataCreate(
 {
    SCIP_CALL( SCIPallocBlockMemory(scip, propdata) );
 
-   propdataReset(scip, *propdata);
+   propdataReset(*propdata);
 
    return SCIP_OKAY;
 }
@@ -211,7 +211,7 @@ SCIP_RETCODE propdataExit(
    /* free memory for non-zero reduced cost variables */
    SCIPfreeBlockMemoryArrayNull(scip, &propdata->redcostvars, propdata->nredcostvars);
 
-   propdataReset(scip, propdata);
+   propdataReset(propdata);
 
    return SCIP_OKAY;
 }

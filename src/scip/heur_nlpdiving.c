@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_nlpdiving.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  NLP diving heuristic that chooses fixings w.r.t. the fractionalities
  * @author Timo Berthold
  * @author Stefan Vigerske
@@ -57,7 +58,7 @@
 
 #define HEUR_NAME             "nlpdiving"
 #define HEUR_DESC             "NLP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'd'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_DIVING
 #define HEUR_PRIORITY         -1003000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
@@ -1222,10 +1223,10 @@ SCIP_RETCODE createNewSol(
    )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
-   SCIP_VAR** subvars;
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    int        nvars;                         /* the original problem's number of variables      */
+   SCIP_VAR* subvar;
    int i;
 
    assert(scip != NULL);
@@ -1235,19 +1236,17 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
-   assert(nvars <= SCIPgetNOrigVars(subscip));
-
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-
-   for( i = 0; i < nvars; i++ )
-      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
 
    /* copy the solution */
-   SCIP_CALL( SCIPgetSolVals(subscip, subsol, nvars, subvars, subsolvals) );
+   for( i = 0; i < nvars; ++i )
+   {
+      subvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      if( subvar == NULL )
+         subsolvals[i] = MIN(MAX(0.0, SCIPvarGetLbLocal(vars[i])), SCIPvarGetUbLocal(vars[i]));  /*lint !e666*/
+      else
+         subsolvals[i] = SCIPgetSolVal(subscip, subsol, subvar);
+   }
 
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
@@ -1256,7 +1255,6 @@ SCIP_RETCODE createNewSol(
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
-   SCIPfreeBufferArray(scip, &subvars);
    SCIPfreeBufferArray(scip, &subsolvals);
 
    return SCIP_OKAY;
@@ -1288,11 +1286,13 @@ SCIP_RETCODE doSolveSubMIP(
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, FALSE,
+         TRUE, NULL) );
 
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
    {
+      assert(SCIPhashmapGetImage(varmap, covervars[c]) != NULL);  /* cover variable cannot be relaxation-only, thus must have been copied */
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(covervars[c]), SCIPvarGetUbLocal(covervars[c])));
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal((SCIP_VAR*) SCIPhashmapGetImage(varmap, covervars[c])),
             SCIPvarGetUbGlobal((SCIP_VAR*) SCIPhashmapGetImage(varmap, covervars[c]))));
@@ -2662,16 +2662,6 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    else
       assert(varincover == NULL);
 
-   /* free array of cover variables */
-   if( heurdata->prefercover || heurdata->solvesubmip )
-   {
-      assert(covervars != NULL || !covercomputed);
-      if( covervars != NULL )
-         SCIPfreeBufferArray(scip, &covervars);
-   }
-   else
-      assert(covervars == NULL);
-
    /* free NLP start solution */
    if( nlpstartsol != NULL )
    {
@@ -2696,8 +2686,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       assert(pseudocandsnlpsol != NULL);
       assert(pseudocandsnlpsol != NULL);
-      SCIPfreeBufferArray(scip, &pseudocandslpsol);
       SCIPfreeBufferArray(scip, &pseudocandsnlpsol);
+      SCIPfreeBufferArray(scip, &pseudocandslpsol);
    }
    else
    {
@@ -2705,12 +2695,22 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       assert(pseudocandsnlpsol == NULL);
    }
 
+   /* free array of cover variables */
+   if( heurdata->prefercover || heurdata->solvesubmip )
+   {
+      assert(covervars != NULL || !covercomputed);
+      if( covervars != NULL )
+         SCIPfreeBufferArray(scip, &covervars);
+   }
+   else
+      assert(covervars == NULL);
+
    if( *result == SCIP_FOUNDSOL )
       heurdata->nsuccess++;
 
    SCIPdebugMsg(scip, "nlpdiving heuristic finished\n");
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,7 +28,6 @@
 #include "pattern.h"
 
 /** sets up the problem data */
-extern
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           probname,           /**< problem name */
@@ -41,13 +40,11 @@ SCIP_RETCODE SCIPprobdataCreate(
    );
 
 /** enumerates circular patterns and creates restricted master problem */
-extern
 SCIP_RETCODE SCIPprobdataSetupProblem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** enumerate all non-dominated circular patterns */
-extern
 SCIP_RETCODE SCIPprobdataEnumeratePatterns(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -59,43 +56,36 @@ SCIP_RETCODE SCIPprobdataEnumeratePatterns(
    );
 
 /** returns number of different types */
-extern
 int SCIPprobdataGetNTypes(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns all external radii */
-extern
 SCIP_Real* SCIPprobdataGetRexts(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns all internal radii */
-extern
 SCIP_Real* SCIPprobdataGetRints(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns all demands */
-extern
 int* SCIPprobdataGetDemands(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns the width of each rectangle */
-extern
 SCIP_Real SCIPprobdataGetWidth(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns the height of each rectangle */
-extern
 SCIP_Real SCIPprobdataGetHeight(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns all information about circular patterns */
-extern
 void SCIPprobdataGetCInfos(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN***       cpatterns,          /**< pointer to store the circular patterns (might be NULL) */
@@ -104,7 +94,6 @@ void SCIPprobdataGetCInfos(
    );
 
 /** returns all information about rectangular patterns */
-extern
 void SCIPprobdataGetRInfos(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_PATTERN***       rpatterns,          /**< pointer to store the rectangular patterns (might be NULL) */
@@ -113,13 +102,11 @@ void SCIPprobdataGetRInfos(
    );
 
 /** returns array of set pattern constraints */
-extern
 SCIP_CONS** SCIPprobdataGetPatternConss(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** adds given variable to the problem data */
-extern
 SCIP_RETCODE SCIPprobdataAddVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -128,7 +115,6 @@ SCIP_RETCODE SCIPprobdataAddVar(
    );
 
 /** updates the dual bound */
-extern
 void SCIPprobdataUpdateDualbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -136,14 +122,12 @@ void SCIPprobdataUpdateDualbound(
    );
 
 /** marks that further reported dual bounds are not valid */
-extern
 void SCIPprobdataInvalidateDualbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns whether dual bound is marked to be invalid */
-extern
 SCIP_Bool SCIPprobdataIsDualboundInvalid(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
@@ -152,7 +136,6 @@ SCIP_Bool SCIPprobdataIsDualboundInvalid(
  *  heuristic. Returns the number of elements that could be stored and indicated which ones these are in the buffer
  *  parameter ispacked. This auxiliary method can be used both to find such a packing or to verify a certain pattern.
  */
-extern
 void SCIPpackCirclesGreedy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            rexts,              /**< outer radii of elements (in original order of probdata) */
@@ -170,7 +153,6 @@ void SCIPpackCirclesGreedy(
    );
 
 /** verifies a circular pattern heuristically */
-extern
 SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -180,7 +162,6 @@ SCIP_RETCODE SCIPverifyCircularPatternHeuristic(
    );
 
 /** verifies a circular pattern via solving a verification NLP */
-extern
 SCIP_RETCODE SCIPverifyCircularPatternNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
@@ -190,7 +171,6 @@ SCIP_RETCODE SCIPverifyCircularPatternNLP(
    );
 
 /** check whether a pattern for consistency */
-extern
 void SCIPcheckPattern(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */

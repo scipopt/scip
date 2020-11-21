@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,9 +31,9 @@
 /** runs the shell */
 static
 SCIP_RETCODE runShell(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {
    SCIP* scip = NULL;
@@ -58,7 +58,6 @@ SCIP_RETCODE runShell(
 
    SCIP_CALL( SCIPprocessShellArguments(scip, argc, argv, defaultsetname) );
 
-
    /********************
     * Deinitialization *
     ********************/
@@ -73,8 +72,8 @@ SCIP_RETCODE runShell(
 
 /** main method */
 int main(
-   int                   argc,          /**< number of arguments */
-   char**                argv           /**< string array with arguments */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv                /**< array with shell parameters */
    )
 {
   SCIP_RETCODE retcode;

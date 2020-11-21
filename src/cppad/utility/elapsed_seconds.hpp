@@ -82,9 +82,7 @@ $end
 // needed before one can use CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL
 # include <cppad/utility/thread_alloc.hpp>
 
-# if _MSC_VER
-extern double microsoft_timer(void);
-# elif CPPAD_USE_CPLUSPLUS_2011
+# if CPPAD_USE_CPLUSPLUS_2011
 # include <chrono>
 # elif CPPAD_HAS_GETTIMEOFDAY
 # include <sys/time.h>
@@ -115,10 +113,7 @@ The number of seconds since the first call to \c elapsed_seconds.
 */
 inline double elapsed_seconds(void)
 // --------------------------------------------------------------------------
-# if _MSC_VER
-{  return microsoft_timer(); }
-// --------------------------------------------------------------------------
-# elif CPPAD_USE_CPLUSPLUS_2011
+# if CPPAD_USE_CPLUSPLUS_2011
 {	CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
 	static bool first_ = true;
 	static std::chrono::time_point<std::chrono::steady_clock> start_;

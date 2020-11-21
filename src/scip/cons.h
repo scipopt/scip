@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -58,7 +58,6 @@ extern "C" {
  */
 
 /** copies the given constraint handler to a new scip */
-extern
 SCIP_RETCODE SCIPconshdlrCopyInclude(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
@@ -66,7 +65,6 @@ SCIP_RETCODE SCIPconshdlrCopyInclude(
    );
 
 /** creates a constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -123,14 +121,12 @@ SCIP_RETCODE SCIPconshdlrCreate(
    );
 
 /** calls destructor and frees memory of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrFree(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls init method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -139,7 +135,6 @@ SCIP_RETCODE SCIPconshdlrInit(
    );
 
 /** calls exit method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrExit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -148,7 +143,6 @@ SCIP_RETCODE SCIPconshdlrExit(
    );
 
 /** informs constraint handler that the presolving process is being started */
-extern
 SCIP_RETCODE SCIPconshdlrInitpre(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -157,7 +151,6 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    );
 
 /** informs constraint handler that the presolving is finished */
-extern
 SCIP_RETCODE SCIPconshdlrExitpre(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -166,7 +159,6 @@ SCIP_RETCODE SCIPconshdlrExitpre(
    );
 
 /** informs constraint handler that the branch and bound process is being started */
-extern
 SCIP_RETCODE SCIPconshdlrInitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -175,7 +167,6 @@ SCIP_RETCODE SCIPconshdlrInitsol(
    );
 
 /** informs constraint handler that the branch and bound process data is being freed */
-extern
 SCIP_RETCODE SCIPconshdlrExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -185,7 +176,6 @@ SCIP_RETCODE SCIPconshdlrExitsol(
    );
 
 /** calls LP initialization method of constraint handler to separate all initial active constraints */
-extern
 SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -199,7 +189,6 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    );
 
 /** calls separator method of constraint handler to separate LP solution */
-extern
 SCIP_RETCODE SCIPconshdlrSeparateLP(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -212,7 +201,6 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
    );
 
 /** calls separator method of constraint handler to separate given primal solution */
-extern
 SCIP_RETCODE SCIPconshdlrSeparateSol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -228,7 +216,6 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
 /** calls enforcing method of constraint handler for a relaxation solution for all constraints added after last
  *  conshdlrResetEnfo() call
  */
-extern
 SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -244,7 +231,6 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
 /** calls enforcing method of constraint handler for LP solution for all constraints added after last
  *  conshdlrReset() call
  */
-extern
 SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -257,7 +243,6 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    );
 
 /** calls diving solution enforcement callback of constraint handler, if it exists */
-extern
 SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -270,7 +255,6 @@ SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
 /** calls enforcing method of constraint handler for pseudo solution for all constraints added after last
  *  conshdlrReset() call
  */
-extern
 SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -285,7 +269,6 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    );
 
 /** calls feasibility check method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -300,7 +283,6 @@ SCIP_RETCODE SCIPconshdlrCheck(
    );
 
 /** calls propagation method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrPropagate(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -315,7 +297,6 @@ SCIP_RETCODE SCIPconshdlrPropagate(
    );
 
 /** calls presolving method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrPresolve(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -337,14 +318,12 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    );
 
 /** enables or disables all clocks of \p conshdlr, depending on the value of the flag */
-extern
 void SCIPconshdlrEnableOrDisableClocks(
    SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the constraint handler be enabled? */
    );
 
 /** calls variable deletion method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrDelVars(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -360,7 +339,6 @@ SCIP_RETCODE SCIPconshdlrLockVars(
    );
 
 /** unlocks rounding of variables involved in the given constraint constraint handler that doesn't need constraints */
-extern
 SCIP_RETCODE SCIPconshdlrUnlockVars(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -371,7 +349,6 @@ SCIP_RETCODE SCIPconshdlrUnlockVars(
  */
 
 /** sets copy method of both the constraint handler and each associated constraint */
-extern
 void SCIPconshdlrSetCopy(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
@@ -379,56 +356,48 @@ void SCIPconshdlrSetCopy(
    );
 
 /** sets destructor method of constraint handler */
-extern
 void SCIPconshdlrSetFree(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSFREE    ((*consfree))       /**< destructor of constraint handler */
    );
 
 /** sets initialization method of constraint handler */
-extern
 void SCIPconshdlrSetInit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit))       /**< initialize constraint handler */
    );
 
 /** sets deinitialization method of constraint handler */
-extern
 void SCIPconshdlrSetExit(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit))       /**< deinitialize constraint handler */
    );
 
 /** sets solving process initialization method of constraint handler */
-extern
 void SCIPconshdlrSetInitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSINITSOL((*consinitsol))     /**< solving process initialization method of constraint handler */
    );
 
 /** sets solving process deinitialization method of constraint handler */
-extern
 void SCIPconshdlrSetExitsol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSEXITSOL ((*consexitsol))    /**< solving process deinitialization method of constraint handler */
    );
 
 /** sets preprocessing initialization method of constraint handler */
-extern
 void SCIPconshdlrSetInitpre(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSINITPRE((*consinitpre))     /**< preprocessing initialization method of constraint handler */
    );
 
 /** sets preprocessing deinitialization method of constraint handler */
-extern
 void SCIPconshdlrSetExitpre(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSEXITPRE((*consexitpre))     /**< preprocessing deinitialization method of constraint handler */
    );
 
 /** sets presolving method of constraint handler */
-extern
 SCIP_RETCODE SCIPconshdlrSetPresol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
@@ -437,98 +406,84 @@ SCIP_RETCODE SCIPconshdlrSetPresol(
    );
 
 /** sets method of constraint handler to free specific constraint data */
-extern
 void SCIPconshdlrSetDelete(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSDELETE  ((*consdelete))     /**< free specific constraint data */
    );
 
 /** sets method of constraint handler to transform constraint data into data belonging to the transformed problem */
-extern
 void SCIPconshdlrSetTrans(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSTRANS   ((*constrans))      /**< transform constraint data into data belonging to the transformed problem */
    );
 
 /** sets method of constraint handler to initialize LP with relaxations of "initial" constraints */
-extern
 void SCIPconshdlrSetInitlp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
    );
 
 /** sets propagation conflict resolving method of constraint handler */
-extern
 void SCIPconshdlrSetResprop(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSRESPROP ((*consresprop))    /**< propagation conflict resolving method */
    );
 
 /** sets activation notification method of constraint handler */
-extern
 void SCIPconshdlrSetActive(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSACTIVE  ((*consactive))     /**< activation notification method */
    );
 
 /** sets deactivation notification method of constraint handler */
-extern
 void SCIPconshdlrSetDeactive(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSDEACTIVE((*consdeactive))   /**< deactivation notification method */
    );
 
 /** sets enabling notification method of constraint handler */
-extern
 void SCIPconshdlrSetEnable(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSENABLE  ((*consenable))     /**< enabling notification method */
    );
 
 /** sets disabling notification method of constraint handler */
-extern
 void SCIPconshdlrSetDisable(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSDISABLE ((*consdisable))    /**< disabling notification method */
    );
 
 /** sets variable deletion method of constraint handler */
-extern
 void SCIPconshdlrSetDelvars(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSDELVARS ((*consdelvars))    /**< variable deletion method */
    );
 
 /** sets constraint display method of constraint handler */
-extern
 void SCIPconshdlrSetPrint(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPRINT   ((*consprint))      /**< constraint display method */
    );
 
 /** sets constraint parsing method of constraint handler */
-extern
 void SCIPconshdlrSetParse(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPARSE   ((*consparse))      /**< constraint parsing method */
    );
 
 /** sets constraint variable getter method of constraint handler */
-extern
 void SCIPconshdlrSetGetVars(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETVARS ((*consgetvars))    /**< constraint variable getter method */
    );
 
 /** sets constraint variable number getter method of constraint handler */
-extern
 void SCIPconshdlrSetGetNVars(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
    );
 
 /** sets diving enforcement method of constraint handler */
-extern
 void SCIPconshdlrSetGetDiveBdChgs(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
@@ -539,7 +494,6 @@ void SCIPconshdlrSetGetDiveBdChgs(
  */
 
 /** frees constraint set change data and releases all included constraints */
-extern
 SCIP_RETCODE SCIPconssetchgFree(
    SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -549,7 +503,6 @@ SCIP_RETCODE SCIPconssetchgFree(
 /** adds constraint addition to constraint set changes, and captures constraint; activates constraint if the
  *  constraint set change data is currently active
  */
-extern
 SCIP_RETCODE SCIPconssetchgAddAddedCons(
    SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -562,7 +515,6 @@ SCIP_RETCODE SCIPconssetchgAddAddedCons(
    );
 
 /** adds constraint disabling to constraint set changes, and captures constraint */
-extern
 SCIP_RETCODE SCIPconssetchgAddDisabledCons(
    SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -571,7 +523,6 @@ SCIP_RETCODE SCIPconssetchgAddDisabledCons(
    );
 
 /** applies constraint set change */
-extern
 SCIP_RETCODE SCIPconssetchgApply(
    SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -582,7 +533,6 @@ SCIP_RETCODE SCIPconssetchgApply(
    );
 
 /** undoes constraint set change */
-extern
 SCIP_RETCODE SCIPconssetchgUndo(
    SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to undo */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -591,7 +541,6 @@ SCIP_RETCODE SCIPconssetchgUndo(
    );
 
 /** applies constraint set change to the global problem and deletes the constraint set change data */
-extern
 SCIP_RETCODE SCIPconssetchgMakeGlobal(
    SCIP_CONSSETCHG**     conssetchg,         /**< pointer to constraint set change data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -602,13 +551,11 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    );
 
 /** increase count of applied cuts */
-extern
 void SCIPconshdlrIncNAppliedCuts(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
 /** increase count of found cuts */
-extern
 void SCIPconshdlrIncNCutsFound(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
@@ -626,7 +573,6 @@ void SCIPconshdlrIncNCutsFound(
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
-extern
 SCIP_RETCODE SCIPconsCreate(
    SCIP_CONS**           cons,               /**< pointer to constraint */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -670,7 +616,6 @@ SCIP_RETCODE SCIPconsCreate(
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
-extern
 SCIP_RETCODE SCIPconsCopy(
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
    SCIP_SET*             set,                /**< global SCIP settings of the target SCIP */
@@ -705,7 +650,6 @@ SCIP_RETCODE SCIPconsCopy(
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
  */
-extern
 SCIP_RETCODE SCIPconsParse(
    SCIP_CONS**           cons,               /**< pointer to constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -738,7 +682,6 @@ SCIP_RETCODE SCIPconsParse(
    );
 
 /** change name of given constraint */
-extern
 SCIP_RETCODE SCIPconsChgName(
    SCIP_CONS*            cons,               /**< problem constraint */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -746,7 +689,6 @@ SCIP_RETCODE SCIPconsChgName(
    );
 
 /** frees a constraint and removes it from the conss array of its constraint handler */
-extern
 SCIP_RETCODE SCIPconsFree(
    SCIP_CONS**           cons,               /**< constraint to free */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -754,13 +696,11 @@ SCIP_RETCODE SCIPconsFree(
    );
 
 /** increases usage counter of constraint */
-extern
 void SCIPconsCapture(
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** decreases usage counter of constraint, and frees memory if necessary */
-extern
 SCIP_RETCODE SCIPconsRelease(
    SCIP_CONS**           cons,               /**< pointer to constraint */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -769,7 +709,6 @@ SCIP_RETCODE SCIPconsRelease(
 
 
 /** outputs constraint information to file stream */
-extern
 SCIP_RETCODE SCIPconsPrint(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -778,7 +717,6 @@ SCIP_RETCODE SCIPconsPrint(
    );
 
 /** checks single constraint for feasibility of the given solution */
-extern
 SCIP_RETCODE SCIPconsCheck(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -790,7 +728,6 @@ SCIP_RETCODE SCIPconsCheck(
    );
 
 /** enforces single constraint for a given pseudo solution */
-extern
 SCIP_RETCODE SCIPconsEnfops(
    SCIP_CONS*            cons,               /**< constraint to enforce */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -800,7 +737,6 @@ SCIP_RETCODE SCIPconsEnfops(
    );
 
 /** enforces single constraint for a given LP solution */
-extern
 SCIP_RETCODE SCIPconsEnfolp(
    SCIP_CONS*            cons,               /**< constraint to enforce */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -818,7 +754,6 @@ SCIP_RETCODE SCIPconsEnforelax(
    );
 
 /** calls LP initialization method for single constraint */
-extern
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -826,7 +761,6 @@ SCIP_RETCODE SCIPconsInitlp(
    );
 
 /** calls separation method of single constraint for LP solution */
-extern
 SCIP_RETCODE SCIPconsSepalp(
    SCIP_CONS*            cons,               /**< constraint to separate */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -834,7 +768,6 @@ SCIP_RETCODE SCIPconsSepalp(
    );
 
 /** calls separation method of single constraint for given primal solution */
-extern
 SCIP_RETCODE SCIPconsSepasol(
    SCIP_CONS*            cons,               /**< constraint to separate */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -843,7 +776,6 @@ SCIP_RETCODE SCIPconsSepasol(
    );
 
 /** calls domain propagation method of single constraint */
-extern
 SCIP_RETCODE SCIPconsProp(
    SCIP_CONS*            cons,               /**< constraint to propagate */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -852,7 +784,6 @@ SCIP_RETCODE SCIPconsProp(
    );
 
 /** resolves propagation conflict of single constraint */
-extern
 SCIP_RETCODE SCIPconsResprop(
    SCIP_CONS*            cons,               /**< constraint to resolve conflict for */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -865,7 +796,6 @@ SCIP_RETCODE SCIPconsResprop(
    );
 
 /** presolves single constraint */
-extern
 SCIP_RETCODE SCIPconsPresol(
    SCIP_CONS*            cons,               /**< constraint to presolve */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -895,14 +825,12 @@ SCIP_RETCODE SCIPconsPresol(
    );
 
 /** calls constraint activation notification method of single constraint */
-extern
 SCIP_RETCODE SCIPconsActive(
    SCIP_CONS*            cons,               /**< constraint to notify */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calls constraint deactivation notification method of single constraint */
-extern
 SCIP_RETCODE SCIPconsDeactive(
    SCIP_CONS*            cons,               /**< constraint to notify */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -919,7 +847,6 @@ SCIP_RETCODE SCIPconsDeactive(
  *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
  *        set to FALSE.
  */
-extern
 SCIP_RETCODE SCIPconsGetVars(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -935,7 +862,6 @@ SCIP_RETCODE SCIPconsGetVars(
  *  @note It might be that a constraint handler does not support this functionality, in that case the success pointer is
  *        set to FALSE
  */
-extern
 SCIP_RETCODE SCIPconsGetNVars(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -946,7 +872,6 @@ SCIP_RETCODE SCIPconsGetNVars(
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was created, or from the problem, if it was a problem constraint
  */
-extern
 SCIP_RETCODE SCIPconsDelete(
    SCIP_CONS*            cons,               /**< constraint to delete */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -959,7 +884,6 @@ SCIP_RETCODE SCIPconsDelete(
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
  *  a new transformed constraint for this constraint is created
  */
-extern
 SCIP_RETCODE SCIPconsTransform(
    SCIP_CONS*            origcons,           /**< original constraint */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -968,7 +892,6 @@ SCIP_RETCODE SCIPconsTransform(
    );
 
 /** sets the initial flag of the given constraint */
-extern
 SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -977,7 +900,6 @@ SCIP_RETCODE SCIPconsSetInitial(
    );
 
 /** sets the separate flag of the given constraint */
-extern
 SCIP_RETCODE SCIPconsSetSeparated(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -985,7 +907,6 @@ SCIP_RETCODE SCIPconsSetSeparated(
    );
 
 /** sets the enforce flag of the given constraint */
-extern
 SCIP_RETCODE SCIPconsSetEnforced(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -993,7 +914,6 @@ SCIP_RETCODE SCIPconsSetEnforced(
    );
 
 /** sets the check flag of the given constraint */
-extern
 SCIP_RETCODE SCIPconsSetChecked(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1001,7 +921,6 @@ SCIP_RETCODE SCIPconsSetChecked(
    );
 
 /** sets the propagate flag of the given constraint */
-extern
 SCIP_RETCODE SCIPconsSetPropagated(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1009,35 +928,30 @@ SCIP_RETCODE SCIPconsSetPropagated(
    );
 
 /** sets the local flag of the given constraint */
-extern
 void SCIPconsSetLocal(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             local               /**< new value */
    );
 
 /** sets the modifiable flag of the given constraint */
-extern
 void SCIPconsSetModifiable(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             modifiable          /**< new value */
    );
 
 /** sets the dynamic flag of the given constraint */
-extern
 void SCIPconsSetDynamic(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             dynamic             /**< new value */
    );
 
 /** sets the removable flag of the given constraint */
-extern
 void SCIPconsSetRemovable(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             removable           /**< new value */
    );
 
 /** sets the stickingatnode flag of the given constraint */
-extern
 void SCIPconsSetStickingAtNode(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             stickingatnode      /**< new value */
@@ -1045,7 +959,6 @@ void SCIPconsSetStickingAtNode(
 
 /** gives the constraint a new name; ATTENTION: to old pointer is over written that might
  *  result in a memory leakage */
-extern
 void SCIPconsSetNamePointer(
    SCIP_CONS*            cons,               /**< constraint */
    const char*           name                /**< new name of constraint */
@@ -1054,13 +967,11 @@ void SCIPconsSetNamePointer(
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint
  *  exists
  */
-extern
 SCIP_CONS* SCIPconsGetTransformed(
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** activates constraint or marks constraint to be activated in next update */
-extern
 SCIP_RETCODE SCIPconsActivate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1070,7 +981,6 @@ SCIP_RETCODE SCIPconsActivate(
    );
 
 /** deactivates constraint or marks constraint to be deactivated in next update */
-extern
 SCIP_RETCODE SCIPconsDeactivate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1078,7 +988,6 @@ SCIP_RETCODE SCIPconsDeactivate(
    );
 
 /** enables constraint's separation, enforcing, and propagation capabilities or marks them to be enabled in next update */
-extern
 SCIP_RETCODE SCIPconsEnable(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1086,7 +995,6 @@ SCIP_RETCODE SCIPconsEnable(
    );
 
 /** disables constraint's separation, enforcing, and propagation capabilities or marks them to be disabled in next update */
-extern
 SCIP_RETCODE SCIPconsDisable(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1094,48 +1002,42 @@ SCIP_RETCODE SCIPconsDisable(
    );
 
 /** enables constraint's separation capabilities or marks them to be enabled in next update */
-extern
 SCIP_RETCODE SCIPconsEnableSeparation(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** disables constraint's separation capabilities or marks them to be disabled in next update */
-extern
 SCIP_RETCODE SCIPconsDisableSeparation(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** enables constraint's propagation capabilities or marks them to be enabled in next update */
-extern
 SCIP_RETCODE SCIPconsEnablePropagation(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** disables constraint's propagation capabilities or marks them to be disabled in next update */
-extern
 SCIP_RETCODE SCIPconsDisablePropagation(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** marks the constraint to be a conflict */
-extern
 void SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
 /** marks the constraint to be propagated (update might be delayed) */
-extern
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsMarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** unmarks the constraint to be propagated (update might be delayed) */
-extern
 SCIP_RETCODE SCIPconsUnmarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1149,7 +1051,6 @@ SCIP_RETCODE SCIPconsUnmarkPropagate(
  *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
  *  in next update
  */
-extern
 SCIP_RETCODE SCIPconsAddAge(
    SCIP_CONS*            cons,               /**< constraint */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1168,7 +1069,6 @@ SCIP_RETCODE SCIPconsAddAge(
  *  if it's age exceeds the constraint age limit, makes constraint obsolete or marks constraint to be made obsolete
  *  in next update
  */
-extern
 SCIP_RETCODE SCIPconsIncAge(
    SCIP_CONS*            cons,               /**< constraint */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1185,7 +1085,6 @@ SCIP_RETCODE SCIPconsIncAge(
  *   - in constraint propagation, if a domain reduction was deduced;
  *  if it was obsolete, makes constraint useful again or marks constraint to be made useful again in next update
  */
-extern
 SCIP_RETCODE SCIPconsResetAge(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1197,7 +1096,6 @@ SCIP_RETCODE SCIPconsResetAge(
  *
  *  @note it is sufficient to explain the relaxed bound change
  */
-extern
 SCIP_RETCODE SCIPconsResolvePropagation(
    SCIP_CONS*            cons,               /**< constraint that deduced the assignment */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1210,7 +1108,6 @@ SCIP_RETCODE SCIPconsResolvePropagation(
    );
 
 /** adds given values to lock status of the constraint and updates the locks of the given locktype of the involved variables */
-extern
 SCIP_RETCODE SCIPconsAddLocks(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1224,7 +1121,6 @@ SCIP_RETCODE SCIPconsAddLocks(
  */
 
 /** gets the key (i.e. the name) of the given constraint */
-extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons);
 
 /*
@@ -1232,7 +1128,6 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons);
  */
 
 /** stores all constraints marked for propagation away when probing is started */
-extern
 SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONSHDLR**       conshdlrs,          /**< all constraint handlers */
@@ -1240,7 +1135,6 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
    );
 
 /** reset all constraints marked for propagation when probing was finished */
-extern
 SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */

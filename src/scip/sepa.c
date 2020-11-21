@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa.c
+ * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for separators
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -410,6 +411,8 @@ SCIP_RETCODE SCIPsepaExecLP(
    {
       if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
       {
+         SCIP_CUTPOOL* cutpool;
+         SCIP_CUTPOOL* delayedcutpool;
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
          int oldncuts;
@@ -418,9 +421,11 @@ SCIP_RETCODE SCIPsepaExecLP(
 
          SCIPsetDebugMsg(set, "executing separator <%s> on LP solution\n", sepa->name);
 
+         cutpool = SCIPgetGlobalCutpool(set->scip);
+         delayedcutpool = SCIPgetDelayedGlobalCutpool(set->scip);
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
-         oldncuts = SCIPsepastoreGetNCuts(sepastore);
+         oldncuts = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) + SCIPcutpoolGetNCuts(delayedcutpool);
          oldnactiveconss = stat->nactiveconss;
 
          /* reset the statistics for current node */
@@ -434,7 +439,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal) );
+         SCIP_CALL( sepa->sepaexeclp(set->scip, sepa, result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);
@@ -448,7 +453,10 @@ SCIP_RETCODE SCIPsepaExecLP(
          }
          if( *result == SCIP_CUTOFF )
             sepa->ncutoffs++;
-         ncutsfound = SCIPsepastoreGetNCuts(sepastore) - oldncuts;
+
+         ncutsfound = SCIPsepastoreGetNCuts(sepastore) + SCIPcutpoolGetNCuts(cutpool) +
+            SCIPcutpoolGetNCuts(delayedcutpool) - oldncuts;
+
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
          sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
@@ -542,7 +550,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          SCIPclockStart(sepa->sepaclock, set);
 
          /* call external separation method */
-         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal) );
+         SCIP_CALL( sepa->sepaexecsol(set->scip, sepa, sol, result, allowlocal, depth) );
 
          /* stop timing */
          SCIPclockStop(sepa->sepaclock, set);

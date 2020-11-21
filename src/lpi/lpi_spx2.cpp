@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -21,7 +21,7 @@
  *
  * This is an implementation of SCIP's LP interface for SoPlex using the extended and improved interface of SoPlex 2.0
  *
- * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
+ * For debugging purposes, the SoPlex results can be double checked with CPLEX if SCIP_WITH_LPSCHECK is defined. This may
  * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
  */
 
@@ -32,8 +32,15 @@
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
 
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
+
 /* in this case the SoPlex results are double checked using CPLEX */
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
 #include <cplex.h>
 
 #define CHECK_SPXSOLVE                  true /**< shall the SoPlex results in spxSolve() be double checked using CPLEX? */
@@ -74,12 +81,19 @@
 #undef SCIP_DEBUG
 #endif
 
-/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, e.g.,
+/* disable -Wclass-memaccess warnings due to dubious memcpy/realloc calls in SoPlex headers, see soplex#136, e.g.,
  * dataarray.h:314:16: warning: ‘void* memcpy(void*, const void*, size_t)’ writing to an object of type ‘struct soplex::SPxParMultPR::SPxParMultPr_Tmp’ with no trivial copy-assignment; use copy-assignment or copy-initialization instead [-Wclass-memaccess]
  */
 #ifdef __GNUC__
 #if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#endif
+
+/* disable -Wdeprecated-copy warnings in SoPlex headers, see soplex#206 */
+#ifdef __GNUC__
+#if __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #endif
 #endif
 
@@ -209,7 +223,7 @@ class SPxSCIP : public SoPlex
    char*                 _probname;
    DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
    DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    int                   _checknum;
    bool                  _doublecheck;
    CPXENVptr             _cpxenv;           /**< CPLEX memory environment */
@@ -233,10 +247,10 @@ public:
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
 #if SOPLEX_APIVERSION >= 2
-      setBoolParam(SoPlex::ENSURERAY, true);
+      (void)setBoolParam(SoPlex::ENSURERAY, true);
 #endif
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
       _doublecheck = false;
@@ -254,7 +268,7 @@ public:
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       (void) CPXfreeprob(_cpxenv, &_cpxlp);
       (void) CPXcloseCPLEX(&_cpxenv);
 #endif
@@ -347,7 +361,7 @@ public:
       }
    }
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    bool getDoubleCheck()
    {
       _checknum++;
@@ -509,7 +523,7 @@ public:
       assert(checkConsistentBounds());
       assert(checkConsistentSides());
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       /* dump LP with current basis and settings saved in SoPlex */
       if( getDoubleCheck() )
          writeStateReal("spxcheck", NULL, NULL);
@@ -521,7 +535,7 @@ public:
       /* for safety reset iteration limit */
 //       setTerminationIter(_itlim);
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
       bool minimize = intParam(OBJSENSE) == OBJSENSE_MINIMIZE;
       Real objLimitUpper = realParam(OBJLIMIT_UPPER);
       Real objLimitLower = realParam(OBJLIMIT_LOWER);
@@ -961,9 +975,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
+   (void)snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
 #else
-   snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
+   (void)snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
 #endif
    return spxname;
 }
@@ -973,8 +987,8 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
-#ifdef WITH_LPSCHECK
+   (void)snprintf(spxdesc, 200, "%s [GitHash: %s]", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef SCIP_WITH_LPSCHECK
      " - including CPLEX double check"
 #endif
    , getGitHash());
@@ -1063,6 +1077,11 @@ SCIP_RETCODE SCIPlpiCreate(
    (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
    (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+
+   /* disable time-measurement for statistics */
+#if SOPLEX_APIVERSION >= 10
+   (void) (*lpi)->spx->setIntParam(SoPlex::STATTIMER, 0);
+#endif
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
@@ -2338,7 +2357,7 @@ SCIP_RETCODE spxSolve(
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
    lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
 #endif
 
@@ -2541,7 +2560,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifndef STRONGBRANCH_RESTOREBASIS
          SCIP_Bool repeatstrongbranching;
 #endif
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
@@ -2636,7 +2655,7 @@ SCIP_RETCODE lpiStrongbranch(
 #ifndef STRONGBRANCH_RESTOREBASIS
             SCIP_Bool repeatstrongbranching;
 #endif
-#ifdef WITH_LPSCHECK
+#ifdef SCIP_WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
@@ -2904,7 +2923,7 @@ SCIP_Bool SCIPlpiWasSolved(
  *  The feasibility information is with respect to the last solving call and it is only relevant if SCIPlpiWasSolved()
  *  returns true. If the LP is changed, this information might be invalidated.
  *
- *  Note that @a primalfeasible and @dualfeasible should only return true if the solver has proved the respective LP to
+ *  Note that @a primalfeasible and @a dualfeasible should only return true if the solver has proved the respective LP to
  *  be feasible. Thus, the return values should be equal to the values of SCIPlpiIsPrimalFeasible() and
  *  SCIPlpiIsDualFeasible(), respectively. Note that if feasibility cannot be proved, they should return false (even if
  *  the problem might actually be feasible).
@@ -2993,21 +3012,12 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SPxBasis::SPxStatus basestatus;
-
    SCIPdebugMessage("calling SCIPlpiIsPrimalFeasible()\n");
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   basestatus = lpi->spx->basisStatus();
-
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   assert(basestatus == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
-
-   return basestatus == SPxBasis::OPTIMAL || basestatus == SPxBasis::PRIMAL;
+   return lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->basisStatus() == SPxBasis::PRIMAL;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -3076,11 +3086,6 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   assert(lpi->spx->basisStatus() == SPxBasis::OPTIMAL || lpi->spx->status() != SPxSolver::OPTIMAL);
-
    return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL) || lpi->spx->basisStatus() == SPxBasis::DUAL;
 }
 
@@ -3096,10 +3101,7 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert((lpi->spx->basisStatus() == SPxBasis::OPTIMAL)
       == (SCIPlpiIsPrimalFeasible(lpi) && SCIPlpiIsDualFeasible(lpi)));
 
-   /* note that the solver status may be ABORT_VALUE and the basis status optimal; if we are optimal, isPerturbed() may
-    * still return true as long as perturbation plus violation is within tolerances
-    */
-   return (lpi->spx->basisStatus() == SPxBasis::OPTIMAL);
+   return (lpi->spx->status() == SPxSolver::OPTIMAL);
 }
 
 /** returns TRUE iff current LP solution is stable
@@ -3261,23 +3263,39 @@ SCIP_RETCODE SCIPlpiGetSol(
    {
       if( primsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getPrimalReal(primsol, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), primsol);
          (void)lpi->spx->getPrimalReal(tmp);
+#endif
       }
       if( dualsol != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getDualReal(dualsol, lpi->spx->numRowsReal());
+#else
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
          (void)lpi->spx->getDualReal(tmp);
+#endif
       }
       if( activity != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+        (void)lpi->spx->getSlacksReal(activity, lpi->spx->numRowsReal());  /* in SoPlex, the activities are called "slacks" */
+#else
          Vector tmp(lpi->spx->numRowsReal(), activity);
          (void)lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+#endif
       }
       if( redcost != NULL )
       {
+#if SOPLEX_APIVERSION > 10
+         (void)lpi->spx->getRedCostReal(redcost, lpi->spx->numColsReal());
+#else
          Vector tmp(lpi->spx->numColsReal(), redcost);
          (void)lpi->spx->getRedCostReal(tmp);
+#endif
       }
    }
 #ifndef NDEBUG
@@ -3310,8 +3328,12 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getPrimalRayReal(ray, lpi->spx->numColsReal());
+#else
       Vector tmp(lpi->spx->numColsReal(), ray);
       (void)lpi->spx->getPrimalRayReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3343,8 +3365,12 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    try
    {
+#if SOPLEX_APIVERSION > 10
+      (void)lpi->spx->getDualFarkasReal(dualfarkas, lpi->spx->numRowsReal());
+#else
       Vector tmp(lpi->spx->numRowsReal(), dualfarkas);
       (void)lpi->spx->getDualFarkasReal(tmp);
+#endif
    }
 #ifndef NDEBUG
    catch( const SPxException& x )
@@ -3700,7 +3726,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the row */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -3773,7 +3799,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients of the column */
    int*                  inds,               /**< array to store the non-zero indices, or NULL */
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                               *   (-1: if we do not store sparsity information) */
@@ -4390,6 +4416,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    case SCIP_LPPAR_CONDITIONLIMIT:
       *dval = lpi->conditionlimit;
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      *dval = lpi->spx->realParam(SoPlex::MIN_MARKOWITZ);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -4445,6 +4476,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       lpi->conditionlimit = dval;
       lpi->checkcondition = (dval >= 0.0);
       break;
+   case SCIP_LPPAR_MARKOWITZ:
+#if (SOPLEX_APIVERSION >= 9)
+      /* 1e-4 <= dval <= 0.999 */
+      if( dval < 1e-4 )
+         dval = 1e-4;
+      else if( dval > 0.9999 )
+         dval = 0.9999;
+
+      (void) lpi->spx->setRealParam(SoPlex::MIN_MARKOWITZ, dval);
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

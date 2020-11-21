@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   benderscut_nogood.c
+ * @ingroup OTHER_CFILES
  * @brief  Generates a no good cut for integer solutions that are infeasible for the subproblems
  * @author Stephen J. Maher
  */
@@ -197,12 +198,12 @@ SCIP_RETCODE generateAndApplyBendersNogoodCut(
    consbenders = SCIPfindConshdlr(masterprob, "benders");
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "nogoodcut_%d", SCIPbenderscutGetNFound(benderscut) );
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "nogoodcut_%" SCIP_LONGINT_FORMAT, SCIPbenderscutGetNFound(benderscut) );
 
    /* creating an empty row or constraint for the Benders' cut */
    if( addcut )
    {
-      SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
+      SCIP_CALL( SCIPcreateEmptyRowConshdlr(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
             FALSE, TRUE) );
    }
    else
@@ -287,12 +288,24 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeNogood)
 static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
 {  /*lint --e{715}*/
+   SCIP* subproblem;
    SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert(scip != NULL);
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
+
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   if( subproblem == NULL )
+   {
+      SCIPdebugMsg(scip, "The subproblem %d is set to NULL. The <%s> Benders' decomposition cut can not be executed.\n",
+         probnumber, BENDERSCUT_NAME);
+
+      (*result) = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert(benderscutdata != NULL);
@@ -311,7 +324,9 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
       return SCIP_OKAY;
 
    /* it is only possible to generate the no-good cut for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders)) )
+   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders))
+      && (!SCIPbendersMasterIsNonlinear(benders)
+         || SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders) - 1)) )
    {
       SCIPinfoMessage(scip, NULL, "The no-good cuts can only be applied to problems with a pure binary master problem. "
          "The no-good Benders' decomposition cuts will be disabled.\n");
@@ -324,7 +339,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    /* We can not rely on complete recourse for the subproblems. As such, the subproblems may be feasible for the LP, but
     * infeasible for the IP. As such, if one subproblem is infeasible, then a no good cut is generated.
     */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_INFEASIBLE )
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
    {
       /* generating a cut */
       SCIP_CALL( generateAndApplyBendersNogoodCut(scip, benders, benderscut, sol, type, result) );

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -466,4 +466,34 @@ Test(intervalarith, issue2250)
 
    cr_assert(resultant.inf <= 4.0);
    cr_assert(resultant.sup >= 4.0);
+}
+
+/* The fail in #2650 was caused by GCC reorganizing operations in SCIPintervalReciprocal so that divisions
+ * were not evaluated with the correct rounding mode.
+ * Unfortunately, I was not able to reproduce this with a single test like this
+ * (build SCIP with OPT=dbg SHARED=true USRCFLAGS="-O3 -DNDEBUG -fomit-frame-pointer").
+ */
+Test(intervalarith, issue2650)
+{
+   SCIP_Real             infinity = 1.0e300;
+   SCIP_INTERVAL         resultant;
+   SCIP_INTERVAL         operand;
+   SCIP_INTERVAL         base;
+   SCIP_INTERVAL         image;
+
+   SCIPintervalSetBounds(&base, 0.0, infinity);
+   SCIPintervalSetBounds(&image, 9.0, 81.0);
+   SCIPintervalPowerScalarInverse(infinity, &resultant, base, 0.2, image);
+   printf("x^0.2 = [%.15g,%.15g] -> x = [%.15g,%.15g]\n", image.inf, image.sup, resultant.inf, resultant.sup);
+
+   cr_assert(resultant.inf <= 3486784401.0);
+   cr_assert(resultant.sup >= 3486784401.0);
+
+   /* the code above failed because the 1/0.2 wasn't computed correctly: */
+   SCIPintervalSetBounds(&operand, 0.2, 0.2);
+   SCIPintervalReciprocal(infinity, &resultant, operand);
+   printf("1/[0.2,0.2] = [%.15g,%.15g]\n", resultant.inf, resultant.sup);
+
+   cr_assert(resultant.inf <= 5.0);
+   cr_assert(resultant.sup >= 5.0);
 }

@@ -1,0 +1,192 @@
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+//*                                                                           */
+//*                  This file is part of the program and library             */
+//*         SCIP --- Solving Constraint Integer Programs                      */
+//*                                                                           */
+//*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
+//*                            fuer Informationstechnik Berlin                */
+//*                                                                           */
+//*  SCIP is distributed under the terms of the ZIB Academic License.         */
+//*                                                                           */
+//*  You should have received a copy of the ZIB Academic License              */
+//*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+//*                                                                           */
+//* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+// use one pass of value tracking
+-vt_passes(2)
+
+// use the integer model for enums
++fie
+
+// underlying type for enum is always int
++fei
+
+// turn off the following warning, because this often arises from old lint versions
+-e72
+
+// also turn off the following warning, because the issue was allowed in former lint versions
+-e373   // lint comments cannot appear after a #include directive on the same line
+
+// turn off general warnings:
+-e451   // Header file repeatedly included but does not have a standard include guard
+-e537   // Repeated include file
+-e717   // monocarpic do-while used to group statements
+-e730   // boolean used as argument to function
+-e731   // boolean arguments to ==
+-e773   // expression-like macro not parenthesized
+-e785   // too few initializers for aggregate of type in initialization
+-e788   // enum constant not used within default switch [possibly too strong]
+-e793   // ANSI/ISO minimum translation limit of 31 'significant characters in an external identifier' exceeded, processing  is unaffected
+-e801   // goto statement used
+-e818   // parameter of function could be pointer to const [interesting but clutters output]
+-e834   // operator '-' followed by operator '+' could be confusing without parentheses [seems uninformative]
+-e835   // zero given as left argument to - [the compiler gets rid of this, e.g., x = 0 - 1]
+-e1731  // public virtual function
+-e1784  // symbol previously declared as "C" [only for information, but clutters output]]
+-e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
+-e2704  // potentially negating the most negative number [often if x = -y, and y is int, only relevant if y = INT_MAX]
+
+// for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
+-e666
+
+// turn off all warnings for exprinterpret_cppad.cpp because the code is not ours
+-efile(*,src/nlpi/exprinterpret_cppad.cpp)
+
+// last value assigned to '_restat_' not used
+-emacro(438,SCIP_CALL)
+-emacro(438,SCIP_CALL_ABORT)
+
+// redundant left argument to comma
+-emacro(505,SCIPtpiInitLock)
+-emacro(505,SCIPtpiDestroyLock)
+-emacro(505,SCIPtpiAcquireLock)
+-emacro(505,SCIPtpiReleaseLock)
+-emacro(505,SCIPtpiInitCondition)
+-emacro(505,SCIPtpiWaitCondition)
+
+// constant value used in Boolean context
+-emacro(506,SCIPdebugMsg)
+-emacro(506,SCIPdebugMsgPrint)
+-emacro(506,SCIPdebugMessage)
+-emacro(506,SCIPdebugPrintf)
+-emacro(506,SCIPstatisticPrintf)
+-emacro(506,SCIPstatisticMessage)
+-emacro(506,SCIPsetDebugMsg)
+-emacro(506,SCIPsetDebugMsgPrint)
+-emacro(506,SCIPstatDebugMsg)
+-emacro(506,debugMessage)
+-emacro(506,debugPrintf)
+-emacro(506,SCIPABORT)
+
+
+// is likely uninitialized
+-emacro(530,va_*)
+-ecall(530,vsnprintf)
+
+// ignoring return value of function
+-esym(534,printf,fprintf,fclose,fputs,fputc,fseek,fflush,strcat,strcpy,SCIPfclose,SCIPfseek,memset,memcpy,memmove)
+
+// cast from 'int' to 'uint64_t' results in sign extension
+-emacro(571,SCIPhashTwo)
+-emacro(571,SCIPhashFour)
+-emacro(571,SCIPcombineTwoInt)
+-etype(571,size_t)
+
+// avoid: is potentially uninitialized
+-emacro(644,assert)
+
+// turn off messages for quad precision
+-emacro(644,SCIPquadprecSumQD)
+-emacro(644,SCIPquadprecProdQD)
+-emacro(644,QUAD_ASSIGN)
+-emacro(644,QUAD_TO_DBL)
+-emacro(644,QUAD)
+-emacro(647,QUAD_ARRAY_SIZE)
+-emacro(665,QUAD)
+-emacro(666,SCIPquadprecProdQD)
+-emacro(666,SCIPquadprecSumQD)
+
+// loop is likely not entered
+-emacro(681,SCIPdebugMsg)
+-emacro(681,SCIPdebugMessage)
+-emacro(681,SCIPdebugPrintf)
+-emacro(681,SCIPdebugMsgPrint)
+-emacro(681,debugMessage)
+-emacro(681,SCIPsetDebugMsg)
+-emacro(681,SCIPstatDebugMsg)
+-emacro(681,SCIPdebugPrintf)
+-emacro(681,SCIPstatisticMessage)
+-emacro(681,SCIPstatisticPrintf)
+-emacro(681,SCIPsetDebugMsgPrint)
+
+-emacro(746,isfinite)       // turn off all messages for isfinite
+
+// generally turn off warnings about unused parameters (possibly too strong)
+-emacro(715,SCIP_DECL_*)
+-emacro(715,TCLIQUE_*)
+-emacro(715,CREATE_CONSTRAINT)
+-emacro(715,DECL_*)
+
+// loss of sign in promotion from 'int' to 'unsigned long'
+-emacro(737,SCIPfreeBlockMemoryArray)
+-emacro(737,SCIPfreeBlockMemoryArrayNull)
+-emacro(737,BMSfreeBlockMemoryArray)
+-emacro(737,BMSfreeBlockMemoryArrayNull)
+-emacro(737,BMSreallocBlockMemorySize)
+-emacro(737,BMSallocMemorySize)
+
+// cannot turn off warning otherwise: local macro not referenced
+-esym(750,_USE_MATH_DEFINES)
+-esym(750,NONLINCONSUPGD_PRIORITY)
+
+// boolean condition for 'while' always evaluates to 'false'
+-emacro(774,SCIPdebugMsg)
+-emacro(774,SCIPdebugMessage)
+-emacro(774,SCIPdebugPrintf)
+-emacro(774,SCIPsetDebugMsgPrint)
+-emacro(774,SCIPsetDebugMsg)
+-emacro(774,SCIPstatDebugMsg)
+-emacro(774,SCIPstatisticPrintf)
+-emacro(774,SCIPstatisticMessage)
+-emacro(774,SCIPdebugMsgPrint)
+-emacro(774,debugMessage)
+-emacro(774,SCIP_CALL_TERMINATE)
+-emacro(774,MCFdebugMessage)
+
+// possible truncation of addition
+-emacro(776,SCIPreallocBufferArray)
+-emacro(776,SCIPallocBufferArray)
+-emacro(776,SCIPduplicateBufferArray)
+-emacro(776,SCIPallocClearBufferArray)
+-emacro(776,SCIPallocBlockMemoryArray)
+-emacro(776,SCIPduplicateBlockMemoryArray)
+-emacro(776,BMSallocMemorySize)
+-emacro(776,BMSallocBufferMemoryArray)
+-emacro(776,BMSallocBlockMemoryArray)
+-emacro(776,BMScopyMemoryArray)
+-emacro(776,BMSallocMemoryArray)
+-emacro(776,BMSclearMemoryArray)
+-emacro(776,BMSreallocBlockMemoryArray)
+-emacro(776,BMSduplicateBlockMemoryArray)
+-emacro(776,BMSfreeBlockMemoryArray)
+-emacro(776,BMSmoveMemoryArray)
+-emacro(776,SCIPsetAllocBufferArray)
+-emacro(776,SCIPsetReallocBufferArray)
+
+// generally allow comparisons to SCIP_INVALID, testing floating point values
+-esym(777,SCIP_INVALID)
+-esym(777,SCIP_UNKNOWN)
+
+// avoid problems with pc-lint for suppressions within assert (careful!)
+-emacro(777,assert)
+
+-emacro(826,SCIP_DEF_RBTREE_FIND)
+-emacro(826,FOR_EACH_NODE)
+
+// previous value assigned to 'retcode' not used
+-emacro(838,SCIP_CALL_TERMINATE)
+
+// constant out of range for '>' portion of compound comparison operator '>='
+-estring(2650, ">=")
+

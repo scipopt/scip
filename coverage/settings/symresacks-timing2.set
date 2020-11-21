@@ -1,5 +1,0 @@
-misc/usesymmetry = 1
-presolving/symbreak/detectorbitopes = FALSE
-presolving/symbreak/addconsstiming = 2
-constraints/symresack/ppsymresack = FALSE
-constraints/orbisack/checkpporbisack = FALSE

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -336,7 +336,7 @@ SCIP_DECL_PROBINITSOL(probinitsolBinpacking)
 /** solving process deinitialization method of transformed data (called before the branch and bound data is freed) */
 static
 SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
-{
+{  /*lint --e{715}*/
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(probdata != NULL);
@@ -347,9 +347,8 @@ SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
 
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_VARADDED, eventhdlr, NULL, -1) );
 
-
    return SCIP_OKAY;
-}/*lint !e715*/
+}
 
 /**@} */
 

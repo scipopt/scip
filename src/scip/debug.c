@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.c
+ * @ingroup OTHER_CFILES
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */
@@ -887,10 +888,10 @@ SCIP_RETCODE SCIPdebugCheckRow(
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
    /* check row for violation, using absolute LP feasibility tolerance (as LP solver should do) */
-   if( maxactivity + SCIPsetLpfeastol(set) < lhs || minactivity - SCIPsetLpfeastol(set) > rhs )
+   if( maxactivity + SCIPgetLPFeastol(set->scip) < lhs || minactivity - SCIPgetLPFeastol(set->scip) > rhs )
    {
       printf("***** debug: row <%s> violates debugging solution (lhs=%.15g, rhs=%.15g, activity=[%.15g,%.15g], local=%u, lpfeastol=%g)\n",
-         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPsetLpfeastol(set));
+         SCIProwGetName(row), lhs, rhs, minactivity, maxactivity, SCIProwIsLocal(row), SCIPgetLPFeastol(set->scip));
       SCIProwPrint(row, SCIPgetMessagehdlr(set->scip), NULL);
 
       /* output row with solution values */
@@ -934,6 +935,16 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
       return SCIP_OKAY;
 
+   /* skip unused relaxation-only variables
+    * Relaxation-only variables are not part of any constraints or the original problem and thus there is no need to check their solution value.
+    * However, for relaxation-only variables that are still in use for the current solve round and for which a debug solution value has been set,
+    * checking against the debug solution value is helpful. If they not in use anymore, they will be captured only by the transformed problem
+    * and they may get fixed to some arbitrary value, e.g., in dual fixing.
+    * Thus, we skip checking bound changes on unused relaxation-only variables.
+    */
+   if( SCIPvarIsRelaxationOnly(var) && SCIPvarGetNUses(var) == 1 )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
@@ -973,6 +984,10 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
       return SCIP_OKAY;
 
    if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
+   /* skip unused relaxation-only variables, see also comment in SCIPdebugCheckLbGlobal() */
+   if( SCIPvarIsRelaxationOnly(var) && SCIPvarGetNUses(var) == 1 )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1277,7 +1292,7 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
    }
 
    /* print debug message if the aggregation violates the debugging solution */
-   if( !SCIPsetIsEQ(set, solval, val) )
+   if( !SCIPsetIsRelEQ(set, solval, val) )
    {
       if( naggrvars == 1 )
       {
@@ -1286,13 +1301,13 @@ SCIP_RETCODE SCIPdebugCheckAggregation(
          /* get solution value of y variable */
          SCIP_CALL( getSolutionValue(set, aggrvars[0], &aggrsolval) );
 
-         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant);
+         SCIPerrorMessage("aggregation <%s>[%g] = %g<%s>[%g] + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, scalars[0], SCIPvarGetName(aggrvars[0]), aggrsolval, constant, val);
       }
       else
       {
-         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution\n",
-            SCIPvarGetName(var), solval, naggrvars, constant);
+         SCIPerrorMessage("multi-aggregation <%s>[%g] = ... %d vars ... + %g violates debugging solution (expected %g)\n",
+            SCIPvarGetName(var), solval, naggrvars, constant, val);
       }
       SCIPABORT();
    }

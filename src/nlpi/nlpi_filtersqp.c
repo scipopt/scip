@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -30,7 +30,12 @@
 #include <sys/time.h>
 #endif
 
-#ifndef NPARASCIP
+/* fallback to non-thread version for windows, because pthread does not exist */
+#if defined(_MSC_VER) && defined(SCIP_THREADSAFE)
+#undef SCIP_THREADSAFE
+#endif
+
+#ifdef SCIP_THREADSAFE
 #include <pthread.h>
 #endif
 
@@ -252,8 +257,8 @@ extern struct
 } F77_FUNC(scalec,SCALEC);
 /*lint -esym(754,phe) */
 
-#ifndef NPARASCIP
-static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
+#ifdef SCIP_THREADSAFE
+static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER; /*lint !e708*/
 #endif
 
 static
@@ -568,7 +573,7 @@ SCIP_RETCODE setupGradients(
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, a, nvars + nnz) );
 
-#if 0  /* enable for debugging Jacobian */
+#ifdef SCIP_MORE_DEBUG   /* enable for debugging Jacobian */
    for( i = 0; i < 1 + (nvars+nnz) + 1+ncons + 1; ++i )
       printf("la[%2d] = %2d\n", i, (*la)[i]);
 #endif
@@ -630,7 +635,7 @@ SCIP_RETCODE setupHessian(
 
    F77_FUNC(hessc,HESSC).phl = 1;
 
-#if 0 /* enable for debugging Hessian */
+#ifdef SCIP_MORE_DEBUG /* enable for debugging Hessian */
    for( i = 0; i < 1 + nnz + nvars + 1; ++i )
       printf("lw[%2d] = %2d\n", i, (*la)[i]);
 #endif
@@ -1914,8 +1919,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
     */
-#ifndef NPARASCIP
-   pthread_mutex_lock(&filtersqpmutex);
+#ifdef SCIP_THREADSAFE
+   (void) pthread_mutex_lock(&filtersqpmutex);
 #endif
 
    /* initialize global variables from filtersqp */
@@ -2038,8 +2043,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       assert(success);
    }
 
-#ifndef NPARASCIP
-   pthread_mutex_unlock(&filtersqpmutex);
+#ifdef SCIP_THREADSAFE
+   (void) pthread_mutex_unlock(&filtersqpmutex);
 #endif
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );

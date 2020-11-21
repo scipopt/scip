@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -49,7 +49,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderMps(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -60,7 +60,7 @@ SCIP_RETCODE SCIPincludeReaderMps(
  */
 
 /** reads problem from file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadMps(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -75,7 +75,7 @@ SCIP_RETCODE SCIPreadMps(
    );
 
 /** writes problem to file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteMps(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader,             /**< the file reader itself */
@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPwriteMps(
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

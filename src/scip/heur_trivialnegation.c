@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trivialnegation.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  trivialnegation primal heuristic
  * @author Jakob Witzig
  */
@@ -36,7 +37,7 @@
 
 #define HEUR_NAME             "trivialnegation"
 #define HEUR_DESC             "negate solution entries if an objective coefficient changes the sign, enters or leaves the objective."
-#define HEUR_DISPCHAR         'j'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_PROP
 #define HEUR_PRIORITY         40000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0

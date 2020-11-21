@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlp.c
+ * @ingroup OTHER_CFILES
  * @brief  NLP management methods and datastructures
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
@@ -65,7 +66,7 @@
 extern "C" {
 #endif
 
-/* avoid inclusion of scip.h */
+/* avoid inclusion of scip.h */ /*lint -e{2701}*/
 BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -964,6 +965,9 @@ SCIP_RETCODE nlrowAddToLinearCoef(
          SCIP_CALL( nlrowConstantChanged(nlrow, set, stat, nlp) );
       }
 
+      if( SCIPsetIsZero(set, coef) )
+         return SCIP_OKAY;
+
       if( !SCIPvarIsActive(var) )
       {
          int j;
@@ -985,10 +989,10 @@ SCIP_RETCODE nlrowAddToLinearCoef(
          return SCIP_OKAY;
       }
    }
-   assert(!removefixed || SCIPvarIsActive(var));
-
-   if( SCIPsetIsZero(set, coef) )
+   else if( SCIPsetIsZero(set, coef) )
       return SCIP_OKAY;
+
+   assert(!removefixed || SCIPvarIsActive(var));
 
    pos = nlrowSearchLinearCoef(nlrow, var);
 
@@ -1437,6 +1441,8 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefPos(
       SCIP_CALL( SCIPnlrowEnsureLinearSize(nlrow, blkmem, set, nlrow->nlinvars + SCIPvarGetMultaggrNVars(var)) );
       for( i = 0; i < SCIPvarGetMultaggrNVars(var); ++i )
       {
+         if( SCIPsetIsZero(set, coef * SCIPvarGetMultaggrScalars(var)[i]) )
+            continue;
          SCIP_CALL( nlrowAddLinearCoef(nlrow, blkmem, set, stat, nlp, SCIPvarGetMultaggrVars(var)[i], coef * SCIPvarGetMultaggrScalars(var)[i]) );
          assert(SCIPvarGetMultaggrVars(var)[i] == nlrow->linvars[nlrow->nlinvars-1]);
          if( !SCIPvarIsActive(SCIPvarGetMultaggrVars(var)[i]) )
@@ -2715,7 +2721,7 @@ SCIP_RETCODE SCIPnlrowChgExprtree(
       {
          SCIP_Bool dummy;
          SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &dummy, NULL, NULL) );
-      }
+      }  /*lint !e438*/
    }
 
    /* notify row about the change */
@@ -3598,6 +3604,14 @@ void nlpMoveNlrow(
 
    nlp->nlrows[newpos] = nlp->nlrows[oldpos];
    nlp->nlrows[newpos]->nlpindex = newpos;
+
+   /* update nlpi to nlp row index mapping */
+   if( nlp->nlrows[newpos]->nlpiindex >= 0 )
+   {
+      assert(nlp->nlrowmap_nlpi2nlp != NULL);
+      assert(nlp->nlrows[newpos]->nlpiindex < nlp->sizenlrows_solver);
+      nlp->nlrowmap_nlpi2nlp[nlp->nlrows[newpos]->nlpiindex] = newpos;
+   }
 }
 
 /** deletes nonlinear row with given position from NLP */
@@ -3617,6 +3631,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    assert(pos >= 0);
    assert(pos < nlp->nnlrows);
    assert(!nlp->indiving);
+   assert(nlp->nlrows != NULL);
 
    nlrow = nlp->nlrows[pos];
    assert(nlrow != NULL);
@@ -3650,7 +3665,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    else if( nlp->solstat == SCIP_NLPSOLSTAT_GLOBINFEASIBLE )
       nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** updates bounds on a variable in the NLPI problem */
@@ -4055,8 +4070,11 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       assert(nlrow->nquadelems  > 0);
       assert(nlrow->quadelems   != NULL);
 
-      /* compute mapping of variable indices quadratic term -> NLPI */
+      /* allocate memory */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       SCIP_CALL( SCIPsetAllocBufferArray(set, &quadvarsidx, nlrow->nquadvars) );
+
+      /* compute mapping of variable indices quadratic term -> NLPI */
       for( i = 0; i < nlrow->nquadvars; ++i )
       {
          var = nlrow->quadvars[i];
@@ -4068,7 +4086,6 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       }
 
       /* compute quad elements using NLPI indices */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, quadelems, nlrow->nquadelems) );
       for( i = 0; i < nlrow->nquadelems; ++i )
       {
          assert(nlrow->quadelems[i].idx1 >= 0);
@@ -4484,28 +4501,28 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
          nlidxs, exprtrees,
          names) );
 
-   for( c = 0; c < nlp->nunflushednlrowadd; ++c )
+   for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
    {
-      if( linidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &linidxs[c]);
-      if( quadelems[c] != NULL )
-         SCIPsetFreeBufferArray(set, &quadelems[c]);
       if( nlidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &nlidxs[c]);
+      if( quadelems[c] != NULL )
+         SCIPsetFreeBufferArray(set, &quadelems[c]);
+      if( linidxs[c] != NULL )
+         SCIPsetFreeBufferArray(set, &linidxs[c]);
    }
 
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lhss);
-   SCIPsetFreeBufferArray(set, &rhss);
-   SCIPsetFreeBufferArray(set, &nlinvars);
-   SCIPsetFreeBufferArray(set, &linidxs);
-   SCIPsetFreeBufferArray(set, &lincoefs);
-   SCIPsetFreeBufferArray(set, &nquadelems);
-   SCIPsetFreeBufferArray(set, &quadelems);
-   SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &exprtrees);
+   SCIPsetFreeBufferArray(set, &nlidxs);
+   SCIPsetFreeBufferArray(set, &quadelems);
+   SCIPsetFreeBufferArray(set, &nquadelems);
+   SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linidxs);
+   SCIPsetFreeBufferArray(set, &nlinvars);
+   SCIPsetFreeBufferArray(set, &rhss);
+   SCIPsetFreeBufferArray(set, &lhss);
 
    nlp->nunflushednlrowadd = 0;
 
@@ -4592,8 +4609,8 @@ SCIP_RETCODE nlpFlushVarAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &lbs);
    SCIPsetFreeBufferArray(set, &ubs);
+   SCIPsetFreeBufferArray(set, &lbs);
 
    nlp->nunflushedvaradd = 0;
 
@@ -4653,8 +4670,8 @@ SCIP_RETCODE nlpFlushObjective(
          NULL, NULL,
          0.0) );
 
-   SCIPsetFreeBufferArray(set, &linindices);
    SCIPsetFreeBufferArray(set, &lincoefs);
+   SCIPsetFreeBufferArray(set, &linindices);
 
    nlp->objflushed = TRUE;
 
@@ -4674,6 +4691,8 @@ SCIP_RETCODE nlpSolve(
    SCIP_STAT*            stat                /**< problem statistics */
    )
 {
+   SCIP_Real sciptimelimit;
+   SCIP_Real timeleft;
    int i;
 
    assert(nlp    != NULL);
@@ -4721,6 +4740,11 @@ SCIP_RETCODE nlpSolve(
    /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
    SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
    SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
+
+   /* set the NLP timelimit to the remaining time */
+   SCIP_CALL( SCIPsetGetRealParam(set, "limits/time", &sciptimelimit) );
+   timeleft = sciptimelimit - SCIPclockGetTime(stat->solvingtime);
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_TILIM, MAX(0.0, timeleft)) );
 
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
@@ -5043,6 +5067,7 @@ SCIP_RETCODE SCIPnlpInclude(
    SCIP_EVENTHDLR* eventhdlr;
 
    assert(set != NULL);
+   assert(blkmem != NULL);
    assert(set->stage == SCIP_STAGE_INIT);
 
    /* check whether event handler is already present */
@@ -5285,6 +5310,7 @@ SCIP_Bool SCIPnlpHasCurrentNodeNLP(
    SCIP_NLP*             nlp                 /**< NLP data */
    )
 {
+   assert(nlp != NULL);
    return TRUE;
 } /*lint !e715*/
 

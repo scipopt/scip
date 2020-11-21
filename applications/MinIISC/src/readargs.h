@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,7 +28,6 @@
  *
  *  Returns 0 if maxsize is not sufficient and 1 otherwise.
  */
-extern
 int getProblemName(
    const char*           filename,           /**< file name */
    char*                 probname,           /**< name of problem (output) */
@@ -36,7 +35,6 @@ int getProblemName(
    );
 
 /** read comand line arguments */
-extern
 SCIP_RETCODE readArguments(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */

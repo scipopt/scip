@@ -40,6 +40,8 @@
 # - Check for spaces around operators; non-strict setting allows operators with numbers like "a+1"
 #   [checkoperspaces, default: false]
 #
+# - Check for the presence of "/**>", which is likely to be a typo.
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -71,6 +73,7 @@ my $checkoperspaces = 0; # check for spaces around operators
 my $checkoperstrict = 0; # check strict rules for operators
 
 my $checkindent = 1;     # check for correct indentation
+my $checksepdoclines = 1;# check for separate documentation lines
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
 my $checkstage = 1;      # check whether names of functions for checkstage are correct in scip.c
 my $checkdocinbody = 1;  # check whether doxygen documentation appears within code
@@ -259,7 +262,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # handle strings (must be executed after the functions above that need strings)
 
       # remove everything within a string
-      if ( $str =~ /\".*\"/ )
+      if ( $str =~ /\".*\"/ && $str !~ /(extern \"C\" \{)/ )
       {
 	 # remove minimal occurence of string
 	 $str =~ s/\".*?\"//g;
@@ -267,6 +270,12 @@ for (my $i = 0; $i < $narg; ++$i)
 
       # ---------------------------------------------------------
       # handle comments
+
+      # check for the presence of "/**>"
+      if ( $str =~ /\/\*\*>/ )
+      {
+	 printf("%d: found \"/**>\", likely to be an error.\n%s\n", $line, $_);
+      }
 
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
@@ -281,6 +290,30 @@ for (my $i = 0; $i < $narg; ++$i)
       # if we are in a comment that started in previous lines, we search for the end of the comment
       if ( $incomment == 1 || $indocumentation == 1 )
       {
+         # if we want to check separate documentation lines
+	 if ( $checksepdoclines == 1 )
+	 {
+	    # if the line does not contain the start of a comment and there is nothing before
+	    if ( $documentationpos < 0 && $inenumstruct == 0 && $depth == 0 )
+	    {
+	       if ( $_ =~ /[\w\*]/ )
+	       {
+		  my $startpos = $-[0];
+		  if ( $startpos >= 45 )
+		  {
+		     if ( $_ !~ /\*/ )
+		     {
+			printf("%d: line contains separate comment without '*'\n%s\n\n", $line, $_);
+		     }
+		     elsif ( $startpos != 46 )
+		     {
+			printf("%d: line contains separate comment that does not start at position 45:\n%s\n\n", $line, $_);
+		     }
+		  }
+	       }
+	    }
+	 }
+
 	 $afterdocumentation = 0;
 	 if ( $str =~ /\*\// )
 	 {
@@ -314,7 +347,7 @@ for (my $i = 0; $i < $narg; ++$i)
 	    # check whether we have a doxygen documentation within the code
 	    if ( $checkdocinbody == 1 && $str =~ /\/\*\*/ && ($depth - $foundexternc - $inenumstruct) > 0 )
 	    {
-	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ )
+	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ && $str !~ /\[Snippet/ )
 	       {
 		  printf("%d: possible doxygen documentation within function (depth: %d, enumstruct: %d):\n%s\n\n", $line, $depth, $inenumstruct, $_);
 	       }

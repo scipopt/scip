@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -55,7 +55,7 @@ extern "C" {
  *
  *  @ingroup FileReaderIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeReaderSto(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
  */
 
 /** reads the stochastic information for a stochastic program that is in SMPS format */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPreadSto(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< full path and name of file to read, or NULL if stdin should be used */
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPreadSto(
    );
 
 /** writes problem to file */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPwriteSto(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file, or NULL if standard output should be used */
@@ -96,12 +96,12 @@ SCIP_RETCODE SCIPwriteSto(
    );
 
 /** returns the total number of scenarios added to the problem */
-EXTERN
+SCIP_EXPORT
 int SCIPstoGetNScenarios(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

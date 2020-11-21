@@ -38,6 +38,7 @@ set(scipsources
     scip/branch_pscost.c
     scip/branch_random.c
     scip/branch_relpscost.c
+    scip/branch_vanillafullstrong.c
     scip/cons_abspower.c
     scip/compr_largestrepr.c
     scip/compr_weakcompr.c
@@ -73,12 +74,15 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
+    scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
+    scip/event_estim.c
     scip/event_softtimelimit.c
     scip/event_solvingphase.c
     scip/disp_default.c
     scip/heur_actconsdiving.c
+    scip/heur_adaptivediving.c
     scip/heur_bound.c
     scip/heur_clique.c
     scip/heur_coefdiving.c
@@ -110,6 +114,7 @@ set(scipsources
     scip/heur_octane.c
     scip/heur_ofins.c
     scip/heur_oneopt.c
+    scip/heur_padm.c
     scip/heur_proximity.c
     scip/heur_pscostdiving.c
     scip/heur_reoptsols.c
@@ -126,6 +131,7 @@ set(scipsources
     scip/heur_sync.c
     scip/heur_trivial.c
     scip/heur_trivialnegation.c
+    scip/heur_trustregion.c
     scip/heur_trysol.c
     scip/heur_twoopt.c
     scip/heur_undercover.c
@@ -141,6 +147,7 @@ set(scipsources
     scip/nodesel_hybridestim.c
     scip/nodesel_restartdfs.c
     scip/nodesel_uct.c
+    scip/presol_milp.cpp
     scip/presol_boundshift.c
     scip/presol_convertinttobin.c
     scip/presol_domcol.c
@@ -153,20 +160,19 @@ set(scipsources
     scip/presol_qpkktref.c
     scip/presol_redvub.c
     scip/presol_sparsify.c
+    scip/presol_dualsparsify.c
     scip/presol_stuffing.c
-    scip/presol_symbreak.c
-    scip/presol_symmetry.c
     scip/presol_trivial.c
     scip/presol_tworowbnd.c
     scip/prop_dualfix.c
     scip/prop_genvbounds.c
     scip/prop_nlobbt.c
     scip/prop_obbt.c
-    scip/prop_orbitalfixing.c
     scip/prop_probing.c
     scip/prop_pseudoobj.c
     scip/prop_redcost.c
     scip/prop_rootredcost.c
+    scip/prop_symmetry.c
     scip/prop_vbounds.c
     scip/prop_sync.c
     scip/reader_bnd.c
@@ -174,6 +180,7 @@ set(scipsources
     scip/reader_cip.c
     scip/reader_cnf.c
     scip/reader_cor.c
+    scip/reader_dec.c
     scip/reader_diff.c
     scip/reader_fix.c
     scip/reader_fzn.c
@@ -210,8 +217,10 @@ set(scipsources
     scip/sepa_rapidlearning.c
     scip/sepa_strongcg.c
     scip/sepa_zerohalf.c
+    scip/treemodel.c
     scip/benders_default.c
     scip/benderscut_feas.c
+    scip/benderscut_feasalt.c
     scip/benderscut_int.c
     scip/benderscut_nogood.c
     scip/benderscut_opt.c
@@ -246,6 +255,7 @@ set(scipsources
     scip/mem.c
     scip/misc.c
     scip/misc_linear.c
+    scip/misc_nonlinear.c
     scip/nlp.c
     scip/nodesel.c
     scip/paramset.c
@@ -271,6 +281,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_datastructures.c
     scip/scip_debug.c
+    scip/scip_dcmp.c
     scip/scip_dialog.c
     scip/scip_disp.c
     scip/scip_event.c
@@ -313,6 +324,7 @@ set(scipsources
     scip/sol.c
     scip/solve.c
     scip/stat.c
+    scip/symmetry.c
     scip/syncstore.c
     scip/table.c
     scip/tree.c
@@ -433,6 +445,7 @@ set(scipheaders
     scip/benders_default.h
     scip/benderscut.h
     scip/benderscut_feas.h
+    scip/benderscut_feasalt.h
     scip/benderscut_int.h
     scip/benderscut_nogood.h
     scip/benderscut_opt.h
@@ -453,6 +466,7 @@ set(scipheaders
     scip/branch_pscost.h
     scip/branch_random.h
     scip/branch_relpscost.h
+    scip/branch_vanillafullstrong.h
     scip/clock.h
     scip/compr.h
     scip/compr_largestrepr.h
@@ -499,6 +513,7 @@ set(scipheaders
     scip/cuts.h
     scip/dbldblarith.h
     scip/debug.h
+    scip/dcmp.h
     scip/def.h
     scip/dialog_default.h
     scip/dialog.h
@@ -506,9 +521,11 @@ set(scipheaders
     scip/disp.h
     scip/event_globalbnd.h
     scip/event.h
+    scip/event_estim.h
     scip/event_softtimelimit.h
     scip/event_solvingphase.h
     scip/heur_actconsdiving.h
+    scip/heur_adaptivediving.h
     scip/heur_bound.h
     scip/heur_clique.h
     scip/heur_coefdiving.h
@@ -542,6 +559,7 @@ set(scipheaders
     scip/heur_octane.h
     scip/heur_ofins.h
     scip/heur_oneopt.h
+    scip/heur_padm.h
     scip/heur_proximity.h
     scip/heur_pscostdiving.h
     scip/heur_randrounding.h
@@ -558,6 +576,7 @@ set(scipheaders
     scip/heur_sync.h
     scip/heur_trivial.h
     scip/heur_trivialnegation.h
+    scip/heur_trustregion.h
     scip/heur_trysol.h
     scip/heur_twoopt.h
     scip/heur_undercover.h
@@ -585,6 +604,7 @@ set(scipheaders
     scip/nodesel_uct.h
     scip/paramset.h
     scip/presol_boundshift.h
+    scip/presol_milp.h
     scip/presol_convertinttobin.h
     scip/presol_domcol.h
     scip/presol_dualagg.h
@@ -597,9 +617,8 @@ set(scipheaders
     scip/presol_qpkktref.h
     scip/presol_redvub.h
     scip/presol_sparsify.h
+    scip/presol_dualsparsify.h
     scip/presol_stuffing.h
-    scip/presol_symbreak.h
-    scip/presol_symmetry.h
     scip/presol_trivial.h
     scip/presol_tworowbnd.h
     scip/presolve.h
@@ -612,11 +631,11 @@ set(scipheaders
     scip/prop.h
     scip/prop_nlobbt.h
     scip/prop_obbt.h
-    scip/prop_orbitalfixing.h
     scip/prop_probing.h
     scip/prop_pseudoobj.h
     scip/prop_redcost.h
     scip/prop_rootredcost.h
+    scip/prop_symmetry.h
     scip/prop_sync.h
     scip/prop_vbounds.h
     scip/pub_branch.h
@@ -630,6 +649,7 @@ set(scipheaders
     scip/pub_conflict.h
     scip/pub_cons.h
     scip/pub_cutpool.h
+    scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
     scip/pub_event.h
@@ -642,6 +662,7 @@ set(scipheaders
     scip/pub_message.h
     scip/pub_misc.h
     scip/pub_misc_linear.h
+    scip/pub_misc_nonlinear.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
     scip/pub_nlp.h
@@ -664,6 +685,7 @@ set(scipheaders
     scip/reader_cip.h
     scip/reader_cnf.h
     scip/reader_cor.h
+    scip/reader_dec.h
     scip/reader_diff.h
     scip/reader_fix.h
     scip/reader_fzn.h
@@ -703,6 +725,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_datastructures.h
     scip/scip_debug.h
+    scip/scip_dcmp.h
     scip/scip_dialog.h
     scip/scip_disp.h
     scip/scip_event.h
@@ -772,6 +795,7 @@ set(scipheaders
     scip/struct_cons.h
     scip/struct_cutpool.h
     scip/struct_cuts.h
+    scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
     scip/struct_event.h
@@ -806,10 +830,12 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/symmetry.h
     scip/syncstore.h
     scip/table_default.h
     scip/table.h
     scip/tree.h
+    scip/treemodel.h
     scip/type_bandit.h
     scip/type_benders.h
     scip/type_benderscut.h
@@ -823,6 +849,7 @@ set(scipheaders
     scip/type_cons.h
     scip/type_cutpool.h
     scip/type_cuts.h
+    scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
     scip/type_event.h
@@ -928,7 +955,12 @@ add_library(liblpi EXCLUDE_FROM_ALL
 setLibProperties(liblpi "lpi")
 
 add_library(libscip ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
-setLibProperties(libscip "scip")
+if(MSVC)
+   # msvc otherwise is not smart enough and tries to link the scip.exe binary as a library
+   setLibProperties(libscip "libscip")
+else()
+   setLibProperties(libscip "scip")
+endif()
 
 target_link_libraries(libscip PRIVATE
     ${ZLIB_LIBRARIES}
@@ -936,26 +968,33 @@ target_link_libraries(libscip PRIVATE
     ${GMP_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
-    ${SYM_LIBRARIES})
+    ${SYM_LIBRARIES}
+    ${PAPILO_IMPORTED_TARGETS})
 
 if(SHARED)
+    set(SOPLEX_NEEDED 0)
+    set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources} ${symsources})
 else()
+    set(SOPLEX_NEEDED ${SOPLEX_FOUND})
+    set(ZIMPL_NEEDED ${ZIMPL_FOUND})
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip libscip)
 endif()
+
+include(GenerateExportHeader)
+generate_export_header(libscip BASE_NAME scip EXPORT_FILE_NAME ${CMAKE_BINARY_DIR}/scip/scip_export.h)
+target_compile_definitions(scip PRIVATE SCIP_STATIC_DEFINE)
 
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
     find_package(Sanitizers)
     add_sanitizers(scip)
 endif()
 
-target_compile_definitions(scip PRIVATE EXTERN=extern)
-
 target_link_libraries(scip ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES} ${PAPILO_IMPORTED_TARGETS})
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
@@ -975,7 +1014,7 @@ install(FILES ${lpiheaders} DESTINATION include/lpi)
 install(FILES ${dijkstraheaders} DESTINATION include/dijkstra)
 install(FILES ${nlpiheaders} DESTINATION include/nlpi)
 install(FILES ${objscipheaders} DESTINATION include/objscip)
-install(FILES ${scipheaders} DESTINATION include/scip)
+install(FILES ${scipheaders} ${CMAKE_BINARY_DIR}/scip/config.h ${CMAKE_BINARY_DIR}/scip/scip_export.h DESTINATION include/scip)
 install(FILES ${tcliqueheaders} DESTINATION include/tclique)
 install(FILES ${tinycthreadheader} DESTINATION include/tinycthread)
 install(FILES ${tpiheaders} DESTINATION include/tpi)
@@ -995,25 +1034,40 @@ export(TARGETS scip libscip
   FILE "${CMAKE_BINARY_DIR}/scip-targets.cmake")
 
 #make soplex and zimpl dir absolute for the config file
-if(SOPLEX_FOUND)
+if(SOPLEX_NEEDED)
     get_filename_component(CONF_SOPLEX_DIR ${SOPLEX_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-if(ZIMPL_FOUND)
+if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${CMAKE_BINARY_DIR}/scip-config.cmake" @ONLY)
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+${CMAKE_BINARY_DIR}/scip-config-version.cmake
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
+    COMPATIBILITY SameMajorVersion
+    )
+
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
+if(SOPLEX_NEEDED)
+    set(CONF_SOPLEX_DIR "\${CMAKE_CURRENT_LIST_DIR}/../soplex")
+endif()
+if(ZIMPL_NEEDED)
+    set(CONF_ZIMPL_DIR "\${CMAKE_CURRENT_LIST_DIR}/../zimpl")
+endif()
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake" @ONLY)
 
 # install the targets of the scip export group and the config file so that other projects
 # can link easily against scip
-install(EXPORT scip-targets FILE scip-targets.cmake DESTINATION lib/cmake/scip)
-install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake" DESTINATION lib/cmake/scip)
+install(EXPORT scip-targets DESTINATION lib/cmake/scip)
+install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
+              ${CMAKE_BINARY_DIR}/scip-config-version.cmake
+        DESTINATION lib/cmake/scip)

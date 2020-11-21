@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,7 +38,7 @@ extern "C" {
  *
  *  @ingroup PrimalHeuristicIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeHeurReoptsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,18 +49,18 @@ SCIP_RETCODE SCIPincludeHeurReoptsols(
  */
 
 /* returns the number of checked solutions */
-EXTERN
+SCIP_EXPORT
 int SCIPreoptsolsGetNCheckedsols(
    SCIP*                 scip
    );
 
 /* returns the number of found improving solutions */
-EXTERN
+SCIP_EXPORT
 int SCIPreoptsolsGetNImprovingsols(
    SCIP*                 scip
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

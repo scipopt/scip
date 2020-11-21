@@ -1,4 +1,4 @@
-FLAGS		+=	-DNO_STRERROR_R -DNDEBUG -DROUNDING_FE
+FLAGS		+=	-DNO_STRERROR_R -DNDEBUG -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O3 -mcpu=ultrasparc -mtune=ultrasparc -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -std=c++0x -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)

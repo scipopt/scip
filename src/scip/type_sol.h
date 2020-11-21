@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -48,6 +48,18 @@ typedef enum SCIP_SolOrigin SCIP_SOLORIGIN;
 typedef struct SCIP_Sol SCIP_SOL;                 /**< primal CIP solution */
 
 typedef struct SCIP_Viol SCIP_VIOL;               /**< maximum violations of problem constraints */
+
+/** type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
+enum SCIP_SolType
+{
+   SCIP_SOLTYPE_UNKNOWN   = 0,          /**< type of solution unspecified (the default) */
+   SCIP_SOLTYPE_HEUR      = 1,          /**< solution was found by a heuristic */
+   SCIP_SOLTYPE_RELAX     = 2,          /**< solution was found by a relaxation */
+   SCIP_SOLTYPE_LPRELAX   = 3,          /**< solution was found by the LP relaxation */
+   SCIP_SOLTYPE_STRONGBRANCH = 4,       /**< solution was found during strong branching */
+   SCIP_SOLTYPE_PSEUDO    = 5           /**< solution originates from a pseudo solution */
+};
+typedef enum SCIP_SolType SCIP_SOLTYPE;
 
 #ifdef __cplusplus
 }

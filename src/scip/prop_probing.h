@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,7 +38,7 @@ extern "C" {
  *
  * @ingroup PropagatorIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludePropProbing(
   */
 
 /** applies and evaluates probing of a single variable in the given direction and bound */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPapplyProbingVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< problem variables */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPapplyProbingVar(
  *  need to be provided, but if they are omitted and probingvar is a binary variable, then already
  *  existing implications may be added.
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             probingvar,         /**< the probing variable */
@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff is detected */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

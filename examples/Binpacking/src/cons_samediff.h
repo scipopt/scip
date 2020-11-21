@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -40,13 +40,11 @@ enum ConsType
 typedef enum ConsType CONSTYPE;
 
 /** creates the handler for element constraints and includes it in SCIP */
-extern
 SCIP_RETCODE SCIPincludeConshdlrSamediff(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a samediff constraint */
-extern
 SCIP_RETCODE SCIPcreateConsSamediff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -59,21 +57,18 @@ SCIP_RETCODE SCIPcreateConsSamediff(
    );
 
 /** returns item id one */
-extern
 int SCIPgetItemid1Samediff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
 /** returns item id two */
-extern
 int SCIPgetItemid2Samediff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */
    );
 
 /** return constraint type SAME or DIFFER */
-extern
 CONSTYPE SCIPgetTypeSamediff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< samediff constraint */

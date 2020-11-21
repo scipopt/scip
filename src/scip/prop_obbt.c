@@ -3,18 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    prop_obbt.c
- * @ingroup PROPAGATORS
+ * @ingroup DEFPLUGINS_PROP
  * @brief   optimization-based bound tightening propagator
  * @author  Stefan Weltge
  * @author  Benjamin Mueller
@@ -75,50 +75,50 @@
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
 #define PROP_TIMING                     SCIP_PROPTIMING_AFTERLPLOOP
-#define PROP_PRIORITY                -1000000      /**< propagator priority */
-#define PROP_FREQ                           0      /**< propagator frequency */
-#define PROP_DELAY                       TRUE      /**< should propagation method be delayed, if other propagators
-                                                    *   found reductions? */
+#define PROP_PRIORITY               -1000000 /**< propagator priority */
+#define PROP_FREQ                          0 /**< propagator frequency */
+#define PROP_DELAY                      TRUE /**< should propagation method be delayed, if other propagators
+                                              *   found reductions? */
 
-#define DEFAULT_CREATE_GENVBOUNDS        TRUE      /**< should obbt try to provide genvbounds if possible? */
-#define DEFAULT_FILTERING_NORM           TRUE      /**< should coefficients in filtering be normalized w.r.t. the
-                                                    *   domains sizes? */
-#define DEFAULT_APPLY_FILTERROUNDS      FALSE      /**< try to filter bounds in so-called filter rounds by solving
-                                                    *   auxiliary LPs? */
-#define DEFAULT_APPLY_TRIVIALFITLERING   TRUE      /**< should obbt try to use the LP solution to filter some bounds? */
-#define DEFAULT_GENVBDSDURINGFILTER      TRUE      /**< try to genrate genvbounds during trivial and aggressive filtering? */
-#define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
-                                                    *   is used if SCIP's dual feastol is greater */
-#define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
-#define DEFAULT_BOUNDSTREPS             0.001      /**< minimal relative improve for strengthening bounds */
-#define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
-                                                    *   round */
-#define DEFAULT_ITLIMITFACTOR            10.0      /**< multiple of root node LP iterations used as total LP iteration
-                                                    *   limit for obbt (<= 0: no limit ) */
-#define DEFAULT_MINITLIMIT              5000L      /**< minimum LP iteration limit */
-#define DEFAULT_ONLYNONCONVEXVARS       FALSE      /**< only apply obbt on non-convex variables */
-#define DEFAULT_TIGHTINTBOUNDSPROBING    TRUE      /**< should bounds of integral variables be tightened during
-                                                    *   the probing mode? */
-#define DEFAULT_TIGHTCONTBOUNDSPROBING  FALSE      /**< should bounds of continuous variables be tightened during
-                                                    *   the probing mode? */
-#define DEFAULT_ORDERINGALGO                1      /**< which type of ordering algorithm should we use?
-                                                    *   (0: no, 1: greedy, 2: greedy reverse) */
-#define OBBT_SCOREBASE                      5      /**< base that is used to calculate a bounds score value */
-#define GENVBOUND_PROP_NAME             "genvbounds"
-#define INTERVALINFTY                   1E+43      /**< value for infinity in interval operations */
+#define DEFAULT_CREATE_GENVBOUNDS       TRUE /**< should obbt try to provide genvbounds if possible? */
+#define DEFAULT_FILTERING_NORM          TRUE /**< should coefficients in filtering be normalized w.r.t. the
+                                              *   domains sizes? */
+#define DEFAULT_APPLY_FILTERROUNDS     FALSE /**< try to filter bounds in so-called filter rounds by solving
+                                              *   auxiliary LPs? */
+#define DEFAULT_APPLY_TRIVIALFITLERING  TRUE /**< should obbt try to use the LP solution to filter some bounds? */
+#define DEFAULT_GENVBDSDURINGFILTER     TRUE /**< try to genrate genvbounds during trivial and aggressive filtering? */
+#define DEFAULT_DUALFEASTOL             1e-9 /**< feasibility tolerance for reduced costs used in obbt; this value
+                                              *   is used if SCIP's dual feastol is greater */
+#define DEFAULT_CONDITIONLIMIT          -1.0 /**< maximum condition limit used in LP solver (-1.0: no limit) */
+#define DEFAULT_BOUNDSTREPS            0.001 /**< minimal relative improve for strengthening bounds */
+#define DEFAULT_FILTERING_MIN              2 /**< minimal number of filtered bounds to apply another filter
+                                              *   round */
+#define DEFAULT_ITLIMITFACTOR           10.0 /**< multiple of root node LP iterations used as total LP iteration
+                                              *   limit for obbt (<= 0: no limit ) */
+#define DEFAULT_MINITLIMIT             5000L /**< minimum LP iteration limit */
+#define DEFAULT_ONLYNONCONVEXVARS      FALSE /**< only apply obbt on non-convex variables */
+#define DEFAULT_TIGHTINTBOUNDSPROBING   TRUE /**< should bounds of integral variables be tightened during
+                                              *   the probing mode? */
+#define DEFAULT_TIGHTCONTBOUNDSPROBING FALSE /**< should bounds of continuous variables be tightened during
+                                              *   the probing mode? */
+#define DEFAULT_ORDERINGALGO               1 /**< which type of ordering algorithm should we use?
+                                              *   (0: no, 1: greedy, 2: greedy reverse) */
+#define OBBT_SCOREBASE                     5 /**< base that is used to calculate a bounds score value */
+#define GENVBOUND_PROP_NAME    "genvbounds"
+#define INTERVALINFTY                  1E+43 /**< value for infinity in interval operations */
 
-#define DEFAULT_SEPARATESOL             FALSE      /**< should the obbt LP solution be separated? note that that by
-                                                    *   separating solution OBBT will apply all bound tightenings
-                                                    *   immediatly */
-#define DEFAULT_SEPAMINITER                 0      /**< minimum number of iteration spend to separate an obbt LP solution */
-#define DEFAULT_SEPAMAXITER                10      /**< maximum number of iteration spend to separate an obbt LP solution */
-#define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
-#define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
-                                                    *   (0: no propagation) */
-#define DEFAULT_CREATE_BILININEQS        TRUE      /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
-#define DEFAULT_ITLIMITFAC_BILININEQS     3.0      /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
-#define DEFAULT_MINNONCONVEXITY          1e-1      /**< minimum nonconvexity for choosing a bilinear term */
-#define DEFAULT_RANDSEED                  149      /**< initial random seed */
+#define DEFAULT_SEPARATESOL            FALSE /**< should the obbt LP solution be separated? note that that by
+                                              *   separating solution OBBT will apply all bound tightenings
+                                              *   immediatly */
+#define DEFAULT_SEPAMINITER                0 /**< minimum number of iteration spend to separate an obbt LP solution */
+#define DEFAULT_SEPAMAXITER               10 /**< maximum number of iteration spend to separate an obbt LP solution */
+#define DEFAULT_GENVBDSDURINGSEPA       TRUE /**< try to create genvbounds during separation process? */
+#define DEFAULT_PROPAGATEFREQ              0 /**< trigger a propagation round after that many bound tightenings
+                                              *   (0: no propagation) */
+#define DEFAULT_CREATE_BILININEQS       TRUE /**< solve auxiliary LPs in order to find valid inequalities for bilinear terms? */
+#define DEFAULT_ITLIMITFAC_BILININEQS    3.0 /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
+#define DEFAULT_MINNONCONVEXITY         1e-1 /**< minimum nonconvexity for choosing a bilinear term */
+#define DEFAULT_RANDSEED                 149 /**< initial random seed */
 
 
 /** translate from one value of infinity to another
@@ -616,10 +616,14 @@ SCIP_RETCODE createGenVBound(
           * but we want the positive dual multiplier!
           */
          gamma_dual = -SCIProwGetDualsol(propdata->cutoffrow);
+
+         /* we need to treat gamma to be exactly 0 if it is below the dual feasibility tolerance, see #2914 */
+         if( EPSZ(gamma_dual, SCIPdualfeastol(scip)) )
+            gamma_dual = 0.0;
       }
 
       /* we need at least one nonzero coefficient or a nonzero dual multiplier for the objective cutoff */
-      if( ncoefs > 0 || !SCIPisZero(scip, gamma_dual) )
+      if( ncoefs > 0 || gamma_dual != 0.0 )
       {
          SCIP_Bool addgenvbound;                /* if everything is fine with the redcosts and the bounds, add the genvbound */
          SCIP_Real c;                           /* helper variable to calculate constant term in genvbound */
@@ -659,8 +663,8 @@ SCIP_RETCODE createGenVBound(
                assert(xk != xi);
 
                /* in this case dont add a genvbound */
-               if( ( (redcost > SCIPdualfeastol(scip))  && SCIPisInfinity(scip, -SCIPvarGetLbLocal(xk)) ) ||
-                  ( (redcost < -SCIPdualfeastol(scip))  && SCIPisInfinity(scip, SCIPvarGetUbLocal(xk)) ) )
+               if( ( (redcost > SCIPdualfeastol(scip)) && SCIPisInfinity(scip, -SCIPvarGetLbLocal(xk)) ) ||
+                  ( (redcost < -SCIPdualfeastol(scip)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(xk)) ) )
                {
                   addgenvbound = FALSE;
                   break;
@@ -684,10 +688,20 @@ SCIP_RETCODE createGenVBound(
          /* add genvbound */
          if( addgenvbound && !SCIPisInfinity(scip, -c) )
          {
+#ifndef NDEBUG
+            /* check whether the activity of the LVB in the optimal solution of the LP is equal to the LP objective value */
+            SCIP_Real activity = c - gamma_dual * SCIPgetCutoffbound(scip);
+
+            for( k = 0; k < ncoefs; ++k )
+               activity += genvboundcoefs[k] * SCIPvarGetLPSol(genvboundvars[k]);
+
+            SCIPdebugMsg(scip, "LVB activity = %g lpobj = %g\n", activity, SCIPgetLPObjval(scip));
+            assert(EPSZ(SCIPrelDiff(activity, SCIPgetLPObjval(scip)), 11.0 * SCIPdualfeastol(scip)));
+#endif
+
             SCIPdebugMsg(scip, "         adding genvbound\n");
             SCIP_CALL( SCIPgenVBoundAdd(scip, propdata->genvboundprop, genvboundvars, xi, genvboundcoefs, ncoefs,
-                  !SCIPisPositive(scip, gamma_dual) ? 0.0 : -gamma_dual, c, bound->boundtype) );
-
+                  gamma_dual < SCIPdualfeastol(scip) ? 0.0 : -gamma_dual, c, bound->boundtype) );
             *found = TRUE;
          }
 
@@ -907,7 +921,7 @@ SCIP_RETCODE filterExistingLP(
                SCIP_CALL( createGenVBound(scip, propdata, bound, &found) );
 
                SCIPdebugMsg(scip, "found genvbound during trivial filtering? %u\n", found);
-            }
+            } /*lint !e438*/
 
             /* restore objective function */
             SCIP_CALL( setObjProbing(scip, propdata, bound, 0.0) );
@@ -989,7 +1003,7 @@ SCIP_RETCODE filterRound(
    int*                  nfiltered,          /**< how many bounds were filtered this round */
    SCIP_Real*            objcoefs,           /**< array to store the nontrivial objective coefficients */
    int*                  objcoefsinds,       /**< array to store bound indices for which their corresponding variables
-                                               *  has a nontrivial objective coefficient */
+                                              *   has a nontrivial objective coefficient */
    int                   nobjcoefs           /**< number of nontrivial objective coefficients */
    )
 {
@@ -1095,7 +1109,7 @@ SCIP_RETCODE filterRound(
                assert(!error);
                SCIP_CALL( createGenVBound(scip, propdata, bound, &found) );
                SCIPdebugMsg(scip, "found genvbound during aggressive filtering? %u\n", found);
-            }
+            } /*lint !e438*/
 
             /* restore objective function */
             for( j = 0; j < nobjcoefs; ++j )
@@ -1524,7 +1538,7 @@ int nextBound(
       }
    }
 
-   return bestidx;
+   return bestidx;  /*lint !e438*/
 }
 
 /** try to separate the solution of the last OBBT LP in order to learn better variable bounds; we apply additional
@@ -1554,7 +1568,7 @@ SCIP_RETCODE applySeparation(
 
    for( i = 0; i <= propdata->sepamaxiter; ++i )
    {
-      SCIP_Longint nlpiter;
+      SCIPdebug( SCIP_Longint nlpiter; )
       SCIP_Real oldval;
       SCIP_Bool cutoff;
       SCIP_Bool delayed;
@@ -1578,7 +1592,7 @@ SCIP_RETCODE applySeparation(
       SCIPdebug( nlpiter = SCIPgetNLPIterations(scip); )
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
       SCIPdebug( nlpiter = SCIPgetNLPIterations(scip) - nlpiter; )
-      SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
+      SCIPdebug( SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter); )
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 
       /* leave if we did not solve the LP to optimality or an error occured */
@@ -1590,7 +1604,7 @@ SCIP_RETCODE applySeparation(
       {
          SCIP_Bool found;
          SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
-      }
+      }  /*lint !e438*/
 
       /* try to tight the variable bound */
       tightened = FALSE;
@@ -1741,7 +1755,7 @@ SCIP_RETCODE findNewBounds(
             SCIP_Bool found;
 
             SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
-         }
+         } /*lint !e438*/
 
          /* try to tighten bound in probing mode */
          success = FALSE;
@@ -2267,11 +2281,14 @@ SCIP_RETCODE applyObbtBilinear(
       SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
    }
 
+   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
+   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
+
    /* we need to solve the probing LP before creating new probing nodes in solveBilinearLP() */
    SCIP_CALL( SCIPsolveProbingLP(scip, (int)nleftiterations, &lperror, NULL) );
 
-   /* 4. tighten LP feasibility tolerance to be at most feastol/10.0 */
-   oldfeastol = SCIPchgRelaxfeastol(scip, SCIPfeastol(scip) / 10.0);
+   if( lperror )
+      goto TERMINATE;
 
    /* 5. main loop */
    for( i = propdata->lastbilinidx; i < propdata->nbilinbounds
@@ -2364,8 +2381,8 @@ SCIP_RETCODE applyObbtBilinear(
    /* remember last unprocessed bilinear term */
    propdata->lastbilinidx = i;
 
+  TERMINATE:
    /* end probing */
-   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) ); /* TODO necessary to solve LP here again? */
    SCIP_CALL( SCIPendProbing(scip) );
 
    /* release cutoff row if there is one */
@@ -2398,7 +2415,7 @@ unsigned int getScore(
    assert(maxnlcount >= nlcount);
 
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
-   score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 );
+   score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 ); /*lint !e414*/
    switch( SCIPvarGetType(bound->var) )
    {
    case SCIP_VARTYPE_INTEGER:
@@ -2701,8 +2718,8 @@ SCIP_Bool varIsInteresting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to check */
    int                   nlcount             /**< number of nonlinear constraints containing the variable
-                                               *  or number of non-convex terms containing the variable
-                                               * (depends on propdata->onlynonconvexvars)  */
+                                              *   or number of non-convex terms containing the variable
+                                              *  (depends on propdata->onlynonconvexvars)  */
    )
 {
    assert(SCIPgetDepth(scip) == 0);

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,12 +19,12 @@
  * @author Daniel Rehfeldt
  * @author Michael Winkler
  *
- * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref CONS page.
+ * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref STP_CONS page.
  *
- * @page CONS Separating violated constraints
+ * @page STP_CONS Separating violated constraints
  *
  * In this file a constraint handler checking solutions for feasibility and separating violated model constraints is implemented.
- * The separation problem for the cut inequalities described in \ref PROBLEM can be solved by a max-flow algorithm in
+ * The separation problem for the cut inequalities described in \ref STP_PROBLEM can be solved by a max-flow algorithm in
  * polynomial time.  Regarding the variable values of a given LP solution as capacities on the edges, one can check for each
  * \f$ t \in T \setminus \{r\} \f$, with \f$ r \f$ being the root, whether the minimal \f$ (r, t) \f$-cut is less than one. In this case,
  * a violated cut inequality has been found, otherwise none exists. In order to calculate such a minimal cut an adaptation of Hao
@@ -202,7 +202,7 @@ SCIP_RETCODE cut_add(
    assert(g != NULL);
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
@@ -449,7 +449,7 @@ SCIP_RETCODE sep_flow(
             {
                SCIP_Bool infeasible;
 
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "term", 1.0,
+               SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "term", 1.0,
                      1.0, FALSE, FALSE, TRUE) );
 
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -499,7 +499,7 @@ SCIP_RETCODE sep_flow(
             {
                SCIP_Bool infeasible;
 
-               SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
+               SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "flow", 0.0, SCIPinfinity(scip),
                      FALSE, FALSE, TRUE) );
 
                SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -550,7 +550,7 @@ SCIP_RETCODE sep_flow(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "infl", -SCIPinfinity(scip),
                   1.0, FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -597,7 +597,7 @@ SCIP_RETCODE sep_flow(
          {
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "bala", 0.0,
+            SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "bala", 0.0,
                   (g->terms == 2) ? 0.0 : SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -1531,7 +1531,9 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], SCIP_LOCKTYPE_MODEL, 1, 1) );
+   {
+      SCIP_CALL( SCIPaddVarLocksType(scip, vars[v], locktype, nlockspos, nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1792,7 +1794,7 @@ SCIP_RETCODE SCIPStpDualAscent(
       gnodearr = gnodearrterms;
    }
 
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist, NULL) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &active, nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &edgearr, nedges) );
@@ -2032,7 +2034,7 @@ SCIP_RETCODE SCIPStpDualAscent(
                }
                else
                {
-                  SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0,
+                  SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "da", 1.0,
                         SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
                   SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -2385,7 +2387,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
       SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
    }
 
-   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist) );
+   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist, NULL) );
 
    k = 0;
    /* mark terminals as active, add all except root to pqueue */
@@ -2565,7 +2567,7 @@ SCIP_RETCODE SCIPStpDualAscentPcMw(
                }
                else
                {
-                  SCIP_CALL(SCIPcreateEmptyRowCons(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
+                  SCIP_CALL(SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, "da", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE));
                   SCIP_CALL(SCIPcacheRowExtensions(scip, row));
                }
             }

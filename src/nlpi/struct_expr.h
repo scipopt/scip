@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -179,6 +179,8 @@ struct SCIP_ExprGraph
    void*                userdata;            /**< user data associated with callback methods */
 
    SCIP_Bool            needvarboundprop;    /**< whether variable bounds need be propagated, e.g., because new nodes have been added to the graph */
+
+   int                  lastreplacechildpos; /**< last position where a child was found that was replaced, used to heuristically speed up consecutive calls to exprgraphNodeReplaceChild */
 };
 
 #ifdef __cplusplus

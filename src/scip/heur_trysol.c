@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_trysol.c
+ * @ingroup DEFPLUGINS_HEUR
  * @brief  primal heuristic that tries a given solution
  * @author Marc Pfetsch
  *
@@ -39,7 +40,7 @@
 
 #define HEUR_NAME             "trysol"
 #define HEUR_DESC             "try solution heuristic"
-#define HEUR_DISPCHAR         'y'
+#define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_TRIVIAL
 #define HEUR_PRIORITY         -3000000     /* should process after all other heuristics */
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_gauge.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  gauge separator
  * @author Felipe Serrano
  *
@@ -218,7 +219,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
-            NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
+            NULL, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
    /* add objective variable; the problem is \min t, s.t. g(x) <= t, l(x) <= 0, where g are nonlinear and l linear */
    objvaridx = nvars;
@@ -597,7 +598,8 @@ SCIP_RETCODE generateCut(
    SCIP_EXPRINT*         exprint,            /**< expression interpreter */
    SCIP_NLROW*           nlrow,              /**< constraint */
    CONVEXSIDE            convexside,         /**< whether we use rhs or lhs of nlrow */
-   SCIP_ROW*             row                 /**< storage for cut */
+   SCIP_ROW*             row,                /**< storage for cut */
+   SCIP_Bool*            success             /**< buffer to store whether the gradient was finite */
    )
 {
    SCIP_Real activity;
@@ -610,6 +612,7 @@ SCIP_RETCODE generateCut(
    assert(row != NULL);
 
    gradx0 = 0.0;
+   *success = TRUE;
 
    /* an nlrow has a linear part, quadratic part and expression tree; ideally one would just build the gradient but we
     * do not know if the different parts share variables or not, so we can't just build the gradient; for this reason
@@ -664,6 +667,13 @@ SCIP_RETCODE generateCut(
 
          for( i = 0; i < SCIPexprtreeGetNVars(tree); i++ )
          {
+            /* check gradient entries: function might not be differentiable */
+            if( !SCIPisFinite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
+            {
+               *success = FALSE;
+               break;
+            }
+
             gradx0 +=  grad[i] * SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(tree)[i]);
             SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPexprtreeGetVars(tree)[i], grad[i]) );
          }
@@ -673,6 +683,10 @@ SCIP_RETCODE generateCut(
    }
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+
+   /* if there was a problem computing the cut -> return */
+   if( ! *success )
+      return SCIP_OKAY;
 
 #ifdef CUT_DEBUG
    SCIPdebugMsg(scip, "gradient: ");
@@ -808,6 +822,7 @@ SCIP_RETCODE separateCuts(
       SCIP_ROW*   row;
       SCIP_Real   activity;
       CONVEXSIDE  convexside;
+      SCIP_Bool   success;
       char        rowname[SCIP_MAXSTRLEN];
 
       nlrow = nlrows[nlrowsidx[i]];
@@ -827,11 +842,11 @@ SCIP_RETCODE separateCuts(
       /* @todo: when local nlrows get supported in SCIP, one can think of recomputing the interior point */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip),
                FALSE, FALSE , TRUE) );
-      SCIP_CALL( generateCut(scip, sol, sepadata->exprinterpreter, nlrow, convexside, row) );
+      SCIP_CALL( generateCut(scip, sol, sepadata->exprinterpreter, nlrow, convexside, row, &success) );
 
       /* add cut */
       SCIPdebugMsg(scip, "cut <%s> has efficacy %g\n", SCIProwGetName(row), SCIPgetCutEfficacy(scip, NULL, row));
-      if( SCIPisCutEfficacious(scip, NULL, row) )
+      if( success && SCIPisCutEfficacious(scip, NULL, row) )
       {
          SCIP_Bool infeasible;
 
@@ -982,17 +997,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
     *        - we can also use convex combination of solutions; there is a function SCIPvarGetAvgSol!
     *        - can add an event handler to only update when a new solution has been found
     */
-   if( !sepadata->isintsolavailable && sepadata->computeintsol )
-   {
-      SCIP_Bool success;
-
-      success = FALSE;
-      SCIP_CALL( computeInteriorPoint(scip, sepa, &success) );
-
-      if( success )
-         sepadata->isintsolavailable = TRUE;
-   }
-
    if( !sepadata->isintsolavailable )
    {
       if( SCIPgetNSols(scip) > 0 )
@@ -1001,7 +1005,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
          SCIP_CALL( SCIPcreateSolCopy(scip, &sepadata->intsol, SCIPgetBestSol(scip)) );
          sepadata->isintsolavailable = TRUE;
       }
-      else if( SCIPhasNLPSolution(scip, NULL) )
+      else if( SCIPhasNLPSolution(scip) )
       {
          SCIPdebugMsg(scip, "Using NLP solution as interior point!\n");
          SCIP_CALL( SCIPcreateNLPSol(scip, &sepadata->intsol, NULL) );

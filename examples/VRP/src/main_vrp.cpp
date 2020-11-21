@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -20,7 +20,7 @@
  *
  * We want to solve the vehicle routing problem on a graph G = (V,E) with
  * V = J cup {d}, where d is the depot and the distances are given by the
- * length function l_e: E -> R_{<= 0}.
+ * length function l_e: E -> R_{>= 0}.
  *
  * Consider the MIP formulation
  *
@@ -34,6 +34,8 @@
  * where T_k is the set of tours visiting at most k customers
  * with repetitions of customers allowed and a^t_e (a^t_j) counts how often
  * edge e (node j) is traversed in t in T_k.
+ *
+ * Examples and the file format are given at https://neo.lcc.uma.es/vrp/vrp-instances/capacitated-vrp-instances/.
  */
 
 /* standard library includes */
@@ -57,6 +59,7 @@ using namespace scip;
 
 
 /** read VRP problem */
+static
 int read_problem(
    const char*           filename,           /**< filename */
    int&                  num_nodes,          /**< number of nodes in instance */
@@ -225,6 +228,7 @@ int read_problem(
 
 
 //------------------------------------------------------------
+static
 SCIP_RETCODE execmain(int argc, char** argv)
 {
    SCIP* scip = NULL;

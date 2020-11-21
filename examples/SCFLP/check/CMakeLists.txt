@@ -8,10 +8,12 @@ set(instances
     "cap42\;+1.29781129000000e+06"
     "cap43\;+1.36281129000000e+06"
     "cap44\;+1.46031129000000e+06"
-    #"cap61\;+1.03826090187500e+06"
-    #"cap62\;+1.08543370562500e+06"
-    #"cap63\;+1.12391676875000e+06"
-    #"cap64\;+1.17209372125000e+06"
+)
+
+set(quadinstances
+    "cap41\;+2.58782e+05"
+    "cap42\;+3.23782e+05"
+    "cap43\;+3.88782e+05"
 )
 
 add_test(NAME examples-scflp-build
@@ -56,3 +58,38 @@ foreach(instance ${instances})
                             DEPENDS examples-scflp-build
                         )
 endforeach()
+
+#
+# add a test for every quadratic instance
+#
+if( DEFINED IPOPT_FOUND AND DEFINED LPS )
+   if(${IPOPT_FOUND} AND ((NOT ${LPS} STREQUAL "msk" )))
+      foreach(instance ${quadinstances})
+          list(GET instance 0 basename)
+          list(GET instance 1 optval)
+          #
+          # call the SCFLP binary and validate the solve with the given objective value
+          #
+          add_test(NAME "examples-scflp-quad-${basename}"
+                  COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+                  )
+          set_tests_properties("examples-scflp-quad-${basename}"
+                              PROPERTIES
+                                  PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                  DEPENDS examples-scflp-build
+                              )
+
+          #
+          # call the SCFLP binary and validate the solve with the given objective value
+          #
+          add_test(NAME "examples-scflpbenders-quad-${basename}"
+                  COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/benders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
+                  )
+          set_tests_properties("examples-scflpbenders-quad-${basename}"
+                              PROPERTIES
+                                  PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                  DEPENDS examples-scflp-build
+                              )
+      endforeach()
+   endif()
+endif()

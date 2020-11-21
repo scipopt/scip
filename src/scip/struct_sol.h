@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -30,6 +30,7 @@
 #include "scip/type_misc.h"
 #include "scip/type_sol.h"
 #include "scip/type_heur.h"
+#include "scip/type_relax.h"
 
 
 #ifdef __cplusplus
@@ -65,15 +66,14 @@ struct SCIP_Sol
    SCIP_Real             obj;                /**< objective value of solution */
    SCIP_Real             time;               /**< clock time, when the solution was discovered */
    SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */
-#ifndef NDEBUG
-   SCIP_Longint          lpcount;            /**< number of LPs solved when this solution was created, needed for debug checks
-                                              *   concerning solutions linked to the LP solution
-                                              */
-#endif
    SCIP_REALARRAY*       vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
-   SCIP_HEUR*            heur;               /**< heuristic that found the solution (or NULL if it's an LP solution) */
+   union
+   {
+      SCIP_HEUR*         heur;               /**< heuristic that found the solution, if solution is of heuristic type */
+      SCIP_RELAX*        relax;              /**< relaxation handler that found the solution, if solution has relax type */
+   } creator;
    SCIP_VIOL             viol;               /**< maximum violations of problem constraints */
    int                   runnum;             /**< branch and bound run number in which the solution was found */
    int                   depth;              /**< depth at which the solution was found */
@@ -84,6 +84,12 @@ struct SCIP_Sol
                                               * could also be implemented as a counter for the number of infinite
                                               * values, to avoid redundant checks when resetting inf. solution values
                                               */
+   SCIP_SOLTYPE          type;               /**< type of solution: heuristic or (LP) relaxation solution, or unspecified origin */
+#ifndef NDEBUG
+   SCIP_Longint          lpcount;            /**< number of LPs solved when this solution was created, needed for debug checks
+                                              *   concerning solutions linked to the LP solution
+                                              */
+#endif
 };
 
 #ifdef __cplusplus

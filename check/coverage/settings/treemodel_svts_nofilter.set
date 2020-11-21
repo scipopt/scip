@@ -1,0 +1,6 @@
+branching/treemodel/enable = TRUE
+branching/treemodel/height = 10
+branching/treemodel/highrule = s
+branching/treemodel/lowrule = s
+branching/treemodel/filterlow = f
+branching/treemodel/filterhigh = f

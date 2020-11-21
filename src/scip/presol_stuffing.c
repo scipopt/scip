@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_stuffing.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  fix singleton continuous variables
  * @author Dieter Weninger
  *
@@ -352,6 +353,7 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -368,7 +370,18 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, FALSE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    if( initialized )
    {
@@ -394,7 +407,6 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
          /* look for fixable variables */
          for( v = ncols - 1; v >= 0; --v )
          {
-            SCIP_Bool infeasible;
             SCIP_Bool fixed;
             SCIP_VAR* var;
 

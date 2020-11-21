@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -47,11 +47,10 @@ SCIPDIR		=	..
 
 ifneq ("$(wildcard $(SCIPDIR)/bin/scip)","")
 # put an @ at the end of each line of scip -v to use as a marker for sed
-SCIPVERSION			:=$(shell $(SCIPDIR)/bin/scip -v | sed -e 's/$$/@/')
+SCIPVERSION		:=$(shell $(SCIPDIR)/bin/scip -v | sed -e 's/$$/@/')
 override ARCH		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ARCH=\([^@]*\).*/\1/')
 override COMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* COMP=\([^@]*\).*/\1/')
 override EXPRINT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* EXPRINT=\([^@]*\).*/\1/')
-override GAMS		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GAMS=\([^@]*\).*/\1/')
 override GMP		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* GMP=\([^@]*\).*/\1/')
 override SYM		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SYM=\([^@]*\).*/\1/')
 override IPOPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* IPOPT=\([^@]*\).*/\1/')
@@ -64,7 +63,7 @@ override NOBLKMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBLKMEM=\([^@]
 override NOBUFMEM	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* NOBUFMEM=\([^@]*\).*/\1/')
 override OPT		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OPT=\([^@]*\).*/\1/')
 override OSTYPE		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* OSTYPE=\([^@]*\).*/\1/')
-override PARASCIP	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* PARASCIP=\([^@]*\).*/\1/')
+override THREADSAFE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* THREADSAFE=\([^@]*\).*/\1/')
 override READLINE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* READLINE=\([^@]*\).*/\1/')
 override SANITIZE	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SANITIZE=\([^@]*\).*/\1/')
 override SHARED		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* SHARED=\([^@]*\).*/\1/')
@@ -78,15 +77,11 @@ override VERSION	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* VERSION=\([^@]*\
 override ZIMPL		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPL=\([^@]*\).*/\1/')
 override ZIMPLOPT	:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZIMPLOPT=\([^@]*\).*/\1/')
 override ZLIB		:=$(shell echo "$(SCIPVERSION)" | sed -e 's/.* ZLIB=\([^@]*\).*/\1/')
-ifeq ($(SHARED), false)
-$(error Please compile SCIP with SHARED=true)
-endif
 ifneq ($(OPT), dbg)
 $(error Please compile SCIP with OPT=dbg)
 endif
 else
 override OPT	=	dbg
-override SHARED	=	true
 endif
 
 #-----------------------------------------------------------------------------
@@ -153,7 +148,7 @@ FLAGS 		+= 	-I.
 # Criterion Framework
 #-----------------------------------------------------------------------------
 CR_INC		=	$(wildcard Criterion/include)
-CR_LIBDIR	=	$(wildcard Criterion/build)
+CR_LIBDIR	=	$(wildcard Criterion/lib)
 CR_LIB		=	criterion
 
 #-----------------------------------------------------------------------------
@@ -183,7 +178,7 @@ lint:		$(UNITTESTSSRC)
 			do \
 			echo $$i; \
 			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
 			done'
 
 $(OBJDIR):
@@ -230,7 +225,7 @@ $(BINDIR)/%$(BASESUFFIX): $(OBJDIR)/%.o $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFI
 		$(LINKCXX_l)$(CR_LIB) \
 		$(LINKRPATH)$(realpath $(SCIPDIR)/lib/shared) \
 		$(addprefix $(LINKRPATH),$(realpath $(CR_LIBDIR))) \
-		$(SANITZERFLAGS) \
+		$(SANITIZERFLAGS) \
 		$(LINKCXX_o)$@
 
 $(LPILIBFILE):
@@ -250,16 +245,17 @@ $(OBJDIR)/%.o : $(SRCDIR)/%.c | $(OBJDIR) $(OBJDIRS) $(BINDIRS)
 
 $(OBJDIR)/%.o:	%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
+		$(CXX) $(addprefix -I,$(CR_INC)) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) $(DFLAGS) -c $< $(CXX_o)$@
 
-# TODO: checkout v2.3.0 when it becomes available
 Criterion:
 	@echo -n "Criterion not found, downloading and building it in"
 	@for (( count=3; $$count ; count-- )) do echo -n " $$count" ; sleep 1 ; done ; echo
-	git clone --depth 1 -b v2.2.2 https://github.com/Snaipe/Criterion
+	git clone --depth 1 -b v2.3.3 https://github.com/Snaipe/Criterion
 	cd Criterion; \
 	mkdir build; \
 	cd build; \
-	cmake ..; \
-	make
+	cmake .. -DCMAKE_INSTALL_PREFIX=..; \
+	make; \
+	make install
+
 #---- EOF --------------------------------------------------------------------

@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol_dualcomp.c
+ * @ingroup DEFPLUGINS_PRESOL
  * @brief  dual compensation presolver
  * @author Dieter Weninger
  *
@@ -521,6 +522,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
 
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
@@ -544,7 +546,19 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
    assert(presoldata != NULL);
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
+
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )
@@ -719,7 +733,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          /* look for fixable variables */
          for( v = ncols - 1; v >= 0; --v )
          {
-            SCIP_Bool infeasible;
             SCIP_Bool fixed;
 
             var = SCIPmatrixGetVar(matrix, v);

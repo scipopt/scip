@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -39,11 +39,10 @@ VISUALIZE=${22}
 PERMUTE=${23}
 SEEDS=${24}
 GLBSEEDSHIFT=${25}
-
-SOLVER=fscip
+STARTPERM=${26}
 
 # check if all variables defined (by checking the last one)
-if test -z $SEEDS
+if test -z $STARTPERM
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -61,7 +60,7 @@ then
     echo "LOCK          = $LOCK"
     echo "VERSION       = $VERSION"
     echo "LPS           = $LPS"
-    echo "DEBUGTOOL      = $DEBUGTOOL"
+    echo "DEBUGTOOL     = $DEBUGTOOL"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
     echo "PERMUTE       = $PERMUTE"
@@ -72,16 +71,24 @@ then
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
     echo "GLBSEEDSHIFT  = $GLBSEEDSHIFT"
+    echo "STARTPERM     = $STARTPERM"
     exit 1;
 fi
 
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
+# defines the following environment variables: SCIPPATH, SETTINGSLIST, SOLUFILE, HARDMEMLIMIT, DEBUGTOOLCMD, INSTANCELIST,
+#                                              TIMELIMLIST, HARDTIMELIMLIST
 TIMEFORMAT="sec"
 MEMFORMAT="kB"
-. ./configuration_set_fscip.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $DEBUGTOOL $SETCUTOFF
 
-EXECNAME=$SCIPPATH/../bin/$BINNAME
+if test -e $SCIPPATH/../$BINNAME
+then
+   EXECNAME=$SCIPPATH/../$BINNAME
+else
+   EXECNAME=$BINNAME
+fi
 echo $EXECNAME
 
 # check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
@@ -134,8 +141,10 @@ do
 
 
 		# infer the names of all involved files from the arguments
+		# defines the following environment variables: OUTFILE, ERRFILE, EVALFILE, OBJECTIVEVAL, SHORTPROBNAME,
+		#                                              FILENAME, SKIPINSTANCE, BASENAME, TMPFILE, SETFILE
 		. ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SEEDS $SETNAME $TSTNAME $CONTINUE $QUEUE $p $s \
-		  $THREADS $GLBSEEDSHIFT
+		  $THREADS $GLBSEEDSHIFT $STARTPERM
 
 		if test "$INSTANCE" = "DONE"
 		then
@@ -149,9 +158,6 @@ do
 		then
 		    continue
 		fi
-
-		# find out the solver that should be used
-		SOLVER=`stripversion $BINNAME`
 
 		# additional environment variables needed by run.sh
 		export SOLVERPATH=$SCIPPATH

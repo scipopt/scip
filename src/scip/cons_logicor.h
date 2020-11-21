@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -42,7 +42,7 @@ extern "C" {
  *
  * @ingroup ConshdlrIncludes
  * */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -118,7 +118,7 @@ SCIP_RETCODE SCIPcreateConsBasicLogicor(
    );
 
 /** adds coefficient in logic or constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< logicor constraint */
@@ -126,28 +126,28 @@ SCIP_RETCODE SCIPaddCoefLogicor(
    );
 
 /** gets number of variables in logic or constraint */
-EXTERN
+SCIP_EXPORT
 int SCIPgetNVarsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets array of variables in logic or constraint */
-EXTERN
+SCIP_EXPORT
 SCIP_VAR** SCIPgetVarsLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual solution of the logic or constraint in the current LP */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualsolLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
 /** gets the dual Farkas value of the logic or constraint in the current infeasible LP */
-EXTERN
+SCIP_EXPORT
 SCIP_Real SCIPgetDualfarkasLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -156,15 +156,25 @@ SCIP_Real SCIPgetDualfarkasLogicor(
 /** returns the linear relaxation of the given logic or constraint; may return NULL if no LP row was yet created;
  *  the user must not modify the row!
  */
-EXTERN
+SCIP_EXPORT
 SCIP_ROW* SCIPgetRowLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/* @} */
+/** cleans up (multi-)aggregations and fixings from logicor constraints */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcleanupConssLogicor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   int*                  naddconss,          /**< pointer to count number of added (linear) constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted (logicor) constraints */
+   int*                  nchgcoefs           /**< pointer to count number of changed coefficients */
+   );
 
-/* @} */
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

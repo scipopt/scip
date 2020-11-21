@@ -3,17 +3,18 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_conjunction.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */
@@ -537,6 +538,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       *success = FALSE;
       goto TERMINATE;
    }
+   assert(saveptr != NULL); /* for lint */
 
    /* skip '(' */
    ++saveptr;
@@ -602,7 +604,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 
 	       SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
 	    }
-
+            assert(nexttokenstart != NULL); /* for lint */
 	    assert(saveptr > nexttokenstart);
 
 	    /* extract token for parsing */

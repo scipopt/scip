@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -64,7 +64,6 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "read problem <%s> ...\n\n", filename);
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
-
    /*******************
     * Problem Solving *
     *******************/
@@ -75,7 +74,6 @@ SCIP_RETCODE fromCommandLine(
 
    SCIPinfoMessage(scip, NULL, "primal solution:\n");
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-
 
    /**************
     * Statistics *
@@ -126,7 +124,6 @@ SCIP_RETCODE runSCIP(
    SCIPprintVersion(scip, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 
-
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
@@ -146,7 +143,6 @@ SCIP_RETCODE runSCIP(
       SCIP_CALL( readParams(scip, NULL) );
    }
 
-
    /**************
     * Start SCIP *
     **************/
@@ -161,7 +157,6 @@ SCIP_RETCODE runSCIP(
 
       SCIP_CALL( interactive(scip) );
    }
-
 
    /********************
     * Deinitialization *

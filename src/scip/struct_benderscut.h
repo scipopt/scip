@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -53,13 +53,6 @@ struct SCIP_Benderscut
    int                   priority;           /**< priority of the Benders' decomposition cuts */
    SCIP_Bool             islpcut;            /**< does this Benders' cut use LP information? */
    SCIP_Bool             initialized;        /**< has the Benders' decomposition cut been initialized? */
-
-   SCIP_CONS**           addedconss;         /**< an array to store the added constraints */
-   SCIP_ROW**            addedcuts;          /**< an array to store the added cuts */
-   int                   addedconsssize;     /**< the size of the added constraint array */
-   int                   addedcutssize;      /**< the size of the added cuts array */
-   int                   naddedconss;        /**< the number of the added constraint */
-   int                   naddedcuts;         /**< the number of the added cuts */
 
    /* additional Benders' decomposition cuts parameters */
    SCIP_Bool             enabled;            /**< is this Benders' decomposition cut enabled? */

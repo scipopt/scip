@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -75,7 +75,7 @@ lint:		$(MAINSRC)
 			do \
 			echo $$i; \
 			$(LINT) lint/scip.lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			$(FLAGS) -UNDEBUG -USCIP_WITH_READLINE -USCIP_ROUNDING_FE $$i; \
 			done'
 
 .PHONY: scipampl
@@ -100,7 +100,7 @@ check/% : $(SCIPDIR)/check/%
 	@-(cd check && ln -fs ../$^);
 
 .PHONY: test
-test: $(MAINFILE) check/evalcheck.sh check/check.awk check/getlastprob.awk
+test: $(MAINFILE) check/evalcheck.sh check/evaluate.sh check/check.awk check/getlastprob.awk check/configuration_solufile.sh
 	cd check; \
 	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "interface" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 

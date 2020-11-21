@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -233,7 +233,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyProp is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjProp*        objprop,            /**< propagator object */
@@ -241,14 +241,14 @@ SCIP_RETCODE SCIPincludeObjProp(
    );
 
 /** returns the prop object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjProp* SCIPfindObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of propagator */
    );
 
 /** returns the prop object for the given propagator */
-EXTERN
+SCIP_EXPORT
 scip::ObjProp* SCIPgetObjProp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop                /**< propagator */

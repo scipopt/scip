@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -148,7 +148,7 @@ public:
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );  // destructor of MyReader is called here
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeObjReader(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjReader*      objreader,          /**< file reader object */
@@ -156,14 +156,14 @@ SCIP_RETCODE SCIPincludeObjReader(
    );
 
 /** returns the reader object of the given name, or 0 if not existing */
-EXTERN
+SCIP_EXPORT
 scip::ObjReader* SCIPfindObjReader(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of file reader */
    );
 
 /** returns the reader object for the given file reader */
-EXTERN
+SCIP_EXPORT
 scip::ObjReader* SCIPgetObjReader(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READER*          reader              /**< file reader */

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -56,7 +56,7 @@ extern "C" {
  *
  *  @ingroup BranchingRuleIncludes
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
  *
  * @note The variables in the lpcands array must have a fractional value in the current LP solution
  */
-EXTERN
+SCIP_EXPORT
 SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP_VAR**            lpcands,            /**< branching candidates                                */
@@ -101,7 +101,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_RESULT*          result              /**< result pointer                                      */
    );
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }

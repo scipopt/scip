@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2018 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -65,7 +65,6 @@ extern "C" {
  */
 
 /** applies single bound change */
-extern
 SCIP_RETCODE SCIPboundchgApply(
    SCIP_BOUNDCHG*        boundchg,           /**< bound change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -80,7 +79,6 @@ SCIP_RETCODE SCIPboundchgApply(
    );
 
 /** undoes single bound change */
-extern
 SCIP_RETCODE SCIPboundchgUndo(
    SCIP_BOUNDCHG*        boundchg,           /**< bound change to remove */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -92,7 +90,6 @@ SCIP_RETCODE SCIPboundchgUndo(
    );
 
 /** applies domain change to the global problem */
-extern
 SCIP_RETCODE SCIPdomchgApplyGlobal(
    SCIP_DOMCHG*          domchg,             /**< domain change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -106,7 +103,6 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    );
 
 /** frees domain change data */
-extern
 SCIP_RETCODE SCIPdomchgFree(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -116,7 +112,6 @@ SCIP_RETCODE SCIPdomchgFree(
    );
 
 /** converts a dynamic domain change data into a static one, using less memory than for a dynamic one */
-extern
 SCIP_RETCODE SCIPdomchgMakeStatic(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -126,7 +121,6 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
    );
 
 /** applies domain change */
-extern
 SCIP_RETCODE SCIPdomchgApply(
    SCIP_DOMCHG*          domchg,             /**< domain change to apply */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -140,7 +134,6 @@ SCIP_RETCODE SCIPdomchgApply(
    );
 
 /** undoes domain change */
-extern
 SCIP_RETCODE SCIPdomchgUndo(
    SCIP_DOMCHG*          domchg,             /**< domain change to remove */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -152,7 +145,6 @@ SCIP_RETCODE SCIPdomchgUndo(
    );
 
 /** adds bound change to domain changes */
-extern
 SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -170,7 +162,6 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    );
 
 /** adds hole change to domain changes */
-extern
 SCIP_RETCODE SCIPdomchgAddHolechg(
    SCIP_DOMCHG**         domchg,             /**< pointer to domain change data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -181,7 +172,6 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
    );
 
 /** creates an artificial bound change information object with depth = INT_MAX and pos = -1 */
-extern
 SCIP_RETCODE SCIPbdchginfoCreate(
    SCIP_BDCHGINFO**      bdchginfo,          /**< pointer to store bound change information */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -192,14 +182,12 @@ SCIP_RETCODE SCIPbdchginfoCreate(
    );
 
 /** frees a bound change information object */
-extern
 void SCIPbdchginfoFree(
    SCIP_BDCHGINFO**      bdchginfo,          /**< pointer to store bound change information */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** returns the relaxed bound change type */
-extern
 SCIP_Real SCIPbdchginfoGetRelaxedBound(
    SCIP_BDCHGINFO*       bdchginfo           /**< bound change to add to the conflict set */
    );
@@ -211,7 +199,6 @@ SCIP_Real SCIPbdchginfoGetRelaxedBound(
 /** creates and captures an original problem variable; an integer variable with bounds
  *  zero and one is automatically converted into a binary variable
  */
-extern
 SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -234,7 +221,6 @@ SCIP_RETCODE SCIPvarCreateOriginal(
 /** creates and captures a loose variable belonging to the transformed problem; an integer variable with bounds
  *  zero and one is automatically converted into a binary variable
  */
-extern
 SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -258,7 +244,6 @@ SCIP_RETCODE SCIPvarCreateTransformed(
  *  automatically converted into a binary variable; in case the variable data cannot be copied the variable is not
  *  copied at all
  */
-extern
 SCIP_RETCODE SCIPvarCopy(
    SCIP_VAR**            var,                /**< pointer to store the target variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -277,7 +262,6 @@ SCIP_RETCODE SCIPvarCopy(
  *  variable is created and captured; if variable is of integral type, fractional bounds are automatically rounded; an
  *  integer variable with bounds zero and one is automatically converted into a binary variable
  */
-extern
 SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -301,7 +285,6 @@ SCIP_RETCODE SCIPvarParseOriginal(
  *  automatically rounded; an integer variable with bounds zero and one is automatically converted into a binary
  *  variable
  */
-extern
 SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_VAR**            var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -321,13 +304,11 @@ SCIP_RETCODE SCIPvarParseTransformed(
    );
 
 /** increases usage counter of variable */
-extern
 void SCIPvarCapture(
    SCIP_VAR*             var                 /**< variable */
    );
 
 /** decreases usage counter of variable, and frees memory if necessary */
-extern
 SCIP_RETCODE SCIPvarRelease(
    SCIP_VAR**            var,                /**< pointer to variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -337,7 +318,6 @@ SCIP_RETCODE SCIPvarRelease(
    );
 
 /** change variable name */
-extern
 /** change variable name */
 SCIP_RETCODE SCIPvarChgName(
    SCIP_VAR*             var,                /**< problem variable */
@@ -346,7 +326,6 @@ SCIP_RETCODE SCIPvarChgName(
    );
 
 /** initializes variable data structure for solving */
-extern
 void SCIPvarInitSolve(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -354,7 +333,6 @@ void SCIPvarInitSolve(
 /** gets and captures transformed variable of a given variable; if the variable is not yet transformed,
  *  a new transformed variable for this variable is created
  */
-extern
 SCIP_RETCODE SCIPvarTransform(
    SCIP_VAR*             origvar,            /**< original problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -365,7 +343,6 @@ SCIP_RETCODE SCIPvarTransform(
    );
 
 /** gets corresponding transformed variable of an original or negated original variable */
-extern
 SCIP_RETCODE SCIPvarGetTransformed(
    SCIP_VAR*             origvar,            /**< original problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -375,7 +352,6 @@ SCIP_RETCODE SCIPvarGetTransformed(
    );
 
 /** converts transformed variable into column variable and creates LP column */
-extern
 SCIP_RETCODE SCIPvarColumn(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -386,7 +362,6 @@ SCIP_RETCODE SCIPvarColumn(
    );
 
 /** converts column transformed variable back into loose variable, frees LP column */
-extern
 SCIP_RETCODE SCIPvarLoose(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -397,7 +372,6 @@ SCIP_RETCODE SCIPvarLoose(
    );
 
 /** converts variable into fixed variable */
-extern
 SCIP_RETCODE SCIPvarFix(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -410,6 +384,7 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             fixedval,           /**< value to fix variable at */
@@ -426,7 +401,6 @@ SCIP_RETCODE SCIPvarFix(
  * The reason for this approach is that we cannot reallocate memory, since we do not know how the
  * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
  */
-extern
 SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< variable array to get active variables */
@@ -444,7 +418,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
  *  with only one active variable (this can happen due to fixings after the multi-aggregation),
  *  is treated like an aggregation; if the multi-aggregation constant is infinite, "scalar" will be 0.0
  */
-extern
 SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -454,15 +427,14 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
 
 
 /** flattens aggregation graph of multi-aggregated variable in order to avoid exponential recursion later-on */
-extern
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
 /** return for given variables all their active counterparts; all active variables will be pairwise different */
-extern
 SCIP_RETCODE SCIPvarsGetActiveVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< variable array with given variables and as output all active
@@ -483,7 +455,6 @@ SCIP_RETCODE SCIPvarsGetActiveVars(
  *  the detection of infeasibility (e.g. if c'' is fractional), or to a rejection of the aggregation (denoted by
  *  aggregated == FALSE), if the resulting integer coefficients are too large and thus numerically instable.
  */
-extern
 SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -508,7 +479,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    );
 
 /** converts loose variable into aggregated variable */
-extern
 SCIP_RETCODE SCIPvarAggregate(
    SCIP_VAR*             var,                /**< loose problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -522,6 +492,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             aggvar,             /**< loose variable y in aggregation x = a*y + c */
    SCIP_Real             scalar,             /**< multiplier a in aggregation x = a*y + c */
@@ -531,7 +502,6 @@ SCIP_RETCODE SCIPvarAggregate(
    );
 
 /** converts variable into multi-aggregated variable */
-extern
 SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -556,7 +526,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    );
 
 /** returns whether variable is not allowed to be multi-aggregated */
-extern
 SCIP_Bool SCIPvarDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -570,7 +539,6 @@ SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
  *  the negation offset of binary variables is always 1, the offset of other variables is fixed to lb + ub when the
  *  negated variable is created
  */
-extern
 SCIP_RETCODE SCIPvarNegate(
    SCIP_VAR*             var,                /**< problem variable to negate */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -580,7 +548,6 @@ SCIP_RETCODE SCIPvarNegate(
    );
 
 /** informs variable that its position in problem's vars array changed */
-extern
 void SCIPvarSetProbindex(
    SCIP_VAR*             var,                /**< problem variable */
    int                   probindex           /**< new problem index of variable */
@@ -590,7 +557,6 @@ void SCIPvarSetProbindex(
  *
  *  @note the old pointer is overwritten, which might result in a memory leakage
  */
-extern
 void SCIPvarSetNamePointer(
    SCIP_VAR*             var,                /**< problem variable */
    const char*           name                /**< new name of variable */
@@ -603,7 +569,6 @@ void SCIPvarSetNamePointer(
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
  */
-extern
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
@@ -613,19 +578,16 @@ SCIP_RETCODE SCIPvarRemove(
    );
 
 /** marks the variable to be deleted from the problem */
-extern
 void SCIPvarMarkDeleted(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** marks the variable to not to be multi-aggregated */
-extern
 SCIP_RETCODE SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** modifies lock numbers for rounding */
-extern
 SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -637,14 +599,17 @@ SCIP_RETCODE SCIPvarAddLocks(
    );
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
-extern
 SCIP_RETCODE SCIPvarChgType(
    SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    );
 
 /** changes objective value of variable */
-extern
 SCIP_RETCODE SCIPvarChgObj(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -657,7 +622,6 @@ SCIP_RETCODE SCIPvarChgObj(
    );
 
 /** adds value to objective value of variable */
-extern
 SCIP_RETCODE SCIPvarAddObj(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -669,12 +633,12 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             addobj              /**< additional objective value for variable */
    );
 
 /** changes objective value of variable in current dive */
-extern
 SCIP_RETCODE SCIPvarChgObjDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -683,7 +647,6 @@ SCIP_RETCODE SCIPvarChgObjDive(
    );
 
 /** adjust lower bound to integral value, if variable is integral */
-extern
 void SCIPvarAdjustLb(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -691,7 +654,6 @@ void SCIPvarAdjustLb(
    );
 
 /** adjust upper bound to integral value, if variable is integral */
-extern
 void SCIPvarAdjustUb(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -699,7 +661,6 @@ void SCIPvarAdjustUb(
    );
 
 /** adjust lower or upper bound to integral value, if variable is integral */
-extern
 void SCIPvarAdjustBd(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -708,7 +669,6 @@ void SCIPvarAdjustBd(
    );
 
 /** changes lower bound of original variable in original problem */
-extern
 SCIP_RETCODE SCIPvarChgLbOriginal(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -716,7 +676,6 @@ SCIP_RETCODE SCIPvarChgLbOriginal(
    );
 
 /** changes upper bound of original variable in original problem */
-extern
 SCIP_RETCODE SCIPvarChgUbOriginal(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -726,7 +685,6 @@ SCIP_RETCODE SCIPvarChgUbOriginal(
 /** changes global lower bound of variable; if possible, adjusts bound to integral value;
  *  updates local lower bound if the global bound is tighter
  */
-extern
 SCIP_RETCODE SCIPvarChgLbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -742,7 +700,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 /** changes global upper bound of variable; if possible, adjusts bound to integral value;
  *  updates local upper bound if the global bound is tighter
  */
-extern
 SCIP_RETCODE SCIPvarChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -758,7 +715,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 /** changes global bound of variable; if possible, adjusts bound to integral value;
  *  updates local bound if the global bound is tighter
  */
-extern
 SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -775,7 +731,6 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
 /** changes current local lower bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
-extern
 SCIP_RETCODE SCIPvarChgLbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -790,7 +745,6 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 /** changes current local upper bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
-extern
 SCIP_RETCODE SCIPvarChgUbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -805,7 +759,6 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 /** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable
  */
-extern
 SCIP_RETCODE SCIPvarChgBdLocal(
    SCIP_VAR*             var,                /**< problem variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -819,7 +772,6 @@ SCIP_RETCODE SCIPvarChgBdLocal(
    );
 
 /** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
-extern
 SCIP_RETCODE SCIPvarChgLbLazy(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -834,7 +786,6 @@ SCIP_RETCODE SCIPvarChgUbLazy(
    );
 
 /** changes lower bound of variable in current dive; if possible, adjusts bound to integral value */
-extern
 SCIP_RETCODE SCIPvarChgLbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -843,7 +794,6 @@ SCIP_RETCODE SCIPvarChgLbDive(
    );
 
 /** changes upper bound of variable in current dive; if possible, adjusts bound to integral value */
-extern
 SCIP_RETCODE SCIPvarChgUbDive(
    SCIP_VAR*             var,                /**< problem variable to change */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -855,7 +805,6 @@ SCIP_RETCODE SCIPvarChgUbDive(
  * this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
  */
-extern
 SCIP_Real SCIPvarGetMultaggrLbLocal(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -865,7 +814,6 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
  * this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
  */
-extern
 SCIP_Real SCIPvarGetMultaggrUbLocal(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -875,7 +823,6 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
  * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
  */
-extern
 SCIP_Real SCIPvarGetMultaggrLbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -885,14 +832,12 @@ SCIP_Real SCIPvarGetMultaggrLbGlobal(
  * this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
  * calling this function for a non-multi-aggregated variable is not allowed
  */
-extern
 SCIP_Real SCIPvarGetMultaggrUbGlobal(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** adds a hole to the original domain of the variable*/
-extern
 SCIP_RETCODE SCIPvarAddHoleOriginal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -902,7 +847,6 @@ SCIP_RETCODE SCIPvarAddHoleOriginal(
    );
 
 /** adds a hole to the variable's global domain */
-extern
 SCIP_RETCODE SCIPvarAddHoleGlobal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -915,7 +859,6 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
    );
 
 /** adds a hole to the variable's current local domain */
-extern
 SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -928,7 +871,6 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    );
 
 /** resets the global and local bounds of original variable to their original values */
-extern
 SCIP_RETCODE SCIPvarResetBounds(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -939,7 +881,6 @@ SCIP_RETCODE SCIPvarResetBounds(
 /** returns at which depth in the tree a bound change was applied to the variable that conflicts with the
  *  given bound; returns -1 if the bound does not conflict with the current local bounds of the variable
  */
-extern
 int SCIPvarGetConflictingBdchgDepth(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -951,7 +892,6 @@ int SCIPvarGetConflictingBdchgDepth(
  *  if z is binary, the corresponding valid implication for z is also added;
  *  improves the global bounds of the variable and the vlb variable if possible
  */
-extern
 SCIP_RETCODE SCIPvarAddVlb(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -977,7 +917,6 @@ SCIP_RETCODE SCIPvarAddVlb(
  *  if z is binary, the corresponding valid implication for z is also added;
  *  updates the global bounds of the variable and the vub variable correspondingly
  */
-extern
 SCIP_RETCODE SCIPvarAddVub(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1005,7 +944,6 @@ SCIP_RETCODE SCIPvarAddVub(
  *  if the variable is already fixed to the given value, the implication is performed immediately;
  *  if the implication is redundant with respect to the variables' global bounds, it is ignored
  */
-extern
 SCIP_RETCODE SCIPvarAddImplic(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1029,7 +967,6 @@ SCIP_RETCODE SCIPvarAddImplic(
    );
 
 /** fixes the bounds of a binary variable to the given value, counting bound changes and detecting infeasibility */
-extern
 SCIP_RETCODE SCIPvarFixBinary(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1053,7 +990,6 @@ SCIP_RETCODE SCIPvarFixBinary(
  *  if the variable now appears twice in the clique with opposite values, all other variables are fixed to
  *  the opposite of the value they take in the clique
  */
-extern
 SCIP_RETCODE SCIPvarAddClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1074,7 +1010,6 @@ SCIP_RETCODE SCIPvarAddClique(
    );
 
 /** adds a filled clique to the cliquelists of all corresponding variables */
-extern
 SCIP_RETCODE SCIPvarsAddClique(
    SCIP_VAR**            vars,               /**< problem variables */
    SCIP_Bool*            values,             /**< values of the variables in the clique */
@@ -1085,7 +1020,6 @@ SCIP_RETCODE SCIPvarsAddClique(
    );
 
 /** deletes the variable from the given clique and updates the list of cliques the binary variable is member of */
-extern
 SCIP_RETCODE SCIPvarDelClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1097,7 +1031,6 @@ SCIP_RETCODE SCIPvarDelClique(
 /** adds a clique to the list of cliques of the given binary variable, but does not change the clique
  *  itself
  */
-extern
 SCIP_RETCODE SCIPvarAddCliqueToList(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1109,7 +1042,6 @@ SCIP_RETCODE SCIPvarAddCliqueToList(
 /** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
-extern
 SCIP_RETCODE SCIPvarDelCliqueFromList(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1120,7 +1052,6 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  */
-extern
 SCIP_RETCODE SCIPvarChgBranchFactor(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1130,7 +1061,6 @@ SCIP_RETCODE SCIPvarChgBranchFactor(
 /** sets the branch priority of the variable; variables with higher branch priority are always preferred to variables
  *  with lower priority in selection of branching variable
  */
-extern
 SCIP_RETCODE SCIPvarChgBranchPriority(
    SCIP_VAR*             var,                /**< problem variable */
    int                   branchpriority      /**< branching priority of the variable */
@@ -1139,7 +1069,6 @@ SCIP_RETCODE SCIPvarChgBranchPriority(
 /** sets the branch direction of the variable; variables with higher branch direction are always preferred to variables
  *  with lower direction in selection of branching variable
  */
-extern
 SCIP_RETCODE SCIPvarChgBranchDirection(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        branchdirection     /**< preferred branch direction of the variable (downwards, upwards, auto) */
@@ -1148,7 +1077,6 @@ SCIP_RETCODE SCIPvarChgBranchDirection(
 /** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
  *  data due to diving, that operate only on the LP without updating the variables
  */
-extern
 SCIP_Real SCIPvarGetObjLP(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -1156,7 +1084,6 @@ SCIP_Real SCIPvarGetObjLP(
 /** gets lower bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
  *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
  */
-extern
 SCIP_Real SCIPvarGetLbLP(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1165,7 +1092,6 @@ SCIP_Real SCIPvarGetLbLP(
 /** gets upper bound of variable in current SCIP_LP; the bound can be different from the bound stored in the variable's own
  *  data due to diving or conflict analysis, that operate only on the LP without updating the variables
  */
-extern
 SCIP_Real SCIPvarGetUbLP(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -1174,7 +1100,6 @@ SCIP_Real SCIPvarGetUbLP(
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
  *  or current LP solution if no primal solution is given; returns an index of -1 if no variable lower bound is available
  */
-extern
 void SCIPvarGetClosestVlb(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
@@ -1187,7 +1112,6 @@ void SCIPvarGetClosestVlb(
 /** returns solution value and index of variable upper bound that is closest to the variable's value in the given primal solution;
  *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
-extern
 void SCIPvarGetClosestVub(
    SCIP_VAR*             var,                /**< active problem variable */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
@@ -1198,14 +1122,12 @@ void SCIPvarGetClosestVub(
    );
 
 /** remembers the current solution as root solution in the problem variables */
-extern
 void SCIPvarStoreRootSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    );
 
 /** updates the current solution as best root solution in the problem variables if it is better */
-extern
 void SCIPvarUpdateBestRootSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1215,14 +1137,12 @@ void SCIPvarUpdateBestRootSol(
    );
 
 /** returns the solution value of the problem variables in the relaxation solution */
-extern
 SCIP_Real SCIPvarGetRelaxSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns the solution value of the transformed problem variable in the relaxation solution */
-extern
 SCIP_Real SCIPvarGetRelaxSolTransVar(
    SCIP_VAR*             var                 /**< problem variable */
    );
@@ -1230,7 +1150,6 @@ SCIP_Real SCIPvarGetRelaxSolTransVar(
 /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
  *  the binary variable is fixed to the given value
  */
-extern
 SCIP_Real SCIPvarGetImplRedcost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1242,7 +1161,6 @@ SCIP_Real SCIPvarGetImplRedcost(
 
 
 /** stores the solution value as relaxation solution in the problem variable */
-extern
 SCIP_RETCODE SCIPvarSetRelaxSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1252,7 +1170,6 @@ SCIP_RETCODE SCIPvarSetRelaxSol(
    );
 
 /** stores the solution value as NLP solution in the problem variable */
-extern
 SCIP_RETCODE SCIPvarSetNLPSol(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1260,7 +1177,6 @@ SCIP_RETCODE SCIPvarSetNLPSol(
    );
 
 /** resolves variable to columns and adds them with the coefficient to the row */
-extern
 SCIP_RETCODE SCIPvarAddToRow(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1282,7 +1198,6 @@ SCIP_RETCODE SCIPvarAddToRow(
  *        this corrupts the variable pseudo costs
  *  @note Apply with care; no internal checks are performed if the two variables should be merged
  */
-extern
 void SCIPvarMergeHistories(
    SCIP_VAR*             targetvar,          /**< the variable that should contain both histories afterwards */
    SCIP_VAR*             othervar,           /**< the variable whose history is to be merged with that of the target variable */
@@ -1292,7 +1207,6 @@ void SCIPvarMergeHistories(
 /** sets the history of a variable; this method is typacally used within reoptimization to keep and update the variable
  *  history over several iteraions
  */
-extern
 void SCIPvarSetHistory(
    SCIP_VAR*             var,                /**< variable */
    SCIP_HISTORY*         history,            /**< the history which is to set */
@@ -1302,7 +1216,6 @@ void SCIPvarSetHistory(
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
-extern
 SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1313,7 +1226,6 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    );
 
 /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
-extern
 SCIP_Real SCIPvarGetPseudocost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1323,7 +1235,6 @@ SCIP_Real SCIPvarGetPseudocost(
 /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value,
  *  only using the pseudo cost information of the current run
  */
-extern
 SCIP_Real SCIPvarGetPseudocostCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1331,7 +1242,6 @@ SCIP_Real SCIPvarGetPseudocostCurrentRun(
    );
 
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction */
-extern
 SCIP_Real SCIPvarGetPseudocostCount(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1340,7 +1250,6 @@ SCIP_Real SCIPvarGetPseudocostCount(
 /** gets the variable's (possible fractional) number of pseudo cost updates for the given direction,
  *  only using the pseudo cost information of the current run
  */
-extern
 SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1356,7 +1265,6 @@ SCIP_Real SCIPvarGetMinPseudocostScore(
    );
 
 /** gets the an estimate of the variable's pseudo cost variance in direction \p dir */
-extern
 SCIP_Real SCIPvarGetPseudocostVariance(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
@@ -1371,7 +1279,6 @@ SCIP_Real SCIPvarGetPseudocostVariance(
  *
  *  @return value of confidence bound for this variable
  */
-extern
 SCIP_Real SCIPvarCalcPscostConfidenceBound(
    SCIP_VAR*             var,                /**< variable in question */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1383,7 +1290,6 @@ SCIP_Real SCIPvarCalcPscostConfidenceBound(
 /** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
  *  Error is calculated at a specific confidence level
  */
-extern
 SCIP_Bool SCIPvarIsPscostRelerrorReliable(
    SCIP_VAR*             var,                /**< variable in question */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1410,7 +1316,6 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
  *
  *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
  */
-extern
 SCIP_Bool SCIPvarSignificantPscostDifference(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1437,7 +1342,6 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
  *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
  *          at the given confidence level \p clevel.
  */
-extern
 SCIP_Bool SCIPvarPscostThresholdProbabilityTest(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1449,7 +1353,6 @@ SCIP_Bool SCIPvarPscostThresholdProbabilityTest(
    );
 
 /** increases the VSIDS of the variable by the given weight */
-extern
 SCIP_RETCODE SCIPvarIncVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
@@ -1461,7 +1364,6 @@ SCIP_RETCODE SCIPvarIncVSIDS(
    );
 
 /** scales the VSIDS of the variable by the given scalar */
-extern
 SCIP_RETCODE SCIPvarScaleVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
@@ -1509,7 +1411,6 @@ SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
    );
 
 /** increases the number of branchings counter of the variable */
-extern
 SCIP_RETCODE SCIPvarIncNBranchings(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
@@ -1521,7 +1422,6 @@ SCIP_RETCODE SCIPvarIncNBranchings(
    );
 
 /** increases the inference score of the variable by the given weight */
-extern
 SCIP_RETCODE SCIPvarIncInferenceSum(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
@@ -1533,7 +1433,6 @@ SCIP_RETCODE SCIPvarIncInferenceSum(
    );
 
 /** increases the cutoff score of the variable by the given weight */
-extern
 SCIP_RETCODE SCIPvarIncCutoffSum(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory, or NULL if the domain value is SCIP_UNKNOWN */
@@ -1545,7 +1444,6 @@ SCIP_RETCODE SCIPvarIncCutoffSum(
    );
 
 /** returns the variable's VSIDS score */
-extern
 SCIP_Real SCIPvarGetVSIDS_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1553,7 +1451,6 @@ SCIP_Real SCIPvarGetVSIDS_rec(
    );
 
 /** returns the variable's VSIDS score only using conflicts of the current run */
-extern
 SCIP_Real SCIPvarGetVSIDSCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1561,7 +1458,6 @@ SCIP_Real SCIPvarGetVSIDSCurrentRun(
    );
 
 /** returns the average number of inferences found after branching on the variable in given direction */
-extern
 SCIP_Real SCIPvarGetAvgInferences(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1571,7 +1467,6 @@ SCIP_Real SCIPvarGetAvgInferences(
 /** returns the average number of inferences found after branching on the variable in given direction
  *  in the current run
  */
-extern
 SCIP_Real SCIPvarGetAvgInferencesCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1579,7 +1474,6 @@ SCIP_Real SCIPvarGetAvgInferencesCurrentRun(
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction */
-extern
 SCIP_Real SCIPvarGetAvgCutoffs(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1587,7 +1481,6 @@ SCIP_Real SCIPvarGetAvgCutoffs(
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction in the current run */
-extern
 SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1595,7 +1488,6 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    );
 
 /** outputs variable information into file stream */
-extern
 SCIP_RETCODE SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1604,7 +1496,6 @@ SCIP_RETCODE SCIPvarPrint(
    );
 
 /** includes event handler with given data in variable's event filter */
-extern
 SCIP_RETCODE SCIPvarCatchEvent(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1616,7 +1507,6 @@ SCIP_RETCODE SCIPvarCatchEvent(
    );
 
 /** deletes event handler with given data from variable's event filter */
-extern
 SCIP_RETCODE SCIPvarDropEvent(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1628,7 +1518,6 @@ SCIP_RETCODE SCIPvarDropEvent(
    );
 
 /** returns the variable's VSIDS score */
-extern
 SCIP_Real SCIPvarGetVSIDS(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -1636,7 +1525,6 @@ SCIP_Real SCIPvarGetVSIDS(
    );
 
 /** returns the position of the bound change index */
-extern
 int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
@@ -1644,7 +1532,6 @@ int SCIPbdchgidxGetPos(
 /** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
  *  bounds arrays, and optionally removes them also from the variable itself
  */
-extern
 SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1676,7 +1563,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
  */
 
 /** gets the key (i.e. the name) of the given variable */
-extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar);
 
 #ifdef __cplusplus
