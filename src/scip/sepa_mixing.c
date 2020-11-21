@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa_mixing.c
+ * @ingroup DEFPLUGINS_SEPA
  * @brief  mixing/star inequality separator
  * @author Weikun Chen
  *
@@ -25,10 +26,10 @@
  * where \f$0 \leq a_i \leq u\f$ for all \f$i\f$. This information can be obtained directly from the variable bounds data
  * structure. The separator will generate three classes of cuts.
  *
- * VLB: Let \f$T\f$ be a subset of \f$N\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \geq a_2 \geq \ldots \geq a_r\f$.
+ * VLB: Let \f$T\f$ be a subset of \f$N\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \leq a_2 \leq \ldots \leq a_r\f$.
  * Let \f$a_0 = 0\f$. The mixing/star VLB cut is of the form \f$ y \geq \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
  *
- * VUB: Let \f$T\f$ be a subset of \f$M\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \geq a_2 \geq \ldots \geq a_r\f$.
+ * VUB: Let \f$T\f$ be a subset of \f$M\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \leq a_2 \leq \ldots \leq a_r\f$.
  * Let \f$a_0 = 0\f$. The mixing/star VLB cut is of the form \f$ y \leq u - \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
  *
  * CONFLICT: Consider \f$i \in N\f$ and \f$j \in M\f$ with \f$a_i + a_j > u\f$. The conflict cut is
@@ -36,17 +37,17 @@
  *
  * A small example is described in the following to see the generated cuts.
  * \f[
- * Y = \{ (x,y) \in \{0,1\}^{4} \times \mathbb{R} \, : \, y \geq 3x_1, \, y \geq 2x_2, \, y \leq 4 - 2x_3, \,
- *                           y \leq 4 - x_4, \, 0 \leq y \leq 4 \}.
+ * Y = \{ (x,y) \in \{0,1\}^{4} \times \mathbb{R} \, : \, y \geq 2x_1, \, y \geq 3x_2, \, y \leq 4 - x_3, \,
+ *                           y \leq 4 - 2 x_4, \, 0 \leq y \leq 4 \}.
  * \f]
- * In this small example, the mixing/star cuts \f$y \geq x_1 + 2x_2\f$ (VLB) and \f$y \leq 4 - x_3 - x_4\f$ (VUB) will be
+ * In this small example, the mixing/star cuts \f$y \geq 2x_1 + x_2\f$ (VLB) and \f$y \leq 4 - x_3 - x_4\f$ (VUB) will be
  * considered to be generated. Besides the mixing cuts, we also consider the conflict cut \f$x_1 + x_3 \leq 1\f$ (CONFLICT).
  *
  *
  * For an overview see:
- * Atamturk, A., Nemhauser, G.L. and Savelsbergh, M.W., 2000@n
+ * Atamturk, A., Nemhauser, G.L. and Savelsbergh, M.W.,@n
  * The mixed vertex packing problem.@n
- * Mathematical Programming, 89(1), 35-53.
+ * Mathematical Programming, 89(1), 35-53, 2000.
  *
  * Some remarks:
  * - Besides the mixing inequality, we also add the conflict inequality.
