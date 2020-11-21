@@ -30,7 +30,7 @@
  * Let \f$a_0 = 0\f$. The mixing/star VLB cut is of the form \f$ y \geq \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
  *
  * VUB: Let \f$T\f$ be a subset of \f$M\f$, wlog, \f$T = \{1,\ldots,r\}\f$ with \f$a_1 \leq a_2 \leq \ldots \leq a_r\f$.
- * Let \f$a_0 = 0\f$. The mixing/star VLB cut is of the form \f$ y \leq u - \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
+ * Let \f$a_0 = 0\f$. The mixing/star VUB cut is of the form \f$ y \leq u - \sum_{i=1}^r (a_i - a_{i-1})x_i \f$.
  *
  * CONFLICT: Consider \f$i \in N\f$ and \f$j \in M\f$ with \f$a_i + a_j > u\f$. The conflict cut is
  * \f$x_i + x_j \leq 1\f$.
@@ -164,7 +164,7 @@ SCIP_RETCODE addCut(
    SCIProwChgRank(cut, 1);
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, " -> found cut");
+   SCIPdebugMsg(scip, "-> found cut: ");
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
@@ -406,9 +406,11 @@ SCIP_RETCODE separateCuts(
             else
             {
                activity += (vlbmixcoefs[j] - lastcoef) * solval;
-               cutrhs -= vlbmixsigns[j] * (vlbmixcoefs[j] -lastcoef);
                if( vlbmixsigns[j] )
+               {
                   cutcoefs[cutnnz] = lastcoef - vlbmixcoefs[j];
+                  cutrhs -= vlbmixcoefs[j] - lastcoef;
+               }
                else
                   cutcoefs[cutnnz] = vlbmixcoefs[j] - lastcoef;
                cutinds[cutnnz++] = vlbmixinds[j];
@@ -420,9 +422,11 @@ SCIP_RETCODE separateCuts(
       /* add the variable with maximal coefficient to make sure the cut is strong enough */
       if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
-         cutrhs -= maxabssign * (maxabscoef - lastcoef);
          if( maxabssign )
+         {
             cutcoefs[cutnnz] = lastcoef - maxabscoef;
+            cutrhs -= maxabscoef - lastcoef;
+         }
          else
             cutcoefs[cutnnz] = maxabscoef - lastcoef;
          cutinds[cutnnz++] = maxabsind;
@@ -434,7 +438,7 @@ SCIP_RETCODE separateCuts(
          SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocallb, cutoff, ncuts) );
       }
 
-VUB:
+   VUB:
       /* get variable upper bounds information */
       nvub = SCIPvarGetNVubs(var);
       if( nvub == 0 )
@@ -553,9 +557,11 @@ VUB:
             else
             {
                activity += (vubmixcoefs[j] - lastcoef) * solval;
-               cutrhs -= vubmixsigns[j] * (vubmixcoefs[j] - lastcoef);
                if( vubmixsigns[j] )
+               {
                   cutcoefs[cutnnz] = lastcoef - vubmixcoefs[j];
+                  cutrhs -= vubmixcoefs[j] - lastcoef;
+               }
                else
                   cutcoefs[cutnnz] = vubmixcoefs[j] - lastcoef;
                cutinds[cutnnz++] = vubmixinds[j];
@@ -567,9 +573,11 @@ VUB:
       /* add the variable with maximal coefficient if needed */
       if( SCIPisGT(scip, maxabscoef, lastcoef) )
       {
-         cutrhs -= maxabssign * (maxabscoef - lastcoef);
          if( maxabssign )
+         {
             cutcoefs[cutnnz] = lastcoef - maxabscoef;
+            cutrhs -= maxabscoef - lastcoef;
+         }
          else
             cutcoefs[cutnnz] = maxabscoef - lastcoef;
          cutinds[cutnnz++] = maxabsind;
@@ -581,8 +589,8 @@ VUB:
          SCIP_CALL( addCut(scip, sepa, cutcoefs, cutinds, cutnnz, cutrhs, islocalub, cutoff, ncuts) );
       }
 
+   CONFLICT:
       /* combine the variable lower bounds information and upper bounds information together to generate cuts */
-CONFLICT:
       /* stop if no useful variable lower (or upper) bounds information exists */
       if( vlbmixsize == 0 || vubmixsize == 0 )
          continue;
@@ -722,7 +730,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMixing)
    if( cutoff )
       *result = SCIP_CUTOFF;
    else if( ncuts > 0 )
+   {
+      SCIPdebugMsg(scip, "mixing separator generated %d cuts.\n", ncuts);
       *result = SCIP_SEPARATED;
+   }
    else
       *result = SCIP_DIDNOTFIND;
 
