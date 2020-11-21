@@ -4007,6 +4007,7 @@ int getNOrbitopesInComp(
          ncols = graphcompbegins[compcolorbegins[j] + 1] - graphcompbegins[compcolorbegins[j]];
 
          threshold = 0.7 * (SCIP_Real) symcompsize;
+	 printf("nbinrows %d ncols %d\n", nbinrows, ncols);
 
          /* check whether criteria for adding orbitopes are satisfied */
          if ( nbinrows <= 2 * ncols || (nbinrows <= 8 * ncols && nbinrows < 100) )
@@ -4779,7 +4780,7 @@ SCIP_RETCODE detectOrbitopes(
          SCIP_CALL( SCIPsortOrbitope(scip, orbitopevaridx, vars, nbincyclescomp, npermsincomponent + 1) );
 
          SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, vars, SCIP_ORBITOPETYPE_FULL,
-               nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop, TRUE, FALSE, FALSE,
+               nbincyclescomp, npermsincomponent + 1, propdata->usedynamicprop, FALSE, FALSE, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
