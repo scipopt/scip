@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_sin.c
+/**@file   expr_sin.c
  * @brief  handler for sine expressions
  * @author Fabian Wegscheider
  *
@@ -42,9 +42,8 @@
 
 #include <string.h>
 #include <math.h>
-#include "scip/cons_expr_sin.h"
-#include "scip/cons_expr_value.h"
-#include "scip/cons_expr_rowprep.h"
+#include "scip/expr_sin.h"
+#include "scip/expr_value.h"
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846
@@ -264,7 +263,7 @@ SCIP_Bool computeSolTangentSin(
    /* use Newton procedure to test if cut is valid */
    for( i = 0; i < 3; ++i )
    {
-      intersection = SCIPcomputeRootNewton(function1, derivative1, params, 2, startingpoints[i], NEWTON_PRECISION,
+      intersection = SCIPcalcRootNewton(function1, derivative1, params, 2, startingpoints[i], NEWTON_PRECISION,
          NEWTON_NITERATIONS);
 
       if( intersection != SCIP_INVALID && !SCIPisEQ(scip, intersection, solpoint) ) /*lint !e777*/
@@ -289,7 +288,6 @@ SCIP_Bool computeLeftMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
    SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
-   SCIP_Bool*            issecant,           /**< buffer to store whether underestimator is actually a secant */
    SCIP_Real             lb,                 /**< lower bound of argument variable */
    SCIP_Real             ub                  /**< upper bound of argument variable */
    )
@@ -302,8 +300,6 @@ SCIP_Bool computeLeftMidTangentSin(
    assert(lincoef != NULL);
    assert(linconst != NULL);
    assert(lb < ub);
-
-   *issecant = FALSE;
 
    if( SCIPisInfinity(scip, -lb) )
       return FALSE;
@@ -332,7 +328,7 @@ SCIP_Bool computeLeftMidTangentSin(
    }
 
    /* use Newton procedure to find the point where the tangent intersects sine at lower bound */
-   tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &lb, 1, startingpoint, NEWTON_PRECISION,
+   tangentpoint = SCIPcalcRootNewton(function2, derivative2, &lb, 1, startingpoint, NEWTON_PRECISION,
       NEWTON_NITERATIONS);
 
    /* if Newton procedure failed, no cut is added */
@@ -347,8 +343,6 @@ SCIP_Bool computeLeftMidTangentSin(
       /* check whether affine function is still underestimating */
       if( SCIPisLE(scip, sin(0.5 * (ub + lb)), sin(lb) + 0.5*(sin(ub) - sin(lb))) )
          return FALSE;
-
-      *issecant = TRUE;
    }
 
    if( SCIPisEQ(scip, tangentpoint, lb) )  /*lint !e777 */
@@ -375,7 +369,6 @@ SCIP_Bool computeRightMidTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
    SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
-   SCIP_Bool*            issecant,           /**< buffer to store whether underestimator is actually a secant */
    SCIP_Real             lb,                 /**< lower bound of argument variable */
    SCIP_Real             ub                  /**< upper bound of argument variable */
    )
@@ -388,8 +381,6 @@ SCIP_Bool computeRightMidTangentSin(
    assert(lincoef != NULL);
    assert(linconst != NULL);
    assert(lb < ub);
-
-   *issecant = FALSE;
 
    if( SCIPisInfinity(scip, ub) )
       return FALSE;
@@ -418,7 +409,7 @@ SCIP_Bool computeRightMidTangentSin(
    }
 
    /* use Newton procedure to find the point where the tangent intersects sine at lower bound */
-   tangentpoint = SCIPcomputeRootNewton(function2, derivative2, &ub, 1, startingpoint, NEWTON_PRECISION,
+   tangentpoint = SCIPcalcRootNewton(function2, derivative2, &ub, 1, startingpoint, NEWTON_PRECISION,
       NEWTON_NITERATIONS);
 
    /* if Newton procedure failed, no underestimator is found */
@@ -433,8 +424,6 @@ SCIP_Bool computeRightMidTangentSin(
       /* check whether affine function is still underestimating */
       if( SCIPisLE(scip, sin(0.5 * (ub + lb)), sin(lb) + 0.5*(sin(ub) - sin(lb))) )
          return FALSE;
-
-      *issecant = TRUE;
    }
 
    if( SCIPisEQ(scip, tangentpoint, ub) )  /*lint !e777 */
@@ -449,46 +438,6 @@ SCIP_Bool computeRightMidTangentSin(
       return FALSE;
 
    return TRUE;
-}
-
-/** sets up a rowprep from given data */
-static
-SCIP_RETCODE assembleRowprep(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP**        rowprep,            /**< buffer to store rowprep */
-   const char*           name,               /**< name of type of cut */
-   SCIP_Bool             iscos,              /**< whether we are doing a cut for cosine instead of sine */
-   SCIP_Bool             underestimate,      /**< whether underestimating */
-   SCIP_Real             linconst,           /**< constant term */
-   SCIP_Real             lincoef,            /**< coefficient of childvar */
-   SCIP_VAR*             childvar,           /**< child var */
-   SCIP_VAR*             auxvar              /**< auxiliary variable */
-   )
-{
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-   assert(childvar != NULL);
-   assert(auxvar != NULL);
-
-   /* for overestimators, mirror back */
-   if( !underestimate )
-      linconst *= -1.0;
-
-   /* further, for cos expressions, the estimator needs to be shifted back to match original bounds */
-   if( iscos )
-      linconst += lincoef * M_PI_2;
-
-   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, underestimate ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, TRUE) );
-   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_%s_%s_%lld", iscos ? "cos" : "sin", name,
-      SCIPvarGetName(childvar), SCIPgetNLPs(scip));
-
-   SCIPaddRowprepConstant(*rowprep, linconst);
-
-   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, 2) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, auxvar, -1.0) );
-   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, childvar, lincoef) );
-
-   return SCIP_OKAY;
 }
 
 
@@ -590,8 +539,7 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
  */
 SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
+   SCIP_EXPR*            expr,               /**< sin or cos expression */
    SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
    SCIP_Real*            linconst,           /**< buffer to store the constant term */
    SCIP_Real             refpoint,           /**< point at which to underestimate (can be SCIP_INVALID) */
@@ -602,21 +550,18 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 {
    SCIP_Bool success;
    SCIP_Bool iscos;
-   SCIP_Bool issecant;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") == 0 || strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") == 0 || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
 
    /* if child is essentially constant, then there should be no point in estimation */
    if( SCIPisEQ(scip, childlb, childub) ) /* @todo maybe return a constant estimator? */
       return FALSE;
 
-   iscos = strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0;
+   iscos = strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0;
 
    /* for cos expressions, the bounds have to be shifted before and after computation */
    if( iscos )
@@ -643,11 +588,11 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 
    /* otherwise, try left middle tangent, that is tangent at some other point which goes through (lb,sin(lb)) */
    if( !success )
-      success = computeLeftMidTangentSin(scip, lincoef, linconst, &issecant, childlb, childub);
+      success = computeLeftMidTangentSin(scip, lincoef, linconst, childlb, childub);
 
    /* otherwise, try right middle tangent, that is tangent at some other point which goes through (ub,sin(ub)) */
    if( !success )
-      success = computeRightMidTangentSin(scip, lincoef, linconst, &issecant, childlb, childub);
+      success = computeRightMidTangentSin(scip, lincoef, linconst, childlb, childub);
 
    if( !success )
       return FALSE;
@@ -674,53 +619,29 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
  */
 SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
-   SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
-   SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
-   SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
-   SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
-   SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
+   SCIP_EXPR*            expr,               /**< sin or cos expression */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
-   SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
+   SCIP_Bool             underestimate,      /**< whether the cuts should be underestimating */
+   SCIP_Real**           coefs,              /**< buffer to store coefficients of computed estimators */
+   SCIP_Real*            constant,           /**< buffer to store constant of computed estimators */
+   int*                  nreturned           /**< buffer to store number of estimators that have been computed */
    )
 {
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* auxvar;
-   SCIP_VAR* childvar;
-   SCIP_Real lincoef;
-   SCIP_Real linconst;
-   SCIP_Bool success;
    SCIP_Bool iscos;
-   SCIP_Bool issecant;
+   int i;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sin") == 0 || strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") == 0 || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0);
    assert(SCIPisLE(scip, childlb, childub));
-
-   assert(secant != NULL);
-   assert(ltangent != NULL);
-   assert(rtangent != NULL);
-   assert(lmidtangent != NULL);
-   assert(rmidtangent != NULL);
 
    /* caller must ensure that variable is not already fixed */
    assert(!SCIPisEQ(scip, childlb, childub));
 
-   /* get expression data */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
-   assert(auxvar != NULL);
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
 
-   iscos = strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "cos") == 0;
+   iscos = strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0;
 
    /* for cos expressions, the bounds have to be shifted before and after computation */
    if( iscos )
@@ -738,80 +659,41 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
     * and the resulting cut is       a*x - z <=/>= -b           depending on over-/underestimation
     */
 
-   /* compute secant between lower and upper bound */
-   *secant = NULL;
-
-   if( underestimate )
-      success = computeSecantSin(scip, &lincoef, &linconst, childlb, childub);
-   else
-      success = computeSecantSin(scip, &lincoef, &linconst, -childub, -childlb);
-
-   if( success )
+   if( ! underestimate )
    {
-      SCIP_CALL( assembleRowprep(scip, secant, "secant", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
+      SCIP_Real aux;
+      aux = childlb;
+      childlb = -childub;
+      childub = -aux;
    }
 
-   /* compute tangent at lower bound */
-   *ltangent = NULL;
-
-   if( underestimate )
-      success = computeLeftTangentSin(scip, &lincoef, &linconst, childlb);
+   /* if we can generate a secant between the bounds, then we have convex (concave) hull */
+   if( computeSecantSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
+      (*nreturned)++;
    else
-      success = computeRightTangentSin(scip, &lincoef, &linconst, -childlb);
-
-   if( success )
    {
-      SCIP_CALL( assembleRowprep(scip, ltangent, "ltangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
+      /* try generating a secant between lb (ub) and some point < ub (> lb); otherwise try with tangent at lb (ub)*/
+      if( computeLeftMidTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
+         (*nreturned)++;
+      else if( computeLeftTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childlb) )
+         (*nreturned)++;
+
+      /* try generating a secant between ub (lb) and some point > lb (< ub); otherwise try with tangent at ub (lb)*/
+      if( computeRightMidTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
+         (*nreturned)++;
+      else if( computeRightTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childub) )
+         (*nreturned)++;
    }
 
-   /* compute tangent at upper bound */
-   *rtangent = NULL;
-
-   if( underestimate )
-      success = computeRightTangentSin(scip, &lincoef, &linconst, childub);
-   else
-      success = computeLeftTangentSin(scip, &lincoef, &linconst, -childub);
-
-   if( success )
+   /* for cos expressions, the estimator needs to be shifted back to match original bounds */
+   for( i = 0; i < *nreturned; ++i )
    {
-      SCIP_CALL( assembleRowprep(scip, rtangent, "rtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
-   }
+      if( ! underestimate )
+         constant[i] *= -1.0;
 
-   /* compute left middle tangent, that is tangent at some other point which goes through (lb,sin(lb))
-    * if secant is feasible, this cut can never beat it so don't compute it
-    */
-   *lmidtangent = NULL;
-
-   if( *secant == NULL )
-   {
-      if( underestimate )
-         success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
-      else
-         success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
-
-      if( success )
+      if( iscos)
       {
-         /* if the cut connects bounds, it is stored in secant */
-         SCIP_CALL( assembleRowprep(scip, issecant ? secant : lmidtangent, "lmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
-      }
-   }
-
-   /* compute right middle tangent, that is tangent at some other point which goes through (ub,sin(ub))
-    * if secant or soltangent are feasible, this cut can never beat them
-    */
-   *rmidtangent = NULL;
-
-   if( *secant == NULL )
-   {
-      if( underestimate )
-         success = computeRightMidTangentSin(scip, &lincoef, &linconst, &issecant, childlb, childub);
-      else
-         success = computeLeftMidTangentSin(scip, &lincoef, &linconst, &issecant, -childub, -childlb);
-
-      if( success )
-      {
-         /* if the cut connects bounds, it is stored in secant */
-         SCIP_CALL( assembleRowprep(scip, issecant ? secant : rmidtangent, "rmidtangent", iscos, underestimate, linconst, lincoef, childvar, auxvar) );
+         constant[i] += coefs[i][0] * M_PI_2;
       }
    }
 
@@ -874,10 +756,9 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
 
 /** expression handler copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSin)
+SCIP_DECL_EXPRCOPYHDLR(copyhdlrSin)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrSin(scip, consexprhdlr) );
-   *valid = TRUE;
+   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
 
    return SCIP_OKAY;
 }
@@ -887,30 +768,29 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSin)
  * TODO: add further simplifications
  */
 static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
+SCIP_DECL_EXPRSIMPLIFY(simplifySin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
    /* check for value expression */
-   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   if( SCIPisExprValue(scip, child) )
    {
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr,
-            sin(SCIPgetConsExprExprValueValue(child))) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, sin(SCIPgetValueExprValue(child)), ownerdatacreate, ownerdatacreatedata) );
    }
    else
    {
       *simplifiedexpr = expr;
 
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
+      SCIPcaptureExpr(*simplifiedexpr);
    }
 
    return SCIP_OKAY;
@@ -918,22 +798,22 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifySin)
 
 /** expression parse callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
+SCIP_DECL_EXPRPARSE(parseSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* childexpr;
+   SCIP_EXPR* childexpr;
 
    assert(expr != NULL);
 
    /* parse child expression from remaining string */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownerdatacreate, ownerdatacreatedata) );
    assert(childexpr != NULL);
 
    /* create sine expression */
-   SCIP_CALL( SCIPcreateConsExprExprSin(scip, consexprhdlr, expr, childexpr) );
+   SCIP_CALL( SCIPcreateExprSin(scip, expr, childexpr, ownerdatacreate, ownerdatacreatedata) );
    assert(*expr != NULL);
 
    /* release child expression since it has been captured by the sine expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
 
    *success = TRUE;
 
@@ -942,32 +822,32 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseSin)
 
 /** expression (point-) evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalSin)
+SCIP_DECL_EXPREVAL(evalSin)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   *val = sin(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+   *val = sin(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
 
 /** expression derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
+SCIP_DECL_EXPRBWDIFF(bwdiffSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(expr != NULL);
    assert(childidx == 0);
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(child)), "val") != 0);
 
-   *val = cos(SCIPgetConsExprExprValue(child));
+   *val = cos(SCIPexprGetEvalValue(child));
 
    return SCIP_OKAY;
 }
@@ -978,19 +858,19 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffSin)
  * COS(child) dot(child)
  */
 static
-SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffSin)
+SCIP_DECL_EXPRFWDIFF(fwdiffSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
-   assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(child)), "val") != 0);
+   assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
 
-   *dot = cos(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
+   *dot = cos(SCIPexprGetEvalValue(child)) * SCIPexprGetDot(child);
 
    return SCIP_OKAY;
 }
@@ -1001,34 +881,35 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffSin)
  * -SIN(child) dot(child)
  * */
 static
-SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffSin)
+SCIP_DECL_EXPRBWFWDIFF(bwfwdiffSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
    assert(childidx == 0);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
-   assert(SCIPgetConsExprExprDot(child) != SCIP_INVALID); /*lint !e777*/
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(child)), "val") != 0);
+   assert(SCIPexprGetDot(child) != SCIP_INVALID); /*lint !e777*/
 
-   *bardot = -sin(SCIPgetConsExprExprValue(child)) * SCIPgetConsExprExprDot(child);
+   *bardot = -sin(SCIPexprGetEvalValue(child)) * SCIPexprGetDot(child);
 
    return SCIP_OKAY;
 }
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
+SCIP_DECL_EXPRINTEVAL(intevalSin)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
+
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
       SCIPintervalSetEmpty(interval);
    else
@@ -1039,100 +920,32 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSin)
 
 /** separation initialization callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaSin)
+SCIP_DECL_EXPRINITESTIMATES(initEstimateSin)
 {  /*lint --e{715}*/
-   SCIP_VAR* childvar;
    SCIP_Real childlb;
    SCIP_Real childub;
-   SCIP_Bool success;
 
-   SCIP_ROWPREP* cuts[5];   /* 0: secant, 1: left tangent, 2: right tangent, 3: left mid tangent, 4: right mid tangent */
-   int i;
-
-   *infeasible = FALSE;
-
-   childvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(childvar != NULL);
-
-   childlb = SCIPvarGetLbLocal(childvar);
-   childub = SCIPvarGetUbLocal(childvar);
+   childlb = bounds[0].inf;
+   childub = bounds[0].sup;
 
    /* no need for cut if child is fixed */
    if( SCIPisRelEQ(scip, childlb, childub) )
       return SCIP_OKAY;
 
-   /* compute underestimating cuts */
-   if( underestimate )
-   {
-      SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
-            childlb, childub, TRUE) );
-
-      for( i = 0; i < 5; ++i)
-      {
-         /* only the cuts which could be created are added */
-         if( !*infeasible && cuts[i] != NULL )
-         {
-            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
-
-            if( success && cuts[i]->nvars == 2 )
-            {
-               /* make a SCIP_ROW and add to LP */
-               SCIP_ROW* row;
-
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], cons) );
-               SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-            }
-
-            SCIPfreeRowprep(scip, &cuts[i]);
-         }
-      }
-   }
-
-   /* compute overestimating cuts */
-   if( overestimate && !*infeasible )
-   {
-      SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, conshdlr, expr, &cuts[0], &cuts[1], &cuts[2], &cuts[3], &cuts[4],
-            childlb, childub, FALSE) );
-
-      for( i = 0; i < 5; ++i )
-      {
-         /* only the cuts which could be created are added */
-         if( !*infeasible && cuts[i] != NULL )
-         {
-            SCIP_CALL( SCIPcleanupRowprep(scip, cuts[i], NULL, SCIP_CONSEXPR_CUTMAXRANGE, 0.0, NULL, &success) );
-
-            if( success && cuts[i]->nvars == 2 )
-            {
-               /* make a SCIP_ROW and add to LP */
-               SCIP_ROW* row;
-
-               SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, cuts[i], cons) );
-               SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-            }
-
-            SCIPfreeRowprep(scip, &cuts[i]);
-         }
-      }
-   }
+   /* compute cuts */
+   SCIP_CALL(SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, ! overestimate, coefs, constant, nreturned) );
 
    return SCIP_OKAY;
 }
 
 /** expression estimator callback */
 static
-SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
+SCIP_DECL_EXPRESTIMATE(estimateSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* childvar;
-
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
@@ -1140,14 +953,8 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
    assert(*branchcand == TRUE);
    assert(success != NULL);
 
-   /* get expression data */
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
-
-   *success = SCIPcomputeEstimatorsTrig(scip, conshdlr, expr, coefs, constant, SCIPgetSolVal(scip, sol, childvar),
-      SCIPvarGetLbLocal(childvar), SCIPvarGetUbLocal(childvar), !overestimate);
+   *success = SCIPcomputeEstimatorsTrig(scip, expr, coefs, constant, refpoint[0], localbounds[0].inf,
+         localbounds[0].sup, ! overestimate);
    *islocal = TRUE;  /* TODO there are cases where cuts would be globally valid */
 
    return SCIP_OKAY;
@@ -1155,46 +962,27 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateSin)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropSin)
+SCIP_DECL_EXPRREVERSEPROP(reversepropSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_INTERVAL newbounds;
-
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(nreductions != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
    assert(SCIPintervalGetInf(bounds) >= -1.0);
    assert(SCIPintervalGetSup(bounds) <= 1.0);
 
-   *nreductions = 0;
-
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-
-   newbounds = SCIPgetConsExprExprBounds(scip, conshdlr, child);
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
-   {
-      *infeasible = TRUE;
-      return SCIP_OKAY;
-   }
-
    /* compute the new child interval */
-   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, newbounds, &newbounds) );
-
-   /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, child, newbounds, infeasible, nreductions) );
+   SCIP_CALL( SCIPcomputeRevPropIntervalSin(scip, bounds, childrenbounds[0], childrenbounds) );
 
    return SCIP_OKAY;
 }
 
 /** sin hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashSin)
+SCIP_DECL_EXPRHASH(hashSin)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
    assert(hashkey != NULL);
    assert(childrenhashes != NULL);
 
@@ -1206,20 +994,21 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSin)
 
 /** expression curvature detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
+SCIP_DECL_EXPRCURVATURE(curvatureSin)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
    SCIP_INTERVAL childinterval;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(childcurv != NULL);
    assert(success != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, child, &childinterval, FALSE) );
+   SCIP_CALL( SCIPevalExprActivity(scip, child) );
+   childinterval = SCIPexprGetActivity(child);
 
    /* TODO rewrite SCIPcomputeCurvatureSin so it provides the reverse operation */
    *success = TRUE;
@@ -1237,7 +1026,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureSin)
 
 /** expression monotonicity detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
+SCIP_DECL_EXPRMONOTONICITY(monotonicitySin)
 {  /*lint --e{715}*/
    SCIP_INTERVAL interval;
    SCIP_Real inf;
@@ -1249,8 +1038,9 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
    assert(result != NULL);
    assert(childidx == 0);
 
-   assert(SCIPgetConsExprExprChildren(expr)[0] != NULL);
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], &interval, FALSE) );
+   assert(SCIPexprGetChildren(expr)[0] != NULL);
+   SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(expr)[0]) );
+   interval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
 
    *result = SCIP_MONOTONE_UNKNOWN;
    inf = SCIPintervalGetInf(interval);
@@ -1273,46 +1063,45 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicitySin)
 }
 
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrSin(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLR* exprhdlr;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalSin, NULL) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalSin, NULL) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSin, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifySin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaSin, NULL, estimateSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffSin, fwdiffSin, bwfwdiffSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureSin) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicitySin) );
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrSin, NULL);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifySin);
+   SCIPexprhdlrSetParse(exprhdlr, parseSin);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalSin);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimateSin, estimateSin);
+   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropSin);
+   SCIPexprhdlrSetHash(exprhdlr, hashSin);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffSin, fwdiffSin, bwfwdiffSin);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureSin);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicitySin);
 
    return SCIP_OKAY;
 }
 
 /** creates a sin expression */
-SCIP_RETCODE SCIPcreateConsExprExprSin(
+SCIP_RETCODE SCIPcreateExprSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< single child */
+   SCIP_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_EXPR*   child,              /**< single child */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1,
-         &child) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownerdatacreate,
+            ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }

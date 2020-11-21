@@ -145,7 +145,7 @@ Test(iterator, bfs_general)
    SCIP_CALL( SCIPcreateExprSum(scip, &expr_sum, 1, &expr_x, &coef, 0.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr_sum, expr_y, 1.0) );
    SCIP_CALL( SCIPcreateExprExp(scip, &expr_exp, expr_sum, NULL, NULL) );
-   SCIP_CALL( SCIPcreateConsExprExprSin(scip, &expr_sin, expr_sum, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSin(scip, &expr_sin, expr_sum, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprProduct(scip, &expr_prod, 1, &expr_exp, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprChild(scip, expr_prod, expr_sin) );
 
@@ -256,7 +256,7 @@ Test(iterator, rtopological_general)
    SCIP_CALL( SCIPcreateExprSum(scip, &expr_sum, 1, &expr_x, &coef, 0.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr_sum, expr_y, 1.0) );
    SCIP_CALL( SCIPcreateExprExp(scip, &expr_exp, expr_sum, NULL, NULL) );
-   SCIP_CALL( SCIPcreateConsExprExprSin(scip, &expr_sin, expr_sum, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSin(scip, &expr_sin, expr_sum, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprProduct(scip, &expr_prod, 1, &expr_exp, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprChild(scip, expr_prod, expr_sin) );
 
@@ -408,7 +408,7 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPcreateExprSum(scip, &expr_sum, 1, &expr_x, &coef, 0.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr_sum, expr_y, 1.0) );
    SCIP_CALL( SCIPcreateExprExp(scip, &expr_exp, expr_sum, NULL, NULL) );
-   SCIP_CALL( SCIPcreateConsExprExprSin(scip, &expr_sin, expr_sum, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprSin(scip, &expr_sin, expr_sum, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprProduct(scip, &expr_prod, 1, &expr_exp, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprChild(scip, expr_prod, expr_sin) );
 

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_abs.c
+/**@file   expr_abs.c
  * @brief  absolute expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -40,6 +40,87 @@
  * Local methods
  */
 
+/** computes both tangent underestimates and secant */
+static
+SCIP_RETCODE computeCutsAbs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< absolute expression */
+   SCIP_INTERVAL*        bounds,             /**< bounds for children */
+   SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
+   SCIP_Real**           coefs,              /**< buffer to store coefficients of computed estimators */
+   SCIP_Real*            constant,           /**< buffer to store constant of computed estimators */
+   int*                  nreturned           /**< buffer to store number of estimators that have been computed */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   *nreturned = 0;
+   /* compute left tangent -x <= z */
+   if( ! overestimate )
+   {
+      coefs[*nreturned][0] = -1.0;
+      constant[*nreturned] = 0.0;
+      (*nreturned)++;
+   }
+
+   /* compute right tangent x <= z */
+   if( ! overestimate )
+   {
+      coefs[*nreturned][0] = -1.0;
+      constant[*nreturned] = 0.0;
+      (*nreturned)++;
+   }
+
+   /* compute secant */
+   if( overestimate )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      lb = bounds[0].inf;
+      ub = bounds[0].sup;
+
+      /* it does not make sense to add a cut if child variable is unbounded or fixed */
+      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, lb, ub) )
+      {
+         if( !SCIPisPositive(scip, ub) )
+         {
+            /* z = -x, so add z <= -x here (-x <= z is the underestimator that is added above) */
+            coefs[*nreturned][0] = -1.0;
+            constant[*nreturned] = 0.0;
+            (*nreturned)++;
+         }
+         else if( !SCIPisNegative(scip, lb) )
+         {
+            /* z =  x, so add z <= x here (x <= z is the underestimator that is added above) */
+            coefs[*nreturned][0] = 1.0;
+            constant[*nreturned] = 0.0;
+            (*nreturned)++;
+         }
+         else
+         {
+            /* z = abs(x), x still has mixed sign */
+            SCIP_Real alpha;
+
+            /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
+             *
+             * z - |ub| <= alpha * (x - ub)  <=> z <= alpha * x + |ub| - alpha * ub
+             */
+            alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
+
+            coefs[*nreturned][0] = alpha;
+            constant[*nreturned] = REALABS(ub) - alpha * ub;
+            (*nreturned)++;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of expression handler
@@ -55,7 +136,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyAbs)
    SCIP_EXPR* child;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
@@ -182,11 +262,12 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
 
    if( !overestimate )
    {
+      *constant = 0.0;
+
       if( refpoint[0] <= 0.0 )
          *coefs = -1.0;
       else
          *coefs = 1.0;
-      *constant = 0.0;
 
       *islocal = FALSE;
       *branchcand = FALSE;
@@ -254,87 +335,6 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
    return SCIP_OKAY;
 }
 
-/** computes both tangent underestimates and secant */
-static
-SCIP_RETCODE computeCutsAbs(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< absolute expression */
-   SCIP_INTERVAL*        bounds,             /**< bounds for children */
-   SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
-   SCIP_Real**           coefs,              /**< buffer to store coefficients of computed estimators */
-   SCIP_Real*            constant,           /**< buffer to store constant of computed estimators */
-   int*                  nreturned           /**< buffer to store number of estimators that have been computed */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-   assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-
-   *nreturned = 0;
-   /* compute left tangent -x <= z */
-   if( ! overestimate )
-   {
-      coefs[*nreturned][0] = -1.0;
-      constant[*nreturned] = 0.0;
-      (*nreturned)++;
-   }
-
-   /* compute right tangent x <= z */
-   if( ! overestimate )
-   {
-      coefs[*nreturned][0] = -1.0;
-      constant[*nreturned] = 0.0;
-      (*nreturned)++;
-   }
-
-   /* compute secant */
-   if( overestimate )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      lb = bounds[0].inf;
-      ub = bounds[0].sup;
-
-      /* it does not make sense to add a cut if child variable is unbounded or fixed */
-      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, lb, ub) )
-      {
-         if( !SCIPisPositive(scip, ub) )
-         {
-            /* z = -x, so add z <= -x here (-x <= z is the underestimator that is added above) */
-            coefs[*nreturned][0] = -1.0;
-            constant[*nreturned] = 0.0;
-            (*nreturned)++;
-         }
-         else if( !SCIPisNegative(scip, lb) )
-         {
-            /* z =  x, so add z <= x here (x <= z is the underestimator that is added above) */
-            coefs[*nreturned][0] = 1.0;
-            constant[*nreturned] = 0.0;
-            (*nreturned)++;
-         }
-         else
-         {
-            /* z = abs(x), x still has mixed sign */
-            SCIP_Real alpha;
-
-            /* let alpha = (|ub|-|lb|) / (ub-lb) then the resulting secant looks like
-             *
-             * z - |ub| <= alpha * (x - ub)  <=> z <= alpha * x + |ub| - alpha * ub
-             */
-            alpha = (REALABS(ub) - REALABS(lb)) / (ub - lb);
-
-            coefs[*nreturned][0] = alpha;
-            constant[*nreturned] = REALABS(ub) - alpha * ub;
-            (*nreturned)++;
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** expression estimate initialization callback */
 static
 SCIP_DECL_EXPRINITESTIMATES(initEstimateAbs)
@@ -357,7 +357,6 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropAbs)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-   assert(nreductions != NULL);
    assert(bounds.inf >= 0.0);  /* bounds should have been intersected with activity, which is >= 0 */
 
    /* abs(x) in I -> x \in (-I \cup I) \cap bounds(x) */
@@ -517,7 +516,7 @@ SCIP_RETCODE SCIPcreateExprAbs(
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
+   assert(SCIPfindExprHdlr(scip, EXPRHDLR_NAME) != NULL);
 
    SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownerdatacreate, ownerdatacreatedata) );
 

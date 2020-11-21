@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_abs.h
+/**@file   expr_abs.h
  * @brief  absolute expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller

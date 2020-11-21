@@ -799,7 +799,7 @@ SCIP_DECL_EXPRINITESTIMATES(initEstimatesSum)
    assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    assert(coefs[0] != NULL);
-   assert(constant[0] != NULL);
+   assert(constant != NULL);
    assert(nreturned != NULL);
 
    exprdata = SCIPexprGetData(expr);

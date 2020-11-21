@@ -13,19 +13,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_sin.h
+/**@file   expr_sin.h
  * @brief  handler for sin expressions
  * @author Fabian Wegscheider
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_SIN_H__
-#define __SCIP_CONS_EXPR_SIN_H__
+#ifndef __SCIP_EXPR_SIN_H__
+#define __SCIP_EXPR_SIN_H__
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_sin.h"
+#include "scip/type_expr.h"
 
 #define NEWTON_NITERATIONS    100
 #define NEWTON_PRECISION      1e-12
@@ -36,18 +35,18 @@ extern "C" {
 
 /** creates the handler for sin expressions and includes it into the expression constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrSin(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrSin(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates a sin expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprSin(
+SCIP_RETCODE SCIPcreateExprSin(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< single child */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< single child */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 /** helper function to compute the new interval for child in reverse propagation */
@@ -73,8 +72,7 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
 SCIP_EXPORT
 SCIP_Bool SCIPcomputeEstimatorsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
+   SCIP_EXPR*            expr,               /**< sin or cos expression */
    SCIP_Real*            lincoef,            /**< buffer to store the linear coefficient */
    SCIP_Real*            linconst,           /**< buffer to store the constant term */
    SCIP_Real             refpoint,           /**< point at which to underestimate (can be SCIP_INVALID) */
@@ -95,16 +93,13 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sin or cos expression */
-   SCIP_ROWPREP**        secant,             /**< pointer to store the secant */
-   SCIP_ROWPREP**        ltangent,           /**< pointer to store the left tangent */
-   SCIP_ROWPREP**        rtangent,           /**< pointer to store the right tangent */
-   SCIP_ROWPREP**        lmidtangent,        /**< pointer to store the left middle tangent */
-   SCIP_ROWPREP**        rmidtangent,        /**< pointer to store the right middle tangent */
+   SCIP_EXPR*            expr,               /**< sin or cos expression */
    SCIP_Real             childlb,            /**< lower bound of child variable */
    SCIP_Real             childub,            /**< upper bound of child variable */
-   SCIP_Bool             underestimate       /**< whether the cuts should be underestimating */
+   SCIP_Bool             underestimate,      /**< whether the cuts should be underestimating */
+   SCIP_Real**           coefs,              /**< buffer to store coefficients of computed estimators */
+   SCIP_Real*            constant,           /**< buffer to store constant of computed estimators */
+   int*                  nreturned           /**< buffer to store number of estimators that have been computed */
    );
 
 /* helper function that computs the curvature of a sine expression for given bounds and curvature of child */
@@ -119,4 +114,4 @@ SCIP_EXPRCURV SCIPcomputeCurvatureSin(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_SIN_H__ */
+#endif /* __SCIP_EXPR_SIN_H__ */

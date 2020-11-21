@@ -222,10 +222,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
    SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
    SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
    SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
    SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
    SCIP_CALL( SCIPincludeExprHdlrSignpower(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
    SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
    SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
