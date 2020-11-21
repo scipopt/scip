@@ -189,7 +189,21 @@ SCIP_RETCODE addCut(
    return SCIP_OKAY;
 }
 
-/** searches and adds mixing cuts that are violated by the given solution value array */
+/** searches and adds mixing cuts that are violated by the given solution value array
+ *
+ *  This function implements a separation heuristic that runs in linear time in comparison to the quadratic exact
+ *  algorithm in Atamturk et al.:
+ *  - Lower and upper bounds are considered separately. Then possible conflict cuts.
+ *  - Variable lower/upper bounds data are collected, i.e., the corresponding binary variables and coefficients.
+ *  - These lists are sorted non-increasingly according to the solution values.
+ *  - Then binary variables are added in turn as long as their coefficients increase in order to make the coefficients
+ *    nonnegative.  This clearly makes the cuts heuristic, since it is order dependent, but also sparser.
+ *  - The procedure stops as soon as it reaches 0 solution values.
+ *  - If the cut is efficious it is added.
+ *
+ *  @todo Check whether one wants to sort according to the quotient of solution values and coefficients to increase the
+ *  chance of having smaller coefficients in the front.
+ */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -335,7 +349,7 @@ SCIP_RETCODE separateCuts(
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j = 0; j < nvlb; j++ )
       {
-         /* consider only active and binary variable */
+         /* consider only active and binary variables */
          if( SCIPvarIsBinary(vlbvars[j]) && SCIPvarGetProbindex(vlbvars[j]) >= 0 )
          {
             SCIP_Real maxactivity;
@@ -402,7 +416,7 @@ SCIP_RETCODE separateCuts(
 
          solval = vlbmixsols[j];
 
-         /* stop if we can not find a violated cut */
+         /* stop if we can not find a violated cut or we reached 0 solution values */
          if( activity + solval * (maxabscoef - lastcoef) < 0.0 || SCIPisFeasZero(scip, solval) )
             break;
          else
@@ -489,7 +503,7 @@ SCIP_RETCODE separateCuts(
       /* extract the useful variable bounds information (binary and nonredundant) */
       for( j = 0; j < nvub; j++ )
       {
-         /* consider only active and binary variable */
+         /* consider only active and binary variables */
          if( SCIPvarIsBinary(vubvars[j]) && SCIPvarGetProbindex(vubvars[j]) >= 0 )
          {
             SCIP_Real minactivity;
@@ -555,6 +569,7 @@ SCIP_RETCODE separateCuts(
 
          solval = vubmixsols[j];
 
+         /* stop if we can not find a violated cut or we reached 0 solution values */
          if( activity + solval * (maxabscoef - lastcoef) < 0.0 || SCIPisFeasZero(scip, solval) )
             break;
          else
