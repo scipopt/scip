@@ -628,16 +628,16 @@ CONFLICT:
    }
 
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &vlbmixcoefs);
-   SCIPfreeBufferArray(scip, &vlbmixsols);
-   SCIPfreeBufferArray(scip, &vlbmixinds);
-   SCIPfreeBufferArray(scip, &vlbmixsigns);
-   SCIPfreeBufferArray(scip, &vubmixcoefs);
-   SCIPfreeBufferArray(scip, &vubmixsols);
-   SCIPfreeBufferArray(scip, &vubmixinds);
-   SCIPfreeBufferArray(scip, &vubmixsigns);
-   SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &cutinds);
+   SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &vubmixsigns);
+   SCIPfreeBufferArray(scip, &vubmixinds);
+   SCIPfreeBufferArray(scip, &vubmixsols);
+   SCIPfreeBufferArray(scip, &vubmixcoefs);
+   SCIPfreeBufferArray(scip, &vlbmixsigns);
+   SCIPfreeBufferArray(scip, &vlbmixinds);
+   SCIPfreeBufferArray(scip, &vlbmixsols);
+   SCIPfreeBufferArray(scip, &vlbmixcoefs);
 
    return SCIP_OKAY;
 }
