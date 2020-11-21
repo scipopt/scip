@@ -160,24 +160,27 @@ SCIP_RETCODE addCut(
    /* flush all changes before adding the cut */
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
-   /* set cut rank */
-   SCIProwChgRank(cut, 1);
+   if ( SCIPisCutEfficacious(scip, NULL, cut) )
+   {
+      /* set cut rank */
+      SCIProwChgRank(cut, 1);
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "-> found cut: ");
-   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+      SCIPdebugMsg(scip, "-> found cut: ");
+      SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
-   if( cutislocal )
-   {
-      /* local cuts are added to the sepastore */
-      SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
+      if( cutislocal )
+      {
+         /* local cuts are added to the sepastore */
+         SCIP_CALL( SCIPaddRow(scip, cut, FALSE, cutoff) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+      }
+      (*ncuts)++;
    }
-   else
-   {
-      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-   }
-   (*ncuts)++;
 
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
