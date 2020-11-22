@@ -680,8 +680,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
             suborbitope[row][2] = perm[idx1];
             ++nintersections;
 
-            (*nusedelems)[idx1] += 1;
-            (*nusedelems)[perm[idx1]] += 1;
+            ++(*nusedelems)[idx1];
+            ++(*nusedelems)[perm[idx1]];
 
             /* if an element appears too often in the orbitope matrix */
             if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )
@@ -703,8 +703,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
             suborbitope[row][2] = perm[idx2];
             ++nintersections;
 
-            (*nusedelems)[idx2] += 1;
-            (*nusedelems)[perm[idx2]] += 1;
+            ++(*nusedelems)[idx2];
+            ++(*nusedelems)[perm[idx2]];
 
             /* if an element appears too often in the orbitope matrix */
             if ( (*nusedelems)[idx2] > 2 || (*nusedelems)[perm[idx2]] > 2 )
@@ -730,8 +730,8 @@ SCIP_RETCODE SCIPextendSubOrbitope(
             suborbitope[row][nfilledcols] = perm[idx1];
             ++nintersections;
 
-            (*nusedelems)[idx1] += 1;
-            (*nusedelems)[perm[idx1]] += 1;
+            ++(*nusedelems)[idx1];
+            ++(*nusedelems)[perm[idx1]];
 
             /* if an element appears to often in the orbitope matrix */
             if ( (*nusedelems)[idx1] > 2 || (*nusedelems)[perm[idx1]] > 2 )

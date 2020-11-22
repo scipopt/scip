@@ -2888,12 +2888,12 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    )
 {  /*lint --e{571}*/
    SCIP_Bool* usedperm;
-   int nusedperms;
+   SCIP_Bool foundperm = FALSE;
+   int nusedperms = 0;
    int nfilledcols;
    int coltoextend;
    int ntestedperms = 0;
    int row = 0;
-   SCIP_Bool foundperm = FALSE;
    int j;
 
    assert( scip != NULL );
@@ -2913,7 +2913,6 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
 
    /* whether a permutation was considered to contribute to orbitope */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &usedperm, nactiveperms) );
-   nusedperms = 0;
 
    /* fill first two columns of orbitopevaridx matrix */
 
@@ -3137,7 +3136,7 @@ SCIP_RETCODE buildSubgroupGraph(
    int**                 usedperms,          /**< buffer to store the indices of permutations that were used */
    int*                  nusedperms,         /**< pointer to store the number of used permutations in the graph */
    int                   usedpermssize,      /**< initial size of usedperms */
-   SCIP_Shortbool*       permused            /**< initialized buffer to store which permutations have beend used
+   SCIP_Shortbool*       permused            /**< initialized buffer to store which permutations have been used
                                               *   (identified by index in component) */
    )
 {
@@ -3717,6 +3716,8 @@ SCIP_RETCODE addWeakSBCsSubgroup(
    assert( ! storelexorder || nvarsorder != NULL );
    assert( ! storelexorder || maxnvarsorder != NULL );
 
+   *naddedconss = 0;
+
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &usedvars, propdata->npermvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varfound, propdata->npermvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &orbit[0], propdata->npermvars) );
@@ -3830,13 +3831,13 @@ SCIP_RETCODE addWeakSBCsSubgroup(
             *nvarsorder = 0;
 
             SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
-            (*lexorder)[*nvarsorder++] = orbit[activeorb][0];
+            (*lexorder)[(*nvarsorder)++] = orbit[activeorb][0];
          }
          else
          {
             assert( *nvarsorder == *maxnvarsorder );
 
-            *maxnvarsorder += 1;
+            ++(*maxnvarsorder);
 
             SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lexorder, *nvarsorder, *maxnvarsorder) );
 
@@ -4000,8 +4001,8 @@ int getNOrbitopesInComp(
       /* we have found an orbitope */
       if ( k == compcolorbegins[j+1] )
       {
-         int ncols;
          SCIP_Real threshold;
+         int ncols;
 
          ++norbitopes;
          ncols = graphcompbegins[compcolorbegins[j] + 1] - graphcompbegins[compcolorbegins[j]];
@@ -4017,7 +4018,7 @@ int getNOrbitopesInComp(
       }
    }
 
-   if ( (norbitopes == 1 && oneorbitopecriterion) || ( norbitopes >= 2 && multorbitopecriterion) )
+   if ( (norbitopes == 1 && oneorbitopecriterion) || (norbitopes >= 2 && multorbitopecriterion) )
       return norbitopes;
 
    return 0;
@@ -4413,11 +4414,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
             nstrongsbcs += graphcompbegins[largestcolorcomp+1] - graphcompbegins[largestcolorcomp] - 1;
 #endif
          }
-         /* otherwise, just mark the color as not handled */
          else if ( ! orbitopeadded )
          {
             SCIPdebugMsg(scip, "      no useable orbitope found and no SBCs added\n");
 
+            /* mark the color as not handled */
             if ( propdata->addweaksbcs )
             {
                assert( chosencomppercolor != NULL );
