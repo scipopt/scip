@@ -457,10 +457,8 @@ SCIP_RETCODE computeStandardNLPOptimalityCut(
 
    (*success) = FALSE;
 
-   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL
-         && row2idx == NULL && var2idx == NULL)
-      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL
-         && row2idx != NULL && var2idx != NULL) )
+   if( !(primalvals == NULL && consdualvals == NULL && varlbdualvals == NULL && varubdualvals == NULL && row2idx == NULL && var2idx == NULL)
+      && !(primalvals != NULL && consdualvals != NULL && varlbdualvals != NULL && varubdualvals != NULL && row2idx != NULL && var2idx != NULL) ) /*lint !e845*/
    {
       SCIPerrorMessage("The optimality cut must generated from either a SCIP instance or all of the dual solutions and indices must be supplied");
       (*success) = FALSE;
@@ -657,7 +655,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
       addcut = benderscutdata->addcuts;
 
    /* setting the name of the generated cut */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%" SCIP_LONGINT_FORMAT, probnumber,
       SCIPbenderscutGetNFound(benderscut) );
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);

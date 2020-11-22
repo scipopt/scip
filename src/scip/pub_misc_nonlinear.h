@@ -38,6 +38,7 @@ extern "C" {
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
+SCIP_EXPORT
 SCIP_Real SCIPconsNonlinearGetRhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
@@ -48,6 +49,7 @@ SCIP_Real SCIPconsNonlinearGetRhs(
  *
  *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
  */
+SCIP_EXPORT
 SCIP_Real SCIPconsNonlinearGetLhs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to get left-hand side for */
@@ -55,6 +57,7 @@ SCIP_Real SCIPconsNonlinearGetLhs(
    );
 
 /** adds the given variable to the input constraint. */
+SCIP_EXPORT
 SCIP_RETCODE SCIPconsNonlinearAddLinearCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint for which row is queried */

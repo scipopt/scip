@@ -1249,21 +1249,16 @@ SCIP_RETCODE initLP(
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
 
-         if( SCIPvarIsInitial(var) )
+         if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || !SCIPcolIsInLP(SCIPvarGetCol(var))) )
          {
-            SCIP_COL* col;
-
-            col = SCIPvarGetCol(var);
-            if( col == NULL || ! SCIPcolIsInLP(col) )
-            {
-               SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-            }
+            SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
          }
 
          /* check for empty domains (necessary if no presolving was performed) */
          if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             *cutoff = TRUE;
       }
+      assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       /* inform pricing storage, that initial LP setup is now finished */
@@ -2216,7 +2211,7 @@ SCIP_RETCODE SCIPpriceLoop(
    /* set information, whether the current lp is a valid relaxation of the current problem */
    SCIPlpSetIsRelax(lp, !(*aborted));
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** separates cuts of the cut pool */
@@ -2346,7 +2341,6 @@ SCIP_RETCODE priceAndCutLoop(
       maxnsepastallrounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
-   /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
          set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );
@@ -2829,8 +2823,8 @@ SCIP_RETCODE priceAndCutLoop(
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
       (*cutoff || *unbounded) ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob));
 
-   return SCIP_OKAY;
-}  /*lint !e438*/
+   return SCIP_OKAY; /*lint !e438*/
+}
 
 /** updates the current lower bound with the pseudo objective value, cuts off node by bounding, and applies conflict
  *  analysis if the pseudo objective lead to the cutoff

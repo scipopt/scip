@@ -30,7 +30,7 @@ set(SCIP_VERSION_MAJOR 7)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 1)
 set(SCIP_VERSION_SUB 3)
-set(SCIP_VERSION_API 68)
+set(SCIP_VERSION_API 74)
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(hasParent)
@@ -73,7 +73,9 @@ option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(WORHP "should worhp be linked" OFF)
-option(PARASCIP "should scip be compiled thread safe" OFF)
+# for backward compability
+option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
+option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
 option(LEGACY "build SCIP/SoPlex in legacy mode (spx1 interface)" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
@@ -151,9 +153,9 @@ else()
     message(FATAL_ERROR "EXPRINT option has wrong value")
 endif()
 
-#if tpi is not none force parascip to on
+# if tpi is not none force THREADSAFE to on
 if(NOT (TPI STREQUAL "none"))
-   set(PARASCIP ON FORCE)
+   set(THREADSAFE ON FORCE)
 endif()
 
 #set sources files, libraries and defines for tpi
@@ -177,9 +179,14 @@ else()
     message(FATAL_ERROR "TPI option has wrong value")
 endif()
 
-#set nparascip define if parascip is off
-if(NOT PARASCIP)
-    set(NPARASCIP on)
+# PARASCIP is deprecated, use THREADSAFE
+if(PARASCIP)
+  set(THREADSAFE ON FORCE)
+endif()
+
+#set SCIP_THREADSAFE define
+if(THREADSAFE)
+    set(SCIP_THREADSAFE on)
 endif()
 
 set(NEWLINE "\\\\n")
@@ -465,7 +472,7 @@ else()
         if(MS_ROUNDING)
             set(SCIP_ROUNDING_MS on)
         else()
-            warning("cannot figure out how to set rounding mode")
+            message(WARNING "cannot figure out how to set rounding mode")
         endif()
     endif()
 endif()
@@ -501,13 +508,21 @@ add_custom_target(all_executables DEPENDS scip unittests examples applications)
 # use sub directory bin/examples for executables of examples
 #
 set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+if(MSVC)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+else()
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+endif()
 add_subdirectory(examples)
 
 #
 # add applications
 #
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+if(MSVC)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+else()
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+endif()
 add_subdirectory(applications)
 
 #

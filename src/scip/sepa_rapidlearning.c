@@ -856,6 +856,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( SCIPsepaGetNCallsAtNode(sepa) > 0 )
       return SCIP_OKAY;
 
+   /* the information deduced from rapid learning is globally valid only if we are at the root node; thus we can't use
+    * the depth argument of the callback
+    */
    global = (SCIPgetDepth(scip) <= SCIPgetEffectiveRootDepth(scip));
 
    /* check if rapid learning should be applied locally */

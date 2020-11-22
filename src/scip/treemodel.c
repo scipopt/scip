@@ -301,8 +301,9 @@ SCIP_Bool hasBetterRatio(
    /* We evaluate the characteristic polynomial of the variable on the given ratio. */
    result = -1;
    if( leftgain > 0.0 && rightgain > 0.0 )
-      result = pow(branchratio->upratio, rightgain * branchratio->invleft) - 
-	      pow(branchratio->upratio, (rightgain - leftgain) * branchratio->invleft) - 1;
+   {
+      result = pow(branchratio->upratio, rightgain * branchratio->invleft) - pow(branchratio->upratio, (rightgain - leftgain) * branchratio->invleft) - 1; /*lint !e644*/
+   }
 
    /* If the result is positive, then it has a better ratio. */
    return (result > 0.0);
@@ -454,17 +455,16 @@ SCIP_RETCODE selectCandidateUsingRatio(
    /* We initialize bestbranchratio at the default bestcand ratio, since it is likely to have
     * a very good ratio and save evaluations of the ratio for many variables */
    int referencevar = *bestcand;
-   computeVarRatio(scip, treemodel, branchcands[referencevar], mingains[referencevar], maxgains[referencevar],
-		   &bestbranchratio);
+   computeVarRatio(scip, treemodel, branchcands[referencevar], mingains[referencevar], maxgains[referencevar], &bestbranchratio);
 
    for( c = 0; c < nbranchcands; ++c )
    {
       if( (!filterdominated || !dominated[c]) && c != referencevar )
       {
-         if( !bestbranchratio.valid || hasBetterRatio(scip, &bestbranchratio, mingains[c], maxgains[c]) )
+         if( !bestbranchratio.valid || hasBetterRatio(scip, &bestbranchratio, mingains[c], maxgains[c]) ) /*lint !e644*/
          {
             computeVarRatio(scip, treemodel, branchcands[c], mingains[c], maxgains[c], &branchratio);
-            if( branchratio.valid )
+            if( branchratio.valid ) /*lint !e644*/
             {
                *bestcand = c;
                bestbranchratio = branchratio;
@@ -549,8 +549,8 @@ SCIP_Real computeSVTS(
             SCIP_RATIO branchratio;
             computeVarRatio(scip, treemodel, var, mingain, maxgain, &branchratio);
 
-            if( branchratio.valid )
-               prediction = treesize * pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft);
+            if( branchratio.valid ) /*lint !e644*/
+               prediction = treesize * pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft); /*lint !e644*/
          }
       }
       else
@@ -659,9 +659,9 @@ SCIP_Real integerpow(
    SCIP_Real             a,                  /**< the base */
    int                   b                   /**< the integer exponent */
    )
-{
+{  /*lint --e{644}*/
    SCIP_Real ans;
-  
+
    ans = 1.0;
    for( ; b; b /= 2 )
    {
@@ -691,8 +691,8 @@ SCIP_Real computeSampleTreesize(
 
    computeVarRatio(scip, treemodel, var, leftgain, rightgain, &branchratio);
 
-   if( branchratio.valid )
-   {
+   if( branchratio.valid ) /*lint !e644*/
+   {  /*lint --e{644}*/
       SCIP_Real phi_l = branchratio.upratio;
       SCIP_Real phi_r = pow(branchratio.upratio, rightgain * branchratio.invleft);
       int kl = (int)ceil(absgap / leftgain);
@@ -893,6 +893,7 @@ SCIP_Bool SCIPtreemodelIsEnabled(
    SCIP_TREEMODEL*       treemodel           /**< Treemodel parameter data structure */
    )
 {
+   assert(scip != NULL);
    return treemodel->enabled;
 }
 

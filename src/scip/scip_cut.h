@@ -362,6 +362,7 @@ SCIP_RETCODE SCIPseparateSolCutpool(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTPOOL*         cutpool,            /**< cut pool */
    SCIP_SOL*             sol,                /**< solution to be separated */
+   SCIP_Bool             pretendroot,        /**< should the cut separators be called as if we are at the root node? */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 

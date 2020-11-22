@@ -3972,6 +3972,7 @@ SCIP_RETCODE exprUnconvertPolynomial(
             {
                /* monomial is a linear term */
                assert(quaddata->lincoefs != NULL);
+               /* coverity[var_deref_op] */
                quaddata->lincoefs[polynomialdata->monomials[i]->childidxs[0]] += polynomialdata->monomials[i]->coef;
             }
             else
@@ -5144,8 +5145,9 @@ SCIP_RETCODE exprParse(
 
    /* find the end of this expression
     * a '+' right at the beginning indicates a coefficient, not treated here, or a summation
+    * a '+' or '-' that follows an 'e' or 'E' indicates that we are in the middle of a number, so it doesn't separate terms
     */
-   while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str) )
+   while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str && subexpptr[-1] != 'e' && subexpptr[-1] != 'E') )
    {
       if( subexpptr[0] == '(')
          ++nopenbrackets;
@@ -11967,6 +11969,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       /* coverity[var_deref_op] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
          userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 

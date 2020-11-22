@@ -1378,7 +1378,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    intcap = (int)capacity;
    assert(intcap >= 0);
    assert(nmyitems > 0);
-   assert(sizeof(size_t) >= sizeof(int)); /* no following conversion should be messed up */
+   assert(sizeof(size_t) >= sizeof(int)); /*lint !e506*/ /* no following conversion should be messed up */
 
    /* this condition checks whether we will try to allocate a correct number of bytes and do not have an overflow, while
     * computing the size for the allocation
@@ -4903,7 +4903,7 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5070,7 +5070,7 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 
@@ -5197,7 +5197,7 @@ SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
       }
       else
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%" SCIP_LONGINT_FORMAT "", *ncuts);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%d", *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, FALSE, FALSE, TRUE) );
       }
 

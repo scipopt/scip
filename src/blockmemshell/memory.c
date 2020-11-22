@@ -55,7 +55,7 @@
  * checks enabled with the defines below.
  * The maintenance of the memlist, however, is not threadsafe.
  */
-#ifdef NPARASCIP
+#ifndef SCIP_THREADSAFE
 /*#define ENABLE_MEMLIST_CHECKS*/
 #endif
 
@@ -762,7 +762,7 @@ void BMSalignMemsize(
    size_t*               size                /**< pointer to the size to align */
    )
 {
-   assert(ALIGNMENT == sizeof(void*));
+   assert(ALIGNMENT == sizeof(void*)); /*lint !e506*/
    alignSize(size);
 }
 
@@ -771,7 +771,7 @@ int BMSisAligned(
    size_t                size                /**< size to check for alignment */
    )
 {
-   assert(ALIGNMENT == sizeof(void*));
+   assert(ALIGNMENT == sizeof(void*)); /*lint !e506*/
    return( size >= ALIGNMENT && size % ALIGNMENT == 0 );
 }
 
@@ -1062,7 +1062,7 @@ int createChunk(
 
    /* the store is allocated directly behind the chunk header */
    newchunk->store = (void*) ((char*) newchunk + sizeof(CHUNK));
-   newchunk->storeend = (void*) ((char*) newchunk->store + storesize * chkmem->elemsize);
+   newchunk->storeend = (void*) ((char*) newchunk->store + (ptrdiff_t)storesize * chkmem->elemsize);
    newchunk->eagerfree = NULL;
    newchunk->nexteager = NULL;
    newchunk->preveager = NULL;
@@ -1072,7 +1072,7 @@ int createChunk(
    newchunk->eagerfreesize = 0;
 
    if( memsize != NULL )
-      (*memsize) += ((long long)(sizeof(CHUNK) + (long long)storesize * chkmem->elemsize));
+      (*memsize) += ((long long)((long long)sizeof(CHUNK) + (long long)storesize * chkmem->elemsize));
 
    debugMessage("allocated new chunk %p: %d elements with size %d\n", (void*)newchunk, newchunk->storesize, newchunk->elemsize);
 
@@ -1081,11 +1081,11 @@ int createChunk(
     */
    for( i = 0; i < newchunk->storesize - 1; ++i )
    {
-      freelist = (FREELIST*) newchunk->store + i * chkmem->elemsize / sizeof(FREELIST*); /*lint !e573 !e647*/
-      freelist->next = (FREELIST*) newchunk->store + (i + 1) * chkmem->elemsize / sizeof(FREELIST*); /*lint !e573 !e647*/
+      freelist = (FREELIST*) newchunk->store + (ptrdiff_t)i * chkmem->elemsize / (ptrdiff_t)sizeof(FREELIST*); /*lint !e573 !e647*/
+      freelist->next = (FREELIST*) newchunk->store + ((ptrdiff_t)i + 1) * chkmem->elemsize / (ptrdiff_t)sizeof(FREELIST*); /*lint !e573 !e647*/
    }
 
-   freelist = (FREELIST*) newchunk->store + (newchunk->storesize - 1) * chkmem->elemsize / sizeof(FREELIST*); /*lint !e573 !e647*/
+   freelist = (FREELIST*) newchunk->store + ((ptrdiff_t) newchunk->storesize - 1) * chkmem->elemsize / (ptrdiff_t)sizeof(FREELIST*); /*lint !e573 !e647*/
    freelist->next = chkmem->lazyfree;
    chkmem->lazyfree = (FREELIST*) (newchunk->store);
    chkmem->lazyfreesize += newchunk->storesize;
@@ -1414,7 +1414,7 @@ void garbagecollectChkmem(
    checkChkmem(chkmem);
 }
 
-/** frees a memory element and returns it to the lazy freelist of the chunk block */
+/** frees a memory element and returns it to the lazy freelist of the chunk block */ /*lint -e715*/
 static
 void freeChkmemElement(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
@@ -1896,6 +1896,23 @@ void* BMSallocBlockMemory_call(
 #endif
 
    return BMSallocBlockMemory_work(blkmem, size, filename, line);
+}
+
+/** allocates memory in the block memory pool and clears it */
+void* BMSallocClearBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   ptr = BMSallocBlockMemory_call(blkmem, size, filename, line);
+   if( ptr != NULL )
+      BMSclearMemorySize(ptr, size);
+
+   return ptr;
 }
 
 /** allocates array in the block memory pool */

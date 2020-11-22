@@ -461,6 +461,7 @@ SCIP_RETCODE SCIPregForestFromFile(
    const char*           filename            /**< name of file with the regression forest data */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_FILE* file;
    SCIP_REGFOREST* regforestptr;
    char buffer[SCIP_MAXSTRLEN];
@@ -490,6 +491,7 @@ SCIP_RETCODE SCIPregForestFromFile(
       goto CLOSEFILE;
    }
 
+   /* coverity[secure_coding] */
    sscanret = sscanf(buffer, firstlineformat, &ntrees, &dim, &size);
 
    if( sscanret != 3 )
@@ -517,13 +519,14 @@ SCIP_RETCODE SCIPregForestFromFile(
    }
 
    /* allocate memory in regression forest data structure */
-   SCIP_ALLOC( BMSallocMemory(regforest) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemory(regforest), FREEFOREST );
+   BMSclearMemory(*regforest);
    regforestptr = *regforest;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->nbegin, ntrees) );
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->child, 2 * size) ); /*lint !e647*/
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->splitidx, size) );
-   SCIP_ALLOC( BMSallocMemoryArray(&regforestptr->value, size) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->nbegin, ntrees), FREEFOREST );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->child, 2 * size), FREEFOREST ); /*lint !e647*/
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->splitidx, size), FREEFOREST );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&regforestptr->value, size), FREEFOREST );
 
    regforestptr->dim = dim;
    regforestptr->size = size;
@@ -571,13 +574,20 @@ SCIP_RETCODE SCIPregForestFromFile(
       ++pos;
    }
 
- CLOSEFILE:
+   goto CLOSEFILE;
+
+/* insufficient memory for allocating regression forest */
+FREEFOREST:
+   assert(retcode == SCIP_NOMEMORY);
+   SCIPregForestFree(regforest);
+
+CLOSEFILE:
    SCIPfclose(file);
 
    if( error )
-      return SCIP_INVALIDDATA;
+      retcode = SCIP_INVALIDDATA;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** compare two tree profile statistics for equality */
@@ -732,9 +742,10 @@ SCIP_RETCODE updateTreeProfile(
 
    nodedepthcnt = ++treeprofile->profile[nodedepth];
 
-   /* Is this level full explored? We assume binary branching. The first condition ensures that the bit shift operation
+   /* Is this level fully explored? We assume binary branching. The first condition ensures that the bit shift operation
     * of the second condition represents a feasible power of unsigned int. The largest power of 2 representable
-    * by unsigned int is 2^{8*sizeof(unsigned int) - 1} */
+    * by unsigned int is 2^{8*sizeof(unsigned int) - 1}. */
+   /* coverity[overflow_before_widen] */
    if( (unsigned int)nodedepth < 8*sizeof(unsigned int) && nodedepthcnt == (1U << nodedepth) )/*lint !e647*/
    {
       SCIPdebugMsg(scip, "Level %d fully explored: %" SCIP_LONGINT_FORMAT " nodes\n", nodedepth, nodedepthcnt);
@@ -936,9 +947,14 @@ void subtreeSumGapFree(
    )
 {
    assert(scip != NULL);
-   assert(ssg != NULL);
 
-   SCIPhashmapFree(&(*ssg)->nodes2info);
+   if( *ssg == NULL )
+      return;
+
+   if( (*ssg)->nodes2info != NULL )
+   {
+      SCIPhashmapFree(&(*ssg)->nodes2info);
+   }
 
    /* delete all subtree data */
    subtreeSumGapDelSubtrees(scip, *ssg);
@@ -1543,7 +1559,9 @@ void freeTreeData(
    )
 {
    assert(scip != NULL);
-   assert(treedata != NULL);
+
+   if( *treedata == NULL )
+      return;
 
    subtreeSumGapFree(scip, &(*treedata)->ssg);
 
@@ -2055,13 +2073,13 @@ SCIP_Real getEnsembleEstimation(
       estim = 0.0;
       coeffs = coeffs_early;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_early)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
    }
    else if( treedata->weight <= 0.6 )
    {
       coeffs = coeffs_intermediate;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_intermediate)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
 
       /* initialize by intermediate WBE coefficient */
       estim = 0.156 * treeDataGetWbe(treedata);
@@ -2070,7 +2088,7 @@ SCIP_Real getEnsembleEstimation(
    {
       coeffs = coeffs_late;
       /* ensure that coeffs and time series are still aligned */
-      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES);
+      assert(sizeof(coeffs_late)/sizeof(SCIP_Real) == NTIMESERIES); /*lint !e506*/
 
       /* initialize by late WBE coefficient */
       estim = 0.579 * treeDataGetWbe(treedata);
@@ -2367,10 +2385,6 @@ SCIP_Bool isRestartApplicable(
    if( eventhdlrdata->restartlimit != -1 && eventhdlrdata->nrestartsperformed >= eventhdlrdata->restartlimit )
       return FALSE;
 
-   /* check whether orbital fixing is active */
-   if ( SCIPgetSymmetryNGenerators(scip) > 0 && SCIPisOrbitalfixingEnabled(scip) )
-      return FALSE;
-
    /* check if number of nodes exceeds the minimum number of nodes */
    if( eventhdlrdata->countonlyleaves )
       nnodes = eventhdlrdata->treedata->nleaves;
@@ -2383,13 +2397,13 @@ SCIP_Bool isRestartApplicable(
    return TRUE;
 }
 
-/** should a restart be applied based on the value of the selected completion method? */
+/** should a restart be applied based on the value of the selected completion method? */   /*lint --e{715}*/
 static
 SCIP_Bool shouldApplyRestartCompletion(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real completion;
 
    SCIP_CALL_ABORT( getSearchCompletion(eventhdlrdata, &completion) );
@@ -2860,6 +2874,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_EVENTHDLRDATA* eventhdlrdata = NULL;
    SCIP_EVENTHDLR* eventhdlr = NULL;
 
@@ -2867,7 +2882,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    BMSclearMemory(eventhdlrdata);
 
-   SCIP_CALL( createTreeData(scip, &eventhdlrdata->treedata) );
+   SCIP_CALL_TERMINATE( retcode, createTreeData(scip, &eventhdlrdata->treedata), TERMINATE );
 
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecEstim, eventhdlrdata) );
@@ -2968,7 +2983,15 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputCompleted,
          NULL, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );
 
-   return SCIP_OKAY;
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      freeTreeData(scip, &eventhdlrdata->treedata);
+      SCIPfreeMemory(scip, &eventhdlrdata);
+   }
+
+   return retcode;
 }
 
 /** return an estimation of the final tree size */
@@ -3039,5 +3062,5 @@ SCIP_Real SCIPgetTreesizeEstimation(
    }
 
    assert(tspos != TSPOS_NONE);
-   return timeSeriesEstimate(eventhdlrdata->timeseries[tspos], eventhdlrdata->treedata);
+   return (tspos == TSPOS_NONE ? -1.0 : timeSeriesEstimate(eventhdlrdata->timeseries[tspos], eventhdlrdata->treedata));
 }

@@ -100,7 +100,7 @@ SCIP_RETCODE addCut(
       char cutname[SCIP_MAXSTRLEN];
 
       /* create cut */
-      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%" SCIP_LONGINT_FORMAT "_%d", SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );

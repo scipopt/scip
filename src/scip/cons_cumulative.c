@@ -249,6 +249,7 @@ struct SCIP_ConshdlrData
 /** Propagation rules */
 enum Proprule
 {
+   PROPRULE_0_INVALID            = 0,        /**< invalid inference information */
    PROPRULE_1_CORETIMES          = 1,        /**< core-time propagator */
    PROPRULE_2_EDGEFINDING        = 2,        /**< edge-finder */
    PROPRULE_3_TTEF               = 3         /**< time-table edeg-finding */
@@ -321,6 +322,15 @@ int inferInfoGetData2(
    return (int) inferinfo.val.asbits.data2;
 }
 
+/** returns whether the inference information is valid */
+static
+SCIP_Bool inferInfoIsValid(
+   INFERINFO             inferinfo           /**< inference information to convert */
+   )
+{
+   return (inferinfo.val.asint != 0);
+}
+
 
 /** constructs an inference information out of a propagation rule, an earliest start and a latest completion time */
 static
@@ -332,13 +342,20 @@ INFERINFO getInferInfo(
 {
    INFERINFO inferinfo;
 
-   /* check that the data menber are in the range of the available bits */
-   assert(data1 >= 0 && data1 < (1<<15));
-   assert(data2 >= 0 && data2 < (1<<15));
-
-   inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
-   inferinfo.val.asbits.data1 = (unsigned int) data1; /*lint !e732*/
-   inferinfo.val.asbits.data2 = (unsigned int) data2; /*lint !e732*/
+   /* check that the data members are in the range of the available bits */
+   if( proprule == PROPRULE_0_INVALID || data1 < 0 || data1 >= (1<<15) || data2 < 0 || data2 >= (1<<15) )
+   {
+      inferinfo.val.asint = 0;
+      assert(inferInfoGetProprule(inferinfo) == PROPRULE_0_INVALID);
+      assert(inferInfoIsValid(inferinfo) == FALSE);
+   }
+   else
+   {
+      inferinfo.val.asbits.proprule = proprule; /*lint !e641*/
+      inferinfo.val.asbits.data1 = (unsigned int) data1; /*lint !e732*/
+      inferinfo.val.asbits.data2 = (unsigned int) data2; /*lint !e732*/
+      assert(inferInfoIsValid(inferinfo) == TRUE);
+   }
 
    return inferinfo;
 }
@@ -3288,6 +3305,7 @@ SCIP_RETCODE respropCumulativeCondition(
       break;
    }
 
+   case PROPRULE_0_INVALID:
    default:
       SCIPerrorMessage("invalid inference information %d\n", inferInfoGetProprule(inferinfo));
       SCIPABORT();
@@ -4064,6 +4082,7 @@ SCIP_RETCODE coretimesUpdateLb(
       /* if we found no peak that means current the job could be scheduled at its earliest start time without
        * conflicting to the core resource profile
        */
+      /* coverity[check_after_sink] */
       if( peak == -1 )
          break;
 
@@ -4097,7 +4116,14 @@ SCIP_RETCODE coretimesUpdateLb(
       inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, newlb-1);
 
       /* perform the bound lower bound change */
-      SCIP_CALL( SCIPinferVarLbCons(scip, var, (SCIP_Real)newlb, cons, inferInfoToInt(inferinfo), TRUE, infeasible, &tightened) );
+      if( inferInfoIsValid(inferinfo) )
+      {
+         SCIP_CALL( SCIPinferVarLbCons(scip, var, (SCIP_Real)newlb, cons, inferInfoToInt(inferinfo), TRUE, infeasible, &tightened) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarLb(scip, var, (SCIP_Real)newlb, TRUE, infeasible, &tightened) );
+      }
       assert(tightened);
       assert(!(*infeasible));
 
@@ -4214,6 +4240,7 @@ SCIP_RETCODE coretimesUpdateUb(
       /* if we found no peak that means the current job could be scheduled at its latest start time without conflicting
        * to the core resource profile
        */
+      /* coverity[check_after_sink] */
       if( peak == -1 )
          break;
 
@@ -4232,7 +4259,14 @@ SCIP_RETCODE coretimesUpdateUb(
       inferinfo = getInferInfo(PROPRULE_1_CORETIMES, idx, newub+duration);
 
       /* perform the bound upper bound change */
-      SCIP_CALL( SCIPinferVarUbCons(scip, var, (SCIP_Real)newub, cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+      if( inferInfoIsValid(inferinfo) )
+      {
+         SCIP_CALL( SCIPinferVarUbCons(scip, var, (SCIP_Real)newub, cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarUb(scip, var, (SCIP_Real)newub, TRUE, &infeasible, &tightened) );
+      }
       assert(tightened);
       assert(!infeasible);
 
@@ -5418,9 +5452,17 @@ SCIP_RETCODE propagateTTEF(
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
 
-      SCIP_CALL( SCIPinferVarLbCons(scip, vars[v], (SCIP_Real)newlbs[v], cons, lbinferinfos[v], TRUE, &infeasible, &tightened) );
+      if( inferInfoIsValid(intToInferInfo(lbinferinfos[v])) )
+      {
+         SCIP_CALL( SCIPinferVarLbCons(scip, vars[v], (SCIP_Real)newlbs[v], cons, lbinferinfos[v],
+               TRUE, &infeasible, &tightened) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarLb(scip, vars[v], (SCIP_Real)newlbs[v], TRUE, &infeasible, &tightened) );
+      }
 
-      /* since we change first the lower bound of the variable an infeasibilty should be detected */
+      /* since we change first the lower bound of the variable an infeasibilty should not be detected */
       assert(!infeasible);
 
       if( tightened )
@@ -5431,14 +5473,26 @@ SCIP_RETCODE propagateTTEF(
          SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbTTEF++ );
       }
 
-      SCIP_CALL( SCIPinferVarUbCons(scip, vars[v], (SCIP_Real)newubs[v], cons, ubinferinfos[v], TRUE, &infeasible, &tightened) );
+      if( inferInfoIsValid(intToInferInfo(ubinferinfos[v])) )
+      {
+         SCIP_CALL( SCIPinferVarUbCons(scip, vars[v], (SCIP_Real)newubs[v], cons, ubinferinfos[v],
+               TRUE, &infeasible, &tightened) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPtightenVarUb(scip, vars[v], (SCIP_Real)newubs[v], TRUE, &infeasible, &tightened) );
+      }
 
       /* since upper bound was compute w.r.t. the "old" bound the previous lower bound update together with this upper
        * bound update can be infeasible
        */
       if( infeasible )
       {
-         if( SCIPisConflictAnalysisApplicable(scip) )
+         /* a small performance improvement is possible here: if the tighten...TEFF and propagate...TEFF methods would
+          * return not only the inferinfos, but the actual begin and end values, then the infeasibility here could also
+          * be analyzed in the case when begin and end exceed the 15 bit limit
+          */
+         if( SCIPisConflictAnalysisApplicable(scip) && inferInfoIsValid(intToInferInfo(ubinferinfos[v])) )
          {
             INFERINFO inferinfo;
             SCIP_VAR* var;
@@ -6679,8 +6733,16 @@ SCIP_RETCODE inferboundsEdgeFinding(
                SCIPdebugMsg(scip, "variable <%s> adjust lower bound from %g to %d\n",
                   SCIPvarGetName(leafdata->var), SCIPvarGetLbLocal(leafdata->var), newest + shift);
 
-               SCIP_CALL( SCIPinferVarLbCons(scip, leafdata->var, (SCIP_Real)(newest + shift),
-                     cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+               if( inferInfoIsValid(inferinfo) )
+               {
+                  SCIP_CALL( SCIPinferVarLbCons(scip, leafdata->var, (SCIP_Real)(newest + shift),
+                        cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPtightenVarLb(scip, leafdata->var, (SCIP_Real)(newest + shift),
+                        TRUE, &infeasible, &tightened) );
+               }
 
                /* for the statistic we count the number of times a lower bound was tightened due the edge-finder */
                SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nlbedgefinder++ );
@@ -6693,8 +6755,16 @@ SCIP_RETCODE inferboundsEdgeFinding(
                SCIPdebugMsg(scip, "variable <%s> adjust upper bound from %g to %d\n",
                   SCIPvarGetName(leafdata->var), SCIPvarGetUbLocal(leafdata->var), shift - newest - leafdata->duration);
 
-               SCIP_CALL( SCIPinferVarUbCons(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
-                     cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+               if( inferInfoIsValid(inferinfo) )
+               {
+                  SCIP_CALL( SCIPinferVarUbCons(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
+                        cons, inferInfoToInt(inferinfo), TRUE, &infeasible, &tightened) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPtightenVarUb(scip, leafdata->var, (SCIP_Real)(shift - newest - leafdata->duration),
+                        TRUE, &infeasible, &tightened) );
+               }
 
                /* for the statistic we count the number of times a upper bound was tightened due the edge-finder */
                SCIPstatistic( SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME))->nubedgefinder++ );
@@ -9430,8 +9500,8 @@ SCIP_RETCODE fixIntegerVariableUb(
     * handler is the only one locking that variable up
     */
    assert(uplock == TRUE || uplock == FALSE);
-   assert((int)TRUE == 1);
-   assert((int)FALSE == 0);
+   assert((int)TRUE == 1);  /*lint !e506*/
+   assert((int)FALSE == 0); /*lint !e506*/
 
    if( SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) > (int)(uplock) )
       return SCIP_OKAY;
@@ -9482,8 +9552,8 @@ SCIP_RETCODE fixIntegerVariableLb(
     * handler is the only one locking that variable down
     */
    assert(downlock == TRUE || downlock == FALSE);
-   assert((int)TRUE == 1);
-   assert((int)FALSE == 0);
+   assert((int)TRUE == 1);  /*lint !e506*/
+   assert((int)FALSE == 0); /*lint !e506*/
 
    if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) > (int)(downlock) )
       return SCIP_OKAY;

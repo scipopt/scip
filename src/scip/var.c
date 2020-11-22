@@ -581,7 +581,7 @@ SCIP_RETCODE SCIPboundchgApply(
    var = boundchg->var;
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(!SCIPvarIsIntegral(var) || SCIPsetIsIntegral(set, boundchg->newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, boundchg->newbound));
 
    /* apply bound change */
    switch( boundchg->boundtype )
@@ -1497,13 +1497,13 @@ SCIP_Real adjustedLb(
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
-   if( lb < 0 && SCIPsetIsInfinity(set, -lb) )
+   if( lb < 0.0 && SCIPsetIsInfinity(set, -lb) )
       return -SCIPsetInfinity(set);
-   else if( lb > 0 && SCIPsetIsInfinity(set, lb) )
+   else if( lb > 0.0 && SCIPsetIsInfinity(set, lb) )
       return SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasCeil(set, lb);
-   else if( SCIPsetIsZero(set, lb) )
+   else if( lb > 0.0 && lb < SCIPsetEpsilon(set) )
       return 0.0;
    else
       return lb;
@@ -1517,13 +1517,13 @@ SCIP_Real adjustedUb(
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
-   if( ub > 0 && SCIPsetIsInfinity(set, ub) )
+   if( ub > 0.0 && SCIPsetIsInfinity(set, ub) )
       return SCIPsetInfinity(set);
-   else if( ub < 0 && SCIPsetIsInfinity(set, -ub) )
+   else if( ub < 0.0 && SCIPsetIsInfinity(set, -ub) )
       return -SCIPsetInfinity(set);
    else if( vartype != SCIP_VARTYPE_CONTINUOUS )
       return SCIPsetFeasFloor(set, ub);
-   else if( SCIPsetIsZero(set, ub) )
+   else if( ub < 0.0 && ub > -SCIPsetEpsilon(set) )
       return 0.0;
    else
       return ub;
@@ -2454,7 +2454,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    /* parse string in cip format for variable information */
    SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, endptr, success) );
 
-   if( *success )
+   if( *success ) /*lint !e774*/
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
@@ -2517,7 +2517,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    /* parse string in cip format for variable information */
    SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, endptr, success) );
 
-   if( *success )
+   if( *success ) /*lint !e774*/
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
@@ -3076,7 +3076,7 @@ SCIP_RETCODE SCIPvarAddLocks(
    SCIP_VAR* lockvar;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(var->nlocksup[locktype] >= 0);
    assert(var->nlocksdown[locktype] >= 0);
    assert(var->scip == set->scip);
@@ -3198,7 +3198,7 @@ int SCIPvarGetNLocksDownType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(var->nlocksdown[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -3255,7 +3255,7 @@ int SCIPvarGetNLocksUpType(
    int i;
 
    assert(var != NULL);
-   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568*/
+   assert((int)locktype >= 0 && (int)locktype < (int)NLOCKTYPES); /*lint !e685 !e568 !e587 !e650*/
    assert(var->nlocksup[locktype] >= 0);
 
    switch( SCIPvarGetStatus(var) )
@@ -5075,7 +5075,7 @@ SCIP_RETCODE tryAggregateIntVars(
       b = -b;
       c = -c;
    }
-   assert(0 <= a);
+   assert(a > 0);
 
    /* search upwards from ysol = 0 */
    ysol = 0;
@@ -5140,8 +5140,8 @@ SCIP_RETCODE tryAggregateIntVars(
    /* release z */
    SCIP_CALL( SCIPvarRelease(&aggvar, blkmem, set, eventqueue, lp) );
 
-   return SCIP_OKAY;
-}  /*lint !e438*/
+   return SCIP_OKAY;  /*lint !e438*/
+}
 
 /** performs second step of SCIPaggregateVars():
  *  the variable to be aggregated is chosen among active problem variables x' and y', preferring a less strict variable

@@ -1048,7 +1048,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    }
 
    /* adding the violation variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trustregion_violationvar", i);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregionviolvar", SCIPgetProbName(sourcescip));
    SCIP_CALL( SCIPcreateVarBasic(targetscip, &violvar, name, 0.0, SCIPinfinity(targetscip), violpenalty, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(targetscip, violvar) );
    consvars[nconsvars] = violvar;

@@ -386,25 +386,6 @@ SCIP_RETCODE SCIPunfixParam(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing parameter
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPsetParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   SCIP_CALL( SCIPsetSetParam(scip->set, scip->messagehdlr, name, value) );
-
-   return SCIP_OKAY;
-}
-
 /** changes the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

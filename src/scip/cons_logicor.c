@@ -3235,7 +3235,11 @@ SCIP_RETCODE shortenConss(
             nfixedvars, &redundant, &glbinfeas, TRUE) );
 
       if( glbinfeas )
+      {
+         /* reset redundants array to FALSE */
+         BMSclearMemoryArray(redundants, nbinprobvars);
          goto TERMINATE;
+      }
 
       /* remove redundant constraint */
       if( redundant )
@@ -5033,6 +5037,7 @@ SCIP_DECL_EVENTEXEC(eventExecLogicor)
  * Callback methods of conflict handler
  */
 
+/** conflict processing method of conflict handler (called when conflict was found) */
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
 {  /*lint --e{715}*/

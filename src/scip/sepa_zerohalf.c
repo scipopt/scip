@@ -48,7 +48,6 @@
 #include "string.h"
 #include "scip/sepa_zerohalf.h"
 #include "scip/scipdefplugins.h"
-#include "scip/struct_lp.h"
 
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
@@ -365,12 +364,15 @@ SCIP_RETCODE transformNonIntegralRow(
    /* first add all integral variables to the transformed row and remember their positions in the row */
    for( i = 0; i < rowlen; ++i )
    {
+      int probindex;
+
       if( !SCIPcolIsIntegral(rowcols[i]) )  /*lint !e613*/
          continue;
 
-      transrowvars[transrowlen] = rowcols[i]->var_probindex; /*lint !e613*/
-      transrowvals[transrowlen] = sign * rowvals[i]; /*lint !e613*/
-      intvarpos[rowcols[i]->var_probindex] = ++transrowlen; /*lint !e613*/
+      probindex = SCIPcolGetVarProbindex(rowcols[i]);
+      transrowvars[transrowlen] = probindex;
+      transrowvals[transrowlen] = sign * rowvals[i];
+      intvarpos[probindex] = ++transrowlen;
    }
 
    /* now loop over the non-integral columns of the row and project them out using simple or variable bounds */
@@ -1464,33 +1466,42 @@ void addOrigRow(
 {
    int i;
    SCIP_Real weight = 0.5 * sign;
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   int rowlen;
 
-   for( i = 0; i < row->len; ++i )
+   rowlen = SCIProwGetNNonz(row);
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   for( i = 0; i < rowlen; ++i )
    {
-      int probindex = row->cols[i]->var_probindex;
-      SCIP_Real val = tmpcoefs[probindex];
+      SCIP_Real val;
+      int probindex;
 
+      probindex = SCIPcolGetVarProbindex(rowcols[i]);
+      val = tmpcoefs[probindex];
       if( val == 0.0 )
       {
          nonzeroinds[(*nnz)++] = probindex;
       }
 
-      val += weight * row->vals[i];
+      val += weight * rowvals[i];
       tmpcoefs[probindex] = NONZERO(val);
    }
 
    if( sign == +1 )
    {
-      *cutrhs += weight * SCIPfeasFloor(scip, row->rhs - row->constant);
+      *cutrhs += weight * SCIPfeasFloor(scip, SCIProwGetRhs(row) - SCIProwGetConstant(row));
    }
    else
    {
       assert(sign == -1);
-      *cutrhs += weight * SCIPfeasCeil(scip, row->lhs - row->constant);
+      *cutrhs += weight * SCIPfeasCeil(scip, SCIProwGetLhs(row) - SCIProwGetConstant(row));
    }
 
-   *cutrank = MAX(*cutrank, row->rank);
-   *cutislocal = *cutislocal || row->local;
+   if( SCIProwGetRank(row) > *cutrank )
+      *cutrank = SCIProwGetRank(row);
+   *cutislocal = *cutislocal || SCIProwIsLocal(row);
 }
 
 /** add transformed integral row to aggregation with weight 0.5 */
@@ -1795,7 +1806,7 @@ SCIP_RETCODE generateZerohalfCut(
          assert(allowlocal || !cutislocal);
 
          /* create the cut */
-         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%d_x%d", SCIPgetNLPs(scip), row->index);
+         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "zerohalf%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), row->index);
 
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 
@@ -2150,7 +2161,8 @@ SCIP_RETCODE doSeparation(
    SCIP_SEPA*            sepa,
    SCIP_SOL*             sol,
    SCIP_RESULT*          result,
-   SCIP_Bool             allowlocal
+   SCIP_Bool             allowlocal,
+   int                   depth               /**< current depth */
    )
 {
    int i;
@@ -2168,7 +2180,6 @@ SCIP_RETCODE doSeparation(
    assert(sepadata != NULL);
 
    {
-      int depth = SCIPgetDepth(scip);
       int ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
       /* only call the zerohalf cut separator a given number of times at each node */
@@ -2383,7 +2394,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIP_CALL( doSeparation(scip, sepa, NULL, result, allowlocal) );
+   SCIP_CALL( doSeparation(scip, sepa, NULL, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }
@@ -2402,7 +2413,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolZerohalf)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIP_CALL( doSeparation(scip, sepa, sol, result, allowlocal) );
+   SCIP_CALL( doSeparation(scip, sepa, sol, result, allowlocal, depth) );
 
    return SCIP_OKAY;
 }

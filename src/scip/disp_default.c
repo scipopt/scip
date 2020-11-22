@@ -776,7 +776,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputMemUsedTotal)
    else
    {
       /* for memory output, we only use 5 characters because this is easier to decipher */
-      assert(DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY>0);
+      assert(DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY>0); /*lint !e506*/
       SCIPinfoMessage(scip, file, "%*.*s", DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, DISP_WIDT_MEMTOTAL-DISP_WIDT_MEMONLY-1, "");
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetMemTotal(scip), DISP_WIDT_MEMONLY);
       SCIPinfoMessage(scip, file, " ");

@@ -1180,7 +1180,7 @@ SCIP_RETCODE hessLagAddExprtree(
 
          values[hesoffset[row] + idx] += weight * *hh;
       }
-      hh += nvars - j;
+      hh += nvars - j; /*lint !e679*/
    }
 
    BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -2770,7 +2770,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       }
 
       /* do dense eval @todo could do it sparse */
-      retcode = SCIPnlpiOracleEvalConstraintGradient(oracle, i, x, isnewx, (convals ? &convals[i] : &nlval), grad);
+      retcode = SCIPnlpiOracleEvalConstraintGradient(oracle, i, x, isnewx, (convals ? &convals[i] : &nlval), grad); /*lint !e838*/
       if( retcode != SCIP_OKAY )
          break;
 

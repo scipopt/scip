@@ -1650,8 +1650,8 @@ SCIP_RETCODE conflictsetAddBounds(
    confrelaxedbds = conflictset->relaxedbds;
    confsortvals = conflictset->sortvals;
 
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE);/*lint !e641*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE);/*lint !e641*/
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641 !e506*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641 !e506*/
 
    for( i = 0; i < nbdchginfos; ++i )
    {
@@ -1872,7 +1872,7 @@ SCIP_Bool conflictsetIsRedundant(
       assert(i2 == 0 || conflictset2->sortvals[i2-1] < conflictset2->sortvals[i2]);
 
       sortval = conflictset2->sortvals[i2];
-      for( ; i1 < conflictset1->nbdchginfos && conflictset1->sortvals[i1] < sortval; ++i1 )
+      for( ; i1 < conflictset1->nbdchginfos && conflictset1->sortvals[i1] < sortval; ++i1 ) /*lint !e445*/
       {
          /* while scanning conflictset1, check consistency */
          assert(i1 == 0 || conflictset1->sortvals[i1-1] < conflictset1->sortvals[i1]);
@@ -2290,8 +2290,8 @@ SCIP_RETCODE detectImpliedBounds(
    assert(sortvals != NULL);
 
    /* check if the boolean representation of boundtypes matches the 'standard' definition */
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641*/
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641 !e506*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641 !e506*/
 
    ntrivialredvars = 0;
 
@@ -2432,6 +2432,9 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
          goto TERMINATE;
       }
 
@@ -3095,9 +3098,9 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualproofsinfsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsinfsuccess);
    else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualproofsbndsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
 
@@ -3193,7 +3196,7 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside, hasrelaxvar) );
    }
 
-   if( applyglobal )
+   if( applyglobal ) /*lint !e774*/
    {
       /* add the constraint to the global problem */
       SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
@@ -3217,7 +3220,7 @@ SCIP_RETCODE createAndAddProofcons(
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
       conflict->dualproofsinfnnonzeros += nnz;
-      if( applyglobal )
+      if( applyglobal ) /*lint !e774*/
          ++conflict->ndualproofsinfglobal;
       else
          ++conflict->ndualproofsinflocal;
@@ -3227,7 +3230,7 @@ SCIP_RETCODE createAndAddProofcons(
    {
       assert(conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
       conflict->dualproofsbndnnonzeros += nnz;
-      if( applyglobal )
+      if( applyglobal ) /*lint !e774*/
          ++conflict->ndualproofsbndglobal;
       else
          ++conflict->ndualproofsbndlocal;

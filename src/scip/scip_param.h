@@ -272,18 +272,6 @@ SCIP_RETCODE SCIPunfixParam(
    const char*           name                /**< name of the parameter */
    );
 
-/** changes the value of an existing parameter
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetParam(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   );
-
 /** changes the value of an existing SCIP_Bool parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
