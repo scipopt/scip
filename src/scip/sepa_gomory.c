@@ -691,7 +691,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
    assert(sepadata->strongcg != NULL);
 
-   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->gomory, "gomory", "separator for Gomory mixed-integer cuts", -100000, SEPA_FREQ, 0.0,
+   SCIP_CALL( SCIPincludeSepaBasic(scip, &sepadata->gomory, "gomorymi", "separator for Gomory mixed-integer cuts", -100000, SEPA_FREQ, 0.0,
       SEPA_USESSUBSCIP, FALSE, sepaExeclpDummy, sepaExecsolDummy, NULL) );
    assert(sepadata->gomory != NULL);
 
