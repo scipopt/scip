@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -25,6 +25,9 @@
 #include "nlpi/nlpi.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_message.h"
+#ifdef SCIP_STATISTIC
+#include "nlpi/struct_nlpi.h"
+#endif
 
 #include <string.h>
 
@@ -159,8 +162,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemAll)
    assert(data != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, problem) );
-   if( *problem == NULL )
-      return SCIP_NOMEMORY;
 
    /* initialize problem */
    BMSclearMemory((*problem));

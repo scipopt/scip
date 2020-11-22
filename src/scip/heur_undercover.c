@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -385,6 +385,7 @@ SCIP_RETCODE processNlRow(
                }
 
                /* nonzero diagonal element of the Hessian: fix */
+               assert(hessiandata->sparsity != NULL);  /* for lint */
                if( hessiandata->sparsity[idx1*nexprtreevars + idx1]
                   && !termIsConstant(scip, exprtreevars[idx1], 1.0, globalbounds) )
                {

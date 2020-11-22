@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -181,7 +181,7 @@ int SCIPheurGetNDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
-/* @} */
+/** @} */
 
 /** get the heuristic to which this diving setting belongs */
 SCIP_EXPORT
@@ -404,7 +404,7 @@ SCIP_Bool SCIPdivesetIsPublic(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/* @} */
+/** @} */
 
 /**@defgroup PublicVariableGraphMethods Public Variable Graph Methods
  * @ingroup MiscellaneousMethods
@@ -464,7 +464,7 @@ void SCIPvariableGraphFree(
    SCIP_VGRAPH**         vargraph            /**< pointer to the variable graph */
    );
 
-/* @} */
+/** @} */
 
 
 #ifdef __cplusplus

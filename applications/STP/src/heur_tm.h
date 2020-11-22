@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,7 +41,6 @@ extern "C" {
 #endif
 
 /** compute starting points among marked (w.r.t. g->mark) vertices for constructive heuristics */
-SCIP_EXPORT
 void SCIPStpHeurTMCompStarts(
    GRAPH*                graph,              /**< graph data structure */
    int*                  starts,             /**< starting points array */
@@ -49,13 +48,11 @@ void SCIPStpHeurTMCompStarts(
    );
 
 /** creates the TM primal heuristic and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpIncludeHeurTM(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** execute shortest paths heuristic to obtain a Steiner tree */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
@@ -75,7 +72,6 @@ SCIP_RETCODE SCIPStpHeurTMRun(
    );
 
 /** run shortest path heuristic, but bias edge costs towards best current LP solution */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMRunLP(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
@@ -88,7 +84,6 @@ SCIP_RETCODE SCIPStpHeurTMRunLP(
    );
 
 /** prune a Steiner tree in such a way that all leaves are terminals */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMPrune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -99,7 +94,6 @@ SCIP_RETCODE SCIPStpHeurTMPrune(
    );
 
 /** prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMPrunePc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -109,7 +103,6 @@ SCIP_RETCODE SCIPStpHeurTMPrunePc(
    );
 
 /** build (rooted) prize collecting Steiner tree in such a way that all leaves are positive-weight vertices */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -120,7 +113,6 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
    );
 
 /** build Steiner tree in such a way that all leaves are terminals */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMBuildTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -131,7 +123,6 @@ SCIP_RETCODE SCIPStpHeurTMBuildTree(
    );
 
 /** prune a degree constrained Steiner tree in such a way that all leaves are terminals */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpHeurTMBuildTreeDc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -92,13 +92,6 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
-   (*stat)->userinterrupt = FALSE;
-   (*stat)->userrestart = FALSE;
-   (*stat)->inrestart = FALSE;
-   (*stat)->collectvarhistory = TRUE;
-   (*stat)->performpresol = FALSE;
-   (*stat)->branchedunbdvar = FALSE;
-   (*stat)->disableenforelaxmsg = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
@@ -284,6 +277,7 @@ void SCIPstatReset(
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
+   stat->nnodezeroitlps = 0;
    stat->nisstoppedcalls = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
@@ -329,6 +323,13 @@ void SCIPstatReset(
    stat->ndivesetcalls = 0;
    stat->ndivesetlps = 0;
    stat->totaldivesetdepth = 0;
+
+   stat->userinterrupt = FALSE;
+   stat->userrestart = FALSE;
+   stat->inrestart = FALSE;
+   stat->collectvarhistory = TRUE;
+   stat->performpresol = FALSE;
+   stat->disableenforelaxmsg = FALSE;
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat, set, transprob, origprob);
@@ -833,15 +834,27 @@ void SCIPstatPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   const char* filename;
    va_list ap;
 
    assert( sourcefile != NULL );
    assert( stat != NULL );
 
-   if ( stat->subscipdepth > 0 )
-      printf("%d: [%s:%d] debug: ", stat->subscipdepth, sourcefile, sourceline);
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\');
+#else
+   filename = strrchr(sourcefile, '/');
+#endif
+   if ( filename == NULL )
+      filename = sourcefile;
    else
-      printf("[%s:%d] debug: ", sourcefile, sourceline);
+      ++filename;
+
+   if ( stat->subscipdepth > 0 )
+      printf("%d: [%s:%d] debug: ", stat->subscipdepth, filename, sourceline);
+   else
+      printf("[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    printf(formatstr, ap);
@@ -856,6 +869,8 @@ void SCIPstatDebugMessagePrint(
    )
 {  /*lint --e{715}*/
    va_list ap;
+
+   assert(stat != NULL);
 
    va_start(ap, formatstr); /*lint !e838*/
    printf(formatstr, ap);

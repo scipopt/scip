@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -291,8 +291,10 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         3 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
-                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing) */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         5 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
+                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
+                                                 *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
+                                                 *   fixing, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -342,6 +344,11 @@
                                                  *   in case they are not present in the LP anymore? */
 #define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
                                                  *   in case they are not present in the LP anymore? */
+
+/* Decomposition */
+#define SCIP_DEFAULT_DECOMP_BENDERSLABELS FALSE /**< should the variables be labelled for the application of Benders' decomposition */
+#define SCIP_DEFAULT_DECOMP_APPLYBENDERS  FALSE /**< if a decomposition exists, should Benders' decomposition be applied? */
+#define SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE  10000 /**< maximum number of edges in block graph computation, or -1 for no limit */
 
 /* Benders' decomposition */
 #define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
@@ -610,7 +617,7 @@ SCIP_DECL_PARAMCHGD(paramChgdBarrierconvtol)
 
 /** information method for a parameter change of infinity value */
 static
-SCIP_DECL_PARAMCHGD(paramChgInfinity)
+SCIP_DECL_PARAMCHGD(paramChgdInfinity)
 {  /*lint --e{715}*/
    SCIP_Real infinity;
 
@@ -679,11 +686,17 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
 static
 SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert( scip != NULL );
    assert( param != NULL );
 
    /* create or deconstruct the reoptimization data structures */
-   SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+   retcode = SCIPenableReoptimization(scip, SCIPparamGetBool(param));
+
+   /* an appropriate error message is already printed in the above method */
+   if( retcode == SCIP_INVALIDCALL )
+      return SCIP_PARAMETERWRONGVAL;
 
    return SCIP_OKAY;
 }
@@ -699,7 +712,8 @@ SCIP_DECL_PARAMCHGD(paramChgdUsesymmetry)
    {
       if ( SCIPparamGetInt(param) > 0 )
       {
-         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving.\n");
+         SCIPerrorMessage("Cannot turn on symmetry handling during (pre)solving or change method.\n");
+         return SCIP_PARAMETERWRONGVAL;
       }
    }
 
@@ -1494,7 +1508,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* display parameters */
-   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL));
+   assert(sizeof(int) == sizeof(SCIP_VERBLEVEL)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "display/verblevel",
          "verbosity level of output",
@@ -1579,7 +1593,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/memory",
          "maximal memory usage in MB; reported memory usage is lower than real memory usage!",
-         &(*set)->limit_memory, FALSE, SCIP_DEFAULT_LIMIT_MEMORY, 0.0, SCIP_MEM_NOLIMIT,
+         &(*set)->limit_memory, FALSE, (SCIP_Real)SCIP_DEFAULT_LIMIT_MEMORY, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/gap",
@@ -1949,7 +1963,7 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_allowstrongdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/allowweakdualsreds",
+            "misc/allowweakdualreds",
             "should weak dual reductions be allowed in propagation and presolving?",
             &(*set)->misc_allowweakdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS,
             NULL, NULL) );
@@ -1976,8 +1990,10 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "misc/usesymmetry",
          "bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);" \
-         " 2: orbital fixing; 3: orbitopes and orbital fixing), see type_symmetry.h.",
-         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 3,
+         " 2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and " \
+         "orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital " \
+         "fixing, see type_symmetry.h.",
+         &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
 
    /* randomization parameters */
@@ -2023,7 +2039,7 @@ SCIP_RETCODE SCIPsetCreate(
          "numerics/infinity",
          "values larger than this are considered infinity",
          &(*set)->num_infinity, FALSE, SCIP_DEFAULT_INFINITY, 1e+10, SCIP_INVALID/10.0,
-         paramChgInfinity, NULL) );
+         paramChgdInfinity, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/epsilon",
          "absolute values smaller than this are considered zero",
@@ -2162,6 +2178,23 @@ SCIP_RETCODE SCIPsetCreate(
          "pricing/delvarsroot",
          "should variables created at the root node be deleted when the root is solved in case they are not present in the LP anymore?",
          &(*set)->price_delvarsroot, FALSE, SCIP_DEFAULT_PRICE_DELVARSROOT,
+         NULL, NULL) );
+
+   /* Decomposition parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "decomposition/benderslabels",
+         "should the variables be labelled for the application of Benders' decomposition?",
+         &(*set)->decomp_benderslabels, FALSE, SCIP_DEFAULT_DECOMP_BENDERSLABELS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "decomposition/applybenders",
+         "if a decomposition exists, should Benders' decomposition be applied?",
+         &(*set)->decomp_applybenders, FALSE, SCIP_DEFAULT_DECOMP_APPLYBENDERS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "decomposition/maxgraphedge",
+         "maximum number of edges in block graph computation, or -1 for no limit",
+         &(*set)->decomp_maxgraphedge, FALSE, SCIP_DEFAULT_DECOMP_MAXGRAPHEDGE, -1, INT_MAX,
          NULL, NULL) );
 
    /* Benders' decomposition parameters */
@@ -2540,7 +2573,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* timing parameters */
-   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE));
+   assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE)); /*lint !e506*/
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "timing/clocktype",
          "default clock type (1: CPU user seconds, 2: wall clock time)",
@@ -3079,21 +3112,6 @@ SCIP_RETCODE SCIPsetChgParamFixed(
    assert(set != NULL);
 
    SCIP_CALL( SCIPparamsetFix(set->paramset, name, fixed) );
-
-   return SCIP_OKAY;
-}
-
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPsetSetParam(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   )
-{
-   assert(set != NULL);
-
-   SCIP_CALL( SCIPparamsetSet(set->paramset, set, messagehdlr, name, value) );
 
    return SCIP_OKAY;
 }
@@ -7019,6 +7037,7 @@ void SCIPsetPrintDebugMessage(
    ...                                       /**< format arguments line in printf() function */
    )
 {
+   const char* filename;
    int subscipdepth = 0;
    SCIP* scip;
    va_list ap;
@@ -7029,13 +7048,24 @@ void SCIPsetPrintDebugMessage(
    scip = set->scip;
    assert( scip != NULL );
 
+   /* strip directory from filename */
+#if defined(_WIN32) || defined(_WIN64)
+   filename = strrchr(sourcefile, '\\');
+#else
+   filename = strrchr(sourcefile, '/');
+#endif
+   if ( filename == NULL )
+      filename = sourcefile;
+   else
+      ++filename;
+
    if ( scip->stat != NULL )
       subscipdepth = scip->stat->subscipdepth;
 
    if ( subscipdepth > 0 )
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, sourcefile, sourceline);
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "%d: [%s:%d] debug: ", subscipdepth, filename, sourceline);
    else
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", sourcefile, sourceline);
+      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "[%s:%d] debug: ", filename, sourceline);
 
    va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(scip->messagehdlr, NULL, formatstr, ap);

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   branch_stp.h
@@ -39,7 +39,6 @@ extern "C" {
 
 
 /** parse constraint name and apply changes to graph or array */
-SCIP_EXPORT
 SCIP_RETCODE STPStpBranchruleParseConsname(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
@@ -49,7 +48,6 @@ SCIP_RETCODE STPStpBranchruleParseConsname(
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
-SCIP_EXPORT
 SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  vertexchgs,         /**< array to store changes or NULL */
@@ -57,14 +55,12 @@ SCIP_RETCODE SCIPStpBranchruleApplyVertexChgs(
    );
 
 /** applies vertex changes caused by this branching rule, either on a graph or on an array */
-SCIP_EXPORT
 void SCIPStpBranchruleInitNodeState(
    const GRAPH*          g,                  /**< graph data structure */
    int*                  nodestate           /**< node state array */
    );
 
 /** creates the stp branching rule and includes it to SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeBranchruleStp(
    SCIP*                 scip                /**< SCIP data structure */
    );

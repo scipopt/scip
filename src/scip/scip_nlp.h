@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +23,7 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  * @author Gregor Hendel
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    int                   priority            /**< new priority of the NLPI */
    );
 
-/* @} */
+/** @} */
 
 /**@addtogroup PublicNLPMethods
  *
@@ -265,6 +265,20 @@ int SCIPgetNNLPNlRows(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
+   );
+
+/** removes a nonlinear row from the NLP. This row is released in the NLP.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdelNlRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow               /**< nonlinear row to add to NLP */
    );

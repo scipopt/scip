@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -26,7 +26,7 @@
 #    DEBUGTOOLCMD - a debug tool command to use
 #    INSTANCELIST - list of all instances with complete path
 #    TIMELIMLIST - list of time limits for the individual instances
-#    TIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
+#    HARDTIMELIMLIST - list of hard time limits for the individual instances, that are given to slurm
 
 # function to capitalize a whole string
 function capitalize {
@@ -42,6 +42,18 @@ function stripversion {
     echo $NAMENOVERSION
 }
 
+# format time in seconds into format  dd-hh:mm:ss
+function formattime {
+    local T=$1
+    local D=$((T/60/60/24))
+    local H=$((T/60/60%24))
+    local M=$((T/60%60))
+    local S=$((T%60))
+    local F="%02d"
+    printf -v PRETTYTIME "${F}-${F}:${F}:${F}" $D $H $M $S
+    echo ${PRETTYTIME}
+}
+
 # input environment - these environment variables should be set before invoking this script
 BINNAME=$1       # name of the binary
 TSTNAME=$2       # name of the test set
@@ -50,7 +62,7 @@ TIMELIMIT=$4     # the time limit in seconds
 TIMEFORMAT=$5    # the format for the time (sec or format)
 MEMLIMIT=$6      # the memory limit in MB
 MEMFORMAT=$7     # the format for hard memory limit (kB or MB)
-DEBUGTOOL=$8      # which debug tool should be used, if any?
+DEBUGTOOL=$8     # which debug tool should be used, if any?
 SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the solver
 
 # get current SCIP path
@@ -80,8 +92,11 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# find out the solver that should be used
+SOLVER=`stripversion $BINNAME`
+
 # figure out the correct settings file extension
-if test $BINNAME = cplex
+if test $SOLVER = cplex
 then
     SETEXTEXTENSION="prm"
 else
@@ -93,7 +108,12 @@ fi
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+    if test $SOLVER = fscip
+    then
+	SETTINGS="${SCIPPATH}/../../ug/settings/${SETNAME}.${SETEXTEXTENSION}"
+    else
+	SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
+    fi
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.
@@ -101,22 +121,16 @@ do
     fi
 done
 
-SOLUFILE=""
-for SOLU in testset/$TSTNAME.solu testset/all.solu
-do
-    if test -e $SOLU
-    then
-        SOLUFILE=$SOLU
-        break
-    fi
-done
+# call method to obtain solution file
+# defines the following environment variable: SOLUFILE
+. ./configuration_solufile.sh $TSTNAME
 
 # if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1 || test $SETCUTOFF = true
 then
     if test $SOLUFILE = ""
     then
-        echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
+        echo "Skipping test: SETCUTOFF=1 set, but no .solu file ($TSTNAME.solu or all.solu in testset/ or instancedata/testsets/) available"
         exit
     fi
 fi
@@ -136,10 +150,17 @@ fi
 if test "$DEBUGTOOL" = "valgrind"
 then
     DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
+elif test "$DEBUGTOOL" = "rr"
+then
+    DEBUGTOOLCMD="rr record --chaos -o RRTRACEFOLDER_PLACEHOLDER.rr "
 elif test "$DEBUGTOOL" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'
     DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
+    if test "$SOLVER" = "fscip"
+    then
+        DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "set verbose on" -ex "thread apply all bt full" --args '
+    fi
 else
     DEBUGTOOLCMD=""
 fi
@@ -151,16 +172,41 @@ then
     POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
 fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-# echo $POSSIBLEPATHS
 
-#check if we use a ttest or a test file
-if [ -f testset/$TSTNAME.ttest ];
+#search for test file and check if we use a ttest or a test file
+if [ -f instancedata/testsets/$TSTNAME.ttest ];
 then
-    FULLTSTNAME="testset/$TSTNAME.ttest"
+    FULLTSTNAME="instancedata/testsets/$TSTNAME.ttest"
     TIMEFACTOR=$TIMELIMIT
 else
-    FULLTSTNAME="testset/$TSTNAME.test"
-    TIMEFACTOR=1
+    if [ -f instancedata/testsets/$TSTNAME.test ];
+    then
+	FULLTSTNAME="instancedata/testsets/$TSTNAME.test"
+	TIMEFACTOR=1
+    else
+	if [ -f testset/$TSTNAME.ttest ];
+	then
+	    FULLTSTNAME="testset/$TSTNAME.ttest"
+	    TIMEFACTOR=$TIMELIMIT
+	else
+	    if [ -f testset/$TSTNAME.test ];
+	    then
+		FULLTSTNAME="testset/$TSTNAME.test"
+		TIMEFACTOR=1
+	    else
+		echo "Skipping test: no $TSTNAME.(t)test file found in testset/ or instancedata/testsets/"
+		exit
+	    fi
+	fi
+    fi
+fi
+
+if [ ${TIMEFACTOR} -gt 5 ]
+then
+    echo ERROR: Time factor ${TIMEFACTOR} is too large--did you accidentally use a time limit in seconds in combination with a TTEST file?
+    echo Exiting, try again, SCIP script novice
+    echo
+    exit 1
 fi
 
 #write instance names to an array
@@ -203,23 +249,8 @@ do
     if test $TIMEFORMAT = "format"
     then
         #format is (d-)HH:MM:SS
-        TMP=`expr $HARDTIMELIMIT`
-        HARDTIMELIMIT=""
-        DIVISORS=(60 60 24)
-        for((i=0; i<=2; i++))
-        do
-            printf -v HARDTIMELIMIT "%02d${HARDTIMELIMIT}" `expr ${TMP} % ${DIVISORS[i]}`
-            # separate the numbers by colons except for the last (HH hours)
-            if test $i -lt 2
-            then
-                HARDTIMELIMIT=":${HARDTIMELIMIT}"
-            fi
-            TMP=`expr ${TMP} / ${DIVISORS[i]}`
-        done
-        if test ${TMP} -gt 0
-        then
-            HARDTIMELIMIT=${TMP}-${HARDTIMELIMIT}
-        fi
+        HARDTIMELIMIT=$(formattime $HARDTIMELIMIT)
+        # echo ${HARDTIMELIMIT}
     fi
     HARDTIMELIMLIST[$COUNT]=$HARDTIMELIMIT
     COUNT=$(( $COUNT + 1 ))

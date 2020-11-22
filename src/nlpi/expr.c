@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2985,7 +2985,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
             if( SCIPintervalIsEmpty(infinity, childval) )
             {
                SCIPintervalSetEmpty(result);
-               break;
+               return SCIP_OKAY;
             }
             SCIPintervalMul(infinity, &monomialval, monomialval, childval);
             continue;
@@ -3972,6 +3972,7 @@ SCIP_RETCODE exprUnconvertPolynomial(
             {
                /* monomial is a linear term */
                assert(quaddata->lincoefs != NULL);
+               /* coverity[var_deref_op] */
                quaddata->lincoefs[polynomialdata->monomials[i]->childidxs[0]] += polynomialdata->monomials[i]->coef;
             }
             else
@@ -5144,8 +5145,9 @@ SCIP_RETCODE exprParse(
 
    /* find the end of this expression
     * a '+' right at the beginning indicates a coefficient, not treated here, or a summation
+    * a '+' or '-' that follows an 'e' or 'E' indicates that we are in the middle of a number, so it doesn't separate terms
     */
-   while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str) )
+   while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str && subexpptr[-1] != 'e' && subexpptr[-1] != 'E') )
    {
       if( subexpptr[0] == '(')
          ++nopenbrackets;
@@ -11967,6 +11969,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       /* coverity[var_deref_op] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
          userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
@@ -16026,7 +16029,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
 
    SCIP_ALLOC( BMSallocMemoryArray(&testx, exprgraph->nvars) );
    for( i = 0; i < exprgraph->nvars; ++i )
-      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen,
+         exprgraph->varbounds[i].inf < -100.0 ? MIN(-100.0, exprgraph->varbounds[i].sup) : exprgraph->varbounds[i].inf,
+         exprgraph->varbounds[i].sup >  100.0 ? MAX( 100.0, exprgraph->varbounds[i].inf) : exprgraph->varbounds[i].sup);  /*lint !e644*/
    SCIP_CALL( SCIPexprgraphEval(exprgraph, testx) );
    for( d = 1; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
@@ -16233,7 +16238,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             testval_before = testvals[idx];  /*lint !e613*/
             testval_after = SCIPexprgraphGetNodeVal(node);
 
-            assert(!SCIPisFinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), eps));  /*lint !e777*/
+            assert(!SCIPisFinite(testval_before) || EPSZ(SCIPrelDiff(testval_before, testval_after), 10*eps));  /*lint !e777*/
          }
       }
 #endif

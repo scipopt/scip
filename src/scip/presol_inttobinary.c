@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -92,9 +92,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nintvars) );
 
-   /* scan the integer variables for possible conversion into binaries;
-    * we have to collect the variables first in an own 
-    */
+   /* scan the integer variables for possible conversion into binaries */
    for( v = 0; v < nintvars; ++v )
    {
       SCIP_Real lb;
@@ -106,8 +104,8 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
       lb = SCIPvarGetLbGlobal(vars[v]);
       ub = SCIPvarGetUbGlobal(vars[v]);
 
-      /* check if bounds are exactly one apart */
-      if( SCIPisEQ(scip, lb, ub - 1.0) )
+      /* check if bounds are exactly one apart; if the lower bound is too large, aggregations will be rejected */
+      if( SCIPisEQ(scip, lb, ub - 1.0) && !SCIPisHugeValue(scip, REALABS(lb) / SCIPfeastol(scip)) )
       {
          SCIP_VAR* binvar;
          char binvarname[SCIP_MAXSTRLEN];
@@ -158,12 +156,14 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
             *result = SCIP_CUTOFF;
             break;
          }
+         else if( aggregated )
+         {
+            assert(redundant);
 
-         assert(redundant);
-         assert(aggregated);
-         (*nchgvartypes)++;
-         ++(*naggrvars);
-         *result = SCIP_SUCCESS;
+            (*nchgvartypes)++;
+            ++(*naggrvars);
+            *result = SCIP_SUCCESS;
+         }
       }
    }
 

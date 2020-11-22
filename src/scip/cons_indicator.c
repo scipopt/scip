@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -3494,6 +3494,18 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
+         /* We also need to update the events and locks if restart is forced, since global bound change events on binary
+          * variables are also caught in this case. If it would not be updated and forcerestart = TRUE, then an event
+          * might be dropped on a wrong variable. */
+         if ( conshdlrdata->forcerestart )
+         {
+            assert( conshdlrdata->eventhdlrrestart != NULL );
+            SCIP_CALL( SCIPdropVarEvent(scip, consdata->binvar, SCIP_EVENTTYPE_GBDCHANGED,
+                  conshdlrdata->eventhdlrrestart, (SCIP_EVENTDATA*) conshdlrdata, -1) );
+            SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_GBDCHANGED, conshdlrdata->eventhdlrrestart,
+                  (SCIP_EVENTDATA*) conshdlrdata, NULL) );
+         }
+
          SCIP_CALL( SCIPaddVarLocksType(scip, consdata->binvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
          SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
 
@@ -3545,8 +3557,8 @@ SCIP_RETCODE presolRoundIndicator(
          SCIP_CALL( SCIPdropVarEvent(scip, consdata->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, -1) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlrbound, (SCIP_EVENTDATA*) consdata, NULL) );
 
-         SCIP_CALL( SCIPaddVarLocksType(scip, consdata->slackvar, SCIP_LOCKTYPE_MODEL, 0, -1) );
-         SCIP_CALL( SCIPaddVarLocksType(scip, var, SCIP_LOCKTYPE_MODEL, 0, 1) );
+         SCIP_CALL( SCIPunlockVarCons(scip, consdata->slackvar, cons, FALSE, TRUE) );
+         SCIP_CALL( SCIPlockVarCons(scip, var, cons, FALSE, TRUE) );
 
          SCIP_CALL( SCIPreleaseVar(scip, &consdata->slackvar) );
          SCIP_CALL( SCIPcaptureVar(scip, var) );
@@ -4216,8 +4228,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_Bool* S;
    SCIP_Bool error;
    int oldsize = -1;
-   /* cppcheck-suppress unassignedVariable */
-   int nGenOld;
+   SCIPdebug( int nGenOld = *nGen; )
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -4236,7 +4247,6 @@ SCIP_RETCODE separateIISRounding(
    lp = conshdlrdata->altlp;
    assert( lp != NULL );
 
-   SCIPdebug( nGenOld = *nGen; )
    SCIPdebugMsg(scip, "Separating IIS-cuts by rounding ...\n");
 
 #ifndef NDEBUG
@@ -4368,7 +4378,7 @@ SCIP_RETCODE separateIISRounding(
       /* reset bounds */
       SCIP_CALL( unfixAltLPVariables(scip, lp, nconss, conss, S) );
    }
-   SCIPdebugMsg(scip, "Generated %d IISs.\n", *nGen - nGenOld);
+   SCIPdebug( SCIPdebugMsg(scip, "Generated %d IISs.\n", *nGen - nGenOld); )
 
 #ifndef NDEBUG
    SCIP_CALL( checkLPBoundsClean(scip, lp, nconss, conss) );
@@ -5575,7 +5585,7 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       assert( (*consdata)->binvar != NULL );
 
       /* free events only in correct stages */
-      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+      if ( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMING && SCIPgetStage(scip) <= SCIP_STAGE_EXITSOLVE )
       {
          if ( (*consdata)->linconsactive )
          {
@@ -5763,9 +5773,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool noReductions;
-   int oldnfixedvars;
-   int oldndelconss;
-   int removedvars = 0;
+   SCIPdebug( int oldnfixedvars = *nfixedvars; )
+   SCIPdebug( int oldndelconss = *ndelconss; )
    int c;
 
    assert( scip != NULL );
@@ -5774,8 +5783,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   SCIPdebug( oldnfixedvars = *nfixedvars; )
-   SCIPdebug( oldndelconss = *ndelconss; )
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -5927,10 +5934,10 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
       conshdlrdata->addedcouplingcons = TRUE;
    }
 
-   SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
-      nconss, *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
+   SCIPdebug( SCIPdebugMsg(scip, "Presolved %d constraints (fixed %d variables, removed 0 variables, and deleted %d constraints).\n",
+      nconss, *nfixedvars - oldnfixedvars, *ndelconss - oldndelconss); )
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 
@@ -6580,6 +6587,7 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
    assert( consdata->slackvar != NULL );
    assert( consdata->lincons != NULL );
    SCIPinfoMessage(scip, file, " -> <%s> = 0", SCIPvarGetName(consdata->slackvar));
+   SCIPinfoMessage(scip, file, " (<%s>)", SCIPconsGetName(consdata->lincons));
 
    return SCIP_OKAY;
 }
@@ -6717,21 +6725,23 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
 {  /*lint --e{715}*/
    char binvarname[1024];
    char slackvarname[1024];
+   char linconsname[1024];
    SCIP_VAR* binvar;
    SCIP_VAR* slackvar;
    SCIP_CONS* lincons;
-   const char* posstr;
    int zeroone;
    int nargs;
 
    *success = TRUE;
 
    /* read indicator constraint */
-   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0", binvarname, &zeroone, slackvarname);
+   /* coverity[secure_coding] */
+   nargs = sscanf(str, " <%1023[^>]> = %d -> <%1023[^>]> = 0 (<%1023[^>]>)", binvarname, &zeroone, slackvarname, linconsname);
 
-   if ( nargs != 3 )
+   /* downward compatible: accept missing linear constraint at end */
+   if ( nargs != 3 && nargs != 4 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0.\n%s\n", str);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected the following form: <var> = [0|1] -> <var> = 0 (<lincons>).\n%s\n", str);
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -6764,40 +6774,66 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
       return SCIP_OKAY;
    }
 
-   /* find matching linear constraint */
-   posstr = strstr(slackvarname, "indslack");
-   if ( posstr == NULL )
+   /* determine linear constraint */
+   if ( nargs == 4 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
-
-   /* overwrite binvarname: set up name for linear constraint */
-   (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
-
-   lincons = SCIPfindCons(scip, binvarname);
-   if ( lincons == NULL )
-   {
-      /* if not found - check without indlin */
-      (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
-      lincons = SCIPfindCons(scip, binvarname);
-
+      lincons = SCIPfindCons(scip, linconsname);
       if ( lincons == NULL )
       {
-         /* if not found - check without indrhs or indlhs */
-         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown constraint <%s>\n", linconsname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+      if ( strncmp(SCIPconshdlrGetName(SCIPconsGetHdlr(lincons)), "linear", 6) != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "constraint <%s> is not linear\n", linconsname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      const char* posstr;
+
+      /* for backward compability try to determine name of linear constraint from variables names */
+      assert( nargs == 3 );
+
+      /* find matching linear constraint */
+      posstr = strstr(slackvarname, "indslack");
+      if ( posstr == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "strange slack variable name: <%s>\n", slackvarname);
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      /* overwrite binvarname: set up name for linear constraint */
+      (void) SCIPsnprintf(binvarname, 1023, "indlin%s", posstr+8);
+
+      lincons = SCIPfindCons(scip, binvarname);
+      if ( lincons == NULL )
+      {
+         /* if not found - check without indlin */
+         (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+9);
          lincons = SCIPfindCons(scip, binvarname);
 
-         if( lincons == NULL )
+         if ( lincons == NULL )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
-               name, posstr+8, posstr+9, posstr+16);
-            *success = FALSE;
-            return SCIP_OKAY;
+            /* if not found - check without indrhs or indlhs */
+            (void) SCIPsnprintf(binvarname, 1023, "%s", posstr+16);
+            lincons = SCIPfindCons(scip, binvarname);
+
+            if( lincons == NULL )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: unknown linear constraint <indlin%s>, <%s> or <%s>.\n",
+                  name, posstr+8, posstr+9, posstr+16);
+               *success = FALSE;
+               return SCIP_OKAY;
+            }
          }
       }
    }
+   assert( lincons != NULL );
 
    /* check correct linear constraint */
    if ( ! SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
@@ -6897,11 +6933,11 @@ SCIP_DECL_CONSGETVARS(consGetVarsIndicator)
    assert( scip != NULL );
    assert( cons != NULL );
    assert( vars != NULL );
-   assert( varssize >= 0 );
    assert( success != NULL );
 
    if ( varssize < 0 )
       return SCIP_INVALIDDATA;
+   assert( varssize >= 0 );
 
    (*success) = TRUE;
 

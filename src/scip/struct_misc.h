@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -60,16 +60,17 @@ struct SCIP_Queue
 /** priority queue data structure
  *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
  *  The ordering is done through a pointer comparison function.
- *  The array is organized as follows. The root element (that is the "best" element $r$ with $r <= x$ for all $x$)
- *  is stored in position 0. The children of an element at position $p$ are stored at positions $q_1 = 2*p+1$ and
- *  $q_2 = 2*p+2$. That means, the parent of the element at position $q$ is at position $p = (q-1)/2$.
- *  At any time, the condition holds that $p <= q$ for each parent $p$ and its children $q$.
- *  Insertion and removal of single elements needs time $O(log n)$.
+ *  The array is organized as follows. The root element (that is the "best" element \f$ r \f$ with \f$ r \leq x \f$ for all \f$ x \f$ )
+ *  is stored in position 0. The children of an element at position \f$ p \f$ are stored at positions \f$ q_1 = 2*p+1 \f$ and
+ *  \f$ q_2 = 2*p+2 \f$ . That means, the parent of the element at position \f$ q \f$ is at position \f$ p = (q-1)/2 \f$ .
+ *  At any time, the condition holds that \f$ p \leq q \f$ for each parent \f$ p \f$ and its children \f$ q \f$ .
+ *  Insertion and removal of single elements needs time \f$ O(log n) \f$ .
  */
 struct SCIP_PQueue
 {
    SCIP_Real             sizefac;            /**< memory growing factor */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp));        /**< compares two data elements */
+   SCIP_DECL_PQUEUEELEMCHGPOS((*elemchgpos));/**< callback to act on position change of elem in priority queue, or NULL */
    void**                slots;              /**< array of element slots */
    int                   len;                /**< number of used element slots */
    int                   size;               /**< total number of available element slots */
@@ -216,9 +217,12 @@ struct SCIP_Digraph
    int*                  nsuccessors;        /**< number of successors stored in the adjacency lists of the nodes */
    int*                  components;         /**< array to store the node indices of the components, one component after the other */
    int*                  componentstarts;    /**< array to store the start indices of the components in the components array */
+   int*                  articulations;      /**< array  of size narticulations to store the node indices of the articulation points */
    int                   ncomponents;        /**< number of undirected components stored */
    int                   componentstartsize; /**< size of array componentstarts */
    int                   nnodes;             /**< number of nodes, nodes should be numbered from 0 to nnodes-1 */
+   int                   narticulations;     /**< number of articulation points among the graph nodes */
+   SCIP_Bool             articulationscheck; /**< TRUE if the (computed) articulation nodes are up-to-date and FALSE otherwise */
 };
 
 /** binary node data structure for binary tree */

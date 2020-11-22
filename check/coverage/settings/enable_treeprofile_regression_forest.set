@@ -1,0 +1,12 @@
+# SCIP version 6.0.0
+
+# should the event handler collect data?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+estimation/treeprofile/enabled = TRUE
+
+# factor by which the number of nodes exceeds the maximum width before producing estimations
+# [type: real, advanced: FALSE, range: [1,1.79769313486232e+308], default: 20]
+estimation/treeprofile/minnodesperdepth = 10
+
+
+estimation/regforestfilename = "coverage/data/regression_forest.rfcsv"

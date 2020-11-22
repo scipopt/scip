@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -384,7 +384,8 @@ struct SCIP_Set
    SCIP_Bool             misc_allowweakdualreds;  /**< should weak dual reductions be allowed in propagation and presolving? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
    int                   misc_usesymmetry;   /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks);
-                                              *   2: orbital fixing; 3: orbitopes and orbital fixing) */
+                                              *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
+                                              *   symresacks) */
    char*                 misc_debugsol;      /**< path to a debug solution */
    SCIP_Bool             misc_scaleobj;      /**< should the objective function be scaled? */
 
@@ -443,6 +444,13 @@ struct SCIP_Set
                                               *   in case they are not present in the LP anymore? */
    SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
                                               *   in case they are not present in the LP anymore? */
+
+   /* Decomposition settings */
+   SCIP_Bool             decomp_benderslabels; /**< should the variables be labeled for the application of Benders'
+                                                *   decomposition */
+   SCIP_Bool             decomp_applybenders;  /**< if a decomposition exists, should Benders' decomposition be applied*/
+   int                   decomp_maxgraphedge;  /**< maximum number of edges in block graph computation, or -1 for no limit */
+
    /* Benders' decomposition settings */
    SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
    SCIP_Bool             benders_cutlpsol;   /**< should cuts be generated from the solution to the LP relaxation? */

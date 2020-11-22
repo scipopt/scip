@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -71,6 +71,11 @@ void setup_simple(void)
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    cr_assert( nrows == 1 );
    cr_assert( ncols == 1 );
+
+#ifdef SCIP_DEBUG
+   /* turn on output */
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) );
+#endif
 }
 
 static
@@ -246,6 +251,11 @@ void setup_complex(void)
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    cr_assert_eq(nrows, 3);
    cr_assert_eq(ncols, 3);
+
+#ifdef SCIP_DEBUG
+   /* turn on output */
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) );
+#endif
 }
 TestSuite(complex, .init = setup_complex, .fini = teardown);
 
@@ -255,11 +265,14 @@ Test(complex, test1)
    SCIP_Real binvrow[3];
    SCIP_Real binvcol[3];
    SCIP_Real coef[3];
+   SCIP_Real coeftwo[3];
    SCIP_Real objval;
    int cstats[3];
    int nrows;
    int rstats[3];
    int basinds[3];
+   int inds[3];
+   int ninds;
    int idx;
    int entry;
    int i;
@@ -305,9 +318,22 @@ Test(complex, test1)
    SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, binvrow, NULL, NULL) );
 
    /* row of basis inverse should be (0, 1, 0.5) */
-   cr_expect_float_eq(binvrow[0], 0.0, EPS);
-   cr_expect_float_eq(binvrow[1], 1.0, EPS);
-   cr_expect_float_eq(binvrow[2], 0.5, EPS);
+   cr_expect_float_eq(binvrow[0], 0.0, EPS, "BInvRow[%d] = %g != %g\n", 0, binvrow[0], 0.0);
+   cr_expect_float_eq(binvrow[1], 1.0, EPS, "BInvRow[%d] = %g != %g\n", 1, binvrow[1], 1.0);
+   cr_expect_float_eq(binvrow[2], 0.5, EPS, "BInvRow[%d] = %g != %g\n", 2, binvrow[2], 0.5);
+
+   /* check whether sparse version is available and the same */
+   SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, coef, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 2 );
+      for (entry = 0; entry < ninds; ++entry)
+      {
+         idx = coef[entry];
+         cr_assert( 0 <= idx && idx < 3 );
+         cr_expect_float_eq(coef[entry], binvrow[idx], EPS);
+      }
+   }
 
    /* check first column of basis inverse */
    SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, binvcol, NULL, NULL) );
@@ -328,15 +354,35 @@ Test(complex, test1)
       }
    }
 
+   /* check whether number of nonzeros fits */
+   SCIP_CALL( SCIPlpiGetBInvCol(lpi, 0, coef, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 1 );
+   }
+
    /* check basis inverse times nonbasic matrix for row corresponding to the basic slack variable */
    cr_assert_geq(i, 0);
    cr_assert_lt(i, nrows);
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coef, NULL, NULL) );
 
    /* row of basis inverse times nonbasic matrix should be (-0.5, 0, 0) */
-   cr_expect_float_eq(coef[0], -0.5, EPS);
-   cr_expect_float_eq(coef[1], 0.0, EPS);
-   cr_expect_float_eq(coef[2], 0.0, EPS);
+   cr_expect_float_eq(coef[0], -0.5, EPS, "BInvARow[%d] = %g != %g\n", 0, coef[0], -0.5);
+   cr_expect_float_eq(coef[1], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 1, coef[1], 0.0);
+   cr_expect_float_eq(coef[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, coef[2], 0.0);
+
+   /* check nonzeros */
+   SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, NULL, coeftwo, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 1 );
+      for (entry = 0; entry < ninds; ++entry)
+      {
+         idx = coef[entry];
+         cr_assert( 0 <= idx && idx < 3 );
+         cr_expect_float_eq(coeftwo[entry], coef[idx], EPS);
+      }
+   }
 
    /* check first column of basis inverse times nonbasic matrix */
    SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, NULL, NULL) );
@@ -355,6 +401,13 @@ Test(complex, test1)
             cr_expect_float_eq(coef[entry], exp_avals[idx], EPS);
          }
       }
+   }
+
+   /* check nonzeros */
+   SCIP_CALL( SCIPlpiGetBInvACol(lpi, 0, coef, inds, &ninds) );
+   if ( ninds >= 0 )
+   {
+      cr_assert( ninds == 3 );
    }
 }
 
@@ -417,6 +470,11 @@ void setup_more_vars(void)
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    cr_assert_eq(nrows, 3);
    cr_assert_eq(ncols, 4);
+
+#ifdef SCIP_DEBUG
+   /* turn on output */
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPINFO, 1) );
+#endif
 }
 TestSuite(more_vars, .init = setup_more_vars, .fini = teardown);
 
@@ -485,10 +543,10 @@ Test(more_vars, test1)
    cr_assert(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 0.0, EPS);
-   cr_expect_float_eq(binvarow[1], 1.0, EPS);
-   cr_expect_float_eq(binvarow[2], 1.0, EPS);
-   cr_expect_float_eq(binvarow[3], 4.0, EPS);
+   cr_expect_float_eq(binvarow[0], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 0, binvarow[0], 0.0);
+   cr_expect_float_eq(binvarow[1], 1.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], 0.0);
+   cr_expect_float_eq(binvarow[2], 1.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
+   cr_expect_float_eq(binvarow[3], 4.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], 0.0);
 
    /* find position of s1 in basis indices; check binvarow of row where s1 is basic */
    for( basicvarpos = 0; basicvarpos < 3; ++basicvarpos )
@@ -499,8 +557,8 @@ Test(more_vars, test1)
    cr_assert(basicvarpos < 3); /* assert that we found the variable */
 
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, basicvarpos, NULL, binvarow, NULL, NULL) );
-   cr_expect_float_eq(binvarow[0], 0.0, EPS);
-   cr_expect_float_eq(binvarow[1], -3.0, EPS);
-   cr_expect_float_eq(binvarow[2], 0.0, EPS);
-   cr_expect_float_eq(binvarow[3], -6.0, EPS);
+   cr_expect_float_eq(binvarow[0], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 0, binvarow[0], 0.0);
+   cr_expect_float_eq(binvarow[1], -3.0, EPS, "BInvARow[%d] = %g != %g\n", 1, binvarow[1], -3.0);
+   cr_expect_float_eq(binvarow[2], 0.0, EPS, "BInvARow[%d] = %g != %g\n", 2, binvarow[2], 0.0);
+   cr_expect_float_eq(binvarow[3], -6.0, EPS, "BInvARow[%d] = %g != %g\n", 3, binvarow[3], -6.0);
 }

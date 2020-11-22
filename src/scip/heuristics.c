@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -23,7 +23,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
-#include "pub_heur.h"
+#include "scip/pub_heur.h"
 
 /* the indicator and SOS1 constraint handlers are included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
@@ -855,7 +855,7 @@ SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_HASHMAP*         varmap              /**< a hashmap to store the mapping of source variables to the corresponding
-                                               *   target variables */
+                                              *   target variables */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
 
-      /* get name of the original problem and add the string "_crossoversub" */
+      /* set name to the original problem name and possibly add a suffix */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
 
       /* create the subproblem */
@@ -1048,7 +1048,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    }
 
    /* adding the violation variable */
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "trustregion_violationvar", i);
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_trustregionviolvar", SCIPgetProbName(sourcescip));
    SCIP_CALL( SCIPcreateVarBasic(targetscip, &violvar, name, 0.0, SCIPinfinity(targetscip), violpenalty, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(targetscip, violvar) );
    consvars[nconsvars] = violvar;
@@ -1069,7 +1069,6 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
    /* free local memory */
    SCIPfreeBufferArray(sourcescip, &consvals);
    SCIPfreeBufferArray(sourcescip, &consvars);
-
 
    return SCIP_OKAY;
 }

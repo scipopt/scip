@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -203,7 +203,9 @@ struct SCIP_Tree
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Real*            probdiverelaxsol;   /**< array with stored original relaxation solution during diving or probing */
+   int                   nprobdiverelaxsol;  /**< size of probdiverelaxsol */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
+   SCIP_Longint          lastbranchparentid; /**< last node id/number of branching parent */
    int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
    int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */

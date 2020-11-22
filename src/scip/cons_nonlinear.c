@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -77,8 +77,10 @@
  * certain optimizations should be omitted (http://www.cplusplus.com/reference/cfenv/FENV_ACCESS/).
  * Not supported by Clang (gives warning) and GCC (silently), at the moment.
  */
-#ifndef __clang__
-#pragma STD FENV_ACCESS ON
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+#pragma fenv_access (on)
+#elif defined __GNUC__
+#pragma STDC FENV_ACCESS ON
 #endif
 
 /* constraint handler properties */
@@ -1541,6 +1543,92 @@ SCIP_RETCODE chgLinearCoefPos(
    return SCIP_OKAY;
 }
 
+/** changes side of constraint and allow to change between finite and infinite
+ *
+ * takes care of updating events and locks of linear variables
+ */
+static
+SCIP_RETCODE chgSideNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SIDETYPE         side,               /**< which side to change */
+   SCIP_Real             sideval             /**< new value for side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, side == SCIP_SIDETYPE_LEFT ? sideval : -sideval));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* if remaining finite or remaining infinite, then can just update the value */
+   if( side == SCIP_SIDETYPE_LEFT )
+   {
+      if( SCIPisInfinity(scip, -consdata->lhs) == SCIPisInfinity(scip, -sideval) )
+      {
+         consdata->lhs = sideval;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      if( SCIPisInfinity(scip, consdata->rhs) == SCIPisInfinity(scip, sideval) )
+      {
+         consdata->rhs = sideval;
+         return SCIP_OKAY;
+      }
+   }
+
+   /* catched boundchange events and locks for linear variables depends on whether side is finite, so first drop all */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      int j;
+      if( SCIPconsIsEnabled(cons) )
+      {
+         SCIP_CALL( dropLinearVarEvents(scip, cons, i) );
+      }
+
+      for( j = 0; j < NLOCKTYPES; j++ )
+      {
+         if( SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j) )
+         {
+            assert(SCIPconsIsTransformed(cons));
+            SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            break;
+         }
+      }
+   }
+
+   if( side == SCIP_SIDETYPE_LEFT )
+      consdata->lhs = sideval;
+   else
+      consdata->rhs = sideval;
+
+   /* catch boundchange events and locks on variables again */
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      int j;
+      if( SCIPconsIsEnabled(cons) )
+      {
+         SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
+      }
+
+      for( j = 0; j < NLOCKTYPES; j++ )
+      {
+         if( SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) j) )
+         {
+            SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            break;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /* merges entries with same linear variable into one entry and cleans up entries with coefficient 0.0 */
 static
@@ -1648,13 +1736,11 @@ SCIP_RETCODE removeFixedLinearVariables(
          {
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-               consdata->lhs -= offset;
-               assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+               SCIP_CALL( chgSideNonlinear(scip, cons, SCIP_SIDETYPE_LEFT, consdata->lhs - offset) );
             }
             if( !SCIPisInfinity(scip,  consdata->rhs) )
             {
-               consdata->rhs -= offset;
-               assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+               SCIP_CALL( chgSideNonlinear(scip, cons, SCIP_SIDETYPE_RIGHT, consdata->rhs - offset) );
             }
          }
 
@@ -5419,7 +5505,7 @@ SCIP_RETCODE generateCut(
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, side,
       !(side == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) &&
-      !(side == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX ))) );
+      !(side == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX ))) ); /*lint --e{845}*/
    SCIPaddRowprepSide(rowprep, side == SCIP_SIDETYPE_LEFT  ? consdata->lhs : consdata->rhs);
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_%u", SCIPconsGetName(cons), ++(consdata->ncuts));
 
@@ -7182,7 +7268,6 @@ SCIP_RETCODE enforceConstraint(
          {
             *result = SCIP_FEASIBLE;
             SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
-            assert(!SCIPisInfinity(scip, maxviol));
          }
          return SCIP_OKAY;
       }
@@ -9706,6 +9791,7 @@ int SCIPgetNLinearVarsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9718,6 +9804,7 @@ SCIP_VAR** SCIPgetLinearVarsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9730,6 +9817,7 @@ SCIP_Real* SCIPgetLinearCoefsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9742,6 +9830,7 @@ int SCIPgetNExprtreesNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
@@ -9755,6 +9844,7 @@ SCIP_EXPRTREE** SCIPgetExprtreesNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
@@ -9768,6 +9858,7 @@ SCIP_Real* SCIPgetExprtreeCoefsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    assert(SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE);
@@ -9781,6 +9872,7 @@ SCIP_EXPRGRAPHNODE* SCIPgetExprgraphNodeNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9793,6 +9885,7 @@ SCIP_Real SCIPgetLhsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 
@@ -9805,6 +9898,7 @@ SCIP_Real SCIPgetRhsNonlinear(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
+   assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
 

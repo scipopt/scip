@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -60,7 +60,7 @@ public:
     *  data object. If the "deleteobject" flag was set to FALSE, and the user variable data object stays alive
     *  after the SCIP variable is freed, this method should delete all the variable specific data that is no
     *  longer needed.
-    */
+    */ /*lint -e715*/
    virtual SCIP_RETCODE scip_delorig(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_VAR*          var                 /**< original variable, the data to free is belonging to */
@@ -81,7 +81,7 @@ public:
     *   2. Call the copy constructor of the variable data object and return the created copy as transformed variable
     *      data object. In this case, he probably wants to set *deleteobject to TRUE, thus letting SCIP call the
     *      destructor of the object if the transformed variable data is no longer needed.
-    */
+    */ /*lint -e715*/
    virtual SCIP_RETCODE scip_trans(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_VAR*          var,                /**< transformed variable, the data to create is belonging to */
@@ -99,7 +99,7 @@ public:
       *deleteobject = FALSE;
 
       return SCIP_OKAY;
-   }      
+   }
 
    /** destructor of user variable data to free transformed user data (called when transformed variable is freed)
     *
@@ -108,7 +108,7 @@ public:
     *  data object. If the "*deleteobject" flag was set to FALSE, and the user variable data object stays alive
     *  after the SCIP variable is freed, this method should delete all the variable specific data that is no
     *  longer needed.
-    */
+    */ /*lint -e715*/
    virtual SCIP_RETCODE scip_deltrans(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_VAR*          var                 /**< transformed variable, the data to free is belonging to */
@@ -131,7 +131,7 @@ public:
     *  possible return values for *result:
     *  - SCIP_DIDNOTRUN  : the copying process was not performed
     *  - SCIP_SUCCESS    : the copying process was successfully performed
-    */
+    */ /*lint -e715*/
    virtual SCIP_RETCODE scip_copy(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP*              sourcescip,         /**< source SCIP main data structure */

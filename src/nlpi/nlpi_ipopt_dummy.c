@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,7 +28,7 @@
 #include "scip/pub_message.h"
 #include "nlpi/nlpi_ipopt.h"
 
-/** create solver interface for Ipopt solver */
+/** create solver interface for Ipopt solver */ /*lint -e715*/
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
@@ -59,7 +59,7 @@ SCIP_Bool SCIPisIpoptAvailableIpopt(void)
    return FALSE;
 }
 
-/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */
+/** gives a pointer to the IpoptApplication object stored in Ipopt-NLPI's NLPI problem data structure */ /*lint -e715*/
 void* SCIPgetIpoptApplicationPointerIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    )
@@ -69,7 +69,7 @@ void* SCIPgetIpoptApplicationPointerIpopt(
    return NULL;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */
+/** gives a pointer to the NLPIORACLE object stored in Ipopt-NLPI's NLPI problem data structure */ /*lint -e715*/
 void* SCIPgetNlpiOracleIpopt(
    SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLP problem of Ipopt-NLPI */
    )
@@ -82,20 +82,18 @@ void* SCIPgetNlpiOracleIpopt(
 /** sets modified default settings that are used when setting up an Ipopt problem
  *
  * Do not forget to add a newline after the last option in optionsstring.
- */
+ */ /*lint -e715*/
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
    const char*           optionsstring,      /**< string with options as in Ipopt options file */
    SCIP_Bool             append              /**< whether to append to modified default settings or to overwrite */
    )
 {
-   SCIPerrorMessage("Ipopt not available!\n");
-   SCIPABORT();
 }  /*lint !e715*/
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
  * It's here, because Ipopt is linked against Lapack.
- */
+ */ /*lint -e715*/
 SCIP_RETCODE LapackDsyev(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */

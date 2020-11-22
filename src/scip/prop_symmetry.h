@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,11 +28,11 @@
 
 #include <scip/scip.h>
 
+#include <symmetry/type_symmetry.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <symmetry/type_symmetry.h>
 
 /** include symmetry propagator */
 SCIP_EXPORT
@@ -56,6 +56,18 @@ SCIP_RETCODE SCIPgetSymmetry(
    int**                 componentbegins,    /**< pointer to store begin positions of components in components array (or NULL) */
    int**                 vartocomponent,     /**< pointer to store assignment from variable to its component (or NULL) */
    int*                  ncomponents         /**< pointer to store number of components (or NULL) */
+   );
+
+/** return whether orbital fixing is enabled */
+SCIP_EXPORT
+SCIP_Bool SCIPisOrbitalfixingEnabled(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** return number of the symmetry group's generators */
+SCIP_EXPORT
+int SCIPgetSymmetryNGenerators(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

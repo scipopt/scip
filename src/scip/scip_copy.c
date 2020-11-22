@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -39,6 +39,7 @@
 #include "scip/conflictstore.h"
 #include "scip/cons.h"
 #include "scip/cons_linear.h"
+#include "scip/dcmp.h"
 #include "scip/debug.h"
 #include "scip/primal.h"
 #include "scip/prob.h"
@@ -347,7 +348,7 @@ SCIP_RETCODE SCIPcopyBenders(
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables; if NULL the transfer of cuts is not possible */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
-                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
+                                              *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool*            valid               /**< pointer to store whether all plugins were validly copied */
    )
 {
@@ -451,6 +452,8 @@ SCIP_RETCODE copyProb(
 
    /* create conflict store to store conflict constraints */
    SCIP_CALL( SCIPconflictstoreCreate(&targetscip->conflictstore, targetscip->set) );
+
+   SCIP_CALL( SCIPdecompstoreCreate(&targetscip->decompstore, SCIPblkmem(targetscip), SCIP_DECOMPSTORE_CAPA) );
 
    if( uselocalvarmap )
    {
@@ -1316,7 +1319,7 @@ SCIP_RETCODE translateSubSol(
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
    SCIP_Real*            solvals             /**< array where to set values taken from subsol, must have length at least SCIPgetNVars(scip) */
-)
+   )
 {
    SCIP_VAR** vars;
    int nvars;
@@ -2606,7 +2609,7 @@ SCIP_RETCODE doCopy(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
-                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
+                                              *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not, or NULL */
    )
@@ -2822,7 +2825,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
-                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
+                                              *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -2919,7 +2922,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
-                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
+                                              *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -2996,7 +2999,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
-                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
+                                              *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
@@ -3086,7 +3089,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             threadsafe,         /**< FALSE, if data can be safely shared between the source and target
-                                                  SCIP, otherwise TRUE. This is usually set to FALSE */
+                                              *   SCIP, otherwise TRUE. This is usually set to FALSE */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )

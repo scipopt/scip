@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -428,6 +428,7 @@ SCIP_RETCODE SCIPsolTransform(
 
    assert(sol != NULL);
    assert(transsol != NULL);
+   assert(set != NULL);
    assert(SCIPsolIsOriginal(sol));
    assert(sol->primalindex > -1);
 
@@ -1095,7 +1096,7 @@ SCIP_RETCODE SCIPsolSetVal(
       {
          oldval = solGetArrayVal(sol, var);
 
-         if( !SCIPsetIsEQ(set, val, oldval) )
+         if( val != oldval )  /*lint !e777*/
          {
             SCIP_Real obj;
             SCIP_Real objcont;
@@ -1146,7 +1147,7 @@ SCIP_RETCODE SCIPsolSetVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
          || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
-      if( !SCIPsetIsEQ(set, val, oldval) )
+      if( val != oldval )  /*lint !e777*/
       {
          SCIP_Real obj;
          SCIP_Real objcont;
@@ -1188,7 +1189,7 @@ SCIP_RETCODE SCIPsolSetVal(
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
       oldval = SCIPvarGetLbGlobal(var);
-      if( !SCIPsetIsEQ(set, val, oldval) )
+      if( val != oldval )  /*lint !e777*/
       {
          SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), oldval, val);
@@ -2028,6 +2029,7 @@ SCIP_Bool SCIPsolsAreEqual(
    )
 {
    SCIP_PROB* prob;
+   SCIP_Bool infobjs;
    SCIP_Real obj1;
    SCIP_Real obj2;
    int v;
@@ -2049,8 +2051,12 @@ SCIP_Bool SCIPsolsAreEqual(
       obj2 = SCIPsolGetObj(sol2, set, transprob, origprob);
    }
 
-   /* solutions with different objective values cannot be the same */
-   if( !SCIPsetIsEQ(set, obj1, obj2) )
+   /* solutions with different objective values cannot be the same; we consider two infinite objective values with the
+    * same sign always to be different
+    */
+   infobjs = (SCIPsetIsInfinity(set, obj1) && SCIPsetIsInfinity(set, obj2))
+      || (SCIPsetIsInfinity(set, -obj1) && SCIPsetIsInfinity(set, -obj2));
+   if( !infobjs && !SCIPsetIsEQ(set, obj1, obj2) )
       return FALSE;
 
    /* if one of the solutions is defined in the original space, the comparison has to be performed in the original
@@ -2150,8 +2156,11 @@ SCIP_RETCODE SCIPsolPrint(
       }
    }
 
-   /* display additional priced variables (if given problem data is original problem) */
-   if( !prob->transformed && !SCIPsolIsOriginal(sol) )
+   /* display additional priced variables (if given problem data is original problem); consider these variables only
+    * if there is at least one active pricer, otherwise we might print variables that have been added by, e.g., the
+    * dual sparsify presolver (see #2946)
+    */
+   if( !prob->transformed && !SCIPsolIsOriginal(sol) && set->nactivepricers > 0 )
    {
       assert(transprob != NULL);
       for( v = 0; v < transprob->nfixedvars; ++v )

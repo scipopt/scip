@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -29,9 +29,10 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
+#include "scip/type_dcmp.h"
+#include "scip/type_event.h"
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"
-#include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_nlp.h"
 #include "scip/type_implics.h"
@@ -69,6 +70,7 @@ struct Scip
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
    SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
+   SCIP_DECOMPSTORE*     decompstore;        /**< decomposition storage data structure */
 
    /* REOPTIMIZATION */
    SCIP_REOPT*           reopt;              /**< reoptimization data */

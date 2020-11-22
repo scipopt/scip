@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -52,6 +52,14 @@ static SCIP_LPI* lpi = NULL;
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )
+
+/** macro to keep control of infinity
+ *
+ *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as finity value. Comparing two infinty values then yields
+ *  nan. This is a workaround. */
+#define cr_assert_float_eq_inf(Actual, Expected, Epsilon, FormatString, ...) \
+   if ( fabs(Actual) < 1e30 && fabs(Expected) < 1e30 )                       \
+      cr_assert_float_eq(Actual, Expected, Epsilon, FormatString, __VA_ARGS__);
 
 /** setup of test suite */
 static
@@ -422,8 +430,8 @@ SCIP_RETCODE checkData(
    /* compare data */
    for (j = 0; j < ncols; ++j)
    {
-      cr_assert_float_eq(lpilb[j], lb[j], EPS, "Violation of lower bound %d: %g != %g\n", j, lpilb[j], lb[j]);
-      cr_assert_float_eq(lpiub[j], ub[j], EPS, "Violation of upper bound %d: %g != %g\n", j, lpiub[j], ub[j]);
+      cr_assert_float_eq_inf(lpilb[j], lb[j], EPS, "Violation of lower bound %d: %g != %g\n", j, lpilb[j], lb[j]);
+      cr_assert_float_eq_inf(lpiub[j], ub[j], EPS, "Violation of upper bound %d: %g != %g\n", j, lpiub[j], ub[j]);
 
       cr_assert_float_eq(lpiobj[j], obj[j], EPS, "Violation of objective coefficient %d: %g != %g\n", j, lpiobj[j], obj[j]);
 
@@ -452,8 +460,8 @@ SCIP_RETCODE checkData(
 
    for (i = 0; i < nrows; ++i)
    {
-      cr_assert_float_eq(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
-      cr_assert_float_eq(lpilhs[i], lhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
+      cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of lhs %d: %g != %g\n", i, lpilhs[i], lhs[i]);
+      cr_assert_float_eq_inf(lpilhs[i], lhs[i], EPS, "Violation of rhs %d: %g != %g\n", i, lpirhs[i], rhs[i]);
    }
 
    BMSfreeMemoryArray(&lpirhs);
@@ -898,7 +906,7 @@ Test(solve, test6)
 
    /* the objective should be equal to the objective limit */
    SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-   cr_assert_geq(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+   cr_assert_float_eq(objval, exp_objval, EPS, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );

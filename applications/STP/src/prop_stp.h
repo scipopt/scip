@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,13 +38,11 @@ extern "C" {
 #endif
 
 /** creates the stp propagator and includes it in SCIP */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** fix a variable (corresponding to an edge) to zero */
-SCIP_EXPORT
 SCIP_RETCODE fixedgevar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             edgevar,            /**< the variable to be fixed */
@@ -52,13 +50,11 @@ SCIP_RETCODE fixedgevar(
    );
 
 /** return total number of arcs fixed by 'fixedgevar' method of this propagator */
-SCIP_EXPORT
 int SCIPStpNfixedEdges(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets propagator graph  */
-SCIP_EXPORT
 void SCIPStpPropGetGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data */

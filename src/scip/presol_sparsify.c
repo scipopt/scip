@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -17,7 +17,7 @@
  * @ingroup DEFPLUGINS_PRESOL
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Ambros Gleixner
  *
  * This presolver attempts to cancel non-zero entries of the constraint
@@ -146,7 +146,7 @@ SCIP_DECL_HASHKEYVAL(varPairHashval)
 
    varpair = (ROWVARPAIR*) key;
 
-   return SCIPhashTwo(SCIPcombineTwoInt(varpair->varindex1, varpair->varindex2),
+   return SCIPhashThree(varpair->varindex1, varpair->varindex2,
                       SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
 }
 
@@ -694,6 +694,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
+   SCIP_Bool infeasible;
    int nrows;
    int r;
    int i;
@@ -748,7 +749,18 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete) );
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    /* we only work on pure MIPs currently */
    if( initialized && complete )
@@ -919,7 +931,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       maxuseless = (SCIP_Longint)(presoldata->maxretrievefac * (SCIP_Real)nrows);
       nuseless = 0;
       oldnchgcoefs = *nchgcoefs;
-      for( r = 0; r < nrows && nuseless <= maxuseless; r++ )
+      for( r = 0; r < nrows && nuseless <= maxuseless && !SCIPisStopped(scip); r++ )
       {
          int rowidx;
 

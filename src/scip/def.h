@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -94,6 +94,8 @@
 #ifndef SCIP_EXPORT
 #if defined(_WIN32) || defined(_WIN64)
 #define SCIP_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#define SCIP_EXPORT __attribute__((__visibility__("default")))
 #else
 #define SCIP_EXPORT
 #endif
@@ -112,16 +114,17 @@
 
 #include "scip/type_retcode.h"
 #include "scip/type_message.h"
+#include "scip/pub_message.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#define SCIP_VERSION                602 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
-#define SCIP_APIVERSION              62 /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2019 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                701 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
+#define SCIP_APIVERSION              74 /**< SCIP API version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2020 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -288,7 +291,7 @@ extern "C" {
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
-#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)(SCIP_LONGINT_MAX >> 20)/**< initial size of dynamically allocated arrays */
 
 /*
  * Tree settings

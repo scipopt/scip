@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -38,33 +38,28 @@ extern "C" {
 
 
 /** sets up the problem data */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
    );
 
 /** sets the probdata graph */
-SCIP_EXPORT
 void SCIPprobdataSetGraph(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    GRAPH*                graph               /**< graph data structure */
    );
 
 /** returns the graph */
-SCIP_EXPORT
 GRAPH* SCIPprobdataGetGraph(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
 /** returns the graph */
-SCIP_EXPORT
 GRAPH* SCIPprobdataGetGraph2(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** sets the offset */
-SCIP_EXPORT
 void SCIPprobdataSetOffset(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_Real             offset              /**< the offset value */
@@ -72,102 +67,86 @@ void SCIPprobdataSetOffset(
 
 
 /** returns the array with all variables */
-SCIP_EXPORT
 SCIP_VAR** SCIPprobdataGetVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the array with all edge variables */
-SCIP_EXPORT
 SCIP_VAR** SCIPprobdataGetEdgeVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the array with all terminals (without the root) */
-SCIP_EXPORT
 int* SCIPprobdataGetRTerms(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** returns the number of layers */
-SCIP_EXPORT
 int SCIPprobdataGetNLayers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** returns the number of vars */
-SCIP_EXPORT
 int SCIPprobdataGetNVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 
 /** returns the number of terminals */
-SCIP_EXPORT
 int SCIPprobdataGetNTerms(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of terminals without the root node  */
-SCIP_EXPORT
 int SCIPprobdataGetRNTerms(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns root */
-SCIP_EXPORT
 int SCIPprobdataGetRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns numer of original edges */
-SCIP_EXPORT
 int SCIPprobdataGetNorgEdges(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the number of edges */
-SCIP_EXPORT
 int SCIPprobdataGetNEdges(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the offset */
-SCIP_EXPORT
 SCIP_Real SCIPprobdataGetOffset(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns the edge variable for a given index */
-SCIP_EXPORT
 SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   idx
    );
 
 /** returns the LP solution values */
-SCIP_EXPORT
 SCIP_Real* SCIPprobdataGetXval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol
    );
 
 /** returns all edge constraints */
-SCIP_EXPORT
 SCIP_CONS** SCIPprobdataGetEdgeConstraints(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns all path constraints */
-SCIP_EXPORT
 SCIP_CONS** SCIPprobdataGetPathConstraints(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** print (undirected) graph */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataPrintGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< Name of the output file */
@@ -176,7 +155,6 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
    );
 
 /** print graph (in undirected form) in GML format with given edges highlighted */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataPrintGraph2(
    const GRAPH*          graph,              /**< Graph to be printed */
    const char*           filename,           /**< Name of the output file */
@@ -184,13 +162,11 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
    );
 
 /** returns if 'T' model is being used */
-SCIP_EXPORT
 SCIP_Bool SCIPprobdataIsBigt(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** writes the best solution to the intermediate solution file */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -203,14 +179,12 @@ void SCIPprobdataWriteStp(
    );
 
 /** writes the best solution to a file */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataWriteSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< file to write best solution to; or NULL, to write to stdout */
    );
 
 /** writes a line to the log file */
-SCIP_EXPORT
 void SCIPprobdataWriteLogLine(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
@@ -218,7 +192,6 @@ void SCIPprobdataWriteLogLine(
    );
 
 /** add new solution */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataAddNewSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            nval,               /**< array [0..nvars], nval[v] = 1 if node v is in the solution, nval[v] = 0 if not */
@@ -228,33 +201,28 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    );
 
 /** set dual bound by ug */
-SCIP_EXPORT
 void SCIPprobdataSetDualBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             dual
    );
 
 /** set the number of solvers */
-SCIP_EXPORT
 void SCIPprobdataSetNSolvers(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nSolvers            /**< the number of solvers */
    );
 
 /** returns problem type */
-SCIP_EXPORT
 int SCIPprobdataGetType(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** writes end of log file */
-SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataWriteLogfileEnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** branching information from UG */
-SCIP_EXPORT
 void initReceivedSubproblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const int             lLinearConsNames,   /**< number of linear constraints */

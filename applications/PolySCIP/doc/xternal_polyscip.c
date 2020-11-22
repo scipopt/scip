@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -24,7 +24,7 @@
  * General information
  * ===================
  *
- * [PolySCIP] (http://polyscip.zib.de) is a solver for multi-criteria integer programming and multi-criteria linear
+ * [PolySCIP] (http://polyscipopt.org) is a solver for multi-criteria integer programming and multi-criteria linear
  * programming problems.
  * In other words, it solves optimization problems of the form:
  * \f{align*}{
@@ -67,7 +67,7 @@
  * | parameter | long | description |
  * |-----------|------|-------------|
  * | `-h` | `--help` | Display usage information and exit |
- * | `-p` | `--params &lt;param_file.set&gt;` | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scip.zib.de/doc/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
+ * | `-p` | `--params &lt;param_file.set&gt;` | Specify a file consisting of SCIP parameter settings. PolySCIP comes with the parameter settings file *scipmip.set*. A [list](http://scipopt.org/doc/html_devel/PARAMETERS.php) of all available SCIP parameters is available at \ref PARAMETERS. To switch, e.g., the verbosity level of the internal SCIP solution process to 1, write `display/verblevel=1` in the *scipmip.set* file and run *polyscip* with `-p scipmip.set` |
  * | `-W` | `--writeSolsPath &lt;path&gt;` | Path where the solution file should be written to if `-w` was set |
  * | `-e` | `--Epsilon &lt;double&gt;` | Specify epsilon used in computation of unsupported points; the default value is 1e-3 |
  * | `-d` | `--Delta &lt;double&gt;` | Specify delta used in computation of feasible boxes; the default value is 0.01 |
@@ -167,7 +167,7 @@
  * yields an `.mop` file.
  *
  * -   Zimpl comes with the [SCIP Optimization
- *     Suite](http://scip.zib.de/#scipoptsuite)
+ *     Suite](http://scipopt.org/#scipoptsuite)
  *
  *     -   Please see the INSTALL file of the SCIP Optimization Suite (you
  *         basically just need the GMP library in order to build).

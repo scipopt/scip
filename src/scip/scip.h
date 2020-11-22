@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -80,6 +80,7 @@
 #include "scip/pub_conflict.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_cutpool.h"
+#include "scip/pub_dcmp.h"
 #include "scip/pub_dialog.h"
 #include "scip/pub_disp.h"
 #include "scip/pub_event.h"
@@ -125,6 +126,7 @@
 #include "scip/scip_cut.h"
 #include "scip/scip_datastructures.h"
 #include "scip/scip_debug.h"
+#include "scip/scip_dcmp.h"
 #include "scip/scip_dialog.h"
 #include "scip/scip_disp.h"
 #include "scip/scip_event.h"

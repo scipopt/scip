@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -271,9 +271,17 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
-/* @} */
+/** cleans up (multi-)aggregations and fixings from knapsack constraints */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcleanupConssKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
+   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   );
 
-/* @} */
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

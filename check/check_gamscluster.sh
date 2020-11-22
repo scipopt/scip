@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -211,14 +211,15 @@ fi
 
 # if cutoff should be passed, check for solu file
 if test $SETCUTOFF = 1 || test $SETCUTOFF = true ; then
-  if test -e testset/$TSTNAME.solu ; then
-    SOLUFILE=testset/$TSTNAME.solu
-  elif test -e testset/all.solu ; then
-    SOLUFILE=testset/all.solu
-  else
-    echo "Warning: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
-    SETCUTOFF=0
-  fi
+    # call method to obtain solution file
+    # defines the following environment variable: SOLUFILE
+    . ./configuration_solufile.sh $TSTNAME
+
+    if test "$SOLUFILE" = ""
+    then
+	echo "Warning: SETCUTOFF=1 set, but no .solu file available"
+	SETCUTOFF=0
+    fi
 fi
 
 #define clusterqueue, which might not be the QUEUE, cause this might be an alias for a bunch of QUEUEs

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   conflict.c
@@ -907,15 +907,15 @@ void lpbdchgsFree(
 
 /** return the char associated with the type of the variable */
 static
-const char* varGetChar(
+char varGetChar(
    SCIP_VAR*             var                 /**< variable */
    )
 {
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
 
-   return (!SCIPvarIsIntegral(var) ? "C" :
-          (vartype == SCIP_VARTYPE_BINARY ? "B" :
-          (vartype == SCIP_VARTYPE_INTEGER ? "I" : "M")));
+   return (!SCIPvarIsIntegral(var) ? 'C' :
+          (vartype == SCIP_VARTYPE_BINARY ? 'B' :
+          (vartype == SCIP_VARTYPE_INTEGER ? 'I' : 'M')));
 }
 
 /** resets the data structure of a proofset */
@@ -1650,8 +1650,8 @@ SCIP_RETCODE conflictsetAddBounds(
    confrelaxedbds = conflictset->relaxedbds;
    confsortvals = conflictset->sortvals;
 
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE);/*lint !e641*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE);/*lint !e641*/
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641 !e506*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641 !e506*/
 
    for( i = 0; i < nbdchginfos; ++i )
    {
@@ -1872,7 +1872,7 @@ SCIP_Bool conflictsetIsRedundant(
       assert(i2 == 0 || conflictset2->sortvals[i2-1] < conflictset2->sortvals[i2]);
 
       sortval = conflictset2->sortvals[i2];
-      for( ; i1 < conflictset1->nbdchginfos && conflictset1->sortvals[i1] < sortval; ++i1 )
+      for( ; i1 < conflictset1->nbdchginfos && conflictset1->sortvals[i1] < sortval; ++i1 ) /*lint !e445*/
       {
          /* while scanning conflictset1, check consistency */
          assert(i1 == 0 || conflictset1->sortvals[i1-1] < conflictset1->sortvals[i1]);
@@ -2290,8 +2290,8 @@ SCIP_RETCODE detectImpliedBounds(
    assert(sortvals != NULL);
 
    /* check if the boolean representation of boundtypes matches the 'standard' definition */
-   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641*/
-   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641*/
+   assert(SCIP_BOUNDTYPE_LOWER == FALSE); /*lint !e641 !e506*/
+   assert(SCIP_BOUNDTYPE_UPPER == TRUE); /*lint !e641 !e506*/
 
    ntrivialredvars = 0;
 
@@ -2432,6 +2432,9 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
          goto TERMINATE;
       }
 
@@ -2447,6 +2450,7 @@ SCIP_RETCODE detectImpliedBounds(
       {
          SCIPsetDebugMsg(set, "conflict set (%p) is redundant because at least one global reduction, fulfills the conflict constraint\n", (void*)conflictset);
 
+         /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
       }
       else if( *nredvars > 0 )
@@ -2476,6 +2480,11 @@ SCIP_RETCODE detectImpliedBounds(
 
          SCIPsetDebugMsg(set, "removed %d redundant of %d variables from conflictset (%p)\n", (*nredvars), conflictset->nbdchginfos, (void*)conflictset);
          conflictset->nbdchginfos = nbdchginfos;
+      }
+      else
+      {
+         /* clear the memory array before freeing it */
+         BMSclearMemoryArray(redundants, nbdchginfos);
       }
 
      TERMINATE:
@@ -2566,7 +2575,7 @@ SCIP_RETCODE tightenSingleVar(
          SCIP_Real consrhs;
          char name[SCIP_MAXSTRLEN];
 
-         SCIPsetDebugMsg(set, "add constraint <%s>[%s] %s %g to node #%lld in depth %d\n",
+         SCIPsetDebugMsg(set, "add constraint <%s>[%c] %s %g to node #%lld in depth %d\n",
                SCIPvarGetName(var), varGetChar(var), boundtype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", newbound,
                SCIPnodeGetNumber(tree->path[validdepth]), validdepth);
 
@@ -2603,7 +2612,7 @@ SCIP_RETCODE tightenSingleVar(
       {
          assert(applyglobal);
 
-         SCIPsetDebugMsg(set, "change global %s bound of <%s>[%s]: %g -> %g\n",
+         SCIPsetDebugMsg(set, "change global %s bound of <%s>[%c]: %g -> %g\n",
                (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
                SCIPvarGetName(var), varGetChar(var),
                (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
@@ -2705,7 +2714,6 @@ SCIP_Real aggrRowGetMinActivity(
          *infdelta = TRUE;
          goto TERMINATE;
       }
-
    }
 
   TERMINATE:
@@ -3090,9 +3098,9 @@ SCIP_RETCODE createAndAddProofcons(
       return SCIP_OKAY;
 
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%d", conflict->ndualproofsinfsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_inf_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsinfsuccess);
    else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF )
-      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%d", conflict->ndualproofsbndsuccess);
+      (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "dualproof_bnd_%" SCIP_LONGINT_FORMAT, conflict->ndualproofsbndsuccess);
    else
       return SCIP_INVALIDCALL;
 
@@ -3188,7 +3196,7 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPconflictstoreAddDualsolcons(conflictstore, cons, blkmem, set, stat, transprob, reopt, scale, updateside, hasrelaxvar) );
    }
 
-   if( applyglobal )
+   if( applyglobal ) /*lint !e774*/
    {
       /* add the constraint to the global problem */
       SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
@@ -3212,7 +3220,7 @@ SCIP_RETCODE createAndAddProofcons(
    if( conflicttype == SCIP_CONFTYPE_INFEASLP || conflicttype == SCIP_CONFTYPE_ALTINFPROOF )
    {
       conflict->dualproofsinfnnonzeros += nnz;
-      if( applyglobal )
+      if( applyglobal ) /*lint !e774*/
          ++conflict->ndualproofsinfglobal;
       else
          ++conflict->ndualproofsinflocal;
@@ -3222,7 +3230,7 @@ SCIP_RETCODE createAndAddProofcons(
    {
       assert(conflicttype == SCIP_CONFTYPE_BNDEXCEEDING || conflicttype == SCIP_CONFTYPE_ALTBNDPROOF);
       conflict->dualproofsbndnnonzeros += nnz;
-      if( applyglobal )
+      if( applyglobal ) /*lint !e774*/
          ++conflict->ndualproofsbndglobal;
       else
          ++conflict->ndualproofsbndlocal;
@@ -3395,6 +3403,9 @@ SCIP_RETCODE conflictAddConflictCons(
       int oldnbdchginfos = conflictset->nbdchginfos;
 #endif
       assert(conflictset->validdepth == 0);
+
+      /* check conflict set on debugging solution */
+      SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->root, conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) );
 
       SCIPclockStart(conflict->dIBclock, set);
 
@@ -3836,6 +3847,9 @@ SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
    assert(!SCIPbdchginfoIsRedundant(bdchginfo1));
    assert(!SCIPbdchginfoIsRedundant(bdchginfo2));
 
+   if( bdchginfo1 == bdchginfo2 )
+      return 0;
+
    if( !SCIPbdchgidxIsEarlierNonNull(SCIPbdchginfoGetIdx(bdchginfo1), SCIPbdchginfoGetIdx(bdchginfo2)) )
       return -1;
    else
@@ -3882,9 +3896,9 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
 
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
-         conflictBdchginfoComp) );
+         conflictBdchginfoComp, NULL) );
    SCIP_CALL( conflictsetCreate(&(*conflict)->conflictset, blkmem) );
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;
@@ -7477,7 +7491,7 @@ SCIP_RETCODE separateAlternativeProofs(
       {
          proofsetFree(&alternativeproofset, blkmem);
       }
-   }
+   }  /*lint !e438*/
 
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);
@@ -9446,12 +9460,19 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       pseudocoefs[v] = -SCIPvarGetObj(var);
       curvarlbs[v] = SCIPvarGetLbLocal(var);
       curvarubs[v] = SCIPvarGetUbLocal(var);
+      lbchginfoposs[v] = var->nlbchginfos-1;
+      ubchginfoposs[v] = var->nubchginfos-1;
+
+      if( SCIPsetIsZero(set, pseudocoefs[v]) )
+      {
+         pseudocoefs[v] = 0.0;
+         continue;
+      }
+
       if( pseudocoefs[v] > 0.0 )
          pseudoact += pseudocoefs[v] * curvarubs[v];
       else
          pseudoact += pseudocoefs[v] * curvarlbs[v];
-      lbchginfoposs[v] = var->nlbchginfos-1;
-      ubchginfoposs[v] = var->nubchginfos-1;
    }
    assert(SCIPsetIsFeasEQ(set, pseudoact, -SCIPlpGetPseudoObjval(lp, set, transprob)));
    SCIPsetDebugMsg(set, "  -> recalculated pseudo infeasibility proof:  %g <= %g\n", pseudolhs, pseudoact);

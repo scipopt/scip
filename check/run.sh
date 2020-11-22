@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,8 +15,8 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 # absolut tolerance for checking linear constraints and objective value
-LINTOL=1e-04 
-# absolut tolerance for checking integrality constraints 
+LINTOL=1e-04
+# absolut tolerance for checking integrality constraints
 INTTOL=1e-04
 
 # check if tmp-path exists
@@ -34,6 +34,26 @@ TMPFILE=$SOLVERPATH/$OUTPUTDIR/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
+
+# function to copy back the results and delete temporary files
+function cleanup {
+     mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
+     mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
+     if [ -f "${ERRFILE}.rr" ] ;
+     then
+         mv -f $ERRFILE.rr $SOLVERPATH/$OUTPUTDIR/$BASENAME.rr
+     fi
+     # move a possible data file
+     if [ -f "${DATFILE}" ] ;
+     then
+         mv $DATFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
+     fi
+     rm -f $TMPFILE
+     rm -f $SOLFILE
+}
+
+# ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
+trap cleanup EXIT
 
 # only wait for optimi to be mounted in run.sh if you are on an opt computer at zib
 OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]')
@@ -70,7 +90,9 @@ then
 fi
 
 echo                                >> $OUTFILE
-top -b -n 1 | head -n 15            >> $OUTFILE
+if test `uname` == Linux ; then   # -b does not work with top on macOS
+  top -b -n 1 | head -n 15          >> $OUTFILE
+fi
 echo                                >> $OUTFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT" >>$OUTFILE
@@ -88,8 +110,14 @@ echo @05 $TIMELIMIT                 >> $OUTFILE
 
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
-EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
-eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
+EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+EXECNAME=$SRUN${EXECNAME/RRTRACEFOLDER_PLACEHOLDER/${ERRFILE}}
+if test -e $TMPFILE
+then
+    eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
+else
+    eval $EXECNAME                           2>>$ERRFILE  | tee -a $OUTFILE
+fi
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then
@@ -109,9 +137,9 @@ then
             s/infinity/1e+20/g;
             s/no solution available//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
-    
+
     # check if the link to the solution checker exists
-    if test -f "$CHECKERPATH/bin/solchecker" 
+    if test -f "$CHECKERPATH/bin/solchecker"
     then
       echo
       $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE
@@ -126,18 +154,3 @@ echo -----------------------------  >> $OUTFILE
 date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
-
-mv $OUTFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.out
-mv $ERRFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.err
-
-# move a possible data file
-if [ -f "${DATFILE}" ] ;
-then
-    mv $DATFILE $SOLVERPATH/$OUTPUTDIR/$BASENAME.dat
-fi
-
-rm -f $TMPFILE
-rm -f $SOLFILE
-#chmod g+r $ERRFILE
-#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.out
-#chmod g+r $SCIPPATH/$OUTPUTDIR/$BASENAME.set

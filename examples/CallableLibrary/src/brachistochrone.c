@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -28,7 +28,7 @@
  * \f$(x_0,y_0)\f$ to \f$ (x_N,y_N)\f$ for a given trajectory by \f[T = \sqrt{\frac{2}{g}}
  * \sum_{0}^{N-1} \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}.\f]
  * We seek to minimize \f$T\f$.
- * A more detailed description of the model can be found in the brachistochrone directory of http://scip.zib.de/workshop2018/pyscipopt-exercises.tgz
+ * A more detailed description of the model can be found in the brachistochrone directory of http://scipopt.org/workshop2018/pyscipopt-exercises.tgz
  *
  * Passing this equation as it is to SCIP does not lead to satisfying results, though, so we reformulate a bit.
  * Let \f$t_i \geq \frac{\sqrt{(y_{i+1} - y_i)^2 + (x_{i+1} - x_i)^2}}{\sqrt{1-y_{i+1}} + \sqrt{1 - y_i}}\f$.

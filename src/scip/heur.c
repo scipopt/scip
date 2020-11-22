@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPdivesetReset(
    }
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, (int)(diveset->initialseed % INT_MAX)));
+   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
 
    return SCIP_OKAY;
 }
@@ -316,7 +316,6 @@ SCIP_RETCODE SCIPdivesetCreate(
    }
 
    SCIP_CALL( SCIPdivesetReset(diveset, set) );
-
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
@@ -844,7 +843,6 @@ SCIP_RETCODE SCIPdivesetIsAvailable(
    assert(set != NULL);
    assert(diveset != NULL);
    assert(available != NULL);
-
 
    if( diveset->divesetavailable == NULL )
       *available = TRUE;

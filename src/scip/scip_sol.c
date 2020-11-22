@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -19,7 +19,7 @@
  * @author Tobias Achterberg
  * @author Timo Berthold
  * @author Gerald Gamrath
- * @author Robert Lion Gottwald
+ * @author Leona Gottwald
  * @author Stefan Heinz
  * @author Gregor Hendel
  * @author Thorsten Koch
@@ -678,7 +678,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
          SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
          break;
       default:
-         assert(FALSE);
+         assert(FALSE); /*lint !e506*/
       }  /*lint !e788*/
    }
 
@@ -2592,6 +2592,7 @@ SCIP_RETCODE readSolFile(
       char varname[SCIP_MAXSTRLEN];
       char valuestring[SCIP_MAXSTRLEN];
       char objstring[SCIP_MAXSTRLEN];
+      char format[SCIP_MAXSTRLEN];
       SCIP_VAR* var;
       SCIP_Real value;
       int nread;
@@ -2609,8 +2610,8 @@ SCIP_RETCODE readSolFile(
          continue;
 
       /* parse the line */
-      /* cppcheck-suppress invalidscanf */
-      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
+      nread = sscanf(buffer, format, varname, valuestring, objstring);
       if( nread < 2 )
       {
          SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);
@@ -3194,7 +3195,19 @@ SCIP_RETCODE SCIPtrySol(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted solution not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3293,7 +3306,19 @@ SCIP_RETCODE SCIPtrySolFree(
       if( *stored )
       {
          if( bestsol != SCIPgetBestSol(scip) )
+         {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+            SCIP_Bool feasible;
+            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+            if( ! feasible )
+            {
+               SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+               SCIPABORT();
+            }
+#endif
             SCIPstoreSolutionGap(scip);
+         }
       }
    }
 
@@ -3335,7 +3360,19 @@ SCIP_RETCODE SCIPtryCurrentSol(
    if( *stored )
    {
       if( bestsol != SCIPgetBestSol(scip) )
+      {
+#ifdef SCIP_DEBUG_ABORTATORIGINFEAS
+         SCIP_Bool feasible;
+         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+         if( ! feasible )
+         {
+            SCIPerrorMessage("Accepted incumbent not feasible for original problem\n");
+            SCIPABORT();
+         }
+#endif
          SCIPstoreSolutionGap(scip);
+      }
    }
 
    return SCIP_OKAY;

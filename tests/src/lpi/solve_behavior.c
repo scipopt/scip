@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -123,8 +123,7 @@ TestSuite(solve_behavior, .init = setup, .fini = teardown);
 
 /** Tests */
 
-/** SCIPlpiSolveBarrier should always solve the problem
- *  if the lp solver does not have a barrier method it should default to dualsimplex. */
+/** Test SCIPlpiSolveBarrier */
 Test(solve_behavior, testbarriersolve)
 {
    SCIP_Real objval;
@@ -136,42 +135,46 @@ Test(solve_behavior, testbarriersolve)
    SCIP_Real* primsol;
    SCIP_Real* dualsol;
 
-   /* do this twice, with and without crossover */
-   for (i = 0; i < 2; ++i)
+   if ( SCIPlpiHasBarrierSolve() )
    {
-      /* initialize */
-      initProb(&nrows, &ncols);
-
-      /* solve problem */
-      SCIP_CALL( SCIPlpiSolveBarrier(lpi, crossover) );
-
-      /* very short check (subset of complex test1 in bases.c) */
-      cr_assert( SCIPlpiWasSolved(lpi) );
-      SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-      cr_assert_float_eq(objval, 14.0, EPS);
-
-      /* allocate storage for solution */
-      BMSallocMemoryArray(&primsol, ncols);
-      BMSallocMemoryArray(&dualsol, nrows);
-
-      /* get solution */
-      SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, NULL, NULL) );
-
-      for (i = 0; i < ncols; ++i)
+      /* do this twice, with and without crossover */
+      for (i = 0; i < 2; ++i)
       {
-         cr_assert_float_eq(primsol[i], exp_primsol[i], EPS, "Violation of primal solution %d: %g != %g\n", i, primsol[i], exp_primsol[i]);
-      }
+         /* initialize */
+         initProb(&nrows, &ncols);
 
-      for (i = 0; i < nrows; ++i)
-      {
-         cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
-      }
-      /* free up memory */
-      BMSfreeMemoryArray(&primsol);
-      BMSfreeMemoryArray(&dualsol);
+         /* solve problem */
+         SCIP_CALL( SCIPlpiSolveBarrier(lpi, crossover) );
 
-      /* prepare for second run */
-      crossover = !crossover;
+         /* very short check (subset of complex test1 in bases.c) */
+         cr_assert( SCIPlpiWasSolved(lpi) );
+         SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+         cr_assert_float_eq(objval, 14.0, EPS);
+
+         /* allocate storage for solution */
+         BMSallocMemoryArray(&primsol, ncols);
+         BMSallocMemoryArray(&dualsol, nrows);
+
+         /* get solution */
+         SCIP_CALL( SCIPlpiGetSol(lpi, &objval, primsol, dualsol, NULL, NULL) );
+
+         for (i = 0; i < ncols; ++i)
+         {
+            cr_assert_float_eq(primsol[i], exp_primsol[i], EPS, "Violation of primal solution %d: %g != %g\n", i, primsol[i], exp_primsol[i]);
+         }
+
+         for (i = 0; i < nrows; ++i)
+         {
+            cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual solution %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+         }
+
+         /* free up memory */
+         BMSfreeMemoryArray(&primsol);
+         BMSfreeMemoryArray(&dualsol);
+
+         /* prepare for second run */
+         crossover = !crossover;
+      }
    }
 }
 

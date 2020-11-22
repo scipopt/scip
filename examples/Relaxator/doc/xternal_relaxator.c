@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -24,7 +24,7 @@
  * @author   Benjamin Mueller
  *
  * This example illustrates how to write a relaxator for SCIP. It extends the default plugins of <a
- * href="http://scip.zib.de">SCIP</a> by two additional relaxator plugins, one for solving the linear and another one
+ * href="http://scipopt.org">SCIP</a> by two additional relaxator plugins, one for solving the linear and another one
  * for solving the convex nonlinear relaxation. Both relaxators are called in each node of the branch-and-bound tree.
  *
  * Installation

@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -388,8 +388,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndConsDatas)
    maxidx = SCIPvarGetIndex(cdata->vars[cdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(cdata->nvars, minidx),
-                      SCIPcombineTwoInt(mididx, maxidx)); /*lint !e701*/
+   return SCIPhashFour(cdata->nvars, minidx, mididx, maxidx);
 }
 
 /** initializes the hashmap and -table used in this constraint handler data for artificial variables and specific
@@ -4005,6 +4004,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
             /* create new pseudoboolean constraint */
             /* coverity[var_deref_op] */
+            /* coverity[var_deref_model] */
             SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                   targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
                   indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
@@ -5400,24 +5400,20 @@ SCIP_RETCODE updateConsanddataUses(
    consanddatas = consdata->consanddatas;
    nconsanddatas = consdata->nconsanddatas;
    assert(nconsanddatas > 0 && consanddatas != NULL);
+   assert(consdata->andcoefs != NULL);
 
    /* remove old locks */
-   if( nconsanddatas > 0 )
+   for( c = nconsanddatas - 1; c >= 0; --c )
    {
-      assert(consdata->andcoefs != NULL);
+      CONSANDDATA* consanddata;
 
-      for( c = nconsanddatas - 1; c >= 0; --c )
-      {
-         CONSANDDATA* consanddata;
+      consanddata = consanddatas[c];
+      assert(consanddata != NULL);
 
-         consanddata = consanddatas[c];
-         assert(consanddata != NULL);
+      if( !consanddata->istransformed )
+         continue;
 
-         if( !consanddata->istransformed )
-            continue;
-
-         SCIP_CALL( removeOldLocks(scip, cons, consanddata, consdata->andcoefs[c], consdata->lhs, consdata->rhs) );
-      }
+      SCIP_CALL( removeOldLocks(scip, cons, consanddata, consdata->andcoefs[c], consdata->lhs, consdata->rhs) );
    }
 
    /* correct consandata usage counters and data */
@@ -5993,7 +5989,7 @@ SCIP_RETCODE tryUpgradingXor(
    {
       (void) SCIPsnprintf(newname, SCIP_MAXSTRLEN, "%s_upgraded", SCIPconsGetName(lincons));
 
-      SCIP_CALL( SCIPcreateConsXor(scip, &newcons, newname, (unsigned int) xortype, nlinvars, linvars,
+      SCIP_CALL( SCIPcreateConsXor(scip, &newcons, newname, (SCIP_Bool) xortype, nlinvars, linvars,
             SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
             SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons),
             SCIPconsIsDynamic(lincons), SCIPconsIsRemovable(lincons), SCIPconsIsStickingAtNode(lincons)) );
@@ -7451,7 +7447,7 @@ SCIP_RETCODE findAggregation(
 	     */
 	 }
 #endif
-      }
+      } /*lint !e438*/
       /* we have a constraint in the form of: x1 + x2 * x3 + ~x2 * x3 + ~x2 * ~x3 == 1
        * this leads to the aggregation x1 = x2 * ~x3
        *
@@ -7538,7 +7534,7 @@ SCIP_RETCODE findAggregation(
 	 SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
 	 SCIP_CALL( SCIPdelCons(scip, cons) );
 	 (*ndelconss) += 2;
-      }
+      } /*lint !e438*/
    }
 
    if( SCIPconsIsDeleted(cons) )
@@ -8776,13 +8772,13 @@ SCIP_DECL_CONSGETVARS(consGetVarsPseudoboolean)
    assert(conshdlr != NULL);
    assert(cons != NULL);
    assert(vars != NULL);
-   assert(varssize >= 0);
    assert(success != NULL);
 
    if( varssize < 0 )
       return SCIP_INVALIDDATA;
+   assert(varssize >= 0);
 
-   (*success) = TRUE;
+   *success = TRUE;
 
    /* pseudoboolean constraint is already deleted */
    if( SCIPconsIsDeleted(cons) )
@@ -10038,6 +10034,8 @@ SCIP_Real SCIPgetLhsPseudoboolean(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
@@ -10060,6 +10058,8 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

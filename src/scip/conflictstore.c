@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -134,10 +134,10 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
       int nvars2;
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons1, &nvars1, &success) );
-      assert(success)
+      assert(success);
 
       SCIP_CALL( SCIPgetConsNVars(scip, cons2, &nvars2, &success) );
-      assert(success)
+      assert(success);
 
       if( nvars1 >= nvars2 )
          return -1;
@@ -693,7 +693,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    SCIPsetDebugMsg(set, "clean-up #%lld: removed %d/%d conflicts, %d depending on cutoff bound\n",
          conflictstore->ncleanups, ndelconfs, conflictstore->nconflicts+ndelconfs, conflictstore->ncbconflicts);
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e438*/
 }
 
 /** adds an original conflict constraint to the store
@@ -958,7 +958,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
-                                               *  the current relaxation only? */
+                                              *   the current relaxation only? */
    )
 {
    int nvars;
@@ -1047,7 +1047,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    SCIP_Real             scale,              /**< scaling factor that needs to be considered when updating the side */
    SCIP_Bool             updateside,         /**< should the side be updated if a new incumbent is found */
    SCIP_Bool             hasrelaxvar         /**< does the dual proof contain at least one variable that exists in
-                                               *  the current relaxation only? */
+                                              *   the current relaxation only? */
    )
 {
    int nvars;
@@ -1088,8 +1088,8 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
          int pos = 0;
 
          /* sort dual rays */
-         SCIPsortPtrRealRealIntBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
-               conflictstore->scalefactors, (int*)conflictstore->updateside, conflictstore->dsolrelaxonly,
+         SCIPsortPtrRealRealBoolBool((void**)conflictstore->dualsolconfs, conflictstore->dualprimalbnds,
+               conflictstore->scalefactors, conflictstore->updateside, conflictstore->dsolrelaxonly,
                compareConss, conflictstore->ndualsolconfs);
          assert(SCIPsetIsGE(set, SCIPconsGetAge(conflictstore->dualsolconfs[0]),
                SCIPconsGetAge(conflictstore->dualsolconfs[conflictstore->ndualsolconfs-1])));
@@ -1333,11 +1333,11 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 
          assert(SCIPsetIsGT(set, conflictstore->dualprimalbnds[i], cutoffbound));
 
-         rhs = SCIPgetRhsLinear(NULL, dualproof);
+         rhs = SCIPgetRhsLinear(set->scip, dualproof);
 
          if( !SCIPsetIsInfinity(set, rhs) )
          {
-            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(NULL, dualproof)));
+            assert(SCIPsetIsInfinity(set, -SCIPgetLhsLinear(set->scip, dualproof)));
             assert(SCIPsetIsPositive(set, conflictstore->scalefactors[i]));
 
             /* get unscaled rhs */
@@ -1352,7 +1352,9 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
          }
          else
          {
-            SCIP_Real lhs = SCIPgetLhsLinear(NULL, dualproof);
+            SCIP_Real lhs;
+
+            lhs = SCIPgetLhsLinear(set->scip, dualproof);
             assert(!SCIPsetIsInfinity(set, -lhs));
             assert(SCIPsetIsNegative(set, conflictstore->scalefactors[i]));
 

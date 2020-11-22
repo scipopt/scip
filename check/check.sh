@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -85,24 +85,24 @@ MEMFORMAT="kB"
 
 if test -e $SCIPPATH/../$BINNAME
 then
-   EXECNAME=$SCIPPATH/../$BINNAME
+    EXECNAME=$SCIPPATH/../$BINNAME
+
+    # check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
+    if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
+	# skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
+	HARDMEMLIMIT="none"
+    elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
+	# skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
+	HARDMEMLIMIT="none"
+    else
+	ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
+    fi
 else
-   EXECNAME=$BINNAME
+    EXECNAME=$BINNAME
+    ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
 fi
 
-
-# check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
-if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
-   # skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
-   HARDMEMLIMIT="none"
-elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
-   # skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
-   HARDMEMLIMIT="none"
-else
-   ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
-fi
-
-export EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
+EXECNAME=${DEBUGTOOLCMD}${EXECNAME}
 
 INIT="true"
 COUNT=0
@@ -171,19 +171,21 @@ do
 		    CONFFILE="configuration_tmpfile_setup_scip.sh"
 		fi
 
-		# overwrite the tmp file now
 		# call tmp file configuration for SCIP
+		# this may modify the EXECNAME environment variable
 		. ./$CONFFILE $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-		    $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
+		  $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND \
+		  $CLIENTTMPDIR $FILENAME $VISUALIZE $SOLUFILE
 
 		# additional environment variables needed by run.sh
 		export SOLVERPATH=$SCIPPATH
 		export BASENAME=$FILENAME
 		export FILENAME=$INSTANCE
 		export SOLNAME=$SOLCHECKFILE
-                export TIMELIMIT
+		export TIMELIMIT
 		export CLIENTTMPDIR
-                export OUTPUTDIR
+		export OUTPUTDIR
+		export EXECNAME
 		export CHECKERPATH=$SCIPPATH/solchecker
 
 		echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT

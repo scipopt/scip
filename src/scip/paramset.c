@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -64,6 +64,7 @@ SCIP_RETCODE paramTestFixed(
    )
 {  /*lint --e{715}*/
    assert(param != NULL);
+   assert(messagehdlr != NULL);
 
    if( param->isfixed )
    {
@@ -84,6 +85,7 @@ SCIP_RETCODE paramTestBool(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
+   assert(messagehdlr != NULL);
 
    if( value != TRUE && value != FALSE )
    {
@@ -104,6 +106,7 @@ SCIP_RETCODE paramTestInt(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.intparam.minvalue || value > param->data.intparam.maxvalue )
    {
@@ -125,6 +128,7 @@ SCIP_RETCODE paramTestLongint(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
@@ -146,6 +150,7 @@ SCIP_RETCODE paramTestReal(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+   assert(messagehdlr != NULL);
 
    if( value < param->data.realparam.minvalue || value > param->data.realparam.maxvalue )
    {
@@ -167,6 +172,7 @@ SCIP_RETCODE paramTestChar(
 {  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+   assert(messagehdlr != NULL);
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
@@ -205,6 +211,7 @@ SCIP_RETCODE paramTestString(
 
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+   assert(messagehdlr != NULL);
 
    if( value == NULL )
    {
@@ -235,6 +242,7 @@ SCIP_RETCODE paramWrite(
    )
 {
    assert(param != NULL);
+   assert(messagehdlr != NULL);
 
    /* write parameters at default values only, if the onlychanged flag is not set or if the parameter is fixed */
    if( onlychanged && SCIPparamIsDefault(param) && !SCIPparamIsFixed(param) )
@@ -1919,68 +1927,6 @@ SCIP_RETCODE SCIPparamsetFix(
    return SCIP_OKAY;
 }
 
-/** changes the value of an existing parameter */
-SCIP_RETCODE SCIPparamsetSet(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           name,               /**< name of the parameter */
-   void*                 value               /**< new value of the parameter */
-   )
-{
-   SCIP_PARAM* param;
-
-   assert(paramset != NULL);
-   assert(set != NULL);
-
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
-   if( param == NULL )
-   {
-      SCIPerrorMessage("parameter <%s> unknown\n", name);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-
-   switch( param->paramtype )
-   {
-   case SCIP_PARAMTYPE_BOOL:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetBool(param, set, messagehdlr, (SCIP_Bool) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case  SCIP_PARAMTYPE_INT:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetInt(param, set, messagehdlr, (int) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_LONGINT:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetLongint(param, set, messagehdlr, (SCIP_Longint) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_REAL:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetReal(param, set, messagehdlr, (SCIP_Real) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_CHAR:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetChar(param, set, messagehdlr, (char) (size_t) value, FALSE, TRUE) );
-      break;
-
-   case SCIP_PARAMTYPE_STRING:
-      /* set the parameter's current value */
-      SCIP_CALL( SCIPparamSetString(param, set, messagehdlr,  (char*) value, TRUE) );
-      break;
-
-   default:
-      SCIPerrorMessage("unknown parameter type\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** changes the value of an existing SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamsetSetBool(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2015,37 +1961,6 @@ SCIP_RETCODE SCIPparamsetSetBool(
    return SCIP_OKAY;
 }
 
-/** changes the default value of an existing SCIP_Bool parameter */
-SCIP_RETCODE SCIPparamsetSetDefaultBool(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   const char*           name,               /**< name of the parameter */
-   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
-   )
-{
-   SCIP_PARAM* param;
-
-   assert(paramset != NULL);
-
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
-   if( param == NULL )
-   {
-      SCIPerrorMessage("parameter <%s> unknown\n", name);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   if( param->paramtype != SCIP_PARAMTYPE_BOOL )
-   {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
-         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   /* set the parameter's default value */
-   SCIPparamSetDefaultBool(param, defaultvalue);
-
-   return SCIP_OKAY;
-}
-
 /** changes the value of an existing int parameter */
 SCIP_RETCODE SCIPparamsetSetInt(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2076,37 +1991,6 @@ SCIP_RETCODE SCIPparamsetSetInt(
 
    /* set the parameter's current value */
    SCIP_CALL( SCIPparamSetInt(param, set, messagehdlr, value, FALSE, TRUE) );
-
-   return SCIP_OKAY;
-}
-
-/** changes the default value of an existing int parameter */
-SCIP_RETCODE SCIPparamsetSetDefaultInt(
-   SCIP_PARAMSET*        paramset,           /**< parameter set */
-   const char*           name,               /**< name of the parameter */
-   int                   defaultvalue        /**< new default value of the parameter */
-   )
-{
-   SCIP_PARAM* param;
-
-   assert(paramset != NULL);
-
-   /* retrieve parameter from hash table */
-   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
-   if( param == NULL )
-   {
-      SCIPerrorMessage("parameter <%s> unknown\n", name);
-      return SCIP_PARAMETERUNKNOWN;
-   }
-   if( param->paramtype != SCIP_PARAMTYPE_INT )
-   {
-      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
-         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
-      return SCIP_PARAMETERWRONGTYPE;
-   }
-
-   /* set the parameter's default value */
-   SCIPparamSetDefaultInt(param, defaultvalue);
 
    return SCIP_OKAY;
 }
@@ -2247,6 +2131,192 @@ SCIP_RETCODE SCIPparamsetSetString(
    return SCIP_OKAY;
 }
 
+/** changes the default value of an existing SCIP_Bool parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultBool(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Bool             defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_BOOL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_BOOL));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultBool(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing int parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultInt(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   int                   defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_INT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_INT));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultInt(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing SCIP_Longint parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultLongint(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Longint          defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_LONGINT )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_LONGINT));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultLongint(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing SCIP_Real parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultReal(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   SCIP_Real             defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_REAL )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_REAL));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultReal(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing char parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultChar(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   char                  defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_CHAR )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_CHAR));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultChar(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
+/** changes the default value of an existing string parameter */
+SCIP_RETCODE SCIPparamsetSetDefaultString(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   const char*           name,               /**< name of the parameter */
+   const char*           defaultvalue        /**< new default value of the parameter */
+   )
+{
+   SCIP_PARAM* param;
+
+   assert(paramset != NULL);
+
+   /* retrieve parameter from hash table */
+   param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)name);
+   if( param == NULL )
+   {
+      SCIPerrorMessage("parameter <%s> unknown\n", name);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   if( param->paramtype != SCIP_PARAMTYPE_STRING )
+   {
+      SCIPerrorMessage("wrong parameter type - parameter <%s> has type <%s> instead of <%s>\n",
+         name, paramtypeGetName(param->paramtype), paramtypeGetName(SCIP_PARAMTYPE_STRING));
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   /* set the parameter's default value */
+   SCIPparamSetDefaultString(param, defaultvalue);
+
+   return SCIP_OKAY;
+}
+
 /** parses emphasis settings */
 static
 SCIP_RETCODE emphasisParse(
@@ -2311,6 +2381,11 @@ SCIP_RETCODE emphasisParse(
    else if ( strcmp(paramname, "optimality") == 0 )
    {
       SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "numerics") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_NUMERICS, FALSE) );
       globalemphasis = TRUE;
    }
 
@@ -2720,7 +2795,7 @@ SCIP_RETCODE SCIPparamsetSetToDefault(
 /** resets parameters changed by SCIPparamsetSetHeuristicsXyz functions to their default values
  *
  *  @note fixed parameters stay as they are; you need to unfix them first if they should be changed, too
- */
+ */ /*lint --e{715}*/
 static
 SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -2942,7 +3017,7 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
       if( SCIPheurUsesSubscip(heurs[i]) )
       {
          char paramname[SCIP_MAXSTRLEN];
-         sprintf(paramname, "heuristics/%s/freq", SCIPheurGetName(heurs[i]));
+         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heurs[i]));
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
    }
@@ -3236,6 +3311,30 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/gateextraction/maxrounds", 0, quiet) );
    }
 
+   /* explicitly disable sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "sparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/sparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable dual sparsify presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "dualsparsify") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/dualsparsify/maxrounds", 0, quiet) );
+   }
+
+   /* explicitly disable tworowbnd presolver, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/tworowbnd/maxrounds", 0, quiet) );
+   }
+
    /* explicitly forbid the use of implications in logicor presolving */
 #ifndef NDEBUG
    if( SCIPsetFindConshdlr(set, "logicor") != NULL )
@@ -3325,7 +3424,7 @@ SCIP_RETCODE paramsetSetPresolvingOff(
 /** reset parameters that may have been changed by other SCIPparamsetSetSeparatingXyz to their default values
  *
  *  @note fixed parameters stay as they are; you need to unfix them first if they should be changed, too
- */
+ */ /*lint !e715*/
 static
 SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3705,6 +3804,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
  *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
  *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_NUMERICS to solve problems which cause numerical issues
  */
 SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
@@ -3916,10 +4016,47 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/relpscost/dynamicweights", TRUE, quiet) );
       break;
 
+   case SCIP_PARAMEMPHASIS_NUMERICS:
+
+      /* huge val is used as a threshold in multiaggregation; decreasing it leads to safer multiaggregations */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "numerics/hugeval", 1e+10, quiet) );
+
+      /* The higher the Markowitz Parameter is, more sparse pivots will be ignored and the numerically
+      more stable ones will be used as pivot */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "lp/minmarkowitz", 0.999, quiet) );
+
+      /* Added parameters as suggested here: https://git.zib.de/integer/scip/issues/2002#note_92716 */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/fastmip", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/scaling", 2, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "lp/presolving", FALSE, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "lp/refactorinterval", 40, quiet) );
+
+      /* To prevent numerically bad multiaggregations in dualPresolve() and convertLongEquality() set maxmultiaggrqout small*/
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxmultaggrquot", 10.0, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "constraints/linear/maxdualmultaggrquot", 10.0, quiet) );
+
+      /* When upgrading constr with knapsack/setppc causes problems */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/knapsack", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/setppc", FALSE, quiet) );
+
+      /* For numerical stability turn rangedrowpropagation, simplifyInequalities and extractCliques off */
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/rangedrowpropagation", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/extractcliques", FALSE, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/simplifyinequalities", FALSE, quiet) );
+
+      /* Reduce the max coefratio to prevent the creation of potentially numerical unstable constraints */
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "separating/maxcoefratio", 100.0, quiet) );
+#ifdef SCIP_WITH_PRESOLVELIB
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/hugebound", 1e6, quiet) );
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "presolving/milp/markowitztolerance", 0.1, quiet) );
+#endif
+
+      break;
+
    default:
       SCIPerrorMessage("the parameter setting <%d> is not allowed for emphasis call\n", paramemphasis);
       return SCIP_INVALIDCALL;
-   }  
+   }
    return SCIP_OKAY;
 }
 
@@ -4268,6 +4405,7 @@ SCIP_Bool SCIPparamIsValidBool(
    SCIP_Bool             value               /**< value to check */
    )
 {  /*lint --e{715}*/
+   assert(param != NULL);
    return ( value == TRUE || value == FALSE );
 }
 
@@ -4338,6 +4476,8 @@ SCIP_Bool SCIPparamIsValidString(
 {  /*lint --e{715}*/
    unsigned int i;
 
+   assert(param != NULL);
+
    for( i = 0; i < (unsigned int) strlen(value); ++i )
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
@@ -4358,16 +4498,20 @@ SCIP_RETCODE SCIPparamSetBool(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    SCIP_CALL_QUIET( paramTestBool(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize || (param->data.boolparam.valueptr != NULL && *param->data.boolparam.valueptr != value)
       || (param->data.boolparam.valueptr == NULL && param->data.boolparam.curvalue != value) )
    {
+      SCIP_Bool oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetBool(param);
       if( param->data.boolparam.valueptr != NULL )
          *param->data.boolparam.valueptr = value;
       else
@@ -4376,7 +4520,21 @@ SCIP_RETCODE SCIPparamSetBool(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.boolparam.valueptr != NULL )
+               *param->data.boolparam.valueptr = oldvalue;
+            else
+               param->data.boolparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4400,16 +4558,20 @@ SCIP_RETCODE SCIPparamSetInt(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    SCIP_CALL_QUIET( paramTestInt(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize || (param->data.intparam.valueptr != NULL && *param->data.intparam.valueptr != value)
       || (param->data.intparam.valueptr == NULL && param->data.intparam.curvalue != value) )
    {
+      int oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetInt(param);
       if( param->data.intparam.valueptr != NULL )
          *param->data.intparam.valueptr = value;
       else
@@ -4418,7 +4580,21 @@ SCIP_RETCODE SCIPparamSetInt(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.intparam.valueptr != NULL )
+               *param->data.intparam.valueptr = oldvalue;
+            else
+               param->data.intparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4442,16 +4618,20 @@ SCIP_RETCODE SCIPparamSetLongint(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    SCIP_CALL_QUIET( paramTestLongint(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize ||  (param->data.longintparam.valueptr != NULL && *param->data.longintparam.valueptr != value)
       || (param->data.longintparam.valueptr == NULL && param->data.longintparam.curvalue != value) )
    {
+      SCIP_Longint oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetLongint(param);
       if( param->data.longintparam.valueptr != NULL )
          *param->data.longintparam.valueptr = value;
       else
@@ -4460,7 +4640,21 @@ SCIP_RETCODE SCIPparamSetLongint(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.longintparam.valueptr != NULL )
+               *param->data.longintparam.valueptr = oldvalue;
+            else
+               param->data.longintparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4484,7 +4678,7 @@ SCIP_RETCODE SCIPparamSetReal(
 {
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter */
    value = MAX(value, SCIP_REAL_MIN);
    value = MIN(value, SCIP_REAL_MAX);
    SCIP_CALL_QUIET( paramTestReal(param, messagehdlr, value) );
@@ -4493,9 +4687,13 @@ SCIP_RETCODE SCIPparamSetReal(
    if( initialize || (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value) /*lint !e777*/
       || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) ) /*lint !e777*/
    {
+      SCIP_Real oldvalue;
+
+      /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetReal(param);
       if( param->data.realparam.valueptr != NULL )
          *param->data.realparam.valueptr = value;
       else
@@ -4504,7 +4702,21 @@ SCIP_RETCODE SCIPparamSetReal(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.realparam.valueptr != NULL )
+               *param->data.realparam.valueptr = oldvalue;
+            else
+               param->data.realparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4535,9 +4747,12 @@ SCIP_RETCODE SCIPparamSetChar(
    if( initialize || (param->data.charparam.valueptr != NULL && *param->data.charparam.valueptr != value)
       || (param->data.charparam.valueptr == NULL && param->data.charparam.curvalue != value) )
    {
+      char oldvalue;
+
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
+      oldvalue = SCIPparamGetChar(param);
       if( param->data.charparam.valueptr != NULL )
          *param->data.charparam.valueptr = value;
       else
@@ -4546,7 +4761,21 @@ SCIP_RETCODE SCIPparamSetChar(
       /* call the parameter's change information method */
       if( param->paramchgd != NULL && set != NULL )
       {
-         SCIP_CALL( param->paramchgd(set->scip, param) );
+         SCIP_RETCODE retcode;
+
+         retcode = param->paramchgd(set->scip, param);
+
+         if( retcode == SCIP_PARAMETERWRONGVAL )
+         {
+            if( param->data.charparam.valueptr != NULL )
+               *param->data.charparam.valueptr = oldvalue;
+            else
+               param->data.charparam.curvalue = oldvalue;
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
       }
    }
 
@@ -4567,28 +4796,55 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    )
 {
+   char* oldvalue = NULL;
+
    assert(param != NULL);
 
-   /* check, if value is possible for the parameter and the parameter is not fixed */
+   /* check if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramTestString(param, messagehdlr, value) );
    SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )
    {
-      BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
+      oldvalue = *param->data.stringparam.valueptr;
       SCIP_ALLOC( BMSduplicateMemoryArray(param->data.stringparam.valueptr, value, strlen(value)+1) );
    }
    else
    {
-      BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
+      oldvalue = param->data.stringparam.curvalue;
       SCIP_ALLOC( BMSduplicateMemoryArray(&param->data.stringparam.curvalue, value, strlen(value)+1) );
    }
 
    /* call the parameter's change information method */
    if( param->paramchgd != NULL && set != NULL )
    {
-      SCIP_CALL( param->paramchgd(set->scip, param) );
+      SCIP_RETCODE retcode;
+
+      retcode = param->paramchgd(set->scip, param);
+
+      if( retcode == SCIP_PARAMETERWRONGVAL )
+      {
+         if( param->data.stringparam.valueptr != NULL )
+         {
+            BMSfreeMemoryArrayNull(param->data.stringparam.valueptr);
+            *param->data.stringparam.valueptr = oldvalue;
+         }
+         else
+         {
+            BMSfreeMemoryArrayNull(&param->data.stringparam.curvalue);
+            param->data.stringparam.curvalue = oldvalue;
+         }
+      }
+      else
+      {
+         BMSfreeMemoryArrayNull(&oldvalue);
+         SCIP_CALL( retcode );
+      }
+   }
+   else
+   {
+      BMSfreeMemoryArrayNull(&oldvalue);
    }
 
    if( !quiet )
@@ -4598,7 +4854,6 @@ SCIP_RETCODE SCIPparamSetString(
 
    return SCIP_OKAY;
 }
-
 
 /** changes default value of SCIP_Bool parameter */
 void SCIPparamSetDefaultBool(
@@ -4624,6 +4879,59 @@ void SCIPparamSetDefaultInt(
    assert(param->data.intparam.minvalue <= defaultvalue && param->data.intparam.maxvalue >= defaultvalue);
 
    param->data.intparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of SCIP_Longint parameter */
+void SCIPparamSetDefaultLongint(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
+
+   assert(param->data.longintparam.minvalue <= defaultvalue && param->data.longintparam.maxvalue >= defaultvalue);
+
+   param->data.longintparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of SCIP_Real parameter */
+void SCIPparamSetDefaultReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_REAL);
+
+   assert(param->data.realparam.minvalue <= defaultvalue && param->data.realparam.maxvalue >= defaultvalue);
+
+   param->data.realparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of char parameter */
+void SCIPparamSetDefaultChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   char                  defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
+
+   param->data.charparam.defaultvalue = defaultvalue;
+}
+
+/** sets default value of string parameter */
+void SCIPparamSetDefaultString(
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           defaultvalue        /**< new default value */
+   )
+{
+   assert(param != NULL);
+   assert(param->paramtype == SCIP_PARAMTYPE_STRING);
+
+   BMSfreeMemoryArray(&param->data.stringparam.defaultvalue);
+   SCIP_ALLOC_ABORT( BMSduplicateMemoryArray(&param->data.stringparam.defaultvalue, defaultvalue, strlen(defaultvalue)+1) );
 }
 
 /** sets the parameter to its default setting */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,8 +46,8 @@
  */
 #define DEFAULT_SELTYPE 'w'
 #define DEFAULT_SCORETYPE 'c'                /**< score parameter for selection: minimize either average 'n'odes, LP 'i'terations,
-                                               *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
-                                               *  1 / solutions'u'ccess */
+                                              *  backtrack/'c'onflict ratio, 'd'epth, 1 / 's'olutions, or
+                                              *  1 / solutions'u'ccess */
 #define DEFAULT_USEADAPTIVECONTEXT FALSE
 #define DEFAULT_SELCONFIDENCECOEFF 10.0      /**< coefficient c to decrease initial confidence (calls + 1.0) / (calls + c) in scores */
 #define DEFAULT_EPSILON             1.0      /**< parameter that increases probability of exploration among divesets (only active if seltype is 'e') */
@@ -330,7 +330,7 @@ char* printRealArray(
 }
 #endif
 
-/** sample from a distribution defined by weights */
+/** sample from a distribution defined by weights */ /*lint -e715*/
 static
 int sampleWeighted(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -553,7 +553,6 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
    if( lpiterlimit <= 0 )
       return SCIP_OKAY;
 
-
    /* select the next diving strategy based on previous success */
    SCIP_CALL( selectDiving(scip, heur, heurdata, &selection) );
    assert(selection >= 0 && selection < heurdata->ndivesets);
@@ -579,6 +578,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
 
@@ -590,7 +590,7 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    heurdata->ndivesets = 0;
    heurdata->divesetssize = -1;
 
-   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE) );
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateRandom(scip, &heurdata->randnumgen, DEFAULT_INITIALSEED, TRUE), TERMINATE );
 
    /* include adaptive diving primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -638,6 +638,14 @@ SCIP_RETCODE SCIPincludeHeurAdaptivediving(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/bestsolweight",
          "weight of incumbent solutions compared to other solutions in computation of LP iteration limit",
          &heurdata->bestsolweight, FALSE, DEFAULT_BESTSOLWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+/* cppcheck-suppress unusedLabel */
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfreeMemory(scip, &heurdata);
+      return retcode;
+   }
 
    return SCIP_OKAY;
 }

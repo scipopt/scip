@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -37,6 +37,16 @@
 
 #include <signal.h>
 #include "include/scip_test.h"
+
+/** macro to keep control of infinity
+ *
+ *  Some LPIs use std::numeric_limits<SCIP_Real>::infinity() as infinity value. Comparing two infinty values then yields
+ *  nan. This is a workaround. */
+#define cr_assert_float_eq_inf(Actual, Expected, Epsilon) \
+   if ( fabs(Actual) > 1e30 || fabs(Expected) > 1e30 )    \
+      cr_assert( Actual == Expected );                    \
+   else                                                   \
+      cr_assert_float_eq(Actual, Expected, Epsilon);
 
 #define EPS 1e-6
 
@@ -309,7 +319,7 @@ void checkChgCoef(int row, int col, SCIP_Real newval)
    cr_assert( !SCIPlpiWasSolved(lpi) );
 
    SCIP_CALL( SCIPlpiGetCoef(lpi, row, col, &val) );
-   cr_assert_float_eq(newval, val, EPS);
+   cr_assert_float_eq_inf(newval, val, EPS);
 }
 
 TheoryDataPoints(change, testchgcoef) =
@@ -674,8 +684,8 @@ Test(change, testrowmethods)
          /* check each row seperately */
          for( j = 0; j < nrows; j++ )
          {
-            cr_assert_float_eq(lhs[j], newlhs[j], 1e-16);
-            cr_assert_float_eq(rhs[j], newrhs[j], 1e-16);
+            cr_assert_float_eq_inf(lhs[j], newlhs[j], 1e-16);
+            cr_assert_float_eq_inf(rhs[j], newrhs[j], 1e-16);
 
             /* We add a row where the indices are not sorted, some lp solvers give them back sorted (e.g. soplex), some others don't (e.g. cplex).
              * Therefore we cannot simply assert the ind and val arrays to be equal, but have to search for and check each value individually. */
@@ -912,13 +922,18 @@ Test(change, testlpiwritestatemethods)
    int cstat[2];
    int rstat[2];
    SCIP_OBJSEN sense;
+   SCIP_RETCODE retcode;
 
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
 
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
-   SCIP_CALL( SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas") );
+   retcode = SCIPlpiWriteState(lpi, "testlpiwriteandreadstate.bas");
+   if ( retcode != SCIP_OKAY && retcode != SCIP_NOTIMPLEMENTED )
+   {
+      SCIP_CALL( retcode );
+   }
    SCIP_CALL( SCIPlpiGetBase(lpi, cstat, rstat) );
    SCIP_CALL( SCIPlpiClearState(lpi) );
 

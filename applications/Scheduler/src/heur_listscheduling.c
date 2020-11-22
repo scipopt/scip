@@ -3,27 +3,28 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_listscheduling.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  scheduling specific primal heuristic which is based on bidirectional serial generation scheme.
  * @author Jens Schulz
  *
- * @page HEUR List scheduling heuristic
+ * @page LISTHEUR List scheduling heuristic
  *
- * The heuristic performs a serial SGS (schedule generation scheme), see Kolisch and Hartmann 2006 \cite KolH06.
+ * The heuristic performs a serial SGS (schedule generation scheme), see Kolisch and Hartmann 2006.
  * Therefore, the jobs are considered in a topological order (e.g., sorted by their earliest start) and are scheduled
  * according to that order as early as possible respecting the precedence and resource constraints.
  *
- * The serial generation scheme is extended to bidirectional SGS; see Li and Willis 1992 \cite LiW92. The first obtained
+ * The serial generation scheme is extended to bidirectional SGS; see Li and Willis 1992. The first obtained
  * schedule is the so-called forward schedule.  Then, all jobs are sorted in non-increasing order of their completion
  * times in the forward schedule.  According to that ordering, a backward schedule is created by scheduling all jobs as
  * late as possible again with respect to precedence and resource constraints.  It gets clear from the way the algorithm
@@ -50,6 +51,7 @@
 
 /**@name Properties of the heuristic
  *
+ * @{
  */
 
 #define HEUR_NAME             "listscheduling"
@@ -84,6 +86,7 @@ struct SCIP_HeurData
 
 /**@name Local methods
  *
+ * @{
  */
 
 /** initializes heuristic data structures */
@@ -748,6 +751,7 @@ SCIP_RETCODE executeHeuristic(
 
 /**@name Callback methods
  *
+ * @{
  */
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
@@ -823,6 +827,7 @@ SCIP_DECL_HEUREXEC(heurExecListScheduling)
 
 /**@name Interface methods
  *
+ * @{
  */
 
 /** creates the list scheduling primal heuristic and includes it in SCIP */

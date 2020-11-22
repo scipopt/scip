@@ -1,0 +1,3935 @@
+##############################################################################
+# Copyright Gimpel Software LLC 2019. All rights reserved.
+# Confidential and proprietary. No part of this file may be redistributed
+# without express written permission of Gimpel Software LLC.
+#
+# This file is provided by Gimpel Software LLC (https://www.gimpel.com) for
+# use exclusively with PC-lint Plus. Redistribution to and use by licensed
+# users is permitted. Any such redistribution must preserve this notice and,
+# if the redistributed file has been modified, provide notice that the file
+# has been modified from the original.
+##############################################################################
+meta:
+    # The version of this compiler database
+    version: "1.3.1"
+
+compilers:
+    keil_armcc:
+        description: "Keil uVision ARMCC"
+        version:
+            command:
+                - "--vsn"
+            channel: stdout
+            match_expr:
+                'ARM Compiler\s+(?P<version>\d+\.\d+(?:\s+update\s+\d+\s+\(build\s+\d+\))?)'
+        macros:
+            command:
+                - "--list_macros"
+                - "-"
+            channel: stdout
+            input: |
+        size_options:
+            command:
+                - "-"
+            input: |
+                int si8[8 != sizeof(int)];
+                int si4[4 != sizeof(int)];
+                int si2[2 != sizeof(int)];
+
+                int ss8[8 != sizeof(short)];
+                int ss4[4 != sizeof(short)];
+                int ss2[2 != sizeof(short)];
+
+                int sl8[8 != sizeof(long)];
+                int sl4[4 != sizeof(long)];
+                int sl2[2 != sizeof(long)];
+
+                int sll8[8 != sizeof(long long)];
+                int sll4[4 != sizeof(long long)];
+                int sll2[2 != sizeof(long long)];
+
+                int sf8[8 != sizeof(float)];
+                int sf4[4 != sizeof(float)];
+                int sf2[2 != sizeof(float)];
+
+                int sd8[8 != sizeof(double)];
+                int sd4[4 != sizeof(double)];
+                int sd2[2 != sizeof(double)];
+
+                int sld8[8 != sizeof(long double)];
+                int sld4[4 != sizeof(long double)];
+                int sld2[2 != sizeof(long double)];
+
+                int sp8[8 != sizeof(void*)];
+                int sp4[4 != sizeof(void*)];
+                int sp2[2 != sizeof(void*)];
+
+                int sw8[8 != sizeof(L'a')];
+                int sw4[4 != sizeof(L'a')];
+                int sw2[2 != sizeof(L'a')];
+
+                /* ensure a size test is not the last line of file */
+            channel: stderr
+            match_expr: '(?:.*?(?P<size_name>si|sl|sll|ss|sw|sp|sf|sd|sld)(?P<size_value>\d+)\[)+'
+        base_config:
+            extensions:
+                - ['-hsfb^3', 'format for uVision']
+                - ['++fbe', 'ensure backslash escapes in options are enabled']
+                - ['-format(\""*** LINT: %(%f(%l) %)%t %n: %m\"")', 'format for uVision']
+                - ['--fbe', 'restore previous state of backslash escape flag']
+                - ['+flm', 'lock message format']
+                - ['+fdi', 'start #include search in the directory of the including file']
+                - ['+rw(__int64)', '']
+                - ['-rw_asgn(__INT64,__int64)', '']
+                - ['-d__asm(s)=', 'ignore register variable syntax']
+                - ['+rw(_ignore_init)', '']
+                - ['-rw_asgn(__asm, _ignore_init)', 'ignore definitions of assembly functions']
+                - ['+rw(__attribute__)', '']
+                - ['-d__forceinline=__attribute__((always_inline))', '']
+                - ['-d__svc_indirect(n)=', '']
+                - ['-d__svc_indirect_r7(n)=', '']
+                - ['-d__svc(n)=', '']
+                - ['-d__smc(n)=', '']
+                - ['+rw(__value_in_regs)', '']
+                - ['-rw_asgn(__align,_Alignas)', '']
+                - ['-rw_asgn(__ALIGNOF__,_Alignof)', '']
+                - ['+rw(__alignof__)', '']
+                - ['-d__global_reg(n)=', '']
+                - ['+rw(__inline)', '']
+                - ['-d__INTADDR__(n)=(n)', '']
+                - ['+rw(__irq)', '']
+                - ['+rw(__isr)', '']
+                - ['+rw(__fiq)', '']
+                - ['+rw(__task)', '']
+                - ['-d__at=@', '']
+                - ['-d_at_=@', '']
+                - ['-d__swi(n)=', '']
+                - ['+rw(__arm)', '']
+                - ['+rw(__thumb)', '']
+                - ['+rw(__ram)', '']
+                - ['+rw(__declspec)', '']
+                - ['-d__packed=__attribute__((packed))', '']
+                - ['-d__pure=__attribute__((const))', '']
+                - ['+rw(__weak)', '']
+                - ['+rw(__writeonly)', '']
+                - ['+rw(__softfp)', '']
+        #    suppressions:
+        decls:
+            definitions:
+                - 'void __nop(void);'
+                - 'void* __return_address(void);'
+                - 'void* __current_sp(void);'
+                - 'void* __current_pc(void);'
+                - 'void __breakpoint(int);'
+                - 'int __semihost(int,void const*);'
+                - 'void __schedule_barrier(void);'
+                - 'void __force_stores(void);'
+                - 'void __force_loads(void);'
+                - 'void __memory_changed(void);'
+                - 'float _fabsf(float);'
+                - 'void __promise(int);'
+                - 'void __nop(void);'
+                - 'void __schedule_barrier(void);'
+                - 'void __force_stores(void);'
+                - 'void __force_loads(void);'
+                - 'void __memory_changed(void);'
+                - 'int __semihost(int, const void *);'
+                - 'unsigned char __clz(unsigned int);'
+                - 'unsigned int __ror(unsigned int, unsigned int);'
+                - 'unsigned int __rev(unsigned int);'
+                - 'double __fabs(double);'
+                - 'float __fabsf(float);'
+                - 'void __enable_irq(void);'
+                - 'void __enable_fiq(void);'
+                - 'int __disable_irq(void);'
+                - 'int __disable_fiq(void);'
+                - 'void __cdp(unsigned int, unsigned int, unsigned int);'
+                - 'unsigned int __ldrt(const volatile void *);'
+                - 'void __strt(unsigned int, volatile void *);'
+                - 'unsigned int __swp(unsigned int, volatile void *);'
+                - 'void __dmb(unsigned int);'
+                - 'void __dsb(unsigned int);'
+                - 'void __isb(unsigned int);'
+                - 'unsigned int __vfp_status(unsigned int, unsigned int);'
+                - ''
+        c_decls:
+            definitions:
+                - 'void __pld();'
+                - 'void __pldw();'
+                - 'void __pli();'
+        cpp_decls:
+            definitions:
+                - 'void __pld(...);'
+                - 'void __pldw(...);'
+                - 'void __pli(...);'
+    gcc: &gcc
+        description: "GNU C/C++ compiler (all targets)"
+        version: &gcc_version
+            # When the compiler version is requested, the compiler will be invoked with the
+            # arguments in 'command' and the portion of the output written to 'stderr' that
+            # matches the 'version' portion of the regular expression provided to 'match_expr'
+            # will be returned.
+            command:
+                - "-v"
+            channel:    stderr
+            match_expr:
+                'version\s+(?P<version>\d+\.\d+\.\d+)'
+        c_include_paths: &gcc_c_include_paths
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-v"
+                - "-xc"
+                - "-E"
+                - "-"
+            channel:    stderr
+            input: ""
+            match_expr: 'search starts here:[\r\n]+(?:\s*(?:(?P<include_dir>[^#\r\n]*?)(?:\(framework directory\))?[\r\n]+)*)End of search list'
+        cpp_include_paths: &gcc_cpp_include_paths
+            # Same as above but for C++.
+            command:
+                - "-v"
+                - "-xc++"
+                - "-E"
+                - "-"
+            channel:    stderr
+            input: ""
+            match_expr: 'search starts here:[\r\n]+(?:\s*(?:(?P<include_dir>[^#\r\n]*?)(?:\(framework directory\))?[\r\n]+)*)End of search list'
+        c_macros: &gcc_c_macros
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-dM"
+                - "-E"
+                - "-xc"
+                - "-"
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+            input: ""
+            scavenge_command:
+                - "-E"
+                - "-xc"
+                - "-"
+        cpp_macros: &gcc_cpp_macros
+            # Same as above but for C++.
+            command:
+                - "-dM"
+                - "-E"
+                - "-xc++"
+                - "-"
+            channel:    stdout
+            input: ""
+            match_expr: '(?P<macros>.*)'
+            scavenge_command:
+                - "-E"
+                - "-xc++"
+                - "-"
+        size_options: &gcc_size_options
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "-E"
+                - "-xc"
+                - "-"
+            input: |
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #if __SIZEOF_SIZE_T__ == __SIZEOF_LONG_LONG__
+                #  define FZL_OPT +fzl ++fzl
+                #elif __SIZEOF_SIZE_T__ == __SIZEOF_LONG__
+                #  define FZL_OPT +fzl
+                #else
+                #  define FZL_OPT
+                #endif
+
+                #pragma message(STR( \
+                                      JOIN(-si, __SIZEOF_INT__) \
+                                      JOIN(-sl, __SIZEOF_LONG__) \
+                                      JOIN(-sll,__SIZEOF_LONG_LONG__) \
+                                      JOIN(-ss, __SIZEOF_SHORT__) \
+                                      JOIN(-sw, __SIZEOF_WCHAR_T__) \
+                                      JOIN(-sp, __SIZEOF_POINTER__) \
+                                      JOIN(-sf, __SIZEOF_FLOAT__) \
+                                      JOIN(-sd, __SIZEOF_DOUBLE__) \
+                                      JOIN(-sld,__SIZEOF_LONG_DOUBLE__) \
+                                      FZL_OPT \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+        base_config:
+            extensions: &gcc_base_config_extensions
+                - ['+fdi', 'Starts its #include search in the directory of the including file']
+                - ['+fgi', 'Enable GNU inline semantics']
+                - ['+fld', 'Enable support for gcc label designators']
+                - ['+ppw(include_next)', 'Enable support for #include_next']
+                - ['+ppw(ident)', 'Enable support for #ident']
+                - ['+ppw(warning)', 'Enable support for #warning']
+                - ['+ppw(import)', 'Enable support for #import']
+                - ['+ppw(sccs)', 'Enable support for #sccs']
+                - ['+ppw(unassert)', 'Enable support for #unassert']
+                - ['+cpp(.cc)', 'Make .cc a C++ file extension in addition to the default of .cpp and .cxx']
+                - ['+rw(__typeof__)', '']
+                - ['+rw(_Decimal32)', '']
+                - ['+rw(_Decimal64)', '']
+                - ['+rw(_Decimal128)', '']
+                - ['+rw(__alignof)', '']
+                - ['+rw(__attribute)', '']
+                - ['+rw(__builtin_choose_expr)', '']
+                - ['+rw(__builtin_offsetof)', '']
+                - ['+rw(__builtin_types_compatible_p)', '']
+                - ['+rw(__builtin_va_arg)', '']
+                - ['+rw(__extension__)', '']
+                - ['+rw(__imag)', '']
+                - ['+rw(__label__)', '']
+                - ['+rw(__real)', '']
+                - ['+rw(__thread)', '']
+                - ['+rw(__PRETTY_FUNCTION__)', '']
+                - ['+rw(typeof)', '']
+                - ['-rw_asgn(__inline,inline)', '']
+                - ['-rw_asgn(__inline__,inline)', '']
+                - ['-rw_asgn(__signed__,signed)', '']
+                - ['-rw_asgn(__signed,signed)', '']
+                - ['-rw_asgn(__volatile__,volatile)', '']
+                - ['-rw_asgn(__volatile,volatile)', '']
+                - ['-rw_asgn(__alignof__,__alignof)', '']
+                - ['-rw_asgn(__const,const)', '']
+                - ['-rw_asgn(asm,_up_to_brackets)', '']
+                - ['-rw_asgn(__asm,_up_to_brackets)', '']
+                - ['-rw_asgn(__asm__,_up_to_brackets)', '']
+                - ['-rw_asgn(_Float128,__float128)', '']
+            suppressions: &gcc_base_config_suppressions
+                - ['-emacro(530, va_start)', '']
+                - ['-emacro(530, va_end)', '']
+                - ['-emacro(413, offsetof)', '']
+        options:
+            # The list of options used by the compiler.
+            #
+            # The 'handled' options are those that have corresponding Lint options and instructions
+            # on how to convert the compiler option to the appropriate lint option.
+            #
+            # The 'ignored' options are options that the configuration tool is aware of and explicitly
+            # ignores because they are not relevant to the linting process.
+            #
+            # The 'unsupported' options include those that could potentially have an effect on the
+            # linting process if they were supported but are currently ignored because the corresponding
+            # behavior is not implemented in Lint.
+            #
+            # Options that are encountered that are not found in these three areas are considered to be
+            # 'unknown' to the configuration tool and will be logged for possibile investigation.
+            # It is important that options be placed in the correct section because the section in which
+            # they are found dictates how information about the option will be communicated to the user.
+            '-ansi':
+                transform: '-std=c90'
+            '-std=c89': 
+                transform: '-std=c89'
+            '-std=c90':
+                transform: '-std=c90'
+            '-std=c99':
+                transform: '-std=c99'
+            '-std=c11':
+                transform: '-std=c11'
+            '-std=c9x':
+                transform: '-std=c99'
+            '-std=c1x':
+                transform: '-std=c11'
+            '-std=iso9899:1990':
+                transform: '-std=c90'
+            '-std=iso9899:199409':
+                transform: '-std=c90'
+            '-std=iso9899:1999':
+                transform: '-std=c99'
+            '-std=iso9899:199x':
+                transform: '-std=c99'
+            '-std=c++03':
+                transform: '-std=c++03'
+            '-std=c++11':
+                transform: '-std=c++11'
+            '-std=c++14':
+                transform: '-std=c++14'
+            '-std=c++17':
+                transform: '-std=c++17'
+            '-std=c++0x':
+                transform: '-std=c++11'
+            '-std=c++1y':
+                transform: '-std=c++14'
+            '-std=c++1z':
+                transform: '-std=c++17'
+            '-std=gnu89':
+                transform: '-std=c89'
+            '-std=gnu90':
+                transform: '-std=c90'
+            '-std=gnu99':
+                transform: '-std=c99'
+            '-std=gnu9x':
+                transform: '-std=c99'
+            '-std=gnu11':
+                transform: '-std=c11'
+            '-std=gnu1x':
+                transform: '-std=c11'
+            '-std=gnu++98':
+                transform: '-std=c++03'
+            '-std=gnu++03':
+                transform: '-std=c++03'
+            '-std=gnu++11':
+                transform: '-std=c++11'
+            '-std=gnu++0x':
+                transform: '-std=c++11'
+            '-std=gnu++14':
+                transform: '-std=c++14'
+            '-std=gnu++1y':
+                transform: '-std=c++14'
+            '-std=gnu++17':
+                transform: '-std=c++17'
+            '-std=gnu++1z':
+                transform: '-std=c++17'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-U':
+                transforms: [ ['-U\s*(?P<macro_name>.+)', '-u\g<macro_name>'] ]
+            '-fgnu89-inline':
+                transform: '+fgi -d__GNUC_GNU_INLINE__'
+            '-fno-gnu89-inline':
+                transform: '-fgi -d__GNUC_STDC_INLINE__'
+            '-fno-asm':
+                transform: '-rw(typeof)'
+            '-fno-gnu-keywords':
+                transform: '-rw(typeof)'
+            '-fgimple':
+                transform: '+rw(__GIMPLE)'
+            '-fms-extensions':
+                transform: '+fms'
+            '-fplan9-extensions':
+                transform: '+fms'
+            '-funsigned-char':
+                transform: '+fcu'
+            '-fsigned-char':
+                transform: '-fcu'
+            '-fno-unsigned-char':
+                transform: '-fcu'
+            '-fno-signed-char':
+                transform: '+fcu'
+            '-ffor-scope':
+                transform: '+ffb'
+            '-fno-for-scope':
+                transform: '-ffb'
+            '-fno-operator-names':
+                transform: '-fon'
+            '-ftemplate-depth':
+                transforms: [ ['-ftemplate-depth=(?P<depth>\d+)', '-tr_limit=\g<depth>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '-B':
+                transforms: [ ['-B(?P<prefix>.+)', '-i"\g<prefix>/include"'] ]
+            '-include':
+                transforms: [ ['-include (?P<file>.+)', '-header(\g<file>)'] ]
+            '-imacros':
+                transforms: [ ['-imacros (?P<file>.+)', '-header(\g<file>)'] ]
+            '-fdollars-in-identifiers':
+                transform: '-$'
+            '-trigraphs':
+                transform: '+ftg'
+            '-Wctor-dtor-privacy':
+                transform: ''
+            '-Wdelete-non-virtual-dtor':
+                transform: ''
+            '-Wliteral-suffix':
+                transform: ''
+            '-Wnarrowing':
+                transform: ''
+            '-Wnoexcept':
+                transform: ''
+            '-Wnon-virtual-dtor':
+                transform: ''
+            '-Wregister':
+                transform: ''
+            '-Wreorder':
+                transform: ''
+            '-Wold-style-cast':
+                transform: ''
+            '-Woverloaded-virtual':
+                transform: ''
+            '-Wno-pmf-conversions':
+                transform: ''
+            '-Wsign-promo':
+                transform: ''
+            '-Wtemplates':
+                transform: ''
+            '-Wmultiple-inheritance':
+                transform: ''
+            '-Wvirtual-inheritance':
+                transform: ''
+            '-Wnamespaces':
+                transform: ''
+            '-Wno-terminate':
+                transform: ''
+
+            '-fcond-mismatch':  null
+            '-flax-vector-conversions': null
+            '-fsigned-bitfields': null
+            '-funsigned-bitfields': null
+            '-fno-signed-bitfields': null
+            '-fno-unsigned-bitfields': null
+            '-fno-access-control' : null
+            '-faligned-new': null
+            '-fconstexpr-depth' : null
+            '-fconstexpr-loop-limit' : null
+            '-fdeduce-init-list': null
+            '-ffriend-injection': null
+            '-fnew-inheriting-ctors': null
+            '-fnew-ttp-matching': null
+            '-fsized-deallocation' : null
+            '-fstrong-eval-order': null
+            '-fext-numeric-literals': null
+            '-Weffc++': null
+            '-Wstrict-null-sentinel': null
+            '-Wno-non-template-friend': null
+            '-I-': null
+            '-iquote': null
+            '-isystem':
+                transforms: [ ['-isystem\s*(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '-idirafter': null
+            '-iprefix': null
+            '-iwithprefix': null
+            '-iwithprefixbefore': null
+            '-iwithprefixbefore': null
+            '-isysroot': null
+            '-imultilib': null
+            '-fpreprocessed': null
+            '-fdirectives-only': null
+            '-fpermitted-flt-eval-methods': null
+            '-fno-builtin': null
+            '-fhosted': null
+            '-ffreestanding': null
+            '-fopenacc': null
+            '-fopenacc-dim': null
+            '-fopenmp': null
+            '-fopenmp-simd': null
+            '-fcilkplus': null
+            '-fgnu-tm': null
+            '-fsso-struct': null
+            '-fabi-version': null
+            '-fabi-compat-version': null
+            '-fcheck-new': null
+            '-fconcepts': null
+            '-fno-elide-constructors': null
+            '-fno-enforce-eh-specs': null
+            '-fextern-tls-init': null
+            '-fno-extern-tls-init': null
+            '-fno-implicit-templates': null
+            '-fno-implicit-inline-templates': null
+            '-fno-implement-inlines': null
+            '-fno-nonansi-builtins': null
+            '-fnothrow-opt': null
+            '-fno-optional-diags': null
+            '-fpermissive': null
+            '-fno-pretty-templates': null
+            '-frepo': null
+            '-fno-rtti': null
+            '-fstrict-enums': null
+            '-ftemplate-backtrace-limit': null
+            '-fno-threadsafe-statics': null
+            '-fuse-cxa-atexit': null
+            '-fno-use-cxa-get-exception-ptr': null
+            '-fvisibility-inlines-hidden': null
+            '-fvisibility-ms-compat': null
+            '-fno-weak': null
+            '-nostdinc++': null
+            '-Wabi-tag': null
+            '-Wlto-type-mismatch': null
+            '-fmessage-length': null
+            '-fdiagnostics-show-location': null
+            '-fdiagnostics-color': null
+            '-fno-diagnostics-show-option': null
+            '-fno-diagnostics-show-caret': null
+            '-fdiagnostics-parseable-fixits': null
+            '-fdiagnostics-generate-patch': null
+            '-fno-show-column': null
+            '-fextended-identifiers': null
+            '-fno-canonical-system-headers': null
+            '-ftabstop': null
+            '-fdelayed-template-parsing':
+                transform: '+fdt'
+            '-fbracket-depth': null
+            '-fconstexpr-depth': null
+            '-ftemplate-depth': null
+            '-foperator-arrow-depth': null
+            '-m': null
+
+    clang: &clang
+        <<: *gcc
+        description: "Compiler frontend for LLVM"
+
+    vs_base: &vs_base
+        version:
+            command: []
+            channel:    stderr
+            match_expr:
+                'Version\s+(?P<version>\d+\.\d+\.\d+)'
+        include_paths:
+            env_var: 'INCLUDE'
+            match_expr: '(?:(?P<include_dir>[^;]+);?)+'
+        c_decls:
+            definitions:
+                - 'void __assert(_Bool); /*lint !e793 !e955 !e970 !e1904 !e9141 */'
+        cpp_decls:
+            definitions:
+                - 'void __assert(bool);  /*lint !e793 !e955 !e970 !e1904 !e9141 */'
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via a temporary file.
+            command: 
+                - '/Tp'
+            tempfile: |
+                template <int T>
+                class si;
+
+                template <int T>
+                class sl;
+
+                template <int T>
+                class sll;
+
+                template <int T>
+                class ss;
+
+                template <int T>
+                class sw;
+
+                template <int T>
+                class sp;
+
+                template <int T>
+                class sf;
+
+                template <int T>
+                class sd;
+
+                template <int T>
+                class sld;
+
+                int main(void) {
+                    si<sizeof(int)> x1;
+                    sl<sizeof(long)> x2;
+                    sll<sizeof(long long)> x3;
+                    ss<sizeof(short)> x4;
+                    sw<sizeof(wchar_t)> x5;
+                    sp<sizeof(void *)> x6;
+                    sf<sizeof(float)> x7;
+                    sd<sizeof(double)> x8;
+                    sld<sizeof(long double)> x9;
+                }
+            channel:    stdout
+            match_expr: '(?:.*?(?P<size_name>si|sl|sll|ss|sw|sp|sf|sd|sld)<(?:(?:T[^0-9]+(?P<size_value>\d+))|(?P<size_value>\d+)))+'
+
+        macros:
+            command:
+                - "/nologo"
+                - "/FoNUL"
+                - "/c"
+                - "/Tp"
+            channel:        stdout
+            match_expr: '(?P<macros>#define.*)'
+            tempfile: |
+                #define S2(x) #x
+                #define S1(x) S2(x)
+                #define DV(x) "#define " #x " " S1(x)
+                /* */
+                #if defined(__ATOM__)
+                    #pragma message(DV(__ATOM__))
+                #endif
+                #if defined(__AVX__)
+                    #pragma message(DV(__AVX__))
+                #endif
+                #if defined(__AVX2__)
+                    #pragma message(DV(__AVX2__))
+                #endif
+                #if defined(__CLR_VER)
+                    #pragma message(DV(__CLR_VER))
+                #endif
+                #pragma message("#define __FUNCDNAME__ \"funcname\"")
+                #pragma message("#define __FUNCSIG__ \"funcsig\"")
+                #pragma message("#define __FUNCTION__ \"func\"")
+                #if defined(__INTELLISENSE__)
+                    #pragma message(DV(__INTELLISENSE__))
+                #endif
+                #if defined(__MSVC_RUNTIME_CHECKS)
+                    #pragma message(DV(__MSVC_RUNTIME_CHECKS))
+                #endif
+                #if defined(__STDC__)
+                    #pragma message(DV(__STDC__))
+                #endif
+                #if defined(__STDC_HOSTED__)
+                    #pragma message(DV(__STDC_HOSTED__))
+                #endif
+                #if defined(__STDCPP_DEFAULT_NEW_ALIGNMENT__)
+                    #pragma message(DV(__STDCPP_DEFAULT_NEW_ALIGNMENT__))
+                #endif
+                #if defined(__STDC_ISO_10646__)
+                    #pragma message(DV(__STDC_ISO_10646__))
+                #endif
+                #if defined(__STDC_MB_MIGHT_NEQ_WC__)
+                    #pragma message(DV(__STDC_MB_MIGHT_NEQ_WC__))
+                #endif
+                #if defined(__STDCPP_STRICT_POINTER_SAFETY__)
+                    #pragma message(DV(__STDCPP_STRICT_POINTER_SAFETY__))
+                #endif
+                #if defined(__STDC_VERSION__)
+                    #pragma message(DV(__STDC_VERSION__))
+                #endif
+                #if defined(__STDCPP_THREADS__)
+                    #pragma message(DV(__STDCPP_THREADS__))
+                #endif
+                #if defined(__cplusplus)
+                    #pragma message(DV(__cplusplus))
+                #endif
+                #if defined(__cplusplus_cli)
+                    #pragma message(DV(__cplusplus_cli))
+                #endif
+                #if defined(__cplusplus_winrt)
+                    #pragma message(DV(__cplusplus_winrt))
+                #endif
+                #if defined(_ATL_VER)
+                    #pragma message(DV(_ATL_VER))
+                #endif
+                #if defined(_CHAR_UNSIGNED)
+                    #pragma message(DV(_CHAR_UNSIGNED))
+                #endif
+                #if defined(_CONTROL_FLOW_GUARD)
+                    #pragma message(DV(_CONTROL_FLOW_GUARD))
+                #endif
+                #if defined(_CPPRTTI)
+                    #pragma message(DV(_CPPRTTI))
+                #endif
+                #if defined(_CPPUNWIND)
+                    #pragma message(DV(_CPPUNWIND))
+                #endif
+                #if defined(_DEBUG)
+                    #pragma message(DV(_DEBUG))
+                #endif
+                #if defined(_DLL)
+                    #pragma message(DV(_DLL))
+                #endif
+                #if defined(_INTEGRAL_MAX_BITS)
+                    #pragma message(DV(_INTEGRAL_MAX_BITS))
+                #endif
+                #if defined(_ISO_VOLATILE)
+                    #pragma message(DV(_ISO_VOLATILE))
+                #endif
+                #if defined(_KERNEL_MODE)
+                    #pragma message(DV(_KERNEL_MODE))
+                #endif
+                #if defined(_M_ALPHA)
+                    #pragma message(DV(_M_ALPHA))
+                #endif
+                #if defined(_M_AMD64)
+                    #pragma message(DV(_M_AMD64))
+                #endif
+                #if defined(_M_ARM)
+                    #pragma message(DV(_M_ARM))
+                #endif
+                #if defined(_M_ARM_ARMV7VE)
+                    #pragma message(DV(_M_ARM_ARMV7VE))
+                #endif
+                #if defined(_M_ARM_FP)
+                    #pragma message(DV(_M_ARM_FP))
+                #endif
+                #if defined(_M_ARM64)
+                    #pragma message(DV(_M_ARM64))
+                #endif
+                #if defined(_M_CEE)
+                    #pragma message(DV(_M_CEE))
+                #endif
+                #if defined(_M_CEE_PURE)
+                    #pragma message(DV(_M_CEE_PURE))
+                #endif
+                #if defined(_M_CEE_SAFE)
+                    #pragma message(DV(_M_CEE_SAFE))
+                #endif
+                #if defined(_M_FP_EXCEPT)
+                    #pragma message(DV(_M_FP_EXCEPT))
+                #endif
+                #if defined(_M_FP_FAST)
+                    #pragma message(DV(_M_FP_FAST))
+                #endif
+                #if defined(_M_FP_PRECISE)
+                    #pragma message(DV(_M_FP_PRECISE))
+                #endif
+                #if defined(_M_FP_STRICT)
+                    #pragma message(DV(_M_FP_STRICT))
+                #endif
+                #if defined(_M_IA64)
+                    #pragma message(DV(_M_IA64))
+                #endif
+                #if defined(_M_IX86)
+                    #pragma message(DV(_M_IX86))
+                #endif
+                #if defined(_M_IX86_FP)
+                    #pragma message(DV(_M_IX86_FP))
+                #endif
+                #if defined(_M_MPPC)
+                    #pragma message(DV(_M_MPPC))
+                #endif
+                #if defined(_M_MRX000)
+                    #pragma message(DV(_M_MRX000))
+                #endif
+                #if defined(_M_PPC)
+                    #pragma message(DV(_M_PPC))
+                #endif
+                #if defined(_M_X64)
+                    #pragma message(DV(_M_X64))
+                #endif
+                #if defined(_MANAGED)
+                    #pragma message(DV(_MANAGED))
+                #endif
+                #if defined(_MFC_VER)
+                    #pragma message(DV(_MFC_VER))
+                #endif
+                #if defined(_MSC_BUILD)
+                    #pragma message(DV(_MSC_BUILD))
+                #endif
+                #if defined(_MSC_EXTENSIONS)
+                    #pragma message(DV(_MSC_EXTENSIONS))
+                #endif
+                #if defined(_MSC_FULL_VER)
+                    #pragma message(DV(_MSC_FULL_VER))
+                #endif
+                #if defined(_MSC_VER)
+                    #pragma message(DV(_MSC_VER))
+                #endif
+                #if defined(_MSVC_LANG)
+                    #pragma message(DV(_MSVC_LANG))
+                #endif
+                #if defined(_MT)
+                    #pragma message(DV(_MT))
+                #endif
+                #if defined(_NATIVE_WCHAR_T_DEFINED)
+                    #pragma message(DV(_NATIVE_WCHAR_T_DEFINED))
+                #endif
+                #if defined(_OPENMP)
+                    #pragma message(DV(_OPENMP))
+                #endif
+                #if defined(_PREFAST_)
+                    #pragma message(DV(_PREFAST_))
+                #endif
+                #if defined(_VC_NODEFAULTLIB)
+                    #pragma message(DV(_VC_NODEFAULTLIB))
+                #endif
+                #if defined(_WCHAR_T_DEFINED)
+                    #pragma message(DV(_WCHAR_T_DEFINED))
+                #endif
+                #if defined(_WIN32)
+                    #pragma message(DV(_WIN32))
+                #endif
+                #if defined(_WIN64)
+                    #pragma message(DV(_WIN64))
+                #endif
+                #if defined(_WINRT_DLL)
+                    #pragma message(DV(_WINRT_DLL))
+                #endif
+                #if defined(_Wp64)
+                    #pragma message(DV(_Wp64))
+                #endif
+                #pragma message("#define L__FUNCTION__ L\"func\"")
+                /* */
+                void main() {}
+
+        options:
+            '/D':
+                transforms: [ ['/D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '++fbe -d\g<macro_name>{"\g<macro_def>"} --fbe'], ['/D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+                pre_transforms_replacements: [ [ '\', '\\' ], [ '"', '\"' ] ]
+            '/EH':
+                transform: '-d_CPPUNWIND=1'
+            '/GR':
+                transform: '-d_CPPRTTI=1'
+            '/GX':
+                transform: '-d_CPPUNWIND=1'
+            '/I':
+                transforms: [ ['/I\s*(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)', '-i"\g<dir>"'] ]
+            '/J':
+                transform: '+fcu -d_CHAR_UNSIGNED -d_ATL_ALLOW_CHAR_UNSIGNED'
+            '/LD':
+                transforms: [ ['/LDd', '-d_DEBUG=1'] ]
+            '/MD':
+                transforms: [ ['/MDd', '-d_DEBUG=1'], ['/MDd?$', '-d_DLL=1'], ['/MD$', '-d_MT=1'], ['/MDd', '-d_MT=1'] ]
+            '/MT':
+                transforms: [ ['/MTd', '-d_DEBUG=1'], ['/MT$', '-d_MT=1'], ['/MTd', '-d_MT=1'] ]
+            '/U':
+                transforms: [ ['/U\s*(?P<macro_name>.+)', '-u\g<macro_name>'] ]
+            '/Zc:forScope':
+                transform: '+ffb'
+            '/Zc:forScope-':
+                transform: '-ffb'
+            '/Zc:trigraphs':
+                transform: '+ftg'
+            '/Zc:trigraphs-':
+                transform: '-ftg'
+            '/Zc:strictStrings':
+                transform: '+fsc'
+            '/Zc:strictStrings-':
+                transform: '-fsc'
+            '/ZW':
+                transform: '-d__cplusplus_winrt=201009'
+            '/Tc': null
+            '/Tp': null
+            '/TC': null
+            '/TP': null
+            '/openmp':
+                transform: '-d_OPENMP=200203'
+            '/X': null
+            '/Zc:sizedDealloc': null
+            '/Zc:sizedDealloc-': null
+            '/Zc:implicitNoexcept-': null
+            '/Zc:rvalueCast-': null
+            '/Zc:auto-': null
+            '/Zc:wchar_t-':
+                transform: '-u_NATIVE_WCHAR_T_DEFINED -u_WCHAR_T_DEFINED'
+            '/Zc:inline': null
+            '/Zc:inline-': null
+            '/clr':
+                transforms: [ ['/clr$', '-d__cplusplus_cli=200406'], ['/clr$', '-d_CPPUNWIND=1'], ['/clr', '-d_M_CEE=001'], ['/clr:pure', '-d_M_CEE_PURE=001'], ['/clr:safe', '-d_M_CEE_SAFE=001'], ['/clr', '-d_MANAGED=1'] ]
+            '/clr:pure':
+                transform: '-d__cplusplus_cli=200406'
+            '/clr:safe':
+                transform: '-d__cplusplus_cli=200406'
+            '/fp':
+                transforms: [ ['/fp:except', '-d_M_FP_EXCEPT=1'], ['/fp:strict', '-d_M_FP_EXCEPT=1'], ['/fp:fast', '-d_M_FP_FAST=1'], ['/fp:precise', '-d_M_FP_PRECISE=1'], ['/fp:strict', '-d_M_FP_STRICT=1']]
+            '/kernel':
+                transform: '-d_KERNEL_MODE=1'
+            '/u': null
+            '/volatile:iso':
+                transform: '-d_ISO_VOLATILE=1'
+        base_config:
+            vs_base_base_config_extensions: &vs_base_base_config_extensions
+                - ['-$', 'Enable $ as an identifier character']
+                - ['+fan', 'Enable support for anonymous unions']
+                - ['+fdi', 'Search including directory']
+                - ['+fsi', 'Search include stack for headers']
+                - ['+frc', 'Enable MSVC behavior with regards to handling of commas in macro expansions involving __VA_ARGS__']
+                - ['+fbl', 'Search dependent base classes for unqualified lookup in a class template']
+                - ['+fei', 'Enumerations are always int']
+                - ['+fur', 'Allow unions to contain reference members']
+                - ['+frd', 'Allow redefinition of default parameters for member functions of a class template']
+                - ['+fum', 'A user-declared move operation will only delete the corresponding copy operation']
+                - ['+ffv', 'Implicit conversion from function pointers to void pointers']
+                - ['+flp', 'Support the C++98 definition of null pointer constant']
+                - ['+fnf', 'Fall back on operator new when operator new[] cannot be found']
+                - ['+fes', 'Search enclosing scopes for friend tag declarations']
+                - ['+ffw', 'A friend declaration may act as a forward declaration']
+                - ['+fma', 'Microsoft Asm blocks']
+                - ['+fdt', 'Enable delayed template parsing']
+                - ['+fms', 'Other Microsoft extensions']
+                - ['-fon', 'Disable alternative C++ tokens for logical operators']
+                - ['+fwc', 'internal wchar_t']
+                - ['+fwu', 'wchar_t is unsigned']
+                - ['+ppw(using)', 'Enable support for the #using directive']
+                - ['+ppw(import)', 'Enable support for the #import directive']
+                - ['+rw(___identifier)', '']
+                - ['+rw(__alignof)', '']
+                - ['+rw(__asm)', '']
+                - ['+rw(__builtin_alignof)', '']
+                - ['+rw(__cdecl)', '']
+                - ['+rw(__declspec)', '']
+                - ['+rw(__fastcall)', '']
+                - ['+rw(__finally)', '']
+                - ['+rw(__forceinline)', '']
+                - ['+rw(__gc)', '']
+                - ['+rw(__if_exists)', '']
+                - ['+rw(__if_not_exists)', '']
+                - ['+rw(__inline)', '']
+                - ['+rw(__int16)', '']
+                - ['+rw(__int32)', '']
+                - ['+rw(__int64)', '']
+                - ['+rw(__int8)', '']
+                - ['+rw(__interface)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['+rw(__is_interface_class)', '']
+                - ['+rw(__is_nothrow_destructible)', '']
+                - ['+rw(__is_sealed)', '']
+                - ['+rw(__leave)', '']
+                - ['+rw(__multiple_inheritance)', '']
+                - ['+rw(__nogc)', '']
+                - ['+rw(__pin)', '']
+                - ['+rw(__ptr64)', '']
+                - ['+rw(__ptr32)', '']
+                - ['+rw(__single_inheritance)', '']
+                - ['+rw(__sptr)', '']
+                - ['+rw(__stdcall)', '']
+                - ['+rw(__super)', '']
+                - ['+rw(__thiscall)', '']
+                - ['+rw(__try)', '']
+                - ['+rw(__try_cast)', '']
+                - ['+rw(__uptr)', '']
+                - ['+rw(__unaligned)', '']
+                - ['+rw(__uuidof)', '']
+                - ['+rw(__value)', '']
+                - ['+rw(__vectorcall)', '']
+                - ['+rw(__virtual_inheritance)', '']
+                - ['+rw(__w64)', '']
+                - ['+rw(__wchar_t)', '']
+                - ['+rw(_asm)', '']
+                - ['+rw(_alignof)', '']
+                - ['+rw(_cdecl)', '']
+                - ['+rw(_declspec)', '']
+                - ['+rw(_fastcall)', '']
+                - ['+rw(_inline)', '']
+                - ['+rw(_int16)', '']
+                - ['+rw(_int32)', '']
+                - ['+rw(_int64)', '']
+                - ['+rw(_int8)', '']
+                - ['+rw(_stdcall)', '']
+                - ['+rw(_thiscall)', '']
+                - ['+rw(_uuidof)', '']
+                - ['++doffsetof(s,m)=__builtin_offsetof(s,m)', '']
+            suppressions: &vs_base_base_config_suppressions
+                - ['-emacro(505 792 1773,va_start)', '']
+                - ['-esym(4242,std::_Const_cast)', '']
+                - ['-estring(9022,_identifier)', '']
+                - ['-estring(9051 9052,_inline,_declspec,_stdcall)', '']
+                - ['-emacro(413, offsetof)', '']
+                - ['-e4374', 'Visual Studio allows certain calling convention differences in overridden functions']
+
+    _vs_shared:
+        base_config:
+            _vs_shared_64: &_vs_shared_64
+                - ['+fzl', 'long sizeof']
+                - ['++fzl', 'long long sizeof']
+            _vs_shared_2013_and_later: &_vs_shared_2013_and_later
+                - ['+rw(char16_t)', '']
+                - ['+rw(char32_t)', '']
+                - ['+d"_EMIT_VECTORCALL(...)="', '']
+            _vs_shared_2012_and_earlier: &_vs_shared_2012_and_earlier
+                - ['+fdm', 'Enable MSVC behavior for commas in variadic macros']
+                - ['+fti', '']
+
+    vs2019:
+        <<: *vs_base
+        description: "Visual Studio 2019 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2019_extensions: &vs2019_extensions
+                - ['-std=c++17', 'Enable C++17 support']
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+
+    vs2019_64:
+        <<: *vs_base
+        description: "Visual Studio 2019 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2019_extensions: *vs2019_extensions
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+            _vs_shared_64: *_vs_shared_64
+
+    vs2017:
+        <<: *vs_base
+        description: "Visual Studio 2017 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2017_extensions: &vs2017_extensions
+                - ['-std=c++17', 'Enable C++17 support']
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+
+    vs2017_64:
+        <<: *vs_base
+        description: "Visual Studio 2017 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2017_extensions: *vs2017_extensions
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+            _vs_shared_64: *_vs_shared_64
+
+    vs2015:
+        <<: *vs_base
+        description: "Visual Studio 2015 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2015_extensions: &vs2015_extensions
+                - ['-std=c++14', 'Enable C++14 support']
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+
+    vs2015_64:
+        <<: *vs_base
+        description: "Visual Studio 2015 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2015_extensions: *vs2015_extensions
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+            _vs_shared_64: *_vs_shared_64
+
+    vs2013:
+        <<: *vs_base
+        description: "Visual Studio 2013 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2013_extensions: &vs2013_extensions
+                - ['-std=c++11', 'Enable C++11 support']
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+
+    vs2013_64:
+        <<: *vs_base
+        description: "Visual Studio 2013 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2013_extensions: *vs2013_extensions
+            _vs_shared_2013_and_later: *_vs_shared_2013_and_later
+            _vs_shared_64: *_vs_shared_64
+
+    vs2012:
+        <<: *vs_base
+        description: "Visual Studio 2012 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2012_extensions: &vs2012_extensions
+                - ['-std=c++11', 'Enable C++11 support']
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+
+    vs2012_64:
+        <<: *vs_base
+        description: "Visual Studio 2012 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2012_extensions: *vs2012_extensions
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+            _vs_shared_64: *_vs_shared_64
+
+    vs2010:
+        <<: *vs_base
+        description: "Visual Studio 2010 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2010_extensions: &vs2010_extensions
+                - ['-std=c++11', 'Enable C++11 support']
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+
+    vs2010_64:
+        <<: *vs_base
+        description: "Visual Studio 2010 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2010_extensions: *vs2010_extensions
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+            _vs_shared_64: *_vs_shared_64
+
+    vs2008:
+        <<: *vs_base
+        description: "Visual Studio 2008 32-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2008_extensions: &vs2008_extensions
+                - ['-std=c++03', 'Enable C++03 support']
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+
+    vs2008_64:
+        <<: *vs_base
+        description: "Visual Studio 2008 64-bit"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2008_extensions: *vs2008_extensions
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+            _vs_shared_64: *_vs_shared_64
+
+    vs2005:
+        <<: *vs_base
+        description: "Visual Studio 2005 32-bits"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2005_extensions: &vs2005_extensions
+                - ['-std=c++03', 'Enable C++03 support']
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+
+    vs2005_64:
+        <<: *vs_base
+        description: "Visual Studio 2005 64-bits"
+        base_config:
+            vs_base_base_config_extensions: *vs_base_base_config_extensions
+            vs_base_base_config_suppressions: *vs_base_base_config_suppressions
+            vs2005_extensions: *vs2005_extensions
+            _vs_shared_2012_and_earlier: *_vs_shared_2012_and_earlier
+            _vs_shared_64: *_vs_shared_64
+
+    iar-8051:
+        description: "IAR compiler for the 8051 microcontroller family"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+rw(__task)', '']
+                - ['+rw(__no_init)', '']
+                - ['+rw(__intrinsic)', '']
+                - ['+rw(__interrupt)', '']
+                - ['+rw(__monitor)', '']
+                - ['+rw(__banked_func)', '']
+                - ['+rw(__banked_func_ext2)', '']
+                - ['+rw(__bdata)', '']
+                - ['+rw(__bit)', '']
+                - ['+rw(__code)', '']
+                - ['+rw(__data)', '']
+                - ['+rw(__data_overlay)', '']
+                - ['+rw(__ext_stack_reentrant)', '']
+                - ['+rw(__far)', '']
+                - ['+rw(__far_code)', '']
+                - ['+rw(__far_func)', '']
+                - ['+rw(__far_rom)', '']
+                - ['+rw(__far22)', '']
+                - ['+rw(__far22_code)', '']
+                - ['+rw(__far22_rom)', '']
+                - ['+rw(__generic)', '']
+                - ['+rw(__huge)', '']
+                - ['+rw(__huge_code)', '']
+                - ['+rw(__huge_rom)', '']
+                - ['+rw(__idata)', '']
+                - ['+rw(__idata_overlay)', '']
+                - ['+rw(__idata_reentrant)', '']
+                - ['+rw(__ixdata)', '']
+                - ['+rw(__near_func)', '']
+                - ['+rw(__noreturn)', '']
+                - ['+rw(__overlay_near_func)', '']
+                - ['+rw(__pdata)', '']
+                - ['+rw(__pdata_reentrant)', '']
+                - ['+rw(__root)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__xdata)', '']
+                - ['+rw(__xdata_reentrant)', '']
+                - ['+rw(__xdata_rom)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp4 -sf4 -sd4 -sld4 -as1 -ai1 -al1 -all1 -ap1 -af1 -ad1 -ald1'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-arm:
+        description: "IAR compiler for Arm Cores"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__task)', '']
+                - ['+rw(__no_init)', '']
+                - ['+rw(__intrinsic)', '']
+                - ['+rw(__interrupt)', '']
+                - ['+rw(__monitor)', '']
+                - ['+rw(__banked_func)', '']
+                - ['+rw(__banked_func_ext2)', '']
+                - ['+rw(__bdata)', '']
+                - ['+rw(__bit)', '']
+                - ['+rw(__code)', '']
+                - ['+rw(__data)', '']
+                - ['+rw(__data_overlay)', '']
+                - ['+rw(__ext_stack_reentrant)', '']
+                - ['+rw(__far)', '']
+                - ['+rw(__far_code)', '']
+                - ['+rw(__far_func)', '']
+                - ['+rw(__far_rom)', '']
+                - ['+rw(__far22)', '']
+                - ['+rw(__far22_code)', '']
+                - ['+rw(__far22_rom)', '']
+                - ['+rw(__generic)', '']
+                - ['+rw(__huge)', '']
+                - ['+rw(__huge_code)', '']
+                - ['+rw(__huge_rom)', '']
+                - ['+rw(__idata)', '']
+                - ['+rw(__idata_overlay)', '']
+                - ['+rw(__idata_reentrant)', '']
+                - ['+rw(__ixdata)', '']
+                - ['+rw(__near_func)', '']
+                - ['+rw(__noreturn)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__overlay_near_func)', '']
+                - ['+rw(__pdata)', '']
+                - ['+rw(__pdata_reentrant)', '']
+                - ['+rw(__root)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__xdata)', '']
+                - ['+rw(__xdata_reentrant)', '']
+                - ['+rw(__xdata_rom)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['+rw(_to_semi)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd8 -sld8 -as2 -ai4 -al4 -all8 -ap4 -af4 -ad8 -ald8'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-430:
+        description: "IAR compiler for Texas Instruments MSP430 and MSP430X"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__cc_rom)','']
+                - ['+rw(__cc_version1)','']
+                - ['+rw(__cc_version2)','']
+                - ['+rw(__data16)','']
+                - ['+rw(__data20)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__no_alloc)','']
+                - ['+rw(__no_alloc16)','']
+                - ['+rw(__no_alloc_str)','']
+                - ['+rw(__no_alloc_str16)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__no_multiplier)','']
+                - ['+rw(__no_pic)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__persistent)','']
+                - ['+rw(__ramfunc)','']
+                - ['+rw(__raw)','']
+                - ['+rw(__regvar)','']
+                - ['+rw(__root)','']
+                - ['+rw(__ro_placement)','']
+                - ['+rw(__save_reg20)','']
+                - ['+rw(__task)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+    iar-sam8:
+        description: "IAR compiler for Samsung SAM8"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__bank0)','']
+                - ['+rw(__bank1)','']
+                - ['+rw(__code)','']
+                - ['+rw(__fast)','']
+                - ['+rw(__generic)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__root)','']
+                - ['+rw(__tiny)','']
+                - ['+rw(__tiny_func)','']
+                - ['+rw(__tiny2)','']
+                - ['+rw(__tinyp)','']
+                - ['+rw(__tiny2p)','']
+                - ['+rw(__tinyp1)','']
+                - ['+rw(__tinyp2)','']
+                - ['+rw(__tinyp3)','']
+                - ['+rw(__tinyp4)','']
+                - ['+rw(__tinyp5)','']
+                - ['+rw(__tinyp6)','']
+                - ['+rw(__tinyp7)','']
+                - ['+rw(__tinyp8)','']
+                - ['+rw(__tinyp9)','']
+                - ['+rw(__tinyp10)','']
+                - ['+rw(__tinyp11)','']
+                - ['+rw(__tinyp12)','']
+                - ['+rw(__tinyp13)','']
+                - ['+rw(__tinyp14)','']
+                - ['+rw(__tinyp15)','']
+                - ['+rw(__tiny2p1)','']
+                - ['+rw(__tiny2p2)','']
+                - ['+rw(__tiny2p3)','']
+                - ['+rw(__tiny2p4)','']
+                - ['+rw(__tiny2p5)','']
+                - ['+rw(__tiny2p6)','']
+                - ['+rw(__tiny2p7)','']
+                - ['+rw(__tiny2p8)','']
+                - ['+rw(__tiny2p9)','']
+                - ['+rw(__tiny2p10)','']
+                - ['+rw(__tiny2p11)','']
+                - ['+rw(__tiny2p12)','']
+                - ['+rw(__tiny2p13)','']
+                - ['+rw(__tiny2p14)','']
+                - ['+rw(__tiny2p15)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__noreturn)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-v850:
+        description: "IAR compiler for Renesas V850"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__brel)','']
+                - ['+rw(__brel23)','']
+                - ['+rw(__callt)','']
+                - ['+rw(__flat)','']
+                - ['+rw(__huge)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__no_bit_access)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__root)','']
+                - ['+rw(__saddr)','']
+                - ['+rw(__syscall)','']
+                - ['+rw(__task)','']
+                - ['+rw(__trap)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd8 -sld8 -as2 -ai4 -al4 -all4 -ap4 -af4 -ad4 -ald4'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-rx:
+        description: "IAR compiler for Renesas RX"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__data16)','']
+                - ['+rw(__data24)','']
+                - ['+rw(__data32)','']
+                - ['+rw(__fast_interrupt)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__nested)','']
+                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc16)','']
+                - ['+rw(__no_alloc_str,)','']
+                - ['+rw(__no_alloc_str16)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__no_scratch)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__packed)','']
+                - ['+rw(__ramfunc)','']
+                - ['+rw(__root)','']
+                - ['+rw(__ro_placement)','']
+                - ['+rw(__sbrel)','']
+                - ['+rw(__sfr)','']
+                - ['+rw(__task)','']
+                - ['+rw(__weak)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai4 -al4 -all4 -ap4 -af4 -ad4 -ald4'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-rh850:
+        description: "IAR compiler for Renesas RH850"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__brel)','']
+                - ['+rw(__brel23)','']
+                - ['+rw(__callt)','']
+                - ['+rw(__cc_version1)','']
+                - ['+rw(__code)','']
+                - ['+rw(__db_int)','']
+                - ['+rw(__ei_int)','']
+                - ['+rw(__fe_int)','']
+                - ['+rw(__fetrap)','']
+                - ['+rw(__flat)','']
+                - ['+rw(__huge)','']
+                - ['+rw(__hvcall)','']
+                - ['+rw(__hvtrap)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__no_bit_access)','']
+                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc16)','']
+                - ['+rw(__no_alloc_str,)','']
+                - ['+rw(__no_alloc_str16)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__root)','']
+                - ['+rw(__saddr)','']
+                - ['+rw(__syscall)','']
+                - ['+rw(__task)','']
+                - ['+rw(__trap)','']
+                - ['+rw(__weak)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd8 -sld8 -as2 -ai4 -al4 -all4 -ap4 -af4 -ad4 -ald4'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-r32c:
+        description: "IAR compiler for Renesas R32C/100 microcomputer"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__code24)','']
+                - ['+rw(__code32)','']
+                - ['+rw(__data16)','']
+                - ['+rw(__data24)','']
+                - ['+rw(__data32)','']
+                - ['+rw(__fast_interrupt)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__packed)','']
+                - ['+rw(__root)','']
+                - ['+rw(__sbdata16)','']
+                - ['+rw(__sbdata24)','']
+                - ['+rw(__task)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai4 -al4 -all8 -ap4 -af4 -ad4 -ald4'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-m32c:
+        description: "IAR compiler for M32C and M16C/8x Series"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__far)','']
+                - ['+rw(__huge)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__sbdata)','']
+                - ['+rw(__sbdata16)','']
+                - ['+rw(__bitvar)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__fast_interrupt)','']
+                - ['+rw(__regbank_interrupt)','']
+                - ['+rw(__tiny_func)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__c_task)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__noreturn)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-m16c:
+        description: "IAR compiler for Renesas M16C/1X-3X, 5X-6X and R8C Series"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__bitvar)','']
+                - ['+rw(__data13)','']
+                - ['+rw(__data16)','']
+                - ['+rw(__data20)','']
+                - ['+rw(__far)','']
+                - ['+rw(__huge)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__regbank_interrupt)','']
+                - ['+rw(__root)','']
+                - ['+rw(__simple)','']
+                - ['+rw(__task)','']
+                - ['+rw(__tiny_func)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-h8:
+        description: "IAR compiler for Renesas H8/300H and H8S"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__cc_version1)','']
+                - ['+rw(__cc_version2)','']
+                - ['+rw(__cc_version3)','']
+                - ['+rw(__code16)','']
+                - ['+rw(__code24)','']
+                - ['+rw(__data8)','']
+                - ['+rw(__data16)','']
+                - ['+rw(__data32)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__raw)','']
+                - ['+rw(__root)','']
+                - ['+rw(__task)','']
+                - ['+rw(__trap)','']
+                - ['+rw(__vector_call)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-78k:
+        description: "IAR compiler for Renesas 78K0/78K0S and 78K0R"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__callf)','']
+                - ['+rw(__callt)','']
+                - ['+rw(__far)','']
+                - ['+rw(__far_func)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__near_func)','']
+                - ['+rw(__no_bit_access)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__non_banked)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__no_save)','']
+                - ['+rw(__root)','']
+                - ['+rw(__saddr)','']
+                - ['+rw(__sfr)','']
+                - ['+rw(__V2_call)','']
+                - ['+rw(__V3_call)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-rl78:
+        description: "IAR compiler for Renesas RL78"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__far_func)','']
+                - ['+rw(__huge)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__near_func)','']
+                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc16)','']
+                - ['+rw(__no_alloc_str)','']
+                - ['+rw(__no_alloc_str16)','']
+                - ['+rw(__no_bit_access)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__no_save)','']
+                - ['+rw(__root)','']
+                - ['+rw(__ro_placement)','']
+                - ['+rw(__saddr)','']
+                - ['+rw(__sfr)','']
+                - ['+rw(__v1_call)','']
+                - ['+rw(__v2_call)','']
+                - ['+rw(__weak)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-cr16c:
+        description: "IAR compiler for National Semiconductor CR16C"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__data16)','']
+                - ['+rw(__data20)','']
+                - ['+rw(__data24)','']
+                - ['+rw(__data32)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__ix4)','']
+                - ['+rw(__ix20)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__noadjust)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__raw)','']
+                - ['+rw(__root)','']
+                - ['+rw(__sbrel)','']
+                - ['+rw(__task)','']
+                - ['+rw(__trap)','']
+                - ['+rw(__user)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp4 -sf4 -sd8 -sld8 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-maxq:
+        description: "IAR compiler for Dallas Semiconductor MAXQ"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__data16)','']
+                - ['+rw(__far_func)','']
+                - ['+rw(__fastcall)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__io)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near_func)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__root)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp2 -sf4 -sd4 -sld4 -as2 -ai2 -al2 -all2 -ap2 -af2 -ad2 -ald2'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-s08:
+        description: "IAR compiler for Freescale S08"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__data8)','']
+                - ['+rw(__data16)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__non_banked)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__root)','']
+                - ['+rw(__task)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll4 -sp2 -sf4 -sd4 -sld4 -as1 -ai1 -al1 -all1 -ap1 -af1 -ad1 -ald1'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-hcs12:
+        description: "IAR compiler for Freescale HCS12"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__banked)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__non_banked)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__root)','']
+                - ['+rw(__simple)','']
+                - ['+rw(__task )','']
+                - ['+rw(__data8)','']
+                - ['+rw(__data16)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__root)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll8 -sp2 -sf4 -sd4 -sld4 -as1 -ai1 -al1 -all1 -ap1 -af1 -ad1 -ald1'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-cf:
+        description: "IAR compiler for Freescale ColdFire"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__far_func)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__near_rel)','']
+                - ['+rw(__near_func)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__root)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd8 -sld8 -as2 -ai4 -al4 -all4 -ap4 -af4 -ad4 -ald4'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-avr32:
+        description: "IAR compiler for Atmel AVR32"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__acall)','']
+                - ['+rw(__code21)','']
+                - ['+rw(__code32)','']
+                - ['+rw(__data17)','']
+                - ['+rw(__data21)','']
+                - ['+rw(__data32)','']
+                - ['+rw(__dbgreg)','']
+                - ['+rw(__exception)','']
+                - ['+rw(__flashvault)','']
+                - ['+rw(__flashvault_impl)','']
+                - ['+rw(__imported)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__nested)','']
+                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc16)','']
+                - ['+rw(__no_alloc_str,)','']
+                - ['+rw(__no_alloc_str16)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__packed)','']
+                - ['+rw(__ramfunc)','']
+                - ['+rw(__root)','']
+                - ['+rw(__scall)','']
+                - ['+rw(__sysreg)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si4 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as2 -ai4 -al4 -all4 -ap4 -af4 -ad4 -ald4'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--variable_enum_size':
+                transform: '+fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+
+    iar-avr:
+        description: "IAR compiler for Atmel AVR"
+
+        macros:
+            # When invoked with the options specified below, the compiler should dump a list of
+            # #defines that correspond to the builtin macros supported to stdout.  This information
+            # will be used to build a macros header.
+            command:
+                - "-"
+                - "--predef_macros"
+                - "-"
+            input: ""
+            channel:    stdout
+            match_expr: '(?P<macros>.*)'
+
+        decls:
+            definitions:
+                - 'void * __segment_begin(char const * segment);'
+                - 'void * __segment_end(char const * segment);'
+                - 'unsigned * __segment_size(char const * segment);'
+
+        base_config:
+            extensions:
+                - ['+fdi', 'Search including directory']
+                - ['+fcu', 'Char is unsigned']
+                - ['+fse', 'Small enums']
+                - ['+fan', 'Anonymous unions']
+                - ['+fas', 'Anonymous structs']
+                - ['+fdi', 'Search directory of including file']
+                - ['+rw(__eeprom)','']
+                - ['+rw(__ext_io)','']
+                - ['+rw(__far)','']
+                - ['+rw(__farflash)','']
+                - ['+rw(__farfunc)','']
+                - ['+rw(__flash)','']
+                - ['+rw(__generic)','']
+                - ['+rw(__huge)','']
+                - ['+rw(__hugeflash)','']
+                - ['+rw(__interrupt)','']
+                - ['+rw(__intrinsic)','']
+                - ['+rw(__io)','']
+                - ['+rw(__monitor)','']
+                - ['+rw(__near)','']
+                - ['+rw(__nearfunc)','']
+                - ['+rw(__nested)','']
+                - ['+rw(__no_alloc,)','']
+                - ['+rw(__no_alloc16)','']
+                - ['+rw(__no_alloc_str)','']
+                - ['+rw(__no_alloc_str16)','']
+                - ['+rw(__no_init)','']
+                - ['+rw(__no_runtime_init)','']
+                - ['+rw(__noreturn)','']
+                - ['+rw(__raw)','']
+                - ['+rw(__regvar)','']
+                - ['+rw(__root)','']
+                - ['+rw(__task)','']
+                - ['+rw(__tiny)','']
+                - ['+rw(__tinyflash)','']
+                - ['+rw(__version_1)','']
+                - ['+rw(__version_2)','']
+                - ['+rw(__version_4)','']
+                - ['+rw(__x)','']
+                - ['+rw(__x_z)','']
+                - ['+rw(__z)','']
+                - ['+rw(__z_x)','']
+                - ['+rw(_to_semi)', '']
+                - ['+rw(__nounwind)', '']
+                - ['+rw(__sfr)', '']
+                - ['+rw(__spec_string)', '']
+                - ['+rw(__sys_reg)', '']
+                - ['+rw(__iar_atomic_is_lock_free)', '']
+                - ['+rw(__is_destructible)', '']
+                - ['-dasm=_to_semi', '']
+                - ['-d__constrange(...)=', '']
+                - ['-d__ALIGNOF__=__alignof__', '']
+                - ['+rw(static_assert)', '']
+                - ['+frc', 'remove commas before empty __VA_ARGS__']
+            suppressions:
+                - ['-e430', 'use of @ is non-standard']
+
+        size_options:
+            # To obtain the size of the fundamental types, the compiler is invoked with the arguments
+            # provided below and the source file below is fed to the compiler via stdin.  The output
+            # from the compiler will be the preprocessed source which will contain the desired size
+            # options which will be extracted from the output via the regular expression 'match_expr'.
+            command:
+                - "--preprocess"
+                - "-"
+                - "-"
+            input: |
+
+                #define STR1(p) #p
+                #define STR(p) STR1(p)
+                #define JOIN1(a,b) a##b
+                #define JOIN(a,b) JOIN1(a,b)
+
+                #pragma message(STR( \
+                                      JOIN(-si, __INT_SIZE__) \
+                                      JOIN(-sl, __LONG_SIZE__) \
+                                      JOIN(-sll,__LONG_LONG_SIZE__) \
+                                      JOIN(-ss, __SHORT_SIZE__) \
+                                      JOIN(-sw, __WCHAR_T_SIZE__) \
+                                      JOIN(-sf, __FLOAT_SIZE__) \
+                                      JOIN(-sd, __DOUBLE_SIZE__) \
+                                      JOIN(-sld,__LONG_DOUBLE_SIZE__) \
+                                      JOIN(-ai, __INT_ALIGN__) \
+                                      JOIN(-al, __LONG_ALIGN__) \
+                                      JOIN(-all,__LONG_LONG_ALIGN__) \
+                                      JOIN(-as, __SHORT_ALIGN__) \
+                                      JOIN(-af, __FLOAT_ALIGN__) \
+                                      JOIN(-ad, __DOUBLE_ALIGN__) \
+                                      JOIN(-ald,__LONG_DOUBLE_ALIGN__) \
+                                    ) )
+
+            channel:    stdout
+            match_expr: 'message\("(?P<size_options>.+?)"'
+            fallback_values: '-ss2 -si2 -sl4 -sll8 -sp4 -sf4 -sd4 -sld4 -as1 -ai1 -al1 -all1 -ap1 -af1 -ad1 -ald1'
+
+        include_paths:
+            # When invoked with the arguments provided below, the compiler will emit, among
+            # other information, the list of directories searched for #includes.  The regular
+            # expression will capture these directory names in a the named capture 'include_dir'.
+            command:
+                - "-"
+            channel:    stderr
+            input: '#include <somefilethatdoesntexist>'
+            match_expr: '(searched:\s*["](?P<include_dir>.+?)["]\s*)+'
+
+        options:
+            '--char_is_unsigned':
+                transform: '+fcu'
+            '--char_is_signed':
+                transform: '-fcu'
+            '--enum_is_int':
+                transform: '-fse'
+            '-D':
+                transforms: [ ['-D\s*(?P<macro_name>[^=#]+)[=#](?P<macro_def>.*)', '-d\g<macro_name>{"\g<macro_def>"}'], ['-D\s*(?P<macro_name>[A-Za-z0-9_]+$)', '-d\g<macro_name>'] ]
+            '-I':
+                transforms: [ ['-I\s*(?P<dir>.+)$', '-i"\g<dir>"'] ]
+            '--preinclude':
+                transforms: [ ['--preinclude[= ](?P<file>.+)$', '-header(\g<file>)'] ]
+    microchip_xc:
+        version: *gcc_version
+        c_macros: *gcc_c_macros
+        cpp_macros: *gcc_cpp_macros
+        c_include_paths: *gcc_c_include_paths
+        cpp_include_paths: *gcc_cpp_include_paths
+        size_options: *gcc_size_options
+        decls: &microchip_xc_decls
+            definitions:
+                - 'unsigned long __builtin_section_begin(const char*);'
+                - 'unsigned long __builtin_section_end(const char*);'
+                - 'unsigned long __builtin_section_size(const char*);'
+                - 'unsigned int __builtin_get_isr_state(void);'
+                - 'void __builtin_set_isr_state(unsigned int);'
+                - 'void __builtin_software_breakpoint(void);'
+                - 'unsigned int __builtin_disable_interrupts(void);'
+                - 'unsigned int __builtin_enable_interrupts(void);'
+                - 'int __builtin_ACCL(int q);'
+                - 'int __builtin_ACCH(int q);'
+                - 'int __builtin_ACCU(int q);'
+                - 'int __builtin_add(int q,int w,const int e);'
+                - 'int __builtin_addab(int q, int w);'
+                - 'unsigned int __builtin_addr_low(void*);'
+                - 'unsigned int __builtin_addr_high(void*);'
+                - 'unsigned int __builtin_addr(void*);'
+                - 'void __builtin_btg(unsigned int *, unsigned int n);'
+                - 'int __builtin_clr(void);'
+                - 'int __builtin_clr_prefetch(  int **q, int *w, int e,  int **qq, int *ww, int ee, int *qqq,  int www);'
+                - 'void __builtin_clrwdt(void);'
+                - 'int __builtin_dataflashoffset(unsigned int* q);'
+                - 'void __builtin_disi(int q);'
+                - 'signed int __builtin_divf(signed int q, signed int w);'
+                - 'signed int __builtin_divmodsd( signed long q, signed int w, signed int *e);'
+                - 'unsigned int __builtin_divmodud( unsigned long q, unsigned int w, unsigned int *e);'
+                - 'int __builtin_divsd(const long q, const int w);'
+                - 'unsigned int __builtin_divud(const unsigned   long q, const unsigned int w);'
+                - 'unsigned int __builtin_dmaoffset(const void *q);'
+                - 'unsigned int __builtin_dmapage(const void *q);'
+                - 'int __builtin_ed(int q, int **w, int e,  int **qq, int ww, int *ee);'
+                - 'int __builtin_edac(int q, int w,   int **e, int qq, int **ww, int ee,  int *qqq);'
+                - 'unsigned int __builtin_edsoffset(const void *q);'
+                - 'unsigned int __builtin_edspage(const void *q);'
+                - 'int __builtin_fbcl(int q);'
+                - 'int __builtin_lac(int q, int w);'
+                - 'int __builtin_lacd(long q, unsigned int w);'
+                - 'int __builtin_mac(int q, int w, int e,   int **qq, int *ww, int ee,   int **qqq, int *www, int eee,   int *qqqq, int wwww);'
+                - 'signed int __builtin_modsd(signed long q, signed int w);'
+                - 'unsigned int __builtin_modud(unsigned long q, unsigned int w);'
+                - 'void __builtin_movsac(  int **q, int *w, int e,  int **qq, int *ww, int ee, int *qqq,  int www);'
+                - 'int __builtin_mpy(int q, int w,  int **e, int *qq, int ww,  int **ee, int *qqq, int www);'
+                - 'int __builtin_mpyn(int q, int w,  int **e, int *qq, int ww,  int **ee, int *qqq, int www);'
+                - 'int __builtin_msc(int q, int w, int e,   int **qq, int *ww, int ee,   int **qqq, int *www, int eee, int *qqqq,  int wwww);'
+                - 'signed long __builtin_mulss(const signed int q, const signed int w);'
+                - 'signed long __builtin_mulsu(const signed int q, const unsigned int w);'
+                - 'signed long __builtin_mulus(const unsigned int q, const signed int w);'
+                - 'unsigned long __builtin_muluu(const unsigned int q, const unsigned int w);'
+                - 'void __builtin_nop(void);'
+                - 'unsigned int __builtin_psvoffset(const void *q);'
+                - 'unsigned int __builtin_psvpage(const void *q);'
+                - 'void __builtin_pwrsav(unsigned int q);'
+                - 'unsigned int __builtin_readsfr(const void *q);'
+                - 'long __builtin_sac(int q, int w);'
+                - 'int __builtin_sacd(int q, int w);'
+                - 'int __builtin_sacr(int q, int w);'
+                - 'int __builtin_sftac(int q, int w);'
+                - 'int __builtin_subab(int q, int w);'
+                - 'unsigned long __builtin_tbladdress(const void *q);'
+                - 'unsigned int __builtin_tbloffset(const void *q);'
+                - 'unsigned int __builtin_tblpage(const void *q);'
+                - 'unsigned int __builtin_tblrdh(unsigned int q);'
+                - 'unsigned int __builtin_tblrdl(unsigned int q);'
+                - 'void __builtin_tblwth(unsigned int q, unsigned int w);'
+                - 'void __builtin_tblwtl(unsigned int q, unsigned int w);'
+                - 'void __builtin_write_CRYOTP(void);'
+                - 'void __builtin_write_DISICNT(int q);'
+                - 'void __builtin_write_NVM(void);'
+                - 'void __builtin_write_NVM_secure(unsigned int q,   unsigned int w);'
+                - 'void __builtin_write_OSCCONH(unsigned char q);'
+                - 'void __builtin_write_OSCCONL(unsigned char q);'
+                - 'void __builtin_write_PWMSFR(volatile unsigned int *q, unsigned int w, volatile unsigned int *e);'
+                - 'void __builtin_write_RTCWEN(void);'
+                - 'void __builtin_write_RTCC_WRLOCK(void);'
+                - ''
+        c_decls: &microchip_xc_c_decls
+            definitions:
+                - 'unsigned __builtin_generic_op();'
+        cpp_decls: &microchip_xc_cpp_decls
+            definitions:
+                - 'unsigned __builtin_generic_op(...);'
+        base_config:
+            extensions: *gcc_base_config_extensions
+            suppressions: *gcc_base_config_suppressions
+            xc_extensions: &microchip_xc_base_config_xc_extensions
+                - ['-d__at=@','']
+                - ['+rw(__far)','']
+                - ['+rw(__near)','']
+                - ['+rw(far)','']
+                - ['+rw(near)','']
+                - ['+rw(__persistent)','']
+                - ['+rw(__xdata)','']
+                - ['+rw(__ydata)','']
+                - ['+rw(_to_brackets)','']
+                - ['-rw_asgn(__bank, _to_brackets)','']
+                - ['+rw(bank0, bank1, bank2, bank3)','']
+                - ['-rw_asgn(__align, _Alignas)','']
+                - ['+rw(__eeprom)','']
+                - ['-rw_asgn(interrupt,_to_brackets)','']
+                - ['-dinterrupt=','']
+                - ['-rw_asgn(__interrupt,_to_brackets)','']
+                - ['-d__interrupt=','']
+                - ['++d__ISR(x,...)=','']
+                - ['+rw(__pack)','']
+                - ['+rw(__attribute__)','']
+                - ['-d__deprecate=__attribute__(deprecated)','']
+                - ['-rw_asgn(__section, _to_brackets)','']
+                - ['+rw(_to_semi)','']
+                - ['-dasm(x)=_to_semi','']
+                - ['-dbit=_Bool','']
+                - ['+pragma(asm,off)','']
+                - ['+pragma(endasm,on)','']
+                - ['-d__builtin_mfc0=__builtin_generic_op', '']
+                - ['-d__builtin_mtc0=__builtin_generic_op', '']
+                - ['-d__builtin_mxc0=__builtin_generic_op', '']
+                - ['-d__builtin_bcc0=__builtin_generic_op', '']
+                - ['-d__builtin_bsc0=__builtin_generic_op', '']
+                - ['-d__builtin_bcsc0=__builtin_generic_op', '']
+                - ['-d__builtin_clz=__builtin_generic_op', '']
+                - ['-d__builtin_ctz=__builtin_generic_op', '']
+                - ['-d__builtin_mips_cache=__builtin_generic_op', '']
+                - ['+rw(__prog__)','']
+                - ['+rw(__psv__)','']
+                - ['+rw(__eds__)','']
+                - ['+rw(__pmp__)','']
+                - ['+rw(__pack_upper_byte)','']
+                - ['+rw(__external__)','']
+                - ['+rw(__section_begin)','XC compatibility extension for IAR']
+                - ['+rw(__section_end)','XC compatibility extension for IAR']
+                - ['+rw(__section_size)','XC compatibility extension for IAR']
+                - ['+rw(__segment_begin)','XC compatibility extension for IAR']
+                - ['+rw(__segment_end)','XC compatibility extension for IAR']
+                - ['+rw(__segment_size)','XC compatibility extension for IAR']
+                - ['+rw(__sfb)','XC compatibility extension for IAR']
+                - ['+rw(__sfe)','XC compatibility extension for IAR']
+                - ['+rw(__sfs)','XC compatibility extension for IAR']
+                - ['+rw(__arm)','XC compatibility extension for IAR']
+                - ['+rw(__big_endian)','XC compatibility extension for IAR']
+                - ['+rw(__fiq)','XC compatibility extension for IAR']
+                - ['+rw(__intrinsic)','XC compatibility extension for IAR']
+                - ['+rw(__interwork)','XC compatibility extension for IAR']
+                - ['+rw(__irq)','XC compatibility extension for IAR']
+                - ['+rw(__little_endian)','XC compatibility extension for IAR']
+                - ['+rw(__nested)','XC compatibility extension for IAR']
+                - ['+rw(__no_init)','XC compatibility extension for IAR']
+                - ['+rw(__noreturn)','XC compatibility extension for IAR']
+                - ['+rw(__ramfunc)','XC compatibility extension for IAR']
+                - ['+rw(__packed)','XC compatibility extension for IAR']
+                - ['+rw(__root)','XC compatibility extension for IAR']
+                - ['+rw(__swi)','XC compatibility extension for IAR']
+                - ['+rw(__task)','XC compatibility extension for IAR']
+                - ['+rw(__weak)','XC compatibility extension for IAR']
+                - ['+rw(__thumb)','XC compatibility extension for IAR']
+                - ['+rw(__farfunc)','XC compatibility extension for IAR']
+                - ['+rw(__huge)','XC compatibility extension for IAR']
+                - ['+rw(__nearfunc)','XC compatibility extension for IAR']
+                - ['+rw(__inline)','XC compatibility extension for IAR']
+    microchip_xc8:
+        description: "Microchip XC8 xc8-gcc"
+        version: *gcc_version
+        c_macros: *gcc_c_macros
+        cpp_macros: *gcc_cpp_macros
+        c_include_paths: *gcc_c_include_paths
+        cpp_include_paths: *gcc_cpp_include_paths
+        size_options: *gcc_size_options
+        decls: *microchip_xc_decls
+        c_decls: *microchip_xc_c_decls
+        cpp_decls: *microchip_xc_cpp_decls
+        base_config:
+            extensions: *gcc_base_config_extensions
+            suppressions: *gcc_base_config_suppressions
+            xc_extensions: *microchip_xc_base_config_xc_extensions
+            xc8_extensions:
+                - ['+fcu','']
+    microchip_xc16:
+        description: "Microchip XC16 xc16-gcc"
+        version: *gcc_version
+        c_macros: *gcc_c_macros
+        cpp_macros: *gcc_cpp_macros
+        c_include_paths: *gcc_c_include_paths
+        cpp_include_paths: *gcc_cpp_include_paths
+        size_options: *gcc_size_options
+        decls: *microchip_xc_decls
+        c_decls: *microchip_xc_c_decls
+        cpp_decls: *microchip_xc_cpp_decls
+        base_config:
+            extensions: *gcc_base_config_extensions
+            suppressions: *gcc_base_config_suppressions
+            xc_extensions: *microchip_xc_base_config_xc_extensions
+            xc16_extensions:
+                - ['-fcu','']
+    microchip_xc32:
+        description: "Microchip XC32 xc32-gcc"
+        version: *gcc_version
+        c_macros: *gcc_c_macros
+        cpp_macros: *gcc_cpp_macros
+        c_include_paths: *gcc_c_include_paths
+        cpp_include_paths: *gcc_cpp_include_paths
+        size_options: *gcc_size_options
+        decls: *microchip_xc_decls
+        c_decls: *microchip_xc_c_decls
+        cpp_decls: *microchip_xc_cpp_decls
+        base_config:
+            extensions: *gcc_base_config_extensions
+            suppressions: *gcc_base_config_suppressions
+            xc_extensions: *microchip_xc_base_config_xc_extensions
+            xc32_extensions:
+                - ['-fcu','']

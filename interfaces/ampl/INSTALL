@@ -3,13 +3,13 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
 *                                                                           *
 *  You should have received a copy of the ZIB Academic License              *
-*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+*  along with SCIP; see the file COPYING. If not email to scipopt.org.      *
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -18,8 +18,8 @@ This is an AMPL interface for SCIP.
 Currently not supported, but planned for future versions:
  - setting user parameters in SCIP from AMPL (AMPL solver options)
 
-Please let us know (e-mail to scip@zib.de mailing list), if you are missing any of these or any other features.
-Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/#contact)
+Please let us know (e-mail to scipopt.org mailing list), if you are missing any of these or any other features.
+Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scipopt.org/#contact)
 
 To use SCIP from AMPL, you have to do the following:
  - execute the ./get.ASL script to download the AMPL solver library sources;

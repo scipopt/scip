@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -271,7 +271,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int ncols;
    int nrows;
    int ncalls;
-   int depth;
    int maxdepth;
    int maxsepacuts;
    int c;
@@ -287,7 +286,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   depth = SCIPgetDepth(scip);
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
 
    minfrac = sepadata->away;
@@ -530,18 +528,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                cutsepa = sepadata->strongcg;
 
                if( c >= 0 )
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
                else
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
             }
             else
             {
                cutsepa = sepadata->gomory;
 
                if( c >= 0 )
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
                else
-                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
             }
 
             /* create empty cut */

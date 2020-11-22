@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -48,7 +48,8 @@ enum SCIP_Retcode
    SCIP_PARAMETERWRONGVAL  = -14,       /**< the value is invalid for the given parameter */
    SCIP_KEYALREADYEXISTING = -15,       /**< the given key is already existing in table */
    SCIP_MAXDEPTHLEVEL      = -16,       /**< maximal branching depth level exceeded */
-   SCIP_BRANCHERROR        = -17        /**< no branching could be created */
+   SCIP_BRANCHERROR        = -17,       /**< no branching could be created */
+   SCIP_NOTIMPLEMENTED     = -18        /**< function not implemented */
 };
 typedef enum SCIP_Retcode SCIP_RETCODE;           /**< return code for SCIP method */
 

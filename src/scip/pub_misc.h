@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -49,6 +49,7 @@
 #include "scip/pub_misc_select.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_misc_linear.h"
+#include "scip/pub_misc_nonlinear.h"
 
 /* in optimized mode some of the function are handled via defines, for that the structs are needed */
 #ifdef NDEBUG
@@ -427,7 +428,8 @@ SCIP_RETCODE SCIPpqueueCreate(
    SCIP_PQUEUE**         pqueue,             /**< pointer to a priority queue */
    int                   initsize,           /**< initial number of available element slots */
    SCIP_Real             sizefac,            /**< memory growing factor applied, if more element slots are needed */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   SCIP_DECL_PQUEUEELEMCHGPOS((*elemchgpos)) /**< callback to act on position change of elem in priority queue, or NULL */
    );
 
 /** frees priority queue, but not the data elements themselves */
@@ -447,6 +449,13 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPpqueueInsert(
    SCIP_PQUEUE*          pqueue,             /**< priority queue */
    void*                 elem                /**< element to be inserted */
+   );
+
+/** delete element at specified position, maintaining the heap property */
+SCIP_EXPORT
+void SCIPpqueueDelPos(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   int                   pos                 /**< position of element that should be deleted */
    );
 
 /** removes and returns best element from the priority queue */
@@ -473,6 +482,13 @@ void** SCIPpqueueElems(
    SCIP_PQUEUE*          pqueue              /**< priority queue */
    );
 
+/** return the position of @p elem in the priority queue, or -1 if element is not found */
+SCIP_EXPORT
+int SCIPpqueueFind(
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   void*                 elem                /**< element to be inserted */
+   );
+
 /**@} */
 
 
@@ -487,20 +503,30 @@ void** SCIPpqueueElems(
  *@{
  */
 
-/* fast 2-universal hash functions for two and four elements */
+/* fast 2-universal hash functions for two to seven 32bit elements with 32bit output */
 
 #define SCIPhashSignature64(a)              (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(a)))>>26))
-#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
-#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) + \
-                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(d) + 0x926f2d4dc4a67218ULL))>>32 ))
+#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint32_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
-/* helpers to use above hashfuncions */
-#define SCIPcombineTwoInt(a, b)             (((uint64_t) (a) << 32) | (uint64_t) (b) )
+#define SCIPhashThree(a, b, c)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                        (uint32_t)(c) * 0xd37e9a1ce2148403ULL)>>32 ))
 
-#define SCIPcombineThreeInt(a, b, c)        (((uint64_t) (a) << 43) + ((uint64_t) (b) << 21) + ((uint64_t) (c)) )
+#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL))>>32 ))
 
-#define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
+#define SCIPhashFive(a, b, c, d, e)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL) + \
+                                                           (uint32_t)(e) * 0xf48d4cd331e14327ULL)>>32 ))
+
+#define SCIPhashSix(a, b, c, d, e, f)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL) + \
+                                                         ((uint32_t)(e) + 0xf48d4cd331e14327ULL) * ((uint32_t)(f) + 0x80791a4edfc44c75ULL))>>32 ))
+
+#define SCIPhashSeven(a, b, c, d, e, f, g)            ((uint32_t)((((uint32_t)(a) + 0xbd5c89185f082658ULL) * ((uint32_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint32_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint32_t)(d) + 0x926f2d4dc4a67218ULL) + \
+                                                         ((uint32_t)(e) + 0xf48d4cd331e14327ULL) * ((uint32_t)(f) + 0x80791a4edfc44c75ULL) + \
+                                                         (uint32_t)(g) * 0x7f497d9ba3bd83c0ULL)>>32 ))
 
 /** computes a hashcode for double precision floating point values containing
  *  15 significant bits, the sign and the exponent
@@ -1370,6 +1396,16 @@ void** SCIPdigraphGetSuccessorsData(
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    );
 
+/** identifies the articulation points in a given directed graph
+ *  uses the helper recursive function findArticulationPointsUtil
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdigraphGetArticulationPoints(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int**                 articulations,      /**< array to store the sorted node indices of the computed articulation points, or NULL */
+   int*                  narticulations      /**< number of the computed articulation points, or NULL */
+   );
+
 /** Compute undirected connected components on the given graph.
  *
  *  @note For each arc, its reverse is added, so the graph does not need to be the directed representation of an
@@ -1708,7 +1744,7 @@ int SCIPdisjointsetGetSize(
    SCIP_DISJOINTSET*     djset               /**< disjoint set (union find) data structure */
    );
 
-/* @} */
+/** @} */
 
 /*
  * Numerical methods
@@ -1757,6 +1793,22 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   n,                  /**< number of different elements */
    int                   m                   /**< number to choose out of the above */
    );
+
+/** calculates hash for floating-point number by using Fibonacci hashing */
+SCIP_EXPORT
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< number to hash */
+   );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPcalcFibHash(v)   ((v) >= 0 ? ((unsigned long long)((v) * 2654435769)) % UINT_MAX : ((unsigned long long)(-(v) * 683565275)) % UINT_MAX )
+
+#endif
 
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
@@ -1939,7 +1991,6 @@ SCIP_RETCODE SCIPgetRandomSubset(
    unsigned int          randseed            /**< seed value for random generator */
    );
 
-
 /**@} */
 
 /*
@@ -2049,7 +2100,11 @@ void SCIPpermuteArray(
  */
 
 
-/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysIntersectionInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
@@ -2062,9 +2117,53 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-/** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysIntersectionInt(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set intersection (duplicates removed) of two void-pointer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysIntersectionPtr(
+   void**                array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   void**                array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void**                intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+);
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly
+ *
+ * @deprecated Switch to SCIPcomputeArraysSetminusInt().
+ */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_EXPORT
+void SCIPcomputeArraysSetminusInt(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
    int*                  array2,             /**< second array (in ascending order) */
@@ -2173,7 +2272,7 @@ SCIP_Bool SCIPstrToRealValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
-/** copies the first size characters between a start and end character of str into token, if no error occured endptr
+/** copies the first size characters between a start and end character of str into token, if no error occurred endptr
  *  will point to the position after the read part, otherwise it will point to @p str
  */
 SCIP_EXPORT
@@ -2185,6 +2284,14 @@ void SCIPstrCopySection(
    int                   size,               /**< size of the token char array */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
+
+/** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
+SCIP_EXPORT
+SCIP_Bool SCIPstrAtStart(
+        const char*           s,                  /**< string to search in */
+        const char*           t,                  /**< string to search for */
+        size_t                tlen                /**< length of t */
+);
 
 /**@} */
 

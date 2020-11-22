@@ -3,13 +3,13 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2019 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2020 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -31,11 +31,11 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** creates the handler for orbitope constraints and includes it in SCIP
  *
@@ -75,15 +75,6 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
  * its information are copied to subSCIPs. Otherwise, the constraint was added just for the purpose of
  * symmetry handling and we do not copy its information to subSCIPs.
  */
-
-/** type of orbitope constraint: full, packing, or partitioning orbitope */
-enum SCIP_OrbitopeType
-{
-   SCIP_ORBITOPETYPE_FULL         = 0,       /**< constraint is a full orbitope constraint:         rowsum(x) unrestricted */
-   SCIP_ORBITOPETYPE_PARTITIONING = 1,       /**< constraint is a partitioning orbitope constraint: rowsum(x) == 1 */
-   SCIP_ORBITOPETYPE_PACKING      = 2        /**< constraint is a packing orbitope constraint:      rowsum(x) <= 1 */
-};
-typedef enum SCIP_OrbitopeType SCIP_ORBITOPETYPE;
 
 /** creates and captures a orbitope constraint
  *
@@ -146,9 +137,9 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    );
 
-/* @} */
+/** @} */
 
-/* @} */
+/** @} */
 
 #ifdef __cplusplus
 }
