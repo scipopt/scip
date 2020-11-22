@@ -854,15 +854,17 @@ int reduceWithEdgeFixingBounds(
 static
 SCIP_RETCODE reduceWithEdgeExtReds(
    SCIP*                 scip,               /**< SCIP data structure */
-   const int*            result,             /**< solution */
    SCIP_Real             upperbound,         /**< best upperbound */
    EXTPERMA*             extperma,           /**< extension data */
    GRAPH*                graph,              /**< graph data structure */
-   int*                  nextdeleted         /**< newly deleted edges */
+   int*                  ndeletions_run      /**< all deleted edges */
 )
 {
    REDCOST* const redcostdata = extperma->redcostdata;
    const int nlevels = redcosts_getNlevels(redcostdata);
+   int nextdeleted = 0;
+
+   assert(*ndeletions_run >= 0);
 
    for( int i = 0; i < nlevels; i++ )
    {
@@ -876,7 +878,7 @@ SCIP_RETCODE reduceWithEdgeExtReds(
 #endif
    }
 
-   SCIP_CALL( extreduce_deleteEdges(scip, result, extperma, graph, nextdeleted) );
+   SCIP_CALL( extreduce_deleteEdges(scip, extperma, graph, &nextdeleted) );
 
 //#define EXT_WRITE
 //   graph_printInfo(graph);  printf("newly fixedSECOND =%d \n", *nextdeleted);
@@ -889,6 +891,8 @@ SCIP_RETCODE reduceWithEdgeExtReds(
       fclose(fp);
       exit(1);
 #endif
+
+    *ndeletions_run += nextdeleted;
 
     return SCIP_OKAY;
 }
@@ -2529,13 +2533,13 @@ SCIP_RETCODE reduce_da(
          if( useExtRed && run == nruns - 1 )
          {
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
-            int nextfixed = 0;
             SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, arcsdeleted, &extpermanent) );
-            SCIP_CALL( reduceWithEdgeExtReds(scip, (havenewsol ? result : NULL), upperbound, extpermanent, graph, &nextfixed) );
-            ndeletions_run += nextfixed;
-         }
+            extpermanent->solIsValid = havenewsol;
+            extpermanent->result = havenewsol ? result : NULL;
 
-         if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
+            SCIP_CALL( reduceWithEdgeExtReds(scip, upperbound, extpermanent, graph, &ndeletions_run) );
+         }
+         else if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
          {
             SCIP_CALL( updateNodeReplaceBounds(scip, redcostdata, graph, nodereplacebounds, upperbound, (run == 0), FALSE));
          }
@@ -2563,9 +2567,7 @@ SCIP_RETCODE reduce_da(
 
          if( useExtRed )
          {
-            havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
-
-            SCIP_CALL( extreduce_pseudoDeleteNodes(scip, (havenewsol ? result : NULL),
+            SCIP_CALL( extreduce_pseudoDeleteNodes(scip,
                   pseudoDelNodes, extpermanent, graph, offsetp, &nreplacings) );
          }
          else

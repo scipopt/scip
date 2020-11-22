@@ -219,7 +219,9 @@ SCIP_RETCODE extreduce_extPermaInit(
    extperm->distdata_default = NULL;
    extperm->distdata_biased = NULL;
    extperm->redcostdata = NULL;
+   extperm->solIsValid = FALSE;
 
+   extperm->result = NULL;
    extperm->nodes_implications = nodes_implied;
    extperm->edgedeleted = edgedeleted;
    extperm->isterm = isterm;

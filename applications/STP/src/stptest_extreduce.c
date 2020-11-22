@@ -174,7 +174,7 @@ SCIP_RETCODE extDeleteNodes(
    extpermanent->redcostdata = redcostdata;
    extpermanent->redcostEqualAllow = allowEquality;
 
-   SCIP_CALL( extreduce_pseudoDeleteNodes(scip, NULL, NULL, extpermanent, graph, NULL, &ndeleted) );
+   SCIP_CALL( extreduce_pseudoDeleteNodes(scip, NULL, extpermanent, graph, NULL, &ndeleted) );
 
    /* clean up */
    extreduce_distDataFree(scip, graph, &distdata);

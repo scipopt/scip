@@ -109,6 +109,7 @@ typedef struct extension_data_permanent
    SCIP_Real*            bottleneckDistNode; /**< needs to be set to -1.0 (size nnodes) */
    SCIP_Real*            pcSdToNode;         /**< needs to be set to -1.0 for all nodes, or NULL if not Pc */
    int*                  tree_deg;           /**< -1 for forbidden nodes (e.g. PC terminals), nnodes for tail, 0 otherwise; in method: position ( > 0) for nodes in tree */
+   const int*            result;             /**< solution array or NULL... NON-OWNED! */
    STP_Vectype(int)*     nodes_implications; /**< implied nodes for each node */
    int                   nnodes;             /**< number of nodes */
    int                   tree_maxnleaves;
@@ -116,6 +117,7 @@ typedef struct extension_data_permanent
    int                   tree_maxnedges;
    SCIP_Bool             redcostEqualAllow;  /**< delete also for equality of reduced costs? */
    SCIP_Bool             useSdBias;          /**< use biased bottleneck Steiner distance? (only for pseudo-elimination) */
+   SCIP_Bool             solIsValid;         /**< use primal solution? */
    enum EXTRED_MODE      mode;               /**< mode */
 } EXTPERMA;
 

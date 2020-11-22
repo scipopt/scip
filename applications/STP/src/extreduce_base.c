@@ -547,6 +547,7 @@ SCIP_RETCODE generalStarCheck(
    SCIP_Bool*            isDeletable         /**< deletable? */
 )
 {
+   const int* result = extpermanent->result;
    const int edge = genstar->edge;
    *isDeletable = TRUE;
 
@@ -570,6 +571,7 @@ SCIP_RETCODE generalStarCheck(
    }
 
    generalStarCheckInit(scip, graph, genstar);
+   extpermanent->redcostEqualAllow = (extpermanent->solIsValid && result[edge] != CONNECT && result[flipedge(edge)] != CONNECT);
 
    /* check all general stars of degree >= 3, as long as they can be ruled-out */
    while ( *isDeletable )
@@ -619,6 +621,10 @@ void generalStarSetUp(
    genstar->replacedge_head = -1;
 
    *isPromising = FALSE;
+
+   /* NOTE: considered too expensive, since SD tree needs to be rebuilt */
+   if( reduce_sdgraphEdgeIsInMst( distdata->sdistdata->sdgraph, edge) )
+      return;
 
    if( (graph->grad[tail] + graph->grad[head]) <= (STP_GENSTAR_MAXDEG + 2) && !Is_term(graph->term[tail]) && !Is_term(graph->term[head]) )
    {
@@ -717,7 +723,7 @@ void generalStarSetUp(
                {
                   SCIPdebugMessage("...not promising, skip edge \n");
 
-                  if( nfails++ > 1 )
+                  if( ++nfails > 1 )
                   {
                      *isPromising = FALSE;
                      break;
@@ -800,8 +806,11 @@ SCIP_RETCODE generalStarDeleteEdges(
 )
 {
    GENSTAR genstar = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, -1, -1, -1 };
+   const int* result = extpermanent->result;
    int ncands = 0;
    int npseudoelims = 0;
+
+   assert(!extpermanent->solIsValid || result);
 
    *nelims = 0;
 
@@ -825,6 +834,9 @@ SCIP_RETCODE generalStarDeleteEdges(
          ncands++;
          if( isDeletable )
          {
+            if( extpermanent->solIsValid && (result[i] == CONNECT || result[flipedge(i)] == CONNECT ) )
+               extpermanent->solIsValid = FALSE;
+
             if( genstar.replacedge_head != -1 )
             {
                npseudoelims++;
@@ -1482,6 +1494,7 @@ SCIP_RETCODE extreduce_deleteArcs(
    }
 
    extpermanent->distdata_default = distdata;
+   extpermanent->result = result;
 
    /* main loop */
    for( int e = 0; e < nedges; e += 2 )
@@ -1545,7 +1558,6 @@ SCIP_RETCODE extreduce_deleteArcs(
 /** extended reduction test for edges */
 SCIP_RETCODE extreduce_deleteEdges(
    SCIP*                 scip,               /**< SCIP data structure */
-   const int*            result,             /**< solution array or NULL */
    EXTPERMA*             extperma,           /**< extension data */
    GRAPH*                graph,              /**< graph data structure (in/out) */
    int*                  nelims              /**< number of eliminations (out) */
@@ -1555,12 +1567,14 @@ SCIP_RETCODE extreduce_deleteEdges(
    const int nedges = graph_get_nEdges(graph);
    REDCOST* const redcostdata = extperma->redcostdata;
    DISTDATA* const distdata = extperma->distdata_default;
-   SCIP_Bool withSol = (result != NULL);
+   const int* result = extperma->result;
+   SCIP_Bool withSol = extperma->solIsValid;
 
    assert(scip && redcostdata);
    assert(!graph_pc_isMw(graph) && "not supported yet");
    assert(redcosts_getRootTop(redcostdata) >= 0 && redcosts_getRootTop(redcostdata) < graph->knots);
    assert(graph_isMarked(graph));
+   assert((result != NULL) == extperma->solIsValid);
 
    *nelims = 0;
 
@@ -1600,6 +1614,8 @@ SCIP_RETCODE extreduce_deleteEdges(
       }
    }
 
+   extperma->solIsValid = withSol;
+
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
 /*
@@ -1609,7 +1625,7 @@ SCIP_RETCODE extreduce_deleteEdges(
       SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, extperma, graph, distdata, &ngenstarelims) );
       *nelims += ngenstarelims;
    }
-   */
+*/
 
 
    assert(graphmarkIsClean(redcostdata, graph));
@@ -1620,7 +1636,6 @@ SCIP_RETCODE extreduce_deleteEdges(
 /** extended reduction test for pseudo-eliminating nodes */
 SCIP_RETCODE extreduce_pseudoDeleteNodes(
    SCIP*                 scip,               /**< SCIP data structure */
-   const int*            result,             /**< solution array or NULL */
    const SCIP_Bool*      pseudoDelNodes,     /**< nodes to pseudo-eliminate already */
    EXTPERMA*             extperma,           /**< extension data */
    GRAPH*                graph,              /**< graph data structure (in/out) */
@@ -1629,10 +1644,13 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 )
 {
    EXTPSEUDO extpseudo;
+   /* NOTE: hacky, needs to be kept because sub-methods do not use solIsValid flag */
+   const int* result = extperma->solIsValid ? extperma->result : NULL;
    SCIP_Bool isExtendedOrg;
 
    assert(scip && extperma && extperma->redcostdata && graph && nelims);
    assert(!extperma->useSdBias);
+
    *nelims = 0;
 
    if( SCIPisZero(scip, redcosts_getCutoffTop(extperma->redcostdata)) )
@@ -1654,8 +1672,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
       assert(!extperma->distdata_biased);
       extperma->useSdBias = TRUE;
       extpseudo.deletionMode = delete_nonprofits;
-      // todo fewer runs...maybe 32 or at least 50
-      // todo maybe also just check 3 nearest terminals!
+      // todo also just check 3 nearest terminals!
       SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, TRUE, TRUE, &(extperma->distdata_biased)) );
       SCIP_CALL( extreduce_extPermaAddMLdistsbiased(scip, extperma) );
    }
@@ -1675,6 +1692,8 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
       SCIPdebugMessage("number of eliminations after extended pseudo-elimination on profits %d \n", extpseudo.nelims_extended);
    }
+
+   extperma->solIsValid = extpseudo.useSolForEq;
 
    /* NOTE: also sets "nelims" pointer*/
    pseudodeleteExit(scip, &extpseudo, nelims);
@@ -1721,6 +1740,7 @@ SCIP_RETCODE extreduce_deleteGeneralStars(
    }
 
    extpermanent->distdata_default = distdata;
+   extpermanent->result = result;
 
    SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, extpermanent, graph, distdata, nelims) );
 
