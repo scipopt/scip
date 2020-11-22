@@ -62,6 +62,10 @@
  * puzzle is represented by that number; a blank is represented by either '.' or '0' in the puzzle
  * string.
  * The input file is containing the configuration of a sudoku read rowwise as a string.
+ * For example, the above puzzle is represented by
+ * 000000000030012008070068020000009870120650400000000006003940000000200060400000031
+ * or
+ * ..........3..12..8.7..68.2......987.12.65.4..........6..394.......2...6.4......31
  *
  * Installation
  * ============
