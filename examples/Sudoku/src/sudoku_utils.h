@@ -59,7 +59,7 @@ namespace sudoku
          for( int j = 0; j < 9; ++j )
          {
             /* We will only convert the numeric string to an integer if it is not '.' or '0'. */
-            if( (puzzledata.substr(idx, 1) != ".") and (puzzledata.substr(idx, 1) != "0") )
+            if( (puzzledata.substr(idx, 1) != ".") && (puzzledata.substr(idx, 1) != "0") )
             {
                puzzle[i][j] = std::stoi( puzzledata.substr(idx, 1) );
             }
@@ -87,7 +87,7 @@ namespace sudoku
             if( sudokupuzzle[i][j] > 0 )
             {
 
-               if( j == 2 or j == 5 or j == 8 )
+               if( j == 2 || j == 5 || j == 8 )
                {
                   std::cout << sudokupuzzle[i][j] << " | ";
                }
@@ -98,7 +98,7 @@ namespace sudoku
             }
             else
             {
-               if( j == 2 or j == 5 or j == 8 )
+               if( j == 2 || j == 5 || j == 8 )
                {
                   std::cout << "*" << " | ";
                }
@@ -110,7 +110,7 @@ namespace sudoku
          }
          std::cout << "\n";
 
-         if( i == 2 or i == 5 or i == 8 )
+         if( i == 2 || i == 5 || i == 8 )
          {
             std::cout << "+----------+-----------+-----------+" << "\n";
          }
