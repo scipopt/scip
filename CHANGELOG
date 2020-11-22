@@ -21,6 +21,8 @@ Performance improvements
 - In-tree restarts due to tree size estimation have been made compatible with orbital fixing.
 - improved upgrade of orbisacks to packing/partitioning orbitopes
 - Improved running time of symresack cover separation.
+- Merge strongcg into the gomory separator to avoid computing the same base equality twice. The files
+  sepa_strongcg.{h|c} have been removed.
 
 Examples and applications
 -------------------------
@@ -446,8 +448,6 @@ Performance improvements
   use only permutations that can contribute to a variable's orbit;
 
 - allow rapid learning at local nodes
-
-- Merge strongcg into the gomory separator to avoid computing the same base equality twice.
 
 - allow to recompute cut without using fractional values for sepa_cgmip
 
