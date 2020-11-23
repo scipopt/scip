@@ -76,7 +76,6 @@ void teardown(void)
 TestSuite(evalexpr, .init = setup, .fini = teardown);
 
 /** TESTS **/
-#if !1
 Test(evalexpr, absolute, .description = "Tests expression evaluation for absolute expressions.")
 {
    int i;
@@ -137,7 +136,6 @@ Test(evalexpr, absolute, .description = "Tests expression evaluation for absolut
    }
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-#endif
 
 Test(evalexpr, exponential, .description = "Tests expression evaluation for exponential expressions.")
 {

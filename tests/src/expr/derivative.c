@@ -238,6 +238,7 @@ Test(derivative, log)
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
+#endif
 
 Test(derivative, abs)
 {
@@ -263,7 +264,6 @@ Test(derivative, abs)
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-#endif
 
 Test(derivative, quadratic)
 {

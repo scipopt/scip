@@ -21,6 +21,8 @@
 
 #define _USE_MATH_DEFINES   /* to get M_PI on Windows */
 
+#define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
+
 #include <strings.h>
 #include <math.h>
 
@@ -47,6 +49,11 @@ static SCIP_EXPR* yexpr;
 static SCIP_EXPR* zexpr;
 static SCIP_EXPR* wexpr;
 static SCIP_EXPR* vexpr;
+
+static SCIP_Real* coefs[2];
+static SCIP_Real constants[2];
+static int nreturned;
+
 
 static SCIP_RANDNUMGEN* randnumgen; /* needs it for the multilinear separation */
 
@@ -87,6 +94,9 @@ void setup(void)
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   coefs[0] = (SCIP_Real *)malloc(sizeof(SCIP_Real));
+   coefs[1] = (SCIP_Real *)malloc(sizeof(SCIP_Real));
 }
 
 /* releases variables, frees scip */
@@ -111,6 +121,9 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
+
+   free(coefs[0]);
+   free(coefs[1]);
 
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }

@@ -181,6 +181,9 @@ SCIP_Bool computeLeftTangentSin(
 /** helper function to compute the tangent at upper bound if it is an underestimator
  *  returns true if the underestimator was computed successfully
  */
+// TODO: fix this, more cases can be considered, see at unit test
+// the underestimating of the tangents depends not only on the ub but also on the lower bound.
+// right now, this function is only checking whether the tangent underestimates independenly of the lower bound!
 static
 SCIP_Bool computeRightTangentSin(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -196,7 +199,7 @@ SCIP_Bool computeRightTangentSin(
    if( SCIPisInfinity(scip, ub) )
       return FALSE;
 
-   /* left tangent is only underestimating in (1.5*pi, 2*pi] *2kpi */
+   /* right tangent is only underestimating in (1.5*pi, 2*pi] *2kpi */
    if( sin(ub) > 0.0 || cos(ub) <= 0.0 )
       return FALSE;
 
@@ -280,11 +283,11 @@ SCIP_Bool computeSolTangentSin(
    return TRUE;
 }
 
-/** helper function to compute the tangent at some other point that goes through (lb,sin(lb)) and is underestimating
+/** helper function to compute the secant between lower bound and some point of the graph such that it underestimates
  *  returns true if the underestimator was computed successfully
  */
 static
-SCIP_Bool computeLeftMidTangentSin(
+SCIP_Bool computeLeftSecantSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
    SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
@@ -356,16 +359,16 @@ SCIP_Bool computeLeftMidTangentSin(
    if( *lincoef >= cos(lb) )
       return FALSE;
 
-   SCIPdebugMsg(scip, "leftmidtangent: %g + %g*x <= sin(x) on [%g,%g]\n", *linconst, *lincoef, lb, ub);
+   SCIPdebugMsg(scip, "left secant: %g + %g*x <= sin(x) on [%g,%g]\n", *linconst, *lincoef, lb, ub);
 
    return TRUE;
 }
 
-/** helper function to compute the tangent at some other point that goes through (ub,sin(ub)) and is underestimating
+/** helper function to compute the secant between upper bound and some point of the graph such that it underestimates
  *  returns true if the underestimator was computed successfully
  */
 static
-SCIP_Bool computeRightMidTangentSin(
+SCIP_Bool computeRightSecantSin(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of tangent */
    SCIP_Real*            linconst,           /**< buffer to store linear constant of tangent */
@@ -531,8 +534,8 @@ SCIP_RETCODE SCIPcomputeRevPropIntervalSin(
  *  The function will try to compute the following estimators in that order:
  *  - soltangent: tangent at specified refpoint
  *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
- *  - lmidtangent: tangent at some other point that goes through (lb,sin(lb))
- *  - rmidtangent: tangent at some other point that goes through (ub,sin(ub))
+ *  - left secant: secant between lower bound and some point of the graph
+ *  - right secant: secant between upper bound and some point of the graph
  *
  *  They are ordered such that a successful computation for one of them cannot be improved by following ones in terms
  *  of value at the reference point
@@ -586,13 +589,13 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
    if( !success )
       success = computeSecantSin(scip, lincoef, linconst, childlb, childub);
 
-   /* otherwise, try left middle tangent, that is tangent at some other point which goes through (lb,sin(lb)) */
+   /* otherwise, try left secant */
    if( !success )
-      success = computeLeftMidTangentSin(scip, lincoef, linconst, childlb, childub);
+      success = computeLeftSecantSin(scip, lincoef, linconst, childlb, childub);
 
-   /* otherwise, try right middle tangent, that is tangent at some other point which goes through (ub,sin(ub)) */
+   /* otherwise, try right secant */
    if( !success )
-      success = computeRightMidTangentSin(scip, lincoef, linconst, childlb, childub);
+      success = computeRightSecantSin(scip, lincoef, linconst, childlb, childub);
 
    if( !success )
       return FALSE;
@@ -611,11 +614,9 @@ SCIP_Bool SCIPcomputeEstimatorsTrig(
 /** helper function to create initial cuts for sine and cosine separation
  *
  *  The following 5 cuts can be generated:
- *  - secant: secant between the points (lb,sin(lb)) and (ub,sin(ub))
- *  - ltangent/rtangent: tangents at the points (lb,sin(lb)) or (ub,sin(ub))
- *  - lmidtangent/rmidtangent: tangent at some other point that goes through (lb,sin(lb)) or (ub,sin(ub))
- *
- *  If one of the computations fails or turns out to be irrelevant, the respective argument pointer is set to NULL.
+ *  - secant: secant between the bounds (lb,sin(lb)) and (ub,sin(ub))
+ *  - left/right secant: secant between lower/upper bound and some point of the graph
+ *  - left/right tangent: tangents at the lower/upper bounds
  */
 SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -640,10 +641,10 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    /* caller must ensure that variable is not already fixed */
    assert(!SCIPisEQ(scip, childlb, childub));
 
-
-   iscos = strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0;
+   *nreturned = 0;
 
    /* for cos expressions, the bounds have to be shifted before and after computation */
+   iscos = strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0;
    if( iscos )
    {
       childlb += M_PI_2;
@@ -656,7 +657,7 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
     *
     * a = cos(x^)    and     b = sin(x^) - a * x^        where x^ is any known point in [lb,ub]
     *
-    * and the resulting cut is       a*x - z <=/>= -b           depending on over-/underestimation
+    * and the resulting cut is       a*x + b <=/>= z           depending on over-/underestimation
     */
 
    if( ! underestimate )
@@ -673,13 +674,13 @@ SCIP_RETCODE SCIPcomputeInitialCutsTrig(
    else
    {
       /* try generating a secant between lb (ub) and some point < ub (> lb); otherwise try with tangent at lb (ub)*/
-      if( computeLeftMidTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
+      if( computeLeftSecantSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
          (*nreturned)++;
       else if( computeLeftTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childlb) )
          (*nreturned)++;
 
       /* try generating a secant between ub (lb) and some point > lb (< ub); otherwise try with tangent at ub (lb)*/
-      if( computeRightMidTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
+      if( computeRightSecantSin(scip, coefs[*nreturned], &constant[*nreturned], childlb, childub) )
          (*nreturned)++;
       else if( computeRightTangentSin(scip, coefs[*nreturned], &constant[*nreturned], childub) )
          (*nreturned)++;

@@ -106,7 +106,6 @@ SCIP_RETCODE checkCurvature(
    return SCIP_OKAY;
 }
 
-#if !1
 /* check for absolute expression */
 Test(curvature, absolute)
 {
@@ -121,7 +120,6 @@ Test(curvature, cosine)
    SCIP_CALL(checkCurvature("cos(<z>[C])", "cos", SCIP_EXPRCURV_CONVEX));
    SCIP_CALL(checkCurvature("cos(<w>[C])", "cos", SCIP_EXPRCURV_CONCAVE));
 }
-#endif
 
 /* check for exponential expression */
 Test(curvature, exponential)
@@ -179,7 +177,6 @@ Test(curvature, product)
    SCIP_CALL( checkCurvature("(<x>[C] * <y>[C] * <z>[C])", "prod", SCIP_EXPRCURV_UNKNOWN) );
 }
 
-#if !1
 /* check for sine expression */
 Test(curvature, sine)
 {
@@ -188,7 +185,6 @@ Test(curvature, sine)
    SCIP_CALL( checkCurvature("sin(<z>[C])", "sin", SCIP_EXPRCURV_UNKNOWN) );
    SCIP_CALL( checkCurvature("sin(<w>[C])", "sin", SCIP_EXPRCURV_CONVEX) );
 }
-#endif
 
 /* check for sum expression */
 Test(curvature, sum)

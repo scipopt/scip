@@ -44,8 +44,7 @@
 static
 SCIP_RETCODE computeCutsAbs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< absolute expression */
-   SCIP_INTERVAL*        bounds,             /**< bounds for children */
+   SCIP_INTERVAL         bounds,             /**< bounds of child */
    SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
    SCIP_Real**           coefs,              /**< buffer to store coefficients of computed estimators */
    SCIP_Real*            constant,           /**< buffer to store constant of computed estimators */
@@ -53,23 +52,19 @@ SCIP_RETCODE computeCutsAbs(
    )
 {
    assert(scip != NULL);
-   assert(expr != NULL);
-   assert(SCIPexprGetNChildren(expr) == 1);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    *nreturned = 0;
-   /* compute left tangent -x <= z */
+   printf("building cut for |x| x in %g %g\n", bounds.inf, bounds.sup);
+
    if( ! overestimate )
    {
+      /* compute left tangent -x <= z */
       coefs[*nreturned][0] = -1.0;
       constant[*nreturned] = 0.0;
       (*nreturned)++;
-   }
 
-   /* compute right tangent x <= z */
-   if( ! overestimate )
-   {
-      coefs[*nreturned][0] = -1.0;
+      /* compute right tangent x <= z */
+      coefs[*nreturned][0] = 1.0;
       constant[*nreturned] = 0.0;
       (*nreturned)++;
    }
@@ -80,8 +75,8 @@ SCIP_RETCODE computeCutsAbs(
       SCIP_Real lb;
       SCIP_Real ub;
 
-      lb = bounds[0].inf;
-      ub = bounds[0].sup;
+      lb = bounds.inf;
+      ub = bounds.sup;
 
       /* it does not make sense to add a cut if child variable is unbounded or fixed */
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, lb, ub) )
@@ -339,9 +334,12 @@ SCIP_DECL_EXPRESTIMATE(estimateAbs)
 static
 SCIP_DECL_EXPRINITESTIMATES(initEstimateAbs)
 {  /*lint --e{715}*/
+   assert(expr != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    /* compute initial cuts */
-   SCIP_CALL( computeCutsAbs(scip, expr, bounds, overestimate, coefs, constant, nreturned) );
+   SCIP_CALL( computeCutsAbs(scip, bounds[0], overestimate, coefs, constant, nreturned) );
 
    return SCIP_OKAY;
 }

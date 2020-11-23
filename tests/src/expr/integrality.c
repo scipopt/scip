@@ -100,7 +100,6 @@ TestSuite(integrality, .init = setup, .fini = teardown);
  * tests for single expressions
  */
 
-#if !1
 Test(integrality, abs)
 {
    SCIP_CALL( checkIntegrality("abs(<x>)", TRUE) );
@@ -113,6 +112,7 @@ Test(integrality, cos)
    SCIP_CALL( checkIntegrality("cos(<x>)", FALSE) );
 }
 
+#if !1
 Test(integrality, entropy)
 {
    SCIP_CALL( checkIntegrality("entropy(<y>)", FALSE) );
@@ -151,12 +151,10 @@ Test(integrality, product)
    SCIP_CALL( checkIntegrality("<x> * <y> * <z>", FALSE) );
 }
 
-#if !1
 Test(integrality, sin)
 {
    SCIP_CALL( checkIntegrality("sin(<x>)", FALSE) );
 }
-#endif
 
 Test(integrality, sum)
 {

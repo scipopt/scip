@@ -98,7 +98,7 @@ Test(iterator, bfs_single)
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, TRUE) );
    cr_expect(SCIPexpriterGetCurrent(it) == expr);
 }
-#if !1
+
 /* test BFS iterator on a tree expression */
 Test(iterator, bfs_tree)
 {
@@ -180,7 +180,7 @@ Test(iterator, bfs_general)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_y) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
 }
-#endif
+
 /* test RTOPOLOGICAL iterator on a tree containing a single expression */
 Test(iterator, rtopological_single)
 {
@@ -196,7 +196,7 @@ Test(iterator, rtopological_single)
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_RTOPOLOGIC, TRUE) );
    cr_expect(SCIPexpriterGetCurrent(it) == expr);
 }
-#if !1
+
 /* test RTOPOLOGICAL iterator on a tree expression */
 Test(iterator, rtopological_tree)
 {
@@ -291,7 +291,7 @@ Test(iterator, rtopological_general)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_y) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
 }
-#endif
+
 
 /* test DFS iterators on a tree containing a single expression */
 Test(iterator, dfs_single)
@@ -322,7 +322,7 @@ Test(iterator, dfs_single)
    cr_expect(SCIPexpriterGetNext(it) == NULL);
    cr_expect(SCIPexpriterIsEnd(it));
 }
-#if !1
+
 /* test DFS iterator on a tree expression */
 Test(iterator, dfs_tree)
 {
@@ -549,7 +549,7 @@ Test(iterator, dfs_general)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_y) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr_x) );
 }
-#endif
+
 Test(iterator, walk_in_walk)
 {
    SCIP_EXPR* expr_x;

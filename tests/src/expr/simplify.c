@@ -52,10 +52,10 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(2*<x>)*(2*<x>)", "sum"},
       {"<x>*<x>^2", "pow"},
       {"(<x>^0.5)^2", "pow"},  /* not simplified because of implicit x >= 0 constraint */
-//      {"(<x>^2)^0.5", "abs"},
+      {"(<x>^2)^0.5", "abs"},
       {"(<x>^3)^0.5", "pow"},  /* should be |x|^1.5 */
       {"(<x>^4)^0.5", "pow"},
-//      {"(<x>^2)^1.5", "pow"},  /* should be |x|^3 */
+      {"(<x>^2)^1.5", "pow"},  /* should be |x|^3 */
       {"(<y>^2)^2", "pow"},
       {"1*2*(<x>+<y>)*<x>*4*0*5", "val"},
       {"(<x>^0.25)^2*(<x>^0.25)^2", "var"},
@@ -79,7 +79,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"(1 + (<x>*<y>^2)^0.5)^2 - 1 - 2*(<x>*<y>^2)^0.5 -<y>^2*<x>", "val"},
       {"((<x>-<y>)^2 + (<x>+<y>)^2)^2/4 - <x>^4 - 2*(<x>*<y>)^2 - <y>^4", "val"},
       {"(2*<x>)*(2*<x>) - 4 * <x>^2", "val"},
-//      {"abs(-3.0)", "val"},
+      {"abs(-3.0)", "val"},
 //      {"log(exp(1.0))", "val"},
       {"exp(-3.0)", "val"},
 //      {"log(abs(-3.0))", "val"},
@@ -96,7 +96,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"<x>*(<x>+1)", "sum"},
       {"2*<x>*(<x>+1)", "sum"},
       {"(<x>^0.5)^0.5*((<x>^0.5)^0.5+2) - 2*(<x>^0.5)^0.5 - <x>^0.5", "val"},
-//      {"(25.0 * <x>^2)^0.5", "sum"},
+      {"(25.0 * <x>^2)^0.5", "sum"},
       {"exp(<x>)*exp(<y>)", "exp"},
       {"exp(<x>)*exp(-<x>)", "val"},
       {"exp(<x>^2)*<x>*exp(-<x>^2)", "var"},
@@ -105,7 +105,7 @@ ParameterizedTestParameters(simplify /* test suite */, simplify_test /* test nam
       {"2+exp(<x>*<y>)*exp(-<y>*<x>)", "val"},
       {"exp(<x>)^2", "exp"},
       {"2+2*<x>*exp(<x>*<y>)-2", "prod"},
-//      {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
+      {"2+2*<x>*cos(<x>*<y>)-2", "sum"},
       {"2+(1+1)*<x>*exp(<x>*<y>)*2-2", "prod"}
       /*TODO,
       {"<x>*abs(<x>)", "pow"}

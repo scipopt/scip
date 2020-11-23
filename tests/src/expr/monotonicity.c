@@ -147,7 +147,6 @@ SCIP_RETCODE testMonotonicity(
 
 TestSuite(monotonicity, .init = setup, .fini = teardown);
 
-#if !1
 /* check for abs expression */
 Test(monotonicity, abs)
 {
@@ -181,6 +180,7 @@ Test(monotonicity, cos)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
 
+#if !1
 /* check for entropy expression */
 Test(monotonicity, entropy)
 {
@@ -357,7 +357,6 @@ Test(monotonicity, prod_three)
    SCIP_CALL( testMonotonicity(2, SCIP_MONOTONE_INC) );
 }
 
-#if !1
 /* check for sin expression */
 Test(monotonicity, sin)
 {
@@ -372,7 +371,6 @@ Test(monotonicity, sin)
    SCIP_CALL( chgBounds(x, M_PI/2.0, 3.0*M_PI/2.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
-#endif
 
 /* check for sum expression */
 Test(monotonicity, sum)
