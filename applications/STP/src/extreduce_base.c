@@ -551,26 +551,37 @@ SCIP_RETCODE generalStarCheck(
 {
    const int* result = extpermanent->result;
    const int edge = genstar->edge;
-   *isDeletable = TRUE;
-
-   assert(graph_edge_isInRange(graph, edge));
+   const int degree_tail = graph->grad[graph->tail[edge]];
+   const int degree_head = graph->grad[graph->head[edge]];
+#ifndef NDEBUG
+   const int tree_maxdepth_org = extpermanent->tree_maxdepth;
+#endif
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("checking GENERAL STAR edge ");
    graph_edge_printInfo(graph, edge);
 #endif
 
-   if( graph->grad[graph->tail[edge]] < 3 && graph->grad[graph->head[edge]] < 3 )
+   *isDeletable = TRUE;
+
+   assert(graph_edge_isInRange(graph, edge));
+   assert(degree_tail + degree_head <= STP_GENSTAR_MAXDEG + 2);
+
+
+   if( degree_tail < 3 && degree_head < 3 )
    {
       SCIPdebugMessage("general-star early rule-out! \n");
       return SCIP_OKAY;
    }
 
-   if( graph->grad[graph->tail[edge]] == 1 || graph->grad[graph->head[edge]] == 1 )
+   if( degree_tail == 1 || degree_head == 1 )
    {
       SCIPdebugMessage("general-star early rule-out! \n");
       return SCIP_OKAY;
    }
+
+   if( degree_tail + degree_head == STP_GENSTAR_MAXDEG + 2 )
+      extpermanent->tree_maxdepth--;
 
    generalStarCheckInit(scip, graph, genstar);
    extpermanent->redcostEqualAllow = (extpermanent->solIsValid && result[edge] != CONNECT && result[flipedge(edge)] != CONNECT);
@@ -595,7 +606,12 @@ SCIP_RETCODE generalStarCheck(
          break;
    }
 
+   if( degree_tail + degree_head == STP_GENSTAR_MAXDEG + 2 )
+      extpermanent->tree_maxdepth++;
+
    generalStarCheckExit(scip, graph, genstar);
+
+   assert(tree_maxdepth_org == extpermanent->tree_maxdepth);
 
    return SCIP_OKAY;
 }
