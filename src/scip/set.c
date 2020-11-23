@@ -291,7 +291,7 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         5 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
+#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
                                                  *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
                                                  *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
                                                  *   fixing, see type_symmetry.h */
