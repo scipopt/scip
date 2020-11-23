@@ -1002,11 +1002,12 @@ SCIP_RETCODE SCIPgenerateOrbitopeVarsMatrix(
    if ( storelexorder )
    {
       assert( *nvarsorder == *maxnvarsorder );
+      assert( lexorder != NULL );
 
       *maxnvarsorder += nrows * ncols;
       nvarsorderold = *nvarsorder;
 
-      if ( lexorder == NULL )
+      if ( *lexorder == NULL )
       {
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, lexorder, *maxnvarsorder) );
       }
