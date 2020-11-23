@@ -476,10 +476,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesEntropy)
    SCIP_Bool overest[4] = {TRUE, TRUE, TRUE, FALSE};
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_ROWPREP* rowprep;
-   SCIP_Bool success;
    int i;
-   SCIP_ROW* row;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -516,7 +513,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesEntropy)
          /* -x*(1+log(x*)) + x* <= -x*log(x) */
          assert(i < 3);
          coefs[*nreturned][0] = -(1.0 + log(refpointsover[i]));
-         *constant[*nreturned] = refpointsover[i];
+         constant[*nreturned] = refpointsover[i];
       }
       else
       {
@@ -524,8 +521,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesEntropy)
          assert(ub - lb != 0.0);
 
          coefs[*nreturned][0] = (-ub * log(ub) + lb * log(lb)) / (ub - lb);
-         *constant[*nreturned] = -ub * log(ub) - coefs[*nreturned][0] * ub;
-         assert(SCIPisEQ(scip, *constant[*nreturned], -lb * log(lb) - coefs[*nreturned][0] * lb));
+         constant[*nreturned] = -ub * log(ub) - coefs[*nreturned][0] * ub;
+         assert(SCIPisEQ(scip, constant[*nreturned], -lb * log(lb) - coefs[*nreturned][0] * lb));
       }
 
       ++(*nreturned);
