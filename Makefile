@@ -563,6 +563,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/event_estim.o \
 			scip/expr_abs.o \
 			scip/expr_cos.o \
+			scip/expr_entropy.o \
 			scip/expr_exp.o \
 			scip/expr_pow.o \
 			scip/expr_product.o \

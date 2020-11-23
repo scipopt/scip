@@ -35,8 +35,8 @@
 #include "scip/expr_pow.h"
 #include "scip/expr_value.h"
 #include "scip/expr_exp.h"
-//#include "scip/cons_expr_entropy.h"
 #include "scip/expr_abs.h"
+#include "scip/expr_entropy.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 
@@ -863,7 +863,7 @@ SCIP_RETCODE enforceSP11(
 
       simplifiedcoef *= -1.0;
 
-      SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, &entropy, entropicchild, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprEntropy(scip, &entropy, entropicchild, ownerdatacreate, ownerdatacreatedata) );
 
       /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) entropy as child */
       if( simplifiedcoef != 1.0 )

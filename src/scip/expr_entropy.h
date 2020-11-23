@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_entropy.h
+/**@file   expr_entropy.h
  * @brief  handler for -x*log(x) expressions
  * @author Benjamin Mueller
  * @author Fabian Wegscheider
@@ -21,35 +21,35 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_ENTROPY_H__
-#define __SCIP_CONS_EXPR_ENTROPY_H__
+#ifndef __SCIP_EXPR_ENTROPY_H__
+#define __SCIP_EXPR_ENTROPY_H__
 
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the handler for x*log(x) expressions and includes it into the expression constraint handler */
+/** creates the handler for x*log(x) expressions and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrEntropy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrEntropy(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates an x*log(x) expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprEntropy(
+SCIP_RETCODE SCIPcreateExprEntropy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< child expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< child expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_ENTROPY_H__ */
+#endif /* __SCIP_EXPR_ENTROPY_H__ */
