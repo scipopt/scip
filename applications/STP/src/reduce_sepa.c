@@ -44,6 +44,8 @@
 typedef struct cut_nodes
 {
    SCIP*                 scip;               /**< SCIP data structure */
+   int*                  childcount_nodes;   /**< number of nodes below each node */
+   int*                  childcount_terms;   /**< number of terminals below each node */
    STP_Vectype(int)      biconn_stack;       /**< stack for marking bi-connected component */
    int*                  biconn_nodesmark;   /**< marks in which component each node is 0, 1,.., biconn_ncomps - 1 */
    int*                  biconn_comproots;   /**< root of each component with index 0,1,...,biconn_ncomps - 1 */
@@ -158,6 +160,8 @@ SCIP_RETCODE cutNodesTraverseFromCutNode(
 
    isVisited[node] = TRUE;
 
+   printf(" belowterms=%d, belownodes=%d  ... \n", cutnodes->childcount_terms[node], cutnodes->childcount_nodes[node]);
+
    for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
    {
       int nterms;
@@ -174,8 +178,9 @@ SCIP_RETCODE cutNodesTraverseFromCutNode(
       printf("component=%d: ", cutnodes->biconn_nodesmark[base]);
       printf("nterms=%d, ", nterms);
       printf("ncompnodes=%d \n", ncompnodes);
-
    }
+
+
 
    StpVecFree(scip, comps_nterms);
    StpVecFree(scip, comps_id);
@@ -428,7 +433,6 @@ SCIP_RETCODE cutNodesTreeInit(
    const int ncomps = cutnodes->biconn_ncomps;
 
    assert(ncomps > 0);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_prednode, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isTree, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comps_isHit, ncomps) );
@@ -473,6 +477,8 @@ SCIP_RETCODE cutNodesInit(
    )
 {
    const int nnodes = g->knots;
+   int* childcount_nodes;
+   int* childcount_terms;
    int* nodes_hittime;
    int* nodes_lowpoint;
    int* biconn_nodesmark;
@@ -482,12 +488,19 @@ SCIP_RETCODE cutNodesInit(
    assert(cutnodes->artpoints == NULL);
    assert(cutnodes->biconn_stack == NULL);
    assert(cutnodes->biconn_ncomps == 0);
-
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcount_nodes, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcount_terms, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &biconn_comproots, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &biconn_nodesmark, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_hittime, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_lowpoint, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      childcount_nodes[k] = 0;
+
+   for( int k = 0; k < nnodes; k++ )
+      childcount_terms[k] = 0;
 
    for( int k = 0; k < nnodes; k++ )
       visited[k] = FALSE;
@@ -507,6 +520,8 @@ SCIP_RETCODE cutNodesInit(
       biconn_nodesmark[k] = 0;
 
    cutnodes->scip = scip;
+   cutnodes->childcount_nodes = childcount_nodes;
+   cutnodes->childcount_terms = childcount_terms;
    cutnodes->biconn_comproots = biconn_comproots;
    cutnodes->biconn_nodesmark = biconn_nodesmark;
    cutnodes->nodes_hittime = nodes_hittime;
@@ -534,6 +549,8 @@ void cutNodesExit(
    SCIPfreeBufferArray(scip, &(cutnodes->nodes_hittime));
    SCIPfreeBufferArray(scip, &(cutnodes->biconn_nodesmark));
    SCIPfreeBufferArray(scip, &(cutnodes->biconn_comproots));
+   SCIPfreeBufferArray(scip, &(cutnodes->childcount_terms));
+   SCIPfreeBufferArray(scip, &(cutnodes->childcount_nodes));
 }
 
 
@@ -585,12 +602,17 @@ void cutNodesComputeDfs(
    )
 {
    SCIP* scip = cutnodes->scip;
+   int* childcount_terms = cutnodes->childcount_terms;
+   int* childcount_nodes = cutnodes->childcount_nodes;
    SCIP_Bool* visited = cutnodes->nodes_isVisited;
    int* nodes_hittime = cutnodes->nodes_hittime;
    int* nodes_lowpoint = cutnodes->nodes_lowpoint;
    int nchildren = 0;
    SCIP_Bool isCutNode = FALSE;
    const SCIP_Bool nodeIsRoot = (parent == -1);
+
+   assert(childcount_terms[node] == 0);
+   assert(childcount_nodes[node] == 0);
 
    visited[node] = TRUE;
    nodes_hittime[node] = hittime;
@@ -611,6 +633,9 @@ void cutNodesComputeDfs(
 
          cutNodesComputeDfs(g, head, hittime + 1, node, cutnodes);
          assert(nodes_lowpoint[head] >= 0);
+
+         childcount_nodes[node] += childcount_nodes[head] + 1;
+         childcount_terms[node] += childcount_terms[head] + (Is_term(g->term[head]) ? 1 : 0);
 
          if( nodeIsRoot )
          {
@@ -756,7 +781,7 @@ SCIP_RETCODE reduce_articulations(
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0 };
+   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0 };
 
    assert(scip && g && nelims);
    graph_mark(g);
