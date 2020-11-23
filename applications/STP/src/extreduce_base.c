@@ -142,9 +142,11 @@ SCIP_RETCODE replaceEdgeByPath(
 
    assert(extreduce_distCloseNodesAreValid(scip, graph, distdata));
 
+   distdata->hasPathReplacement = TRUE;
+
    if( distdata->sdistdata )
    {
-      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
+      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, TRUE, graph, distdata->sdistdata) );
    }
 
    {
@@ -219,7 +221,7 @@ void removeEdge(
 
    if( distdata->sdistdata )
    {
-      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, graph, distdata->sdistdata) );
+      SCIP_CALL_ABORT( reduce_sdRepair(scip, edge, distdata->hasPathReplacement, graph, distdata->sdistdata) );
    }
 
    /*
@@ -577,7 +579,6 @@ SCIP_RETCODE generalStarCheck(
    while ( *isDeletable )
    {
       SCIP_Bool allVisited;
-      // todo allow reversion
       EXTCOMP extcomp = { .compedges = genstar->tmp_compedges, .extleaves = genstar->tmp_extleaves,
                           .nextleaves = -1, .ncompedges = -1,  .genstar_centeredge = genstar->edge,
                           .comproot = -1, .allowReversion = FALSE };
@@ -622,7 +623,7 @@ void generalStarSetUp(
 
    *isPromising = FALSE;
 
-   /* NOTE: considered too expensive, since SD tree needs to be rebuilt */
+   /* NOTE: considered too expensive, since SD tree would need to be rebuilt */
    if( reduce_sdgraphEdgeIsInMst( distdata->sdistdata->sdgraph, edge) )
       return;
 
@@ -738,18 +739,20 @@ void generalStarSetUp(
          graph_pseudoAncestors_unhashEdge(pseudoancestors, edge_j, hasharr);
       }
 
+      assert(*isPromising == (nfails <= 1));
+
       graph_pseudoAncestors_unhashEdge(pseudoancestors, edge, hasharr);
 
-
+#ifndef NDEBUG
       for( int i = 0; i < hashsize; i++ )
       {
          assert(hasharr[i] == 0);
       }
-      SCIPfreeCleanBufferArray(scip, &hasharr);
+#endif
 
+      SCIPfreeCleanBufferArray(scip, &hasharr);
    }
 }
-
 
 
 /** initializes */
@@ -853,10 +856,9 @@ SCIP_RETCODE generalStarDeleteEdges(
 
    generalStarExit(scip, graph, &genstar);
 
-   printf("ncands=%d \n", ncands);
-   printf("npseudoelims=%d \n", npseudoelims);
+   SCIPdebugMessage("number of general star eliminations=%d \n", *nelims);
+   SCIPdebugMessage("number of general star replacements=%d \n", npseudoelims);
 
-   printf("number of general star eliminations=%d \n", *nelims);
    return SCIP_OKAY;
 }
 
@@ -1618,14 +1620,14 @@ SCIP_RETCODE extreduce_deleteEdges(
 
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
-/*
+
    if( extperma->mode == extred_full )
    {
       int ngenstarelims = 0;
       SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, extperma, graph, distdata, &ngenstarelims) );
       *nelims += ngenstarelims;
    }
-*/
+
 
 
    assert(graphmarkIsClean(redcostdata, graph));
@@ -1674,6 +1676,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
       extpseudo.deletionMode = delete_nonprofits;
       // todo also just check 3 nearest terminals!
       SCIP_CALL( extreduce_distDataInit(scip, graph, STP_EXT_CLOSENODES_MAXN, TRUE, TRUE, &(extperma->distdata_biased)) );
+      extperma->distdata_biased->hasPathReplacement = extperma->distdata_default->hasPathReplacement;
       SCIP_CALL( extreduce_extPermaAddMLdistsbiased(scip, extperma) );
    }
    assert(extpseudo.deletionMode == delete_nonprofits || extpseudo.deletionMode == delete_all);

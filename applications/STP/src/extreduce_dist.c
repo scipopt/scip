@@ -237,7 +237,13 @@ SCIP_Real getCloseNodeDistance(
    int position;
    SCIP_Real dist = -1.0;
 
-   assert(size > 0);
+   assert(size >= 0);
+
+   if( size == 0 )
+   {
+      assert(distdata->hasPathReplacement);
+      return dist;
+   }
 
    position = findEntryFromSorted(&indices[start], size, closenode);
 
@@ -270,7 +276,13 @@ SCIP_Real getCloseNodeDistanceForbidden(
    int position;
    SCIP_Real dist = -1.0;
 
-   assert(size > 0);
+   assert(size >= 0);
+
+   if( size == 0 )
+   {
+      assert(distdata->hasPathReplacement);
+      return dist;
+   }
 
    position = findEntryFromSorted(&indices[start], size, closenode);
 
@@ -1213,6 +1225,7 @@ SCIP_RETCODE extreduce_distDataInit(
 
    SCIP_CALL( SCIPallocMemory(scip, distdata) );
    dist = *distdata;
+   dist->hasPathReplacement = FALSE;
 
    distDataInitSizes(g, maxnclosenodes, dist);
    SCIP_CALL( distDataAllocateNodesArrays(scip, g, dist) );

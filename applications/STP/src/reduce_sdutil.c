@@ -811,6 +811,7 @@ SCIP_RETCODE reduce_sdInitBiasedBottleneck(
 SCIP_RETCODE reduce_sdRepair(
    SCIP*                 scip,               /**< SCIP */
    int                   edge,               /**< edge to be deleted soon */
+   SCIP_Bool             withEdgeReplacement,/**< with edge replacement? */
    GRAPH*                g,                  /**< graph NOTE: will mark the graph, thus not const :(
                                                   terrible design */
    SD*                   sd                  /**< to be repaired */
@@ -824,7 +825,7 @@ SCIP_RETCODE reduce_sdRepair(
    assert(!sd->sdprofit);
    assert(!sd->sdneighbors);
 
-   SCIP_CALL( graph_tpathsRepair(scip, edge, g, (sd->terminalpaths)) );
+   SCIP_CALL( graph_tpathsRepair(scip, edge, withEdgeReplacement, g, (sd->terminalpaths)) );
 
    if( reduce_sdgraphEdgeIsInMst(sd->sdgraph, edge) )
    {

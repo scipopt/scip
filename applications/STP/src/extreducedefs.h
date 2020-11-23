@@ -85,6 +85,7 @@ typedef struct distance_data
    DIJK* dijkdata;
    int closenodes_totalsize;
    int closenodes_maxnumber;
+   SCIP_Bool hasPathReplacement;
 } DISTDATA;
 
 

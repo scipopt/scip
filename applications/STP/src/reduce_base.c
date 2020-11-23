@@ -529,20 +529,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( bdk || extensive )
       {
-         int bdk34nelims = 0;
-
-         // todo correct reduce_bdkBiased
-#if 0
-         if( inner_rounds == 0 )
-            SCIP_CALL( reduce_bdkBiased(scip, getWorkLimits_stp(g, inner_rounds, stp_bdk), g, &bdknelims) );
-         else
-#endif
          SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_bdk), g, &bdknelims) );
-
-/*       if( inner_rounds > 0  )
-            SCIP_CALL( reduce_bd34(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bdk34nelims, STP_REDBOUND_BDK, fixed) );
-*/
-         bdknelims += bdk34nelims;
 
          if( bdknelims <= STP_RED_EXPENSIVEFACTOR * reductbound )
             bdk = FALSE;
@@ -633,15 +620,15 @@ SCIP_RETCODE redLoopStp_inner(
             inner_restarts++;
             le = TRUE;
             sd = TRUE;
-            sdstar = TRUE;
-            sdbiased = TRUE;
+            sdstar = TRUE;   // todo set FALSE
+            sdbiased = TRUE; // todo set FALSE
             sdc = TRUE;
             nvsl = nodereplacing;
 
             assert(extensive || sdcnelims == 0);
 
 #ifdef STP_PRINT_STATS
-            printf("RESTART reductions (restart %d) \n", inner_restarts);
+            printf("RESTART inner reductions (restart number %d) \n", inner_restarts);
 #endif
          }
          else

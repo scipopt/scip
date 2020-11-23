@@ -137,7 +137,7 @@ SCIP_RETCODE testTerminalPathsRepair(
    STPTEST_ASSERT(closeterms[0] == 0);
    STPTEST_ASSERT(EQ(dists[0], 2.1));
 
-   SCIP_CALL( graph_tpathsRepair(scip, 0, graph, tpaths) );
+   SCIP_CALL( graph_tpathsRepair(scip, 0, FALSE, graph, tpaths) );
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, NULL, dists, &ncloseterms);
 //   STPTEST_ASSERT(ncloseterms == 1);
@@ -205,7 +205,7 @@ SCIP_RETCODE testTerminalPathsRepair2(
    STPTEST_ASSERT(EQ(dists[1], 2.1));
 
    /* delete edge 0-1 */
-   SCIP_CALL( graph_tpathsRepair(scip, 0, graph, tpaths) );
+   SCIP_CALL( graph_tpathsRepair(scip, 0, FALSE, graph, tpaths) );
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 1, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(closeterms[0] == 2);
@@ -223,7 +223,7 @@ SCIP_RETCODE testTerminalPathsRepair2(
    graph_edge_del(scip, graph, 0, TRUE);
 
    /* delete edge 0-3 */
-   SCIP_CALL( graph_tpathsRepair(scip, 8, graph, tpaths) );
+   SCIP_CALL( graph_tpathsRepair(scip, 8, FALSE, graph, tpaths) );
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 3, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(closeterms[0] == 4);
@@ -291,7 +291,7 @@ SCIP_RETCODE testTerminalPathsRepair3(
    STPTEST_ASSERT(EQ(dists[1], 2.0));
 
    /* delete edge 0-3 */
-   SCIP_CALL( graph_tpathsRepair(scip, 0, graph, tpaths) );
+   SCIP_CALL( graph_tpathsRepair(scip, 0, FALSE, graph, tpaths) );
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 3, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    STPTEST_ASSERT(closeterms[0] == 0);
@@ -318,7 +318,7 @@ SCIP_RETCODE testTerminalPathsRepair3(
    graph_edge_del(scip, graph, 0, TRUE);
 
    /* delete edge 0-4 */
-   SCIP_CALL( graph_tpathsRepair(scip, 2, graph, tpaths) );
+   SCIP_CALL( graph_tpathsRepair(scip, 2, FALSE, graph, tpaths) );
 
    graph_tpathsGet4CloseTerms(graph, tpaths, 4, FARAWAY, closeterms, NULL, dists, &ncloseterms);
    assert(ncloseterms == 2);
@@ -382,22 +382,22 @@ SCIP_RETCODE testSdRepair(
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 0, 3, FARAWAY, 0.0, sd), 2.3));
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 1, 2, FARAWAY, 0.0, sd), 2.2));
 
-   SCIP_CALL( reduce_sdRepair(scip, 0, graph, sd) );
+   SCIP_CALL( reduce_sdRepair(scip, 0, FALSE, graph, sd) );
    graph_edge_del(scip, graph, 0, TRUE);
 
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 0, 3, FARAWAY, 0.0, sd), 2.4));
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 1, 2, FARAWAY, 0.0, sd), 2.2));
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 0, 3, FARAWAY, 0.0, sd), 2.4));
 
-   SCIP_CALL( reduce_sdRepair(scip, 4, graph, sd) );
+   SCIP_CALL( reduce_sdRepair(scip, 4, FALSE, graph, sd) );
    graph_edge_del(scip, graph, 4, TRUE);
-   SCIP_CALL( reduce_sdRepair(scip, 12, graph, sd) );
+   SCIP_CALL( reduce_sdRepair(scip, 12, FALSE, graph, sd) );
    graph_edge_del(scip, graph, 12, TRUE);
 
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 1, 2, FARAWAY, 0.0, sd), 4.4));
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 3, 4, FARAWAY, 0.0, sd), 2.3));
 
-   SCIP_CALL( reduce_sdRepair(scip, 8, graph, sd) );
+   SCIP_CALL( reduce_sdRepair(scip, 8, FALSE, graph, sd) );
    graph_edge_del(scip, graph, 8, TRUE);
    STPTEST_ASSERT(EQ(reduce_sdGetSd(graph, 3, 4, FARAWAY, 0.0, sd), FARAWAY));
 
