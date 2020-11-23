@@ -270,8 +270,13 @@ SCIP_RETCODE reduceExact(
       const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                     .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
-      SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
-            vbase, nodearrint, edgearrint, nodearrint2, solnode, nodearrchar, offset) );
+      REDBASE redbase = { .redparameters = &parameters, .solnode = solnode, .fixed = offset,
+                          .vnoi = vnoi, .path = path, .heap = heap,
+                          .nodearrreal = nodearrreal,
+                          .state = state, .vbase = vbase, .nodearrint = nodearrint,
+                          .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
+
+      SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
    }
 
    SCIPfreeBufferArray(scip, &path);

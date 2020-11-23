@@ -747,9 +747,13 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       {
          const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                       .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
+         REDBASE redbase = { .redparameters = &parameters, .solnode = NULL, .fixed = &offset,
+                                  .vnoi = vnoi, .path = path, .heap = heap,
+                                  .nodearrreal = nodearrreal,
+                                  .state = state, .vbase = vbase, .nodearrint = nodearrint,
+                                  .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
 
-         SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state,
-               vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, &offset) );
+         SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
       }
    }
 
@@ -851,8 +855,13 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                  .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
 
-            SCIP_CALL( redLoopStp(scip, &parameters, prunegraph, vnoi, path, nodearrreal, heap, state, vbase, nodearrint, edgearrint,
-                  nodearrint2, solnode, nodearrchar, &offset) );
+            REDBASE redbase = { .redparameters = &parameters, .solnode = solnode, .fixed = &offset,
+                                .vnoi = vnoi, .path = path, .heap = heap,
+                                .nodearrreal = nodearrreal,
+                                .state = state, .vbase = vbase, .nodearrint = nodearrint,
+                                .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
+
+            SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
          }
 
          /* delete all vertices not reachable from the root */

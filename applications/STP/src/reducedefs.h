@@ -28,6 +28,7 @@
 #define APPLICATIONS_STP_SRC_REDUCEDEFS_H_
 
 #include "scip/scip.h"
+#include "portab.h"
 
 
 #define STP_REDUCTION_NONE      0
@@ -53,6 +54,40 @@ typedef struct bottleneck_link_cut_tree BLCTREE;
 enum EXTRED_MODE { extred_none = 0, extred_fast = 1, extred_full = 2 };
 
 
+/** reduction parameters */
+typedef struct reduction_parameters
+{
+   SCIP_Bool             dualascent;         /**< do dual-ascent reduction? */
+   SCIP_Bool             boundreduce;        /**< do bound-based reduction? */
+   SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
+   int                   reductbound;        /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   SCIP_Bool             userec;             /**< use recombination heuristic? */
+   SCIP_Bool             fullreduce;         /**< use full reductions? (including extended techniques) */
+} RPARAMS;
+
+
+
+/** reduction information and some buffers */
+typedef struct reduction_base
+{
+   const RPARAMS*        redparameters;      /**< parameters */
+   int*                  solnode;            /**< solution nodes array (or NULL) */
+   SCIP_Real*            fixed;              /**< pointer to fixed value */
+ /* buffer: */
+   PATH* vnoi;
+   PATH* path;
+   SCIP_Real* nodearrreal;
+   int* heap;
+   int* state;
+   int* vbase;
+   int* nodearrint;
+   int* edgearrint;
+   int* nodearrint2;
+   STP_Bool* nodearrchar;
+} REDBASE;
+
+
+
 /** Stores data for computation of special distance/bottleneck distance computations  */
 typedef struct special_distance_storage
 {
@@ -74,20 +109,6 @@ struct special_distance_implied_profit
    int* RESTRICT         nodes_biassource;   /**< source terminal per node */
    int* RESTRICT         nodes_biassource2;  /**< second source terminal per node */
 };
-
-
-/** reduction parameters */
-typedef struct reduction_parameters
-{
-   SCIP_Bool             dualascent;         /**< do dual-ascent reduction? */
-   SCIP_Bool             boundreduce;        /**< do bound-based reduction? */
-   SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
-   int                   reductbound;        /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             userec;             /**< use recombination heuristic? */
-   SCIP_Bool             fullreduce;         /**< use full reductions? (including extended techniques) */
-} RPARAMS;
-
-
 
 
 /** reduced cost reduction parameters */
