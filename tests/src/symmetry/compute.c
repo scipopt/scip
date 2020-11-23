@@ -862,7 +862,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgrou
    int* compcolorbegins;
    int* usedperms;
    int* perms[6];
-   SCIP_Bool permused[6] = {FALSE};
+   SCIP_Shortbool permused[6] = {FALSE};
    int permorder1[6] = {0,1,2,3,4,5};
    int permorder2[6] = {2,3,4,5,0,1};
    int permorder3[6] = {5,0,1,2,3,4};
@@ -996,7 +996,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    int* compcolorbegins;
    int* usedperms;
    int* perms[6];
-   SCIP_Bool permused[6] = {FALSE};
+   SCIP_Shortbool permused[6] = {FALSE};
    int perm1[10] = {0,2,1,3,5,4,6,7,8,9};
    int perm2[10] = {0,1,2,3,4,5,7,6,8,9};
    int perm3[10] = {0,1,2,3,4,5,6,8,7,9};
