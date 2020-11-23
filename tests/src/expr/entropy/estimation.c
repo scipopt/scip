@@ -13,34 +13,41 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   separation_entropy.c
- * @brief  tests separation of entropy()
+/**@file   estimation_entropy.c
+ * @brief  tests estimation of entropy()
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_entropy.c"
-#include "separation.h"
+#include "scip/expr_entropy.c"
+#include "../estimation.h"
 
 Test(separation, entropy, .init = setup, .fini = teardown,
-   .description = "test separation for an exponential expression"
+   .description = "test separation for an entropy expression"
    )
 {
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    SCIP_Real coef;
    SCIP_Real constant;
    SCIP_Bool success;
    SCIP_Bool local;
    SCIP_Bool branchcand;
+   SCIP_INTERVAL localbounds;
+   SCIP_INTERVAL globalbounds;
+   SCIP_Real refpoint;
 
-   SCIP_CALL( SCIPcreateConsExprExprEntropy(scip, conshdlr, &expr, zexpr) );
+   SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
+
+   SCIP_CALL( SCIPcreateExprEntropy(scip, &expr, zexpr, NULL, NULL) );
+
+   SCIPintervalSetBounds(&localbounds, SCIPvarGetLbLocal(z), SCIPvarGetUbLocal(z));
+   SCIPintervalSetBounds(&globalbounds, SCIPvarGetLbGlobal(z), SCIPvarGetUbGlobal(z));
 
    /* compute an overestimation (linearization) */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 0.0) );
-
+   refpoint = 2.0;
    branchcand = TRUE;
-   SCIP_CALL( estimateEntropy(scip, conshdlr, expr, sol, TRUE, -SCIPinfinity(scip), &coef, &constant, &local, &success, &branchcand) );
+   SCIP_CALL( estimateEntropy(scip, expr, &localbounds, &globalbounds, &refpoint, TRUE, -SCIPinfinity(scip), &coef,
+         &constant, &local, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, 2.0, SCIPepsilon(scip));
@@ -49,11 +56,10 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    cr_assert(!branchcand);
 
    /* compute an underestimation (secant) */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 2.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -10.0) );
-
+   refpoint = 2.0;
    branchcand = TRUE;
-   SCIP_CALL( estimateEntropy(scip,  conshdlr, expr, sol, FALSE, SCIPinfinity(scip), &coef, &constant, &local, &success, &branchcand) );
+   SCIP_CALL( estimateEntropy(scip, expr, &localbounds, &globalbounds, &refpoint, FALSE, SCIPinfinity(scip), &coef,
+         &constant, &local, &success, &branchcand) );
 
    cr_assert(success);
    cr_assert_float_eq(constant, 1.5 * log(3.0) - 1.5 * log(1.0), SCIPepsilon(scip));
@@ -62,5 +68,5 @@ Test(separation, entropy, .init = setup, .fini = teardown,
    cr_assert(branchcand);
 
    /* release expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }

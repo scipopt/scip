@@ -20,15 +20,16 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_nonlinear.h"
+#include "scip/scipdefplugins.h"
+#include "scip/scip_nonlinear.h"
 #include "scip/expr_var.h"
+#include "scip/expr_exp.h"
 #include "scip/expr_value.h"
 #include "scip/expr_entropy.h"
 
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
@@ -44,16 +45,12 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
 
    /* disable relaxing variable bounds in activity evaluation */
-   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+//   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -209,7 +206,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
+//      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       SCIP_CALL( SCIPevalExprActivity(scip, entropyexpr) );
       intervalEntropy = SCIPexprGetActivity(entropyexpr);
 
@@ -229,7 +226,7 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
+//      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       SCIP_CALL( SCIPevalExprActivity(scip, entropyexpr) );
       intervalEntropy = SCIPexprGetActivity(entropyexpr);
 
