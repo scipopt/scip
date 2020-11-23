@@ -72,7 +72,7 @@ extern SCIP_RETCODE    reduce_chain2(SCIP*, GRAPH*, PATH*, int*, int*, int*, int
 extern SCIP_RETCODE    reduce_sdEdgeCliqueStar(SCIP*, int, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdImpLongEdge(SCIP*, const int*, GRAPH*, SD*, int*);
 extern SCIP_RETCODE    reduce_ledge(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
-extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
+extern SCIP_RETCODE    reduce_sdsp(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*, int*, int, int*);
 extern SCIP_RETCODE    reduce_sdStar(SCIP*, int, const int*, GRAPH*, SCIP_Real*, int*, int*, STP_Bool*, DHEAP*, int*);
 extern SCIP_RETCODE    reduce_sdStarBiased(SCIP*, int, const int*,  GRAPH*, int*);
 extern SCIP_RETCODE    reduce_sdStarBiasedWithProfit(SCIP*, int, const SDPROFIT*, const int*,  GRAPH*, int*);

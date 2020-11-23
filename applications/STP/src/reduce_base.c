@@ -502,7 +502,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sdc || extensive )
       {
-         SCIP_CALL( reduce_sdsp(scip, g, redbase->vnoi, redbase->path,
+         SCIP_CALL( reduce_sdsp(scip, g, redbase->vnoi,
                redbase->heap, redbase->state, redbase->vbase, redbase->nodearrint,
                redbase->nodearrint2, &sdcnelims,
                ((inner_rounds > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP), NULL));
@@ -1080,8 +1080,7 @@ SCIP_RETCODE reduceStp(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
-
+   path = NULL;
    reductbound = MAX(nedges / 1000, minelims);
 
    /* reduction loop */
@@ -1100,7 +1099,6 @@ SCIP_RETCODE reduceStp(
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &path);
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &nodearrint2);
    SCIPfreeBufferArray(scip, &nodearrint);

@@ -4530,12 +4530,11 @@ SCIP_RETCODE reduce_sdWalkExt2(
    return SCIP_OKAY;
 }
 
-/** SD test using only limited dijkstra from both endpoints of an edge */
+/** SD test using only limited Dijkstra from both endpoints of an edge */
 SCIP_RETCODE reduce_sdsp(
    SCIP*                 scip,
    GRAPH*                g,
    PATH*                 pathtail,
-   PATH*                 pathhead,
    int*                  heap,
    int*                  statetail,
    int*                  statehead,
@@ -4546,16 +4545,15 @@ SCIP_RETCODE reduce_sdsp(
    int*                  edgestate
 )
 {
+   PATH *pathhead = NULL;
    int* pathmaxnodetail = NULL;
    int* pathmaxnodehead = NULL;
-   const int nnodes = g->knots;
+   const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool pc = (g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG);
    const SCIP_Bool checkstate = (edgestate != NULL);
 
-   assert(g != NULL);
    assert(scip  != NULL);
    assert(pathtail != NULL);
-   assert(pathhead != NULL);
    assert(heap != NULL);
    assert(statetail != NULL);
    assert(statehead != NULL);
@@ -4568,6 +4566,8 @@ SCIP_RETCODE reduce_sdsp(
 
    if( limit <= 0 )
       return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathhead, nnodes) );
 
    if( pc )
    {
@@ -4811,6 +4811,7 @@ SCIP_RETCODE reduce_sdsp(
 
    SCIPfreeBufferArrayNull(scip, &pathmaxnodehead);
    SCIPfreeBufferArrayNull(scip, &pathmaxnodetail);
+   SCIPfreeBufferArray(scip, &pathhead);
 
    assert(graph_valid(scip, g));
 
