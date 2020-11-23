@@ -24,6 +24,7 @@
 #include "scip/scip_nonlinear.h"
 #include "scip/expr_var.h"
 #include "scip/expr_exp.h"
+#include "scip/expr_log.h"
 #include "scip/expr_value.h"
 #include "scip/expr_entropy.h"
 
@@ -48,9 +49,7 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
-
-   /* disable relaxing variable bounds in activity evaluation */
-//   SCIP_CALL( SCIPsetCharParam(scip, "constraints/expr/varboundrelax", 'n') );
+   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -206,7 +205,6 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, detlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, detub[i]) );
-//      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       SCIP_CALL( SCIPevalExprActivity(scip, entropyexpr) );
       intervalEntropy = SCIPexprGetActivity(entropyexpr);
 
@@ -226,7 +224,6 @@ Test(entropy, inteval, .description = "Tests the expression interval evaluation.
    {
       SCIP_CALL( SCIPchgVarLb(scip, x, rndlb[i]) );
       SCIP_CALL( SCIPchgVarUb(scip, x, rndub[i]) );
-//      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
       SCIP_CALL( SCIPevalExprActivity(scip, entropyexpr) );
       intervalEntropy = SCIPexprGetActivity(entropyexpr);
 

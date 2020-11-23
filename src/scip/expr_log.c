@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_log.c
+/**@file   expr_log.c
  * @brief  logarithm expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
@@ -25,9 +25,8 @@
 
 #include <string.h>
 
-#include "scip/cons_expr_value.h"
-#include "scip/cons_expr_log.h"
-#include "scip/cons_expr_rowprep.h"
+#include "scip/expr_value.h"
+#include "scip/expr_log.h"
 
 #define EXPRHDLR_NAME         "log"
 #define EXPRHDLR_DESC         "logarithmic expression"
@@ -39,7 +38,7 @@
  */
 
 /** expression handler data */
-struct SCIP_ConsExpr_ExprHdlrData
+struct SCIP_ExprHdlrData
 {
    SCIP_Real             minzerodistance;    /**< minimal distance from zero to enforce for child in bound tightening */
    SCIP_Bool             warnedonpole;       /**< whether we warned on enforcing a minimal non-zero bound for child */
@@ -60,48 +59,48 @@ struct SCIP_ConsExpr_ExprHdlrData
  * TODO: log(exp(*)) = *
  */
 static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyLog)
+SCIP_DECL_EXPRSIMPLIFY(simplifyLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
    /* check for value expression */
-   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   if( SCIPisExprValue(scip, child) )
    {
       /* TODO how to handle a non-positive value? */
-      assert(SCIPgetConsExprExprValueValue(child) > 0.0);
+      assert(SCIPgetValueExprValue(child) > 0.0);
 
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, log(SCIPgetConsExprExprValueValue(child))) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, log(SCIPgetValueExprValue(child)), ownerdatacreate,
+            ownerdatacreatedata) );
    }
    else
    {
       *simplifiedexpr = expr;
 
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
+      SCIPcaptureExpr(*simplifiedexpr);
    }
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrLog)
+SCIP_DECL_EXPRCOPYHDLR(copyhdlrLog)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrLog(scip, consexprhdlr) );
-   *valid = TRUE;
+   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrLog)
+SCIP_DECL_EXPRFREEHDLR(freehdlrLog)
 {  /*lint --e{715}*/
    assert(exprhdlrdata != NULL);
    assert(*exprhdlrdata != NULL);
@@ -112,11 +111,11 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrLog)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataLog)
+SCIP_DECL_EXPRCOPYDATA(copydataLog)
 {  /*lint --e{715}*/
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
-   assert(SCIPgetConsExprExprData(sourceexpr) == NULL);
+   assert(SCIPexprGetData(sourceexpr) == NULL);
 
    *targetexprdata = NULL;
 
@@ -124,32 +123,32 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataLog)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataLog)
+SCIP_DECL_EXPRFREEDATA(freedataLog)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
-   SCIPsetConsExprExprData(expr, NULL);
+   SCIPexprSetData(expr, NULL);
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseLog)
+SCIP_DECL_EXPRPARSE(parseLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* childexpr;
+   SCIP_EXPR* childexpr;
 
    assert(expr != NULL);
 
    /* parse child expression from remaining string */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownerdatacreate, ownerdatacreatedata) );
    assert(childexpr != NULL);
 
    /* create logarithmic expression */
-   SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, expr, childexpr) );
+   SCIP_CALL( SCIPcreateExprLog(scip, expr, childexpr, ownerdatacreate, ownerdatacreatedata) );
    assert(*expr != NULL);
 
    /* release child expression since it has been captured by the logarithmic expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
 
    *success = TRUE;
 
@@ -158,21 +157,21 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseLog)
 
 /** expression point evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalLog)
+SCIP_DECL_EXPREVAL(evalLog)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetData(expr) == NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   if( SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) <= 0.0 )
+   if( SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) <= 0.0 )
    {
       SCIPdebugMsg(scip, "invalid evaluation of logarithmic expression\n");
       *val = SCIP_INVALID;
    }
    else
    {
-      *val = log(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+      *val = log(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]));
    }
 
    return SCIP_OKAY;
@@ -180,39 +179,39 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalLog)
 
 /** expression derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffLog)
+SCIP_DECL_EXPRBWDIFF(bwdiffLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(expr != NULL);
    assert(childidx == 0);
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetEvalValue(expr) != SCIP_INVALID); /*lint !e777*/
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(child)), "val") != 0);
-   assert(SCIPgetConsExprExprValue(child) > 0.0);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(child)), "val") != 0);
+   assert(SCIPexprGetEvalValue(child) > 0.0);
 
-   *val = 1.0 / SCIPgetConsExprExprValue(child);
+   *val = 1.0 / SCIPexprGetEvalValue(child);
 
    return SCIP_OKAY;
 }
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
+SCIP_DECL_EXPRINTEVAL(intevalLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+   SCIP_EXPRHDLRDATA* exprhdlrdata;
    SCIP_INTERVAL childinterval;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetData(expr) == NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlr(expr));
+   exprhdlrdata = SCIPexprhdlrGetData(SCIPexprGetHdlr(expr));
    assert(exprhdlrdata != NULL);
 
-   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
 
    /* pretend childinterval to be >= epsilon, see also reversepropLog */
    if( childinterval.inf < exprhdlrdata->minzerodistance && exprhdlrdata->minzerodistance > 0.0 )
@@ -223,7 +222,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
             "Check your model formulation or use option constraints/expr/exprhdlr/log/minzerodistance to avoid this warning.\n",
             childinterval.inf, exprhdlrdata->minzerodistance);
          SCIPinfoMessage(scip, NULL, "Expression: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+         SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
          SCIPinfoMessage(scip, NULL, "\n");
          exprhdlrdata->warnedonpole = TRUE;
       }
@@ -243,29 +242,25 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
 
 /** expression estimation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
+SCIP_DECL_EXPRESTIMATE(estimateLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* childvar;
+   SCIP_Real lb;
+   SCIP_Real ub;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(coefs != NULL);
    assert(constant != NULL);
    assert(islocal != NULL);
    assert(branchcand != NULL);
    assert(*branchcand == TRUE);
    assert(success != NULL);
+   assert(refpoint != NULL);
 
-   /* get expression data */
-   child = SCIPgetConsExprExprChildren(expr)[0];
-   assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
+   lb = localbounds[0].inf;
+   ub = localbounds[0].sup;
 
    *coefs = 0.0;
    *constant = 0.0;
@@ -273,37 +268,27 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
 
    if( overestimate )
    {
-      SCIP_Real refpoint;
-
-      /* get reference point */
-      refpoint = SCIPgetSolVal(scip, sol, childvar);
-      if( !SCIPisPositive(scip, refpoint) )
+      if( !SCIPisPositive(scip, refpoint[0]) )
       {
          /* if refpoint is 0 (then lb=0 probably) or below, then slope is infinite, then try to move away from 0 */
-         if( SCIPisZero(scip, SCIPvarGetUbLocal(childvar)) )
+         if( SCIPisZero(scip, ub) )
          {
             *success = FALSE;
             return SCIP_OKAY;
          }
 
-         if( SCIPvarGetUbLocal(childvar) < 0.2 )
-            refpoint = 0.5 * SCIPvarGetLbLocal(childvar) + 0.5 * SCIPvarGetUbLocal(childvar);
+         if( localbounds[0].sup < 0.2 )
+            refpoint[0] = 0.5 * lb + 0.5 * ub;
          else
-            refpoint = 0.1;
+            refpoint[0] = 0.1;
       }
 
-      SCIPaddLogLinearization(scip, refpoint, SCIPvarIsIntegral(childvar), coefs, constant, success);
-      *islocal = FALSE; /* linearization are globally valid */
+      SCIPaddLogLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
+      *islocal = FALSE; /* linearization is globally valid */
       *branchcand = FALSE;
    }
    else
    {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      lb = SCIPvarGetLbLocal(childvar);
-      ub = SCIPvarGetUbLocal(childvar);
-
       SCIPaddLogSecant(scip, lb, ub, coefs, constant, success);
       *islocal = TRUE; /* secants are only valid locally */
    }
@@ -313,35 +298,27 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateLog)
 
 /** init sepa callback that initializes LP for a logarithm expression */
 static
-SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
+SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
 {
    SCIP_Real refpointsover[3] = {SCIP_INVALID, SCIP_INVALID, SCIP_INVALID};
    SCIP_Bool overest[4] = {TRUE, TRUE, TRUE, FALSE};
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_VAR* childvar;
+   SCIP_EXPR* child;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_ROWPREP* rowprep;
-   SCIP_Real constant;
    SCIP_Bool success;
    int i;
-   SCIP_ROW* row;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), "expr") == 0);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
 
    /* get expression data */
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-   childvar = SCIPgetConsExprExprAuxVar(child);
-   assert(childvar != NULL);
 
-   lb = SCIPvarGetLbLocal(childvar);
-   ub = SCIPvarGetUbLocal(childvar);
+   lb = SCIPintervalGetInf(bounds[0]);
+   ub = SCIPintervalGetSup(bounds[0]);
 
    if( SCIPisEQ(scip, lb, ub) )
       return SCIP_OKAY;
@@ -356,55 +333,31 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
       refpointsover[2] = SCIPisInfinity(scip, ub) ? lb + 20.0 : ub;
    }
 
-   *infeasible = FALSE;
+   *nreturned = 0;
 
    for( i = 0; i < 4; ++i )
    {
-      if( (overest[i] && !overestimate) || (!overest[i] && (!underestimate || SCIPisInfinity(scip, ub))) )
+      if( (overest[i] && !overestimate) || (!overest[i] && (overestimate || SCIPisInfinity(scip, ub))) )
          continue;
 
       assert(!overest[i] || (SCIPisLE(scip, refpointsover[i], ub) && SCIPisGE(scip, refpointsover[i], lb))); /*lint !e661*/
 
-      SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overest[i] ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, !overest[i]) );
-      SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
-      *(rowprep->coefs) = 0.0;
-      constant = 0.0;
       success = TRUE;
+      coefs[*nreturned][0] = 0.0;
+      constant[*nreturned] = 0.0;
 
       if( overest[i] )
       {
          assert(i < 3);
-         SCIPaddLogLinearization(scip, refpointsover[i], SCIPvarIsIntegral(childvar), rowprep->coefs, &constant, &success); /*lint !e661*/
+         SCIPaddLogLinearization(scip, refpointsover[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else
-         SCIPaddLogSecant(scip, lb, ub, rowprep->coefs, &constant, &success);
+         SCIPaddLogSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);
 
       if( success )
       {
-         rowprep->nvars = 1;
-         rowprep->vars[0] = childvar;
-         rowprep->side = -constant;
-
-         /* add auxiliary variable */
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetConsExprExprAuxVar(expr), -1.0) );
-
-         /* straighten out numerics */
-         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetHugeValue(scip),
-               &success) );
+         ++(*nreturned);
       }
-
-      if( success )
-      {
-         /* add the cut */
-         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
-         SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-         SCIP_CALL( SCIPreleaseRow(scip, &row) );
-      }
-
-      SCIPfreeRowprep(scip, &rowprep);
-
-      if( *infeasible )
-         break;
    }
 
    return SCIP_OKAY;
@@ -412,61 +365,54 @@ SCIP_DECL_CONSEXPR_EXPRINITSEPA(initsepaLog)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropLog)
+SCIP_DECL_EXPRREVERSEPROP(reversepropLog)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
-   SCIP_INTERVAL childbound;
+   SCIP_EXPRHDLRDATA* exprhdlrdata;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(nreductions != NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlr(expr));
+   exprhdlrdata = SCIPexprhdlrGetData(SCIPexprGetHdlr(expr));
    assert(exprhdlrdata != NULL);
 
-   *nreductions = 0;
-
    /* f = log(c0) -> c0 = exp(f) */
-   SCIPintervalExp(SCIP_INTERVAL_INFINITY, &childbound, bounds);
+   SCIPintervalExp(SCIP_INTERVAL_INFINITY, &childrenbounds[0], bounds);
 
    /* force child lower bound to be at least epsilon away from 0
     * this can help a lot in enforcement (try ex8_5_3)
     * child being equal 0 is already forbidden, so making it strictly greater-equal epsilon enforces
     * and hopefully doesn't introduce much problems
-    * if childbound.sup < epsilon, too, then this will result in a cutoff
+    * if childrenbounds[0].sup < epsilon, too, then this will result in a cutoff
     */
-   if( childbound.inf < exprhdlrdata->minzerodistance )
+   if( childrenbounds[0].inf < exprhdlrdata->minzerodistance )
    {
-      SCIPdebugMsg(scip, "Pushing child lower bound from %g to %g; upper bound remains at %g\n", childbound.inf, SCIPepsilon(scip), childbound.sup);
+      SCIPdebugMsg(scip, "Pushing child lower bound from %g to %g; upper bound remains at %g\n", childrenbounds[0].inf, SCIPepsilon(scip), childrenbounds[0].sup);
 
       if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
       {
          SCIPinfoMessage(scip, NULL, "Changing lower bound for child of log() from %g to %g.\n"
             "Check your model formulation or use option constraints/expr/exprhdlr/log/minzerodistance to avoid this warning.\n",
-            childbound.inf, exprhdlrdata->minzerodistance);
+            childrenbounds[0].inf, exprhdlrdata->minzerodistance);
          SCIPinfoMessage(scip, NULL, "Expression: ");
-         SCIP_CALL( SCIPprintConsExprExpr(scip, SCIPfindConshdlr(scip, "expr"), expr, NULL) );
+         SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
          SCIPinfoMessage(scip, NULL, "\n");
          exprhdlrdata->warnedonpole = TRUE;
       }
 
-      childbound.inf = exprhdlrdata->minzerodistance;
+      childrenbounds[0].inf = exprhdlrdata->minzerodistance;
    }
-
-   /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[0], childbound, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
 
 /** expression hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
+SCIP_DECL_EXPRHASH(hashLog)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
    assert(hashkey != NULL);
    assert(childrenhashes != NULL);
 
@@ -478,12 +424,12 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
 
 /** expression curvature detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureLog)
+SCIP_DECL_EXPRCURVATURE(curvatureLog)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
    assert(childcurv != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
    /* expression is concave if child is concave, expression cannot be linear or convex */
    if( exprcurvature == SCIP_EXPRCURV_CONCAVE )
@@ -499,7 +445,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureLog)
 
 /** expression monotonicity detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityLog)
+SCIP_DECL_EXPRMONOTONICITY(monotonicityLog)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -511,32 +457,31 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityLog)
    return SCIP_OKAY;
 }
 
-/** creates the handler for logarithmic expression and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+/** creates the handler for logarithmic expression and includes it into SCIP */
+SCIP_RETCODE SCIPincludeExprHdlrLog(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+   SCIP_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLRDATA* exprhdlrdata;
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &exprhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalLog, exprhdlrdata) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalLog,
+         exprhdlrdata) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrLog, freehdlrLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataLog, freedataLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initsepaLog, NULL, estimateLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffLog, NULL, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureLog) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityLog) );
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrLog, freehdlrLog);
+   SCIPexprhdlrSetCopyFreeData(exprhdlr, copydataLog, freedataLog);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifyLog);
+   SCIPexprhdlrSetParse(exprhdlr, parseLog);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalLog);
+   SCIPexprhdlrSetEstimate(exprhdlr, initestimatesLog, estimateLog);
+   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropLog);
+   SCIPexprhdlrSetHash(exprhdlr, hashLog);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffLog, NULL, NULL);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureLog);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityLog);
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/exprhdlr/" EXPRHDLR_NAME "/minzerodistance",
       "minimal distance from zero to enforce for child in bound tightening",
@@ -546,18 +491,19 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
 }
 
 /** creates a logarithmic expression */
-SCIP_RETCODE SCIPcreateConsExprExprLog(
+SCIP_RETCODE SCIPcreateExprLog(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< single child */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< single child */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
    assert(expr != NULL);
    assert(child != NULL);
-   assert(SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME) != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME), NULL, 1, &child) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownerdatacreate,
+         ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }
