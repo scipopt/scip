@@ -39,6 +39,45 @@
 #define STP_UNIFORM_RANGEMAX 1.1
 
 
+/**@name Local methods
+ *
+ * @{
+ */
+
+
+/**@} */
+
+/**@name Interface methods
+ *
+ * @{
+ */
+
+
+/** is the given graph a variant that is effectively an STP?? */
+SCIP_Bool graph_typeIsSpgLike(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   const int type = g->stp_type;
+   assert(g);
+
+   return (type == STP_SPG || type == STP_RSMT || type == STP_GSTP || type == STP_OARSMT);
+}
+
+/** is the given graph undirected? */
+SCIP_Bool graph_typeIsUndirected(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   assert(g);
+
+   if( g->stp_type == STP_SAP || g->stp_type == STP_DHCSTP )
+      return FALSE;
+
+   return TRUE;
+}
+
+
 
 /** is the edge blocked? */
 SCIP_Bool graph_edge_isBlocked(

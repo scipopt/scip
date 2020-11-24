@@ -80,8 +80,12 @@ CMAINOBJ	=	cmain.o \
 			extreduce_util.o \
 			graph_history.o \
 			graph_base.o \
+			graph_delpseudo.o \
+			graph_edge.o \
+			graph_grid.o \
 			graph_load.o \
 			graph_mcut.o \
+			graph_node.o \
 			graph_path.o \
 			graph_sdpath.o \
 			graph_pcbase.o \

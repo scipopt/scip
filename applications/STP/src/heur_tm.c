@@ -796,7 +796,7 @@ SCIP_RETCODE computeStarts(
       for( int k = 0; k < nnodes && count < runs; k++ )
       {
          const int v = (k + shift) % nnodes;
-         if( !Is_term(graph->term[v]) || graph_nw_knotIsLeaf(graph, v) )
+         if( !Is_term(graph->term[v]) || graph_knotIsNWLeaf(graph, v) )
             continue;
          start[count++] = v;
       }
@@ -2341,7 +2341,7 @@ SCIP_RETCODE runTm(
    for( int r = 0; r < runs; r++ )
    {
       assert(start[r] >= 0 && start[r] < graph->knots);
-      assert(graph->stp_type != STP_NWPTSPG || !graph_nw_knotIsLeaf(graph, start[r]));
+      assert(graph->stp_type != STP_NWPTSPG || !graph_knotIsNWLeaf(graph, start[r]));
 
       if( graph->stp_type == STP_DCSTP )
       {

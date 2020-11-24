@@ -98,6 +98,10 @@ extern int            graph_get_nFixpseudonodes(SCIP*, const GRAPH*);
 
 /* graph_util.c
  */
+extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);
+extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int, SCIP_Bool*);
+extern SCIP_RETCODE   graph_trail_costAware(SCIP*, const GRAPH*, int, SCIP_Bool*);
 /* Dijkstra heap: */
 extern SCIP_RETCODE graph_heap_create(SCIP*, int capacity, int* position, DENTRY* entries, DHEAP** heap);
 extern void   graph_heap_free(SCIP*, SCIP_Bool, SCIP_Bool, DHEAP**);
@@ -162,20 +166,6 @@ extern void   graph_uncover(GRAPH*);
 extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
 extern void   graph_free_history(SCIP*, GRAPH*);
 extern void   graph_free_historyDeep(SCIP*, GRAPH*);
-extern SCIP_Bool graph_knot_isInRange(const GRAPH*, int);
-extern void   graph_knot_add(GRAPH*, int);
-extern void   graph_knot_chg(GRAPH*, int, int);
-extern void   graph_knot_del(SCIP*, GRAPH*, int, SCIP_Bool);
-extern void   graph_knot_contract_dir(GRAPH*, int, int);
-extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
-extern void   graph_edge_addBi(SCIP*, GRAPH*, int, int, double);
-extern void   graph_edge_addSubgraph(SCIP*, const GRAPH*, const int*, int, GRAPH*);
-extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
-extern void   graph_edge_delFull(SCIP*, GRAPH*, int, SCIP_Bool);
-extern void   graph_edge_delBlocked(SCIP*, GRAPH*, const SCIP_Bool*, SCIP_Bool);
-extern void   graph_edge_delHistory(SCIP*, GRAPH*, int);
-extern void   graph_edge_hide(GRAPH*, int);
-extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
 extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
 extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
 extern void   graph_get_edgeRevCosts(const GRAPH*, SCIP_Real* RESTRICT);
@@ -188,28 +178,48 @@ extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_Bool      graph_isMarked(const GRAPH*);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_knot_contractFixed(SCIP*, GRAPH*, int*, int, int, int);
-extern SCIP_RETCODE   graph_knot_contractLowdeg2High(SCIP*, GRAPH*, int*, int, int);
-extern SCIP_RETCODE   graph_knot_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, REDCOST*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_knot_delPseudoCheckIfPossible(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, SCIP_Bool*);
-extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, GRAPH*, int*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, int, SINGLETONANS*, SINGLETONANS*, int*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_edge_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, SCIP_Real*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_edge_delPseudoPath(SCIP*, GRAPH*, int, int, int, SCIP_Real*);
+extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
+extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
+extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
+extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
+
+/* graph_grid.c
+ */
 extern SCIP_RETCODE   graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE   graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
-extern SCIP_RETCODE   graph_trail_arr(SCIP*, const GRAPH*, int, SCIP_Bool*);
-extern SCIP_RETCODE   graph_trail_costAware(SCIP*, const GRAPH*, int, SCIP_Bool*);
-extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
-extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
-extern SCIP_RETCODE   graph_termsReachable(SCIP*, const GRAPH*, SCIP_Bool*);
-extern SCIP_RETCODE   graph_findCentralTerminal(SCIP*, const GRAPH*, int, int*);extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
-extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
-extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
-extern SCIP_Bool graph_nw_knotIsLeaf(const GRAPH*, int);
 
+/* graph_edge.c
+ */
+extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
+extern void   graph_edge_addBi(SCIP*, GRAPH*, int, int, double);
+extern void   graph_edge_addSubgraph(SCIP*, const GRAPH*, const int*, int, GRAPH*);
+extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
+extern void   graph_edge_delFull(SCIP*, GRAPH*, int, SCIP_Bool);
+extern void   graph_edge_delBlocked(SCIP*, GRAPH*, const SCIP_Bool*, SCIP_Bool);
+extern void   graph_edge_delHistory(SCIP*, GRAPH*, int);
+extern void   graph_edge_hide(GRAPH*, int);
+extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real, SCIP_Bool, SCIP_Bool);
+
+/* graph_node.c
+ */
+extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int*, int, int);
+extern SCIP_RETCODE   graph_knot_contractFixed(SCIP*, GRAPH*, int*, int, int, int);
+extern SCIP_RETCODE   graph_knot_contractLowdeg2High(SCIP*, GRAPH*, int*, int, int);
+extern SCIP_RETCODE   graph_knot_replaceDeg2(SCIP*, int, GRAPH*, int*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, int, SINGLETONANS*, SINGLETONANS*, int*, SCIP_Bool*);
+extern SCIP_Bool graph_knot_isInRange(const GRAPH*, int);
+extern void   graph_knot_add(GRAPH*, int);
+extern void   graph_knot_chg(GRAPH*, int, int);
+extern void   graph_knot_del(SCIP*, GRAPH*, int, SCIP_Bool);
+extern void   graph_knot_contract_dir(GRAPH*, int, int);
+
+/* graph_delpseudo.c
+ */
+extern SCIP_RETCODE   graph_edge_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, SCIP_Real*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_edge_delPseudoPath(SCIP*, GRAPH*, int, int, int, SCIP_Real*);
+extern SCIP_RETCODE   graph_knot_delPseudo(SCIP*, GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, REDCOST*, SCIP_Bool*);
+extern SCIP_RETCODE   graph_knot_delPseudoCheckIfPossible(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, const SCIP_Real*, int, SCIP_Bool*);
 
 /* graph_stats.c
  */
@@ -226,6 +236,8 @@ extern int    graph_get_nEdges(const GRAPH*);
 extern int    graph_get_nTerms(const GRAPH*);
 extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
+extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
+extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
 
 
 /* graph_trans.c

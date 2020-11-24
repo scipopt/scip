@@ -30,8 +30,12 @@ add_executable(scipstp
     src/extreduce_util.c
     src/graph_history.c
     src/graph_base.c
+    src/graph_delpseudo.c
+    src/graph_edge.c
+    src/graph_grid.c
     src/graph_load.c
     src/graph_mcut.c
+    src/graph_node.c
     src/graph_path.c
     src/graph_sdpath.c
     src/graph_pcbase.c
