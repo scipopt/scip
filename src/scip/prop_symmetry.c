@@ -3221,8 +3221,12 @@ SCIP_RETCODE buildSubgroupGraph(
 
          if ( comp1 == comp2 )
          {
-            assert( firstcolor >= 0 );
-
+            /* another permutation has already merged these variables into one component; store its color */
+            if ( firstcolor < 0 )
+            {
+               assert( SCIPdisjointsetFind(comptocolor, comp1) == SCIPdisjointsetFind(comptocolor, comp2) );
+               firstcolor = SCIPdisjointsetFind(comptocolor, comp1);
+            }
             componentslastperm[comp1] = j;
             continue;
          }
@@ -3250,7 +3254,10 @@ SCIP_RETCODE buildSubgroupGraph(
       /* if the generator is invalid, delete the newly added edges, go to next generator */
       if ( k < npermvars )
          continue;
-      assert( firstcolor > -1 );
+
+      /* if the generator only acts on already existing components, we don't have to store it */
+      if ( firstcolor == -1 )
+         continue;
 
       /* check whether we need to resize */
       if ( *nusedperms >= usedpermssize )
@@ -4008,7 +4015,6 @@ int getNOrbitopesInComp(
          ncols = graphcompbegins[compcolorbegins[j] + 1] - graphcompbegins[compcolorbegins[j]];
 
          threshold = 0.7 * (SCIP_Real) symcompsize;
-	 printf("nbinrows %d ncols %d\n", nbinrows, ncols);
 
          /* check whether criteria for adding orbitopes are satisfied */
          if ( nbinrows <= 2 * ncols || (nbinrows <= 8 * ncols && nbinrows < 100) )
@@ -4352,7 +4358,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] >= 0 );
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] < propdata->npermvars );
-            assert( chosencomppercolor == NULL || chosencomppercolor[j] >= 0 );
 
             /* add the orbitope constraint for this color
              *
