@@ -3254,7 +3254,10 @@ SCIP_RETCODE buildSubgroupGraph(
       /* if the generator is invalid, delete the newly added edges, go to next generator */
       if ( k < npermvars )
          continue;
-      assert( firstcolor > -1 );
+
+      /* if the generator only acts on already existing components, we don't have to store it */
+      if ( firstcolor == -1 )
+         continue;
 
       /* check whether we need to resize */
       if ( *nusedperms >= usedpermssize )
