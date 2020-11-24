@@ -4355,7 +4355,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] >= 0 );
             assert( firstvaridxpercolor == NULL || firstvaridxpercolor[j] < propdata->npermvars );
-            assert( chosencomppercolor == NULL || chosencomppercolor[j] >= 0 );
 
             /* add the orbitope constraint for this color
              *
