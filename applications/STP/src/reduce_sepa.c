@@ -54,6 +54,7 @@ typedef struct cut_nodes
    int*                  nodes_lowpoint;     /**< low-point per node */
    SCIP_Bool*            nodes_isVisited;    /**< visited? */
    int                   biconn_ncomps;      /**< number of components */
+   int                   dfsroot;            /**< root */
 } CUTNODES;
 
 
@@ -206,7 +207,7 @@ SCIP_RETCODE cutNodesTreeCheckLeaveComponents(
    SCIP_Bool* RESTRICT nodes_isTree = cuttree->nodes_isTree;
    const int* const biconn_nodesmark = biconn_nodesmark;
    const int nnodes = graph_get_nNodes(g);
-   const int root = g->source;
+   const int root = cutnodes->dfsroot;
    const int lastcutnode = cutNodesGetLastCutnode(cutnodes);
    int termscount = g->terms;
 
@@ -259,9 +260,10 @@ void cutNodesTreeBuildSteinerTree(
    SCIP_Bool* RESTRICT nodes_isTree = cuttree->nodes_isTree;
    const int* const biconn_nodesmark = biconn_nodesmark;
    const int nnodes = graph_get_nNodes(g);
-   const int root = g->source;
+   const int root = cutnodes->dfsroot;
    const int lastcutnode = cutNodesGetLastCutnode(cutnodes);
-   int termscount = g->terms;
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
+   int termscount = isPcMw ? graph_pc_nNonLeafTerms(g) : g->terms;
 
    assert(nodes_pred && nodes_isVisited && nodes_isTree && cuttree->comps_isHit);
    assert(!nodes_isTree[root] && !cuttree->comps_isHit[cutnodes->biconn_nodesmark[root]] && !nodes_isVisited[root]);
@@ -294,6 +296,10 @@ void cutNodesTreeBuildSteinerTree(
             if( Is_term(g->term[head]) )
             {
                assert(!nodes_isTree[head]);
+
+               if( isPcMw && graph_pc_termIsNonLeafTerm(g, head) )
+                  continue;
+
                termscount--;
 
                for( int pred = head; !nodes_isTree[pred]; pred = nodes_pred[pred] )
@@ -308,7 +314,7 @@ void cutNodesTreeBuildSteinerTree(
 
    cuttree->cutnode0isNeeded = (cuttree->cutnode0isNeeded && (nodes_isTree[lastcutnode]));
 
-   assert(termscount == 0);
+   assert(termscount == 0 || isPcMw);
    StpVecFree(scip, stack);
 }
 
@@ -320,6 +326,7 @@ void cutNodesTreeDeleteComponents(
    const CUTNODES*       cutnodes,           /**< cut nodes */
    const CUTTREE*        cuttree,            /**< cut tree data */
    GRAPH*                g,                  /**< graph */
+   SCIP_Real*            fixedp,             /**< pointer to offset value */
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
@@ -339,14 +346,24 @@ void cutNodesTreeDeleteComponents(
 
       if( !comps_isHit[comp] && i != lastcutnode )
       {
+
 #ifdef SCIP_DEBUG
          SCIPdebugMessage("delete: ");
          graph_knot_printInfo(g, i);
 #endif
-         assert(!Is_term(g->term[i]));
          assert(!cuttree->nodes_isTree[i]);
 
-         graph_knot_del(scip, g, i, TRUE);
+         if( Is_term(g->term[i]) )
+         {
+            assert(graph_pc_isPcMw(g));
+            assert(graph_pc_termIsNonLeafTerm(g, i));
+
+            graph_pc_deleteTerm(scip, g, i, fixedp);
+         }
+         else
+         {
+            graph_knot_del(scip, g, i, TRUE);
+         }
 
          (*nelims)++;
       }
@@ -468,6 +485,41 @@ void cutNodesTreeExit(
 }
 
 
+
+/** sets root  */
+static inline
+void cutNodesSetDfsRoot(
+   const GRAPH*          g,                  /**< graph data structure */
+   CUTNODES*             cutnodes            /**< cut nodes */
+   )
+{
+   if( !graph_pc_isPcMw(g) )
+   {
+      cutnodes->dfsroot = g->source;
+   }
+   else
+   {
+      int i;
+      const int nnodes = graph_get_nNodes(g);
+      const int pseudoroot = graph_pc_isRootedPcMw(g) ? -1 : g->source;
+
+      assert(!g->extended);
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) && i != pseudoroot)
+         {
+            assert(!graph_pc_knotIsDummyTerm(g, i));
+            cutnodes->dfsroot = i;
+            break;
+         }
+      }
+
+      assert(i < nnodes);
+   }
+}
+
+
 /** initializes */
 static
 SCIP_RETCODE cutNodesInit(
@@ -527,6 +579,8 @@ SCIP_RETCODE cutNodesInit(
    cutnodes->nodes_hittime = nodes_hittime;
    cutnodes->nodes_lowpoint = nodes_lowpoint;
    cutnodes->nodes_isVisited = visited;
+
+   cutNodesSetDfsRoot(g, cutnodes);
 
    StpVecReserve(scip, cutnodes->biconn_stack, nnodes);
 
@@ -709,7 +763,6 @@ void cutNodesComputePostProcess(
 
 }
 
-
 /** computes cut-nodes and (implicitly) bi-connected components */
 static inline
 void cutNodesCompute(
@@ -717,11 +770,9 @@ void cutNodesCompute(
    CUTNODES*             cutnodes            /**< cut nodes */
    )
 {
-   // todo needs to be adapted for PC/MW
-   assert(!graph_pc_isPcMw(g));
-
    /* NOTE: we assume the graph to be connected, so we only do the DFS once */
-   cutNodesComputeDfs(g, g->source, 0, -1, cutnodes);
+   /* todo make it non-recursive, otherwise it might crash for big graphs! */
+   cutNodesComputeDfs(g, cutnodes->dfsroot, 0, -1, cutnodes);
 
    SCIPdebugMessage("number of cut nodes: %d \n", StpVecGetSize(cutnodes->artpoints));
    assert(cutnodes->biconn_ncomps >= StpVecGetSize(cutnodes->artpoints));
@@ -742,6 +793,7 @@ SCIP_RETCODE cutNodesReduceWithTree(
    SCIP*                 scip,               /**< SCIP data structure */
    CUTNODES*             cutnodes,           /**< cut nodes */
    GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixedp,             /**< pointer to offset value */
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
@@ -760,8 +812,10 @@ SCIP_RETCODE cutNodesReduceWithTree(
    }
 #endif
 
-   cutNodesTreeDeleteComponents(scip, cutnodes, &cuttree, g, nelims);
-   cutNodesTreeMakeTerms(scip, cutnodes, &cuttree, g);
+   cutNodesTreeDeleteComponents(scip, cutnodes, &cuttree, g, fixedp, nelims);
+
+   if( !graph_pc_isPcMw(g) )
+      cutNodesTreeMakeTerms(scip, cutnodes, &cuttree, g);
 
    cutNodesTreeExit(scip, &cuttree);
 
@@ -781,10 +835,12 @@ SCIP_RETCODE reduce_articulations(
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0 };
+   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, -1 };
 
    assert(scip && g && nelims);
    graph_mark(g);
+
+   *nelims = 0;
 
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
    cutNodesCompute(g, &cutnodes);
@@ -793,7 +849,7 @@ SCIP_RETCODE reduce_articulations(
 
    if( cutnodes.biconn_ncomps > 0 )
    {
-      SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, nelims) );
+      SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, fixedp, nelims) );
    }
 
    cutNodesExit(scip, &cutnodes);

@@ -438,6 +438,73 @@ SCIP_RETCODE packEdges(
 }
 
 
+/** initializes subgraph */
+static
+void extractSubgraphGetSize(
+   const GRAPH*          orggraph,           /**< original graph */
+   int*                  sub_nnodes,         /**< number of nodes */
+   int*                  sub_nedges,         /**< number of edges */
+   int*                  sub_nterms          /**< number of terminals */
+   )
+{
+   const int nnodes = graph_get_nNodes(orggraph);
+   const int* const isMarked = orggraph->mark;
+   int sub_n = 0;
+   int sub_m = 0;
+   int sub_t = 0;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !isMarked[i] )
+         continue;
+
+      sub_n++;
+
+      if( Is_term(orggraph->term[i]) )
+         sub_t++;
+
+      for( int e = orggraph->outbeg[i]; e != EAT_LAST; e = orggraph->oeat[e] )
+      {
+         const int head = orggraph->head[e];
+         if( isMarked[head] )
+            sub_m++;
+      }
+   }
+
+   assert(sub_m % 2 == 0);
+   assert(sub_t > 0);
+
+   *sub_nnodes = sub_n;
+   *sub_nedges = sub_m;
+   *sub_nterms = sub_t;
+}
+
+
+/** initializes subgraph */
+static
+SCIP_RETCODE extractSubgraphInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   int*                  nodemap,            /**< node map to be filled */
+   GRAPH**               subgraph            /**< graph to be created */
+   )
+{
+   int sub_nnodes;
+   int sub_nedges;
+   int sub_nterms;
+
+   extractSubgraphGetSize(orggraph, &sub_nnodes, &sub_nedges, &sub_nterms);
+
+   // init new graph
+
+   // fill node map
+
+   return SCIP_OKAY;
+}
+
+
+
+
 /*
  * global functions
  */
@@ -1213,6 +1280,36 @@ SCIP_RETCODE graph_copy_pseudoAncestors(
 
    return SCIP_OKAY;
 }
+
+
+
+/** Obtains a new subgraph corresponding to marked nodes.
+ *  Also fills a node map from the new to the original nodes.
+ *  Creates a shallow copy wrt ancestor information:
+ *  ancestors and pseudo-ancestors are kept and will be modified also for original graph! */
+SCIP_RETCODE graph_extractSubgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   int*                  nodemap,            /**< node map from sub to original to be filled */
+   GRAPH**               subgraph            /**< graph to be created */
+   )
+{
+   assert(scip && orggraph && nodemap);
+
+
+   // get number of nodes, nedges..submethods
+
+   // init new graph
+
+   // copy data
+
+  // SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
+
+ //  SCIP_CALL( graph_copy_data(scip, orggraph, *copygraph) );
+
+   return SCIP_OKAY;
+}
+
 
 
 /** marks the current graph */

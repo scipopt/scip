@@ -174,6 +174,7 @@ extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copy_pseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
+extern SCIP_RETCODE   graph_extractSubgraph(SCIP*, const GRAPH*, int*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_Bool      graph_isMarked(const GRAPH*);
