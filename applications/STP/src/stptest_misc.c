@@ -73,7 +73,7 @@ SCIP_RETCODE graphBuildV5E5(
       SCIP_CALL( graph_transPc(scip, graph) );
    }
 
-   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_initHistory(scip, graph));
    SCIP_CALL(graph_path_init(scip, graph));
 
    return SCIP_OKAY;
@@ -103,7 +103,7 @@ SCIP_RETCODE pseudoDelSingle(
    graph_edge_add(scip, graph, 0, 2, 1.0, 1.0);
    graph_edge_add(scip, graph, 0, 3, 1.0, 1.0);
 
-   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_initHistory(scip, graph));
    SCIP_CALL(graph_path_init(scip, graph));
 
 
@@ -153,7 +153,7 @@ SCIP_RETCODE pseudoDelDouble(
    graph_edge_add(scip, graph, 0, 3, 1.0, 1.0);
    graph_edge_add(scip, graph, 3, 4, 1.0, 1.0);
 
-   SCIP_CALL(graph_init_history(scip, graph));
+   SCIP_CALL(graph_initHistory(scip, graph));
    SCIP_CALL(graph_path_init(scip, graph));
 
    for( int e = 0; e < nedges; e += 2 )

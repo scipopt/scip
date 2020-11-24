@@ -190,7 +190,7 @@ SCIP_RETCODE computeSteinerTreeTM(
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
-   graph_get_edgeCosts(graph, cost, costrev);
+   graph_getEdgeCosts(graph, cost, costrev);
 
    SCIPStpHeurTMCompStarts(graph, startstm, &runstm);
 
@@ -3167,7 +3167,7 @@ SCIP_RETCODE reduce_daPcMw(
       SCIPdebugMessage("DA first minpathcost %f \n", minpathcost);
 
    /* initialize data structures for transgraph */
-   SCIP_CALL( graph_init_history(scip, transgraph) );
+   SCIP_CALL( graph_initHistory(scip, transgraph) );
    computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
    /*
@@ -3342,7 +3342,7 @@ SCIP_RETCODE reduce_daPcMw(
 
       /* init data structures for shortest paths and history */
       SCIP_CALL( graph_path_init(scip, transgraph) );
-      SCIP_CALL( graph_init_history(scip, transgraph ) );
+      SCIP_CALL( graph_initHistory(scip, transgraph ) );
 
       if( havenewsol && run > 1 )
       {

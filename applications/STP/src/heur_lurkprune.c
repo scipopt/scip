@@ -107,7 +107,7 @@ SCIP_RETCODE prunegraphInit(
 )
 {
    SCIP_CALL( graph_copy(scip, g, prunegraph) );
-   SCIP_CALL( graph_init_history(scip, *prunegraph) );
+   SCIP_CALL( graph_initHistory(scip, *prunegraph) );
    if( graph_pc_isPcMw(g) )
       (*prunegraph)->norgmodelknots = (*prunegraph)->knots;
    SCIP_CALL( graph_path_init(scip, *prunegraph) );

@@ -288,7 +288,7 @@ SCIP_RETCODE stptest_graphSetUp(
    GRAPH*                graph               /**< the graph */
    )
 {
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    graph_mark(graph);

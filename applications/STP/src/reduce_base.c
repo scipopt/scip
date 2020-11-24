@@ -2041,7 +2041,7 @@ SCIP_RETCODE reduce(
    stp_type = graph->stp_type;
 
    /* initialize ancestor list for each edge */
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
 
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );

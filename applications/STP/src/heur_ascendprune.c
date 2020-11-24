@@ -439,7 +439,7 @@ SCIP_RETCODE redcostGraphBuild(
    SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
 
    /* initialize ancestors of new graph edges */
-   SCIP_CALL( graph_init_history(scip, newgraph) );
+   SCIP_CALL( graph_initHistory(scip, newgraph) );
 
    return SCIP_OKAY;
 }

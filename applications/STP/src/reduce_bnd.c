@@ -96,7 +96,7 @@ SCIP_RETCODE computeSteinerTree(
    {
       graph_pc_2trans(scip, graph);
 
-      graph_get_edgeCosts(graph, cost, costrev);
+      graph_getEdgeCosts(graph, cost, costrev);
    }
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
@@ -110,7 +110,7 @@ SCIP_RETCODE computeSteinerTree(
 
       assert(SCIPisEQ(scip, obj, graph_pc_solGetObj(scip, graph, result, 0.0)));
 
-      graph_get_edgeCosts(graph, cost, costrev);
+      graph_getEdgeCosts(graph, cost, costrev);
    }
    else
    {
@@ -183,7 +183,7 @@ SCIP_RETCODE boundPruneHeur(
    if( nterms <= 2 )
       return SCIP_OKAY;
 
-   graph_get_edgeCosts(graph, cost, costrev);
+   graph_getEdgeCosts(graph, cost, costrev);
 
    if( !pc )
    {
@@ -516,7 +516,7 @@ SCIP_RETCODE boundPruneHeurMw(
    if( nterms <= 2 )
       return SCIP_OKAY;
 
-   graph_get_edgeCosts(graph, cost, costrev);
+   graph_getEdgeCosts(graph, cost, costrev);
    graph_voronoiMw(scip, graph, costrev, vnoi, vbase, heap, state);
    graph_add2ndTermPaths(graph, cost, costrev, vnoi, vbase, state);
 
@@ -723,7 +723,7 @@ SCIP_RETCODE reduce_bound(
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
 
-   graph_get_edgeCosts(graph, cost, costrev);
+   graph_getEdgeCosts(graph, cost, costrev);
 
    /* init auxiliary graph */
    SCIP_CALL( graph_init(scip, &adjgraph, nterms, MIN(nedges, (nterms - 1) * nterms), 1) );

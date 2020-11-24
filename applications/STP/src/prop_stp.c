@@ -1177,8 +1177,8 @@ SCIP_RETCODE initPropgraph(
    propdata->propgraph->norgmodeledges = propdata->propgraph->edges;
    propdata->propgraph->norgmodelknots = propdata->propgraph->knots;
 
-   SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
-   SCIP_CALL( graph_copy_pseudoAncestors(scip, graph, propdata->propgraph) );
+   SCIP_CALL( graph_initHistory(scip, propdata->propgraph) );
+   SCIP_CALL( graph_copyPseudoAncestors(scip, graph, propdata->propgraph) );
 
    assert(propdata->nfixededges == 0);
    assert(propdata->propgraph != NULL);
@@ -1323,10 +1323,10 @@ SCIP_RETCODE updatePropgraph(
 
    assert(propgraph != NULL);
 
-   graph_free_history(scip, propgraph);
-   graph_free_historyDeep(scip, propgraph);
+   graph_freeHistory(scip, propgraph);
+   graph_freeHistoryDeep(scip, propgraph);
 
-   SCIP_CALL( graph_copy_data(scip, graph, propgraph) );
+   SCIP_CALL( graph_copyData(scip, graph, propgraph) );
 
    propgraph->norgmodeledges = propgraph->edges;
    propgraph->norgmodelknots = propgraph->knots;
@@ -1334,7 +1334,7 @@ SCIP_RETCODE updatePropgraph(
 
    assert(!graph_pc_isRootedPcMw(graph) || graph_pc_nFixedTerms(graph) == graph_pc_nFixedTerms(propgraph));
 
-   SCIP_CALL( graph_init_history(scip, propdata->propgraph) );
+   SCIP_CALL( graph_initHistory(scip, propdata->propgraph) );
 
    return SCIP_OKAY;
 }

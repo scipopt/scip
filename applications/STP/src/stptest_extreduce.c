@@ -409,7 +409,7 @@ SCIP_RETCODE testEdgeDeletion4_deprecated(
    graph_knot_chg(graph, 4, 0);
    graph_knot_chg(graph, 5, 0);
 
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    if( variant == 1 )
@@ -517,7 +517,7 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
 
    if( variant == 1 )
    {
-      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_initHistory(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
       SCIP_CALL(extCheckArc(scip, graph, redcostdata, edgedeleted, edge, -1, nnodes, &deletable, TRUE));
@@ -525,7 +525,7 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
    }
    else if( variant == 2 )
    {
-      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_initHistory(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
       SCIP_CALL(extCheckArc(scip, graph, redcostdata, edgedeleted, edge, -1, nnodes, &deletable, FALSE));
@@ -536,7 +536,7 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
       const int edge2 = 14;
       assert(graph->tail[edge2] == 7 && graph->head[edge2] == 9);
 
-      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_initHistory(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
       graph->cost[edge2] = 0.99;
@@ -550,7 +550,7 @@ SCIP_RETCODE testEdgeDeletion3_deprecated(
       const int edgedelete = 14;
       assert(graph->tail[edgedelete] == 7 && graph->head[edgedelete] == 9);
 
-      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_initHistory(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
       SCIP_CALL(extCheckArc(scip, graph, redcostdata, edgedeleted, edge, edgedelete, nnodes, &deletable, TRUE));
@@ -617,7 +617,7 @@ SCIP_RETCODE testEdgeDeletion2_deprecated(
    if( variant == 1 )
    {
       int pseudoancestor;
-      SCIP_CALL( graph_init_history(scip, graph) );
+      SCIP_CALL( graph_initHistory(scip, graph) );
       SCIP_CALL( graph_path_init(scip, graph) );
 
       graph_addPseudoAncestor(graph, &pseudoancestor);
@@ -683,7 +683,7 @@ SCIP_RETCODE testEdgeDeletion1_deprecated(
    graph_edge_addBi(scip, graph, 4, 8, 1.0);
    graph_edge_addBi(scip, graph, 4, 9, 1.0);
 
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    graph_mark(graph);

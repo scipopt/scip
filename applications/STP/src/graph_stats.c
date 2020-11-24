@@ -336,6 +336,134 @@ void graph_printInfoReduced(
 }
 
 
+/** prints edge conflicts */
+SCIP_RETCODE graph_printEdgeConflicts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< the graph */
+)
+{
+   int* childcount;
+   int* pseudonodecount;
+   int nconflicts;
+   int npseudoconflicts;
+   int npseudofixed;
+   const int nnodes = g->knots;
+   const int nedges = g->edges;
+   const int nedgesorg = MAX(g->orgedges, g->edges);
+
+   assert(scip != NULL && g != NULL);
+   assert(g->ancestors != NULL);
+   assert(nedgesorg % 2 == 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &childcount, nedgesorg / 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pseudonodecount, nnodes) );
+
+   for( int e = 0; e < nedgesorg / 2; e++ )
+      childcount[e] = 0;
+
+   for( int e = 0; e < nnodes; e++ )
+      pseudonodecount[e] = 0;
+
+   npseudofixed = graph_get_nFixpseudonodes(scip, g);
+   nconflicts = 0;
+   npseudoconflicts = 0;
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      SCIP_Bool hasConflict = FALSE;
+      SCIP_Bool hasPseudoConflict = FALSE;
+
+      const int nPseudoAncestors = graph_edge_nPseudoAncestors(g, e);
+      const int* pseudoAncestors = graph_edge_getPseudoAncestors(g, e);
+      for( IDX* curr = g->ancestors[e]; curr != NULL; curr = curr->parent )
+      {
+         assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
+         if( childcount[curr->index / 2] > 0 )
+            hasConflict = TRUE;
+
+         childcount[curr->index / 2]++;
+      }
+
+      for( int k = 0; k < nPseudoAncestors; k++ )
+      {
+         const int a = pseudoAncestors[k];
+         assert(a >= 0 && a < nnodes);
+
+         if( pseudonodecount[a] > 0 )
+            hasPseudoConflict = TRUE;
+
+         pseudonodecount[a]++;
+      }
+
+      if( hasConflict )
+      {
+         nconflicts++;
+         assert(hasPseudoConflict);
+      }
+
+      if( hasPseudoConflict )
+         npseudoconflicts++;
+
+   }
+
+   if( graph_pc_isPcMw(g) )
+   {
+      assert(g->extended);
+
+      for( int e = 0; e < nnodes; e++ )
+      {
+         if( !Is_term(g->term[e]) )
+         {
+            SCIP_Bool hasConflict = FALSE;
+            SCIP_Bool hasPseudoConflict = FALSE;
+
+            const int nPseudoAncestors = graph_knot_nPseudoAncestors(g, e);
+            const int* pseudoAncestors = graph_knot_getPseudoAncestors(g, e);
+            for( IDX* curr = g->pcancestors[e]; curr != NULL; curr = curr->parent )
+            {
+               assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
+               if( childcount[curr->index / 2] > 0 )
+                  hasConflict = TRUE;
+
+               childcount[curr->index / 2]++;
+            }
+
+            for( int k = 0; k < nPseudoAncestors; k++ )
+            {
+               const int a = pseudoAncestors[k];
+               assert(a >= 0 && a < nnodes);
+
+               if( pseudonodecount[a] > 0 )
+                  hasPseudoConflict = TRUE;
+
+               pseudonodecount[a]++;
+            }
+
+            if( hasConflict )
+            {
+               nconflicts++;
+               assert(hasPseudoConflict);
+            }
+
+            if( hasPseudoConflict )
+               npseudoconflicts++;
+         }
+      }
+   }
+
+   printf("number of edge conflicts %d \n", nconflicts);
+   printf("number of pseudo-ancestor conflicts %d \n", npseudoconflicts);
+   printf("number of fixed pseudo-ancestors %d \n", npseudofixed);
+
+   SCIPfreeBufferArray(scip, &pseudonodecount);
+   SCIPfreeBufferArray(scip, &childcount);
+
+   return SCIP_OKAY;
+}
+
+
+
+
 /** get number of nodes */
 int graph_get_nNodes(
    const GRAPH*    graph               /**< the graph */

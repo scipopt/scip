@@ -655,7 +655,7 @@ SCIP_RETCODE daExec(
    SCIP_CALL( SCIPallocMemoryArray(scip, &stackarr, nnodes) );
 
    /* fill auxiliary adjacent vertex/edges arrays */
-   graph_get_csr(g, edgearr, tailarr, start, &ncsredges);
+   graph_getCsr(g, edgearr, tailarr, start, &ncsredges);
 
    if( updateRescaps )
    {

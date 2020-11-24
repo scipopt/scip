@@ -244,7 +244,7 @@ SCIP_RETCODE extreduce_extPermaInit(
          pcSdToNode[k] = -1.0;
    }
 
-   graph_get_isTerm(graph, isterm);
+   graph_getIsTermArray(graph, isterm);
 
    for( int k = 0; k < nnodes; k++ )
    {

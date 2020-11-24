@@ -682,7 +682,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
    }
 
    /* set ancestors of the new graph */
-   SCIP_CALL( graph_init_history(scip, prunegraph) );
+   SCIP_CALL( graph_initHistory(scip, prunegraph) );
 
    /* set offset (within new graph) to 0.0 */
    offset = 0.0;

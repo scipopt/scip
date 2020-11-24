@@ -518,7 +518,7 @@ SCIP_RETCODE testDistCloseNodesAreValid(
    graph_edge_addBi(scip, graph, 11, 12, 1.0);
 
    graph_mark(graph);
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
@@ -604,7 +604,7 @@ SCIP_RETCODE testDistRootPathsAreValid(
    graph_edge_addBi(scip, graph, 11, 12, 1.0);
 
    graph_mark(graph);
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );
@@ -683,7 +683,7 @@ SCIP_RETCODE testDistDistancesAreValid(
    graph_edge_addBi(scip, graph, 11, 12, 1.0);
 
    graph_mark(graph);
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    SCIP_CALL( graph_init_dcsr(scip, graph) );

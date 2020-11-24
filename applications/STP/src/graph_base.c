@@ -440,8 +440,10 @@ SCIP_RETCODE packEdges(
 
 /** initializes subgraph */
 static
-void extractSubgraphGetSize(
+void extractSubgraphGetSizeAndMap(
    const GRAPH*          orggraph,           /**< original graph */
+   int*                  orgToSub,           /**< node map to be filled */
+   int*                  subToOrg,           /**< node map to be filled */
    int*                  sub_nnodes,         /**< number of nodes */
    int*                  sub_nedges,         /**< number of edges */
    int*                  sub_nterms          /**< number of terminals */
@@ -456,7 +458,13 @@ void extractSubgraphGetSize(
    for( int i = 0; i < nnodes; i++ )
    {
       if( !isMarked[i] )
+      {
+         orgToSub[i] = -1;
          continue;
+      }
+
+      subToOrg[sub_n] = i;
+      orgToSub[i] = sub_n;
 
       sub_n++;
 
@@ -480,29 +488,131 @@ void extractSubgraphGetSize(
 }
 
 
-/** initializes subgraph */
+/** helper */
 static
-SCIP_RETCODE extractSubgraphInit(
-   SCIP*                 scip,               /**< SCIP data structure */
+void extractSubgraphAddNodes(
    const GRAPH*          orggraph,           /**< original graph */
-   int*                  nodemap,            /**< node map to be filled */
-   GRAPH**               subgraph            /**< graph to be created */
+   const int*            nodemap,            /**< map*/
+   GRAPH*                subgraph            /**< graph to fill */
    )
 {
-   int sub_nnodes;
-   int sub_nedges;
-   int sub_nterms;
+   const int ksize = subgraph->ksize;
+   assert(subgraph->source == -1);
 
-   extractSubgraphGetSize(orggraph, &sub_nnodes, &sub_nedges, &sub_nterms);
+   for( int i = 0; i < ksize; i++ )
+   {
+      const int orgnode = nodemap[i];
+      assert(graph_knot_isInRange(orggraph, orgnode));
 
-   // init new graph
+      if( Is_term(orggraph->term[orgnode]) )
+      {
+         graph_knot_add(subgraph, STP_TERM);
+         if( subgraph->source == -1 )
+            subgraph->source = i;
+      }
+      else
+      {
+         graph_knot_add(subgraph, STP_TERM_NONE);
+      }
+   }
 
-   // fill node map
+   assert(subgraph->knots == ksize);
+   assert(subgraph->source != -1);
+}
+
+
+/** helper */
+static
+SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
+   const GRAPH*          orggraph,           /**< original graph */
+   const int*            nodemap_orgToSub,   /**< map */
+   const int*            nodemap_subToOrg,   /**< map */
+   GRAPH*                subgraph            /**< graph to fill */
+   )
+{
+   const int* const isMarked = orggraph->mark;
+   const int nnodes = graph_get_nNodes(subgraph);
+
+   assert(subgraph->ksize >= 2);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->ancestors), subgraph->ksize) );
+
+   // todo create new method init pseudo ancestors of fixed size...call from normal methods.
+   // todo add the old ancestro number! like in copy ancestor
+
+#ifdef XXX_XXX
+     IDX** ancestors;          /* ancestor lists array (over all edges) */
+
+     ancestors = graph->ancestors;
+
+     for( int e = 0; e < nedges; e++ )
+     {
+        SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
+        (ancestors)[e]->index = e;
+        (ancestors)[e]->parent = NULL;
+     }
+#endif
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int orgnode = nodemap_subToOrg[i];
+      assert(graph_knot_isInRange(orggraph, orgnode));
+
+      for( int e = orggraph->outbeg[orgnode]; e != EAT_LAST; e = orggraph->oeat[e] )
+      {
+         const int orghead = orggraph->head[e];
+         if( isMarked[orghead] )
+         {
+            const int subhead = nodemap_orgToSub[orghead];
+            assert(graph_knot_isInRange(subgraph, subhead));
+
+            // todo add edge extra method that also copies ancestors/pseudoancestors
+         }
+      }
+   }
+
+   // todo make check that everything works by using extract and insert together
 
    return SCIP_OKAY;
 }
 
 
+/** builds subgraph */
+static
+SCIP_RETCODE extractSubgraphBuild(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   int*                  nodemap_subToOrg,   /**< node map to be filled */
+   GRAPH**               subgraph            /**< graph to be created */
+   )
+{
+   GRAPH* subg;
+   int* nodemap_orgToSub;
+   int sub_nnodes;
+   int sub_nedges;
+   int sub_nterms;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodemap_orgToSub, graph_get_nNodes(orggraph)) );
+
+   extractSubgraphGetSizeAndMap(orggraph, nodemap_orgToSub, nodemap_subToOrg, &sub_nnodes, &sub_nedges, &sub_nterms);
+
+   printf("subgraph: nodes=%d, edges=%d, terms=%d \n", sub_nnodes, sub_nedges, sub_nterms);
+
+   SCIP_CALL( graph_init(scip, subgraph, sub_nnodes, sub_nedges, 1) );
+   subg = *subgraph;
+   assert(subg->ksize == sub_nnodes);
+
+   if( graph_typeIsSpgLike(orggraph) )
+      subg->stp_type = STP_SPG;
+
+   extractSubgraphAddNodes(orggraph, nodemap_subToOrg, subg);
+
+   SCIP_CALL( extractSubgraphAddEdgesWithHistory(orggraph, nodemap_orgToSub, nodemap_subToOrg, subg) );
+
+   SCIPfreeBufferArray(scip, &nodemap_orgToSub);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -510,9 +620,36 @@ SCIP_RETCODE extractSubgraphInit(
  */
 
 
+/** builds complete graph (Kn) with unit edge weights and no terminals */
+SCIP_RETCODE graph_buildCompleteGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               g,                  /**< new graph */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+   const int nedges = nnodes * (nnodes - 1);
+   GRAPH* graph;
+
+   assert(scip && g);
+   assert(nnodes >= 1);
+
+   SCIP_CALL( graph_init(scip, g, nnodes, nedges, 1) );
+
+   graph = *g;
+
+   for( int k = 0; k < nnodes; k++ )
+      graph_knot_add(graph, -1);
+
+   for( int k = 0; k < nnodes - 1; k++ )
+      for( int k2 = nnodes - 1; k2 >= k + 1; k2-- )
+         graph_edge_add(scip, graph, k, k2, 1.0, 1.0);
+
+   return SCIP_OKAY;
+}
+
 
 /* get compressed sparse row arrays representing current graph */
-void graph_get_csr(
+void graph_getCsr(
    const GRAPH*          g,                  /**< the graph */
    int* RESTRICT         edgearr,            /**< original edge array [0,...,nedges - 1] */
    int* RESTRICT         tailarr,            /**< tail of csr edge [0,...,nedges - 1]  */
@@ -544,7 +681,7 @@ void graph_get_csr(
 
 
 /** get edge costs */
-void graph_get_edgeCosts(
+void graph_getEdgeCosts(
    const GRAPH*          graph,              /**< the graph */
    SCIP_Real* RESTRICT   cost,               /**< reduced edge costs */
    SCIP_Real* RESTRICT   costrev             /**< reduced reverse edge costs */
@@ -565,7 +702,7 @@ void graph_get_edgeCosts(
 
 
 /** gets reversed edge costs */
-void graph_get_edgeRevCosts(
+void graph_getEdgeRevCosts(
    const GRAPH*          graph,              /**< the graph */
    SCIP_Real* RESTRICT   costrev             /**< reduced reverse edge costs */
 )
@@ -584,7 +721,7 @@ void graph_get_edgeRevCosts(
 
 
 /* modifies 'isterm' to mark whether node is a terminal (or proper terminal for PC) */
-void graph_get_isTerm(
+void graph_getIsTermArray(
    const GRAPH*          g,                  /**< the graph */
    SCIP_Bool*            isterm              /**< marks whether node is a terminal (or proper terminal for PC) */
 )
@@ -607,131 +744,6 @@ void graph_get_isTerm(
          isterm[i] = TRUE;
       }
    }
-}
-
-/** gets edge conflicts */
-SCIP_RETCODE graph_get_edgeConflicts(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g                   /**< the graph */
-)
-{
-   int* childcount;
-   int* pseudonodecount;
-   int nconflicts;
-   int npseudoconflicts;
-   int npseudofixed;
-   const int nnodes = g->knots;
-   const int nedges = g->edges;
-   const int nedgesorg = MAX(g->orgedges, g->edges);
-
-   assert(scip != NULL && g != NULL);
-   assert(g->ancestors != NULL);
-   assert(nedgesorg % 2 == 0);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &childcount, nedgesorg / 2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pseudonodecount, nnodes) );
-
-   for( int e = 0; e < nedgesorg / 2; e++ )
-      childcount[e] = 0;
-
-   for( int e = 0; e < nnodes; e++ )
-      pseudonodecount[e] = 0;
-
-   npseudofixed = graph_get_nFixpseudonodes(scip, g);
-   nconflicts = 0;
-   npseudoconflicts = 0;
-
-   for( int e = 0; e < nedges; e += 2 )
-   {
-      SCIP_Bool hasConflict = FALSE;
-      SCIP_Bool hasPseudoConflict = FALSE;
-
-      const int nPseudoAncestors = graph_edge_nPseudoAncestors(g, e);
-      const int* pseudoAncestors = graph_edge_getPseudoAncestors(g, e);
-      for( IDX* curr = g->ancestors[e]; curr != NULL; curr = curr->parent )
-      {
-         assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
-         if( childcount[curr->index / 2] > 0 )
-            hasConflict = TRUE;
-
-         childcount[curr->index / 2]++;
-      }
-
-      for( int k = 0; k < nPseudoAncestors; k++ )
-      {
-         const int a = pseudoAncestors[k];
-         assert(a >= 0 && a < nnodes);
-
-         if( pseudonodecount[a] > 0 )
-            hasPseudoConflict = TRUE;
-
-         pseudonodecount[a]++;
-      }
-
-      if( hasConflict )
-      {
-         nconflicts++;
-         assert(hasPseudoConflict);
-      }
-
-      if( hasPseudoConflict )
-         npseudoconflicts++;
-
-   }
-
-   if( graph_pc_isPcMw(g) )
-   {
-      assert(g->extended);
-
-      for( int e = 0; e < nnodes; e++ )
-      {
-         if( !Is_term(g->term[e]) )
-         {
-            SCIP_Bool hasConflict = FALSE;
-            SCIP_Bool hasPseudoConflict = FALSE;
-
-            const int nPseudoAncestors = graph_knot_nPseudoAncestors(g, e);
-            const int* pseudoAncestors = graph_knot_getPseudoAncestors(g, e);
-            for( IDX* curr = g->pcancestors[e]; curr != NULL; curr = curr->parent )
-            {
-               assert(curr->index >= 0 && curr->index / 2 < nedgesorg / 2);
-               if( childcount[curr->index / 2] > 0 )
-                  hasConflict = TRUE;
-
-               childcount[curr->index / 2]++;
-            }
-
-            for( int k = 0; k < nPseudoAncestors; k++ )
-            {
-               const int a = pseudoAncestors[k];
-               assert(a >= 0 && a < nnodes);
-
-               if( pseudonodecount[a] > 0 )
-                  hasPseudoConflict = TRUE;
-
-               pseudonodecount[a]++;
-            }
-
-            if( hasConflict )
-            {
-               nconflicts++;
-               assert(hasPseudoConflict);
-            }
-
-            if( hasPseudoConflict )
-               npseudoconflicts++;
-         }
-      }
-   }
-
-   printf("number of edge conflicts %d \n", nconflicts);
-   printf("number of pseudo-ancestor conflicts %d \n", npseudoconflicts);
-   printf("number of fixed pseudo-ancestors %d \n", npseudofixed);
-
-   SCIPfreeBufferArray(scip, &pseudonodecount);
-   SCIPfreeBufferArray(scip, &childcount);
-
-   return SCIP_OKAY;
 }
 
 
@@ -818,7 +830,7 @@ SCIP_RETCODE graph_init(
 }
 
 /** initialize data structures required to keep track of reductions */
-SCIP_RETCODE graph_init_history(
+SCIP_RETCODE graph_initHistory(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< graph */
    )
@@ -875,34 +887,6 @@ SCIP_RETCODE graph_init_history(
       (ancestors)[e]->index = e;
       (ancestors)[e]->parent = NULL;
    }
-
-   return SCIP_OKAY;
-}
-
-
-/** builds complete graph (Kn) with unit edge weights and no terminals */
-SCIP_RETCODE graph_buildCompleteGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH**               g,                  /**< new graph */
-   int                   nnodes              /**< number of nodes */
-   )
-{
-   const int nedges = nnodes * (nnodes - 1);
-   GRAPH* graph;
-
-   assert(scip && g);
-   assert(nnodes >= 1);
-
-   SCIP_CALL( graph_init(scip, g, nnodes, nedges, 1) );
-
-   graph = *g;
-
-   for( int k = 0; k < nnodes; k++ )
-      graph_knot_add(graph, -1);
-
-   for( int k = 0; k < nnodes - 1; k++ )
-      for( int k2 = nnodes - 1; k2 >= k + 1; k2-- )
-         graph_edge_add(scip, graph, k, k2, 1.0, 1.0);
 
    return SCIP_OKAY;
 }
@@ -975,10 +959,10 @@ void graph_free(
    p = *graph;
    assert(p != NULL);
 
-   graph_free_history(scip, p);
+   graph_freeHistory(scip, p);
 
    if( final )
-      graph_free_historyDeep(scip, p);
+      graph_freeHistoryDeep(scip, p);
 
    SCIPfreeMemoryArrayNull(scip, &(p->prize));
    SCIPfreeMemoryArrayNull(scip, &(p->costbudget));
@@ -1027,7 +1011,7 @@ void graph_free(
 
 
 /** frees the history */
-void graph_free_history(
+void graph_freeHistory(
    SCIP*                 scip,               /**< SCIP data */
    GRAPH*                p                   /**< graph data */
    )
@@ -1057,7 +1041,7 @@ void graph_free_history(
 
 
 /** frees the deep history */
-void graph_free_historyDeep(
+void graph_freeHistoryDeep(
    SCIP*                 scip,               /**< SCIP data */
    GRAPH*                p                   /**< graph data */
    )
@@ -1096,8 +1080,27 @@ void graph_free_historyDeep(
       graph_free_fixed(scip, p);
 }
 
+
+/** copy the graph */
+SCIP_RETCODE graph_copy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH**               copygraph           /**< graph to be created */
+   )
+{
+   const GRAPH* p = orggraph;
+   assert(p != NULL);
+
+   SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
+
+   SCIP_CALL( graph_copyData(scip, orggraph, *copygraph) );
+
+   return SCIP_OKAY;
+}
+
+
 /** copy the data of the graph */
-SCIP_RETCODE graph_copy_data(
+SCIP_RETCODE graph_copyData(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          orgraph,            /**< original graph */
    GRAPH*                copygraph           /**< graph to be copied to */
@@ -1223,26 +1226,9 @@ SCIP_RETCODE graph_copy_data(
    return SCIP_OKAY;
 }
 
-/** copy the graph */
-SCIP_RETCODE graph_copy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orggraph,           /**< original graph */
-   GRAPH**               copygraph           /**< graph to be created */
-   )
-{
-   const GRAPH* p = orggraph;
-   assert(p != NULL);
-
-   SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
-
-   SCIP_CALL( graph_copy_data(scip, orggraph, *copygraph) );
-
-   return SCIP_OKAY;
-}
-
 
 /** copies the pseudo-ancestors */
-SCIP_RETCODE graph_copy_pseudoAncestors(
+SCIP_RETCODE graph_copyPseudoAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          orggraph,           /**< original graph */
    GRAPH*                copygraph           /**< graph to be created */
@@ -1282,7 +1268,6 @@ SCIP_RETCODE graph_copy_pseudoAncestors(
 }
 
 
-
 /** Obtains a new subgraph corresponding to marked nodes.
  *  Also fills a node map from the new to the original nodes.
  *  Creates a shallow copy wrt ancestor information:
@@ -1290,22 +1275,31 @@ SCIP_RETCODE graph_copy_pseudoAncestors(
 SCIP_RETCODE graph_extractSubgraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          orggraph,           /**< original graph */
-   int*                  nodemap,            /**< node map from sub to original to be filled */
+   int*                  nodemap_subToOrg,   /**< node map to be filled */
    GRAPH**               subgraph            /**< graph to be created */
    )
 {
-   assert(scip && orggraph && nodemap);
+   assert(scip && orggraph && nodemap_subToOrg);
+   assert(!graph_pc_isPcMw(orggraph) && "not yet supported");
+
+   SCIP_CALL( extractSubgraphBuild(scip, orggraph, nodemap_subToOrg, subgraph) );
+
+   return SCIP_OKAY;
+}
 
 
-   // get number of nodes, nedges..submethods
+/** reinserts extracted (and modified) subgraph; also deletes subgraph.
+ *  Dual to "graph_extractSubgraph"  */
+SCIP_RETCODE graph_reinsertSubgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            nodemap_subToOrg,   /**< node map */
+   GRAPH*                orggraph,           /**< original graph */
+   GRAPH**               subgraph            /**< graph to be created */
+   )
+{
 
-   // init new graph
-
-   // copy data
-
-  // SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers) );
-
- //  SCIP_CALL( graph_copy_data(scip, orggraph, *copygraph) );
+   // reinsertSubgraph()
+   // extractSubgraphFree();
 
    return SCIP_OKAY;
 }

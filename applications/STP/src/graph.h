@@ -164,22 +164,22 @@ extern void   graph_mark(GRAPH*);
 extern void   graph_show(const GRAPH*);
 extern void   graph_uncover(GRAPH*);
 extern void   graph_free(SCIP*, GRAPH**, SCIP_Bool);
-extern void   graph_free_history(SCIP*, GRAPH*);
-extern void   graph_free_historyDeep(SCIP*, GRAPH*);
-extern void   graph_get_isTerm(const GRAPH*, SCIP_Bool*);
-extern void   graph_get_edgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
-extern void   graph_get_edgeRevCosts(const GRAPH*, SCIP_Real* RESTRICT);
-extern void   graph_get_csr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
+extern void   graph_freeHistory(SCIP*, GRAPH*);
+extern void   graph_freeHistoryDeep(SCIP*, GRAPH*);
+extern void   graph_getIsTermArray(const GRAPH*, SCIP_Bool*);
+extern void   graph_getEdgeCosts(const GRAPH*, SCIP_Real* RESTRICT, SCIP_Real* RESTRICT);
+extern void   graph_getEdgeRevCosts(const GRAPH*, SCIP_Real* RESTRICT);
+extern void   graph_getCsr(const GRAPH*, int* RESTRICT, int* RESTRICT, int* RESTRICT, int*);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
-extern SCIP_RETCODE   graph_copy_pseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
-extern SCIP_RETCODE   graph_copy_data(SCIP*, const GRAPH*, GRAPH*);
+extern SCIP_RETCODE   graph_copyPseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
+extern SCIP_RETCODE   graph_copyData(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_extractSubgraph(SCIP*, const GRAPH*, int*, GRAPH**);
+extern SCIP_RETCODE   graph_reinsertSubgraph(SCIP*, const int*, GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_Bool      graph_isMarked(const GRAPH*);
-extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_get_edgeConflicts(SCIP*, const GRAPH*);
+extern SCIP_RETCODE   graph_initHistory(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
 extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
@@ -224,6 +224,7 @@ extern SCIP_RETCODE   graph_knot_delPseudoCheckIfPossible(SCIP*, const GRAPH*, c
 
 /* graph_stats.c
  */
+extern SCIP_RETCODE   graph_printEdgeConflicts(SCIP*, const GRAPH*);
 extern void   graph_edge_printInfo(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isBlocked(const GRAPH*, int);
 extern SCIP_Bool graph_edge_isDeleted(const GRAPH*, int);

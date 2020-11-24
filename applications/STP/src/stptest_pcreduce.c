@@ -65,7 +65,7 @@ SCIP_RETCODE checkSdWalk(
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL( graph_init_history(scip, graph) );
+   SCIP_CALL( graph_initHistory(scip, graph) );
    SCIP_CALL( graph_path_init(scip, graph) );
 
    graph_mark(graph);
@@ -85,7 +85,7 @@ SCIP_RETCODE checkSdWalk(
 
    graph_heap_create(scip, nnodes, NULL, NULL, &dheap);
 
-   graph_get_isTerm(graph, isterm);
+   graph_getIsTermArray(graph, isterm);
 
    /* actual test */
 
