@@ -941,7 +941,7 @@ SCIP_RETCODE readRows(
    return SCIP_OKAY;
 }
 
-/** Process ROWS, USERCUTS, or LAZYCONS section. */
+/** Process ROWS, USERCUTS, or LAZYCONS section. (exact version) */
 static
 SCIP_RETCODE readRowsExact(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -1178,7 +1178,7 @@ SCIP_RETCODE readCols(
    return SCIP_OKAY;
 }
 
-/** Process COLUMNS section. */
+/** Process COLUMNS section. (exact version) */
 static
 SCIP_RETCODE readColsExact(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -1468,8 +1468,7 @@ SCIP_RETCODE readRhs(
    return SCIP_OKAY;
 }
 
-
-/** Process RHS section for exact solving. */
+/** Process RHS section (exact version). */
 static
 SCIP_RETCODE readRhsExact(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -1764,7 +1763,7 @@ SCIP_RETCODE readRanges(
    return SCIP_OKAY;
 }
 
-/** Process RANGES section for exact solving */
+/** Process RANGES section (exact version) */
 static
 SCIP_RETCODE readRangesExact(
    MPSINPUT*             mpsi,               /**< mps input structure */
@@ -3539,59 +3538,151 @@ SCIP_RETCODE readMps(
       || mpsinputSection(mpsi) == MPS_USERCUTS
       || mpsinputSection(mpsi) == MPS_LAZYCONS )
    {
-      if( !SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL_TERMINATE( retcode, readRows(mpsi, scip, consnames, consnamessize, nconsnames), TERMINATE );
-      }
-      else
-      {
-         SCIP_CALL_TERMINATE( retcode, readRowsExact(mpsi, scip, consnames, consnamessize, nconsnames), TERMINATE );
-      }
+      SCIP_CALL_TERMINATE( retcode, readRows(mpsi, scip, consnames, consnamessize, nconsnames), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_COLUMNS )
    {
-      if( !SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL_TERMINATE( retcode, readCols(mpsi, scip, varnames, varnamessize, nvarnames), TERMINATE );
-      }
-      else
-      {
-         SCIP_CALL_TERMINATE( retcode, readColsExact(mpsi, scip, varnames, varnamessize, nvarnames), TERMINATE );
-      }
+      SCIP_CALL_TERMINATE( retcode, readCols(mpsi, scip, varnames, varnamessize, nvarnames), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_RHS )
    {
-      if( !SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL_TERMINATE( retcode, readRhs(mpsi, scip), TERMINATE );
-      }
-      else
-      {
-         SCIP_CALL_TERMINATE( retcode, readRhsExact(mpsi, scip), TERMINATE );
-      }
+      SCIP_CALL_TERMINATE( retcode, readRhs(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_RANGES )
    {
-      if( !SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL_TERMINATE( retcode, readRanges(mpsi, scip), TERMINATE );
-      }
-      else
-      {
-         SCIP_CALL_TERMINATE( retcode, readRangesExact(mpsi, scip), TERMINATE );
-      }
+      SCIP_CALL_TERMINATE( retcode, readRanges(mpsi, scip), TERMINATE );
    }
    if( mpsinputSection(mpsi) == MPS_BOUNDS )
    {
-      if( !SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL_TERMINATE( retcode, readBounds(mpsi, scip), TERMINATE );
-      }
-      else
-      {
-         SCIP_CALL_TERMINATE( retcode, readBoundsExact(mpsi, scip), TERMINATE );
-      }
+      SCIP_CALL_TERMINATE( retcode, readBounds(mpsi, scip), TERMINATE );
    }
+   if( mpsinputSection(mpsi) == MPS_SOS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readSOS(mpsi, scip), TERMINATE );
+   }
+   while( mpsinputSection(mpsi) == MPS_QCMATRIX )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQCMatrix(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_QMATRIX )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQMatrix(mpsi, FALSE, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_QUADOBJ )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQMatrix(mpsi, TRUE, scip), TERMINATE );
+   }
+   while( mpsinputSection(mpsi) == MPS_QCMATRIX )
+   {
+      SCIP_CALL_TERMINATE( retcode, readQCMatrix(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_INDICATORS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readIndicators(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) != MPS_ENDATA )
+      mpsinputSyntaxerror(mpsi);
+
+   SCIPfclose(fp);
+
+   error = mpsinputHasError(mpsi);
+
+   if( !error )
+   {
+      SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
+   }
+
+ TERMINATE:
+   mpsinputFree(scip, &mpsi);
+
+   if( error )
+      return SCIP_READERROR;
+   else
+      return SCIP_OKAY;
+}
+
+/** Read LP in "MPS File Format" (version for exact solving mode, numbers can also be rationals).
+ *
+ *  A specification of the MPS format can be found at
+ *
+ *  http://plato.asu.edu/ftp/mps_format.txt,
+ *  ftp://ftp.caam.rice.edu/pub/people/bixby/miplib/mps_format,
+ *
+ *  and in the
+ *
+ *  CPLEX Reference Manual
+ *
+ *  This routine should read all valid MPS format files.
+ *  What it will not do, is to find all cases where a file is ill formed.
+ *  If this happens it may complain and read nothing or read "something".
+ */
+static
+SCIP_RETCODE readMpsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   const char***         varnames,           /**< storage for the variable names, or NULL */
+   const char***         consnames,          /**< storage for the constraint names, or NULL */
+   int*                  varnamessize,       /**< the size of the variable names storage, or NULL */
+   int*                  consnamessize,      /**< the size of the constraint names storage, or NULL */
+   int*                  nvarnames,          /**< the number of stored variable names, or NULL */
+   int*                  nconsnames          /**< the number of stored constraint names, or NULL */
+   )
+{
+   SCIP_FILE* fp;
+   MPSINPUT* mpsi;
+   SCIP_RETCODE retcode;
+   SCIP_Bool error = TRUE;
+
+   assert(scip != NULL);
+   assert(filename != NULL);
+   assert(SCIPisExactSolve(scip));
+
+   fp = SCIPfopen(filename, "r");
+   if( fp == NULL )
+   {
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_NOFILE;
+   }
+
+   SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
+
+   SCIP_CALL_TERMINATE( retcode, readName(scip, mpsi), TERMINATE );
+
+   SCIP_CALL_TERMINATE( retcode, SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL), TERMINATE );
+
+   if( mpsinputSection(mpsi) == MPS_OBJSEN )
+   {
+      SCIP_CALL_TERMINATE( retcode, readObjsen(scip, mpsi), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_OBJNAME )
+   {
+      SCIP_CALL_TERMINATE( retcode, readObjname(scip, mpsi), TERMINATE );
+   }
+   while( mpsinputSection(mpsi) == MPS_ROWS
+      || mpsinputSection(mpsi) == MPS_USERCUTS
+      || mpsinputSection(mpsi) == MPS_LAZYCONS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readRowsExact(mpsi, scip, consnames, consnamessize, nconsnames), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_COLUMNS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readColsExact(mpsi, scip, varnames, varnamessize, nvarnames), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_RHS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readRhsExact(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_RANGES )
+   {
+      SCIP_CALL_TERMINATE( retcode, readRangesExact(mpsi, scip), TERMINATE );
+   }
+   if( mpsinputSection(mpsi) == MPS_BOUNDS )
+   {
+      SCIP_CALL_TERMINATE( retcode, readBoundsExact(mpsi, scip), TERMINATE );
+   }
+   /* exip: these are currently here in order to terminate with
+    * an error if unsupported content is in the mps file */
    if( mpsinputSection(mpsi) == MPS_SOS )
    {
       SCIP_CALL_TERMINATE( retcode, readSOS(mpsi, scip), TERMINATE );
@@ -4799,7 +4890,10 @@ SCIP_RETCODE SCIPreadMps(
    assert(scip != NULL);
    assert(result != NULL);
 
-   retcode = readMps(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
+   if( !SCIPisExactSolve(scip) )
+      retcode = readMps(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
+   else
+      retcode = readMpsExact(scip, filename, varnames, consnames, varnamessize, consnamessize, nvarnames, nconsnames);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
