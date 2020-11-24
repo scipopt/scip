@@ -545,6 +545,34 @@ SCIP_RETCODE SCIPcreateLPSol(
    return SCIP_OKAY;
 }
 
+/** creates an exact primal solution, initialized to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateLPSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateLPSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
+      SCIPerrorMessage("LP solution does not exist\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolCreateLPSolExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+            scip->tree, scip->lpexact, heur) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a primal solution, initialized to the current NLP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

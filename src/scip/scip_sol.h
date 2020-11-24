@@ -87,6 +87,21 @@ SCIP_RETCODE SCIPcreateLPSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates an exact primal solution, initialized to the current exact LP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateLPSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a primal solution, initialized to the current NLP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1570,6 +1585,13 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPupdatePrimalRay(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             primalray           /**< the new primal ray */
+   );
+
+/** overwrite the fp-values in a solution with the rounded exact ones */
+SCIP_EXPORT
+SCIP_RETCODE SCIPoverwriteFPsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** returns TRUE if the solution is an exact rational solution */

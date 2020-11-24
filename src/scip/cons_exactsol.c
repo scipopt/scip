@@ -440,7 +440,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
          {
             SCIP_Real solval;
             solval = SCIPgetSolVal(scip, worksol, vars[i]);
-            //printf(" (exactsol) lb = %f, ub = %f of var %s \n", RatApproxReal(SCIPvarGetLbLocalExact(vars[i])), RatApproxReal(SCIPvarGetUbLocalExact(vars[i])), SCIPvarGetName(vars[i]));
+
             assert(RatIsLE(SCIPvarGetLbLocalExact(vars[i]), SCIPvarGetUbLocalExact(vars[i])));
 
             /* check if solution value is supposed to be integral */
@@ -499,10 +499,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPExactSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
-         /** @todo exip: replace these 2 methods with proper wrapped ones from scip_sol.h */
-         SCIP_CALL( SCIPsolCreateLPSolExact(&exactsol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
-            scip->tree, scip->lpexact, NULL) );
-         SCIP_CALL( SCIPsolOverwriteFPSolWithExact(exactsol, scip->set, scip->stat, scip->origprob, scip->transprob, scip->tree) );
+         SCIP_CALL( SCIPcreateLPSolExact(scip, &exactsol, NULL) );
+         SCIP_CALL( SCIPoverwriteFPsol(scip, exactsol) );
 
          SCIPsolSetHeur(exactsol, SCIPsolGetHeur(worksol));
          SCIP_CALL( SCIPtrySolFreeExact(scip, &exactsol, FALSE, FALSE, FALSE, FALSE, TRUE, &foundsol) );
