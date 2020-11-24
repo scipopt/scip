@@ -617,8 +617,8 @@ SCIP_RETCODE redLoopStp_inner(
             inner_restarts++;
             le = TRUE;
             sd = TRUE;
-            sdstar = TRUE;   // todo set FALSE
-            sdbiased = TRUE; // todo set FALSE
+            sdstar = TRUE;
+            sdbiased = TRUE;
             sdc = TRUE;
             nvsl = nodereplacing;
 
