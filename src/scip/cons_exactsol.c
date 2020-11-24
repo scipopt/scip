@@ -138,7 +138,8 @@ SCIP_RETCODE bufferSolution(
    /* extend solubuffer, if necessary */
    if( conshdlrdata->nbufferedsols == conshdlrdata->lensolubuffer )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->solubuffer, conshdlrdata->lensolubuffer, conshdlrdata->lensolubuffer * 2) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->solubuffer,
+            conshdlrdata->lensolubuffer, conshdlrdata->lensolubuffer * 2) );
       conshdlrdata->lensolubuffer *= 2;
    }
 
@@ -309,8 +310,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( !SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
-   /* if we're already in exact diving mode, we already computed an exact solution with this constraint handler and
-    * are checking if it's actually feasible */
+   /* if we're already in exact diving mode, we already computed an exact solution
+    * with this constraint handler and are checking if it's actually feasible */
    if( SCIPlpExactDiving(scip->lpexact) )
       return SCIP_OKAY;
 
@@ -387,7 +388,8 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       /* add assignment to the hashtable, extend assignment array, if necessary */
       if( conshdlrdata->lenhash == conshdlrdata->nhashedassignments )
       {
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, conshdlrdata->lenhash, conshdlrdata->lenhash * 2) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments,
+               conshdlrdata->lenhash, conshdlrdata->lenhash * 2) );
          conshdlrdata->lenhash *= 2;
       }
       conshdlrdata->hashedassignments[conshdlrdata->nhashedassignments] = assignment;
@@ -420,13 +422,15 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       /* only try to fix solutions that improve the cutoffbound */
       if( !SCIPisLT(scip, SCIPgetSolTransObj(scip, worksol), SCIPgetUpperbound(scip)) )
       {
-         SCIPdebugMessage("don't repair heuristic with obj value (%g) greater than upper bound (%g) \n",  SCIPgetSolTransObj(scip, worksol), SCIPgetUpperbound(scip));
+         SCIPdebugMessage("don't repair heuristic with obj value (%g) greater than upper bound (%g) \n",
+            SCIPgetSolTransObj(scip, worksol), SCIPgetUpperbound(scip));
          SCIP_CALL( SCIPfreeSol(scip, &worksol) );
          conshdlrdata->nbufferedsols--;
          continue;
       }
 
-      SCIPdebugMessage("attempting to repair solution from heuristic %s with floating point objval %g \n", SCIPheurGetName(SCIPsolGetHeur(worksol)), SCIPgetSolTransObj(scip, worksol));
+      SCIPdebugMessage("attempting to repair solution from heuristic %s with floating point objval %g \n",
+         SCIPheurGetName(SCIPsolGetHeur(worksol)), SCIPgetSolTransObj(scip, worksol));
 
       /* set the bounds of the variables: fixed for integers, global bounds for continuous */
       vars = SCIPgetVars(scip);
@@ -529,14 +533,16 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    endtime = SCIPgetSolvingTime(scip);
    if( foundsol )
    {
-      SCIPdebugMessage("successfully found feasible improving solution, objval %g, upperbound %g\n", SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
+      SCIPdebugMessage("successfully found feasible improving solution, objval %g, upperbound %g\n",
+         SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
       ncurrentstalls = 0;
       scip->stat->nfoundexactsol++;
       scip->stat->timesuccessexactsol += (endtime - starttime);
    }
    else
    {
-      SCIPdebugMessage("repaired solution not feasible or not improving, objval %g, upperbound %g \n", SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
+      SCIPdebugMessage("repaired solution not feasible or not improving, objval %g, upperbound %g \n",
+         SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip));
       ncurrentstalls++;
       scip->stat->timefailexactsol += (endtime - starttime);
    }
@@ -578,18 +584,18 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int nvars;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    /* create hashdata for integer assignments */
-   SCIPallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, 10);
-   SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->solhash), SCIPblkmem(scip), 10, hashGetKeyAssignment, hashKeyEqAssignment, hashKeyValAssignment, NULL) );
+   SCIPallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, DEFAULT_SOLBUFSIZE);
+   SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->solhash), SCIPblkmem(scip), DEFAULT_SOLBUFSIZE, hashGetKeyAssignment, hashKeyEqAssignment, hashKeyValAssignment, NULL) );
 
    conshdlrdata->nhashedassignments = 0;
-   conshdlrdata->lenhash = 10;
+   conshdlrdata->lenhash = DEFAULT_SOLBUFSIZE;
 
    /* allocate data for solution buffer */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->solubuffer, DEFAULT_SOLBUFSIZE) );
