@@ -1637,7 +1637,7 @@ SCIP_RETCODE extreduce_deleteEdges(
   // printf("number of extended edge eliminations=%d \n", *nelims);
 
 
-   if( extperma->mode == extred_full )
+   if( extperma->mode == extred_full && !graph_pc_isPc(graph) )
    {
       int ngenstarelims = 0;
       SCIP_CALL( generalStarDeleteEdges(scip, redcostdata, extperma, graph, distdata, &ngenstarelims) );
