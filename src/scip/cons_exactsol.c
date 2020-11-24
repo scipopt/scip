@@ -20,6 +20,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include <assert.h>
 
 #include "scip/cons_exactsol.h"
@@ -63,15 +64,15 @@ struct SCIP_ConshdlrData
    SCIP_SOL**            solubuffer;         /**< buffer solutions for later checking here */
    SCIP_HASHTABLE*       solhash;            /**< hash solutions so we don't use the same integer assignment twice */
    SOLINTASSIGNMENT**    hashedassignments;  /**< array with all hashed assignments */
-   int                   nhashedassignments; /**< number of elements in the array */
-   int                   lenhash;            /**< length of the array */
-   int                   lensolubuffer;      /**< size of solubuffer */
+   int                   nhashedassignments; /**< number of elements in the hashedassignments array */
+   int                   lenhash;            /**< length of the hashedassignments array */
    int                   nbufferedsols;      /**< number of solutions currently in the solubuffer */
+   int                   lensolubuffer;      /**< length of the solubuffer */
 };
 
 /** gets the key of the given element */
 static
-SCIP_DECL_HASHGETKEY(hashGetKeySol)
+SCIP_DECL_HASHGETKEY(hashGetKeyAssignment)
 {  /*lint --e{715}*/
    /* the key is the element itself */
    return elem;
@@ -79,7 +80,7 @@ SCIP_DECL_HASHGETKEY(hashGetKeySol)
 
 /** returns TRUE iff both keys are equal */
 static
-SCIP_DECL_HASHKEYEQ(hashKeyEqSol)
+SCIP_DECL_HASHKEYEQ(hashKeyEqAssignment)
 {
    int i;
    SOLINTASSIGNMENT* sol1;
@@ -105,7 +106,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqSol)
 
 /** returns the hash value of the key */
 static
-SCIP_DECL_HASHKEYVAL(hashKeyValSol)
+SCIP_DECL_HASHKEYVAL(hashKeyValAssignment)
 {
    SOLINTASSIGNMENT* sol;
    uint64_t signature;
@@ -141,7 +142,7 @@ SCIP_RETCODE bufferSolution(
       conshdlrdata->lensolubuffer *= 2;
    }
 
-   /* put solution in buffer, according to objective value (best obj value goes last) */
+   /* put solution in buffer */
    conshdlrdata->solubuffer[conshdlrdata->nbufferedsols] = insertsol;
    conshdlrdata->nbufferedsols++;
 
@@ -170,7 +171,7 @@ static
 void solCreateSolAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to create assignment for */
-   SOLINTASSIGNMENT**    assignment          /**< assignment array */
+   SOLINTASSIGNMENT**    assignment          /**< address of assignment */
    )
 {
    int nvars;
@@ -194,13 +195,27 @@ void solCreateSolAssignment(
       if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_INTEGER && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
          continue;
 
-       (*assignment)->vals[solsize] = SCIPround(scip, SCIPgetSolVal(scip, sol, vars[i]));
+       (*assignment)->vals[solsize] = (SCIP_Longint) SCIPround(scip, SCIPgetSolVal(scip, sol, vars[i]));
        (*assignment)->idx[solsize] = SCIPvarGetIndex(vars[i]);
        solsize++;
    }
 
    (*assignment)->len = solsize;
    assert(solsize == SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
+}
+
+/** creates assignment from integer variable-values in solution */
+static
+void solFreeAssignment(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SOLINTASSIGNMENT**    assignment          /**< address of assignment */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPfreeBlockMemoryArray(scip, &(*assignment)->idx, (*assignment)->len);
+   SCIPfreeBlockMemoryArray(scip, &(*assignment)->vals, (*assignment)->len);
+   SCIPfreeBlockMemory(scip, assignment);
 }
 
 /*
@@ -287,9 +302,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPsolGetType(sol) != SCIP_SOLTYPE_HEUR )
       return SCIP_OKAY;
 
-   if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
-      return SCIP_OKAY;
-
    if( SCIPgetNContVars(scip) > 0.8 * SCIPgetNVars(scip) )
       return SCIP_OKAY;
 
@@ -306,8 +318,12 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( SCIPlpDiving(scip->lp) )
       return SCIP_OKAY;
 
-   /** if we are at a point where we can't dive, buffer the solution and return */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || !SCIPtreeHasCurrentNodeLP(scip->tree) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
+   /* do not run, e.g. for trivial since it would only be buffered and never used */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /** if we are at a point where we can't dive exactly, buffer the solution and return */
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) || SCIPnodeGetType(SCIPgetCurrentNode(scip)) != SCIP_NODETYPE_FOCUSNODE )
    {
       SCIP_CALL( bufferSolution(scip, sol, conshdlrdata) );
       *result = SCIP_INFEASIBLE;
@@ -317,6 +333,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    if( !SCIPisLPConstructed(scip) )
    {
       SCIP_Bool cutoff = FALSE;
+
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
       SCIP_CALL( SCIPflushLP(scip) );
    }
@@ -358,16 +375,16 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIPdebugMessage("rejecting solution that was already checked \n");
       SCIPdebug(SCIPprintSol(scip, sol, NULL, 0));
 
-      SCIPfreeBlockMemoryArray(scip, &assignment->idx, assignment->len);
-      SCIPfreeBlockMemoryArray(scip, &assignment->vals, assignment->len);
-      SCIPfreeBlockMemory(scip, &assignment);
+      solFreeAssignment(scip, &assignment);
       *result = SCIP_INFEASIBLE;
+
       return SCIP_OKAY;
    }
    else
    {
       SCIPdebugMessage("checking solution for the first time: \n");
       SCIPdebug(SCIPprintSol(scip, sol, NULL, 0));
+      /* add assignment to the hashtable, extend assignment array, if necessary */
       if( conshdlrdata->lenhash == conshdlrdata->nhashedassignments )
       {
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, conshdlrdata->lenhash, conshdlrdata->lenhash * 2) );
@@ -571,7 +588,7 @@ SCIP_DECL_CONSINIT(consInitExactSol)
 
    /* create hashdata for integer assignments */
    SCIPallocBlockMemoryArray(scip, &conshdlrdata->hashedassignments, 10);
-   SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->solhash), SCIPblkmem(scip), 10, hashGetKeySol, hashKeyEqSol, hashKeyValSol, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&(conshdlrdata->solhash), SCIPblkmem(scip), 10, hashGetKeyAssignment, hashKeyEqAssignment, hashKeyValAssignment, NULL) );
 
    conshdlrdata->nhashedassignments = 0;
    conshdlrdata->lenhash = 10;

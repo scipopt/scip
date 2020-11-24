@@ -195,7 +195,7 @@ SCIP_Real SCIPsolGetRelConsViolation(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** compare two solutions by their objective value */
+/** comparison method for sorting solution by decreasing objective value (best solution will be sorted to the end) */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPsolComp);
 
