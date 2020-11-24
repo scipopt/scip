@@ -3221,8 +3221,12 @@ SCIP_RETCODE buildSubgroupGraph(
 
          if ( comp1 == comp2 )
          {
-            assert( firstcolor >= 0 );
-
+            /* another permutation has already merged these variables into one component; store its color */
+            if ( firstcolor < 0 )
+            {
+               assert( SCIPdisjointsetFind(comptocolor, comp1) == SCIPdisjointsetFind(comptocolor, comp2) );
+               firstcolor = SCIPdisjointsetFind(comptocolor, comp1);
+            }
             componentslastperm[comp1] = j;
             continue;
          }
