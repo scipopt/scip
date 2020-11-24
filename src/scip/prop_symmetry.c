@@ -4008,7 +4008,6 @@ int getNOrbitopesInComp(
          ncols = graphcompbegins[compcolorbegins[j] + 1] - graphcompbegins[compcolorbegins[j]];
 
          threshold = 0.7 * (SCIP_Real) symcompsize;
-	 printf("nbinrows %d ncols %d\n", nbinrows, ncols);
 
          /* check whether criteria for adding orbitopes are satisfied */
          if ( nbinrows <= 2 * ncols || (nbinrows <= 8 * ncols && nbinrows < 100) )
