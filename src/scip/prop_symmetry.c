@@ -4107,7 +4107,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       int nusedperms;
       int ntrivialcolors = 0;
       int j;
-      SCIP_Bool useorbitope = FALSE;
+      SCIP_Bool useorbitope;
       int* lexorder = NULL;
       int nvarslexorder = 0;
       int maxnvarslexorder = 0;
@@ -4340,7 +4340,8 @@ SCIP_RETCODE detectAndHandleSubgroups(
 #endif
 
          /* only use the orbitope if there are binary rows */
-         if ( norbitopesincomp > 0 && nbinarycomps == 0 )
+         useorbitope = FALSE;
+         if ( norbitopesincomp > 0 && nbinarycomps > 0 )
             useorbitope = TRUE;
 
          if ( isorbitope && useorbitope )
