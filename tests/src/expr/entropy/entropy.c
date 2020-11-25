@@ -14,16 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprhdlr_entropy.c
- * @brief  tests expression handler functions of entropy an expression
+ * @brief  tests expression handler functions of entropy expressions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scip/scip_nonlinear.h"
 #include "scip/expr_var.h"
-#include "scip/expr_exp.h"
 #include "scip/expr_log.h"
 #include "scip/expr_value.h"
 #include "scip/expr_entropy.h"
@@ -41,7 +39,7 @@ static SCIP_EXPR* xexpr;
 static SCIP_EXPR* yexpr;
 static SCIP_RANDNUMGEN* rndgen;
 
-/* creates scip, problem, includes expression constraint handler, creates  and adds variables */
+/* creates scip, problem, includes expression handlers, creates and adds variables */
 static
 void setup(void)
 {
