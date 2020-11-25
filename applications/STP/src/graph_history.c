@@ -950,8 +950,24 @@ SCIP_Bool graph_pseudoAncestors_edgesInConflict(
 
 
 /** initializes pseudo ancestors */
-SCIP_RETCODE graph_init_pseudoAncestors(
+SCIP_RETCODE graph_initPseudoAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+)
+{
+   assert(scip && g);
+   assert(g->pseudoancestors == NULL);
+
+   SCIP_CALL( graph_initPseudoAncestorsSized(scip, g->edges, g) );
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes pseudo ancestors with given size */
+SCIP_RETCODE graph_initPseudoAncestorsSized(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nedges,             /**< number of edges to use */
    GRAPH*                g                   /**< the graph */
 )
 {
@@ -959,6 +975,8 @@ SCIP_RETCODE graph_init_pseudoAncestors(
 
    assert(scip && g);
    assert(g->pseudoancestors == NULL);
+   assert(nedges > 0);
+   assert(nedges % 2 == 0);
 
    SCIP_CALL( SCIPallocMemory(scip, &pseudoancestors) );
 
@@ -966,7 +984,7 @@ SCIP_RETCODE graph_init_pseudoAncestors(
 
    pseudoancestors->nnodes = g->knots;
    pseudoancestors->nAllPseudoancestors = 0;
-   pseudoancestors->halfnedges = g->edges / 2;
+   pseudoancestors->halfnedges = nedges / 2;
 
    SCIP_CALL( blockedAncestors_init(pseudoancestors->halfnedges, &(pseudoancestors->ans_halfedges)) );
 
@@ -984,7 +1002,7 @@ SCIP_RETCODE graph_init_pseudoAncestors(
 
 
 /** frees pseudo ancestors */
-void graph_free_pseudoAncestors(
+void graph_freePseudoAncestors(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g                   /**< the graph */
    )
@@ -1643,6 +1661,45 @@ SCIP_RETCODE graph_fixed_moveNodePc(
       SCIPintListNodeFree(scip, &(g->pcancestors[node]));
 
    graph_knot_delPseudoAncestors(scip, node, g);
+
+   return SCIP_OKAY;
+}
+
+
+
+/** copies fixed components */
+SCIP_RETCODE graph_copyFixed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                   /**< the graph */
+   GRAPH*                g_copy               /**< the copied graph */
+)
+{
+   FIXED* fixed_copy;
+   const FIXED* fixed_org;
+   SCIP_Bool conflict;
+
+   assert(scip && g && g_copy);
+   assert(g_copy->fixedcomponents == NULL);
+   assert(g->fixedcomponents != NULL);
+
+   SCIP_CALL( SCIPallocMemory(scip, &(g_copy->fixedcomponents)) );
+   fixed_copy = g_copy->fixedcomponents;
+   fixed_org = g->fixedcomponents;
+
+   fixed_copy->fixedges = NULL;
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(fixed_copy->fixedges), fixed_org->fixedges, &conflict) );
+   assert(!conflict);
+
+   fixed_copy->nfixnodes = fixed_org->nfixnodes;
+   if( fixed_copy->nfixnodes > 0 )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(fixed_copy->fixpseudonodes), fixed_copy->nfixnodes) );
+      BMScopyMemoryArray(fixed_copy->fixpseudonodes, fixed_org->fixpseudonodes, fixed_copy->nfixnodes);
+   }
+   else
+   {
+      fixed_copy->fixpseudonodes = NULL;
+   }
 
    return SCIP_OKAY;
 }

@@ -47,8 +47,9 @@ extern SCIP_RETCODE  graph_singletonAncestors_init(SCIP*, const GRAPH*, int, SIN
 extern void          graph_singletonAncestors_freeMembers(SCIP*, SINGLETONANS*);
 extern SCIP_Bool     graph_valid_ancestors(SCIP*, const GRAPH*);
 /* Pseudo ancestors */
-extern SCIP_RETCODE   graph_init_pseudoAncestors(SCIP*, GRAPH*);
-extern void           graph_free_pseudoAncestors(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_initPseudoAncestors(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_initPseudoAncestorsSized(SCIP*, int, GRAPH*);
+extern void           graph_freePseudoAncestors(SCIP*, GRAPH*);
 extern void           graph_edge_delPseudoAncestors(SCIP*, int, GRAPH*);
 extern void           graph_knot_delPseudoAncestors(SCIP*, int, GRAPH*);
 extern void           graph_edge_printPseudoAncestors(const GRAPH*, int);
@@ -92,6 +93,7 @@ extern SCIP_RETCODE   graph_fixed_add(SCIP*, IDX*, const int*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addEdge(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addNodePc(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_moveNodePc(SCIP*, int, GRAPH*);
+extern SCIP_RETCODE   graph_copyFixed(SCIP*, const GRAPH*, GRAPH*);
 extern IDX*           graph_get_fixedges(const GRAPH*);
 extern const int*     graph_get_fixpseudonodes(SCIP*, const GRAPH*);
 extern int            graph_get_nFixpseudonodes(SCIP*, const GRAPH*);

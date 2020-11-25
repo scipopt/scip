@@ -342,7 +342,7 @@ SCIP_RETCODE packPseudoAncestors(
    const int oldnedges = graph_get_nEdges(g_old);
    int e_new = 0;
 
-   SCIP_CALL( graph_init_pseudoAncestors(scip, g_new) );
+   SCIP_CALL( graph_initPseudoAncestors(scip, g_new) );
 
    if( oldnacestors == 0 )
       return SCIP_OKAY;
@@ -523,37 +523,85 @@ void extractSubgraphAddNodes(
 
 /** helper */
 static
+SCIP_RETCODE extractSubgraphInitHistory(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH*                subgraph            /**< graph to fill */
+   )
+{
+   assert(subgraph->esize >= 2);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->ancestors), subgraph->esize) );
+
+   SCIP_CALL( graph_initPseudoAncestorsSized(scip, subgraph->esize, subgraph) );
+   graph_addPseudoAncestors(graph_getNpseudoAncestors(orggraph), subgraph);
+
+   SCIP_CALL( graph_copyFixed(scip, orggraph, subgraph) );
+
+   return SCIP_OKAY;
+}
+
+
+/** helper */
+static
+SCIP_RETCODE extractSubgraphAddEdge(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   int                   tail,
+   int                   head,
+   int                   orgedge,
+   GRAPH*                subgraph            /**< graph to fill */
+   )
+{
+   IDX** organcestors = orggraph->ancestors;
+   IDX** ancestors = subgraph->ancestors;
+   const int sub_e = subgraph->edges;
+   const int npseudoancestors = graph_edge_nPseudoAncestors(orggraph, orgedge);
+   SCIP_Bool conflict = FALSE;
+
+   if( npseudoancestors != 0 )
+   {
+      const int* const pseudoancestors = graph_edge_getPseudoAncestors(orggraph, orgedge);
+      assert(pseudoancestors);
+
+      SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, sub_e, pseudoancestors, npseudoancestors, subgraph, &conflict));
+      assert(!conflict);
+   }
+   assert(graph_edge_nPseudoAncestors(subgraph, sub_e) == npseudoancestors);
+   assert(graph_edge_nPseudoAncestors(subgraph, sub_e + 1) == npseudoancestors);
+
+   ancestors[sub_e] = NULL;
+   ancestors[sub_e + 1] = NULL;
+
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[sub_e]), organcestors[orgedge], &conflict) );
+   assert(!conflict);
+   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[sub_e + 1]), organcestors[flipedge(orgedge)], &conflict) );
+   assert(!conflict);
+
+   assert(EQ(orggraph->cost[orgedge], orggraph->cost[flipedge(orgedge)]));
+   graph_edge_add(scip, subgraph, tail, head, orggraph->cost[orgedge], orggraph->cost[orgedge]);
+
+   return SCIP_OKAY;
+}
+
+
+/** helper */
+static
 SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          orggraph,           /**< original graph */
    const int*            nodemap_orgToSub,   /**< map */
    const int*            nodemap_subToOrg,   /**< map */
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
+   IDX** subancestors = subgraph->ancestors;
    const int* const isMarked = orggraph->mark;
-   const int nnodes = graph_get_nNodes(subgraph);
+   const int subnnodes = graph_get_nNodes(subgraph);
 
-   assert(subgraph->ksize >= 2);
+   assert(subancestors);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->ancestors), subgraph->ksize) );
-
-   // todo create new method init pseudo ancestors of fixed size...call from normal methods.
-   // todo add the old ancestro number! like in copy ancestor
-
-#ifdef XXX_XXX
-     IDX** ancestors;          /* ancestor lists array (over all edges) */
-
-     ancestors = graph->ancestors;
-
-     for( int e = 0; e < nedges; e++ )
-     {
-        SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
-        (ancestors)[e]->index = e;
-        (ancestors)[e]->parent = NULL;
-     }
-#endif
-
-   for( int i = 0; i < nnodes; i++ )
+   for( int i = 0; i < subnnodes; i++ )
    {
       const int orgnode = nodemap_subToOrg[i];
       assert(graph_knot_isInRange(orggraph, orgnode));
@@ -561,17 +609,23 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
       for( int e = orggraph->outbeg[orgnode]; e != EAT_LAST; e = orggraph->oeat[e] )
       {
          const int orghead = orggraph->head[e];
-         if( isMarked[orghead] )
+         const int orgtail = orggraph->tail[e];
+
+         assert(isMarked[orgtail]);
+
+         /* NOTE: avoid double inclusion of edge */
+         if( isMarked[orghead] && orghead > orgtail )
          {
             const int subhead = nodemap_orgToSub[orghead];
             assert(graph_knot_isInRange(subgraph, subhead));
+            assert(nodemap_orgToSub[orgtail] == i);
 
-            // todo add edge extra method that also copies ancestors/pseudoancestors
+            SCIP_CALL( extractSubgraphAddEdge(scip, orggraph, i, subhead, e, subgraph) );
          }
       }
    }
 
-   // todo make check that everything works by using extract and insert together
+   assert(subgraph->edges == subgraph->esize);
 
    return SCIP_OKAY;
 }
@@ -593,7 +647,6 @@ SCIP_RETCODE extractSubgraphBuild(
    int sub_nterms;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodemap_orgToSub, graph_get_nNodes(orggraph)) );
-
    extractSubgraphGetSizeAndMap(orggraph, nodemap_orgToSub, nodemap_subToOrg, &sub_nnodes, &sub_nedges, &sub_nterms);
 
    printf("subgraph: nodes=%d, edges=%d, terms=%d \n", sub_nnodes, sub_nedges, sub_nterms);
@@ -606,8 +659,8 @@ SCIP_RETCODE extractSubgraphBuild(
       subg->stp_type = STP_SPG;
 
    extractSubgraphAddNodes(orggraph, nodemap_subToOrg, subg);
-
-   SCIP_CALL( extractSubgraphAddEdgesWithHistory(orggraph, nodemap_orgToSub, nodemap_subToOrg, subg) );
+   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subg) );
+   SCIP_CALL( extractSubgraphAddEdgesWithHistory(scip, orggraph, nodemap_orgToSub, nodemap_subToOrg, subg) );
 
    SCIPfreeBufferArray(scip, &nodemap_orgToSub);
 
@@ -849,7 +902,7 @@ SCIP_RETCODE graph_initHistory(
 
    pcmw = graph_pc_isPcMw(graph);
 
-   SCIP_CALL( graph_init_pseudoAncestors(scip, graph) );
+   SCIP_CALL( graph_initPseudoAncestors(scip, graph) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orgtail), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orghead), nedges) );
@@ -1017,7 +1070,7 @@ void graph_freeHistory(
    )
 {
    if( p->pseudoancestors != NULL )
-      graph_free_pseudoAncestors(scip, p);
+      graph_freePseudoAncestors(scip, p);
 
    if( p->ancestors != NULL )
    {
@@ -1297,6 +1350,12 @@ SCIP_RETCODE graph_reinsertSubgraph(
    GRAPH**               subgraph            /**< graph to be created */
    )
 {
+
+   // copy fixed pseudo ancestors
+   // also number of pseudo
+   // append normal fixed ancestors
+
+   // offset needs to be added
 
    // reinsertSubgraph()
    // extractSubgraphFree();
