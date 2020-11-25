@@ -14,34 +14,30 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   exprhdlr_xyz.c
- * @brief  tests expression handler functions of xzy an expression
+ * @brief  tests expression handler functions of xyz expressions
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
+#include "scip/expr.h"
+#include "scip/expr_xyz.h"
 
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_SOL* sol;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 
-/* creates scip, problem, includes expression constraint handler, creates  and adds variables */
+/* creates scip, problem, includes expression handler, creates and adds variables */
 static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   /* include the xyz expr handler */
+   SCIP_CALL( SCIPincludeExprHdlrXyz(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );

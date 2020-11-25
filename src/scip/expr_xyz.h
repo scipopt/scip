@@ -13,43 +13,43 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_xyz.h
+/**@file   expr_xyz.h
  * @brief  handler for xyz expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_XYZ_H__
-#define __SCIP_CONS_EXPR_XYZ_H__
+#ifndef __SCIP_EXPR_XYZ_H__
+#define __SCIP_EXPR_XYZ_H__
 
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the handler for xyz expressions and includes it into the expression constraint handler */
+/** creates the handler for xyz expressions and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrXyz(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates a xyz expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprXyz(
+SCIP_RETCODE SCIPcreateExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
+   SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_XYZ_H__ */
+#endif /* __SCIP_EXPR_XYZ_H__ */

@@ -13,15 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_xyz.c
+/**@file   expr_xyz.c
  * @brief  handler for xyz expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_xyz.h"
-#include "scip/cons_expr.h"
+#include "scip/expr_xyz.h"
+#include "scip/expr.h"
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "xyz"
@@ -36,12 +36,12 @@
 /* TODO: fill in the necessary data */
 
 /** expression data */
-struct SCIP_ConsExpr_ExprData
+struct SCIP_ExprData
 {
 };
 
 /** expression handler data */
-struct SCIP_ConsExpr_ExprHdlrData
+struct SCIP_ExprHdlrData
 {
 };
 
@@ -57,7 +57,7 @@ struct SCIP_ConsExpr_ExprHdlrData
 
 /** expression handler copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXyz)
+SCIP_DECL_EXPRCOPYHDLR(copyhdlrXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -67,7 +67,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrXyz)
 
 /** expression handler free callback */
 static
-SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrXyz)
+SCIP_DECL_EXPRFREEHDLR(freehdlrXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -77,7 +77,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrXyz)
 
 /** simplifies a xyz expression */
 static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
+SCIP_DECL_EXPRSIMPLIFY(simplifyXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -89,7 +89,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyXyz)
 
 /** expression compare callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
+SCIP_DECL_EXPRCOMPARE(compareXyz)
 {  /*lint --e{715}*/
    assert(expr1 != NULL);
    assert(expr2 != NULL);
@@ -102,7 +102,7 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareXyz)
 
 /** expression data copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXyz)
+SCIP_DECL_EXPRCOPYDATA(copydataXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -112,7 +112,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataXyz)
 
 /** expression data free callback */
 static
-SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXyz)
+SCIP_DECL_EXPRFREEDATA(freedataXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -124,7 +124,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataXyz)
 
 /** expression print callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
+SCIP_DECL_EXPRPRINT(printXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -136,7 +136,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printXyz)
 
 /** expression parse callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
+SCIP_DECL_EXPRPARSE(parseXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -148,7 +148,7 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseXyz)
 
 /** expression (point-) evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
+SCIP_DECL_EXPREVAL(evalXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -160,7 +160,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalXyz)
 
 /** expression backward derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXyz)
+SCIP_DECL_EXPRBWDIFF(bwdiffXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -172,7 +172,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXyz)
 
 /** expression forward derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffXyz)
+SCIP_DECL_EXPRFWDIFF(fwdiffXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -184,7 +184,7 @@ SCIP_DECL_CONSEXPR_EXPRFWDIFF(fwdiffXyz)
 
 /** expression backward-forward derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffXyz)
+SCIP_DECL_EXPRBWFWDIFF(bwfwdiffXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -196,7 +196,7 @@ SCIP_DECL_CONSEXPR_EXPRBWFWDIFF(bwfwdiffXyz)
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXyz)
+SCIP_DECL_EXPRINTEVAL(intevalXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -206,21 +206,9 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXyz)
    return SCIP_OKAY;
 }
 
-/** separation initialization callback */
+/** initial estimates callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINITSEPA(initSepaXyz)
-{  /*lint --e{715}*/
-   assert(expr != NULL);
-
-   SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-
-/** separation deinitialization callback */
-static
-SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaXyz)
+SCIP_DECL_EXPRINITESTIMATES(initEstimatesXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -232,7 +220,7 @@ SCIP_DECL_CONSEXPR_EXPREXITSEPA(exitSepaXyz)
 
 /** expression under/overestimation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
+SCIP_DECL_EXPRESTIMATE(estimateXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -244,7 +232,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateXyz)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
+SCIP_DECL_EXPRREVERSEPROP(reversepropXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -256,7 +244,7 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropXyz)
 
 /** xyz hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
+SCIP_DECL_EXPRHASH(hashXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
    assert(EXPRHDLR_HASHKEY != 0.0);
@@ -269,7 +257,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashXyz)
 
 /** expression curvature detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
+SCIP_DECL_EXPRCURVATURE(curvatureXyz)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -282,7 +270,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureXyz)
 
 /** expression monotonicity detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityXyz)
+SCIP_DECL_EXPRMONOTONICITY(monotonicityXyz)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -296,7 +284,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityXyz)
 
 /** expression integrality detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityXyz)
+SCIP_DECL_EXPRINTEGRALITY(integralityXyz)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -308,14 +296,13 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityXyz)
    return SCIP_OKAY;
 }
 
-/** creates the handler for xyz expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+/** creates the handler for xyz expressions and includes it into SCIP */
+SCIP_RETCODE SCIPincludeExprHdlrXyz(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLRDATA* exprhdlrdata;
+   SCIP_EXPRHDLR* exprhdlr;
 
    /* create expression handler data */
    exprhdlrdata = NULL;
@@ -323,24 +310,24 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
    /* TODO: create and store expression handler specific data here */
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalXyz, exprhdlrdata) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalXyz,
+         exprhdlrdata) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrXyz, freehdlrXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataXyz, freedataXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, initSepaXyz, exitSepaXyz, estimateXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffXyz, fwdiffXyz, bwfwdiffXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityXyz) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityXyz) );
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrXyz, freehdlrXyz);
+   SCIPexprhdlrSetCopyFreeData(exprhdlr, copydataXyz, freedataXyz);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifyXyz);
+   SCIPexprhdlrSetCompare(exprhdlr, compareXyz);
+   SCIPexprhdlrSetPrint(exprhdlr, printXyz);
+   SCIPexprhdlrSetParse(exprhdlr, parseXyz);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalXyz);
+   SCIPexprhdlrSetEstimate(exprhdlr, initEstimatesXyz, estimateXyz);
+   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropXyz);
+   SCIPexprhdlrSetHash(exprhdlr, hashXyz);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffXyz, fwdiffXyz, bwfwdiffXyz);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureXyz);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityXyz);
+   SCIPexprhdlrSetIntegrality(exprhdlr, integralityXyz);
 
    return SCIP_OKAY;
 }
@@ -348,19 +335,19 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrXyz(
 /** creates a xyz expression */
 SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR**  children            /**< children (can be NULL if nchildren is 0) */
+   SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_EXPRHDLR* exprhdlr;
+   SCIP_EXPRDATA* exprdata;
 
-   assert(consexprhdlr != NULL);
    assert(expr != NULL);
 
-   exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
+   exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
 
    if( exprhdlr != NULL )
    {
@@ -375,7 +362,8 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    /* TODO: create and store expression specific data here */
 
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, nchildren, children) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, nchildren, children, ownerdatacreate,
+         ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }
