@@ -1680,7 +1680,11 @@ SCIP_RETCODE graph_copyFixed(
 
    assert(scip && g && g_copy);
    assert(g_copy->fixedcomponents == NULL);
-   assert(g->fixedcomponents != NULL);
+
+   if( g->fixedcomponents == NULL )
+   {
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPallocMemory(scip, &(g_copy->fixedcomponents)) );
    fixed_copy = g_copy->fixedcomponents;

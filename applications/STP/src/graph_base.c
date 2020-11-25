@@ -534,7 +534,11 @@ SCIP_RETCODE extractSubgraphInitHistory(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->ancestors), subgraph->esize) );
 
    SCIP_CALL( graph_initPseudoAncestorsSized(scip, subgraph->esize, subgraph) );
-   graph_addPseudoAncestors(graph_getNpseudoAncestors(orggraph), subgraph);
+
+   if( graph_getNpseudoAncestors(orggraph) > 0 )
+      graph_addPseudoAncestors(graph_getNpseudoAncestors(orggraph), subgraph);
+
+   assert(graph_getNpseudoAncestors(orggraph) == graph_getNpseudoAncestors(subgraph));
 
    SCIP_CALL( graph_copyFixed(scip, orggraph, subgraph) );
 
