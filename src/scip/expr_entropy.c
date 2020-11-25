@@ -24,7 +24,7 @@
 
 #include "scip/expr_entropy.h"
 #include "scip/expr_value.h"
-#include "scip/cons_nonlinear.h"
+#include "scip/expr.h"
 
 #include <string.h>
 
@@ -433,9 +433,9 @@ SCIP_DECL_EXPRESTIMATE(estimateEntropy)
       vallb = (lb == 0.0) ? 0.0 : -lb * log(lb);
       valub = (ub == 0.0) ? 0.0 : -ub * log(ub);
 
-      *coefs = (valub - vallb) / (ub - lb);
-      *constant = valub - *coefs * ub;
-      assert(SCIPisEQ(scip, *constant, vallb - *coefs * lb));
+      coefs[0] = (valub - vallb) / (ub - lb);
+      *constant = valub - coefs[0] * ub;
+      assert(SCIPisEQ(scip, *constant, vallb - coefs[0] * lb));
 
       *islocal = TRUE;
    }
