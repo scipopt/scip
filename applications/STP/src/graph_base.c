@@ -595,11 +595,10 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
-   IDX** subancestors = subgraph->ancestors;
    const int* const isMarked = orggraph->mark;
    const int subnnodes = graph_get_nNodes(subgraph);
 
-   assert(subancestors);
+   assert(subgraph->ancestors);
 
    for( int i = 0; i < subnnodes; i++ )
    {
