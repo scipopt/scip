@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   expr_exp.c
+/**@file   estimation.c
  * @brief  tests estimators of exp()
  */
 

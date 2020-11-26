@@ -120,8 +120,6 @@ SCIP_RETCODE chgBounds(
    SCIP_CALL( SCIPchgVarLbGlobal(scip, var, lb) );
    SCIP_CALL( SCIPchgVarUbGlobal(scip, var, ub) );
 
-//   SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
-
    return SCIP_OKAY;
 }
 
@@ -180,7 +178,6 @@ Test(monotonicity, cos)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
 
-#if !1
 /* check for entropy expression */
 Test(monotonicity, entropy)
 {
@@ -195,7 +192,6 @@ Test(monotonicity, entropy)
    SCIP_CALL( chgBounds(x, exp(-1.0), 10.0) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_DEC) );
 }
-#endif
 
 /* check for exp expression */
 Test(monotonicity, exp)
@@ -206,7 +202,6 @@ Test(monotonicity, exp)
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
 }
 
-#if !1
 /* check for log expression */
 Test(monotonicity, log)
 {
@@ -215,7 +210,6 @@ Test(monotonicity, log)
    SCIP_CALL( chgBounds(x, -SCIPinfinity(scip), SCIPinfinity(scip)) );
    SCIP_CALL( testMonotonicity(0, SCIP_MONOTONE_INC) );
 }
-#endif
 
 /* check for pow expressions */
 Test(monotonicity, pow)

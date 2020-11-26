@@ -113,7 +113,6 @@ Test(quad, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 /* detect x^2 + 2*x cos(y x^2) + cos(y x^2)^2 as convex quadratic expression
  * simplify yields x^2 + 2 * x cos(x^2 y) + cos(x^2 y)^2 <= 1 --> should detect x^2 + 2 x * w + w^2
  */
@@ -181,10 +180,8 @@ Test(quad, detectandfree2, .init = setup, .fini = teardown)
    if( expr->quaddata->curvaturechecked )  /* currently check only with Ipopt */
       cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-#endif
 
 /* detects x^2 + 2*x*y + y^2 + y*z - z^2 as quadratic expression and convexity in (x,y) */
 Test(quad, detectandfree3, .init = setup, .fini = teardown)

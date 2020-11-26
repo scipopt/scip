@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   exprhdlr_xyz.c
+/**@file   xyz.c
  * @brief  tests expression handler functions of xyz expressions
  */
 

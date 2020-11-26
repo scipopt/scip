@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   estimation_log.c
+/**@file   estimation.c
  * @brief  tests estimation of log()
  */
 
@@ -35,8 +35,6 @@ Test(separation, logarithmic, .init = setup, .fini = teardown,
    SCIP_Real refpoint;
    SCIP_INTERVAL localbounds;
    SCIP_INTERVAL globalbounds;
-
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
 
    SCIP_CALL( SCIPcreateExprLog(scip, &expr, zexpr, NULL, NULL) );
 

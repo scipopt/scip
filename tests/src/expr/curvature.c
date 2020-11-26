@@ -127,13 +127,11 @@ Test(curvature, exponential)
    SCIP_CALL( checkCurvature("exp(<x>[C])", "exp", SCIP_EXPRCURV_CONVEX) );
 }
 
-#if !1
 /* check for logarithm expression */
 Test(curvature, logarithm)
 {
    SCIP_CALL( checkCurvature("log(<x>[C])", "log", SCIP_EXPRCURV_CONCAVE) );
 }
-#endif
 
 /* check for power expression */
 Test(curvature, power)
@@ -220,7 +218,7 @@ Test(curvature, variable)
    SCIP_CALL( checkCurvature("<x>[C]", "var", SCIP_EXPRCURV_LINEAR) );
 }
 
-#if !1
+#if !1  // FIXME move to cons_nonlinear test
 /* check curvature in the constraint data and in the nonlinear rows */
 Test(curvature, cons_and_nlrows)
 {

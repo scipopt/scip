@@ -132,7 +132,6 @@ Test(hash, hashEqualExpressions)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 Test(hash, hashSingleExpr)
 {
    SCIP_EXPR* expr;
@@ -170,4 +169,3 @@ Test(hash, hashSingleExpr)
    checkHashkey(expr, NULL);
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-#endif

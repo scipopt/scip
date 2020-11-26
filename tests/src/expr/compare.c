@@ -82,7 +82,6 @@ void setup(void)
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr_sum, expr_y, 1.0) );
 
    /* create expression sum_fracpow: (x+y)^3.2 */
-   //SCIP_CALL( SCIPcreateExprProduct(scip, conshdlr, &expr_sum_fracpow, 1, &expr_sum, &aux, 1.0) );
    SCIP_CALL( SCIPcreateExprPow(scip, &expr_sum_fracpow, expr_sum, 3.2, NULL, NULL) );
 
    /* create expression halfx: 0.5*x */

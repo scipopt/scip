@@ -82,7 +82,6 @@ Test(commonSubexpr, singleConstraints)
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 Test(commonSubexpr, multipleExprs)
 {
    SCIP_EXPR* exprs[4];
@@ -110,4 +109,3 @@ Test(commonSubexpr, multipleExprs)
    SCIP_CALL( SCIPreleaseExpr(scip, &exprs[1]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &exprs[0]) );
 }
-#endif

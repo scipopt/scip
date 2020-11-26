@@ -85,9 +85,6 @@ void setup(void)
    SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprVar(scip, &vexpr, v, NULL, NULL) );
 
-   /* get SCIP into SOLVING stage */
-//   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 }

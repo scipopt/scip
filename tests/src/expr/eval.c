@@ -43,7 +43,7 @@ void setup(void)
    /* turn off log() and pow() assuming arguments to a away from zero
     * good for solving, but complicates unittesting
     */
-//   SCIP_CALL( SCIPsetRealParam(scip, "expr/log/minzerodistance", 0.0) );
+   SCIP_CALL( SCIPsetRealParam(scip, "expr/log/minzerodistance", 0.0) );
    SCIP_CALL( SCIPsetRealParam(scip, "expr/pow/minzerodistance", 0.0) );
 
    /* create problem */
@@ -195,7 +195,6 @@ Test(evalexpr, exponential, .description = "Tests expression evaluation for expo
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
 
-#if !1
 Test(evalexpr, logarithm, .description = "Tests expression evaluation for logarithmic expressions.")
 {
       SCIP_EXPR* expr;
@@ -273,7 +272,6 @@ Test(evalexpr, logarithm, .description = "Tests expression evaluation for logari
 
       SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-#endif
 
 Test(evalexpr, power, .description = "Tests expression evaluation for power expressions.")
 {

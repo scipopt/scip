@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   estimation_entropy.c
+/**@file   estimation.c
  * @brief  tests estimation of entropy()
  */
 

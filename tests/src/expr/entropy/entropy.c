@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   exprhdlr_entropy.c
+/**@file   entropy.c
  * @brief  tests expression handler functions of entropy expressions
  */
 
@@ -45,9 +45,6 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
-   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
