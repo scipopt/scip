@@ -2954,7 +2954,14 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
 
       ++ntestedperms;
    }
-   assert( row == ntwocycles );
+
+   /* in the subgroup case it might happen that a generator has less than ntwocyles many 2-cyles */
+   if ( row < ntwocyles )
+   {
+      *isorbitope = FALSE;
+      SCIPfreeBufferArray(scip, &usedperm);
+      return SCIP_OKAY;
+   }
 
    usedperm[ntestedperms - 1] = TRUE;
    ++nusedperms;
