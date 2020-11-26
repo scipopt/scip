@@ -1541,7 +1541,7 @@ void graph_free_fixed(
       curr = fixedcomponents->fixedges;
    }
 
-   SCIPfreeMemoryArray(scip, &(g->fixedcomponents));
+   SCIPfreeMemory(scip, &(g->fixedcomponents));
 }
 
 
@@ -1691,13 +1691,16 @@ SCIP_RETCODE graph_copyFixed(
    fixed_org = g->fixedcomponents;
 
    fixed_copy->fixedges = NULL;
-   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(fixed_copy->fixedges), fixed_org->fixedges, &conflict) );
-   assert(!conflict);
+   if( fixed_org->fixedges != NULL  )
+   {
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(fixed_copy->fixedges), fixed_org->fixedges, &conflict) );
+      assert(!conflict);
+   }
 
    fixed_copy->nfixnodes = fixed_org->nfixnodes;
    if( fixed_copy->nfixnodes > 0 )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(fixed_copy->fixpseudonodes), fixed_copy->nfixnodes) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(fixed_copy->fixpseudonodes), fixed_copy->nfixnodes) );
       BMScopyMemoryArray(fixed_copy->fixpseudonodes, fixed_org->fixpseudonodes, fixed_copy->nfixnodes);
    }
    else
