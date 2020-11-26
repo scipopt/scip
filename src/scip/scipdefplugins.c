@@ -223,7 +223,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
    SCIP_CALL( SCIPincludeExprHdlrAbs(scip) );
    SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrEntropy(scip) );
    SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrLog(scip) );
    SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
    SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
    SCIP_CALL( SCIPincludeExprHdlrSignpower(scip) );
