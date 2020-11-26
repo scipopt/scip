@@ -21,29 +21,20 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_var.h"
-
+#include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
-static SCIP_CONSEXPR_EXPR* xexpr;
-static SCIP_CONSEXPR_EXPR* yexpr;
+static SCIP_CONS* cons;
+static SCIP_Bool success;
 
 static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert(conshdlr != NULL);
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
@@ -53,16 +44,13 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   cons = NULL;
+   success = FALSE;
 }
 
 static
 void teardown(void)
 {
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
-
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
@@ -84,20 +72,21 @@ SCIP_Bool checkVarLocks(
    int                  nylocksneg          /**< target number of negative locks */
    )
 {
+#if SCIP_DISABLED_CODE
    /* get expressions for x and y as used in conshdlr: these will have locks updated */
-   SCIP_HASHMAP* var2expr = (SCIP_HASHMAP*)SCIPgetConsExprVarHashmap(scip, conshdlr);
-   SCIP_CONSEXPR_EXPR* curxexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, x);
-   SCIP_CONSEXPR_EXPR* curyexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(var2expr, y);
+   SCIP_HASHMAP* var2expr = (SCIP_HASHMAP*)SCIPgetVarExprHashmapNonlinear(scip, conshdlr);
+   SCIP_EXPR* curxexpr = (SCIP_EXPR*)SCIPhashmapGetImage(var2expr, x);
+   SCIP_EXPR* curyexpr = (SCIP_EXPR*)SCIPhashmapGetImage(var2expr, y);
 
    /* if no locks at all, then there may not even be an expression for the var */
-   EXPECTANDRETURN(nxlockspos != 0 || nxlocksneg != 0 || curxexpr == NULL || (SCIPgetConsExprExprNLocksPos(curxexpr) == 0 && SCIPgetConsExprExprNLocksNeg(curxexpr) == 0));
-   EXPECTANDRETURN((nxlockspos == 0 && nxlocksneg == 0) || SCIPgetConsExprExprNLocksPos(curxexpr) == nxlockspos);
-   EXPECTANDRETURN((nxlockspos == 0 && nxlocksneg == 0) || SCIPgetConsExprExprNLocksNeg(curxexpr) == nxlocksneg);
+   EXPECTANDRETURN(nxlockspos != 0 || nxlocksneg != 0 || curxexpr == NULL || (SCIPgetExprNLocksPosNonlinear(curxexpr) == 0 && SCIPgetExprNLocksNegNonlinear(curxexpr) == 0));
+   EXPECTANDRETURN((nxlockspos == 0 && nxlocksneg == 0) || SCIPgetExprNLocksPosNonlinear(curxexpr) == nxlockspos);
+   EXPECTANDRETURN((nxlockspos == 0 && nxlocksneg == 0) || SCIPgetExprNLocksNegNonlinear(curxexpr) == nxlocksneg);
 
-   EXPECTANDRETURN(nylockspos != 0 || nylocksneg != 0 || curyexpr == NULL || (SCIPgetConsExprExprNLocksPos(curyexpr) == 0 && SCIPgetConsExprExprNLocksNeg(curyexpr) == 0));
-   EXPECTANDRETURN((nylockspos == 0 && nylocksneg == 0) || SCIPgetConsExprExprNLocksPos(curyexpr) == nylockspos);
-   EXPECTANDRETURN((nylockspos == 0 && nylocksneg == 0) || SCIPgetConsExprExprNLocksNeg(curyexpr) == nylocksneg);
-
+   EXPECTANDRETURN(nylockspos != 0 || nylocksneg != 0 || curyexpr == NULL || (SCIPgetExprNLocksPosNonlinear(curyexpr) == 0 && SCIPgetExprNLocksNegNonlinear(curyexpr) == 0));
+   EXPECTANDRETURN((nylockspos == 0 && nylocksneg == 0) || SCIPgetExprNLocksPosNonlinear(curyexpr) == nylockspos);
+   EXPECTANDRETURN((nylockspos == 0 && nylocksneg == 0) || SCIPgetExprNLocksNegNonlinear(curyexpr) == nylocksneg);
+#endif
    EXPECTANDRETURN(SCIPvarGetNLocksDown(x) == nxlocksneg);
    EXPECTANDRETURN(SCIPvarGetNLocksUp(x) == nxlockspos);
    EXPECTANDRETURN(SCIPvarGetNLocksDown(y) == nylocksneg);
@@ -120,8 +109,6 @@ SCIP_RETCODE chgBounds(
    SCIP_CALL( SCIPchgVarLb(scip, y, lby) );
    SCIP_CALL( SCIPchgVarUb(scip, y, uby) );
 
-   SCIPincrementConsExprCurBoundsTag(conshdlr, TRUE);
-
    return SCIP_OKAY;
 }
 
@@ -134,13 +121,11 @@ TestSuite(locks, .init = setup, .fini = teardown);
 
 Test(locks, sum)
 {
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "[nonlinear] <test> : <x> - <y> <= 1.0";
 
-   const char* input = "<x> - <y>";
-
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
+   cr_assert_not_null(cons);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -151,19 +136,16 @@ Test(locks, sum)
    cr_expect( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* test for changing bounds between locking of a single constraint */
 Test(locks, chg_bounds)
 {
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "[nonlinear] <test> : (<x>)^2 <= 1.0";
 
-   const char* input = "(<x>)^2";
-
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), 1.0) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
+   cr_assert_not_null(cons);
 
    /*
     * x^2 is not monotone for [-1,1]
@@ -187,19 +169,16 @@ Test(locks, chg_bounds)
    cr_expect( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* test locks for an non-monotone expression */
 Test(locks, non_monotone)
 {
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "[nonlinear] <test> : sin(<x>^2) - cos(<y>^0.5) >= -.10";
 
-   const char* input = "sin(<x>^2) - cos(<y>^0.5)";
-
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
+   cr_assert_not_null(cons);
 
    /* add locks */
    SCIP_CALL( chgBounds(-10.0, 10.0, 1.0, 10.0) );
@@ -211,19 +190,16 @@ Test(locks, non_monotone)
    cr_expect( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* tests locks for a complex expression */
 Test(locks, complex)
 {
-   SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
+   const char* input = "[nonlinear] <test> : exp(<x>^2 + <x>*<y> - log(abs(<y>^3))) <= 0.0";
 
-   const char* input = "exp(<x>^2 + <x>*<y> - log(abs(<y>^3)))";
-
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_expect(success);
+   cr_assert_not_null(cons);
 
    /* add locks */
    SCIP_CALL( chgBounds(-1.0, 1.0, -3.0, -2.0) );
@@ -235,5 +211,4 @@ Test(locks, complex)
    cr_expect( checkVarLocks(0, 0, 0, 0) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
