@@ -319,6 +319,12 @@ SCIP_Real getCloseNodeDistanceForbiddenLast(
    int position_rel;
    SCIP_Real dist = -1.0;
 
+   if( size == 0 )
+   {
+      assert(distdata->hasPathReplacement);
+      return dist;
+   }
+
    assert(size > 0);
    assert(graph_edge_isInRange(g, lastedge_node2close));
    assert(g->head[lastedge_node2close] == closenode);
@@ -364,6 +370,12 @@ SCIP_Real getCloseNodeDistanceForbiddenEq(
    const int size = end - start;
    int position;
    SCIP_Real dist = -1.0;
+
+   if( size == 0 )
+   {
+      assert(distdata->hasPathReplacement);
+      return dist;
+   }
 
    assert(size > 0);
 
