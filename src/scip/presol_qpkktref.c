@@ -1663,8 +1663,8 @@ SCIP_RETCODE checkConsQuadraticProblem(
     * at most one variable has a nonzero objective value); additionally, check the sign of the objective variable
     */
 
-   SCIP_CALL( SCIPgetLinvarMayIncreaseNonlinear(scip, nlconshdlr, cons, &mayincrease, &mayincreasecoef) );
-   SCIP_CALL( SCIPgetLinvarMayIncreaseNonlinear(scip, nlconshdlr, cons, &maydecrease, &maydecreasecoef) );
+   SCIPgetLinvarMayIncreaseNonlinear(scip, cons, &mayincrease, &mayincreasecoef);
+   SCIPgetLinvarMayIncreaseNonlinear(scip, cons, &maydecrease, &maydecreasecoef);
 
    if( maydecrease == NULL && mayincrease == NULL )
       return SCIP_OKAY;

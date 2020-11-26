@@ -620,20 +620,18 @@ SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
 
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLinvarMayDecreaseNonlinear(
+void SCIPgetLinvarMayDecreaseNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_VAR**            var,                /**< pointer to store the variable */
    SCIP_Real*            coef                /**< pointer to store the coefficient */
    );
 
 /** returns a variable that appears linearly that may be increased without making any other constraint infeasible */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetLinvarMayIncreaseNonlinear(
+void SCIPgetLinvarMayIncreaseNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_VAR**            var,                /**< pointer to store the variable */
    SCIP_Real*            coef                /**< pointer to store the coefficient */
    );

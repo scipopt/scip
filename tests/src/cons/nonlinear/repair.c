@@ -13,15 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   conscheck.c
+/**@file   repair.c
  * @brief  tests repair mechanism in CONSCHECK
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
-
+#include "scip/scipdefplugins.h"
 /* we include the source file here to call the trysol heuristic manually */
 #include "scip/heur_trysol.c"
 
@@ -37,12 +36,10 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-   SCIP_CALL( SCIPincludeHeurTrySol(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    /* create problem */
@@ -54,6 +51,9 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
+
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 }
 
 /* releases variables, frees scip */
@@ -70,56 +70,56 @@ void teardown(void)
 
 Test(repair, linvars1, .init = setup, .fini = teardown)
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_VAR* var;
    SCIP_Real coef;
-   const char* input = "[expr] <test>: 1.1*<x>*<y> + 3.2*<x>^2*<y>^(-5) + 0.5*<z> <= 2;";
+   const char* input = "[nonlinear] <test>: 1.1*<x>*<y> + 3.2*<x>^2*<y>^(-5) + 0.5*<z> <= 2;";
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
 
    cr_assert(SCIPgetNConss(scip) == 1);
-   consexpr = SCIPgetConss(scip)[0];
-   cr_assert(consexpr != NULL);
+   cons = SCIPgetConss(scip)[0];
+   cr_assert(cons != NULL);
 
-   SCIP_CALL( SCIPgetLinvarMayDecreaseExpr(scip, conshdlr, consexpr, &var, &coef) );
+   SCIPgetLinvarMayDecreaseNonlinear(scip, cons, &var, &coef);
    cr_expect(var == SCIPvarGetTransVar(z));
    cr_expect(coef == 0.5);
-   SCIP_CALL( SCIPgetLinvarMayIncreaseExpr(scip, conshdlr, consexpr, &var, &coef) );
+   SCIPgetLinvarMayIncreaseNonlinear(scip, cons, &var, &coef);
    cr_expect(var == SCIPvarGetTransVar(z));
    cr_expect(coef == 0.5);
 }
 
 Test(repair, linvars2, .init = setup, .fini = teardown)
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_VAR* var;
    SCIP_Real coef;
    int i;
 
    const char* input[2] = {
-         "[expr] <test>: 1.1*<x>*<y> + 3.2*<x>^2*<y>^(-5) - 0.5*<z> <= 2;",
-         "[expr] <test>: 1.1*<x>*<y> + 3.2*<x>^2*<y>^(-5) - 1.5*<z> <= 2;"
+         "[nonlinear] <test>: 1.1*<x>*<y> + 3.2*<x>^2*<y>^(-5) - 0.5*<z> <= 2;",
+         "[nonlinear] <test>: 1.1*<x>*<y> + 3.2*<x>^2*<y>^(-5) - 1.5*<z> <= 2;"
    };
 
    /* parse constraints */
    for( i = 0; i < 2; ++i )
    {
       success = FALSE;
-      SCIP_CALL( SCIPparseCons(scip, &consexpr, input[i],
+      SCIP_CALL( SCIPparseCons(scip, &cons, input[i],
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       cr_assert(success);
-      SCIP_CALL( SCIPaddCons(scip, consexpr) );
-      SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
@@ -127,14 +127,14 @@ Test(repair, linvars2, .init = setup, .fini = teardown)
 
    for( i = 0; i < 2; ++i )
    {
-      consexpr = SCIPgetConss(scip)[i];
-      cr_assert(consexpr != NULL);
+      cons = SCIPgetConss(scip)[i];
+      cr_assert(cons != NULL);
 
-      SCIP_CALL( SCIPgetLinvarMayDecreaseExpr(scip, conshdlr, consexpr, &var, &coef) );
+      SCIPgetLinvarMayDecreaseNonlinear(scip, cons, &var, &coef);
       cr_expect(var == NULL);
       cr_expect(coef == 0.0);
 
-      SCIP_CALL( SCIPgetLinvarMayIncreaseExpr(scip, conshdlr, consexpr, &var, &coef) );
+      SCIPgetLinvarMayIncreaseNonlinear(scip, cons, &var, &coef);
       cr_expect(var == SCIPvarGetTransVar(z));
       cr_expect(i == 0 ? coef == -0.5 : coef == -1.5);
    }
@@ -142,20 +142,20 @@ Test(repair, linvars2, .init = setup, .fini = teardown)
 
 Test(repair, sol, .init = setup, .fini = teardown)
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_SOL* sol;
    SCIP_Bool success;
 
-   const char* input = "[expr] <test>: 1.1*<x>*<y> + <x>^2*<y> + <z> == 2;";
+   const char* input = "[nonlinear] <test>: 1.1*<x>*<y> + <x>^2*<y> + <z> == 2;";
    SCIP_RESULT result;
 
    /* parse constraint */
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+   SCIP_CALL( SCIPparseCons(scip, &cons, input,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* go to solving stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
