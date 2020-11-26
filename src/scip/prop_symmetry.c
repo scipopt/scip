@@ -3035,7 +3035,7 @@ SCIP_RETCODE checkTwoCyclePermsAreOrbitope(
    if ( activevars == NULL && nusedperms < nactiveperms ) /*lint !e850*/
       *isorbitope = FALSE;
 
-   assert( activevars == NULL || nusedperms == nactivevars / ntwocycles - 1 );
+   assert( ! *isorbitope || activevars == NULL || nusedperms == nactivevars / ntwocycles - 1 );
 
    SCIPfreeBufferArray(scip, &usedperm);
 
