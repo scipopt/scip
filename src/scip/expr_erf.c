@@ -13,20 +13,19 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_erf.c
- * @brief  handler for gaussian error function expressions
+/**@file   expr_erf.c
+ * @brief  handler for Gaussian error function expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr_erf.h"
-#include "scip/cons_expr_value.h"
-#include "scip/cons_expr.h"
+#include "scip/expr_erf.h"
+#include "scip/expr_value.h"
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "erf"
-#define EXPRHDLR_DESC         "gaussian error function"
+#define EXPRHDLR_DESC         "Gaussian error function"
 #define EXPRHDLR_PRECEDENCE   79000
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(131071.0)
 
@@ -38,7 +37,7 @@
  * Local methods
  */
 
-/** evaluates the gaussian error function at a given point */
+/** evaluates the Gaussian error function at a given point */
 static
 SCIP_Real errorf(
    SCIP_Real             x                   /**< point to evaluate */
@@ -63,39 +62,38 @@ SCIP_Real errorf(
 
 /** expression handler copy callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrErf)
+SCIP_DECL_EXPRCOPYHDLR(copyhdlrErf)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludeConsExprExprHdlrErf(scip, consexprhdlr) );
-   *valid = TRUE;
+   SCIP_CALL( SCIPincludeExprHdlrErf(scip) );
 
    return SCIP_OKAY;
 }
 
 /** simplifies an erf expression */
 static
-SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyErf)
+SCIP_DECL_EXPRSIMPLIFY(simplifyErf)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* child;
+   SCIP_EXPR* child;
 
    assert(scip != NULL);
    assert(expr != NULL);
    assert(simplifiedexpr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
    /* check for value expression */
-   if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+   if( SCIPisExprValue(scip, child) )
    {
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, simplifiedexpr, errorf(SCIPgetConsExprExprValueValue(child))) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, errorf(SCIPgetValueExprValue(child)), ownerdatacreate, ownerdatacreatedata) );
    }
    else
    {
       *simplifiedexpr = expr;
 
       /* we have to capture it, since it must simulate a "normal" simplified call in which a new expression is created */
-      SCIPcaptureConsExprExpr(*simplifiedexpr);
+      SCIPcaptureExpr(*simplifiedexpr);
    }
 
    return SCIP_OKAY;
@@ -103,7 +101,7 @@ SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(simplifyErf)
 
 /** expression compare callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareErf)
+SCIP_DECL_EXPRCOMPARE(compareErf)
 {  /*lint --e{715}*/
    assert(expr1 != NULL);
    assert(expr2 != NULL);
@@ -116,22 +114,22 @@ SCIP_DECL_CONSEXPR_EXPRCOMPARE(compareErf)
 
 /** expression parse callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPARSE(parseErf)
+SCIP_DECL_EXPRPARSE(parseErf)
 {  /*lint --e{715}*/
-   SCIP_CONSEXPR_EXPR* childexpr;
+   SCIP_EXPR* childexpr;
 
    assert(expr != NULL);
 
    /* parse child expression from remaining string */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownerdatacreate, ownerdatacreatedata) );
    assert(childexpr != NULL);
 
    /* create gaussian error function expression */
-   SCIP_CALL( SCIPcreateConsExprExprErf(scip, consexprhdlr, expr, childexpr) );
+   SCIP_CALL( SCIPcreateExprErf(scip, expr, childexpr, ownerdatacreate, ownerdatacreatedata) );
    assert(*expr != NULL);
 
    /* release child expression since it has been captured by the gaussian error function expression */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &childexpr) );
 
    *success = TRUE;
 
@@ -140,21 +138,21 @@ SCIP_DECL_CONSEXPR_EXPRPARSE(parseErf)
 
 /** expression (point-) evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPREVAL(evalErf)
+SCIP_DECL_EXPREVAL(evalErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
+   assert(SCIPexprGetData(expr) == NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
+   assert(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]) != SCIP_INVALID); /*lint !e777*/
 
-   *val = errorf(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[0]));
+   *val = errorf(SCIPexprGetEvalValue(SCIPexprGetChildren(expr)[0]));
 
    return SCIP_OKAY;
 }
 
 /** expression derivative evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffErf)
+SCIP_DECL_EXPRBWDIFF(bwdiffErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -166,15 +164,15 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffErf)
 
 /** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalErf)
+SCIP_DECL_EXPRINTEVAL(intevalErf)
 {  /*lint --e{715}*/
    SCIP_INTERVAL childinterval;
 
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetData(expr) == NULL);
+   assert(SCIPexprGetNChildren(expr) == 1);
 
-   childinterval = SCIPgetConsExprExprActivity(scip, SCIPgetConsExprExprChildren(expr)[0]);
+   childinterval = SCIPexprGetActivity(SCIPexprGetChildren(expr)[0]);
 
    if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, childinterval) )
       SCIPintervalSetEmpty(interval);
@@ -193,7 +191,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalErf)
 
 /** expression under/overestimation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateErf)
+SCIP_DECL_EXPRESTIMATE(estimateErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -205,7 +203,7 @@ SCIP_DECL_CONSEXPR_EXPRESTIMATE(estimateErf)
 
 /** expression reverse propagation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropErf)
+SCIP_DECL_EXPRREVERSEPROP(reversepropErf)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
@@ -217,11 +215,11 @@ SCIP_DECL_CONSEXPR_EXPRREVERSEPROP(reversepropErf)
 
 /** erf hash callback */
 static
-SCIP_DECL_CONSEXPR_EXPRHASH(hashErf)
+SCIP_DECL_EXPRHASH(hashErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(SCIPexprGetNChildren(expr) == 1);
    assert(hashkey != NULL);
    assert(childrenhashes != NULL);
 
@@ -233,7 +231,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashErf)
 
 /** expression curvature detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureErf)
+SCIP_DECL_EXPRCURVATURE(curvatureErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -255,7 +253,7 @@ SCIP_DECL_CONSEXPR_EXPRCURVATURE(curvatureErf)
 
 /** expression monotonicity detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityErf)
+SCIP_DECL_EXPRMONOTONICITY(monotonicityErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -268,7 +266,7 @@ SCIP_DECL_CONSEXPR_EXPRMONOTONICITY(monotonicityErf)
 
 /** expression integrality detection callback */
 static
-SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityErf)
+SCIP_DECL_EXPRINTEGRALITY(integralityErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
@@ -279,62 +277,57 @@ SCIP_DECL_CONSEXPR_EXPRINTEGRALITY(integralityErf)
    return SCIP_OKAY;
 }
 
-/** creates the handler for erf expressions and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeConsExprExprHdlrErf(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+/** creates the handler for erf expressions and includes it SCIP */
+SCIP_RETCODE SCIPincludeExprHdlrErf(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_EXPRHDLR* exprhdlr;
 
    /* include expression handler */
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC,
-         EXPRHDLR_PRECEDENCE, evalErf, NULL) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalErf, NULL) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrErf, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrSepa(scip, consexprhdlr, exprhdlr, NULL, NULL, estimateErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrDiff(scip, consexprhdlr, exprhdlr, bwdiffErf, NULL, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCurvature(scip, consexprhdlr, exprhdlr, curvatureErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrMonotonicity(scip, consexprhdlr, exprhdlr, monotonicityErf) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrIntegrality(scip, consexprhdlr, exprhdlr, integralityErf) );
+   SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrErf, NULL);
+   SCIPexprhdlrSetSimplify(exprhdlr, simplifyErf);
+   SCIPexprhdlrSetCompare(exprhdlr, compareErf);
+   SCIPexprhdlrSetParse(exprhdlr, parseErf);
+   SCIPexprhdlrSetIntEval(exprhdlr, intevalErf);
+   SCIPexprhdlrSetEstimate(exprhdlr, NULL, estimateErf);
+   SCIPexprhdlrSetReverseProp(exprhdlr, reversepropErf);
+   SCIPexprhdlrSetHash(exprhdlr, hashErf);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffErf, NULL, NULL);
+   SCIPexprhdlrSetCurvature(exprhdlr, curvatureErf);
+   SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityErf);
+   SCIPexprhdlrSetIntegrality(exprhdlr, integralityErf);
 
    return SCIP_OKAY;
 }
 
 /** creates an erf expression */
-SCIP_RETCODE SCIPcreateConsExprExprErf(
+SCIP_RETCODE SCIPcreateExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< childr expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< child expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_EXPRHDLR* exprhdlr;
 
-   assert(consexprhdlr != NULL);
    assert(expr != NULL);
+   assert(child != NULL);
 
-   exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
-
-   if( exprhdlr != NULL )
+   exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
+   if( exprhdlr == NULL )
    {
       SCIPerrorMessage("could not find %s expression handler -> abort\n", EXPRHDLR_NAME);
       SCIPABORT();
-      return SCIP_ERROR;
+      return SCIP_PLUGINNOTFOUND;
    }
 
-   /* create expression data */
-   exprdata = NULL;
    /* create expression */
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 1, &child) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, NULL, 1, &child, ownerdatacreate, ownerdatacreatedata) );
 
    return SCIP_OKAY;
 }

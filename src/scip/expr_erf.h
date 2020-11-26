@@ -13,42 +13,40 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_erf.h
- * @brief  handler for gaussian error function expressions
+/**@file   expr_erf.h
+ * @brief  handler for Gaussian error function expressions
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_ERF_H__
-#define __SCIP_CONS_EXPR_ERF_H__
-
+#ifndef __SCIP_EXPR_ERF_H__
+#define __SCIP_EXPR_ERF_H__
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the handler for erf expressions and includes it into the expression constraint handler */
+/** creates the handler for erf expressions and includes it into SCIP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprExprHdlrErf(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeExprHdlrErf(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates an erf expression */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsExprExprErf(
+SCIP_RETCODE SCIPcreateExprErf(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPR*   child               /**< childr expression */
+   SCIP_EXPR**           expr,               /**< pointer where to store expression */
+   SCIP_EXPR*            child,              /**< child expression */
+   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
+   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_ERF_H__ */
+#endif /* __SCIP_EXPR_ERF_H__ */

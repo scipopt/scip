@@ -564,6 +564,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/expr_abs.o \
 			scip/expr_cos.o \
 			scip/expr_entropy.o \
+			scip/expr_erf.o \
 			scip/expr_exp.o \
 			scip/expr_log.o \
 			scip/expr_pow.o \
