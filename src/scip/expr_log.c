@@ -483,7 +483,7 @@ SCIP_RETCODE SCIPincludeExprHdlrLog(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureLog);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityLog);
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/exprhdlr/" EXPRHDLR_NAME "/minzerodistance",
+   SCIP_CALL( SCIPaddRealParam(scip, "expr/" EXPRHDLR_NAME "/minzerodistance",
       "minimal distance from zero to enforce for child in bound tightening",
       &exprhdlrdata->minzerodistance, FALSE, SCIPepsilon(scip), 0.0, 1.0, NULL, NULL) );
 
