@@ -3582,32 +3582,53 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
-#if !1
 static
 SCIP_DECL_CONSGETVARS(consGetVarsNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+   /* check whether array is too small in order to store all variables */
+   if( varssize < consdata->nvarexprs )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      vars[i] = SCIPgetVarExprVar(consdata->varexprs[i]);
+      assert(vars[i] != NULL);
+   }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define consGetVarsNonlinear NULL
-#endif
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
-#if !1
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* store variable expressions if not done so far */
+   SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
+
+   *nvars = consdata->nvarexprs;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define consGetNVarsNonlinear NULL
-#endif
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 #if SCIP_DISABLED_CODE
