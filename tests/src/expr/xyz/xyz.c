@@ -20,9 +20,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/expr.h"
+#include "scip/scipdefplugins.h"
 #include "scip/expr_xyz.h"
-
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -35,9 +34,7 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include the xyz expr handler */
-   SCIP_CALL( SCIPincludeExprHdlrXyz(scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );

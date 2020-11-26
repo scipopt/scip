@@ -22,6 +22,22 @@
 #include "scip/expr_sin.h"
 #include "../estimation.h"
 
+static SCIP_Real coefs[SCIP_EXPR_MAXINITESTIMATES];
+static SCIP_Real* coefsp[SCIP_EXPR_MAXINITESTIMATES];
+static SCIP_Real constants[SCIP_EXPR_MAXINITESTIMATES];
+static int nreturned;
+
+static
+void sine_setup(void)
+{
+   int i;
+
+   setup();
+
+   for( i = 0; i < SCIP_EXPR_MAXINITESTIMATES; ++i )
+      coefsp[i] = &coefs[i];
+}
+
 /* note: for the tests, SCIPcomputeInitialCutsTrig() does:
  * 1. secant -> done if success
  * 2. left mid tangent (left secant) -> if fails tries left tangent
@@ -30,8 +46,10 @@
  * when overestimating 2. and 3. are swapped
  */
 
+TestSuite(separation, .init = sine_setup, .fini = teardown);
+
 /* tests for interval [-1,5] */
-Test(separation, sine_x, .init = setup, .fini = teardown,
+Test(separation, sine_x,
    .description = "test separation for a sine expression in large range"
    )
 {
@@ -77,17 +95,17 @@ Test(separation, sine_x, .init = setup, .fini = teardown,
     * test initial overestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
    newtonpoint = 2.2544608804;
-   EXPECTFEQ( coefs[0][0], cos(newtonpoint) );
+   EXPECTFEQ( coefs[0], cos(newtonpoint) );
    EXPECTFEQ( constants[0], sin(5) - 5 * cos(newtonpoint) );
 
    /* check lmidtangent */
    newtonpoint = 0.4936608602;
-   EXPECTFEQ( coefs[1][0], cos(newtonpoint) );
+   EXPECTFEQ( coefs[1], cos(newtonpoint) );
    EXPECTFEQ( constants[1], cos(newtonpoint) + sin(-1) );
 
 
@@ -95,16 +113,16 @@ Test(separation, sine_x, .init = setup, .fini = teardown,
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left secant */
    newtonpoint = 4.6845658560;
-   EXPECTFEQ( coefs[0][0], cos(newtonpoint) );
+   EXPECTFEQ( coefs[0], cos(newtonpoint) );
    EXPECTFEQ( constants[0], cos(newtonpoint) + sin(-1) );
 
    /* check right tangent */
-   EXPECTFEQ( coefs[1][0], cos(5) );
+   EXPECTFEQ( coefs[1], cos(5) );
    EXPECTFEQ( constants[1],  sin(5) - 5 * cos(5) );
 
 
@@ -143,7 +161,7 @@ Test(separation, sine_x, .init = setup, .fini = teardown,
 }
 
 /* tests for interval [-6,-3] */
-Test(separation, sine_y, .init = setup, .fini = teardown,
+Test(separation, sine_y,
    .description = "test separation for a sine expression in mid size range"
 )
 {
@@ -189,16 +207,16 @@ Test(separation, sine_y, .init = setup, .fini = teardown,
     * test initial overestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right secant */
    newtonpoint = -3.2123712333;
-   EXPECTFEQ( coefs[0][0], cos(newtonpoint) );
+   EXPECTFEQ( coefs[0], cos(newtonpoint) );
    EXPECTFEQ( constants[0], 3 * cos(newtonpoint) + sin(-3) );
 
    /* check left tangent */
-   EXPECTFEQ( coefs[1][0], cos(-6) );
+   EXPECTFEQ( coefs[1], cos(-6) );
    EXPECTFEQ( constants[1], sin(-6) + 6 * cos(-6) );
 
 
@@ -206,11 +224,11 @@ Test(separation, sine_y, .init = setup, .fini = teardown,
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
 
    /* check secant */
-   EXPECTFEQ( coefs[0][0], (sin(-3) - sin(-6)) / 3.0 );
+   EXPECTFEQ( coefs[0], (sin(-3) - sin(-6)) / 3.0 );
    EXPECTFEQ( constants[0], 2.0 * sin(-3) - sin(-6) );
 
    /*
@@ -248,7 +266,7 @@ Test(separation, sine_y, .init = setup, .fini = teardown,
 }
 
 /* tests for interval [1,3] */
-Test(separation, sine_z, .init = setup, .fini = teardown,
+Test(separation, sine_z,
    .description = "test separation for a sine expression in short range"
 )
 {
@@ -293,26 +311,26 @@ Test(separation, sine_z, .init = setup, .fini = teardown,
    /*
     * test initial overestimation
     */
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right tangent */
-   EXPECTFEQ( coefs[0][0], cos(3) );
+   EXPECTFEQ( coefs[0], cos(3) );
    EXPECTFEQ( constants[0], sin(3) - 3 * cos(3) );
 
    /* check left tangent */
-   EXPECTFEQ( coefs[1][0], cos(1) );
+   EXPECTFEQ( coefs[1], cos(1) );
    EXPECTFEQ( constants[1], sin(1) - cos(1) );
 
    /*
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 1, "expected %d, got %d\n", 1, nreturned);
 
    /* check secant */
-   EXPECTFEQ( coefs[0][0], 0.5 * (sin(3) - sin(1)) );
+   EXPECTFEQ( coefs[0], 0.5 * (sin(3) - sin(1)) );
    EXPECTFEQ( constants[0], 1.5 * sin(1) - 0.5 * sin(3) );
 
    /*
@@ -342,7 +360,7 @@ Test(separation, sine_z, .init = setup, .fini = teardown,
 
 
 /* tests for interval [-pi,pi] */
-Test(separation, sine_v, .init = setup, .fini = teardown,
+Test(separation, sine_v,
    .description = "test separation for a sine expression in large range"
    )
 {
@@ -383,30 +401,30 @@ Test(separation, sine_v, .init = setup, .fini = teardown,
     * test initial overestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, FALSE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check right tangent */
-   EXPECTFEQ( coefs[0][0], -1.0 );
+   EXPECTFEQ( coefs[0], -1.0 );
    EXPECTFEQ( constants[0], M_PI );
 
    /* check left secant */
-   EXPECTFEQ( coefs[1][0], 0.217233628211222 );
+   EXPECTFEQ( coefs[1], 0.217233628211222 );
    EXPECTFEQ( constants[1], 0.682459570501030 );
 
    /*
     * test initial underestimation
     */
 
-   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefs, constants, &nreturned) );
+   SCIP_CALL( SCIPcomputeInitialCutsTrig(scip, expr, childlb, childub, TRUE, coefsp, constants, &nreturned) );
    cr_expect_eq(nreturned, 2, "expected %d, got %d\n", 2, nreturned);
 
    /* check left tangent */
-   EXPECTFEQ( coefs[0][0], -1.0 );
+   EXPECTFEQ( coefs[0], -1.0 );
    EXPECTFEQ( constants[0], -M_PI );
 
    /* check right secant */
-   EXPECTFEQ( coefs[1][0], 0.217233628211222 );
+   EXPECTFEQ( coefs[1], 0.217233628211222 );
    EXPECTFEQ( constants[1], -0.682459570501030 );
 
 

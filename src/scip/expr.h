@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
    SCIP_INTERVAL*        bounds,             /**< bounds for children */
    SCIP_Bool             overestimate,       /**< whether the expression shall be overestimated or underestimated */
    SCIP_Real*            coefs[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store coefficients of computed estimators */
-   SCIP_Real*            constant[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store constant of computed estimators */
+   SCIP_Real             constant[SCIP_EXPR_MAXINITESTIMATES], /**< buffer to store constant of computed estimators */
    int*                  nreturned           /**< buffer to store number of estimators that have been computed */
    );
 
