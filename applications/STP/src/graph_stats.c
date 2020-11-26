@@ -364,7 +364,7 @@ SCIP_RETCODE graph_printEdgeConflicts(
    for( int e = 0; e < nnodes; e++ )
       pseudonodecount[e] = 0;
 
-   npseudofixed = graph_get_nFixpseudonodes(scip, g);
+   npseudofixed = graph_get_nFixpseudonodes(g);
    nconflicts = 0;
    npseudoconflicts = 0;
 

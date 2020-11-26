@@ -746,7 +746,7 @@ SCIP_RETCODE reduce_fixedConflicts(
 
    const int nedges = g->edges;
    const int nnodes = g->knots;
-   const int nfixednodes = graph_get_nFixpseudonodes(scip, g);
+   const int nfixednodes = graph_get_nFixpseudonodes(g);
    const int* fixednodes = graph_get_fixpseudonodes(scip, g);
 
    *countnew = 0;

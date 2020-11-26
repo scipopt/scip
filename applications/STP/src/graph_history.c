@@ -1738,11 +1738,10 @@ const int* graph_get_fixpseudonodes(
 
 /** gets number of fixed pseudo eliminated nodes */
 int graph_get_nFixpseudonodes(
-   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g                   /**< the graph */
 )
 {
-   assert(g && scip);
+   assert(g);
 
    if( !g->fixedcomponents )
       return 0;

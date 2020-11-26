@@ -106,8 +106,6 @@
 typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
 
-
-
 /** fixed graph components */
 typedef struct fixed_graph_components FIXED;
 
@@ -119,8 +117,12 @@ typedef struct pseudo_ancestors PSEUDOANS;
 /** depository for several CSR storages */
 typedef struct compressed_sparse_storages_depository CSRDEPO;
 
-
+/** bottleneck Steiner distance (implied) profit */
 typedef struct special_distance_implied_profit SDPROFIT;
+
+
+/** helper needed for extracting and reinserting subgraph */
+typedef struct subgraph_extraction_insertion SUBINOUT;
 
 
 /** CSR like graph storage */

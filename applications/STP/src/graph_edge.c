@@ -164,7 +164,7 @@ int graph_edge_redirect(
    {
       assert(graph_edge_isInRange(g, eki));
 
-      if( !forcedelete )
+      if( !forcedelete && g->ieat[eki] != EAT_FREE )
          graph_edge_del(NULL, g, eki, FALSE);
 
       assert(g->oeat[eki] == EAT_FREE);

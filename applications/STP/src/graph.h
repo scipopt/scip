@@ -96,7 +96,7 @@ extern SCIP_RETCODE   graph_fixed_moveNodePc(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_copyFixed(SCIP*, const GRAPH*, GRAPH*);
 extern IDX*           graph_get_fixedges(const GRAPH*);
 extern const int*     graph_get_fixpseudonodes(SCIP*, const GRAPH*);
-extern int            graph_get_nFixpseudonodes(SCIP*, const GRAPH*);
+extern int            graph_get_nFixpseudonodes(const GRAPH*);
 
 /* graph_util.c
  */
@@ -176,8 +176,13 @@ extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copyPseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copyData(SCIP*, const GRAPH*, GRAPH*);
-extern SCIP_RETCODE   graph_extractSubgraph(SCIP*, const GRAPH*, int*, GRAPH**);
-extern SCIP_RETCODE   graph_reinsertSubgraph(SCIP*, const int*, GRAPH*, GRAPH**);
+extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, const GRAPH*, SUBINOUT*, GRAPH**);
+extern SCIP_RETCODE   graph_subinoutInit(SCIP*, const GRAPH*, SUBINOUT**);
+extern void           graph_subinoutFree(SCIP*, SUBINOUT**);
+const int* graph_subinoutGetSubToOrgNodeMap(const SUBINOUT*);
+
+extern SCIP_RETCODE   graph_subgraphReinsert(SCIP*, SUBINOUT*, GRAPH*, GRAPH**);
+extern SCIP_RETCODE   graph_subgraphFree(SCIP*, GRAPH**);
 extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_Bool      graph_isMarked(const GRAPH*);
