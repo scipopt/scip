@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
          namebuf.str("");
          namebuf << "col_" << j << "_" << k << "]";
 
-         /* we first create an empty an equality constraint (i.e. the lhs and rhs are equal to 1) and then add the
+         /* we first create an empty equality constraint (i.e. the lhs and rhs are equal to 1) and then add the
           * variables
           */
          SCIP_CALL( SCIPcreateConsBasicLinear(
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
          namebuf.str("");
          namebuf << "row_" << i << "_" << k << "]";
 
-         /* we first create an empty an equality constraint (i.e. the lhs and rhs are equal to 1) and then add the
+         /* we first create an empty equality constraint (i.e. the lhs and rhs are equal to 1) and then add the
           * variables
           */
           SCIP_CALL( SCIPcreateConsBasicLinear(
