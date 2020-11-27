@@ -409,7 +409,8 @@ SCIP_RETCODE redLoopStp_inner(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN*      randnumgen,         /**< generator */
    GRAPH*                g,                  /**< graph data structure */
-   REDBASE*              redbase             /**< parameters */
+   REDBASE*              redbase,            /**< parameters */
+   SCIP_Bool*            wasDecomposed       /**< pointer to mark whether to exit early */
 )
 {
    const RPARAMS* redparameters = redbase->redparameters;
@@ -431,6 +432,8 @@ SCIP_RETCODE redLoopStp_inner(
    SCIP_Bool bdk = redparameters->nodereplacing;
    SCIP_Bool bred = redparameters->boundreduce;
    SCIP_Bool nvsl = redparameters->nodereplacing;
+
+   *wasDecomposed = FALSE;
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -573,6 +576,45 @@ SCIP_RETCODE redLoopStp_inner(
          SCIP_CALL(reduce_articulations(scip, g, redbase->fixed, &nelims));
          printf("cutelims=%d \n", nelims);
       }
+
+//#define XXX
+#ifdef XXX
+      static int bi = FALSE;
+
+      if( g->terms > 1 && 1 && !bi )
+      {
+         int todo;
+         GRAPH *sub;
+         SUBINOUT *subinout = NULL;
+         //   printf("go \n");
+
+         bi = TRUE;
+         SCIP_CALL(graph_subinoutInit(scip, g, &subinout));
+         graph_mark(g);
+
+         SCIP_CALL(graph_subgraphExtract(scip, g, subinout, &sub));
+         graph_printInfo(g);
+         graph_printInfo(sub);
+
+         SCIP_CALL(redLoopStp(scip, sub, redbase));
+
+         printf("after red: \n");
+         graph_printInfo(sub);
+
+         printf("go \n");
+
+         SCIP_CALL(graph_subgraphReinsert(scip, subinout, g, &sub));
+         graph_printInfo(g);
+         //     graph_subgraphFree(scip, &sub);
+
+         graph_subinoutFree(scip, &subinout);
+         //assert(0);
+         *wasDecomposed = TRUE;
+      }
+#endif
+
+
+
 
       if( da )
       {
@@ -1968,9 +2010,16 @@ SCIP_RETCODE redLoopStp(
    /* reduction loop */
    do
    {
+      SCIP_Bool wasDecomposed;
       rerun = FALSE;
 
-      SCIP_CALL( redLoopStp_inner(scip, randnumgen, g, redbase) );
+      SCIP_CALL( redLoopStp_inner(scip, randnumgen, g, redbase, &wasDecomposed) );
+
+      if( wasDecomposed )
+      {
+         SCIP_CALL(reduce_simple(scip, g, redbase->fixed, redbase->solnode, &dummy, NULL));
+         break;
+      }
 
       if( fullreduce && !SCIPisStopped(scip) )
       {
