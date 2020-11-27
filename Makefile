@@ -763,6 +763,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cons.o \
 			scip/scip_copy.o \
 			scip/scip_cut.o \
+			scip/scip_cutsel.o \
 			scip/scip_datastructures.o\
 			scip/scip_debug.o \
 			scip/scip_dcmp.o \
