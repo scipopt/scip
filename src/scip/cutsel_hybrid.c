@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cutsel_default.c
+/**@file   cutsel_hybrid.c
  * @ingroup DEFPLUGINS_CUTSEL
- * @brief  default cut selector
+ * @brief  hybrid cut selector
  * @author Leona Gottwald
  * @author Felipe Serrano
  * @author Mark Turner
@@ -29,10 +29,10 @@
 #include "scip/scip_cut.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_randnumgen.h"
-#include "scip/cutsel_default.h"
+#include "scip/cutsel_hybrid.h"
 
 
-#define CUTSEL_NAME              "default"
+#define CUTSEL_NAME              "hybrid"
 #define CUTSEL_DESC              "weighted sum of efficacy, dircutoffdist, objparal, and intsupport"
 #define CUTSEL_PRIORITY           8000
 
@@ -255,7 +255,7 @@ int filterWithParallelism(
 
 /** copy method for cut selector plugin (called when SCIP copies plugins) */
 static
-SCIP_DECL_CUTSELCOPY(cutselCopyDefault)
+SCIP_DECL_CUTSELCOPY(cutselCopyHybrid)
 {  /*lint --e{715}*/
 
    assert(scip != NULL);
@@ -263,14 +263,14 @@ SCIP_DECL_CUTSELCOPY(cutselCopyDefault)
    assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
 
    /* call inclusion method of cut selector */
-   SCIP_CALL( SCIPincludeCutselDefault(scip) );
+   SCIP_CALL( SCIPincludeCutselHybrid(scip) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of cut selector to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_CUTSELFREE(cutselFreeDefault)
+SCIP_DECL_CUTSELFREE(cutselFreeHybrid)
 {  /*lint --e{715}*/
    SCIP_CUTSELDATA* cutseldata;
 
@@ -284,7 +284,7 @@ SCIP_DECL_CUTSELFREE(cutselFreeDefault)
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */
 static
-SCIP_DECL_CUTSELEXIT(cutselExitDefault)
+SCIP_DECL_CUTSELEXIT(cutselExitHybrid)
 {  /*lint --e{715}*/
    SCIP_CUTSELDATA* cutseldata;
 
@@ -296,7 +296,7 @@ SCIP_DECL_CUTSELEXIT(cutselExitDefault)
 
 /** cut selection method of cut selector */
 static
-SCIP_DECL_CUTSELSELECT(cutselSelectDefault)
+SCIP_DECL_CUTSELSELECT(cutselSelectHybrid)
 {  /*lint --e{715}*/
    SCIP_CUTSELDATA* cutseldata;
    SCIP_Real goodmaxparall;
@@ -317,7 +317,7 @@ SCIP_DECL_CUTSELSELECT(cutselSelectDefault)
       goodmaxparall = MAX(0.5, 1.0 - cutseldata->minortho);
    }
 
-   SCIP_CALL( SCIPselectCutsDefault(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->goodscore, cutseldata->badscore,
+   SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->goodscore, cutseldata->badscore,
             goodmaxparall, maxparall, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
             cutseldata->objparalweight, cutseldata->intsupportweight, ncuts, nforcedcuts, maxnselectedcuts, nselectedcuts) );
 
@@ -329,33 +329,33 @@ SCIP_DECL_CUTSELSELECT(cutselSelectDefault)
  * cut selector specific interface methods
  */
 
-/** creates the default cut selector and includes it in SCIP */
-SCIP_RETCODE SCIPincludeCutselDefault(
+/** creates the hybrid cut selector and includes it in SCIP */
+SCIP_RETCODE SCIPincludeCutselHybrid(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CUTSELDATA* cutseldata;
    SCIP_CUTSEL* cutsel;
 
-   /* create default cut selector data */
+   /* create hybrid cut selector data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &cutseldata) );
    BMSclearMemory(cutseldata);
    SCIP_CALL( SCIPcreateRandom(scip, &(cutseldata)->randnumgen, RANDSEED, TRUE) );
    cutseldata->goodscore = GOODSCORE;
    cutseldata->badscore  = BADSCORE;
 
-   SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectDefault,
+   SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectHybrid,
             cutseldata) );
 
    assert(cutsel != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetCutselCopy(scip, cutsel, cutselCopyDefault) );
+   SCIP_CALL( SCIPsetCutselCopy(scip, cutsel, cutselCopyHybrid) );
 
-   SCIP_CALL( SCIPsetCutselFree(scip, cutsel, cutselFreeDefault) );
-   SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitDefault) );
+   SCIP_CALL( SCIPsetCutselFree(scip, cutsel, cutselFreeHybrid) );
+   SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitHybrid) );
 
-   /* add default cut selector parameters */
+   /* add hybrid cut selector parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
             "cutselection/" CUTSEL_NAME "/efficacyweight",
             "weight of efficacy in cut score calculation",
@@ -391,12 +391,12 @@ SCIP_RETCODE SCIPincludeCutselDefault(
 
 
 /** perform a cut selection algorithm for the given array of cuts;
- *  this is the selection method of the default cut selector which does a weighted sum of the
+ *  this is the selection method of the hybrid cut selector which does a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
  *  The input cuts array gets resorted s.t the selected cuts comes first and the remaining
  *  ones are the end.
  */
-SCIP_RETCODE SCIPselectCutsDefault(
+SCIP_RETCODE SCIPselectCutsHybrid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_ROW**            forcedcuts,         /**< array with forced cuts */

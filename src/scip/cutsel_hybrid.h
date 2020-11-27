@@ -13,9 +13,9 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cutsel_default.h
+/**@file   cutsel_hybrid.h
  * @ingroup CUTSELECTORS
- * @brief  default cut selector
+ * @brief  hybrid cut selector
  * @author Leona Gottwald
  * @author Felipe Serrano
  * @author Mark Turner
@@ -23,8 +23,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CUTSEL_DEFAULT_H__
-#define __SCIP_CUTSEL_DEFAULT_H__
+#ifndef __SCIP_CUTSEL_HYBRID_H__
+#define __SCIP_CUTSEL_HYBRID_H__
 
 
 #include "scip/scip.h"
@@ -33,12 +33,12 @@
 extern "C" {
 #endif
 
-/** creates the default separator and includes it in SCIP
+/** creates the hybrid separator and includes it in SCIP
  *
  * @ingroup CutSelectorIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeCutselDefault(
+SCIP_RETCODE SCIPincludeCutselHybrid(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -48,12 +48,12 @@ SCIP_RETCODE SCIPincludeCutselDefault(
  */
 
 /** perform a cut selection algorithm for the given array of cuts;
- *  this is the selection method of the default cut selector which does a weighted sum of the
+ *  this is the selection method of the hybrid cut selector which does a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
  *  The input cuts array gets resorted s.t the selected cuts comes first and the remaining
  *  ones are the end.
  */
-SCIP_RETCODE SCIPselectCutsDefault(
+SCIP_RETCODE SCIPselectCutsHybrid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_ROW**            forcedcuts,         /**< array with forced cuts */
