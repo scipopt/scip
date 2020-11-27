@@ -370,6 +370,47 @@ void cutNodesTreeDeleteComponents(
 }
 
 
+#ifndef NDEBUG
+/** debug checker: makes sure that all remaining proper cut nodes are terminals */
+static
+SCIP_Bool cutNodesTreeMakeTermsIsComplete(
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   const GRAPH*          g                   /**< graph */
+   )
+{
+   const int* const biconn_nodesmark = cutnodes->biconn_nodesmark;
+   const int* biconn_comproot = cutnodes->biconn_comproots;
+   const int nnodes = graph_get_nNodes(g);
+
+   for( int i = 0; i < cutnodes->biconn_ncomps; i++ )
+   {
+      const int cutnode = biconn_comproot[i];
+      assert(graph_knot_isInRange(g, cutnode));
+
+      if( g->grad[cutnode] == 0 || Is_term(g->term[cutnode]) )
+         continue;
+
+      printf("XXXX %d \n", cutnode);
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( biconn_nodesmark[k] != i  )
+            continue;
+
+         if( g->grad[k] > 0 && g->mark[k] && k != cutnode )
+         {
+            printf("issue for \n");
+            graph_knot_printInfo(g, k);
+            return FALSE;
+         }
+      }
+   }
+
+   return TRUE;
+}
+#endif
+
+
 /** changes required cut-nodes from non-terminals to terminals */
 static
 void cutNodesTreeMakeTerms(
@@ -429,6 +470,8 @@ void cutNodesTreeMakeTerms(
          }
       }
    }
+
+   assert(cutNodesTreeMakeTermsIsComplete(cutnodes, g));
 }
 
 
@@ -630,13 +673,13 @@ void cutNodesProcessComponent(
    for( int size = StpVecGetSize(biconn_stack); size != stack_start; size-- )
    {
       const int compnode = biconn_stack[size - 1];
+      SCIPdebugMessage("%d \n", compnode);
 
       assert(size >= 1);
       assert(size == StpVecGetSize(biconn_stack));
       assert(biconn_nodesmark[compnode] == 0);
       assert(compnode != root);
 
-      SCIPdebugMessage("%d \n", compnode);
       biconn_nodesmark[compnode] = ncomps;
       StpVecPopBack(biconn_stack);
    }
@@ -702,7 +745,7 @@ void cutNodesComputeDfs(
          {
             isCutNode = TRUE;
 
-            SCIPdebugMessage("mark new bi-connected component \n");
+            SCIPdebugMessage("mark new bi-connected component from %d \n", node);
 
             cutNodesProcessComponent(node, stack_start, cutnodes);
          }
@@ -774,6 +817,7 @@ void cutNodesCompute(
    cutnodes->curr_hittime = 0;
    /* NOTE: we assume the graph to be connected, so we only do the DFS once */
    /* todo make it non-recursive, otherwise it might crash for big graphs! */
+   SCIPdebugMessage("starting DFS from %d \n", cutnodes->dfsroot);
    cutNodesComputeDfs(g, cutnodes->dfsroot, -1, cutnodes);
 
    SCIPdebugMessage("number of cut nodes: %d \n", StpVecGetSize(cutnodes->artpoints));
