@@ -4004,6 +4004,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
             /* create new pseudoboolean constraint */
             /* coverity[var_deref_op] */
+            /* coverity[var_deref_model] */
             SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                   targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
                   indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
@@ -5988,7 +5989,7 @@ SCIP_RETCODE tryUpgradingXor(
    {
       (void) SCIPsnprintf(newname, SCIP_MAXSTRLEN, "%s_upgraded", SCIPconsGetName(lincons));
 
-      SCIP_CALL( SCIPcreateConsXor(scip, &newcons, newname, (unsigned int) xortype, nlinvars, linvars,
+      SCIP_CALL( SCIPcreateConsXor(scip, &newcons, newname, (SCIP_Bool) xortype, nlinvars, linvars,
             SCIPconsIsInitial(lincons), SCIPconsIsSeparated(lincons), SCIPconsIsEnforced(lincons), SCIPconsIsChecked(lincons),
             SCIPconsIsPropagated(lincons), SCIPconsIsLocal(lincons), SCIPconsIsModifiable(lincons),
             SCIPconsIsDynamic(lincons), SCIPconsIsRemovable(lincons), SCIPconsIsStickingAtNode(lincons)) );

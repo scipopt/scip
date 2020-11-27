@@ -556,7 +556,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->misc_estimexternmem )
    {
-      if( scip->set->limit_memory < SCIP_MEM_NOLIMIT )
+      if( scip->set->limit_memory < (SCIP_Real)SCIP_MEM_NOLIMIT )
       {
          SCIP_Longint memused = SCIPgetMemUsed(scip);
 
@@ -2021,9 +2021,9 @@ SCIP_RETCODE freeTransform(
    scip->set->stage = SCIP_STAGE_FREETRANS;
 
    /* reset solving specific paramters */
-   if( scip->set->reopt_enable )
+   assert(!scip->set->reopt_enable || scip->reopt != NULL);
+   if( scip->set->reopt_enable && scip->reopt != NULL )
    {
-      assert(scip->reopt != NULL);
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 

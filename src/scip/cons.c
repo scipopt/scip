@@ -3274,17 +3274,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
 
       /* update statistics */
-      if( *result != SCIP_DIDNOTRUN )
-         conshdlr->nenforelaxcalls++;
-      else
-      {
-         SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation returned an invalid result %d\n",
-            conshdlr->name, *result);
-         conshdlr->lastenforelaxresult = *result;
-
-         return SCIP_INVALIDRESULT;
-      }
-
+      conshdlr->nenforelaxcalls++;
       if( *result == SCIP_CUTOFF )
          conshdlr->ncutoffs++;
       conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
@@ -3313,8 +3303,7 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
          && *result != SCIP_BRANCHED
          && *result != SCIP_SOLVELP
          && *result != SCIP_INFEASIBLE
-         && *result != SCIP_FEASIBLE
-         && *result != SCIP_DIDNOTRUN )
+         && *result != SCIP_FEASIBLE )
       {
          SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation solutions returned invalid result <%d>\n",
             conshdlr->name, *result);
@@ -3468,8 +3457,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          conshdlr->lastenfolpresult = *result;
 
          /* update statistics */
-         if( *result != SCIP_DIDNOTRUN )
-            conshdlr->nenfolpcalls++;
+         conshdlr->nenfolpcalls++;
          if( *result == SCIP_CUTOFF )
             conshdlr->ncutoffs++;
          conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/

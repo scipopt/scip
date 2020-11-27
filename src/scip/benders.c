@@ -37,8 +37,6 @@
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_misc_linear.h"
-#include "scip/pub_misc_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
@@ -780,7 +778,10 @@ SCIP_RETCODE assignAuxiliaryVariables(
       j = 0;
       targetvar = NULL;
 
-      /* the prefix is required for UG, since we don't know how many copies have been made. */
+      /* the prefix for the variable names is required for UG, since we don't know how many copies have been made. To
+       * find the target variable, we start with an empty prefix. Then t_ is prepended until the target variable is
+       * found
+       */
       prefix[0] = '\0';
       while( targetvar == NULL && j <= subscipdepth )
       {
@@ -793,18 +794,24 @@ SCIP_RETCODE assignAuxiliaryVariables(
          targetvar = SCIPfindVar(scip, varname);
 
          (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
-         strcpy(prefix, tmpprefix);
          len += 2;
+         strncpy(prefix, tmpprefix, len); /*lint !e732*/
 
          j++;
       }
-      assert(targetvar != NULL);
 
-      SCIPvarSetData(targetvar, vardata);
+      if( targetvar != NULL )
+      {
+         SCIPvarSetData(targetvar, vardata);
 
-      benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
+         benders->auxiliaryvars[i] = SCIPvarGetTransVar(targetvar);
 
-      SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+         SCIP_CALL( SCIPcaptureVar(scip, benders->auxiliaryvars[i]) );
+      }
+      else
+      {
+         SCIPABORT();
+      }
    }
 
    SCIPfreeBlockMemory(scip, &vardata);
@@ -4244,10 +4251,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
       /* if the result is DIDNOTRUN, then the subproblem was not solved */
       (*solved) = (result != SCIP_DIDNOTRUN);
    }
-   else
+   else if( subproblem != NULL )
    {
-      assert(subproblem != NULL);
-
       /* setting up the subproblem */
       if( solveloop == SCIP_BENDERSSOLVELOOP_CONVEX )
       {
@@ -4301,6 +4306,10 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
          else
             objective = SCIPsetInfinity(set);
       }
+   }
+   else
+   {
+      SCIPABORT();
    }
 
    if( !enhancement )
