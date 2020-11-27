@@ -81,42 +81,6 @@ SCIP_RETCODE freeExpr(
  * quadratic representation of expression
  */
 
-/** frees data of quadratic representation of expression, if any */
-static
-void quadFree(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_EXPR*            expr                /**< expression whose quadratic data will be released */
-   )
-{
-   int i;
-   int n;
-
-   assert(blkmem != NULL);
-   assert(expr != NULL);
-
-   expr->quadchecked = FALSE;
-
-   if( expr->quaddata == NULL )
-      return;
-
-   n = expr->quaddata->nquadexprs;
-
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->linexprs, expr->quaddata->nlinexprs);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);
-
-   for( i = 0; i < n; ++i )
-   {
-      BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->quadexprterms[i].adjbilin,
-         expr->quaddata->quadexprterms[i].adjbilinsize);
-   }
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->quadexprterms, n);
-
-   BMSfreeBlockMemory(blkmem, &expr->quaddata);
-}
-
 /** first time seen quadratically and
  * seen before linearly --> --nlinterms; assign 2; ++nquadterms
  * not seen before linearly --> assing 1; ++nquadterms
@@ -1801,7 +1765,7 @@ SCIP_RETCODE SCIPexprRelease(
    }
 
    /* free quadratic info */
-   quadFree(blkmem, *rootexpr);
+   SCIPexprFreeQuadratic(blkmem, *rootexpr);
 
    /* free expression data */
    if( (*rootexpr)->exprdata != NULL )
@@ -1850,7 +1814,7 @@ SCIP_RETCODE SCIPexprRelease(
             }
 
             /* free quadratic info */
-            quadFree(blkmem, child);
+            SCIPexprFreeQuadratic(blkmem, child);
 
             /* free expression data */
             if( child->exprdata != NULL )
@@ -3138,6 +3102,45 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    *isquadratic = TRUE;
 
    return SCIP_OKAY;
+}
+
+/** frees information on quadratic representation of an expression
+ *
+ * Reverts SCIPexprCheckQuadratic().
+ * Before doing changes to an expression, it can be useful to call this function.
+ */
+void SCIPexprFreeQuadratic(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int i;
+   int n;
+
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+
+   expr->quadchecked = FALSE;
+
+   if( expr->quaddata == NULL )
+      return;
+
+   n = expr->quaddata->nquadexprs;
+
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->linexprs, expr->quaddata->nlinexprs);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);
+
+   for( i = 0; i < n; ++i )
+   {
+      BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->quadexprterms[i].adjbilin,
+         expr->quaddata->quadexprterms[i].adjbilinsize);
+   }
+   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->quadexprterms, n);
+
+   BMSfreeBlockMemory(blkmem, &expr->quaddata);
 }
 
 /** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata

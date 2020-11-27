@@ -2186,6 +2186,22 @@ SCIP_RETCODE SCIPcheckExprQuadratic(
    return SCIP_OKAY;
 }
 
+/** frees information on quadratic representation of an expression
+ *
+ * Reverts SCIPcheckExprQuadratic().
+ * Before doing changes to an expression, it can be useful to call this function.
+ */
+void SCIPfreeExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIPexprFreeQuadratic(scip->mem->probmem, expr);
+}
+
 /** evaluates quadratic term in a solution
  *
  * \note This requires that every expr used in the quadratic data is a variable expression.

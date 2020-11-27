@@ -634,6 +634,17 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    SCIP_Bool*            isquadratic         /**< buffer to store result */
    );
 
+/** frees information on quadratic representation of an expression
+ *
+ * Reverts SCIPexprCheckQuadratic().
+ * Before doing changes to an expression, it can be useful to call this function.
+ */
+SCIP_EXPORT
+void SCIPexprFreeQuadratic(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** Checks the curvature of the quadratic function, x^T Q x + b^T x stored in quaddata
  *
  * For this, it builds the matrix Q and computes its eigenvalues using LAPACK; if Q is

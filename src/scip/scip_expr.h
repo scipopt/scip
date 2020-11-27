@@ -818,6 +818,17 @@ SCIP_RETCODE SCIPcheckExprQuadratic(
    SCIP_Bool*            isquadratic         /**< buffer to store result */
    );
 
+/** frees information on quadratic representation of an expression
+ *
+ * Reverts SCIPcheckExprQuadratic().
+ * Before doing changes to an expression, it can be useful to call this function.
+ */
+SCIP_EXPORT
+void SCIPfreeExprQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** evaluates quadratic term in a solution
  *
  * \note This requires that every expr used in the quadratic data is a variable expression.

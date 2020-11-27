@@ -2011,7 +2011,7 @@ SCIP_RETCODE deinitSolve(
          SCIP_CALL( freeEnfoData(scip, expr, TRUE) );
 
          /* remove quadratic info */
-//FIXME?         quadFree(scip, expr);
+         SCIPfreeExprQuadratic(scip, expr);
 
          if( rootactivityvalid )
          {
