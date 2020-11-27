@@ -276,13 +276,25 @@ SCIP_DECL_CUTSELFREE(cutselFreeHybrid)
    SCIP_CUTSELDATA* cutseldata;
 
    cutseldata = SCIPcutselGetData(cutsel);
-   SCIPfreeRandom(scip, &cutseldata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &cutseldata);
 
    return SCIP_OKAY;
 }
 /**! [SnippetCutselFreeHybrid] */
+
+/** initialization method of cut selector (called after problem was transformed) */
+static
+SCIP_DECL_CUTSELINIT(cutselInitHybrid)
+{  /*lint --e{715}*/
+   SCIP_CUTSELDATA* cutseldata;
+
+   cutseldata = SCIPcutselGetData(cutsel);
+   assert(cutseldata != NULL);
+
+   SCIP_CALL( SCIPcreateRandom(scip, &(cutseldata)->randnumgen, RANDSEED, TRUE) );
+   return SCIP_OKAY;
+}
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */
 static
@@ -292,6 +304,8 @@ SCIP_DECL_CUTSELEXIT(cutselExitHybrid)
 
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
+
+   SCIPfreeRandom(scip, &cutseldata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -342,7 +356,6 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
    /* create hybrid cut selector data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &cutseldata) );
    BMSclearMemory(cutseldata);
-   SCIP_CALL( SCIPcreateRandom(scip, &(cutseldata)->randnumgen, RANDSEED, TRUE) );
    cutseldata->goodscore = GOODSCORE;
    cutseldata->badscore  = BADSCORE;
 
@@ -355,6 +368,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
    SCIP_CALL( SCIPsetCutselCopy(scip, cutsel, cutselCopyHybrid) );
 
    SCIP_CALL( SCIPsetCutselFree(scip, cutsel, cutselFreeHybrid) );
+   SCIP_CALL( SCIPsetCutselInit(scip, cutsel, cutselInitHybrid) );
    SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitHybrid) );
 
    /* add hybrid cut selector parameters */
