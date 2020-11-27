@@ -2341,7 +2341,6 @@ SCIP_RETCODE priceAndCutLoop(
       maxnsepastallrounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
-   /* @todo check if LP is always already solved, because of calling solveNodeInitialLP() in solveNodeLP()? */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
    SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem,  stat, eventqueue, eventfilter, transprob,
          set->lp_iterlim, FALSE, TRUE, FALSE, lperror) );

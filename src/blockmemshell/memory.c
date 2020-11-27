@@ -55,7 +55,7 @@
  * checks enabled with the defines below.
  * The maintenance of the memlist, however, is not threadsafe.
  */
-#ifdef NPARASCIP
+#ifndef SCIP_THREADSAFE
 /*#define ENABLE_MEMLIST_CHECKS*/
 #endif
 
@@ -1896,6 +1896,23 @@ void* BMSallocBlockMemory_call(
 #endif
 
    return BMSallocBlockMemory_work(blkmem, size, filename, line);
+}
+
+/** allocates memory in the block memory pool and clears it */
+void* BMSallocClearBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   ptr = BMSallocBlockMemory_call(blkmem, size, filename, line);
+   if( ptr != NULL )
+      BMSclearMemorySize(ptr, size);
+
+   return ptr;
 }
 
 /** allocates array in the block memory pool */

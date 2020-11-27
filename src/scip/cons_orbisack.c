@@ -60,6 +60,7 @@
 #include "scip/scip_param.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry.h"
 #include <string.h>
 
 /* constraint handler properties */
@@ -204,12 +205,9 @@ SCIP_RETCODE packingUpgrade(
    SCIP_Bool*            isparttype          /**< memory address to store whether upgraded orbisack is partitioning orbisack */
    )
 {
-   SCIP_CONSHDLR* setppcconshdlr;
-   SCIP_CONS** setppcconss;
-   SCIP_Bool* rowcovered;
-   int nsetppcconss;
+   SCIP_VAR*** vars;
+   SCIP_ORBITOPETYPE type;
    int i;
-   int c;
 
    assert( scip != NULL );
    assert( vars1 != NULL );
@@ -218,154 +216,31 @@ SCIP_RETCODE packingUpgrade(
    assert( isparttype != NULL );
 
    *success = FALSE;
+   *isparttype = FALSE;
 
-   /* get data of setppc conshdlr */
-   setppcconshdlr = SCIPfindConshdlr(scip, "setppc");
-   if ( setppcconshdlr == NULL )
-   {
-      SCIPwarningMessage(scip, "Check for upgrading orbisacks to packing/partitioning orbisacks not possible - setppc constraint handler not found.\n");
-      return SCIP_OKAY;
-   }
-   setppcconss = SCIPconshdlrGetConss(setppcconshdlr);
-   nsetppcconss = SCIPconshdlrGetNConss(setppcconshdlr);
-
-   /* upgrade cannot be successful */
-   if ( nsetppcconss == 0 )
-      return SCIP_OKAY;
-   assert( setppcconss != NULL );
-
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &rowcovered, nrows) );
-
-   /* iterate over orbisack rows and check whether rows are contained in partitioning constraints */
-   *success = TRUE;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nrows) );
    for (i = 0; i < nrows; ++i)
    {
-      /* iterate over constraints */
-      for (c = 0; c < nsetppcconss; ++c)
-      {
-         int nsetppcvars;
-         SCIP_VAR** setppcvars;
-         SCIP_VAR* var;
-         int varidx1;
-         int varidx2;
-
-         /* check type */
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING ||
-              SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING )
-            continue;
-         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING );
-
-         /* get set packing/partitioning variables */
-         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-         assert( nsetppcvars > 0 );
-
-         /* partitioning constraint contains too much variables */
-         if ( nsetppcvars != 2 )
-            continue;
-         assert( nsetppcvars == 2 );
-
-         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
-         assert( setppcvars != NULL );
-
-         /* check whether i-th row is contained in partitioning constraint */
-         var = setppcvars[0];
-         if ( SCIPvarIsNegated(var) )
-            continue;
-
-         varidx1 = SCIPvarGetProbindex(var);
-
-         var = setppcvars[1];
-         if ( SCIPvarIsNegated(var) )
-            continue;
-
-         varidx2 = SCIPvarGetProbindex(var);
-
-         if ( (varidx1 == SCIPvarGetProbindex(vars1[i]) && varidx2 == SCIPvarGetProbindex(vars2[i])) ||
-              (varidx2 == SCIPvarGetProbindex(vars1[i]) && varidx1 == SCIPvarGetProbindex(vars2[i])))
-         {
-            rowcovered[i] = TRUE;
-            break;
-         }
-      }
-
-      /* no partitioning constraint corresponds to row i */
-      if ( c >= nsetppcconss )
-         *success = FALSE;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], 2) );
+      vars[i][0] = vars1[i];
+      vars[i][1] = vars2[i];
    }
 
-   if ( *success )
+   SCIP_CALL( SCIPisPackingPartitioningOrbitope(scip, vars, nrows, 2, NULL, NULL, &type) );
+
+   if ( type == SCIP_ORBITOPETYPE_PACKING )
+      *success = TRUE;
+   else if ( type == SCIP_ORBITOPETYPE_PARTITIONING )
    {
+      *success = TRUE;
       *isparttype = TRUE;
-      SCIPfreeBufferArray(scip, &rowcovered);
-
-      return SCIP_OKAY;
    }
 
-   /* Iterate over orbisack rows and check whether rows are contained in packing constraints.
-    * In particular, it is possible that variables in row i form a subset of variables in the
-    * a packing/partitioning constraint. */
-   *success = TRUE;
-   for (i = 0; i < nrows; ++i)
+   for (i = nrows - 1; i >= 0; --i)
    {
-      /* skip already covered rows */
-      if ( rowcovered[i] )
-         continue;
-
-      /* iterate over constraints */
-      for (c = 0; c < nsetppcconss; ++c)
-      {
-         SCIP_VAR** setppcvars;
-         SCIP_VAR* var;
-         int nsetppcvars;
-         int varidx;
-         int nfound = 0;
-         int j;
-
-         /* check type */
-         if ( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_COVERING )
-            continue;
-         assert( SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PARTITIONING ||
-            SCIPgetTypeSetppc(scip, setppcconss[c]) == SCIP_SETPPCTYPE_PACKING );
-
-         /* get set packing/partitioning variables */
-         nsetppcvars = SCIPgetNVarsSetppc(scip, setppcconss[c]);
-
-         /* skip empty constraints (might not have been removed by presolving yet) */
-         if ( nsetppcvars == 0 )
-            continue;
-         assert( nsetppcvars > 0 );
-
-         setppcvars = SCIPgetVarsSetppc(scip, setppcconss[c]);
-         assert( setppcvars != NULL );
-
-         /* check whether all variables of the cycle are contained in setppc constraint */
-         for (j = 0; j < nsetppcvars && nfound < 2; ++j)
-         {
-            var = setppcvars[j];
-
-            if ( SCIPvarIsNegated(var) )
-               continue;
-
-            varidx = SCIPvarGetProbindex(var);
-
-            if ( varidx == SCIPvarGetProbindex(vars1[i]) || varidx == SCIPvarGetProbindex(vars2[i]) )
-               ++nfound;
-         }
-
-         if ( nfound == 2 )
-            break;
-      }
-
-      /* row i is not contained in an setppc constraint */
-      if ( c >= nsetppcconss )
-         *success = FALSE;
+      SCIPfreeBufferArray(scip, &vars[i]);
    }
-
-   /* we have found a packing orbisack */
-   if ( *success )
-      *isparttype = FALSE;
-
-   SCIPfreeBufferArray(scip, &rowcovered);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }

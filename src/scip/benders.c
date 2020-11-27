@@ -37,8 +37,6 @@
 #include "scip/benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/pub_misc_linear.h"
-#include "scip/pub_misc_nonlinear.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
@@ -1592,6 +1590,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    SCIP_CONSHDLR* conshdlr_nonlinear = NULL;
    SCIP_CONSHDLR* conshdlr_quadratic = NULL;
    SCIP_CONSHDLR* conshdlr_abspower = NULL;
+   SCIP_CONSHDLR* conshdlr_soc = NULL;
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -1637,6 +1636,15 @@ SCIP_RETCODE checkSubproblemConvexity(
       conshdlr_nonlinear = SCIPfindConshdlr(subproblem, "nonlinear");
       conshdlr_quadratic = SCIPfindConshdlr(subproblem, "quadratic");
       conshdlr_abspower = SCIPfindConshdlr(subproblem, "abspower");
+      conshdlr_soc = SCIPfindConshdlr(subproblem, "soc");
+
+      /* ensuring that the sqrt form of the soc constraints is always used. This ensures that the constraints are always
+       * convex
+       */
+      if( conshdlr_soc != NULL )
+      {
+         SCIP_CALL( SCIPsetCharParam(subproblem, "constraints/soc/nlpform", 's') );
+      }
    }
 
    /* if the quadratic constraint handler exists, then we create a hashmap of variables that can be assumed to be fixed.
@@ -1750,8 +1758,15 @@ SCIP_RETCODE checkSubproblemConvexity(
          }
       }
 
+      /* checking whether soc constraints exist. If, so then they are guaranteed to be convex. */
+      if( conshdlr == conshdlr_soc )
+      {
+         isnonlinear = TRUE;
+
+         continue;
+      }
+
       /* skip bivariate constraints: they are typically nonconvex
-       * skip soc constraints: it would depend how these are represented in the NLP eventually, which could be nonconvex
        */
 
 #ifdef SCIP_MOREDEBUG
@@ -2948,6 +2963,7 @@ SCIP_RETCODE performInteriorSolCutStrengthening(
 
          /* if the number of iterations without improvement is less than 2*noimprovelimit, then perturbation is
           * performed
+          * TODO: This should be a random vector!!!!
           */
          if( perturbsol || benders->noimprovecount <= 2*benders->noimprovelimit )
             newsolval += benders->perturbeps;
