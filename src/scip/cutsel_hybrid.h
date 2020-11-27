@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup CUTSELECTOR
+/**@addtogroup CUTSELECTORS
  *
  * @{
  */

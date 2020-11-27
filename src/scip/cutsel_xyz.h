@@ -40,7 +40,7 @@ SCIP_RETCODE SCIPincludeCutselXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@addtogroup CUTSELECTOR
+/**@addtogroup CUTSELECTORS
  *
  * @{
  */

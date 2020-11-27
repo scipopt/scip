@@ -269,6 +269,7 @@ SCIP_DECL_CUTSELCOPY(cutselCopyHybrid)
 }
 
 /** destructor of cut selector to free user data (called when SCIP is exiting) */
+/**! [SnippetCutselFreeHybrid] */
 static
 SCIP_DECL_CUTSELFREE(cutselFreeHybrid)
 {  /*lint --e{715}*/
@@ -281,6 +282,7 @@ SCIP_DECL_CUTSELFREE(cutselFreeHybrid)
 
    return SCIP_OKAY;
 }
+/**! [SnippetCutselFreeHybrid] */
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */
 static
