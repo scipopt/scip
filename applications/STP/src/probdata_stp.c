@@ -1173,7 +1173,7 @@ SCIP_RETCODE createVariables(
       SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
       assert(nedges == graph->edges);
-      assert(realnterms >= 1);
+      assert(realnterms >= 0);
 
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->xval, nvars) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->edgevars, nvars) );
@@ -1363,8 +1363,10 @@ SCIP_RETCODE createVariables(
             if( probdata->usesymcons )
             {
 #ifdef STP_SYM_PRIZE
-               SCIP_Real* termprizes;
-               SCIP_CALL( SCIPallocBufferArray(scip, &termprizes, probdata->realnterms) );
+               SCIP_Real* termprizes = NULL;
+
+               if( probdata->realnterms > 0 )
+                  SCIP_CALL( SCIPallocBufferArray(scip, &termprizes, probdata->realnterms) );
 
                assert(t == graph->terms - 1);
                assert(probdata->realnterms == t);
@@ -1416,7 +1418,7 @@ SCIP_RETCODE createVariables(
 
                SCIPfreeBufferArray(scip, &termprizes);
 #endif
-               SCIPfreeBufferArray(scip, &pseudoterms);
+               SCIPfreeBufferArrayNull(scip, &pseudoterms);
             }
          }
       }
@@ -1591,7 +1593,7 @@ SCIP_RETCODE createModel(
       const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
       const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
 
-      assert(graph->terms > 1);
+      assert(graph->terms >= 1);
 
       SCIP_CALL(graph_path_init(scip, graph));
 #ifdef WITH_UG
@@ -1764,6 +1766,10 @@ SCIP_RETCODE createInitialCuts(
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
 
    assert(STP_MODE_CUT == probdata->mode);
+   assert(graph->terms - 1 == probdata->realnterms);
+
+   if( probdata->realnterms == 0 )
+      return SCIP_OKAY;
 
    if( pc || mw )
    {
@@ -1938,9 +1944,7 @@ SCIP_RETCODE setParams(
 
    if( graph->knots > 1 )
    {
-      /* we always to some basic presolving and thus assume that there is not problem with only one terminal
-       * and additional nodes */
-      assert(graph->terms > 1);
+      assert(graph->terms >= 1);
 
       probdata->graphHasVanished = FALSE;
    }

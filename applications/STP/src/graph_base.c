@@ -63,6 +63,7 @@ struct subgraph_extraction_insertion
    int*                  nodemap_orgToSub;    /**< node map */
    int                   org_nnodes;
    int                   sub_nnodes;
+   SCIP_Bool             rootIsTransfered;
 };
 
 
@@ -521,16 +522,17 @@ void extractSubgraphGetSizeAndMap(
 static
 void extractSubgraphAddNodes(
    const GRAPH*          orggraph,           /**< original graph */
-   const int*            nodemap,            /**< map*/
+   SUBINOUT*             subinout,
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
+   const int* const nodemap_subToOrg = subinout->nodemap_subToOrg;
    const int ksize = subgraph->ksize;
    assert(subgraph->source == -1);
 
    for( int i = 0; i < ksize; i++ )
    {
-      const int orgnode = nodemap[i];
+      const int orgnode = nodemap_subToOrg[i];
       assert(graph_knot_isInRange(orggraph, orgnode));
 
       if( Is_term(orggraph->term[orgnode]) )
@@ -538,6 +540,12 @@ void extractSubgraphAddNodes(
          graph_knot_add(subgraph, STP_TERM);
          if( subgraph->source == -1 )
             subgraph->source = i;
+
+         if( orggraph->source == orgnode )
+         {
+            subgraph->source = i;
+            subinout->rootIsTransfered = TRUE;
+         }
       }
       else
       {
@@ -707,7 +715,7 @@ SCIP_RETCODE extractSubgraphBuild(
    if( graph_typeIsSpgLike(orggraph) )
       subg->stp_type = STP_SPG;
 
-   extractSubgraphAddNodes(orggraph, nodemap_subToOrg, subg);
+   extractSubgraphAddNodes(orggraph, subinout, subg);
    SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subg) );
    SCIP_CALL( extractSubgraphAddEdgesWithHistory(scip, orggraph, subinout, subg) );
 
@@ -725,20 +733,22 @@ void reinsertSubgraphTransferFixedHistory(
    GRAPH*                orggraph            /**< original graph */
    )
 {
-   const int npseudoans_sub = graph_get_nFixpseudonodes(subgraph);
-   const int npseudoans_org = graph_get_nFixpseudonodes(orggraph);
+   const int npseudoans_sub = graph_getNpseudoAncestors(subgraph);
+   const int npseudoans_org = graph_getNpseudoAncestors(orggraph);
 
    assert(npseudoans_org <= npseudoans_sub);
 
    if( npseudoans_org < npseudoans_sub )
       graph_addPseudoAncestors(npseudoans_sub - npseudoans_org, orggraph);
 
-   assert(graph_get_nFixpseudonodes(subgraph) == graph_get_nFixpseudonodes(orggraph));
+   assert(graph_getNpseudoAncestors(subgraph) == graph_getNpseudoAncestors(orggraph));
 
    if( orggraph->fixedcomponents )
       graph_free_fixed(scip, orggraph);
    assert(orggraph->fixedcomponents == NULL);
    orggraph->fixedcomponents = subgraph->fixedcomponents;
+
+   assert(graph_get_nFixpseudonodes(subgraph) == graph_get_nFixpseudonodes(orggraph));
 }
 
 
@@ -803,6 +813,14 @@ SCIP_RETCODE reinsertSubgraphTransferTerminals(
       const int orgnode = nodemap_subToOrg[i];
 
       graph_knot_chg(orggraph, orgnode, subgraph->term[i]);
+   }
+
+   if( subinout->rootIsTransfered )
+   {
+      assert(graph_knot_isInRange(subgraph, subgraph->source));
+
+      orggraph->source = nodemap_subToOrg[subgraph->source];
+      assert(Is_term(orggraph->term[orggraph->source]));
    }
 
    return SCIP_OKAY;
@@ -1565,6 +1583,7 @@ SCIP_RETCODE graph_subinoutInit(
 
    sub->org_nnodes = nnodes;
    sub->sub_nnodes = -1;
+   sub->rootIsTransfered = FALSE;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->nodemap_subToOrg), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->nodemap_orgToSub), nnodes) );
