@@ -72,12 +72,28 @@ typedef enum
  * The callback must not try to access the expressions children.
  *
  * input:
+ *  - scip      : SCIP main data structure
+ *  - expr      : the expression which is printed
+ *  - file      : file to print to, or NULL for stdout
+ *  - ownerdata : the ownerdata stored in the expression
+ */
+#define SCIP_DECL_EXPR_OWNERDATAFREE(x) SCIP_RETCODE x(\
+   SCIP* scip, \
+   SCIP_EXPR* expr, \
+   SCIP_EXPR_OWNERDATA** ownerdata)
+
+/** callback for printing ownerdata of expression
+ *
+ * This callback is called when printing details on an expression, e.g., SCIPdismantleExpr().
+ *
+ * input:
  *  - scip           : SCIP main data structure
  *  - expr           : the expression which is freed
  *  - ownerdata      : the ownerdata stored in the expression
  */
-#define SCIP_DECL_EXPR_OWNERDATAFREE(x) SCIP_RETCODE x(\
+#define SCIP_DECL_EXPR_OWNERDATAPRINT(x) SCIP_RETCODE x(\
    SCIP* scip, \
+   FILE* file, \
    SCIP_EXPR* expr, \
    SCIP_EXPR_OWNERDATA** ownerdata)
 
@@ -91,14 +107,16 @@ typedef enum
  *  - expr           : the expression that has been created
  *  - ownerdatacreatedata : data that has been passed on by future owner of expression that can be used to create ownerdata
  * output:
- *  - ownerdata      : buffer to store ownerdata that shall be stored in expression (can be NULL)
- *  - ownerdatafree  : buffer to store function to be called to free ownerdata when expression is freed
+ *  - ownerdata      : buffer to store ownerdata that shall be stored in expression (can be NULL, as it is initialized)
+ *  - ownerdatafree  : buffer to store function to be called to free ownerdata when expression is freed (can be NULL, as it is initialized)
+ *  - ownerdataprint : buffer to store function to be called to print ownerdata (can be NULL, as it is initialized)
  */
 #define SCIP_DECL_EXPR_OWNERDATACREATE(x) SCIP_RETCODE x(\
    SCIP* scip, \
    SCIP_EXPR* expr, \
    SCIP_EXPR_OWNERDATA** ownerdata, \
    SCIP_DECL_EXPR_OWNERDATAFREE((**ownerdatafree)), \
+   SCIP_DECL_EXPR_OWNERDATAPRINT((**ownerdataprint)), \
    SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
 
 /** callback that returns bounds for a given variable as used in interval evaluation
@@ -643,14 +661,14 @@ typedef struct SCIP_ExprIter     SCIP_EXPRITER;      /**< expression iterator */
 #define SCIP_EXPRPRINT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
 #define SCIP_EXPRPRINT_EXPRHDLR     0x2u /**< print expression handler name */
 #define SCIP_EXPRPRINT_NUSES        0x4u /**< print number of uses (reference counting) */
-#define SCIP_EXPRPRINT_NLOCKS       0x8u /**< print number of locks */
-#define SCIP_EXPRPRINT_EVALVALUE   0x10u /**< print evaluation value */
-#define SCIP_EXPRPRINT_EVALTAG     0x30u /**< print evaluation value and tag */
-#define SCIP_EXPRPRINT_ACTIVITY    0x40u /**< print activity value */
-#define SCIP_EXPRPRINT_ACTIVITYTAG 0xC0u /**< print activity value and corresponding tag */
+#define SCIP_EXPRPRINT_EVALVALUE    0x8u /**< print evaluation value */
+#define SCIP_EXPRPRINT_EVALTAG     0x18u /**< print evaluation value and tag */
+#define SCIP_EXPRPRINT_ACTIVITY    0x20u /**< print activity value */
+#define SCIP_EXPRPRINT_ACTIVITYTAG 0x60u /**< print activity value and corresponding tag */
+#define SCIP_EXPRPRINT_OWNER       0x80u /**< print ownerdata */
 
 /** print everything */
-#define SCIP_EXPRPRINT_ALL SCIP_EXPRPRINT_EXPRSTRING | SCIP_EXPRPRINT_EXPRHDLR | SCIP_EXPRPRINT_NUSES | SCIP_EXPRPRINT_NLOCKS | SCIP_EXPRPRINT_EVALTAG | SCIP_EXPRPRINT_ACTIVITYTAG
+#define SCIP_EXPRPRINT_ALL SCIP_EXPRPRINT_EXPRSTRING | SCIP_EXPRPRINT_EXPRHDLR | SCIP_EXPRPRINT_NUSES | SCIP_EXPRPRINT_EVALTAG | SCIP_EXPRPRINT_ACTIVITYTAG | SCIP_EXPRPRINT_OWNER
 
 typedef unsigned int              SCIP_EXPRPRINT_WHAT; /**< type for exprprint bitflags */
 typedef struct SCIP_ExprPrintData SCIP_EXPRPRINTDATA;  /**< printing a expression file data */

@@ -1426,7 +1426,7 @@ SCIP_RETCODE SCIPexprCreate(
    /* initializes the ownerdata */
    if( ownerdatacreate != NULL )
    {
-      SCIP_CALL( ownerdatacreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerdatafree, ownerdatacreatedata) );
+      SCIP_CALL( ownerdatacreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerdatafree, &(*expr)->ownerdataprint, ownerdatacreatedata) );
    }
 
    return SCIP_OKAY;
@@ -2092,11 +2092,18 @@ SCIP_RETCODE SCIPexprPrintDot(
          fprintf(printdata->file, "%d uses\\n", expr->nuses);
       }
 
-//      if( printdata->whattoprint & SCIP_EXPRPRINT_NLOCKS )
-//      {
-//         /* print number of locks */
-//         fprintf(printdata->file, "%d,%d +,-locks\\n", expr->nlockspos, expr->nlocksneg);
-//      }
+      if( printdata->whattoprint & SCIP_EXPRPRINT_OWNER )
+      {
+         /* print ownerdata */
+         if( expr->ownerdataprint != NULL )
+         {
+            SCIP_CALL( expr->ownerdataprint(set->scip, printdata->file, expr, expr->ownerdata) );
+         }
+         else if( expr->ownerdata != NULL )
+         {
+            fprintf(printdata->file, "owner=%p\\n", (void*)expr->ownerdata);
+         }
+      }
 
       if( printdata->whattoprint & SCIP_EXPRPRINT_EVALVALUE )
       {
@@ -2244,6 +2251,12 @@ SCIP_RETCODE SCIPexprDismantle(
                SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetExponentExprPow(expr));
 
             SCIPmessageFPrintInfo(messagehdlr, file, "\n");
+
+            if( expr->ownerdataprint != NULL )
+            {
+               SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
+               expr->ownerdataprint(set->scip, file, expr, expr->ownerdata);
+            }
 
             break;
          }

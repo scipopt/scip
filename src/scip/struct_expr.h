@@ -105,6 +105,7 @@ struct SCIP_Expr
    /* owner data */
    SCIP_EXPR_OWNERDATA*  ownerdata;          /**< data stored by owner of expression */
    SCIP_DECL_EXPR_OWNERDATAFREE((*ownerdatafree)); /**< callback for freeing ownerdata */
+   SCIP_DECL_EXPR_OWNERDATAPRINT((*ownerdataprint)); /**< callback for printing ownerdata */
 
    /* point-evaluation and differentiation*/
    SCIP_Real             evalvalue;          /**< value of expression from last evaluation (corresponding to evaltag) */
