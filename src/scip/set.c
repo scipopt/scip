@@ -956,14 +956,14 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-    /* copy all cut selector plugins */
-    if( copycutselectors && sourceset->cutsels != NULL )
-    {
-        for( p = sourceset->ncutsels - 1; p >= 0; --p )
-        {
-            SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
-        }
-    }
+   /* copy all cut selector plugins */
+   if( copycutselectors && sourceset->cutsels != NULL )
+   {
+      for( p = sourceset->ncutsels - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
+      }
+   }
 
    /* copy all propagators plugins */
    if( copypropagators && sourceset->props != NULL )
