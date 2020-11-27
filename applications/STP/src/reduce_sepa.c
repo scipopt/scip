@@ -37,24 +37,26 @@
 #include "stpvector.h"
 #include "scip/scip.h"
 
-#define CUTTREE_PRINT_STATISTICS
+//#define CUTTREE_PRINT_STATISTICS
 
 
 /** cut nodes/ articulation points */
 typedef struct cut_nodes
 {
    SCIP*                 scip;               /**< SCIP data structure */
+#ifdef CUTTREE_PRINT_STATISTICS
    int*                  childcount_nodes;   /**< number of nodes below each node */
    int*                  childcount_terms;   /**< number of terminals below each node */
+#endif
    STP_Vectype(int)      biconn_stack;       /**< stack for marking bi-connected component */
    int*                  biconn_nodesmark;   /**< marks in which component each node is 0, 1,.., biconn_ncomps - 1 */
    int*                  biconn_comproots;   /**< root of each component with index 0,1,...,biconn_ncomps - 1 */
    STP_Vectype(int)      artpoints;          /**< cut nodes */
    int*                  nodes_hittime;      /**< hit time 0,1,... */
-   int*                  nodes_lowpoint;     /**< low-point per node */
-   SCIP_Bool*            nodes_isVisited;    /**< visited? */
    int                   biconn_ncomps;      /**< number of components */
    int                   dfsroot;            /**< root */
+   int                   curr_lowpoint;      /**< current low-point */
+   int                   curr_hittime;       /**< current hit time */
 } CUTNODES;
 
 
@@ -64,7 +66,6 @@ typedef struct cut_tree_data
    int*                  nodes_prednode;     /**< predecessor per node */
    SCIP_Bool*            comps_isHit;        /**< of size ncomps */
    SCIP_Bool*            nodes_isTree;       /**< of size |V| */
-   SCIP_Bool*            nodes_isVisited;    /**< visited? NON-OWNED! */
    SCIP_Bool             cutnode0isNeeded;   /**< special treatment */
 } CUTTREE;
 
@@ -256,7 +257,6 @@ void cutNodesTreeBuildSteinerTree(
 {
    STP_Vectype(int) stack = NULL;
    int* RESTRICT nodes_pred = cuttree->nodes_prednode;
-   SCIP_Bool* RESTRICT nodes_isVisited = cutnodes->nodes_isVisited;
    SCIP_Bool* RESTRICT nodes_isTree = cuttree->nodes_isTree;
    const int* const biconn_nodesmark = biconn_nodesmark;
    const int nnodes = graph_get_nNodes(g);
@@ -265,14 +265,14 @@ void cutNodesTreeBuildSteinerTree(
    const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
    int termscount = isPcMw ? graph_pc_nNonLeafTerms(g) : g->terms;
 
-   assert(nodes_pred && nodes_isVisited && nodes_isTree && cuttree->comps_isHit);
-   assert(!nodes_isTree[root] && !cuttree->comps_isHit[cutnodes->biconn_nodesmark[root]] && !nodes_isVisited[root]);
+   assert(nodes_pred && nodes_isTree && cuttree->comps_isHit);
+   assert(!nodes_isTree[root] && !cuttree->comps_isHit[cutnodes->biconn_nodesmark[root]]);
    assert(!cuttree->cutnode0isNeeded);
 
    StpVecReserve(scip, stack, nnodes);
 
+   nodes_pred[root] = root;
    cutNodesTreeAddNode(root, cutnodes, lastcutnode, cuttree);
-   nodes_isVisited[root] = TRUE;
    StpVecPushBack(scip, stack, root);
    termscount--;
 
@@ -286,9 +286,8 @@ void cutNodesTreeBuildSteinerTree(
       {
          const int head = g->head[e];
 
-         if( !nodes_isVisited[head] && g->mark[head] )
+         if( nodes_pred[head] < 0 && g->mark[head] )
          {
-            nodes_isVisited[head] = TRUE;
             nodes_pred[head] = node;
 
             StpVecPushBack(scip, stack, head);
@@ -445,7 +444,6 @@ SCIP_RETCODE cutNodesTreeInit(
    int* nodes_prednode;
    SCIP_Bool* comps_isHit;
    SCIP_Bool* nodes_isTree;
-   SCIP_Bool* const nodes_isVisited = cutnodes->nodes_isVisited;
    const int nnodes = graph_get_nNodes(g);
    const int ncomps = cutnodes->biconn_ncomps;
 
@@ -457,7 +455,6 @@ SCIP_RETCODE cutNodesTreeInit(
    for( int i = 0; i < nnodes; i++ )
    {
       nodes_isTree[i] = FALSE;
-      nodes_isVisited[i] = FALSE;
       nodes_prednode[i] = -1;
    }
 
@@ -529,36 +526,37 @@ SCIP_RETCODE cutNodesInit(
    )
 {
    const int nnodes = g->knots;
-   int* childcount_nodes;
-   int* childcount_terms;
+
    int* nodes_hittime;
-   int* nodes_lowpoint;
    int* biconn_nodesmark;
    int* biconn_comproots;
-   SCIP_Bool* visited;
 
    assert(cutnodes->artpoints == NULL);
    assert(cutnodes->biconn_stack == NULL);
    assert(cutnodes->biconn_ncomps == 0);
-   SCIP_CALL( SCIPallocBufferArray(scip, &childcount_nodes, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &childcount_terms, nnodes) );
+
+#ifdef CUTTREE_PRINT_STATISTICS
+   {
+      int* childcount_nodes;
+      int* childcount_terms;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &childcount_nodes, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &childcount_terms, nnodes) );
+
+      for( int k = 0; k < nnodes; k++ )
+         childcount_nodes[k] = 0;
+
+      for( int k = 0; k < nnodes; k++ )
+         childcount_terms[k] = 0;
+
+      cutnodes->childcount_nodes = childcount_nodes;
+      cutnodes->childcount_terms = childcount_terms;
+   }
+#endif
+
    SCIP_CALL( SCIPallocBufferArray(scip, &biconn_comproots, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &biconn_nodesmark, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes_hittime, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_lowpoint, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &visited, nnodes) );
-
-   for( int k = 0; k < nnodes; k++ )
-      childcount_nodes[k] = 0;
-
-   for( int k = 0; k < nnodes; k++ )
-      childcount_terms[k] = 0;
-
-   for( int k = 0; k < nnodes; k++ )
-      visited[k] = FALSE;
-
-   for( int k = 0; k < nnodes; k++ )
-      nodes_lowpoint[k] = -1;
 
    for( int k = 0; k < nnodes; k++ )
       nodes_hittime[k] = -1;
@@ -572,13 +570,12 @@ SCIP_RETCODE cutNodesInit(
       biconn_nodesmark[k] = 0;
 
    cutnodes->scip = scip;
-   cutnodes->childcount_nodes = childcount_nodes;
-   cutnodes->childcount_terms = childcount_terms;
+
    cutnodes->biconn_comproots = biconn_comproots;
    cutnodes->biconn_nodesmark = biconn_nodesmark;
    cutnodes->nodes_hittime = nodes_hittime;
-   cutnodes->nodes_lowpoint = nodes_lowpoint;
-   cutnodes->nodes_isVisited = visited;
+   cutnodes->curr_lowpoint = -1;
+   cutnodes->curr_hittime = -1;
 
    cutNodesSetDfsRoot(g, cutnodes);
 
@@ -598,13 +595,14 @@ void cutNodesExit(
    StpVecFree(scip, cutnodes->artpoints);
    StpVecFree(scip, cutnodes->biconn_stack);
 
-   SCIPfreeBufferArray(scip, &(cutnodes->nodes_isVisited));
-   SCIPfreeBufferArray(scip, &(cutnodes->nodes_lowpoint));
    SCIPfreeBufferArray(scip, &(cutnodes->nodes_hittime));
    SCIPfreeBufferArray(scip, &(cutnodes->biconn_nodesmark));
    SCIPfreeBufferArray(scip, &(cutnodes->biconn_comproots));
+
+#ifdef CUTTREE_PRINT_STATISTICS
    SCIPfreeBufferArray(scip, &(cutnodes->childcount_terms));
    SCIPfreeBufferArray(scip, &(cutnodes->childcount_nodes));
+#endif
 }
 
 
@@ -650,28 +648,25 @@ static
 void cutNodesComputeDfs(
    const GRAPH*          g,                  /**< graph data structure */
    int                   node,               /**< vertex */
-   int                   hittime,            /**< 0,1,... */
    int                   parent,             /**< parent of node */
    CUTNODES*             cutnodes            /**< cut nodes */
    )
 {
-   SCIP* scip = cutnodes->scip;
+#ifdef CUTTREE_PRINT_STATISTICS
    int* childcount_terms = cutnodes->childcount_terms;
    int* childcount_nodes = cutnodes->childcount_nodes;
-   SCIP_Bool* visited = cutnodes->nodes_isVisited;
-   int* nodes_hittime = cutnodes->nodes_hittime;
-   int* nodes_lowpoint = cutnodes->nodes_lowpoint;
+#endif
+
+   int* const nodes_hittime = cutnodes->nodes_hittime;
+   const int myhittime = cutnodes->curr_hittime;
+   int mylowpoint = myhittime;
    int nchildren = 0;
    SCIP_Bool isCutNode = FALSE;
    const SCIP_Bool nodeIsRoot = (parent == -1);
 
-   assert(childcount_terms[node] == 0);
-   assert(childcount_nodes[node] == 0);
-
-   visited[node] = TRUE;
-   nodes_hittime[node] = hittime;
-   nodes_lowpoint[node] = hittime;
-   StpVecPushBack(scip, cutnodes->biconn_stack, node);
+   nodes_hittime[node] = myhittime;
+   (cutnodes->curr_hittime)++;
+   StpVecPushBack(cutnodes->scip, cutnodes->biconn_stack, node);
 
    for( int e = g->outbeg[node]; e != EAT_LAST; e = g->oeat[e] )
    {
@@ -680,17 +675,18 @@ void cutNodesComputeDfs(
       if( !g->mark[head] )
          continue;
 
-      if( !visited[head] )
+      /* not visited? */
+      if( nodes_hittime[head] < 0 )
       {
          const int stack_start = StpVecGetSize(cutnodes->biconn_stack);
          assert(head != parent);
 
-         cutNodesComputeDfs(g, head, hittime + 1, node, cutnodes);
-         assert(nodes_lowpoint[head] >= 0);
+         cutNodesComputeDfs(g, head, node, cutnodes);
 
+#ifdef CUTTREE_PRINT_STATISTICS
          childcount_nodes[node] += childcount_nodes[head] + 1;
          childcount_terms[node] += childcount_terms[head] + (Is_term(g->term[head]) ? 1 : 0);
-
+#endif
          if( nodeIsRoot )
          {
             nchildren++;
@@ -702,7 +698,7 @@ void cutNodesComputeDfs(
                cutNodesProcessComponent(node, stack_start, cutnodes);
             }
          }
-         else if( nodes_lowpoint[head] >= nodes_hittime[node] )
+         else if( cutnodes->curr_lowpoint >= myhittime )
          {
             isCutNode = TRUE;
 
@@ -711,14 +707,14 @@ void cutNodesComputeDfs(
             cutNodesProcessComponent(node, stack_start, cutnodes);
          }
 
-         if( nodes_lowpoint[node] > nodes_lowpoint[head] )
-            nodes_lowpoint[node] = nodes_lowpoint[head];
+         if( mylowpoint > cutnodes->curr_lowpoint )
+            mylowpoint = cutnodes->curr_lowpoint;
       }
       else if( head != parent )
       {
          assert(nodes_hittime[head] >= 0);
-         if( nodes_lowpoint[node] > nodes_hittime[head] )
-            nodes_lowpoint[node] = nodes_hittime[head];
+         if( mylowpoint > nodes_hittime[head] )
+            mylowpoint = nodes_hittime[head];
       }
    }
 
@@ -733,6 +729,8 @@ void cutNodesComputeDfs(
    {
       StpVecPushBack(cutnodes->scip, cutnodes->artpoints, node);
    }
+
+   cutnodes->curr_lowpoint = mylowpoint;
 }
 
 
@@ -770,9 +768,13 @@ void cutNodesCompute(
    CUTNODES*             cutnodes            /**< cut nodes */
    )
 {
+   assert(StpVecGetSize(cutnodes->biconn_stack) == 0);
+   assert(StpVecGetSize(cutnodes->artpoints) == 0);
+
+   cutnodes->curr_hittime = 0;
    /* NOTE: we assume the graph to be connected, so we only do the DFS once */
    /* todo make it non-recursive, otherwise it might crash for big graphs! */
-   cutNodesComputeDfs(g, cutnodes->dfsroot, 0, -1, cutnodes);
+   cutNodesComputeDfs(g, cutnodes->dfsroot, -1, cutnodes);
 
    SCIPdebugMessage("number of cut nodes: %d \n", StpVecGetSize(cutnodes->artpoints));
    assert(cutnodes->biconn_ncomps >= StpVecGetSize(cutnodes->artpoints));
@@ -797,7 +799,7 @@ SCIP_RETCODE cutNodesReduceWithTree(
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   CUTTREE cuttree = { NULL, NULL, NULL, NULL, FALSE };
+   CUTTREE cuttree = { NULL, NULL, NULL, FALSE };
 
    SCIP_CALL( cutNodesTreeInit(scip, g, cutnodes, &cuttree) );
    cutNodesTreeBuildSteinerTree(scip, g, cutnodes, &cuttree);
@@ -835,7 +837,11 @@ SCIP_RETCODE reduce_articulations(
    int*                  nelims              /**< pointer to number of reductions */
    )
 {
-   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, -1 };
+#ifdef CUTTREE_PRINT_STATISTICS
+   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, -1, -1, -1 };
+#else
+   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, 0, -1, -1, -1 };
+#endif
 
    assert(scip && g && nelims);
    graph_mark(g);
