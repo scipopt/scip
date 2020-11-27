@@ -25,6 +25,7 @@
 #include "sepa_edge.h"
 
 #include "probdata_cyc.h"
+#include "scip/cutsel_hybrid.h"
 
 #define SEPA_NAME                "edge"
 #define SEPA_DESC              "separator to separate triangle-inequalities in cycle-clustering application"
@@ -326,8 +327,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
       SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/objparalweight", &objparalweight) );
       SCIP_CALL( SCIPgetRealParam(scip, "cycleclustering/intsuppweight", &intsuppweight) );
 
-      SCIP_CALL( SCIPselectCuts(scip, cuts, NULL, goodscorefac, badscorefac, goodmaxparall, maxparall, dircutoffdist,
-         efficacyweight, objparalweight, intsuppweight, ncutscreated, 0, MAXCUTS, &ncutsapplied ) );
+      SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, NULL, NULL, goodscorefac, badscorefac,
+            goodmaxparall, maxparall, dircutoffdist, efficacyweight, objparalweight, intsuppweight,
+            ncutscreated, 0, MAXCUTS, &ncutsapplied) );
    }
    else
    {
