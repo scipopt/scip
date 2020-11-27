@@ -2050,6 +2050,161 @@ SCIP_RETCODE deinitSolve(
    return SCIP_OKAY;
 }
 
+/** scales the sides of the constraint l <= sum_i c_i f_i(x) <= r according to the following rules:
+ *
+ *  let n_+ the number of positive coefficients c_i and n_- be the number of negative coefficients
+ *
+ *   i. scale by -1 if n_+ < n_-
+ *
+ *  ii. scale by -1 if n_+ = n_- & r = INF
+ */
+static
+SCIP_RETCODE scaleConsSides(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_CONS*            cons,               /**< expression constraint */
+   SCIP_Bool*            changed             /**< buffer to store if the expression of cons changed */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( SCIPisExprSum(scip, consdata->expr) )
+   {
+      SCIP_Real* coefs;
+      SCIP_Real constant;
+      int nchildren;
+      int counter = 0;
+
+      coefs = SCIPgetCoefsExprSum(consdata->expr);
+      constant = SCIPgetConstantExprSum(consdata->expr);
+      nchildren = SCIPexprGetNChildren(consdata->expr);
+
+      /* handle special case when constraint is l <= -f(x) <= r and f(x) not a sum: simplfy ensures f is not a sum */
+      if( nchildren == 1 && constant == 0.0 && coefs[0] == -1.0 )
+      {
+         SCIP_EXPR* expr;
+         expr = consdata->expr;
+
+         consdata->expr = SCIPexprGetChildren(expr)[0];
+         assert(!SCIPisExprSum(scip, consdata->expr));
+
+         SCIPcaptureExpr(consdata->expr);
+
+         SCIPswapReals(&consdata->lhs, &consdata->rhs);
+         consdata->lhs = -consdata->lhs;
+         consdata->rhs = -consdata->rhs;
+
+         SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+         *changed = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* compute n_+ - n_i */
+      for( i = 0; i < nchildren; ++i )
+         counter += coefs[i] > 0 ? 1 : -1;
+
+      if( counter < 0 || (counter == 0 && SCIPisInfinity(scip, consdata->rhs)) )
+      {
+         SCIP_EXPR* expr;
+         SCIP_Real* newcoefs;
+
+         /* allocate memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &newcoefs, nchildren) );
+
+         for( i = 0; i < nchildren; ++i )
+            newcoefs[i] = -coefs[i];
+
+         /* create a new sum expression */
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr, nchildren, SCIPexprGetChildren(consdata->expr), newcoefs, -constant, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+
+         /* replace expression in constraint data and scale sides */
+         SCIP_CALL( SCIPreleaseExpr(scip, &consdata->expr) );
+         consdata->expr = expr;
+         SCIPswapReals(&consdata->lhs, &consdata->rhs);
+         consdata->lhs = -consdata->lhs;
+         consdata->rhs = -consdata->rhs;
+
+         /* free memory */
+         SCIPfreeBufferArray(scip, &newcoefs);
+
+         *changed = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** forbid multiaggrations of variables that appear nonlinear in constraints */
+static
+SCIP_RETCODE forbidNonlinearVariablesMultiaggration(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< number of constraints */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+
+   if( !SCIPconshdlrGetData(conshdlr)->forbidmultaggrnlvar )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+
+   for( c = 0; c < nconss; ++c )
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* if root expression is sum, then forbid multiaggregation only for variables that are not in linear terms of sum,
+       *   i.e., skip children of sum that are variables
+       */
+      if( SCIPisExprSum(scip, consdata->expr) )
+      {
+         int i;
+         SCIP_EXPR* child;
+         for( i = 0; i < SCIPexprGetNChildren(consdata->expr); ++i )
+         {
+            child = SCIPexprGetChildren(consdata->expr)[i];
+
+            /* skip variable expression, as they correspond to a linear term */
+            if( SCIPisExprVar(scip, child) )
+               continue;
+
+            for( expr = SCIPexpriterRestartDFS(it, child); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+               if( SCIPisExprVar(scip, expr) )
+               {
+                  SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetVarExprVar(expr)) );
+               }
+         }
+      }
+      else
+      {
+         for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+            if( SCIPisExprVar(scip, expr) )
+            {
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, SCIPgetVarExprVar(expr)) );
+            }
+      }
+   }
+
+   SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
 /** simplifies expressions and replaces common subexpressions for a set of constraints
  * @todo put the constant to the constraint sides
  */
@@ -2208,7 +2363,7 @@ SCIP_RETCODE canonicalizeConstraints(
             break;
 
          /* scale constraint sides */
-//FIXME         SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i], &changed) );
+         SCIP_CALL( scaleConsSides(scip, conshdlr, conss[i], &changed) );
 
          if( changed )
             havechange = TRUE;
@@ -2237,13 +2392,28 @@ SCIP_RETCODE canonicalizeConstraints(
       }
    }
 
-#if !1
    /* replace common subexpressions */
    if( havechange && !*infeasible )
    {
       SCIP_CONS** consssorted;
+      SCIP_EXPR** rootexprs;
+      SCIP_Bool replacedroot;
 
-      SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rootexprs, nconss) );
+      for( i = 0; i < nconss; ++i )
+         rootexprs[i] = SCIPconsGetData(conss[i])->expr;
+
+      SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, rootexprs, nconss, &replacedroot) );
+
+      /* update pointer to root expr in constraints, if any has changed
+       * SCIPreplaceCommonSubexpressions will have released the old expr and captures the new one
+       */
+      if( replacedroot )
+         for( i = 0; i < nconss; ++i )
+            SCIPconsGetData(conss[i])->expr = rootexprs[i];
+
+      SCIPfreeBufferArray(scip, &rootexprs);
+
 
       /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
        * been changed after simplification; now we completely recollect all variable expression and variable events
@@ -2253,11 +2423,11 @@ SCIP_RETCODE canonicalizeConstraints(
        * Thus, for performance reasons, it is better to call dropVarEvents in descending order of constraint index.
        */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consssorted, conss, nconss) );
-      SCIPsortPtr((void**)consssorted, SCIPcompareIndexConsNonlinear, nconss);
+      SCIPsortPtr((void**)consssorted, compIndexConsNonlinear, nconss);
 
       for( i = nconss-1; i >= 0; --i )
       {
-         assert(i == 0 || SCIPcompareIndexConsNonlinear((void*)consssorted[i-1], (void*)consssorted[i]) < 0);
+         assert(i == 0 || compIndexConsNonlinear((void*)consssorted[i-1], (void*)consssorted[i]) < 0);
          if( SCIPconsIsDeleted(consssorted[i]) )
             continue;
 
@@ -2281,7 +2451,6 @@ SCIP_RETCODE canonicalizeConstraints(
        */
       SCIP_CALL( forbidNonlinearVariablesMultiaggration(scip, conshdlr, conss, nconss) );
    }
-#endif
 
    /* restore locks */
    for( i = 0; i < nconss; ++i )
