@@ -90,6 +90,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
  *  The input cuts array gets resorted s.t the selected cuts comes first and the remaining
  *  ones are the end.
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPselectCutsHybrid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
