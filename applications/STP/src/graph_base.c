@@ -675,6 +675,7 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
       }
    }
 
+   subgraph->orgedges = orggraph->edges;
    assert(subgraph->edges == subgraph->esize);
 
    return SCIP_OKAY;
@@ -709,6 +710,8 @@ SCIP_RETCODE extractSubgraphBuild(
    extractSubgraphAddNodes(orggraph, nodemap_subToOrg, subg);
    SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subg) );
    SCIP_CALL( extractSubgraphAddEdgesWithHistory(scip, orggraph, subinout, subg) );
+
+   SCIP_CALL( graph_path_init(scip, subg) );
 
    return SCIP_OKAY;
 }
@@ -784,6 +787,30 @@ SCIP_RETCODE reinsertSubgraphTransferEdges(
 
 /** helper */
 static
+SCIP_RETCODE reinsertSubgraphTransferTerminals(
+   const GRAPH*          subgraph,           /**< graph to be inserted */
+   SUBINOUT*             subinout,
+   GRAPH*                orggraph            /**< original graph */
+   )
+{
+   const int* nodemap_subToOrg = subinout->nodemap_subToOrg;
+   const int sub_nnodes = graph_get_nNodes(subgraph);
+
+   assert(nodemap_subToOrg);
+
+   for( int i = 0; i < sub_nnodes; i++ )
+   {
+      const int orgnode = nodemap_subToOrg[i];
+
+      graph_knot_chg(orggraph, orgnode, subgraph->term[i]);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** helper */
+static
 SCIP_RETCODE reinsertSubgraphDeleteOldEdges(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          subgraph,           /**< graph to be inserted */
@@ -841,6 +868,7 @@ SCIP_RETCODE reinsertSubgraph(
    reinsertSubgraphTransferFixedHistory(scip, subgraph, orggraph);
    SCIP_CALL( reinsertSubgraphDeleteOldEdges(scip, subgraph, subinout, orggraph) );
    SCIP_CALL( reinsertSubgraphTransferEdges(scip, subgraph, subinout, orggraph) );
+   reinsertSubgraphTransferTerminals(subgraph, subinout, orggraph);
 
    StpVecClear(subinout->org_spareedges);
 
@@ -1592,6 +1620,8 @@ SCIP_RETCODE graph_subgraphReinsert(
 
    SCIP_CALL( reinsertSubgraph(scip, *subgraph, subinout, orggraph) );
 
+   graph_path_exit(scip, *subgraph);
+
    /* NOTE: fixed components are not deleted */
    graph_free(scip, subgraph, FALSE);
 
@@ -1605,6 +1635,9 @@ SCIP_RETCODE graph_subgraphFree(
    GRAPH**               subgraph            /**< graph to be freed */
    )
 {
+   assert(scip && subgraph);
+
+   graph_path_exit(scip, *subgraph);
    graph_free(scip, subgraph, TRUE);
 
    return SCIP_OKAY;
