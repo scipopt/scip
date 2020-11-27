@@ -77,8 +77,8 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyLog)
       /* TODO how to handle a non-positive value? */
       assert(SCIPgetValueExprValue(child) > 0.0);
 
-      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, log(SCIPgetValueExprValue(child)), ownerdatacreate,
-            ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, log(SCIPgetValueExprValue(child)), ownercreate,
+            ownercreatedata) );
    }
    else
    {
@@ -140,11 +140,11 @@ SCIP_DECL_EXPRPARSE(parseLog)
    assert(expr != NULL);
 
    /* parse child expression from remaining string */
-   SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPparseExpr(scip, &childexpr, string, endstring, ownercreate, ownercreatedata) );
    assert(childexpr != NULL);
 
    /* create logarithmic expression */
-   SCIP_CALL( SCIPcreateExprLog(scip, expr, childexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExprLog(scip, expr, childexpr, ownercreate, ownercreatedata) );
    assert(*expr != NULL);
 
    /* release child expression since it has been captured by the logarithmic expression */
@@ -495,15 +495,15 @@ SCIP_RETCODE SCIPcreateExprLog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_EXPR*            child,              /**< single child */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(expr != NULL);
    assert(child != NULL);
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownerdatacreate,
-         ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPfindExprHdlr(scip, EXPRHDLR_NAME), NULL, 1, &child, ownercreate,
+         ownercreatedata) );
 
    return SCIP_OKAY;
 }

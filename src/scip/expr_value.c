@@ -222,8 +222,8 @@ SCIP_RETCODE SCIPcreateExprValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_Real             value,              /**< value to be stored */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRDATA* exprdata;
@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPcreateExprValue(
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_EXPRDATA*));
    memcpy(&exprdata, &value, sizeof(SCIP_Real));
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrValue(scip), exprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrValue(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

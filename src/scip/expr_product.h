@@ -46,8 +46,8 @@ SCIP_RETCODE SCIPcreateExprProduct(
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children */
    SCIP_Real             coefficient,        /**< constant coefficient of product */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 #ifdef __cplusplus

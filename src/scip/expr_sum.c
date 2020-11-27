@@ -105,8 +105,8 @@ SCIP_RETCODE simplifyTerm(
    SCIP_EXPR*            duplicate,          /**< expression to be simplified */
    int                   idx,                /**< idx of children to be simplified */
    SCIP_Bool*            changed,            /**< pointer to store if some term actually got simplified */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void* ownercreatedata  /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR** children;
@@ -218,22 +218,22 @@ SCIP_RETCODE simplifyTerm(
          }
 
          /* add constant to exponential's child */
-         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expchild), NULL, expconstant, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expchild), NULL, expconstant, ownercreate, ownercreatedata) );
 
          /* simplify sum */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, &simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
          /* create exponential with new child */
-         SCIP_CALL( SCIPcreateExprExp(scip, &exponential, simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprExp(scip, &exponential, simplifiedsum, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, exponential, &simplifiedexp, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPsimplifyExprShallow(scip, exponential, &simplifiedexp, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &exponential) );
 
          /* create product with new child */
-         SCIP_CALL( SCIPcreateExprProduct(scip, &prod, 0, NULL, 1.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &prod, 0, NULL, 1.0, ownercreate, ownercreatedata) );
 
          for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
          {
@@ -249,7 +249,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedexp) );
 
          /* simplify product */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, prod, &simplifiedprod, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPsimplifyExprShallow(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &prod) );
 
          /* replace current child with simplified product */
@@ -259,7 +259,7 @@ SCIP_RETCODE simplifyTerm(
          /* since the simplified product can be a sum ( exp(-1)*exp(log(x+y)+1) -> x+y ), we call the function we are in again
           * this is no endless recursion, since the coef is now +- 1
           */
-         SCIP_CALL( simplifyTerm(scip, duplicate, idx, changed, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( simplifyTerm(scip, duplicate, idx, changed, ownercreate, ownercreatedata) );
 
          return SCIP_OKAY;
       }
@@ -321,7 +321,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
 
    /* TODO: maybe have a flag to know if it is simplified ? */
    // FIXME should this be a shallow duplicate + copy of children pointer?
-   SCIP_CALL( SCIPduplicateExpr(scip, expr, &duplicate, NULL, NULL, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPduplicateExpr(scip, expr, &duplicate, NULL, NULL, ownercreate, ownercreatedata) );
    assert(duplicate != NULL);
 
    nchildren = SCIPexprGetNChildren(duplicate);
@@ -336,7 +336,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
       }
 
       /* enforces SS2, SS3 and SS9 */
-      SCIP_CALL( simplifyTerm(scip, duplicate, i, &changed, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( simplifyTerm(scip, duplicate, i, &changed, ownercreate, ownercreatedata) );
    }
 
    /* simplifyTerm can add new children to duplicate and realloc them; so get them again */
@@ -347,7 +347,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    /* treat zero term case */
    if( nchildren == 0 )
    {
-      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPgetConstantExprSum(duplicate), ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPgetConstantExprSum(duplicate), ownercreate, ownercreatedata) );
       goto CLEANUP;
    }
 
@@ -356,7 +356,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    {
       if( coefs[0] == 0.0 )
       {
-         SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPgetConstantExprSum(duplicate), ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, SCIPgetConstantExprSum(duplicate), ownercreate, ownercreatedata) );
          goto CLEANUP;
       }
 
@@ -436,7 +436,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    if( nnewchildren == 0 )
    {
       debugSimplify("[sum] got empty list, return value %g\n", newconstant); /*lint !e506 !e681*/
-      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, newconstant, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, newconstant, ownercreate, ownercreatedata) );
 
       goto CLEANUP;
    }
@@ -453,7 +453,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    /* build sum expression from children */
    if( changed )
    {
-      SCIP_CALL( SCIPcreateExprSum(scip, simplifiedexpr, nnewchildren, newchildren, newcoefs, newconstant, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprSum(scip, simplifiedexpr, nnewchildren, newchildren, newcoefs, newconstant, ownercreate, ownercreatedata) );
 
       goto CLEANUP;
    }
@@ -999,15 +999,15 @@ SCIP_RETCODE SCIPcreateExprSum(
    SCIP_EXPR**           children,           /**< children */
    SCIP_Real*            coefficients,       /**< array with coefficients for all children (or NULL if all 1.0) */
    SCIP_Real             constant,           /**< constant term of sum */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRDATA* exprdata;
 
    SCIP_CALL( createData(scip, &exprdata, nchildren, coefficients, constant) );
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrSum(scip), exprdata, nchildren, children, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrSum(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

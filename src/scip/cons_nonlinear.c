@@ -426,7 +426,7 @@ SCIP_RETCODE freeEnfoData(
 
 /** callback that frees data that this conshdlr stored in an expression */
 static
-SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
+SCIP_DECL_EXPR_OWNERFREE(exprownerdataFree)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -479,7 +479,7 @@ SCIP_DECL_EXPR_OWNERDATAFREE(exprownerdataFree)
 
 /** callback that creates data that this conshdlr wants to store in an expression */
 static
-SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
+SCIP_DECL_EXPR_OWNERCREATE(exprownerdataCreate)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -487,7 +487,7 @@ SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
 
    SCIP_CALL( SCIPallocClearBlockMemory(scip, ownerdata) );
    (*ownerdata)->nenfos = -1;
-   (*ownerdata)->conshdlr = (SCIP_CONSHDLR*)ownerdatacreatedata;
+   (*ownerdata)->conshdlr = (SCIP_CONSHDLR*)ownercreatedata;
 
    if( SCIPisExprVar(scip, expr) )
    {
@@ -515,9 +515,9 @@ SCIP_DECL_EXPR_OWNERDATACREATE(exprownerdataCreate)
       }
    }
 
-   *ownerdatafree = exprownerdataFree;
+   *ownerfree = exprownerdataFree;
 
-   // TODO set *ownerdataprint
+   // TODO set *ownerprint
 
    return SCIP_OKAY;
 }
@@ -541,7 +541,7 @@ SCIP_RETCODE createExprVar(
    if( *expr == NULL )
    {
       /* create a new variable expression; this also captures the expression */
-      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerdataCreate, (void*)conshdlr) );
       assert(*expr != NULL);
       /* exprownerdataCreate should have added var->expr to var2expr */
       assert(SCIPhashmapGetImage(SCIPconshdlrGetData(conshdlr)->var2expr, (void*)var) == (void*)*expr);
@@ -1255,7 +1255,7 @@ SCIP_RETCODE createCons(
    if( copyexpr )
    {
       /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
-      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerdataCreate, (void*)conshdlr) );
    }
    else
    {
@@ -2123,7 +2123,7 @@ SCIP_RETCODE scaleConsSides(
             newcoefs[i] = -coefs[i];
 
          /* create a new sum expression */
-         SCIP_CALL( SCIPcreateExprSum(scip, &expr, nchildren, SCIPexprGetChildren(consdata->expr), newcoefs, -constant, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr, nchildren, SCIPexprGetChildren(consdata->expr), newcoefs, -constant, exprownerdataCreate, (void*)conshdlr) );
 
          /* replace expression in constraint data and scale sides */
          SCIP_CALL( SCIPreleaseExpr(scip, &consdata->expr) );
@@ -2334,7 +2334,7 @@ SCIP_RETCODE canonicalizeConstraints(
          SCIP_Bool changed;
 
          changed = FALSE;
-         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, infeasible, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, infeasible, exprownerdataCreate, (void*)conshdlr) );
          consdata->issimplified = TRUE;
 
          if( changed )
@@ -3740,7 +3740,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
    assert(sourcedata != NULL);
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPduplicateExpr(scip, sourcedata->expr, &targetexpr, mapexprtransvar, conshdlr, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+   SCIP_CALL( SCIPduplicateExpr(scip, sourcedata->expr, &targetexpr, mapexprtransvar, conshdlr, exprownerdataCreate, (void*)conshdlr) );
    assert(targetexpr != NULL);  /* SCIPduplicateExpr cannot fail */
 
    /* create transformed cons (only captures targetexpr, no need to copy again) */
@@ -4061,7 +4061,7 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
          SCIP_Bool changed;
 
          /* simplify constraint */
-         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, &infeasible, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, &infeasible, exprownerdataCreate, (void*)conshdlr) );
          SCIP_CALL( SCIPreleaseExpr(scip, &consdata->expr) );
          assert(simplified != NULL);
          consdata->expr = simplified;
@@ -4222,7 +4222,7 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
    targetconshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(targetconshdlr != NULL);
 
-   SCIP_CALL( SCIPcopyExpr(sourcescip, scip, sourcedata->expr, &targetexpr, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)targetconshdlr, varmap, consmap, global, valid) );
+   SCIP_CALL( SCIPcopyExpr(sourcescip, scip, sourcedata->expr, &targetexpr, exprownerdataCreate, (void*)targetconshdlr, varmap, consmap, global, valid) );
 
    if( targetexpr == NULL )
       *valid = FALSE;
@@ -4310,7 +4310,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIPdebugMsg(scip, "str should start at beginning of expr: %s\n", str);
 
    /* parse expression: so far we did not allocate memory, so can just return in case of readerror */
-   SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+   SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerdataCreate, (void*)conshdlr) );
 
    /* check for left or right hand side */
    while( isspace((unsigned char)*str) )
@@ -4848,7 +4848,7 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    }
 
    /* create quadratic expression */
-   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, exprownerdataCreate, (void*)conshdlr) );
    assert(expr != NULL);
 
    /* create expression constraint */
@@ -5303,7 +5303,7 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
       SCIP_EXPR* children[2] = { consdata->expr, varexpr };
       SCIP_Real coefs[2] = { 1.0, coef };
 
-      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerdataCreate, (SCIP_EXPR_OWNERDATACREATEDATA*)conshdlr) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerdataCreate, (void*)conshdlr) );
 
       /* release old root expr */
       SCIP_CALL( SCIPreleaseExpr(scip, &children[0]) );

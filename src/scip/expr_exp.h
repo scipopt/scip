@@ -37,8 +37,8 @@ SCIP_RETCODE SCIPcreateExprExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_EXPR*            child,              /**< single child */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** creates the handler for exponential expressions and includes it into SCIP */

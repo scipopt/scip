@@ -39,7 +39,6 @@ typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
 
 typedef struct SCIP_Expr_OwnerData SCIP_EXPR_OWNERDATA; /**< data stored by expression owner in expression */
-typedef struct SCIP_Expr_OwnerDataCreateData SCIP_EXPR_OWNERDATACREATEDATA; /**< data used to ownerdata-create callback */
 
 /** curvature types */
 typedef enum
@@ -77,9 +76,9 @@ typedef enum
  *  - file      : file to print to, or NULL for stdout
  *  - ownerdata : the ownerdata stored in the expression
  */
-#define SCIP_DECL_EXPR_OWNERDATAFREE(x) SCIP_RETCODE x(\
-   SCIP* scip, \
-   SCIP_EXPR* expr, \
+#define SCIP_DECL_EXPR_OWNERFREE(x) SCIP_RETCODE x(\
+   SCIP*                 scip, \
+   SCIP_EXPR*            expr, \
    SCIP_EXPR_OWNERDATA** ownerdata)
 
 /** callback for printing ownerdata of expression
@@ -91,11 +90,11 @@ typedef enum
  *  - expr           : the expression which is freed
  *  - ownerdata      : the ownerdata stored in the expression
  */
-#define SCIP_DECL_EXPR_OWNERDATAPRINT(x) SCIP_RETCODE x(\
-   SCIP* scip, \
-   FILE* file, \
-   SCIP_EXPR* expr, \
-   SCIP_EXPR_OWNERDATA** ownerdata)
+#define SCIP_DECL_EXPR_OWNERPRINT(x) SCIP_RETCODE x(\
+   SCIP*                 scip, \
+   FILE*                 file, \
+   SCIP_EXPR*            expr, \
+   SCIP_EXPR_OWNERDATA*  ownerdata)
 
 /** callback for creating ownerdata of expression
  *
@@ -103,21 +102,21 @@ typedef enum
  * It can create data which is then stored in the expression.
  *
  * input:
- *  - scip           : SCIP main data structure
- *  - expr           : the expression that has been created
- *  - ownerdatacreatedata : data that has been passed on by future owner of expression that can be used to create ownerdata
+ *  - scip            : SCIP main data structure
+ *  - expr            : the expression that has been created
+ *  - ownercreatedata : data that has been passed on by future owner of expression that can be used to create ownerdata
  * output:
- *  - ownerdata      : buffer to store ownerdata that shall be stored in expression (can be NULL, as it is initialized)
- *  - ownerdatafree  : buffer to store function to be called to free ownerdata when expression is freed (can be NULL, as it is initialized)
- *  - ownerdataprint : buffer to store function to be called to print ownerdata (can be NULL, as it is initialized)
+ *  - ownerdata       : buffer to store ownerdata that shall be stored in expression (can be NULL, as it is initialized)
+ *  - ownerfree       : buffer to store function to be called to free ownerdata when expression is freed (can be NULL, as it is initialized)
+ *  - ownerprint      : buffer to store function to be called to print ownerdata (can be NULL, as it is initialized)
  */
-#define SCIP_DECL_EXPR_OWNERDATACREATE(x) SCIP_RETCODE x(\
-   SCIP* scip, \
-   SCIP_EXPR* expr, \
+#define SCIP_DECL_EXPR_OWNERCREATE(x) SCIP_RETCODE x(\
+   SCIP*                 scip, \
+   SCIP_EXPR*            expr, \
    SCIP_EXPR_OWNERDATA** ownerdata, \
-   SCIP_DECL_EXPR_OWNERDATAFREE((**ownerdatafree)), \
-   SCIP_DECL_EXPR_OWNERDATAPRINT((**ownerdataprint)), \
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
+   SCIP_DECL_EXPR_OWNERFREE((**ownerfree)), \
+   SCIP_DECL_EXPR_OWNERPRINT((**ownerprint)), \
+   void*                 ownercreatedata)
 
 /** callback that returns bounds for a given variable as used in interval evaluation
  *
@@ -142,21 +141,21 @@ typedef enum
  * (in a target SCIP instance) and captures the target expression.
  *
  *  input:
- *  - targetscip         : target SCIP main data structure
- *  - targetexpr         : pointer to store the mapped expression, or NULL if expression shall be copied
- *  - sourcescip         : source SCIP main data structure
- *  - sourceexpr         : expression to be mapped
- *  - ownerdatacreate    : callback to call when creating a new expression
- *  - ownerdatacreatedata: data for ownerdatacreate callback
- *  - mapexprdata        : data of callback
+ *  - targetscip      : target SCIP main data structure
+ *  - targetexpr      : pointer to store the mapped expression, or NULL if expression shall be copied
+ *  - sourcescip      : source SCIP main data structure
+ *  - sourceexpr      : expression to be mapped
+ *  - ownercreate     : callback to call when creating a new expression
+ *  - ownercreatedata : data for ownercreate callback
+ *  - mapexprdata     : data of callback
  */
 #define SCIP_DECL_EXPR_MAPEXPR(x) SCIP_RETCODE x (\
    SCIP*       targetscip, \
    SCIP_EXPR** targetexpr, \
    SCIP*       sourcescip, \
    SCIP_EXPR*  sourceexpr, \
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, \
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), \
+   void* ownercreatedata, \
    void*       mapexprdata)
 
 /**@name Expression Handler */
@@ -206,11 +205,11 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * This callback must be implemented for expressions that have data.
  *
  *  input:
- *  - targetscip         : target SCIP main data structure
- *  - targetexprhdlr     : expression handler in target SCIP
- *  - targetexprdata     : pointer to store the copied expression data
- *  - sourcescip         : source SCIP main data structure
- *  - sourceexpr         : expression in source SCIP which data is to be copied
+ *  - targetscip     : target SCIP main data structure
+ *  - targetexprhdlr : expression handler in target SCIP
+ *  - targetexprdata : pointer to store the copied expression data
+ *  - sourcescip     : source SCIP main data structure
+ *  - sourceexpr     : expression in source SCIP which data is to be copied
  */
 #define SCIP_DECL_EXPRCOPYDATA(x) SCIP_RETCODE x (\
    SCIP*           targetscip, \
@@ -263,8 +262,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * input:
  *  - scip         : SCIP main data structure
  *  - string       : string containing expression to be parse
- *  - ownerdatacreate: function to call to create ownerdata
- *  - ownerdatacreatedata: data to pass to ownerdatacreate
+ *  - ownercreate: function to call to create ownerdata
+ *  - ownercreatedata: data to pass to ownercreate
  *
  *  output:
  *  - endstring    : buffer to store the position of string after parsing
@@ -278,8 +277,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    const char**   endstring, \
    SCIP_EXPR**    expr, \
    SCIP_Bool*     success, \
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), \
+   void*          ownercreatedata)
 
 /** expression curvature detection callback
  *
@@ -577,8 +576,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * input:
  *  - scip           : SCIP main data structure
  *  - expr           : expression to simplify
- *  - ownerdatacreate: function to call to create ownerdata
- *  - ownerdatacreatedata: data to pass to ownerdatacreate
+ *  - ownercreate: function to call to create ownerdata
+ *  - ownercreatedata: data to pass to ownercreate
  * output:
  *  - simplifiedexpr : the simplified expression
  */
@@ -586,8 +585,8 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
    SCIP*          scip,     \
    SCIP_EXPR*     expr,     \
    SCIP_EXPR**    simplifiedexpr, \
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), \
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata)
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), \
+   void*          ownercreatedata)
 
 /** expression callback for reverse propagation
  *

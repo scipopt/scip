@@ -124,8 +124,8 @@ SCIP_RETCODE buildSimplifiedProduct(
    EXPRNODE**            simplifiedfactors,  /**< factors of simplified product */
    SCIP_Bool             changed,            /**< indicates whether some of the simplified factors was changed */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /*  methods for handling linked list of expressions */
@@ -277,8 +277,8 @@ SCIP_RETCODE createExprProductFromExprlist(
    EXPRNODE*             exprlist,           /**< list containing the children of expr */
    SCIP_Real             coef,               /**< coef of expr */
    SCIP_EXPR**           expr,               /**< pointer to store the product expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    int i;
@@ -299,7 +299,7 @@ SCIP_RETCODE createExprProductFromExprlist(
 
    assert(exprlist == NULL);
 
-   SCIP_CALL( SCIPcreateExprProduct(scip, expr, nchildren, children, coef, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, expr, nchildren, children, coef, ownercreate, ownercreatedata) );
 
    SCIPfreeBufferArray(scip, &children);
 
@@ -393,8 +393,8 @@ SCIP_RETCODE mergeProductExprlist(
    EXPRNODE**            unsimplifiedchildren,/**< the list of children that should go to the product expression;
                                                    they are unsimplified when seen as children of a simplified product */
    SCIP_Bool*            changed,            /**< pointer to store if some term actually got simplified */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    EXPRNODE* tomergenode;
@@ -450,19 +450,19 @@ SCIP_RETCODE mergeProductExprlist(
          *changed = TRUE;
 
          /* create sum */
-         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(current->expr), NULL, 0.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(current->expr), NULL, 0.0, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPappendExprSumExpr(scip, sum, SCIPexprGetChildren(tomergenode->expr)[0], 1.0) );
 
          /* simplify sum */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, &simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
          /* create exponential */
-         SCIP_CALL( SCIPcreateExprExp(scip, &expexpr, simplifiedsum, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprExp(scip, &expexpr, simplifiedsum, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, expexpr, &simplifiedexp, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPsimplifyExprShallow(scip, expexpr, &simplifiedexp, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &expexpr) );
 
          /* note that simplified exponential might be a product exp(x) * exp(-x + log(y*z)) -> y*z and so it is not a
@@ -553,7 +553,7 @@ SCIP_RETCODE mergeProductExprlist(
             if( (EPSISINT(expo1, 0.0) && EPSISINT(expo2, 0.0)) || !EPSISINT(expo1+expo2, 0.0) )  /*lint !e835*/
 #endif
             {
-               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownercreate, ownercreatedata) );
             }
          }
          else if( issignpower1 ^ issignpower2 )
@@ -568,22 +568,22 @@ SCIP_RETCODE mergeProductExprlist(
                    * |expr|^even -> expr^even, since the call to SCIPsimplifyExprShallow(scip, conshdlr, power,
                    * &simplifiedpower) below will take care of this.
                    */
-                  SCIP_CALL( SCIPcreateExprSignpower(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+                  SCIP_CALL( SCIPcreateExprSignpower(scip, &power, base1, expo1 + expo2, ownercreate, ownercreatedata) );
                }
                else
                {
                   /* if expo2 is odd, then sign(x)^(1+expo2) = 1, so we have |x|^(expo1+expo2) */
                   SCIP_EXPR* absbase;
 
-                  SCIP_CALL( SCIPcreateExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
-                  SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+                  SCIP_CALL( SCIPcreateExprAbs(scip, &absbase, base1, ownercreate, ownercreatedata) );
+                  SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownercreate, ownercreatedata) );
                   SCIP_CALL( SCIPreleaseExpr(scip, &absbase) );
                }
             }
             else if( !EPSISINT(expo1+expo2, 0.0) )  /*lint !e835*/
             {
                /* if expo2 is fractional and expo1+expo2 is fractional, then we need x >= 0, so we can use x^(expo1+expo2) */
-               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownercreate, ownercreatedata) );
             }
             /* else: expo2 is fractional but expo1+expo2 is integral, then we better do not do anything for now
              * (leave power at NULL)
@@ -596,14 +596,14 @@ SCIP_RETCODE mergeProductExprlist(
              */
             if( EPSISINT(expo1+expo2, 0.0) && (int)(expo1+expo2)%2 == 0 ) /*lint !e835*/
             {
-               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, base1, expo1 + expo2, ownercreate, ownercreatedata) );
             }
             else
             {
                SCIP_EXPR* absbase;
 
-               SCIP_CALL( SCIPcreateExprAbs(scip, &absbase, base1, ownerdatacreate, ownerdatacreatedata) );
-               SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownerdatacreate, ownerdatacreatedata) );
+               SCIP_CALL( SCIPcreateExprAbs(scip, &absbase, base1, ownercreate, ownercreatedata) );
+               SCIP_CALL( SCIPcreateExprPow(scip, &power, absbase, expo1 + expo2, ownercreate, ownercreatedata) );
                SCIP_CALL( SCIPreleaseExpr(scip, &absbase) );
             }
          }
@@ -614,7 +614,7 @@ SCIP_RETCODE mergeProductExprlist(
             SCIP_EXPR* simplifiedpower;
 
             /* call simplifyPow or simplifySignpower */
-            SCIP_CALL( SCIPsimplifyExprShallow(scip, power, &simplifiedpower, ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPsimplifyExprShallow(scip, power, &simplifiedpower, ownercreate, ownercreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &power) );
 
             /* replace tomergenode's expression with simplifiedpower */
@@ -724,8 +724,8 @@ SCIP_RETCODE simplifyMultiplyChildren(
    SCIP_Real*            simplifiedcoef,     /**< buffer to store coefficient of PI exprs; do not initialize */
    EXPRNODE**            finalchildren,      /**< expr node list to store the simplified factors */
    SCIP_Bool*            changed,            /**< buffer to store whether some factor changed */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    EXPRNODE* unsimplifiedchildren;
@@ -759,7 +759,7 @@ SCIP_RETCODE simplifyMultiplyChildren(
       SCIP_CALL( simplifyFactor(scip, first->expr, simplifiedcoef, &tomerge, changed) );
 
       /* enforces SP4 and SP5 note: merge frees (or uses) the nodes of the tomerge list */
-      SCIP_CALL( mergeProductExprlist(scip, tomerge, finalchildren, &unsimplifiedchildren, changed, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( mergeProductExprlist(scip, tomerge, finalchildren, &unsimplifiedchildren, changed, ownercreate, ownercreatedata) );
 
       /* free first */
       SCIP_CALL( freeExprlist(scip, &first) );
@@ -788,14 +788,14 @@ SCIP_RETCODE enforceSP10(
    SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
    EXPRNODE*             finalchildren,      /**< factors of simplified product */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    /* empty list --> return value */
    if( finalchildren == NULL )
    {
-      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, simplifiedcoef, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, simplifiedexpr, simplifiedcoef, ownercreate, ownercreatedata) );
       return SCIP_OKAY;
    }
 
@@ -812,12 +812,12 @@ SCIP_RETCODE enforceSP10(
    {
       SCIP_EXPR* sum;
 
-      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, &(finalchildren->expr), &simplifiedcoef, 0.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, &(finalchildren->expr), &simplifiedcoef, 0.0, ownercreate, ownercreatedata) );
 
       /* simplifying here is necessary, the product could have sums as children e.g., (prod 2 (sum 1 <x>))
        * -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified to (sum 0 2 <x>)
        */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
       return SCIP_OKAY;
    }
@@ -832,8 +832,8 @@ SCIP_RETCODE enforceSP11(
    SCIP_Real             simplifiedcoef,     /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
    EXPRNODE*             finalchildren,      /**< factors of simplified product */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR* entropicchild = NULL;
@@ -863,12 +863,12 @@ SCIP_RETCODE enforceSP11(
 
       simplifiedcoef *= -1.0;
 
-      SCIP_CALL( SCIPcreateExprEntropy(scip, &entropy, entropicchild, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprEntropy(scip, &entropy, entropicchild, ownercreate, ownercreatedata) );
 
       /* enforces SP8: if simplifiedcoef != 1.0, transform it into a sum with the (simplified) entropy as child */
       if( simplifiedcoef != 1.0 )
       {
-         SCIP_CALL( SCIPcreateExprSum(scip, simplifiedexpr, 1, &entropy, &simplifiedcoef, 0.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, simplifiedexpr, 1, &entropy, &simplifiedcoef, 0.0, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &entropy) );
       }
       else
@@ -893,8 +893,8 @@ SCIP_RETCODE enforceSP12(
    SCIP_Real             simplifiedcoef,  /**< simplified product should be simplifiedcoef * PI simplifiedfactors */
    EXPRNODE*             finalchildren,   /**< factors of simplified product */
    SCIP_EXPR**           simplifiedexpr,  /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata  /**< data to pass to ownercreate */
    )
 {
    /* we need only two children */
@@ -921,7 +921,7 @@ SCIP_RETCODE enforceSP12(
       SCIP_CALL( SCIPprintExpr(scip, finalchildren->next->expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
-      SCIP_CALL( SCIPcreateExprSum(scip, &expanded, 0, NULL, NULL, c1 * c2 * simplifiedcoef, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &expanded, 0, NULL, NULL, c1 * c2 * simplifiedcoef, ownercreate, ownercreatedata) );
 
       /* multiply c1 * sum2 */
       if( c1 != 0.0 )
@@ -993,7 +993,7 @@ SCIP_RETCODE enforceSP12(
 #endif
 
             factorscoef = coef1 * coef2;
-            SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &factorscoef, &finalfactors, &dummy, ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &factorscoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
             assert(factorscoef != 0.0);
 
 #ifdef SIMPLIFY_DEBUG
@@ -1015,7 +1015,7 @@ SCIP_RETCODE enforceSP12(
             }
 #endif
 
-            SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
             assert(finalfactors == NULL);
             assert(term != NULL);
 
@@ -1033,7 +1033,7 @@ SCIP_RETCODE enforceSP12(
       }
 
       /* simplify the sum */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, expanded, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPsimplifyExprShallow(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &expanded) );
  
       return SCIP_OKAY;
@@ -1064,7 +1064,7 @@ SCIP_RETCODE enforceSP12(
       constant = simplifiedcoef * SCIPgetConstantExprSum(sum);
       nchildren = SCIPexprGetNChildren(sum);
 
-      SCIP_CALL( SCIPcreateExprSum(scip, &expanded, 1, &factors[0], &constant, 0.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &expanded, 1, &factors[0], &constant, 0.0, ownercreate, ownercreatedata) );
       /* we are just re-using a child here, so do not release factor! */
 
       for( j = 0; j < nchildren; ++j )
@@ -1079,10 +1079,10 @@ SCIP_RETCODE enforceSP12(
          factors[1] = SCIPexprGetChildren(sum)[j];
 
          termcoef = coef;
-         SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &termcoef, &finalfactors, &dummy, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( simplifyMultiplyChildren(scip, factors, 2, &termcoef, &finalfactors, &dummy, ownercreate, ownercreatedata) );
          assert(termcoef != 0.0);
 
-         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( buildSimplifiedProduct(scip, 1.0, &finalfactors, TRUE, &term, ownercreate, ownercreatedata) );
          assert(finalfactors == NULL);
          assert(term != NULL);
 
@@ -1091,7 +1091,7 @@ SCIP_RETCODE enforceSP12(
       }
 
       /* simplify the sum */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, expanded, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPsimplifyExprShallow(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &expanded) );
    }
 
@@ -1109,8 +1109,8 @@ SCIP_RETCODE buildSimplifiedProduct(
    EXPRNODE**            simplifiedfactors,  /**< factors of simplified product */
    SCIP_Bool             changed,            /**< indicates whether some of the simplified factors was changed */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    EXPRNODE* finalchildren = *simplifiedfactors;
@@ -1120,15 +1120,15 @@ SCIP_RETCODE buildSimplifiedProduct(
 
    *simplifiedexpr = NULL;
 
-   SCIP_CALL( enforceSP11(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( enforceSP11(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
    if( *simplifiedexpr != NULL )
       goto CLEANUP;
 
-   SCIP_CALL( enforceSP12(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( enforceSP12(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
    if( *simplifiedexpr != NULL )
       goto CLEANUP;
 
-   SCIP_CALL( enforceSP10(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( enforceSP10(scip, simplifiedcoef, *simplifiedfactors, simplifiedexpr, ownercreate, ownercreatedata) );
    if( *simplifiedexpr != NULL )
       goto CLEANUP;
 
@@ -1139,12 +1139,12 @@ SCIP_RETCODE buildSimplifiedProduct(
       SCIP_EXPR* sum;
 
       /* create sum */
-      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, 1.0, &aux, ownerdatacreate, ownerdatacreatedata) );
-      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, &aux, &simplifiedcoef, 0.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, 1.0, &aux, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, &aux, &simplifiedcoef, 0.0, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
 
       /* simplify sum */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
       goto CLEANUP;
@@ -1153,7 +1153,7 @@ SCIP_RETCODE buildSimplifiedProduct(
    /* build product expression from list */
    if( changed )
    {
-      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( createExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr, ownercreate, ownercreatedata) );
       goto CLEANUP;
    }
 
@@ -1201,7 +1201,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
 #endif
 
    /* simplify and multiply factors */
-   SCIP_CALL( simplifyMultiplyChildren(scip, SCIPexprGetChildren(expr), SCIPexprGetNChildren(expr), &simplifiedcoef, &finalchildren, &changed, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( simplifyMultiplyChildren(scip, SCIPexprGetChildren(expr), SCIPexprGetNChildren(expr), &simplifiedcoef, &finalchildren, &changed, ownercreate, ownercreatedata) );
 
 #ifdef SIMPLIFY_DEBUG
    {
@@ -1223,7 +1223,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyProduct)
 #endif
 
    /* get simplified product from simplified factors in finalchildren */
-   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, changed, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( buildSimplifiedProduct(scip, simplifiedcoef, &finalchildren, changed, simplifiedexpr, ownercreate, ownercreatedata) );
    assert(finalchildren == NULL);
 
    if( *simplifiedexpr == NULL )
@@ -2098,15 +2098,15 @@ SCIP_RETCODE SCIPcreateExprProduct(
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children */
    SCIP_Real             coefficient,        /**< constant coefficient of product */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRDATA* exprdata;
 
    SCIP_CALL( createData(scip, &exprdata, coefficient) );
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrProduct(scip), exprdata, nchildren, children, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrProduct(scip), exprdata, nchildren, children, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

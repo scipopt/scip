@@ -47,8 +47,8 @@ SCIP_RETCODE SCIPcreateExprSum(
    SCIP_EXPR**           children,           /**< children */
    SCIP_Real*            coefficients,       /**< array with coefficients for all children (or NULL if all 1.0) */
    SCIP_Real             constant,           /**< constant term of sum */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** sets the constant of a summation expression */

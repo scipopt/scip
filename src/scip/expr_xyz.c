@@ -338,8 +338,8 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRHDLR* exprhdlr;
@@ -362,8 +362,8 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    /* TODO: create and store expression specific data here */
 
    /* create expression */
-   SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, nchildren, children, ownerdatacreate,
-         ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, nchildren, children, ownercreate,
+         ownercreatedata) );
 
    return SCIP_OKAY;
 }

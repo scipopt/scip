@@ -772,8 +772,8 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
    const char**          endstring,          /**< buffer to store the position of string after parsing */
    SCIP_EXPR**           expr,               /**< buffer to store the parsed expression */
    SCIP_Bool*            success,            /**< buffer to store whether the parsing was successful or not */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(exprhdlr != NULL);
@@ -793,7 +793,7 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
    }
 
    /* give control to exprhdlr's parser */
-   SCIP_CALL( exprhdlr->parse(set->scip, exprhdlr, string, endstring, expr, success, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( exprhdlr->parse(set->scip, exprhdlr, string, endstring, expr, success, ownercreate, ownercreatedata) );
 
    assert(*success || (*expr == NULL));
 
@@ -1296,8 +1296,8 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to simplify */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(exprhdlr != NULL);
@@ -1309,7 +1309,7 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    if( exprhdlr->simplify != NULL )
    {
       SCIPclockStart(expr->exprhdlr->simplifytime, set);
-      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( exprhdlr->simplify(set->scip, expr, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIPclockStop(expr->exprhdlr->simplifytime, set);
 
       /* update statistics */
@@ -1387,8 +1387,8 @@ SCIP_RETCODE SCIPexprCreate(
    SCIP_EXPRDATA*        exprdata,         /**< expression data (expression assumes ownership) */
    int                   nchildren,        /**< number of children */
    SCIP_EXPR**           children,         /**< children (can be NULL if nchildren is 0) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    int c;
@@ -1424,9 +1424,9 @@ SCIP_RETCODE SCIPexprCreate(
    SCIPexprCapture(*expr);
 
    /* initializes the ownerdata */
-   if( ownerdatacreate != NULL )
+   if( ownercreate != NULL )
    {
-      SCIP_CALL( ownerdatacreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerdatafree, &(*expr)->ownerdataprint, ownerdatacreatedata) );
+      SCIP_CALL( ownercreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerfree, &(*expr)->ownerprint, ownercreatedata) );
    }
 
    return SCIP_OKAY;
@@ -1546,8 +1546,8 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRITER* it;
@@ -1583,7 +1583,7 @@ SCIP_RETCODE SCIPexprCopy(
 
             if( mapexpr != NULL )
             {
-               SCIP_CALL( mapexpr(targetscip, &exprcopy, sourcescip, expr, ownerdatacreate, ownerdatacreatedata, mapexprdata) );
+               SCIP_CALL( mapexpr(targetscip, &exprcopy, sourcescip, expr, ownercreate, ownercreatedata, mapexprdata) );
                if( exprcopy != NULL )
                {
                   /* map callback gave us an expression to use for the copy */
@@ -1630,7 +1630,7 @@ SCIP_RETCODE SCIPexprCopy(
             }
 
             /* create in targetexpr an expression of the same type as expr, but without children for now */
-            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPexprCreate(targetset, targetblkmem, &exprcopy, targetexprhdlr, targetexprdata, 0, NULL, ownercreate, ownercreatedata) );
 
             /* store targetexpr */
             expriteruserdata.ptrval = exprcopy;
@@ -1694,8 +1694,8 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store (shallow) duplicate of expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRDATA* exprdatacopy = NULL;
@@ -1713,7 +1713,7 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    }
 
    /* create expression with same handler and copied data, but without children */
-   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPexprCreate(set, blkmem, copyexpr, expr->exprhdlr, exprdatacopy, 0, NULL, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -1755,12 +1755,12 @@ SCIP_RETCODE SCIPexprRelease(
 
    /* handle the root expr separately: free ownerdata, quaddata, and exprdata first */
 
-   /* call ownerdatafree callback, if given
+   /* call ownerfree callback, if given
     * we intentially call this also if ownerdata is NULL, so owner can be notified without storing data
     */
-   if( (*rootexpr)->ownerdatafree != NULL )
+   if( (*rootexpr)->ownerfree != NULL )
    {
-      SCIP_CALL( (*rootexpr)->ownerdatafree(set->scip, *rootexpr, &(*rootexpr)->ownerdata) );
+      SCIP_CALL( (*rootexpr)->ownerfree(set->scip, *rootexpr, &(*rootexpr)->ownerdata) );
       assert((*rootexpr)->ownerdata == NULL);
    }
 
@@ -1807,9 +1807,9 @@ SCIP_RETCODE SCIPexprRelease(
             assert(child->nuses == 1);
 
             /* free child's quaddata, ownerdata, and exprdata when entering child */
-            if( child->ownerdatafree != NULL )
+            if( child->ownerfree != NULL )
             {
-               SCIP_CALL( child->ownerdatafree(set->scip, child, &child->ownerdata) );
+               SCIP_CALL( child->ownerfree(set->scip, child, &child->ownerdata) );
                assert(child->ownerdata == NULL);
             }
 
@@ -2095,9 +2095,9 @@ SCIP_RETCODE SCIPexprPrintDot(
       if( printdata->whattoprint & SCIP_EXPRPRINT_OWNER )
       {
          /* print ownerdata */
-         if( expr->ownerdataprint != NULL )
+         if( expr->ownerprint != NULL )
          {
-            SCIP_CALL( expr->ownerdataprint(set->scip, printdata->file, expr, expr->ownerdata) );
+            SCIP_CALL( expr->ownerprint(set->scip, printdata->file, expr, expr->ownerdata) );
          }
          else if( expr->ownerdata != NULL )
          {
@@ -2252,10 +2252,10 @@ SCIP_RETCODE SCIPexprDismantle(
 
             SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 
-            if( expr->ownerdataprint != NULL )
+            if( expr->ownerprint != NULL )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-               expr->ownerdataprint(set->scip, file, expr, expr->ownerdata);
+               expr->ownerprint(set->scip, file, expr, expr->ownerdata);
             }
 
             break;

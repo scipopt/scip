@@ -98,8 +98,8 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
    const char**          endstring,          /**< buffer to store the position of string after parsing */
    SCIP_EXPR**           expr,               /**< buffer to store the parsed expression */
    SCIP_Bool*            success,            /**< buffer to store whether the parsing was successful or not */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** calls the curvature check callback of an expression handler
@@ -292,8 +292,8 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to simplify */
    SCIP_EXPR**           simplifiedexpr,     /**< buffer to store the simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** calls the reverse propagation callback of an expression handler
@@ -326,8 +326,8 @@ SCIP_RETCODE SCIPexprCreate(
    SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,            /**< children (can be NULL if nchildren is 0) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** appends child to the children list of expr */
@@ -385,8 +385,8 @@ SCIP_RETCODE SCIPexprCopy(
    SCIP_EXPR**           targetexpr,         /**< buffer to store pointer to copy of source expression */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** duplicates the given expression without its children */
@@ -396,8 +396,8 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store (shallow) duplicate of expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** captures an expression (increments usage count) */

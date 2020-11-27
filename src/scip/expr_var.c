@@ -97,19 +97,19 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    }
 
    /* create expression for constant + sum coefs_i vars_i */
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 0, NULL, NULL, constant, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 0, NULL, NULL, constant, ownercreate, ownercreatedata) );
 
    for( i = 0; i < nvars; ++i )
    {
       SCIP_EXPR* child;
 
-      SCIP_CALL( SCIPcreateExprVar(scip, &child, vars[i], ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &child, vars[i], ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPappendExprSumExpr(scip, sumexpr, child, coefs[i]) );
       SCIP_CALL( SCIPreleaseExpr(scip, &child) );
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyExprShallow(scip, sumexpr, simplifiedexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPsimplifyExprShallow(scip, sumexpr, simplifiedexpr, ownercreate, ownercreatedata) );
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "expr_var simplify: <%s> := ", SCIPvarGetName(var));
@@ -371,8 +371,8 @@ SCIP_RETCODE SCIPcreateExprVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_VAR*             var,                /**< variable to be stored */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPRDATA* exprdata;
@@ -385,7 +385,7 @@ SCIP_RETCODE SCIPcreateExprVar(
 
    exprdata = (SCIP_EXPRDATA*)var;
 
-   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExpr(scip, expr, SCIPgetExprHdlrVar(scip), exprdata, 0, NULL, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

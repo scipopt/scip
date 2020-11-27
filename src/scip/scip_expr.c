@@ -90,7 +90,7 @@ SCIP_DECL_EXPR_MAPEXPR(copyVarExpr)
    if( !valid )
       data->valid = FALSE;
 
-   SCIP_CALL( SCIPcreateExprVar(targetscip, targetexpr, targetvar, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExprVar(targetscip, targetexpr, targetvar, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -134,8 +134,8 @@ SCIP_RETCODE parseExpr(
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_EXPR**           exprtree,           /**< buffer to store the expr parsed by Expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** Parses base to build a value, variable, sum, or function-like ("func(...)") expression.
@@ -150,8 +150,8 @@ SCIP_RETCODE parseBase(
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_EXPR**           basetree,           /**< buffer to store the expr parsed by Base */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    debugParse("parsing base from %s\n", expr);
@@ -190,14 +190,14 @@ SCIP_RETCODE parseBase(
       {
          debugParse("First time parsing variable <%s>, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var));
          /* intentionally not using createExprVar here, since parsed expressions are not part of a constraint (they will be copied when a constraint is created) */
-         SCIP_CALL( SCIPcreateExprVar(scip, basetree, var, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprVar(scip, basetree, var, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPhashmapInsert(vartoexprvarmap, (void*)var, (void*)(*basetree)) );
       }
    }
    else if( *expr == '(' )
    {
       /* parse expression */
-      SCIP_CALL( parseExpr(scip, vartoexprvarmap, ++expr, newpos, basetree, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( parseExpr(scip, vartoexprvarmap, ++expr, newpos, basetree, ownercreate, ownercreatedata) );
       expr = *newpos;
 
       /* expect ')' */
@@ -220,7 +220,7 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       debugParse("Parsed value %g, creating a value-expression.\n", value);
-      SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownercreate, ownercreatedata) );
    }
    else if( isalpha(*expr) )
    {
@@ -258,7 +258,7 @@ SCIP_RETCODE parseBase(
       }
 
       ++expr;
-      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, scip->set, expr, newpos, basetree, &success, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPexprhdlrParseExpr(exprhdlr, scip->set, expr, newpos, basetree, &success, ownercreate, ownercreatedata) );
 
       if( !success )
       {
@@ -299,8 +299,8 @@ SCIP_RETCODE parseFactor(
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_EXPR**           factortree,         /**< buffer to store the expr parsed by Factor */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR*  basetree;
@@ -319,7 +319,7 @@ SCIP_RETCODE parseFactor(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseBase(scip, vartoexprvarmap, expr, newpos, &basetree, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( parseBase(scip, vartoexprvarmap, expr, newpos, &basetree, ownercreate, ownercreatedata) );
    expr = *newpos;
 
    /* check if there is an exponent */
@@ -400,7 +400,7 @@ SCIP_RETCODE parseFactor(
    /* create power */
    if( exponent != 1.0 )
    {
-      SCIP_CALL( SCIPcreateExprPow(scip, factortree, basetree, exponent, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprPow(scip, factortree, basetree, exponent, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
    }
    else
@@ -422,8 +422,8 @@ SCIP_RETCODE parseTerm(
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_EXPR**           termtree,           /**< buffer to store the expr parsed by Term */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR* factortree;
@@ -435,7 +435,7 @@ SCIP_RETCODE parseTerm(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseFactor(scip, FALSE, vartoexprvarmap, expr, newpos, &factortree, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( parseFactor(scip, FALSE, vartoexprvarmap, expr, newpos, &factortree, ownercreate, ownercreatedata) );
    expr = *newpos;
 
    debugParse("back to parsing Term, continue parsing from %s\n", expr);
@@ -446,7 +446,7 @@ SCIP_RETCODE parseTerm(
    if( *expr == '*' || *expr == '/' )
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
-      SCIP_CALL( SCIPcreateExprProduct(scip, termtree, 1, &factortree, 1.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, termtree, 1, &factortree, 1.0, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &factortree) );
 
       /* loop: parse Factor, find next symbol */
@@ -460,7 +460,7 @@ SCIP_RETCODE parseTerm(
          debugParse("while parsing term, read char %c\n", *expr); /*lint !e506 !e681*/
 
          ++expr;
-         retcode = parseFactor(scip, isdivision, vartoexprvarmap, expr, newpos, &factortree, ownerdatacreate, ownerdatacreatedata);
+         retcode = parseFactor(scip, isdivision, vartoexprvarmap, expr, newpos, &factortree, ownercreate, ownercreatedata);
 
          /* release termtree, if parseFactor fails with a read-error */
          if( retcode == SCIP_READERROR )
@@ -504,8 +504,8 @@ SCIP_RETCODE parseExpr(
    const char*           expr,               /**< expr that we are parsing */
    const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_EXPR**           exprtree,           /**< buffer to store the expr parsed by Expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_Real sign;
@@ -526,7 +526,7 @@ SCIP_RETCODE parseExpr(
       ++expr;
    }
 
-   SCIP_CALL( parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree, ownercreate, ownercreatedata) );
    expr = *newpos;
 
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr); /*lint !e506 !e681*/
@@ -539,13 +539,13 @@ SCIP_RETCODE parseExpr(
       if( SCIPexprIsValue(scip->set, termtree) )
       {
          /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
-         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 0, NULL, NULL, sign * SCIPgetValueExprValue(termtree), ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 0, NULL, NULL, sign * SCIPgetValueExprValue(termtree), ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
       else
       {
          /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
-         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 1, &termtree, &sign, 0.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 1, &termtree, &sign, 0.0, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
 
@@ -584,7 +584,7 @@ SCIP_RETCODE parseExpr(
 
          debugParse("while parsing expression, read coefficient %g\n", coef); /*lint !e506 !e681*/
 
-         retcode = parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree, ownerdatacreate, ownerdatacreatedata);
+         retcode = parseTerm(scip, vartoexprvarmap, expr, newpos, &termtree, ownercreate, ownercreatedata);
 
          /* release exprtree if parseTerm fails with an read-error */
          if( retcode == SCIP_READERROR )
@@ -609,7 +609,7 @@ SCIP_RETCODE parseExpr(
       if( sign  < 0.0 )
       {
          assert(sign == -1.0);
-         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 1, &termtree, &sign, 0.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprSum(scip, exprtree, 1, &termtree, &sign, 0.0, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &termtree) );
       }
       else
@@ -914,14 +914,14 @@ SCIP_RETCODE SCIPcreateExpr(
    SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIP_CALL( SCIPexprCreate(scip->set, scip->mem->probmem, expr, exprhdlr, exprdata, nchildren, children, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPexprCreate(scip->set, scip->mem->probmem, expr, exprhdlr, exprdata, nchildren, children, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -934,8 +934,8 @@ SCIP_RETCODE SCIPcreateExpr2(
    SCIP_EXPRDATA*        exprdata,           /**< expression data */
    SCIP_EXPR*            child1,             /**< first child (can be NULL) */
    SCIP_EXPR*            child2,             /**< second child (can be NULL) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(scip != NULL);
@@ -948,16 +948,16 @@ SCIP_RETCODE SCIPcreateExpr2(
       pair[0] = child1;
       pair[1] = child2;
 
-      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, 2, pair, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, 2, pair, ownercreate, ownercreatedata) );
    }
    else if( child2 == NULL )
    {
-      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, child1 == NULL ? 0 : 1, &child1, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, child1 == NULL ? 0 : 1, &child1, ownercreate, ownercreatedata) );
    }
    else
    {
       /* child2 != NULL, child1 == NULL */
-      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, 1, &child2, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExpr(scip, expr, exprhdlr, exprdata, 1, &child2, ownercreate, ownercreatedata) );
    }
 
    return SCIP_OKAY;
@@ -974,8 +974,8 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
    SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
    SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
    SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR** children;
@@ -1005,10 +1005,10 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
          /* create variable expression; intentionally not using createExprVar here,
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, quadvars1[i], ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, quadvars1[i], ownercreate, ownercreatedata) );
 
          /* create pow expression */
-         SCIP_CALL( SCIPcreateExprPow(scip, &children[i], xexpr, 2.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprPow(scip, &children[i], xexpr, 2.0, ownercreate, ownercreatedata) );
 
          /* release variable expression; note that the variable expression is still captured by children[i] */
          SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
@@ -1020,11 +1020,11 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
          /* create variable expressions; intentionally not using createExprVar here,
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateExprVar(scip, &exprs[0], quadvars1[i], ownerdatacreate, ownerdatacreatedata) );
-         SCIP_CALL( SCIPcreateExprVar(scip, &exprs[1], quadvars2[i], ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &exprs[0], quadvars1[i], ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &exprs[1], quadvars2[i], ownercreate, ownercreatedata) );
 
          /* create product expression */
-         SCIP_CALL( SCIPcreateExprProduct(scip, &children[i], 2, exprs, 1.0, ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprProduct(scip, &children[i], 2, exprs, 1.0, ownercreate, ownercreatedata) );
 
          /* release variable expressions; note that the variable expressions are still captured by children[i] */
          SCIP_CALL( SCIPreleaseExpr(scip, &exprs[1]) );
@@ -1044,14 +1044,14 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
        * since expression created here is not part of a constraint (they will be copied when a constraint is created);
        * release variable expression after the sum expression has been created
        */
-      SCIP_CALL( SCIPcreateExprVar(scip, &children[nquadterms + i], linvars[i], ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprVar(scip, &children[nquadterms + i], linvars[i], ownercreate, ownercreatedata) );
 
       /* store coefficient */
       coefs[nquadterms + i] = lincoefs[i];
    }
 
    /* create sum expression */
-   SCIP_CALL( SCIPcreateExprSum(scip, expr, nquadterms + nlinvars, children, coefs, 0.0, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPcreateExprSum(scip, expr, nquadterms + nlinvars, children, coefs, 0.0, ownercreate, ownercreatedata) );
 
    /* release children */
    for( i = 0; i < nquadterms + nlinvars; ++i )
@@ -1074,8 +1074,8 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    int                   nfactors,           /**< number of factors in monomial */
    SCIP_VAR**            vars,               /**< variables in the monomial */
    SCIP_Real*            exponents,          /**< exponent in each factor, or NULL if all 1.0 */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(scip != NULL);
@@ -1085,7 +1085,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    /* return 1 as constant expression if there are no factors */
    if( nfactors == 0 )
    {
-      SCIP_CALL( SCIPcreateExprValue(scip, expr, 1.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprValue(scip, expr, 1.0, ownercreate, ownercreatedata) );
    }
    else if( nfactors == 1 )
    {
@@ -1095,7 +1095,7 @@ SCIP_RETCODE SCIPcreateExprMonomial(
          /* intentionally not using createExprVar here, since expression created here is not part of
           * a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateExprVar(scip, expr, vars[0], ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprVar(scip, expr, vars[0], ownercreate, ownercreatedata) );
       }
       else
       {
@@ -1104,8 +1104,8 @@ SCIP_RETCODE SCIPcreateExprMonomial(
          /* create variable and power expression; intentionally not using createExprVar here,
           * since expression created here is not part of a constraint (they will be copied when a constraint is created)
           */
-         SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[0], ownerdatacreate, ownerdatacreatedata) );
-         SCIP_CALL( SCIPcreateExprPow(scip, expr, varexpr, exponents[0], ownerdatacreate, ownerdatacreatedata) );
+         SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[0], ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcreateExprPow(scip, expr, varexpr, exponents[0], ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
       }
    }
@@ -1123,21 +1123,21 @@ SCIP_RETCODE SCIPcreateExprMonomial(
          /* check whether to create a power expression or not, i.e., exponent == 1 */
          if( exponents == NULL || exponents[i] == 1.0 )
          {
-            SCIP_CALL( SCIPcreateExprVar(scip, &children[i], vars[i], ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPcreateExprVar(scip, &children[i], vars[i], ownercreate, ownercreatedata) );
          }
          else
          {
             SCIP_EXPR* varexpr;
 
             /* create variable and pow expression */
-            SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[i], ownerdatacreate, ownerdatacreatedata) );
-            SCIP_CALL( SCIPcreateExprPow(scip, &children[i], varexpr, exponents[i], ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPcreateExprVar(scip, &varexpr, vars[i], ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPcreateExprPow(scip, &children[i], varexpr, exponents[i], ownercreate, ownercreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &varexpr) );
          }
       }
 
       /* create product expression */
-      SCIP_CALL( SCIPcreateExprProduct(scip, expr, nfactors, children, 1.0, ownerdatacreate, ownerdatacreatedata) );
+      SCIP_CALL( SCIPcreateExprProduct(scip, expr, nfactors, children, 1.0, ownercreate, ownercreatedata) );
 
       /* release children */
       for( i = 0; i < nfactors; ++i )
@@ -1211,14 +1211,14 @@ SCIP_RETCODE SCIPduplicateExpr(
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprCopy(scip->set, scip->stat, scip->mem->probmem, scip->set, scip->stat, scip->mem->probmem, expr, copyexpr, mapexpr, mapexprdata, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPexprCopy(scip->set, scip->stat, scip->mem->probmem, scip->set, scip->stat, scip->mem->probmem, expr, copyexpr, mapexpr, mapexprdata, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -1228,14 +1228,14 @@ SCIP_RETCODE SCIPduplicateExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store (shallow) duplicate of expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
 
-   SCIP_CALL( SCIPexprDuplicateShallow(scip->set, scip->mem->probmem, expr, copyexpr, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPexprDuplicateShallow(scip->set, scip->mem->probmem, expr, copyexpr, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -1246,8 +1246,8 @@ SCIP_RETCODE SCIPcopyExpr(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata,    /**< data to pass to ownercreate */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
                                               *   variables of the target SCIP, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
@@ -1270,7 +1270,7 @@ SCIP_RETCODE SCIPcopyExpr(
 
    SCIP_CALL( SCIPexprCopy(sourcescip->set, sourcescip->stat, sourcescip->mem->probmem,
       targetscip->set, targetscip->stat, targetscip->mem->probmem,
-      expr, copyexpr, copyVarExpr, &copydata, ownerdatacreate, ownerdatacreatedata) );
+      expr, copyexpr, copyVarExpr, &copydata, ownercreate, ownercreatedata) );
 
    *valid = copydata.valid;
 
@@ -1300,8 +1300,8 @@ SCIP_RETCODE SCIPparseExpr(
    SCIP_EXPR**           expr,               /**< pointer to store the expr parsed */
    const char*           exprstr,            /**< string with the expr to parse */
    const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
 )
 {
    const char* finalpos_;
@@ -1313,7 +1313,7 @@ SCIP_RETCODE SCIPparseExpr(
    SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), 5 * SCIPgetNVars(scip)) );
 
    /* if parseExpr fails, we still want to free hashmap */
-   retcode = parseExpr(scip, vartoexprvarmap, exprstr, &finalpos_, expr, ownerdatacreate, ownerdatacreatedata);
+   retcode = parseExpr(scip, vartoexprvarmap, exprstr, &finalpos_, expr, ownercreate, ownercreatedata);
 
    SCIPhashmapFree(&vartoexprvarmap);
 
@@ -1687,8 +1687,8 @@ SCIP_RETCODE SCIPsimplifyExpr(
    SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
    SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
    SCIP_EXPR* expr;
@@ -1746,7 +1746,7 @@ SCIP_RETCODE SCIPsimplifyExpr(
              */
 
             /* use simplification of expression handlers */
-            SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, &refexpr, ownerdatacreate, ownerdatacreatedata) );
+            SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, &refexpr, ownercreate, ownercreatedata) );
             assert(refexpr != NULL);
             if( expr != refexpr )
                *changed = TRUE;
@@ -1780,14 +1780,14 @@ SCIP_RETCODE SCIPsimplifyExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be simplified */
    SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
 )
 {
    assert(scip != NULL);
 
    /* use simplification of expression handlers */
-   SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, simplified, ownerdatacreate, ownerdatacreatedata) );
+   SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, simplified, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

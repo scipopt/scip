@@ -37,8 +37,8 @@ SCIP_RETCODE SCIPcreateExprPow(
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_EXPR*            child,              /**< single child */
    SCIP_Real             exponent,           /**< exponent of the power expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** creates a signpower expression */
@@ -48,8 +48,8 @@ SCIP_RETCODE SCIPcreateExprSignpower(
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    SCIP_EXPR*            child,              /**< single child */
    SCIP_Real             exponent,           /**< exponent of the power expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** creates the handler for power expression and includes it into SCIP */

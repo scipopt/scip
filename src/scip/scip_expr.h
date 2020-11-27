@@ -112,8 +112,8 @@ SCIP_RETCODE SCIPcreateExpr(
    SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** creates and captures an expression with given expression data and up to two children */
@@ -125,8 +125,8 @@ SCIP_RETCODE SCIPcreateExpr2(
    SCIP_EXPRDATA*        exprdata,           /**< expression data */
    SCIP_EXPR*            child1,             /**< first child (can be NULL) */
    SCIP_EXPR*            child2,             /**< second child (can be NULL) */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** creates and captures an expression representing a quadratic function */
@@ -141,8 +141,8 @@ SCIP_RETCODE SCIPcreateExprQuadratic(
    SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms */
    SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms */
    SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** creates and captures an expression representing a monomial */
@@ -153,8 +153,8 @@ SCIP_RETCODE SCIPcreateExprMonomial(
    int                   nfactors,           /**< number of factors in monomial */
    SCIP_VAR**            vars,               /**< variables in the monomial */
    SCIP_Real*            exponents,          /**< exponent in each factor, or NULL if all 1.0 */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** appends child to the children list of expr */
@@ -195,8 +195,8 @@ SCIP_RETCODE SCIPduplicateExpr(
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
    SCIP_DECL_EXPR_MAPEXPR((*mapexpr)),       /**< expression mapping function, or NULL for creating new expressions */
    void*                 mapexprdata,        /**< data of expression mapping function */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** duplicates the given expression without its children */
@@ -205,8 +205,8 @@ SCIP_RETCODE SCIPduplicateExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store (shallow) duplicate of expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** copies an expression to use in a (possibly different) SCIP instance (including children) */
@@ -216,8 +216,8 @@ SCIP_RETCODE SCIPcopyExpr(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_EXPR*            expr,               /**< original expression */
    SCIP_EXPR**           copyexpr,           /**< buffer to store duplicate of expr */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call on expression copy to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata, /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call on expression copy to create ownerdata */
+   void*                 ownercreatedata,    /**< data to pass to ownercreate */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
                                               *   variables of the target SCIP, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
@@ -250,8 +250,8 @@ SCIP_RETCODE SCIPparseExpr(
    SCIP_EXPR**           expr,               /**< pointer to store the expr parsed */
    const char*           exprstr,            /**< string with the expr to parse */
    const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** captures an expression (increments usage count) */
@@ -684,8 +684,8 @@ SCIP_RETCODE SCIPsimplifyExpr(
    SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
    SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
 /** calls the simplify callback for an expression
@@ -698,8 +698,8 @@ SCIP_RETCODE SCIPsimplifyExprShallow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression to be simplified */
    SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
-   SCIP_DECL_EXPR_OWNERDATACREATE((*ownerdatacreate)), /**< function to call to create ownerdata */
-   SCIP_EXPR_OWNERDATACREATEDATA* ownerdatacreatedata  /**< data to pass to ownerdatacreate */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
 );
 
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
