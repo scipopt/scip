@@ -22,26 +22,15 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-//TODO: remove unused headers
 #include <assert.h>
-#include <string.h>
 
-#include "scip/def.h"
 #include "scip/set.h"
 #include "scip/clock.h"
-#include "scip/stat.h"
-#include "scip/visual.h"
 #include "scip/paramset.h"
-#include "scip/tree.h"
-#include "scip/reopt.h"
 #include "scip/scip.h"
 #include "scip/cutsel.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/pub_misc_sort.h"
 
 #include "scip/struct_cutsel.h"
-#include "scip/struct_scip.h"
 
 
 /** method to call, when the priority of a cut selector was changed */

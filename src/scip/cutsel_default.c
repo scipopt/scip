@@ -51,8 +51,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary cut selector data */
-
 /** cut selector data */
 struct SCIP_CutselData
 {
@@ -66,9 +64,6 @@ struct SCIP_CutselData
    SCIP_Real             intsupportweight;   /**< weight of integral support in cut score calculation */
    SCIP_Real             minortho;           /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             minorthoroot;       /**< minimal orthogonality for a cut to enter the LP in the root node */
-   //TODO: maybe this information should be asked from some global info
-   int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
-   int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
 };
 
 

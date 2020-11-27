@@ -74,7 +74,6 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
-    scip/cutsel_hello.c
     scip/cutsel_default.c
     scip/dcmp.c
     scip/dialog_default.c
@@ -515,7 +514,6 @@ set(scipheaders
     scip/cutpool.h
     scip/cuts.h
     scip/cutsel.h
-    scip/cutsel_hello.h
     scip/cutsel_default.h
     scip/dbldblarith.h
     scip/debug.h
