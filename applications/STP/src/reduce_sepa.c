@@ -40,6 +40,16 @@
 //#define CUTTREE_PRINT_STATISTICS
 
 
+/** decompose */
+typedef struct biconnected_component_decomposition
+{
+   SUBINOUT*             subinout;           /**< helper */
+   int*                  nodes;              /**< nodes */
+   int*                  starts;             /**< starts array per component */
+   int                   nbicomps;           /**< number of components */
+} BIDECOMP;
+
+
 /** cut nodes/ articulation points */
 typedef struct cut_nodes
 {
@@ -405,6 +415,9 @@ SCIP_Bool cutNodesTreeMakeTermsIsComplete(
          }
       }
    }
+
+   // make sure that for any nonterminal all incident edges are in the same component!
+
 
    return TRUE;
 }
@@ -868,6 +881,125 @@ SCIP_RETCODE cutNodesReduceWithTree(
    return SCIP_OKAY;
 }
 
+
+/** initalizes */
+static
+SCIP_RETCODE decomposeInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   const GRAPH*          g,                  /**< graph data structure */
+   BIDECOMP*             bidecomp
+   )
+{
+   int* nodes;
+   int* starts;
+   const int nnodes = graph_get_nNodes(g);
+   const int ncomps = cutnodes->biconn_ncomps;
+
+   assert(ncomps >= 2);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &starts, ncomps + 1) );
+   SCIP_CALL( graph_subinoutInit(scip, g, &(bidecomp->subinout)) );
+
+
+
+   // 1. count the numbers
+
+
+   // 2. shift
+
+   // 3. fill in4444444444444444444444444444444444444444444
+
+   bidecomp->nodes = nodes;
+   bidecomp->starts = starts;
+   bidecomp->nbicomps = ncomps;
+
+   // make sure that all start marked nods are in the same component! (compare with first)
+#ifndef NDEBUG
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+static
+void decomposeFreeMembers(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BIDECOMP*             bidecomp
+   )
+{
+   graph_subinoutFree(scip, &(bidecomp->subinout));
+
+   SCIPfreeBufferArray(scip, &(bidecomp->starts));
+   SCIPfreeBufferArray(scip, &(bidecomp->nodes));
+}
+
+
+/** reduces subproblem */
+static
+SCIP_RETCODE decomposeReduceSub(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex,          /**< component index */
+   GRAPH*                g                   /**< graph data structure */
+   )
+{
+   int* const gMark = g->mark;
+   const int* const compnodes = bidecomp->nodes;
+   const int nnodes = graph_get_nNodes(g);
+   const int compstart = bidecomp->starts[compindex];
+   const int compend = bidecomp->starts[compindex + 1];
+
+   assert(compstart < compend);
+
+   // check whether enough candidtes
+
+   for( int i = 0; i < nnodes; i++ )
+      gMark[i] = FALSE;
+
+   for( int i = compstart; i != compend; i++ )
+   {
+      const int compnode = compnodes[i];
+
+      assert(graph_knot_isInRange(g, compnode));
+      gMark[compnode] = TRUE;
+   }
+
+   // extract / insert
+
+      // make sure that for any nonterminal all incident edges are in the same component!
+
+   return SCIP_OKAY;
+}
+
+
+/** solves biconnected components separately */
+static
+SCIP_RETCODE decomposeExec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   BIDECOMP bidecomp;
+
+   SCIP_CALL( decomposeInit(scip, cutnodes, g, &bidecomp) );
+
+   // go over all components...
+   for( int i = 0; i < bidecomp.nbicomps; i++ )
+   {
+      SCIP_CALL( decomposeReduceSub(scip, &bidecomp, i, g) );
+   }
+
+   decomposeFreeMembers(scip, &bidecomp);
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Interface methods
  */
@@ -899,7 +1031,17 @@ SCIP_RETCODE reduce_articulations(
 
    if( cutnodes.biconn_ncomps > 0 )
    {
+      /* get rid of non-required biconnected components (without terminals) */
       SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, fixedp, nelims) );
+
+
+      /* decompose and reduce recursively? todo */
+      if( 0 )
+      {
+         REDBASE* redbase = NULL; // todo
+         SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase) );
+      }
+
    }
 
    cutNodesExit(scip, &cutnodes);
