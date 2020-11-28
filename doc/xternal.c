@@ -1146,6 +1146,14 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  @subpage SUDOKU_MAIN "Sudoku example"
+ *  </td>
+ *  <td>
+ *  An example solving sudokus.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  @subpage LOP_MAIN "Linear Ordering"
  *  </td>
  *  <td>
