@@ -32,8 +32,10 @@
 #include "reducedefs.h"
 
 
-/* reduce.c
+/* reduce_base.c
  */
+extern SCIP_RETCODE reduce_baseInit(SCIP*, const GRAPH*, REDBASE**);
+extern void reduce_baseFree(SCIP*, REDBASE**);
 extern SCIP_RETCODE reduceLevel0(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduceLevel0infeas(SCIP*, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE reduceLevel0RpcRmw(SCIP*, GRAPH*, SCIP_Real*);
@@ -144,6 +146,8 @@ extern void            reduce_identifyNonLeafTerms(SCIP*, GRAPH*);
 /* reduce_sepa.c
  */
 extern SCIP_RETCODE    reduce_articulations(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*);
+
 
 
 /* reduce_pcsimple.c

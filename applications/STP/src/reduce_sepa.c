@@ -986,7 +986,6 @@ void decomposeBuildCsr(
       const int comp_root = biconn_comproots[i];
 
       assert(comp_start <= comp_end);
-      assert(comp_start == comp_end || comp_start + 1 == comp_end || Is_term(g->term[comp_root]));
 
       SCIPdebugMessage("component %d is of size %d (root=%d); nodes: \n", i, comp_end - comp_start,
             comp_root);
@@ -1141,7 +1140,45 @@ SCIP_RETCODE decomposeExec(
  */
 
 
-/** articulation points based reduction */
+
+/** decomposition into biconnected components and recursive reduction */
+SCIP_RETCODE reduce_bidecomposition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase             /**< reduction base */
+   )
+{
+#ifdef CUTTREE_PRINT_STATISTICS
+   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, -1, -1, -1 };
+#else
+   CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, 0, -1, -1, -1 };
+#endif
+
+   assert(scip && g && redbase);
+   graph_mark(g);
+
+   SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
+   cutNodesCompute(g, &cutnodes);
+
+//printf("cutnodes.biconn_ncomps=%d \n", cutnodes.biconn_ncomps);
+
+   if( cutnodes.biconn_ncomps > 0 )
+   {
+      int dummy = 0;
+      /* get rid of non-required biconnected components (without terminals) */
+      SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, redbase->fixed, &dummy) );
+
+      /* decompose and reduce recursively? */
+      SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase) );
+   }
+
+   cutNodesExit(scip, &cutnodes);
+
+   return SCIP_OKAY;
+}
+
+
+/** articulation points based, simple reduction */
 SCIP_RETCODE reduce_articulations(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -1163,20 +1200,9 @@ SCIP_RETCODE reduce_articulations(
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
    cutNodesCompute(g, &cutnodes);
 
-//printf("cutnodes.biconn_ncomps=%d \n", cutnodes.biconn_ncomps);
-
    if( cutnodes.biconn_ncomps > 0 )
    {
-      /* get rid of non-required biconnected components (without terminals) */
       SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, fixedp, nelims) );
-
-      /* decompose and reduce recursively? todo */
-      if( 1 )
-      {
-         REDBASE* redbase = NULL; // todo
-         SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase) );
-      }
-
    }
 
    cutNodesExit(scip, &cutnodes);

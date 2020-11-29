@@ -857,6 +857,72 @@ SCIP_RETCODE redLoopMw_inner(
    return SCIP_OKAY;
 }
 
+/*
+ * Interface methods
+ */
+
+
+/** initializes */
+SCIP_RETCODE reduce_baseInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   REDBASE**             redbase             /**< base */
+   )
+{
+   REDBASE* red;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+
+   assert(scip);
+
+   SCIP_CALL( SCIPallocMemory(scip, redbase) );
+   red = *redbase;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->edgearrint), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->nodearrchar), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->heap), nnodes + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->state), 4 * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->nodearrreal), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->vbase), 4 * nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->nodearrint), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->nodearrint2), nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(red->vnoi), 4 * nnodes) );
+   red->path = NULL;
+
+   red->redparameters = NULL;
+   red->solnode = NULL;
+   *(red->fixed) = 0.0;
+
+   return SCIP_OKAY;
+}
+
+
+/** frees */
+void reduce_baseFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   REDBASE**             redbase             /**< base */
+   )
+{
+   REDBASE* red;
+   assert(scip && redbase);
+   assert(*redbase);
+
+   red = *redbase;
+
+   SCIPfreeMemoryArray(scip, &(red->vnoi));
+   SCIPfreeMemoryArray(scip, &(red->nodearrint2));
+   SCIPfreeMemoryArray(scip, &(red->nodearrint));
+   SCIPfreeMemoryArray(scip, &(red->vbase));
+   SCIPfreeMemoryArray(scip, &(red->nodearrreal));
+   SCIPfreeMemoryArray(scip, &(red->state));
+   SCIPfreeMemoryArray(scip, &(red->heap));
+   SCIPfreeMemoryArray(scip, &(red->nodearrchar));
+   SCIPfreeMemoryArray(scip, &(red->edgearrint));
+
+   SCIPfreeMemory(scip, redbase);
+}
+
+
 /* remove unconnected vertices */
 SCIP_RETCODE reduceLevel0(
    SCIP*                 scip,               /**< SCIP data structure */
