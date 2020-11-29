@@ -891,7 +891,7 @@ SCIP_RETCODE reduce_baseInit(
 
    red->redparameters = NULL;
    red->solnode = NULL;
-   *(red->fixed) = 0.0;
+   red->fixed = NULL;
 
    return SCIP_OKAY;
 }
