@@ -1300,6 +1300,95 @@ void sdGetSdsCliqueTermWalks(
 }
 
 
+/*  longest edge reduction test from T. Polzin's "Algorithms for the Steiner problem in networks" (Lemma 20)
+ *
+ *  *** DEPRECATED! *** */
+static
+SCIP_RETCODE ledgeFromNetgraph(
+   SCIP* scip,
+   const GRAPH* netgraph,
+   const PATH* mst,
+   const int* edgeorg,
+   const PATH* vnoi,
+   const int* vbase,
+   GRAPH* g,
+   int* nelims
+)
+{
+   SCIP_Bool* blocked;
+   SCIP_Real maxcost;
+   const int nedges = graph_get_nEdges(g);
+   const int nnodes = graph_get_nNodes(g);
+   const int netnnodes = graph_get_nNodes(netgraph);
+
+   assert(*nelims == 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &blocked, nedges / 2) );
+
+   for( int e = 0; e < nedges / 2; e++ )
+   {
+      blocked[e] = FALSE;
+   }
+
+   maxcost = -1.0;
+   assert(mst[0].edge == -1);
+
+   for( int k = 1; k < netnnodes; k++ )
+   {
+      SCIP_Real cost;
+      int ne;
+      const int e = mst[k].edge;
+
+      assert(netgraph->path_state[k] == CONNECT);
+      assert(e >= 0);
+      cost = netgraph->cost[e];
+
+      if( SCIPisGT(scip, cost, maxcost) )
+         maxcost = cost;
+
+      ne = edgeorg[e];
+      blocked[ne / 2] = TRUE;
+      for( int v1 = g->head[ne]; v1 != vbase[v1]; v1 = g->tail[vnoi[v1].edge] )
+         blocked[vnoi[v1].edge / 2] = TRUE;
+
+      for( int v1 = g->tail[ne]; v1 != vbase[v1]; v1 = g->tail[vnoi[v1].edge] )
+         blocked[vnoi[v1].edge / 2] = TRUE;
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      int e = g->outbeg[k];
+      while( e != EAT_LAST )
+      {
+         assert(e >= 0);
+
+         if( SCIPisGE(scip, g->cost[e], maxcost) && !blocked[e / 2] )
+         {
+            const int nextedge = g->oeat[e];
+
+            (*nelims)++;
+            graph_edge_del(scip, g, e, TRUE);
+            e = nextedge;
+         }
+         else
+         {
+            e = g->oeat[e];
+         }
+      }
+   }
+
+   /* graph might have become disconnected */
+   if( *nelims > 0 )
+   {
+      SCIP_CALL( reduceLevel0(scip, g) );
+   }
+
+   SCIPfreeBufferArray(scip, &blocked);
+
+   assert(graph_valid(scip, g));
+   return SCIP_OKAY;
+}
+
 
 /*
  * Interface methods
@@ -1602,6 +1691,9 @@ SCIP_RETCODE reduce_sd(
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
 
    graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
+
+   /* long edge test */
+   ledgeFromNetgraph(scip, netgraph, mst, edgepreds, vnoi, vbase, g, nelims);
 
    /* mark (original) edges of MST */
    for( k = 1; k < netgraph->knots; k++ )

@@ -423,7 +423,6 @@ SCIP_RETCODE redLoopStp_inner(
    const SCIP_Bool fullreduce = redparameters->fullreduce;
    const SCIP_Bool nodereplacing = redparameters->nodereplacing;
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
-   SCIP_Bool le = TRUE;
    SCIP_Bool sd = TRUE;
    SCIP_Bool sdbiased = TRUE;
    SCIP_Bool sdc = FALSE;
@@ -441,7 +440,6 @@ SCIP_RETCODE redLoopStp_inner(
    while( rerun && !SCIPisStopped(scip) )
    {
       int danelims = 0;
-      int lenelims = 0;
       int sdnelims = 0;
       int sdcnelims = 0;
       int sdstarnelims = 0;
@@ -464,19 +462,6 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
-
-      if( le || extensive )
-      {
-         SCIP_CALL(reduce_ledge(scip, g, redbase->vnoi, redbase->heap, redbase->state, redbase->vbase, &lenelims, NULL));
-
-         if( lenelims <= reductbound )
-            le = FALSE;
-
-         reduceStatsPrint(fullreduce, "le", lenelims);
-
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
 
       if( sd || extensive )
       {
@@ -651,13 +636,12 @@ SCIP_RETCODE redLoopStp_inner(
 
       /* too few eliminations? */
       if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims +
-           lenelims + brednelims + sdcnelims + sdstarnelims) <= STP_RED_GLBFACTOR * reductbound )
+           brednelims + sdcnelims + sdstarnelims) <= STP_RED_GLBFACTOR * reductbound )
       {
          // at least one successful round and full reduce and no inner_restarts yet?
          if( inner_rounds > 0 && fullreduce && inner_restarts == 0 )
          {
             inner_restarts++;
-            le = TRUE;
             sd = TRUE;
             sdstar = TRUE;
             sdbiased = TRUE;
@@ -676,7 +660,7 @@ SCIP_RETCODE redLoopStp_inner(
          }
       }
 
-      if( extensive && (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + lenelims + brednelims + sdcnelims + sdstarnelims) > 0 )
+      if( extensive && (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims + brednelims + sdcnelims + sdstarnelims) > 0 )
          rerun = TRUE;
 
       inner_rounds++;
