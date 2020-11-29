@@ -1076,6 +1076,7 @@ SCIP_RETCODE decomposeReduceSub(
    REDBASE*              redbase             /**< reduction stuff */
    )
 {
+   GRAPH* subgraph;
    int* const gMark = g->mark;
    const int* const compnodes = bidecomp->nodes;
    const int nnodes = graph_get_nNodes(g);
@@ -1090,6 +1091,8 @@ SCIP_RETCODE decomposeReduceSub(
       return SCIP_OKAY;
    }
 
+   SCIPdebugMessage("reduce component %d: \n", compindex);
+
    for( int i = 0; i < nnodes; i++ )
       gMark[i] = FALSE;
 
@@ -1101,7 +1104,21 @@ SCIP_RETCODE decomposeReduceSub(
       gMark[compnode] = TRUE;
    }
 
-   // extract // reduce // insert
+   /** extract, reduce, re-insert: */
+
+   SCIP_CALL(graph_subgraphExtract(scip, g, bidecomp->subinout, &subgraph));
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("subgraph before reduction: ");
+   graph_printInfo(subgraph);
+#endif
+
+   SCIP_CALL(redLoopStp(scip, subgraph, redbase));
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("subgraph after reduction: ");
+   graph_printInfo(subgraph);
+#endif
+   SCIP_CALL(graph_subgraphReinsert(scip, bidecomp->subinout, g, &subgraph));
 
 
    return SCIP_OKAY;
@@ -1121,13 +1138,11 @@ SCIP_RETCODE decomposeExec(
 
    SCIP_CALL( decomposeInit(scip, cutnodes, g, &bidecomp) );
 
-#ifdef XXX_XXX
    /* reduce each biconnected component individually */
    for( int i = 0; i < bidecomp.nbicomps; i++ )
    {
       SCIP_CALL( decomposeReduceSub(scip, &bidecomp, i, g, redbase) );
    }
-#endif
 
    decomposeFreeMembers(scip, &bidecomp);
 
@@ -1155,12 +1170,12 @@ SCIP_RETCODE reduce_bidecomposition(
 #endif
 
    assert(scip && g && redbase);
+   assert(graph_typeIsSpgLike(g) && "only SPG decomposition supported yet");
+
    graph_mark(g);
 
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
    cutNodesCompute(g, &cutnodes);
-
-//printf("cutnodes.biconn_ncomps=%d \n", cutnodes.biconn_ncomps);
 
    if( cutnodes.biconn_ncomps > 0 )
    {
