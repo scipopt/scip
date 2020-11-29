@@ -388,9 +388,12 @@ SCIP_Bool cutNodesTreeMakeTermsIsComplete(
    const GRAPH*          g                   /**< graph */
    )
 {
+   const int nnodes = graph_get_nNodes(g);
+
+   // todo probably wrong
+#ifdef SCIP_DISABLED
    const int* const biconn_nodesmark = cutnodes->biconn_nodesmark;
    const int* biconn_comproot = cutnodes->biconn_comproots;
-   const int nnodes = graph_get_nNodes(g);
 
    /* 1. make sure that the components of non-terminal cut-nodes are empty */
 
@@ -415,6 +418,7 @@ SCIP_Bool cutNodesTreeMakeTermsIsComplete(
          }
       }
    }
+#endif
 
    /* 2. make sure that for any nonterminal all incident edges are in the same component! */
 
