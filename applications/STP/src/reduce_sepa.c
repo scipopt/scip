@@ -36,7 +36,6 @@
 #include "portab.h"
 #include "stpvector.h"
 #include "scip/scip.h"
-
 //#define CUTTREE_PRINT_STATISTICS
 
 
@@ -908,6 +907,121 @@ SCIP_RETCODE cutNodesReduceWithTree(
 }
 
 
+/** builds CSR like arrays for biconnected components */
+static
+void decomposeBuildCsr(
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   const GRAPH*          g,                  /**< graph data structure */
+   BIDECOMP*             bidecomp
+   )
+{
+   int* RESTRICT nodes = bidecomp->nodes;
+   int* RESTRICT starts = bidecomp->starts;
+   const int* const biconn_nodesmark = cutnodes->biconn_nodesmark;
+   const int* const biconn_comproots = cutnodes->biconn_comproots;
+   const int ncomps = cutnodes->biconn_ncomps;
+   const int nnodes = graph_get_nNodes(g);
+
+   for( int i = 0; i <= ncomps; i++ )
+      starts[i] = 0;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( g->mark[i] && g->grad[i] > 0 )
+      {
+         const int compid = biconn_nodesmark[i];
+         assert(0 <= compid && compid < ncomps);
+
+         starts[compid]++;
+      }
+   }
+
+   /* we also need to count the component roots */
+   for( int i = 0; i < ncomps; i++ )
+   {
+      const int comproot = biconn_comproots[i];
+      if( biconn_nodesmark[comproot] != i && g->grad[comproot] > 0 )
+         starts[i]++;
+   }
+
+   for( int i = 1; i <= ncomps; i++ )
+      starts[i] += starts[i - 1];
+
+   assert(starts[ncomps] == starts[ncomps - 1]);
+
+   /* now fill the values in */
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( g->mark[i] && g->grad[i] > 0 )
+      {
+         const int compid = biconn_nodesmark[i];
+         assert(0 <= compid && compid < ncomps);
+
+         starts[compid]--;
+         nodes[starts[compid]] = i;
+
+         assert(compid == 0 || starts[compid - 1] <= starts[compid]);
+      }
+   }
+
+   for( int i = 0; i < ncomps; i++ )
+   {
+      const int comproot = biconn_comproots[i];
+      if( biconn_nodesmark[comproot] != i && g->grad[comproot] > 0 )
+      {
+         starts[i]--;
+         nodes[starts[i]] = comproot;
+      }
+   }
+
+   assert(starts[0] == 0);
+   assert(starts[ncomps] <= nnodes + ncomps);
+
+
+#ifndef NDEBUG
+   for( int i = 0; i < ncomps; i++ )
+   {
+      const int comp_start = starts[i];
+      const int comp_end = starts[i + 1];
+      const int comp_root = biconn_comproots[i];
+
+      assert(comp_start <= comp_end);
+      assert(comp_start == comp_end || comp_start + 1 == comp_end || Is_term(g->term[comp_root]));
+
+      SCIPdebugMessage("component %d is of size %d (root=%d); nodes: \n", i, comp_end - comp_start,
+            comp_root);
+
+      for( int j = comp_start; j != comp_end; j++ )
+      {
+         const int comp_node = nodes[j];
+         assert(graph_knot_isInRange(g, comp_node));
+
+#ifdef SCIP_DEBUG
+         graph_knot_printInfo(g, comp_node);
+#endif
+
+         if( biconn_nodesmark[comp_node] != i )
+         {
+            int k = 0;
+            SCIP_Bool isCompRoot = FALSE;
+            for( k = 0; k < ncomps; k++ )
+            {
+               if( comp_node == biconn_comproots[k] )
+               {
+                  isCompRoot = TRUE;
+                  break;
+               }
+            }
+
+            assert(isCompRoot);
+         }
+      }
+   }
+#endif
+
+}
+
+
 /** initalizes */
 static
 SCIP_RETCODE decomposeInit(
@@ -924,26 +1038,15 @@ SCIP_RETCODE decomposeInit(
 
    assert(ncomps >= 2);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes + ncomps) );
    SCIP_CALL( SCIPallocBufferArray(scip, &starts, ncomps + 1) );
    SCIP_CALL( graph_subinoutInit(scip, g, &(bidecomp->subinout)) );
-
-
-
-   // 1. count the numbers
-
-
-   // 2. shift
-
-   // 3. fill in4444444444444444444444444444444444444444444
 
    bidecomp->nodes = nodes;
    bidecomp->starts = starts;
    bidecomp->nbicomps = ncomps;
 
-   // make sure that all start marked nods are in the same component! (compare with first)
-#ifndef NDEBUG
-#endif
+   decomposeBuildCsr(cutnodes, g, bidecomp);
 
    return SCIP_OKAY;
 }
@@ -956,8 +1059,9 @@ void decomposeFreeMembers(
    BIDECOMP*             bidecomp
    )
 {
-   graph_subinoutFree(scip, &(bidecomp->subinout));
+   assert(scip && bidecomp);
 
+   graph_subinoutFree(scip, &(bidecomp->subinout));
    SCIPfreeBufferArray(scip, &(bidecomp->starts));
    SCIPfreeBufferArray(scip, &(bidecomp->nodes));
 }
@@ -969,7 +1073,8 @@ SCIP_RETCODE decomposeReduceSub(
    SCIP*                 scip,               /**< SCIP data structure */
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    int                   compindex,          /**< component index */
-   GRAPH*                g                   /**< graph data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase             /**< reduction stuff */
    )
 {
    int* const gMark = g->mark;
@@ -978,9 +1083,13 @@ SCIP_RETCODE decomposeReduceSub(
    const int compstart = bidecomp->starts[compindex];
    const int compend = bidecomp->starts[compindex + 1];
 
-   assert(compstart < compend);
+   assert(compstart <= compend);
 
-   // check whether enough candidtes
+   if( compend - compstart <= 1 )
+   {
+      SCIPdebugMessage("component %d is of size %d, SKIP! \n", compindex, compend - compstart);
+      return SCIP_OKAY;
+   }
 
    for( int i = 0; i < nnodes; i++ )
       gMark[i] = FALSE;
@@ -993,9 +1102,8 @@ SCIP_RETCODE decomposeReduceSub(
       gMark[compnode] = TRUE;
    }
 
-   // extract / insert
+   // extract // reduce // insert
 
-      // make sure that for any nonterminal all incident edges are in the same component!
 
    return SCIP_OKAY;
 }
@@ -1014,11 +1122,13 @@ SCIP_RETCODE decomposeExec(
 
    SCIP_CALL( decomposeInit(scip, cutnodes, g, &bidecomp) );
 
-   // go over all components...
+#ifdef XXX_XXX
+   /* reduce each biconnected component individually */
    for( int i = 0; i < bidecomp.nbicomps; i++ )
    {
-      SCIP_CALL( decomposeReduceSub(scip, &bidecomp, i, g) );
+      SCIP_CALL( decomposeReduceSub(scip, &bidecomp, i, g, redbase) );
    }
+#endif
 
    decomposeFreeMembers(scip, &bidecomp);
 
@@ -1060,9 +1170,8 @@ SCIP_RETCODE reduce_articulations(
       /* get rid of non-required biconnected components (without terminals) */
       SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, fixedp, nelims) );
 
-
       /* decompose and reduce recursively? todo */
-      if( 0 )
+      if( 1 )
       {
          REDBASE* redbase = NULL; // todo
          SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase) );
