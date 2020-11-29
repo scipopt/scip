@@ -392,6 +392,8 @@ SCIP_Bool cutNodesTreeMakeTermsIsComplete(
    const int* biconn_comproot = cutnodes->biconn_comproots;
    const int nnodes = graph_get_nNodes(g);
 
+   /* 1. make sure that the components of non-terminal cut-nodes are empty */
+
    for( int i = 0; i < cutnodes->biconn_ncomps; i++ )
    {
       const int cutnode = biconn_comproot[i];
@@ -399,8 +401,6 @@ SCIP_Bool cutNodesTreeMakeTermsIsComplete(
 
       if( g->grad[cutnode] == 0 || Is_term(g->term[cutnode]) )
          continue;
-
-      printf("XXXX %d \n", cutnode);
 
       for( int k = 0; k < nnodes; k++ )
       {
@@ -416,7 +416,29 @@ SCIP_Bool cutNodesTreeMakeTermsIsComplete(
       }
    }
 
-   // make sure that for any nonterminal all incident edges are in the same component!
+   /* 2. make sure that for any nonterminal all incident edges are in the same component! */
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int compid = cutnodes->biconn_nodesmark[i];
+
+      if( g->grad[i] == 0 || Is_term(g->term[i]) )
+         continue;
+
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+
+         if( cutnodes->biconn_nodesmark[head] != compid && !Is_term(g->term[head]) )
+         {
+            printf("issue for compid=%d, %d \n", compid, cutnodes->biconn_nodesmark[head] );
+            graph_knot_printInfo(g, i);
+            graph_knot_printInfo(g, head);
+
+            return FALSE;
+         }
+      }
+   }
 
 
    return TRUE;
