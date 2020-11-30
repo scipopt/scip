@@ -465,7 +465,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( sd || extensive )
       {
-         SCIP_CALL( reduce_sd(scip, g, redbase->vnoi, redbase->nodearrreal,
+         SCIP_CALL( reduce_sd(scip, g, redbase->vnoi,
                redbase->state, redbase->vbase, redbase->nodearrint, redbase->nodearrint2, redbase->edgearrint, &sdnelims,
                nodereplacing, NULL));
 
