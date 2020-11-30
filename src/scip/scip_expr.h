@@ -534,6 +534,19 @@ SCIP_RETCODE SCIPevalExprInterval(
    void*                 intevalvardata      /**< data to be passed to intevalvar callback */
    );
 
+/** calls the reverse propagation callback of an expression handler
+ *
+ * The method propagates given bounds over the children of an expression.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPreversepropExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to propagate */
+   SCIP_INTERVAL         bounds,             /**< the bounds on the expression that should be propagated */
+   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
+   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
+   );
+
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.

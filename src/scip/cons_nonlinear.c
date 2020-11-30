@@ -557,6 +557,11 @@ SCIP_DECL_EXPR_OWNERCREATE(exprownerCreate)
          assert(SCIPhashmapGetImage(conshdlrdata->var2expr, (void*)var) !=  (void*)expr);
       }
    }
+   else
+   {
+      /* just so that we can use filterpos to recognize whether an expr is a varexpr if not having a SCIP pointer around */
+      (*ownerdata)->filterpos = -2;
+   }
 
    *ownerfree = exprownerFree;
    *ownerevalactivity = exprownerEvalactivity;
@@ -2091,6 +2096,535 @@ SCIP_RETCODE forwardPropExpr(
    }
 
    SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
+/** returns whether intersecting oldinterval with newinterval would provide a properly smaller interval
+ *
+ * If subsetsufficient is TRUE, then the intersection being smaller than oldinterval is sufficient.
+ * If subsetsufficient is FALSE, then we require
+ *  - a change from an unbounded interval to a bounded one, or
+ *  - or a change from an unfixed (width > epsilon) to a fixed interval, or
+ *  - a minimal tightening of one of the interval bounds as defined by SCIPis{Lb,Ub}Better.
+ */
+static
+SCIP_Bool isIntervalBetter(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             subsetsufficient,   /**< whether the intersection being a proper subset of oldinterval is sufficient */
+   SCIP_INTERVAL         newinterval,        /**< new interval */
+   SCIP_INTERVAL         oldinterval         /**< old interval */
+   )
+{
+   assert(scip != NULL);
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newinterval));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, oldinterval));
+
+   if( subsetsufficient )
+      /* oldinterval \cap newinterval < oldinterval iff not oldinterval is subset of newinterval */
+      return !SCIPintervalIsSubsetEQ(SCIP_INTERVAL_INFINITY, oldinterval, newinterval);
+
+   /* check whether lower bound of interval becomes finite */
+   if( oldinterval.inf <= -SCIP_INTERVAL_INFINITY && newinterval.inf > -SCIP_INTERVAL_INFINITY )
+      return TRUE;
+
+   /* check whether upper bound of interval becomes finite */
+   if( oldinterval.sup >=  SCIP_INTERVAL_INFINITY && newinterval.sup >  SCIP_INTERVAL_INFINITY )
+      return TRUE;
+
+   /* check whether intersection will have width <= epsilon, if oldinterval doesn't have yet */
+   if( !SCIPisEQ(scip, oldinterval.inf, oldinterval.sup) && SCIPisEQ(scip, MAX(oldinterval.inf, newinterval.inf), MIN(oldinterval.sup, newinterval.sup)) )
+      return TRUE;
+
+   /* check whether lower bound on interval will be better by SCIP's quality measures for boundchanges */
+   if( SCIPisLbBetter(scip, newinterval.inf, oldinterval.inf, oldinterval.sup) )
+      return TRUE;
+
+   /* check whether upper bound on interval will be better by SCIP's quality measures for boundchanges */
+   if( SCIPisUbBetter(scip, newinterval.sup, oldinterval.inf, oldinterval.sup) )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** propagates bounds for each sub-expression in the reversepropqueue by starting from the root expressions
+ *
+ *  the expression will be traversed in breadth first search by using this queue
+ *
+ *  @note calling this function requires feasible intervals for each sub-expression; this is guaranteed by calling
+ *  forwardPropExpr() before calling this function
+ *
+ *  @note calling this function with *infeasible == TRUE will only empty the queue
+ */
+static
+SCIP_RETCODE reversePropQueue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_Bool*            infeasible,         /**< buffer to update whether an expression's bounds were propagated to an empty interval */
+   int*                  ntightenings        /**< buffer to store the number of (variable) tightenings */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   assert(infeasible != NULL);
+   assert(ntightenings != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *ntightenings = 0;
+
+   /* main loop that calls reverse propagation for expressions on the queue
+    * when reverseprop finds a tightening for an expression, then that expression is added to the queue (within the reverseprop call)
+    */
+   while( !SCIPqueueIsEmpty(conshdlrdata->reversepropqueue) && !(*infeasible) )
+   {
+      SCIP_INTERVAL propbounds;
+      int e;
+
+      expr = (SCIP_EXPR*) SCIPqueueRemove(conshdlrdata->reversepropqueue);
+      assert(expr != NULL);
+
+      ownerdata = SCIPexprGetOwnerData(expr);
+      assert(ownerdata != NULL);
+
+      assert(ownerdata->inpropqueue);
+      /* mark that the expression is not in the queue anymore */
+      ownerdata->inpropqueue = FALSE;
+
+      /* since the expr was in the propagation queue, the propbounds should belong to current propagation and should not be empty
+       * (propbounds being entire doesn't make much sense, so assert this for now, too, but that could be removed)
+       */
+      assert(ownerdata->propboundstag == conshdlrdata->curpropboundstag);
+      assert(!SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, ownerdata->propbounds));
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, ownerdata->propbounds));
+
+      /* this intersects propbounds with activity and auxvar bounds
+       * I doubt this would be much helpful, since propbounds are already subset of activity and we also propagate
+       * auxvar bounds separately, so disabling this for now
+       */
+#ifdef SCIP_DISABLED_CODE
+      propbounds = SCIPgetExprBoundsNonlinear(scip, expr);
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, propbounds) )
+      {
+         *infeasible = TRUE;
+         break;
+      }
+#else
+      propbounds = ownerdata->propbounds;
+#endif
+
+      if( ownerdata->nenfos > 0 )
+      {
+         /* for nodes with enforcement, call reverse propagation callbacks of nlhdlrs */
+         for( e = 0; e < ownerdata->nenfos && !*infeasible; ++e )
+         {
+            SCIP_NLHDLR* nlhdlr;
+            int nreds;
+
+            /* skip nlhdlr if it does not want to participate in activity computation */
+            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) == 0 )
+               continue;
+
+            nlhdlr = ownerdata->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+
+            /* call the reverseprop of the nlhdlr */
+#ifdef SCIP_DEBUG
+            SCIPdebugMsg(scip, "call reverse propagation for ");
+            SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+            SCIPdebugMsgPrint(scip, " in [%g,%g] using nlhdlr <%s>\n", propbounds.inf, propbounds.sup, nlhdlr->name);
+#endif
+
+            nreds = 0;
+//FIXME            SCIP_CALL( SCIPcallNlhdlrReversePropNonlinear(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, propbounds, infeasible, &nreds) );
+            assert(nreds >= 0);
+            *ntightenings += nreds;
+         }
+      }
+      else if( SCIPexprhdlrHasReverseProp(SCIPexprGetHdlr(expr)) )
+      {
+         /* if expr without enforcement (before detect), call reverse propagation callback of exprhdlr directly */
+         SCIP_INTERVAL* childrenbounds;
+         int c;
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMsg(scip, "call reverse propagation for ");
+         SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+         SCIPdebugMsgPrint(scip, " in [%g,%g] using exprhdlr <%s>\n", SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+#endif
+
+         /* if someone added an expr without nlhdlr into the reversepropqueue, then this must be because its enfo hasn't
+          * been initialized in detectNlhdlr yet (nenfos < 0)
+          */
+         assert(ownerdata->nenfos < 0);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &childrenbounds, SCIPexprGetNChildren(expr)) );
+         for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+            childrenbounds[c] = SCIPgetExprBoundsNonlinear(scip, SCIPexprGetChildren(expr)[c]);
+
+         /* call the reverseprop of the exprhdlr */
+         SCIP_CALL( SCIPreversepropExpr(scip, expr, propbounds, childrenbounds, infeasible) );
+
+         if( !*infeasible )
+            for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
+            {
+               SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, SCIPexprGetChildren(expr)[c], childrenbounds[c], infeasible, ntightenings) );
+            }
+
+         SCIPfreeBufferArray(scip, &childrenbounds);
+      }
+   }
+
+   /* reset inpropqueue for all remaining expr's in queue (can happen in case of early stop due to infeasibility) */
+   while( !SCIPqueueIsEmpty(conshdlrdata->reversepropqueue) )
+   {
+      expr = (SCIP_EXPR*) SCIPqueueRemove(conshdlrdata->reversepropqueue);
+      assert(expr != NULL);
+
+      ownerdata = SCIPexprGetOwnerData(expr);
+      assert(ownerdata != NULL);
+
+      /* mark that the expression is not in the queue anymore */
+      ownerdata->inpropqueue = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls domain propagation for a given set of constraints
+ *
+ *  The algorithm alternates calls of forward and reverse propagation.
+ *  Forward propagation ensures that activity of expressions is uptodate.
+ *  Reverse propagation tries to derive tighter variable bounds by reversing the activity computation, using the constraints
+ *  [lhs,rhs] interval as starting point.
+ *
+ *  the propagation algorithm works as follows:
+ *
+ *   1.) apply forward propagation (update activities) for all constraints not marked as propagated
+ *
+ *   2.) if presolve or propauxvars is disabled: collect expressions for which the constraint sides provide tighter bounds
+ *       if solve and propauxvars is enabled: collect expressions for which auxvars (including those in root exprs)
+ *       provide tighter bounds
+ *
+ *   3.) apply reverse propagation to all collected expressions; don't explore
+ *       sub-expressions which have not changed since the beginning of the propagation loop
+ *
+ *   4.) if we have found enough tightenings go to 1.) otherwise leave propagation loop
+ *
+ *  @note after calling forward propagation for a constraint we mark this constraint as propagated; this flag might be
+ *  reset during the reverse propagation when we find a bound tightening of a variable expression contained in the
+ *  constraint; resetting this flag is done in the EVENTEXEC callback of the event handler
+ *
+ *  @TODO should we distinguish between expressions where activity information is used for separation and those where not,
+ *    e.g., try less to propagate on convex constraints?
+ */
+static
+SCIP_RETCODE propConss(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to propagate */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_Bool cutoff = FALSE;
+   SCIP_INTERVAL conssides;
+   int ntightenings;
+   int roundnr;
+   SCIP_EXPRITER* revpropcollectit = NULL;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+   assert(result != NULL);
+   assert(nchgbds != NULL);
+   assert(*nchgbds >= 0);
+
+   /* no constraints to propagate */
+   if( nconss == 0 )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->intevalvar == intEvalVarBoundTightening);
+   assert(!conshdlrdata->globalbounds);
+
+   *result = SCIP_DIDNOTFIND;
+   roundnr = 0;
+
+   /* tightenAuxVarBounds needs to know whether boundtightenings are to be forced */
+   conshdlrdata->forceboundtightening = force;
+
+   /* invalidate all propbounds (probably not needed) */
+   ++conshdlrdata->curpropboundstag;
+
+   /* create iterator that we will use if we need to look at all auxvars */
+   if( conshdlrdata->propauxvars )
+   {
+      SCIP_CALL( SCIPcreateExpriter(scip, &revpropcollectit) );
+   }
+
+   /* main propagation loop */
+   do
+   {
+      SCIPdebugMsg(scip, "start propagation round %d\n", roundnr);
+
+      assert(SCIPqueueIsEmpty(conshdlrdata->reversepropqueue));
+
+      /* apply forward propagation (update expression activities)
+       * and add promising root expressions into queue for reversepropagation
+       */
+      for( i = 0; i < nconss; ++i )
+      {
+         consdata = SCIPconsGetData(conss[i]);
+         assert(consdata != NULL);
+
+         /* skip deleted, non-active, or propagation-disabled constraints */
+         if( SCIPconsIsDeleted(conss[i]) || !SCIPconsIsActive(conss[i]) || !SCIPconsIsPropagationEnabled(conss[i]) )
+            continue;
+
+         /* skip already propagated constraints, i.e., constraints where no (original) variable has changed and thus
+          * activity didn't change
+          */
+         if( consdata->ispropagated )
+            continue;
+
+         /* update activities in expression */
+         SCIPdebugMsg(scip, "call forwardPropExpr() for constraint <%s> (round %d): ", SCIPconsGetName(conss[i]), roundnr);
+         SCIPdebugPrintCons(scip, conss[i], NULL);
+
+         ntightenings = 0;
+         SCIP_CALL( forwardPropExpr(scip, conshdlr, consdata->expr, TRUE, &cutoff, &ntightenings) );
+         assert(cutoff || !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(consdata->expr)));
+
+         if( cutoff )
+         {
+            SCIPdebugMsg(scip, " -> cutoff in forwardPropExpr (due to domain error or auxvar tightening) of constraint <%s>\n", SCIPconsGetName(conss[i]));
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         ownerdata = SCIPexprGetOwnerData(consdata->expr);
+
+         /* TODO for a constraint that only has an auxvar for consdata->expr (e.g., convex quadratic), we could also just do the if(TRUE)-branch */
+         if( !conshdlrdata->propauxvars || ownerdata->auxvar == NULL )
+         {
+            /* check whether constraint sides (relaxed by epsilon) or auxvar bounds provide a tightening
+             *   (if we have auxvar (not in presolve), then bounds of the auxvar are initially set to constraint sides,
+             *   so taking auxvar bounds is enough)
+             */
+            if( ownerdata->auxvar == NULL )
+            {
+               /* relax sides by SCIPepsilon() and handle infinite sides */
+               SCIP_Real lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIP_INTERVAL_INFINITY : consdata->lhs - conshdlrdata->conssiderelaxamount;
+               SCIP_Real rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIP_INTERVAL_INFINITY : consdata->rhs + conshdlrdata->conssiderelaxamount;
+               SCIPintervalSetBounds(&conssides, lhs, rhs);
+            }
+            else
+            {
+               conssides = intEvalVarBoundTightening(scip, ownerdata->auxvar, (void*)conshdlrdata);
+            }
+            SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, consdata->expr, conssides, &cutoff, &ntightenings) );
+         }
+         else
+         {
+            /* check whether bounds of any auxvar used in constraint provides a tightening
+             *   (for the root expression, bounds of auxvar are initially set to constraint sides)
+             */
+            SCIP_EXPR* expr;
+
+            assert(revpropcollectit != NULL);
+            SCIP_CALL( SCIPexpriterInit(revpropcollectit, consdata->expr, SCIP_EXPRITER_BFS, FALSE) );
+            for( expr = SCIPexpriterGetCurrent(revpropcollectit); !SCIPexpriterIsEnd(revpropcollectit) && !cutoff; expr = SCIPexpriterGetNext(revpropcollectit) )
+            {
+               ownerdata = SCIPexprGetOwnerData(expr);
+               assert(ownerdata != NULL);
+
+               if( ownerdata->auxvar == NULL )
+                  continue;
+
+               conssides = intEvalVarBoundTightening(scip, ownerdata->auxvar, (void*)conshdlrdata);
+               SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, expr, conssides, &cutoff, &ntightenings) );
+            }
+         }
+
+         if( cutoff )
+         {
+            SCIPdebugMsg(scip, " -> cutoff after intersect with conssides of constraint <%s>\n", SCIPconsGetName(conss[i]));
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         assert(ntightenings >= 0);
+         if( ntightenings > 0 )
+         {
+            *nchgbds += ntightenings;
+            *result = SCIP_REDUCEDDOM;
+         }
+
+         /* mark constraint as propagated; this will be reset via the event system when we find a variable tightening */
+         consdata->ispropagated = TRUE;
+      }
+
+      /* apply backward propagation (if cutoff is TRUE, then this call empties the queue) */
+      SCIP_CALL( reversePropQueue(scip, conshdlr, &cutoff, &ntightenings) );
+      assert(ntightenings >= 0);
+      assert(SCIPqueueIsEmpty(conshdlrdata->reversepropqueue));
+
+      if( cutoff )
+      {
+         SCIPdebugMsg(scip, " -> cutoff\n");
+         *result = SCIP_CUTOFF;
+         break;
+      }
+
+      if( ntightenings > 0 )
+      {
+         *nchgbds += ntightenings;
+         *result = SCIP_REDUCEDDOM;
+      }
+   }
+   while( ntightenings > 0 && ++roundnr < conshdlrdata->maxproprounds );
+
+   if( conshdlrdata->propauxvars )
+   {
+      SCIPfreeExpriter(&revpropcollectit);
+   }
+
+   conshdlrdata->forceboundtightening = FALSE;
+
+   /* invalidate propbounds in all exprs, so noone accidentally uses them outside propagation */
+   ++conshdlrdata->curpropboundstag;
+
+   return SCIP_OKAY;
+}
+
+/* calls the reverseprop callbacks of all nlhdlrs in all expressions in all constraints using activity as bounds
+ *
+ * This is meant to propagate any domain restrictions on functions onto variable bounds, if possible.
+ *
+ * Assumes that activities are still valid and curpropboundstag does not need to be increased.
+ * That is, a good place to call this function is immediately after propConss or after forwardPropExpr if outside propagation.
+ */
+static
+SCIP_RETCODE propExprDomains(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to propagate */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_RESULT*          result,             /**< pointer to store the result */
+   int*                  nchgbds             /**< buffer to add the number of changed bounds */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_Bool cutoff = FALSE;
+   int ntightenings;
+   int c;
+   int e;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+   assert(result != NULL);
+   assert(nchgbds != NULL);
+   assert(*nchgbds >= 0);
+
+   assert(SCIPconshdlrGetData(conshdlr)->intevalvar == intEvalVarBoundTightening);
+   assert(!SCIPconshdlrGetData(conshdlr)->globalbounds);
+   assert(SCIPqueueIsEmpty(SCIPconshdlrGetData(conshdlr)->reversepropqueue));
+
+   *result = SCIP_DIDNOTFIND;
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+
+   for( c = 0; c < nconss && !cutoff; ++c )
+   {
+      /* skip deleted, non-active, or propagation-disabled constraints */
+      if( SCIPconsIsDeleted(conss[c]) || !SCIPconsIsActive(conss[c]) || !SCIPconsIsPropagationEnabled(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it) && !cutoff; expr = SCIPexpriterGetNext(it) )
+      {
+         ownerdata = SCIPexprGetOwnerData(expr);
+         assert(ownerdata != NULL);
+
+         /* call reverseprop for those nlhdlr that participate in this expr's activity computation
+          * this will propagate the current activity
+          */
+         for( e = 0; e < ownerdata->nenfos; ++e )
+         {
+            SCIP_NLHDLR* nlhdlr;
+            assert(ownerdata->enfos[e] != NULL);
+
+            nlhdlr = ownerdata->enfos[e]->nlhdlr;
+            assert(nlhdlr != NULL);
+            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) == 0 )
+               continue;
+
+            SCIPdebugMsg(scip, "propExprDomains calling reverseprop for expression %p [%g,%g]\n", (void*)expr,
+                  SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup);
+            ntightenings = 0;
+//FIXME            SCIP_CALL( SCIPcallNlhdlrReversePropNonlinear(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
+//                     SCIPexprGetActivity(expr), &cutoff, &ntightenings) );
+
+            if( cutoff )
+            {
+               /* stop everything if we detected infeasibility */
+               SCIPdebugMsg(scip, "detect infeasibility for constraint <%s> during reverseprop()\n", SCIPconsGetName(conss[c]));
+               *result = SCIP_CUTOFF;
+               break;
+            }
+
+            assert(ntightenings >= 0);
+            if( ntightenings > 0 )
+            {
+               *nchgbds += ntightenings;
+               *result = SCIP_REDUCEDDOM;
+            }
+         }
+      }
+   }
+
+   /* apply backward propagation (if cutoff is TRUE, then this call empties the queue) */
+   SCIP_CALL( reversePropQueue(scip, conshdlr, &cutoff, &ntightenings) );
+   assert(ntightenings >= 0);
+
+   if( cutoff )
+   {
+      SCIPdebugMsg(scip, " -> cutoff\n");
+      *result = SCIP_CUTOFF;
+   }
+   else if( ntightenings > 0 )
+   {
+      *nchgbds += ntightenings;
+      *result = SCIP_REDUCEDDOM;
+   }
+
+   SCIPfreeExpriter(&it);
+
+   /* invalidate propbounds in all exprs, so noone accidentally uses them outside propagation */
+   ++SCIPconshdlrGetData(conshdlr)->curpropboundstag;
 
    return SCIP_OKAY;
 }
@@ -5977,18 +6511,18 @@ SCIP_DECL_CONSCHECK(consCheckNonlinear)
 
 
 /** domain propagation method of constraint handler */
-#if 1
 static
 SCIP_DECL_CONSPROP(consPropNonlinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-//   SCIPABORT(); /*lint --e{527}*/
+   int nchgbds = 0;
+
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, SCIPgetDepth(scip) == 0, result, &nchgbds) );
+   assert(nchgbds >= 0);
+
+   /* TODO would it make sense to check for redundant constraints? */
 
    return SCIP_OKAY;
 }
-#else
-#define consPropNonlinear NULL
-#endif
 
 
 /** presolving method of constraint handler */
@@ -6029,11 +6563,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* propagate constraints */
-//FIXME   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0, result, nchgbds) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, (presoltiming & (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE)) != 0, result, nchgbds) );
    if( *result == SCIP_CUTOFF )
       return SCIP_OKAY;
 
-#if !1
    /* propagate function domains (TODO integrate with simplify?) */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) || nrounds == 0 )
    {
@@ -6047,7 +6580,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       if( localresult == SCIP_REDUCEDDOM )
          *result = SCIP_REDUCEDDOM;
    }
-#endif
 
    /* check for redundant constraints, remove constraints that are a value expression */
    SCIP_CALL( presolveRedundantConss(scip, conshdlr, conss, nconss, &infeasible, ndelconss, nchgbds) );
@@ -7581,4 +8113,229 @@ void SCIPgetLinvarMayIncreaseNonlinear(
 
    *var = consdata->linvarincr;
    *coef = consdata->linvarincrcoef;
+}
+
+
+/*
+ * Methods for Expressions in Nonlinear Constraints
+ */
+
+/** returns the variable used for linearizing a given expression (return value might be NULL)
+ *
+ * @note for variable expression it returns the corresponding variable
+ */
+SCIP_VAR* SCIPgetExprAuxVarNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   return ownerdata->filterpos >= -1 ? SCIPgetVarExprVar(expr) : ownerdata->auxvar;
+}
+
+/** returns bounds on the expression
+ *
+ * This gives an intersection of bounds from
+ * - activity calculation (\ref SCIPexprGetActivity), if valid,
+ * - auxiliary variable, if present,
+ * - stored by \ref SCIPtightenExprIntervalNonlinear during domain propagation
+ *
+ * @note The returned interval can be empty!
+ */
+SCIP_INTERVAL SCIPgetExprBoundsNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_INTERVAL bounds;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* SCIPdebugMsg(scip, "get bounds expr %p:", expr); */
+
+   /* start with propbounds if they belong to current propagation */
+   if( ownerdata->propboundstag == conshdlrdata->curpropboundstag )
+   {
+      bounds = ownerdata->propbounds;
+      /* SCIPdebugMsgPrint(scip, " propbounds [%.15g,%.15g]", ownerdata->propbounds.inf, ownerdata->propbounds.sup); */
+   }
+   else
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &bounds);
+
+   if( SCIPexprGetActivityTag(expr) >= conshdlrdata->lastboundrelax )
+   {
+      /* apply propbounds to expr activity, but ensure it's not-empty if very close disjoint intervals */
+      /* SCIPdebugMsgPrint(scip, " activity [%.15g,%.15g]", expr->activity.inf, expr->activity.sup); */
+      SCIPintervalIntersectEps(&bounds, SCIPepsilon(scip), SCIPexprGetActivity(expr), bounds);
+   }
+
+   if( ownerdata->auxvar != NULL )
+   {
+      /* apply auxiliary variable bounds to bounds */
+      SCIP_INTERVAL auxvarbounds;
+
+      auxvarbounds = conshdlrdata->intevalvar(scip, ownerdata->auxvar, conshdlrdata);
+      /* SCIPdebugMsgPrint(scip, " auxvar [%.15g,%.15g]", auxvarbounds.inf, auxvarbounds.sup); */
+      SCIPintervalIntersectEps(&bounds, SCIPepsilon(scip), bounds, auxvarbounds);
+   }
+
+   /* SCIPdebugMsgPrint(scip, " -> [%.15g,%.15g]\n", bounds.inf, bounds.sup); */
+
+   return bounds;
+}
+
+/** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of
+ * corresponding (auxiliary) variable (if any)
+ *
+ * @attention this function should only be called during domain propagation in cons_nonlinear
+ */
+SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be tightened */
+   SCIP_INTERVAL         newbounds,          /**< new bounds for the expression */
+   SCIP_Bool*            cutoff,             /**< buffer to store whether a cutoff was detected */
+   int*                  ntightenings        /**< buffer to add the total number of tightenings, or NULL */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(cutoff != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+   assert(ownerdata->conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* the code below assumes that current activity is valid
+    * if it turns out that we cannot ensure that, then we should change code
+    */
+   assert(SCIPexprGetActivityTag(expr) >= conshdlrdata->lastboundrelax || SCIPintervalIsEntire(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(expr)));
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(expr)));
+
+   *cutoff = FALSE;
+
+#ifdef DEBUG_PROP
+   SCIPdebugMsg(scip, "Trying to tighten bounds of expr ");
+   SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+   SCIPdebugMsgPrint(scip, " with activity [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup, newbounds.inf, newbounds.sup, conshdlrdata->forceboundtightening);
+#endif
+
+   if( SCIPexprIsIntegral(expr) )
+   {
+      /* apply integrality to new bounds
+       * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now
+       */
+      if( newbounds.inf > -SCIP_INTERVAL_INFINITY )
+         newbounds.inf = SCIPceil(scip, newbounds.inf);
+      if( newbounds.sup <  SCIP_INTERVAL_INFINITY )
+         newbounds.sup = SCIPfloor(scip, newbounds.sup);
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, " applied integrality: [%.15g,%.15g]\n", newbounds.inf, newbounds.sup);
+#endif
+   }
+
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      SCIPdebugMsg(scip, " cut off due to new bounds being empty\n");
+
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* treat the new bounds as empty if either the lower/upper bound is above/below +/- SCIPinfinity() */
+   if( SCIPisInfinity(scip, newbounds.inf) || SCIPisInfinity(scip, -newbounds.sup) )
+   {
+      SCIPdebugMsg(scip, " cut off due to new bounds being beyond infinity\n");
+
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* tighten newbounds w.r.t. existing expr->propbounds or activity */
+   if( ownerdata->propboundstag == conshdlrdata->curpropboundstag )
+   {
+      /* if already having propbounds in expr, then tighten newbounds by propbounds */
+      SCIPintervalIntersectEps(&newbounds, SCIPepsilon(scip), ownerdata->propbounds, newbounds);
+   }
+   else
+   {
+      /* first time we have propbounds for expr in this propagation rounds:
+       * intersect with activity (though don't let it become empty if very close intervals)
+       */
+      SCIPintervalIntersectEps(&newbounds, SCIPepsilon(scip), SCIPexprGetActivity(expr), newbounds);
+   }
+#ifdef DEBUG_PROP
+   SCIPdebugMsg(scip, " applied %s: [%.20g,%.20g]\n", ownerdata->propboundstag == conshdlrdata->curpropboundstag ? "previous propbounds" : "activity", newbounds.inf, newbounds.sup);
+#endif
+
+   /* check if the new bounds lead to an empty interval */
+   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, newbounds) )
+   {
+      SCIPdebugMsg(scip, " cut off due to empty intersection with previous propbounds or activity\n");
+
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* if expr is not constant or variable, then store newbounds in expr->propbounds
+    * - for constant, the intersection with activity should have been sufficient to determine infeasibilty
+    * - for variable, the tightenAuxVarBounds call below should be suffient to have to new bounds acknowledged
+    */
+   if( SCIPexprGetNChildren(expr) > 0 )
+   {
+      ownerdata->propbounds = newbounds;
+      ownerdata->propboundstag = conshdlrdata->curpropboundstag;
+   }
+
+   /* if updated propbounds do not allow a sufficient tightening, then do not consider adding to queue for reverse
+    * propagation or update of auxvar bounds
+    * TODO? if we first had a considerable tightening and then only get small tightenings under the same
+    *   curpropboundstag, then these will still be considered as isIntervalBetter, since we compare with activity here and
+    *   not with the propbounds as set in the beginning; I'm not sure, though, that comparing always with previous
+    *   propbounds would be better, since a number of small updates to propbounds could eventually lead to a considerable
+    *   one or should we not even update propbounds to newbounds if the update is small?
+    */
+   if( !isIntervalBetter(scip, conshdlrdata->forceboundtightening, newbounds, SCIPexprGetActivity(expr)) )
+   {
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, " new bounds [%g,%g] for expr %p not sufficiently tighter than activity -- not adding to propqueue or tightening auxvar\n", newbounds.inf, newbounds.sup, (void*)expr);
+#endif
+      return SCIP_OKAY;
+   }
+
+   if( SCIPexprGetNChildren(expr) > 0 && !ownerdata->inpropqueue && (ownerdata->nactivityusesprop > 0 || ownerdata->nactivityusessepa > 0 || ownerdata->nenfos < 0) )
+   {
+      /* add expression to propagation queue if not there yet and not var or constant and
+       * if it should have a nlhdlr with a reverseprop callback or nlhdlrs are not initialized yet (nenfos < 0)
+       */
+#ifdef DEBUG_PROP
+         SCIPdebugMsg(scip, " insert expr <%p> (%s) into reversepropqueue\n", (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+#endif
+         SCIP_CALL( SCIPqueueInsert(conshdlrdata->reversepropqueue, expr) );
+         ownerdata->inpropqueue = TRUE;
+   }
+
+   /* update bounds on variable or auxiliary variable */
+   SCIP_CALL( tightenAuxVarBounds(scip, ownerdata->conshdlr, expr, newbounds, cutoff, ntightenings) );
+
+   return SCIP_OKAY;
 }

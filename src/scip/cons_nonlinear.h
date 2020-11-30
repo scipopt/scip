@@ -851,19 +851,17 @@ SCIP_RETCODE SCIPevalExprActivityNonlinear(
 SCIP_EXPORT
 SCIP_INTERVAL SCIPgetExprBoundsNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** informs the expression about new bounds that can be used for reverse-propagation and to tighten bounds of
  * corresponding (auxiliary) variable (if any)
  *
- * @attention this function should only be called during domain propagation in cons_expr
+ * @attention this function should only be called during domain propagation in cons_nonlinear
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR*            expr,               /**< expression to be tightened */
    SCIP_INTERVAL         newbounds,          /**< new bounds for the expression */
    SCIP_Bool*            cutoff,             /**< buffer to store whether a cutoff was detected */
