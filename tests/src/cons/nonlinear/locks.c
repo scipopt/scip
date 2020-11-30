@@ -109,6 +109,8 @@ SCIP_RETCODE chgBounds(
    SCIP_CALL( SCIPchgVarLb(scip, y, lby) );
    SCIP_CALL( SCIPchgVarUb(scip, y, uby) );
 
+   SCIPincrementCurBoundsTagNonlinear(SCIPfindConshdlr(scip, "nonlinear"), TRUE);
+
    return SCIP_OKAY;
 }
 
