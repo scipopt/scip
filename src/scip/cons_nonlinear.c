@@ -328,6 +328,17 @@ typedef struct
  * Local methods
  */
 
+/* forward declaration */
+static
+SCIP_RETCODE forwardPropExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_EXPR*            rootexpr,           /**< expression */
+   SCIP_Bool             tightenauxvars,     /**< should the bounds of auxiliary variables be tightened? */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether the problem is infeasible (NULL if not needed) */
+   int*                  ntightenings        /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
+   );
+
 /** frees auxiliary variables of expression, if any */
 static
 SCIP_RETCODE freeAuxVar(
@@ -480,16 +491,42 @@ SCIP_DECL_EXPR_OWNERFREE(exprownerFree)
    return SCIP_OKAY;
 }
 
-/* forward declaration */
 static
-SCIP_RETCODE forwardPropExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_EXPR*            rootexpr,           /**< expression */
-   SCIP_Bool             tightenauxvars,     /**< should the bounds of auxiliary variables be tightened? */
-   SCIP_Bool*            infeasible,         /**< buffer to store whether the problem is infeasible (NULL if not needed) */
-   int*                  ntightenings        /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
-   );
+SCIP_DECL_EXPR_OWNERPRINT(exprownerPrint)
+{
+   assert(ownerdata != NULL);
+
+   /* print nl handlers associated to expr */
+   if( ownerdata->nenfos > 0 )
+   {
+      int i;
+      SCIPinfoMessage(scip, file, "   {");
+
+      for( i = 0; i < ownerdata->nenfos; ++i )
+      {
+         SCIPinfoMessage(scip, file, "%s:", ownerdata->enfos[i]->nlhdlr->name);
+         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY )
+            SCIPinfoMessage(scip, file, "a");
+         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW )
+            SCIPinfoMessage(scip, file, "u");
+         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE )
+            SCIPinfoMessage(scip, file, "o");
+         if( i < ownerdata->nenfos-1 )
+            SCIPinfoMessage(scip, file, ", ");
+      }
+
+      SCIPinfoMessage(scip, file, "}");
+   }
+
+   /* print aux var associated to expr */
+   if( ownerdata->auxvar != NULL )
+   {
+      SCIPinfoMessage(scip, file, "  (<%s> in [%g, %g])", SCIPvarGetName(ownerdata->auxvar), SCIPvarGetLbLocal(ownerdata->auxvar), SCIPvarGetUbLocal(ownerdata->auxvar));
+   }
+   SCIPinfoMessage(scip, file, "\n");
+
+   return SCIP_OKAY;
+}
 
 /** possibly reevaluates and then returns the activity of the expression
  *
@@ -564,9 +601,8 @@ SCIP_DECL_EXPR_OWNERCREATE(exprownerCreate)
    }
 
    *ownerfree = exprownerFree;
+   *ownerprint = exprownerPrint;
    *ownerevalactivity = exprownerEvalactivity;
-
-   // TODO set *ownerprint
 
    return SCIP_OKAY;
 }
@@ -6344,7 +6380,7 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of nonlinear constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+//   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
