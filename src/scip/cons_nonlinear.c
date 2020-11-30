@@ -426,7 +426,7 @@ SCIP_RETCODE freeEnfoData(
 
 /** callback that frees data that this conshdlr stored in an expression */
 static
-SCIP_DECL_EXPR_OWNERFREE(exprownerdataFree)
+SCIP_DECL_EXPR_OWNERFREE(exprownerFree)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -477,9 +477,49 @@ SCIP_DECL_EXPR_OWNERFREE(exprownerdataFree)
    return SCIP_OKAY;
 }
 
+/* forward declaration */
+static
+SCIP_RETCODE forwardPropExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_EXPR*            rootexpr,           /**< expression */
+   SCIP_Bool             tightenauxvars,     /**< should the bounds of auxiliary variables be tightened? */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether the problem is infeasible (NULL if not needed) */
+   int*                  ntightenings        /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
+   );
+
+/** possibly reevaluates and then returns the activity of the expression
+ *
+ * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
+ * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
+ * since last evaluation.
+ */
+static
+SCIP_DECL_EXPR_OWNEREVALACTIVITY(exprownerEvalactivity)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag )
+   {
+      /* update activity of expression */
+      SCIP_CALL( forwardPropExpr(scip, ownerdata->conshdlr, expr, FALSE, NULL, NULL) );
+
+      assert(SCIPexprGetActivityTag(expr) == conshdlrdata->curboundstag);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** callback that creates data that this conshdlr wants to store in an expression */
 static
-SCIP_DECL_EXPR_OWNERCREATE(exprownerdataCreate)
+SCIP_DECL_EXPR_OWNERCREATE(exprownerCreate)
 {
    assert(scip != NULL);
    assert(expr != NULL);
@@ -515,7 +555,8 @@ SCIP_DECL_EXPR_OWNERCREATE(exprownerdataCreate)
       }
    }
 
-   *ownerfree = exprownerdataFree;
+   *ownerfree = exprownerFree;
+   *ownerevalactivity = exprownerEvalactivity;
 
    // TODO set *ownerprint
 
@@ -541,9 +582,9 @@ SCIP_RETCODE createExprVar(
    if( *expr == NULL )
    {
       /* create a new variable expression; this also captures the expression */
-      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerdataCreate, (void*)conshdlr) );
+      SCIP_CALL( SCIPcreateExprVar(scip, expr, var, exprownerCreate, (void*)conshdlr) );
       assert(*expr != NULL);
-      /* exprownerdataCreate should have added var->expr to var2expr */
+      /* exprownerCreate should have added var->expr to var2expr */
       assert(SCIPhashmapGetImage(SCIPconshdlrGetData(conshdlr)->var2expr, (void*)var) == (void*)*expr);
    }
    else
@@ -806,22 +847,6 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
 }
 
 #if !1
-/** returns whether the variable events on variable are catched */
-SCIP_Bool SCIPisConsExprExprVarEventCatched(
-   SCIP_EXPR*   expr                /**< variable expression */
-   )
-{
-   SCIP_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-
-   exprdata = SCIPexprGetData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->filterpos >= 0;
-}
-
 /** gives number of constraints for which the expression catches bound change events on the variable */
 int SCIPgetConsExprExprVarNConss(
    SCIP_EXPR*   expr                /**< variable expression */
@@ -952,8 +977,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       /* update the activity of the var-expr here immediately
        * (we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated)
        */
-//FIXME      SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
-      activity = conshdlrdata->intevalvar(scip, SCIPgetVarExprVar(expr), conshdlrdata);
+      SCIP_CALL( SCIPevalExprInterval(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
+      /* activity = conshdlrdata->intevalvar(scip, SCIPgetVarExprVar(expr), conshdlrdata); */
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", activity.inf, activity.sup);
 #endif
@@ -1068,8 +1093,8 @@ SCIP_RETCODE catchVarEvents(
       if( SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag )
       {
          SCIP_INTERVAL activity;
-//FIXME         SCIP_CALL( SCIPexprhdlrIntEvalExpr(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
-         activity = intEvalVarBoundTightening(scip, SCIPgetVarExprVar(expr), conshdlrdata);
+         SCIP_CALL( SCIPevalExprInterval(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
+         /* activity = intEvalVarBoundTightening(scip, SCIPgetVarExprVar(expr), conshdlrdata); */
          SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
 #ifdef DEBUG_PROP
          SCIPdebugMsg(scip, "var-exprhdlr::inteval for var <%s> = [%.20g, %.20g]\n", SCIPvarGetName(SCIPgetVarExprVar(expr)), activity.inf, activity.sup);
@@ -1190,6 +1215,18 @@ SCIP_RETCODE dropVarEvents(
    return SCIP_OKAY;
 }
 
+/** returns whether the variable events on variable expression are catched */
+static
+SCIP_Bool isVarEventCatched(
+   SCIP_EXPR*            expr                /**< variable expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->filterpos >= 0;
+}
+
 /** creates and captures a nonlinear constraint
  *
  * @attention Use copyexpr=FALSE only if expr is already "owned" by conshdlr
@@ -1255,7 +1292,7 @@ SCIP_RETCODE createCons(
    if( copyexpr )
    {
       /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
-      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerdataCreate, (void*)conshdlr) );
+      SCIP_CALL( SCIPduplicateExpr(scip, expr, &consdata->expr, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );
    }
    else
    {
@@ -1683,6 +1720,378 @@ SCIP_RETCODE proposeFeasibleSolution(
    return SCIP_OKAY;
 }
 
+/** tightens the bounds of the auxiliary variable associated with an expression (or original variable if being a variable-expression) according to given bounds
+ *
+ *  The given bounds may very well be the exprs activity (when called from forwardPropExpr), but can also be some
+ *  tighter bounds (when called from SCIPtightenExprIntervalNonlinear).
+ *
+ *  Nothing will happen if SCIP is not in presolve or solve.
+ */
+static
+SCIP_RETCODE tightenAuxVarBounds(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< constraint handler */
+   SCIP_EXPR*              expr,             /**< expression whose auxvar is to be tightened */
+   SCIP_INTERVAL           bounds,           /**< bounds to be used for tightening (must not be empty) */
+   SCIP_Bool*              cutoff,           /**< buffer to store whether a cutoff was detected */
+   int*                    ntightenings      /**< buffer to add the total number of tightenings, or NULL */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Bool tightenedlb;
+   SCIP_Bool tightenedub;
+   SCIP_Bool force;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(expr != NULL);
+   assert(cutoff != NULL);
+
+   /* the given bounds must not be empty (we could cope, but we shouldn't be called in this situation) */
+   assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bounds));
+
+   *cutoff = FALSE;
+
+   /* do not tighten variable in problem stage (important for unittests)
+    * TODO put some kind of #ifdef UNITTEST around this once the unittest are modified to include the .c file (again)?
+    */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   var = SCIPgetExprAuxVarNonlinear(expr);
+   if( var == NULL )
+      return SCIP_OKAY;
+
+   /* force tightening if conshdlrdata says so or it would mean fixing the variable */
+   force = SCIPconshdlrGetData(conshdlr)->forceboundtightening || SCIPisEQ(scip, bounds.inf, bounds.sup);
+
+   /* try to tighten lower bound of (auxiliary) variable */
+   SCIP_CALL( SCIPtightenVarLb(scip, var, bounds.inf, force, cutoff, &tightenedlb) );
+   if( tightenedlb )
+   {
+      if( ntightenings != NULL )
+         ++*ntightenings;
+      SCIPdebugMsg(scip, "tightened lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var));
+   }
+   if( *cutoff )
+   {
+      SCIPdebugMsg(scip, "cutoff when tightening lb on auxvar <%s> to %.15g\n", SCIPvarGetName(var), bounds.inf);
+      return SCIP_OKAY;
+   }
+
+   /* try to tighten upper bound of (auxiliary) variable */
+   SCIP_CALL( SCIPtightenVarUb(scip, var, bounds.sup, force, cutoff, &tightenedub) );
+   if( tightenedub )
+   {
+      if( ntightenings != NULL )
+         ++*ntightenings;
+      SCIPdebugMsg(scip, "tightened ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), SCIPvarGetUbLocal(var));
+   }
+   if( *cutoff )
+   {
+      SCIPdebugMsg(scip, "cutoff when tightening ub on auxvar <%s> to %.15g\n", SCIPvarGetName(var), bounds.sup);
+      return SCIP_OKAY;
+   }
+
+   /* TODO expr->activity should have been reevaluated now due to boundchange-events, but it used to relax bounds
+    * that seems unnecessary and we could easily undo this here, e.g.,
+    * if( tightenedlb ) expr->activity.inf = bounds.inf
+    */
+
+   return SCIP_OKAY;
+}
+
+/** propagate bounds of the expressions in a given expression tree (that is, updates activity intervals)
+ *  and tries to tighten the bounds of the auxiliary variables accordingly
+ */
+static
+SCIP_RETCODE forwardPropExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_EXPR*            rootexpr,           /**< expression */
+   SCIP_Bool             tightenauxvars,     /**< should the bounds of auxiliary variables be tightened? */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether the problem is infeasible (NULL if not needed) */
+   int*                  ntightenings        /**< buffer to store the number of auxiliary variable tightenings (NULL if not needed) */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(rootexpr != NULL);
+
+   if( infeasible != NULL )
+      *infeasible = FALSE;
+   if( ntightenings != NULL )
+      *ntightenings = 0;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if value is valid and empty, then we cannot improve, so do nothing */
+   if( SCIPexprGetActivityTag(rootexpr) >= conshdlrdata->lastboundrelax && SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(rootexpr)) )
+   {
+      SCIPdebugMsg(scip, "stored activity of root expr is empty and valid (activitytag >= lastboundrelax (%u)), skip forwardPropExpr -> cutoff\n", conshdlrdata->lastboundrelax);
+
+      if( infeasible != NULL )
+         *infeasible = TRUE;
+
+      /* just update tag to curboundstag */
+      SCIPexprSetActivity(rootexpr, SCIPexprGetActivity(rootexpr), conshdlrdata->curboundstag);
+
+      return SCIP_OKAY;
+   }
+
+   /* if value is up-to-date, then nothing to do */
+   if( SCIPexprGetActivityTag(rootexpr) == conshdlrdata->curboundstag )
+   {
+      SCIPdebugMsg(scip, "activitytag of root expr equals curboundstag (%u), skip forwardPropExpr\n", conshdlrdata->curboundstag);
+
+      assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(rootexpr))); /* handled in previous if() */
+
+      return SCIP_OKAY;
+   }
+
+   ownerdata = SCIPexprGetOwnerData(rootexpr);
+   assert(ownerdata != NULL);
+
+   /* if activity of rootexpr is not used, but expr participated in detect (nenfos >= 0), then we do nothing
+    * it seems wrong to be called for such an expression (unless we are in detect at the moment), so I add a SCIPABORT()
+    * during detect, we are in some in-between state where we may want to eval activity
+    * on exprs that we did not notify about their activity usage
+    */
+   if( ownerdata->nenfos >= 0 && ownerdata->nactivityusesprop == 0 && ownerdata->nactivityusessepa == 0 && !conshdlrdata->indetect)
+   {
+#ifdef DEBUG_PROP
+      SCIPdebugMsg(scip, "root expr activity is not used but enfo initialized, skip inteval\n");
+#endif
+      SCIPABORT();
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it);  )
+   {
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITINGCHILD :
+         {
+            /* skip child if it has been evaluated already */
+            SCIP_EXPR* child;
+
+            child = SCIPexpriterGetChildExprDFS(it);
+            if( conshdlrdata->curboundstag == SCIPexprGetActivityTag(child) )
+            {
+               if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(child)) && infeasible != NULL )
+                  *infeasible = TRUE;
+
+               expr = SCIPexpriterSkipDFS(it);
+               continue;
+            }
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR :
+         {
+            SCIP_INTERVAL activity;
+
+            /* we should not have entered this expression if its activity was already uptodate */
+            assert(SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag);
+
+            /* for var exprs where varevents are catched, activity is updated immediately when the varbound has been changed
+             * so we can assume that the activity is uptodate for all these variables
+             * UNLESS we changed the method used to evaluate activity of variable expressions
+             *   or we currently use global bounds (varevents are catched for local bound changes only)
+             */
+            if( SCIPisExprVar(scip, expr) && isVarEventCatched(expr) &&
+                SCIPexprGetActivityTag(expr) >= conshdlrdata->lastvaractivitymethodchange && !conshdlrdata->globalbounds )
+            {
+#ifndef NDEBUG
+               SCIP_INTERVAL exprhdlrinterval;
+
+               SCIP_CALL( SCIPevalExprInterval(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+               assert(SCIPisRelEQ(scip, exprhdlrinterval.inf, SCIPexprGetActivity(expr).inf));
+               assert(SCIPisRelEQ(scip, exprhdlrinterval.sup, SCIPexprGetActivity(expr).sup));
+#endif
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, "skip interval evaluation of expr for var <%s> [%g,%g]\n", SCIPvarGetName(SCIPgetVarExprVar(expr)), SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup);
+#endif
+               SCIPexprSetActivity(expr, SCIPexprGetActivity(expr), conshdlrdata->curboundstag);
+
+               break;
+            }
+
+            if( SCIPexprGetActivityTag(expr) < conshdlrdata->lastboundrelax )
+            {
+               /* start with entire activity if current one is invalid */
+               SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
+            }
+            else if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, SCIPexprGetActivity(expr)) )
+            {
+               /* If already empty, then don't try to compute even better activity.
+                * If cons_nonlinear were alone, then we should have noted that we are infeasible
+                * so an assert(infeasible == NULL || *infeasible) should work here.
+                * However, after reporting a cutoff due to expr->activity being empty,
+                * SCIP may wander to a different node and call propagation again.
+                * If no bounds in a nonlinear constraint have been relaxed when switching nodes
+                * (so expr->activitytag >= conshdlrdata->lastboundrelax), then
+                * we will still have expr->activity being empty, but will have forgotten
+                * that we found infeasibility here before (!2221#note_134120).
+                * Therefore we just set *infeasibility=TRUE here and stop.
+                */
+               if( infeasible != NULL )
+                  *infeasible = TRUE;
+               SCIPdebugMsg(scip, "expr %p already has empty activity -> cutoff\n", (void*)expr);
+               break;
+            }
+            else
+            {
+               /* start with current activity, since it is valid */
+               activity = SCIPexprGetActivity(expr);
+            }
+
+            ownerdata = SCIPexprGetOwnerData(expr);
+            assert(ownerdata != NULL);
+
+            /* if activity of expr is not used, but expr participated in detect (nenfos >= 0), then do nothing */
+            if( ownerdata->nenfos >= 0 && ownerdata->nactivityusesprop == 0 && ownerdata->nactivityusessepa == 0 && !conshdlrdata->indetect )
+            {
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, "expr %p activity is not used but enfo initialized, skip inteval\n", (void*)expr);
+#endif
+               break;
+            }
+
+#ifdef DEBUG_PROP
+            SCIPdebugMsg(scip, "interval evaluation of expr %p ", (void*)expr);
+            SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+            SCIPdebugMsgPrint(scip, ", current activity = [%.20g, %.20g]\n", SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup);
+#endif
+
+            /* run interval eval of nonlinear handlers or expression handler */
+            if( ownerdata->nenfos > 0 )
+            {
+               SCIP_NLHDLR* nlhdlr;
+               SCIP_INTERVAL nlhdlrinterval;
+               int e;
+
+               /* for expressions with enforcement, nlhdlrs take care of interval evaluation */
+               for( e = 0; e < ownerdata->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity); ++e )
+               {
+                  /* skip nlhdlr if it does not want to participate in activity computation */
+                  if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) == 0 )
+                     continue;
+
+                  nlhdlr = ownerdata->enfos[e]->nlhdlr;
+                  assert(nlhdlr != NULL);
+
+                  /* skip nlhdlr if it does not provide interval evaluation (so it may only provide reverse propagation) */
+//FIXME                  if( !SCIPnlhdlrHasIntEval(nlhdlr) )
+//                     continue;
+
+                  /* let nlhdlr evaluate current expression */
+                  nlhdlrinterval = activity;
+//FIXME                  SCIP_CALL( SCIPcallNlhdlrIntEvalNonlinear(scip, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
+//                     &nlhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+#ifdef DEBUG_PROP
+                  SCIPdebugMsg(scip, " nlhdlr <%s>::inteval = [%.20g, %.20g]", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
+#endif
+
+                  /* update activity by intersecting with computed activity */
+                  SCIPintervalIntersectEps(&activity, SCIPepsilon(scip), activity, nlhdlrinterval);
+#ifdef DEBUG_PROP
+                  SCIPdebugMsgPrint(scip, " -> new activity: [%.20g, %.20g]\n", activity.inf, activity.sup);
+#endif
+               }
+            }
+            else
+            {
+               /* for node without enforcement (before or during detect), call the callback of the exprhdlr directly */
+               SCIP_INTERVAL exprhdlrinterval = activity;
+               SCIP_CALL( SCIPevalExprInterval(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), exprhdlrinterval.inf, exprhdlrinterval.sup);
+#endif
+
+               /* update expr->activity by intersecting with computed activity */
+               SCIPintervalIntersectEps(&activity, SCIPepsilon(scip), activity, exprhdlrinterval);
+#ifdef DEBUG_PROP
+               SCIPdebugMsgPrint(scip, " -> new activity: [%.20g, %.20g]\n", activity.inf, activity.sup);
+#endif
+            }
+
+            /* if expression is integral, then we try to tighten the interval bounds a bit
+             * this should undo the addition of some unnecessary safety added by use of nextafter() in interval arithmetics, e.g., when doing pow()
+             * it would be ok to use ceil() and floor(), but for safety we use SCIPceil and SCIPfloor for now
+             * do this only if using boundtightening-inteval and not in redundancy check (there we really want to relax all variables)
+             * boundtightening-inteval does not relax integer variables, so can omit expressions without children
+             * (constants should be ok, too)
+             */
+            if( SCIPexprIsIntegral(expr) && conshdlrdata->intevalvar == intEvalVarBoundTightening && SCIPexprGetNChildren(expr) > 0 )
+            {
+               if( activity.inf > -SCIP_INTERVAL_INFINITY )
+                  activity.inf = SCIPceil(scip, activity.inf);
+               if( activity.sup <  SCIP_INTERVAL_INFINITY )
+                  activity.sup = SCIPfloor(scip, activity.sup);
+#ifdef DEBUG_PROP
+               SCIPdebugMsg(scip, " applying integrality: [%.20g, %.20g]\n", activity.inf, activity.sup);
+#endif
+            }
+
+            /* mark the current node to be infeasible if either the lower/upper bound is above/below +/- SCIPinfinity()
+             * TODO this is a problem if dual-presolve fixed a variable to +/- infinity
+             */
+            if( SCIPisInfinity(scip, activity.inf) || SCIPisInfinity(scip, -activity.sup) )
+            {
+               SCIPdebugMsg(scip, "cut off due to activity [%g,%g] beyond infinity\n", activity.inf, activity.sup);
+               SCIPintervalSetEmpty(&activity);
+            }
+
+            /* now finally store activity in expr */
+            SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
+
+            if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+            {
+               if( infeasible != NULL )
+                  *infeasible = TRUE;
+            }
+            else if( tightenauxvars && ownerdata->auxvar != NULL )
+            {
+               SCIP_Bool tighteninfeasible;
+
+               SCIP_CALL( tightenAuxVarBounds(scip, conshdlr, expr, activity, &tighteninfeasible, ntightenings) );
+               if( tighteninfeasible )
+               {
+                  if( infeasible != NULL )
+                     *infeasible = TRUE;
+                  SCIPintervalSetEmpty(&activity);
+                  SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
+               }
+            }
+
+            break;
+         }
+
+         default:
+            /* you should never be here */
+            SCIPABORT();
+            break;
+      }
+
+      expr = SCIPexpriterGetNext(it);
+   }
+
+   SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
 /** propagates variable locks through expression and adds lock to variables */
 static
 SCIP_RETCODE propagateLocks(
@@ -2002,8 +2411,7 @@ SCIP_RETCODE deinitSolve(
       assert(consdata->expr != NULL);
 
       /* check and remember whether activity in root is valid */
-//FIXME      rootactivityvalid = consdata->expr->activitytag >= SCIPconshdlrGetData(conshdlr)->lastboundrelax;
-      rootactivityvalid = TRUE;
+      rootactivityvalid = SCIPexprGetActivityTag(consdata->expr) >= SCIPconshdlrGetData(conshdlr)->lastboundrelax;
 
       for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
@@ -2022,7 +2430,7 @@ SCIP_RETCODE deinitSolve(
              * e.g., an expr's activity was kept uptodate by a nlhdlr, but without using some childs activity
              * so this childs activity would be invalid, which can generate confusion
              */
-//FIXME            SCIP_CALL( SCIPevalExprActivity(scip, expr) );
+            SCIP_CALL( SCIPevalExprActivity(scip, expr) );
          }
       }
 
@@ -2123,7 +2531,7 @@ SCIP_RETCODE scaleConsSides(
             newcoefs[i] = -coefs[i];
 
          /* create a new sum expression */
-         SCIP_CALL( SCIPcreateExprSum(scip, &expr, nchildren, SCIPexprGetChildren(consdata->expr), newcoefs, -constant, exprownerdataCreate, (void*)conshdlr) );
+         SCIP_CALL( SCIPcreateExprSum(scip, &expr, nchildren, SCIPexprGetChildren(consdata->expr), newcoefs, -constant, exprownerCreate, (void*)conshdlr) );
 
          /* replace expression in constraint data and scale sides */
          SCIP_CALL( SCIPreleaseExpr(scip, &consdata->expr) );
@@ -2334,7 +2742,7 @@ SCIP_RETCODE canonicalizeConstraints(
          SCIP_Bool changed;
 
          changed = FALSE;
-         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, infeasible, exprownerdataCreate, (void*)conshdlr) );
+         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, infeasible, exprownerCreate, (void*)conshdlr) );
          consdata->issimplified = TRUE;
 
          if( changed )
@@ -3740,7 +4148,7 @@ SCIP_DECL_CONSTRANS(consTransNonlinear)
    assert(sourcedata != NULL);
 
    /* get a copy of sourceexpr with transformed vars */
-   SCIP_CALL( SCIPduplicateExpr(scip, sourcedata->expr, &targetexpr, mapexprtransvar, conshdlr, exprownerdataCreate, (void*)conshdlr) );
+   SCIP_CALL( SCIPduplicateExpr(scip, sourcedata->expr, &targetexpr, mapexprtransvar, conshdlr, exprownerCreate, (void*)conshdlr) );
    assert(targetexpr != NULL);  /* SCIPduplicateExpr cannot fail */
 
    /* create transformed cons (only captures targetexpr, no need to copy again) */
@@ -4061,7 +4469,7 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
          SCIP_Bool changed;
 
          /* simplify constraint */
-         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, &infeasible, exprownerdataCreate, (void*)conshdlr) );
+         SCIP_CALL( SCIPsimplifyExpr(scip, consdata->expr, &simplified, &changed, &infeasible, exprownerCreate, (void*)conshdlr) );
          SCIP_CALL( SCIPreleaseExpr(scip, &consdata->expr) );
          assert(simplified != NULL);
          consdata->expr = simplified;
@@ -4222,7 +4630,7 @@ SCIP_DECL_CONSCOPY(consCopyNonlinear)
    targetconshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(targetconshdlr != NULL);
 
-   SCIP_CALL( SCIPcopyExpr(sourcescip, scip, sourcedata->expr, &targetexpr, exprownerdataCreate, (void*)targetconshdlr, varmap, consmap, global, valid) );
+   SCIP_CALL( SCIPcopyExpr(sourcescip, scip, sourcedata->expr, &targetexpr, exprownerCreate, (void*)targetconshdlr, varmap, consmap, global, valid) );
 
    if( targetexpr == NULL )
       *valid = FALSE;
@@ -4310,7 +4718,7 @@ SCIP_DECL_CONSPARSE(consParseNonlinear)
    SCIPdebugMsg(scip, "str should start at beginning of expr: %s\n", str);
 
    /* parse expression: so far we did not allocate memory, so can just return in case of readerror */
-   SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerdataCreate, (void*)conshdlr) );
+   SCIP_CALL( SCIPparseExpr(scip, &consexprtree, str, &str, exprownerCreate, (void*)conshdlr) );
 
    /* check for left or right hand side */
    while( isspace((unsigned char)*str) )
@@ -4848,7 +5256,7 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    }
 
    /* create quadratic expression */
-   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, exprownerdataCreate, (void*)conshdlr) );
+   SCIP_CALL( SCIPcreateExprQuadratic(scip, &expr, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, quadcoefs, exprownerCreate, (void*)conshdlr) );
    assert(expr != NULL);
 
    /* create expression constraint */
@@ -5303,7 +5711,7 @@ SCIP_RETCODE SCIPaddLinearTermConsNonlinear(
       SCIP_EXPR* children[2] = { consdata->expr, varexpr };
       SCIP_Real coefs[2] = { 1.0, coef };
 
-      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerdataCreate, (void*)conshdlr) );
+      SCIP_CALL( SCIPcreateExprSum(scip, &consdata->expr, 2, children, coefs, 0.0, exprownerCreate, (void*)conshdlr) );
 
       /* release old root expr */
       SCIP_CALL( SCIPreleaseExpr(scip, &children[0]) );

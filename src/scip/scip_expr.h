@@ -524,6 +524,16 @@ SCIP_RETCODE SCIPevalExprActivity(
    SCIP_EXPR*            expr                /**< expression */
    );
 
+/** calls the interval evaluation callback of an expression handler */
+SCIP_EXPORT
+SCIP_RETCODE SCIPevalExprInterval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_INTERVAL*        interval,           /**< buffer where to store interval */
+   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), /**< callback to be called when interval-evaluating a variable */
+   void*                 intevalvardata      /**< data to be passed to intevalvar callback */
+   );
+
 /** compare expressions
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
