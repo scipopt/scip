@@ -71,10 +71,9 @@ typedef enum
  * The callback must not try to access the expressions children.
  *
  * input:
- *  - scip      : SCIP main data structure
- *  - expr      : the expression which is printed
- *  - file      : file to print to, or NULL for stdout
- *  - ownerdata : the ownerdata stored in the expression
+ *  - scip           : SCIP main data structure
+ *  - expr           : the expression which is freed
+ *  - ownerdata      : the ownerdata stored in the expression
  */
 #define SCIP_DECL_EXPR_OWNERFREE(x) SCIP_RETCODE x(\
    SCIP*                 scip, \
@@ -86,13 +85,30 @@ typedef enum
  * This callback is called when printing details on an expression, e.g., SCIPdismantleExpr().
  *
  * input:
- *  - scip           : SCIP main data structure
- *  - expr           : the expression which is freed
- *  - ownerdata      : the ownerdata stored in the expression
+ *  - scip      : SCIP main data structure
+ *  - expr      : the expression which is printed
+ *  - file      : file to print to, or NULL for stdout
+ *  - ownerdata : the ownerdata stored in the expression
  */
 #define SCIP_DECL_EXPR_OWNERPRINT(x) SCIP_RETCODE x(\
    SCIP*                 scip, \
    FILE*                 file, \
+   SCIP_EXPR*            expr, \
+   SCIP_EXPR_OWNERDATA*  ownerdata)
+
+/** callback for owner-specific activity evaluation
+ *
+ * This callback is called when evaluating the activity of an expression, e.g., SCIPevalActivity().
+ * The callback should ensure that activity is updated, if required, by calling SCIPsetActivity().
+ * The callback can use the activitytag in the expression to recognize whether it needs to become active.
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : the expression for which activity should be updated
+ *  - ownerdata      : the ownerdata stored in the expression
+ */
+#define SCIP_DECL_EXPR_OWNEREVALACTIVITY(x) SCIP_RETCODE x(\
+   SCIP*                 scip, \
    SCIP_EXPR*            expr, \
    SCIP_EXPR_OWNERDATA*  ownerdata)
 
@@ -109,6 +125,7 @@ typedef enum
  *  - ownerdata       : buffer to store ownerdata that shall be stored in expression (can be NULL, as it is initialized)
  *  - ownerfree       : buffer to store function to be called to free ownerdata when expression is freed (can be NULL, as it is initialized)
  *  - ownerprint      : buffer to store function to be called to print ownerdata (can be NULL, as it is initialized)
+ *  - ownerevalactivity: buffer to store function to be called to evaluate activity (can be NULL, as it is initialized)
  */
 #define SCIP_DECL_EXPR_OWNERCREATE(x) SCIP_RETCODE x(\
    SCIP*                 scip, \
@@ -116,6 +133,7 @@ typedef enum
    SCIP_EXPR_OWNERDATA** ownerdata, \
    SCIP_DECL_EXPR_OWNERFREE((**ownerfree)), \
    SCIP_DECL_EXPR_OWNERPRINT((**ownerprint)), \
+   SCIP_DECL_EXPR_OWNEREVALACTIVITY((**ownerevalactivity)), \
    void*                 ownercreatedata)
 
 /** callback that returns bounds for a given variable as used in interval evaluation

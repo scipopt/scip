@@ -1426,7 +1426,7 @@ SCIP_RETCODE SCIPexprCreate(
    /* initializes the ownerdata */
    if( ownercreate != NULL )
    {
-      SCIP_CALL( ownercreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerfree, &(*expr)->ownerprint, ownercreatedata) );
+      SCIP_CALL( ownercreate(set->scip, *expr, &(*expr)->ownerdata, &(*expr)->ownerfree, &(*expr)->ownerprint, &(*expr)->ownerevalactivity, ownercreatedata) );
    }
 
    return SCIP_OKAY;
@@ -1443,7 +1443,7 @@ SCIP_RETCODE SCIPexprAppendChild(
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(child != NULL);
-//   assert(expr->monotonicitysize == 0);  /* should not append child while mononoticity is stored in expr (not updated here) */
+//   assert(expr->monotonicitysize == 0);  /* should not append child while monotonicity is stored in expr (not updated here) */
 //   assert(expr->nlocksneg == 0);  /* should not append child while expression is locked (not updated here) */
 //   assert(expr->nlockspos == 0);  /* should not append child while expression is locked (not updated here) */
    assert(expr->nchildren <= expr->childrensize);
@@ -2621,7 +2621,10 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
 
 /** possibly reevaluates and then returns the activity of the expression
  *
- * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
+ * Reevaluate activity if currently stored is no longer uptodate.
+ * If the expr owner provided a evalactivity-callback, then call this.
+ * Otherwise, loop over descendants and compare activitytag with stat's domchgcount, i.e.,
+ * whether some bound was changed since last evaluation, to check whether exprhdlrs INTEVAL should be called.
  */
 SCIP_RETCODE SCIPexprEvalActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2637,6 +2640,17 @@ SCIP_RETCODE SCIPexprEvalActivity(
    assert(stat != NULL);
    assert(blkmem != NULL);
    assert(rootexpr != NULL);
+
+   if( rootexpr->ownerevalactivity != NULL )
+   {
+      /* call owner callback for activity-eval */
+      SCIP_CALL( rootexpr->ownerevalactivity(set->scip, rootexpr, rootexpr->ownerdata) );
+
+      return SCIP_OKAY;
+   }
+
+   /* fallback if no callback is given */
+
    assert(rootexpr->activitytag <= stat->domchgcount);
 
    /* if value is up-to-date, then nothing to do */

@@ -573,7 +573,10 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
 
 /** possibly reevaluates and then returns the activity of the expression
  *
- * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
+ * Reevaluate activity if currently stored is no longer uptodate.
+ * If the expr owner provided a evalactivity-callback, then call this.
+ * Otherwise, loop over descendants and compare activitytag with stat's domchgcount, i.e.,
+ * whether some bound was changed since last evaluation, to check whether exprhdlrs INTEVAL should be called.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprEvalActivity(
