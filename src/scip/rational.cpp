@@ -1658,7 +1658,7 @@ SCIP_Longint Rdenominator(
 
 /** returns the sign of the rational (1 if positive, -1 if negative, 0 if zero) */
 int RatGetSign(
-   SCIP_Rational*        rational            /**< the rational */
+   const SCIP_Rational*  rational            /**< the rational */
    )
 {
    return rational->val.sign();
