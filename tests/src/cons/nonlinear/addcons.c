@@ -14,16 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   addcons.c
- * @brief  tests adding expression constraints during the solving process
+ * @brief  tests adding nonlinear constraints during the solving process
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/cons_expr.h"
+#include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
 static SCIP* scip;
-static SCIP_CONSHDLR* conshdlr;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
@@ -32,13 +31,10 @@ static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include cons_expr: this adds the operator handlers */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
@@ -62,12 +58,12 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-/* test that creates and adds a nonchecked expression constraints during SCIP_STAGE_SOLVING */
+/* test that creates and adds a nonchecked nonlinear constraints during SCIP_STAGE_SOLVING */
 Test(addcons, nonchecked, .init = setup, .fini = teardown)
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_EXPR* expr;
-   const char* input = "[expr] <c1>: <t_x> + (<t_x>) == 2";
+   SCIP_EXPR* expr;
+   const char* input = "[nonlinear] <c1>: <t_x> + (<t_x>) == 2";
    SCIP_Bool success;
    SCIP_Bool cutoff;
 
@@ -86,23 +82,23 @@ Test(addcons, nonchecked, .init = setup, .fini = teardown)
 
    /* add constraint */
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
    cr_assert(expr != NULL);
 
    /* check locks */
-   cr_expect(SCIPgetConsExprExprNLocksNeg(expr) == 1);
-   cr_expect(SCIPgetConsExprExprNLocksPos(expr) == 1);
+//FIXME   cr_expect(SCIPgetExprNLocksNegNonlinear(expr) == 1);
+//FIXME   cr_expect(SCIPgetExprNLocksPosNonlinear(expr) == 1);
 
    /* expression should have been simplified in SCIP_DECL_CONSACTIVE */
-   cr_expect(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr) );
-   cr_expect(SCIPgetConsExprExprNChildren(expr) == 1);
+   cr_expect(SCIPisExprSum(scip, expr) );
+   cr_expect(SCIPexprGetNChildren(expr) == 1);
 
    /* call SCIPconstructLP to trigger an INITLP call */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
    cr_expect(!cutoff);
 
    /* check whether expression has been detected by at least one nonlinear handler (happens now already in addCons during solve */
-   cr_expect(SCIPgetConsExprExprAuxVar(expr) != NULL);
+//FIXME   cr_expect(SCIPgetExprAuxVarNonlinear(expr) != NULL);
 
    /* release the constraint */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
