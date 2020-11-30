@@ -7556,11 +7556,7 @@ SCIP_RETCODE SCIProwExactChgLhs(
 
    if( !RatIsEqual(rowexact->lhs, lhs) )
    {
-      SCIP_Rational* oldlhs;
-
-      oldlhs = rowexact->lhs;
-
-      rowexact->lhs = lhs;
+      RatSet(rowexact->lhs, lhs);
       SCIP_CALL( rowExactSideChanged(rowexact, set, lpexact, SCIP_SIDETYPE_LEFT) );
    }
 
@@ -7582,11 +7578,7 @@ SCIP_RETCODE SCIProwExactChgRhs(
 
    if( !RatIsEqual(rowexact->rhs, rhs) )
    {
-      SCIP_Rational* oldrhs;
-
-      oldrhs = rowexact->rhs;
-
-      rowexact->rhs = rhs;
+      RatSet(rowexact->rhs, rhs);
       SCIP_CALL( rowExactSideChanged(rowexact, set, lpexact, SCIP_SIDETYPE_RIGHT) );
    }
 

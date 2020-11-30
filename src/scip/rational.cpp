@@ -1346,7 +1346,7 @@ SCIP_Bool RatIsIntegral(
 {
    assert(rational != NULL);
    if( rational->isinf )
-      return FALSE;
+      return TRUE;
    else if( denominator(rational->val) == 1 )
       return TRUE;
    else if( numerator(rational->val) < denominator(rational->val) )
