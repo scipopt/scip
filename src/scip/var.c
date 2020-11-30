@@ -1561,7 +1561,7 @@ void adjustedUbExact(
       RatRound(ub, ub, SCIP_ROUND_DOWNWARDS);
 }
 
-/** writes the approximate exact multi-aggregate data in the floating point structs */
+/** writes the approximate exact multi-aggregate data in the floating-point structs */
 static
 void overwriteMultAggrWithExactData(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2136,9 +2136,9 @@ SCIP_RETCODE SCIPvarCreateTransformed(
 SCIP_RETCODE SCIPvarAddExactData(
    SCIP_VAR*             var,                /**< pointer to variable data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational*        lb,                 /**< lower bound of variable, or NULL to use floating point data */
-   SCIP_Rational*        ub,                 /**< upper bound of variable, or NULL to use floating point data  */
-   SCIP_Rational*        obj                 /**< objective function value, or NULL to use floating point data  */
+   SCIP_Rational*        lb,                 /**< lower bound of variable, or NULL to use floating-point data */
+   SCIP_Rational*        ub,                 /**< upper bound of variable, or NULL to use floating-point data  */
+   SCIP_Rational*        obj                 /**< objective function value, or NULL to use floating-point data  */
    )
 {
    assert(var != NULL);
