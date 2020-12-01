@@ -37,7 +37,7 @@ static SCIP_RANDNUMGEN* rndgen;
 
 /* give derivative in expr that belongs to var */
 static
-SCIP_Real getConsExprExprPartialDiff(
+SCIP_Real getPartialDiff(
    SCIP_EXPR* expr,
    SCIP_VAR*           var
    )
@@ -103,7 +103,7 @@ Test(derivative, value)
    SCIP_CALL( SCIPcreateExprValue(scip, &expr, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 0.0);
+   cr_expect_eq(getPartialDiff(expr, x), 0.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -116,7 +116,7 @@ Test(derivative, var)
    SCIP_CALL( SCIPcreateExprVar(scip, &expr, x, NULL, NULL) );
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 1.0);
+   cr_expect_eq(getPartialDiff(expr, x), 1.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -130,8 +130,8 @@ Test(derivative, sum)
    cr_expect_eq(SCIPparseExpr(scip, &expr, (char*)input, NULL, NULL, NULL), SCIP_OKAY);
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 5.0);
-   cr_expect_eq(getConsExprExprPartialDiff(expr, y), -2.2);
+   cr_expect_eq(getPartialDiff(expr, x), 5.0);
+   cr_expect_eq(getPartialDiff(expr, y), -2.2);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -150,9 +150,9 @@ Test(derivative, product)
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, -3.5) );
 
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 4.0 * 3.5);
-   cr_expect_eq(getConsExprExprPartialDiff(expr, y), -2.3 * 3.5);
-   cr_expect_eq(getConsExprExprPartialDiff(expr, z), -2.3 * 4.0);
+   cr_expect_eq(getPartialDiff(expr, x), 4.0 * 3.5);
+   cr_expect_eq(getPartialDiff(expr, y), -2.3 * 3.5);
+   cr_expect_eq(getPartialDiff(expr, z), -2.3 * 4.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -167,7 +167,7 @@ Test(derivative, pow)
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), -3.0 * pow(2.3, -4));
+   cr_expect_eq(getPartialDiff(expr, x), -3.0 * pow(2.3, -4));
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
@@ -188,17 +188,17 @@ Test(derivative, signpow)
    /* try positive */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.3) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 2.5 * pow(2.3, 1.5));
+   cr_expect_eq(getPartialDiff(expr, x), 2.5 * pow(2.3, 1.5));
 
    /* try 0 */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 0.0);
+   cr_expect_eq(getPartialDiff(expr, x), 0.0);
 
    /* try negative */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -1.42) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 2.5 * pow(1.42, 1.5));
+   cr_expect_eq(getPartialDiff(expr, x), 2.5 * pow(1.42, 1.5));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -213,7 +213,7 @@ Test(derivative, exp)
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), exp(-2.0));
+   cr_expect_eq(getPartialDiff(expr, x), exp(-2.0));
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -228,7 +228,7 @@ Test(derivative, log)
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 0.5);
+   cr_expect_eq(getPartialDiff(expr, x), 0.5);
 
    /* try an undefined point */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
@@ -248,17 +248,17 @@ Test(derivative, abs)
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -5.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), -1.0);
+   cr_expect_eq(getPartialDiff(expr, x), -1.0);
 
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 5.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect_eq(getConsExprExprPartialDiff(expr, x), 1.0);
+   cr_expect_eq(getPartialDiff(expr, x), 1.0);
 
    /* for x = 0 the gradient should can be everything in [-1,1] */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0.0) );
    SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-   cr_expect(getConsExprExprPartialDiff(expr, x) >= -1.0);
-   cr_expect(getConsExprExprPartialDiff(expr, x) <= 1.0);
+   cr_expect(getPartialDiff(expr, x) >= -1.0);
+   cr_expect(getPartialDiff(expr, x) <= 1.0);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
@@ -285,9 +285,9 @@ Test(derivative, quadratic)
       SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
 
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), 6.0 * xval - 4.0 * yval + zval));
-      cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, y), -4.0 * xval));
-      cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, z), xval - 7.0));
+      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), 6.0 * xval - 4.0 * yval + zval));
+      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, y), -4.0 * xval));
+      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, z), xval - 7.0));
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -315,9 +315,9 @@ Test(derivative, complex1)
       SCIP_CALL( SCIPsetSolVal(scip, sol, z, zval) );
 
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
-      cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), (yval + 2*pow(xval,2) * yval) * exp(pow(xval,2) + pow(zval,2) -5)));
-      cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, y), xval * exp(pow(xval,2) + pow(zval,2) - 5)));
-      cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, z), 2*xval*yval*zval*exp(pow(xval,2) + pow(zval,2) - 5)));
+      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), (yval + 2*pow(xval,2) * yval) * exp(pow(xval,2) + pow(zval,2) -5)));
+      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, y), xval * exp(pow(xval,2) + pow(zval,2) - 5)));
+      cr_expect(SCIPisEQ(scip, getPartialDiff(expr, z), 2*xval*yval*zval*exp(pow(xval,2) + pow(zval,2) - 5)));
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -343,9 +343,9 @@ Test(derivative, complex2)
       SCIP_CALL( SCIPevalExprGradient(scip, expr, sol, 0) );
 
       if( xval == 3.0 )
-         cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), SCIP_INVALID));
+         cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), SCIP_INVALID));
       else
-         cr_expect(SCIPisEQ(scip, getConsExprExprPartialDiff(expr, x), (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3)), "expected %g, got %g", (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3), getConsExprExprPartialDiff(expr, x));
+         cr_expect(SCIPisEQ(scip, getPartialDiff(expr, x), (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3)), "expected %g, got %g", (6*pow(xval,2) + 18) / pow(pow(xval,2)-9, 3), getPartialDiff(expr, x));
    }
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -435,7 +435,7 @@ Test(performance, rosenbrock)
       SCIP_Real partial;
 
       expected = 200.0 * ( i - (i - 1.0) * (i - 1.0) ) - 400.0 * i * (i + 1 - i * i) - 2.0 * (1.0 - i);
-      partial = getConsExprExprPartialDiff(rosenbrock, vars[i]);
+      partial = getPartialDiff(rosenbrock, vars[i]);
       if( fabs(partial - expected) > 1e-5 )
          printf("Something terribly wrong: got %f, expected %f (error %f)\n", partial, expected, fabs(partial - expected));
    }
@@ -449,10 +449,10 @@ Test(performance, rosenbrock)
 
    for( int i = 0; i < K - 1; ++i )
    {
-      if( fabs(getConsExprExprPartialDiff(rosenbrock, vars[i]) - (-2.0)) > 1e-5 )
+      if( fabs(getPartialDiff(rosenbrock, vars[i]) - (-2.0)) > 1e-5 )
       {
-         printf("Something terribly wrong: got %.10f", getConsExprExprPartialDiff(rosenbrock, vars[i]));
-         printf(" error is %.10f\n", fabs(getConsExprExprPartialDiff(rosenbrock, vars[i]) - (-2.0)));
+         printf("Something terribly wrong: got %.10f", getPartialDiff(rosenbrock, vars[i]));
+         printf(" error is %.10f\n", fabs(getPartialDiff(rosenbrock, vars[i]) - (-2.0)));
       }
    }
 

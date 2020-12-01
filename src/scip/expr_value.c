@@ -119,6 +119,17 @@ SCIP_DECL_EXPRBWDIFF(bwdiffValue)
    return SCIP_INVALIDCALL;
 }
 
+/** expression forward derivative evaluation callback */
+static
+SCIP_DECL_EXPRFWDIFF(fwdiffValue)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   *dot = 0.0;
+
+   return SCIP_OKAY;
+}
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_EXPRINTEVAL(intevalValue)
@@ -209,7 +220,7 @@ SCIP_RETCODE SCIPincludeExprHdlrValue(
    SCIPexprhdlrSetPrint(exprhdlr, printValue);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalValue);
    SCIPexprhdlrSetHash(exprhdlr, hashValue);
-   SCIPexprhdlrSetDiff(exprhdlr, bwdiffValue, NULL, NULL);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffValue, fwdiffValue, NULL);
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureValue);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityValue);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityValue);

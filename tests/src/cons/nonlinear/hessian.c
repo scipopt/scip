@@ -14,44 +14,26 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   hessian.c
- * @brief  tests computation of Hessian direction
+ * @brief  tests computation of Hessian direction for expression in constraint
+ *
+ * This is similar to expr/hessian.c, but canonicalizes expressions and uses
+ * cons_nonlinear's function to access Hessian direction
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.c"
 #include "include/scip_test.h"
 
 #define EXPECTFEQ(a,b) cr_expect_float_eq(a, b, 1e-6, "%s = %g != %g (dif %g)", #a, a, b, ABS(a-b))
+
 
 static SCIP* scip;
 static SCIP_SOL* sol;
 static SCIP_SOL* dir;
 static SCIP_VAR* x;
 static SCIP_VAR* y;
-
-/* gives bardot expr that belongs to var */
-static
-SCIP_Real getPartialDiffGradientDir(
-   SCIP_EXPR* expr,
-   SCIP_VAR*           var
-   )
-{
-   SCIP_EXPRITER* it;
-   SCIP_Real deriv = 0.0;
-
-   SCIP_CALL_ABORT( SCIPcreateExpriter(scip, &it) );
-
-   /* we need to sum-up the derivative value from all expr that represent variable var; but only visit each expr once */
-   for( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
-      if( SCIPisExprVar(scip, expr) && SCIPgetVarExprVar(expr) == var )
-         deriv += SCIPexprGetBardot(expr);
-
-   SCIPfreeExpriter(&it);
-
-   return deriv;
-}
-
 
 static
 void setup(void)
@@ -91,44 +73,73 @@ void teardown(void)
 
 Test(hess, hessian1, .init = setup, .fini = teardown)
 {
+   SCIP_CONS* cons;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_Real expected;
-   SCIP_EXPR* expr;
-   const char* input = "sin(<x>[C]^2 * <y>[C]) + <x>[C]^2";
    SCIP_Real xv = 2.3;
    SCIP_Real yv = -4.0;
+   SCIP_VAR* tx;
+   SCIP_VAR* ty;
+   int dummy;
+   SCIP_EXPR* expr;
+   const char* input = "[nonlinear] <test>: sin(<t_x>[C]^2 * <t_y>[C]) + <t_x>[C]^2 <= 2;";
 
-   SCIP_CALL( SCIPparseExpr(scip, &expr, input, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, x, &tx) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, y, &ty) );
+
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   assert(success);
+
+   SCIP_CALL( canonicalizeConstraints(scip, SCIPfindConshdlr(scip, "nonlinear"), &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeas, &dummy, &dummy, &dummy) );
+   assert(!infeas);
 
    /* set solution values */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, xv) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, y, yv) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, tx, xv) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, ty, yv) );
 
    /* set direction values */
-   SCIP_CALL( SCIPsetSolVal(scip, dir, x, 1.0) );
-   SCIP_CALL( SCIPsetSolVal(scip, dir, y, 1.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, dir, tx, 1.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, dir, ty, 1.0) );
+
+   expr = SCIPgetExprConsNonlinear(cons);
 
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
    expected = 2.0 + cos(xv * xv * yv) * (2 * xv + 2 * yv) - sin(xv * xv * yv) * (4 * xv * xv * yv * yv + 2 * xv * xv * xv * yv);
-   EXPECTFEQ(getPartialDiffGradientDir(expr, x), expected);
+   EXPECTFEQ(SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, tx), expected);
 
    expected = 2.0 * xv * cos(xv * xv * yv) - sin(xv * xv * yv) * ( xv * xv * xv * xv + 2 * xv * xv * xv * yv);
-   EXPECTFEQ(getPartialDiffGradientDir(expr, y), expected);
+   EXPECTFEQ(SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, ty), expected);
 
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 Test(hess, hessian2, .init = setup, .fini = teardown)
 {
+   SCIP_CONS* cons;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_Real xv = 2.3;
    SCIP_Real yv = -4.0;
    SCIP_Real fxx;
    SCIP_Real fxy;
    SCIP_Real fyy;
+   SCIP_VAR* tx;
+   SCIP_VAR* ty;
+   int dummy;
    SCIP_EXPR* expr;
-   const char* input = "(3.0 + 2.8 * <x>[C])^3 * <y>[C] + 1.0";
+   const char* input = "[nonlinear] <test>: (3.0 +  2.8 * <t_x>[C])^3 * <t_y>[C] + 1.0 <= 2;";
 
-   SCIP_CALL( SCIPparseExpr(scip, &expr, input, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, x, &tx) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, y, &ty) );
+
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   assert(success);
+
+   SCIP_CALL( canonicalizeConstraints(scip, SCIPfindConshdlr(scip, "nonlinear"), &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeas, &dummy, &dummy, &dummy) );
+   assert(!infeas);
 
    /* set solution values */
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, xv) );
@@ -138,10 +149,11 @@ Test(hess, hessian2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPsetSolVal(scip, dir, x, 1.0) );
    SCIP_CALL( SCIPsetSolVal(scip, dir, y, 0.0) );
 
+   expr = SCIPgetExprConsNonlinear(cons);
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
-   fxx = getPartialDiffGradientDir(expr, x);
-   fxy = getPartialDiffGradientDir(expr, y);
+   fxx = SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, tx);
+   fxy = SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, ty);
 
    /* get second column of hessian */
    SCIP_CALL( SCIPsetSolVal(scip, dir, x, 0.0) );
@@ -149,39 +161,55 @@ Test(hess, hessian2, .init = setup, .fini = teardown)
 
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
-   fyy = getPartialDiffGradientDir(expr, y);
+   fyy = SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, ty);
 
-   EXPECTFEQ(getPartialDiffGradientDir(expr, x), fxy);
+   EXPECTFEQ(SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, tx), fxy);
 
    EXPECTFEQ(fxx, 6*(3+xv*2.8)*2.8*2.8*yv);
    EXPECTFEQ(fxy, 3*(3+xv*2.8)*(3+xv*2.8)*2.8);
    EXPECTFEQ(fyy, 0.0);
 
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 Test(hess, hessian3, .init = setup, .fini = teardown)
 {
+   SCIP_CONS* cons;
+   SCIP_Bool success;
+   SCIP_Bool infeas;
    SCIP_Real expected;
    SCIP_Real xv = 2.3;
    SCIP_Real fxx;
+   SCIP_VAR* tx;
+   SCIP_VAR* ty;
+   int dummy;
    SCIP_EXPR* expr;
-   const char* input = "<x>[C]^3";
+   const char* input = "[nonlinear] <test>:  <t_x>[C]^3 <= 2.0;";
 
-   SCIP_CALL( SCIPparseExpr(scip, &expr, input, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, x, &tx) );
+   SCIP_CALL( SCIPgetTransformedVar(scip, y, &ty) );
+
+   SCIP_CALL( SCIPparseCons(scip, &cons, input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   assert(success);
+
+   SCIP_CALL( canonicalizeConstraints(scip, SCIPfindConshdlr(scip, "nonlinear"), &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeas, &dummy, &dummy, &dummy) );
+   assert(!infeas);
 
    /* set solution values */
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x, xv) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, tx, xv) );
 
    /* get first column of hessian */
-   SCIP_CALL( SCIPsetSolVal(scip, dir, x, 1.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, dir, tx, 1.0) );
 
+   expr = SCIPgetExprConsNonlinear(cons);
    SCIP_CALL( SCIPevalExprHessianDir(scip, expr, sol, 0, dir) );
 
-   fxx = getPartialDiffGradientDir(expr, x);
+   fxx = SCIPgetExprPartialDiffGradientDirNonlinear(scip, expr, tx);
    expected = 3 * 2 * xv;
 
    EXPECTFEQ(fxx, expected);
 
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }

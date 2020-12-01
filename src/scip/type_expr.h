@@ -440,17 +440,13 @@ typedef struct SCIP_ExprHdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  * where \f$ u \f$ is the direction and \f$ D_u c_i \f$ is the directional derivative of the i-th child,
  * which can be accessed via SCIPexprGetDot.
  *
- * See Differentiation methods in cons_expr.h for more details.
+ * See Differentiation methods in scip_expr.h for more details.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be differentiated
  *  - dot : buffer to store derivative value
  *  - direction : direction of the derivative (useful only for var expressions)
- *
- *  TODO: think whether we actually need to pass direction. Right now, the direction is being set
- *  to the var expressions in SCIPevalExprHessianDir and it is not used anywhere else.
- *  If we remove direction, update documentation accordingly
  */
 #define SCIP_DECL_EXPRFWDIFF(x) SCIP_RETCODE x (\
    SCIP*      scip, \

@@ -216,7 +216,7 @@ SCIP_DECL_EXPREVAL(evalVar)
    return SCIP_OKAY;
 }
 
-/** expression derivative evaluation callback */
+/** expression backward derivative evaluation callback */
 static
 SCIP_DECL_EXPRBWDIFF(bwdiffVar)
 {  /*lint --e{715}*/
@@ -227,7 +227,7 @@ SCIP_DECL_EXPRBWDIFF(bwdiffVar)
    return SCIP_INVALIDCALL;
 }
 
-/** expression derivative evaluation callback */
+/** expression forward derivative evaluation callback */
 static
 SCIP_DECL_EXPRFWDIFF(fwdiffVar)
 {  /*lint --e{715}*/
