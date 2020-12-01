@@ -66,7 +66,7 @@ SCIP_Real SCIPgetCutLPSolCutoffDistance(
    SCIP_ROW*             cut                 /**< separated cut */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCutEfficacy", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetCutLPSolCutoffDistance", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(sol != NULL);
 
