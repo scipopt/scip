@@ -65,7 +65,7 @@ SCIP_RETCODE doCutselCreate(
    SCIP_DECL_CUTSELINITSOL((*cutselinitsol)),/**< solving process initialization method of cut selector */
    SCIP_DECL_CUTSELEXITSOL((*cutselexitsol)),/**< solving process deinitialization method of cut selector */
    SCIP_DECL_CUTSELSELECT((*cutselselect)),  /**< cut selection method */
-   SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
+   SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPcutselCreate(
    SCIP_DECL_CUTSELINITSOL((*cutselinitsol)),/**< solving process initialization method of cut selector */
    SCIP_DECL_CUTSELEXITSOL((*cutselexitsol)),/**< solving process deinitialization method of cut selector */
    SCIP_DECL_CUTSELSELECT((*cutselselect)),  /**< cut selection method */
-   SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
+   SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
    )
 {
    assert(cutsel != NULL);
@@ -140,7 +140,7 @@ SCIP_RETCODE SCIPcutselCreate(
 
 /** gets name of cut selector */
 const char* SCIPcutselGetName(
-   SCIP_CUTSEL*         cutsel             /**< cut selector */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
    )
 {
    assert(cutsel != NULL);
@@ -484,7 +484,7 @@ void SCIPcutselSetPriority(
 
 /** is cut selector initialized? */
 SCIP_Bool SCIPcutselIsInitialized(
-   SCIP_CUTSEL*          cutsel               /**< cut selector */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
    )
 {
    assert(cutsel != NULL);

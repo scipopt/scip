@@ -53,7 +53,7 @@ SCIP_RETCODE SCIPcutselCreate(
    SCIP_DECL_CUTSELINITSOL((*cutselinitsol)),/**< solving process initialization method of cut selector */
    SCIP_DECL_CUTSELEXITSOL((*cutselexitsol)),/**< solving process deinitialization method of cut selector */
    SCIP_DECL_CUTSELSELECT((*cutselselect)),  /**< cut selection method */
-   SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
+   SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
    );
 
 /** enables or disables all clocks of @p cutsel, depending on the value of the flag */
