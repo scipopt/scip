@@ -5195,9 +5195,9 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    if( !SCIPdialogHasEntry(setmenu, "cutselection") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
-                                   NULL,
-                                   SCIPdialogExecMenu, NULL, NULL,
-                                   "cutselection", "change parameters for cut selectors", TRUE, NULL) );
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "cutselection", "change parameters for cut selectors", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -5215,9 +5215,9 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       if( !SCIPdialogHasEntry(submenu, SCIPcutselGetName(cutsels[i])) )
       {
          SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-                                      NULL,
-                                      SCIPdialogExecMenu, NULL, NULL,
-                                      SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -5981,9 +5981,9 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
    if( !SCIPdialogHasEntry(fixmenu, "cutselection") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
-                                   NULL,
-                                   SCIPdialogExecMenu, NULL, NULL,
-                                   "cutselection", "fix parameters for cut selectors", TRUE, NULL) );
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "cutselection", "fix parameters for cut selectors", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, fixmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
@@ -6001,9 +6001,9 @@ SCIP_RETCODE SCIPincludeDialogDefaultFix(
       if( !SCIPdialogHasEntry(submenu, SCIPcutselGetName(cutsels[i])) )
       {
          SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-                                      NULL,
-                                      SCIPdialogExecMenu, NULL, NULL,
-                                      SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
+               NULL,
+               SCIPdialogExecMenu, NULL, NULL,
+               SCIPcutselGetName(cutsels[i]), SCIPcutselGetDesc(cutsels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
