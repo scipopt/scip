@@ -5055,30 +5055,27 @@ SCIP_RETCODE reduce_bd34(
    SD1PC sd1pc;
    SCIP_Real cutoffs[STP_BD_MAXDNEDGES];
    int edges[STP_BD_MAXDEGREE];
-   SCIP_Real sd[STP_BD_MAXDEGREE];
    SCIP_Real ecost[STP_BD_MAXDEGREE];
    GRAPH* auxg;
    int* pathmaxnodetail = NULL;
    int* pathmaxnodehead = NULL;
    int adjvert[STP_BD_MAXDEGREE];
    const int nnodes = g->knots;
+   const int limit4 = limit - limit / 3;
 
    SCIPdebugMessage("BD34-Reduction: ");
 
    assert(scip && g && heap && nelims);
    assert(!g->extended);
    assert(graph_pc_isPc(g));
+   assert(limit > 0 && limit4 > 0);
 
    /* build auxiliary graph */
    SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BD_MAXDEGREE) );
    assert(auxg->edges == 2 * STP_BD_MAXDNEDGES);
-
    SCIP_CALL( graph_path_init(scip, auxg) );
 
    *nelims = 0;
-
-   for( int i = 0; i < STP_BD_MAXDEGREE; i++ )
-      sd[i] = 0.0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodetail, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodehead, nnodes) );
@@ -5146,6 +5143,7 @@ SCIP_RETCODE reduce_bd34(
          /* vertex of degree 3? */
          if( degree == 3 )
          {
+            SCIP_Real sd[3];
             const SCIP_Real iprize = (Is_term(g->term[i])) ? g->prize[i] : 0.0;
             const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] - iprize;
 
@@ -5187,9 +5185,9 @@ SCIP_RETCODE reduce_bd34(
             SCIP_Real adjsds[6];
             SCIP_Bool success = TRUE;
 
-            adjsds[0] = sdGetSdPcMw(scip, g, ecost[0] + ecost[1], adjvert[0], adjvert[1], limit, &sd1pc);
-            adjsds[1] = sdGetSdPcMw(scip, g, ecost[0] + ecost[2], adjvert[0], adjvert[2], limit, &sd1pc);
-            adjsds[3] = sdGetSdPcMw(scip, g, ecost[1] + ecost[2], adjvert[1], adjvert[2], limit, &sd1pc);
+            adjsds[0] = sdGetSdPcMw(scip, g, ecost[0] + ecost[1], adjvert[0], adjvert[1], limit4, &sd1pc);
+            adjsds[1] = sdGetSdPcMw(scip, g, ecost[0] + ecost[2], adjvert[0], adjvert[2], limit4, &sd1pc);
+            adjsds[3] = sdGetSdPcMw(scip, g, ecost[1] + ecost[2], adjvert[1], adjvert[2], limit4, &sd1pc);
 
             if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[1], adjsds[3] },
                (int[3]){ edges[0], edges[1], edges[2]},
@@ -5198,8 +5196,8 @@ SCIP_RETCODE reduce_bd34(
                continue;
             }
 
-            adjsds[2] = sdGetSdPcMw(scip, g, ecost[0] + ecost[3], adjvert[0], adjvert[3], limit, &sd1pc);
-            adjsds[4] = sdGetSdPcMw(scip, g, ecost[1] + ecost[3], adjvert[1], adjvert[3], limit, &sd1pc);
+            adjsds[2] = sdGetSdPcMw(scip, g, ecost[0] + ecost[3], adjvert[0], adjvert[3], limit4, &sd1pc);
+            adjsds[4] = sdGetSdPcMw(scip, g, ecost[1] + ecost[3], adjvert[1], adjvert[3], limit4, &sd1pc);
 
             if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[2], adjsds[4] },
                (int[3]){ edges[0], edges[1], edges[3]},
@@ -5208,7 +5206,7 @@ SCIP_RETCODE reduce_bd34(
                continue;
             }
 
-            adjsds[5] = sdGetSdPcMw(scip, g, ecost[2] + ecost[3], adjvert[2], adjvert[3], limit, &sd1pc);
+            adjsds[5] = sdGetSdPcMw(scip, g, ecost[2] + ecost[3], adjvert[2], adjvert[3], limit4, &sd1pc);
 
             if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[1], adjsds[2], adjsds[5] },
                 (int[3]){ edges[0], edges[2], edges[3]},
@@ -5239,7 +5237,7 @@ SCIP_RETCODE reduce_bd34(
                      else
                         auxg->cost[e] = adjsds[k + k2];
 
-                     assert(EQ(auxg->cost[e], sdGetSdPcMw(scip, g, ecost[k] + ecost[k2], adjvert[k], adjvert[k2], limit, &sd1pc)));
+                     assert(EQ(auxg->cost[e], sdGetSdPcMw(scip, g, ecost[k] + ecost[k2], adjvert[k], adjvert[k2], limit4, &sd1pc)));
                      auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
                }
