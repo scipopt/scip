@@ -1666,6 +1666,52 @@ SCIP_RETCODE graph_fixed_moveNodePc(
 }
 
 
+/** initializes */
+SCIP_RETCODE graph_initContractTracing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< graph */
+   )
+{
+   int* trace;
+   const int nnodes = graph_get_nNodes(graph);
+
+   assert(scip);
+   assert(!graph->contracttrace);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(trace), nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+      trace[i] = -1;
+
+   graph->contracttrace = trace;
+
+   return SCIP_OKAY;
+}
+
+
+
+/** traces contraction back; returns traced node */
+int graph_contractTrace(
+   int                   node,               /**< node to trace back from */
+   const GRAPH*          graph               /**< graph */
+   )
+{
+   const int* const trace = graph->contracttrace;
+   int newnode;
+
+   assert(graph && trace);
+   assert(graph_knot_isInRange(graph, node));
+   assert(graph->grad[node] == 0);
+   assert(trace[node] != -1);
+
+   for( newnode = node; trace[node] != -1; newnode = trace[newnode]  )
+   {
+      assert(graph_knot_isInRange(graph, newnode));
+   }
+   assert(graph_knot_isInRange(graph, newnode));
+
+   return newnode;
+}
 
 /** copies fixed components */
 SCIP_RETCODE graph_copyFixed(

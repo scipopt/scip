@@ -91,6 +91,7 @@ CMAINOBJ	=	cmain.o \
 			graph_pcbase.o \
 			graph_save.o \
 			graph_stats.o \
+			graph_sub.o \
 			graph_tpath.o \
 			graph_trans.o \
 			graph_util.o \

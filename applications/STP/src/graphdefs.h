@@ -225,6 +225,7 @@ typedef struct
    IDX**                 pcancestors;        /**< list of ancestor edges to each node (to keep track of PC/MW reductions )  */
    PSEUDOANS*            pseudoancestors;    /**< pseudo ancestors */
    FIXED*                fixedcomponents;    /**< fixed components */
+   int*                  contracttrace;      /**< used to trace node contractions */
 
    /* Data for min cut computation todo extra struct */
    int* RESTRICT         mincut_dist;        /**< dist[i] : Distance-label of node i          */

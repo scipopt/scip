@@ -43,6 +43,8 @@ extern SCIP_Bool show; // todo delete
 
 /* graph_history.c
  */
+extern SCIP_RETCODE   graph_initContractTracing(SCIP*, GRAPH*);
+extern int            graph_contractTrace(int, const GRAPH*);
 extern SCIP_RETCODE  graph_singletonAncestors_init(SCIP*, const GRAPH*, int, SINGLETONANS*);
 extern void          graph_singletonAncestors_freeMembers(SCIP*, SINGLETONANS*);
 extern SCIP_Bool     graph_valid_ancestors(SCIP*, const GRAPH*);
@@ -176,20 +178,22 @@ extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copyPseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copyData(SCIP*, const GRAPH*, GRAPH*);
+extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
+extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
+extern SCIP_RETCODE   graph_initHistory(SCIP*, GRAPH*);
+extern SCIP_Bool      graph_isMarked(const GRAPH*);
+extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
+extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
+extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
+
+/* graph_sub.c
+ */
 extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, const GRAPH*, SUBINOUT*, GRAPH**);
 extern SCIP_RETCODE   graph_subinoutInit(SCIP*, const GRAPH*, SUBINOUT**);
 extern void           graph_subinoutFree(SCIP*, SUBINOUT**);
 const int* graph_subinoutGetSubToOrgNodeMap(const SUBINOUT*);
-
 extern SCIP_RETCODE   graph_subgraphReinsert(SCIP*, SUBINOUT*, GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_subgraphFree(SCIP*, GRAPH**);
-extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
-extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
-extern SCIP_Bool      graph_isMarked(const GRAPH*);
-extern SCIP_RETCODE   graph_initHistory(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
-extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
-extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
 
 /* graph_grid.c
  */
