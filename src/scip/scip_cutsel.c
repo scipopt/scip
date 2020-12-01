@@ -32,9 +32,9 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 
-/** creates a cut selector and includes it in SCIP.
+/** creates a cut selector and includes it in SCIP
  *
- *  @note method has all cut selector callbacks as arguments and is thus changed every time a new
+ *  @note this method has all cut selector callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludeCutselBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPincludeCutsel(
    SCIP_DECL_CUTSELINITSOL((*cutselinitsol)),/**< solving process initialization method of cut selector */
    SCIP_DECL_CUTSELEXITSOL((*cutselexitsol)),/**< solving process deinitialization method of cut selector */
    SCIP_DECL_CUTSELSELECT((*cutselselect)),  /**< cut selection method */
-   SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
+   SCIP_CUTSELDATA*      cutseldata          /**< cut selector data */
    )
 {
    SCIP_CUTSEL* cutsel;
@@ -72,9 +72,10 @@ SCIP_RETCODE SCIPincludeCutsel(
    return SCIP_OKAY;
 }
 
-/** Creates a cut selector and includes it in SCIP with its most fundamental callbacks. All non-fundamental
- *  (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL.
- *  Optional callbacks can be set via specific setter functions, see SCIPsetCutselCopy(), SCIPsetCutselFree(),
+/** Creates a cut selector and includes it in SCIP with its most fundamental callbacks.
+ *
+ *  All non-fundamental (or optional) callbacks as, e.g., init and exit callbacks, will be set to NULL. Optional
+ *  callbacks can be set via specific setter functions, see SCIPsetCutselCopy(), SCIPsetCutselFree(),
  *  SCIPsetCutselInit(), SCIPsetCutselExit(), SCIPsetCutselInitsol(), and SCIPsetCutselExitsol()
  *
  *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeCutsel() instead
@@ -101,8 +102,8 @@ SCIP_RETCODE SCIPincludeCutselBasic(
     }
 
     SCIP_CALL( SCIPcutselCreate(&cutselptr, scip->set, scip->messagehdlr, scip->mem->setmem, name, desc, priority,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 cutselselect, cutseldata) );
+          NULL, NULL, NULL, NULL, NULL, NULL,
+          cutselselect, cutseldata) );
     SCIP_CALL( SCIPsetIncludeCutsel(scip->set, cutselptr) );
 
     if( cutsel != NULL )
@@ -113,9 +114,9 @@ SCIP_RETCODE SCIPincludeCutselBasic(
 
 /** sets copy method of cut selector */
 SCIP_RETCODE SCIPsetCutselCopy(
-        SCIP*                 scip,               /**< SCIP data structure */
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))     /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
     SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -131,7 +132,7 @@ SCIP_RETCODE SCIPsetCutselCopy(
 SCIP_RETCODE SCIPsetCutselFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELFREE  ((*cutselfree))    /**< destructor of cut selector */
+   SCIP_DECL_CUTSELFREE  ((*cutselfree))     /**< destructor of cut selector */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -147,7 +148,7 @@ SCIP_RETCODE SCIPsetCutselFree(
 SCIP_RETCODE SCIPsetCutselInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELINIT ((*cutselinit))     /**< initialize cut selector */
+   SCIP_DECL_CUTSELINIT  ((*cutselinit))     /**< initialize cut selector */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselInit", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -179,7 +180,7 @@ SCIP_RETCODE SCIPsetCutselExit(
 SCIP_RETCODE SCIPsetCutselInitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELINITSOL  ((*cutselinitsol))/**< solving process initialization method of cut selector */
+   SCIP_DECL_CUTSELINITSOL ((*cutselinitsol))/**< solving process initialization method of cut selector */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselInitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -195,7 +196,7 @@ SCIP_RETCODE SCIPsetCutselInitsol(
 SCIP_RETCODE SCIPsetCutselExitsol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
-   SCIP_DECL_CUTSELEXITSOL  ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
+   SCIP_DECL_CUTSELEXITSOL ((*cutselexitsol))/**< solving process deinitialization method of cut selector */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetCutselExitsol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );

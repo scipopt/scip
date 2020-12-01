@@ -52,8 +52,6 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
  */
 #define SCIP_DECL_CUTSELCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CUTSEL* cutsel)
 
-
-
 /** destructor of cut selector to free user data (called when SCIP is exiting)
  *
  *  input:
@@ -104,8 +102,7 @@ typedef struct SCIP_CutselData SCIP_CUTSELDATA; /**< cut selector specific data 
  *
  *  This method is called to select the cuts to be added to the LP.
  *  Forcedcuts must not be changed, and cuts should only be resorted, with the first nselectedcuts of cuts being chosen.
- *  These nselectededcuts are on top of the forcedcuts.
- *  (do not delete nor modify elements, simply resort)
+ *  These nselectededcuts are used in addition to the forcedcuts (do not delete nor modify elements, simply resort).
  *
  *  input:
  *  - scip            : SCIP main data structure
