@@ -7179,7 +7179,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
 }
 
 /*
- * constraint specific interface methods
+ * constraint handler specific interface methods
  */
 
 /** creates the handler for nonlinear constraints and includes it in SCIP */
@@ -7857,6 +7857,10 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
+/*
+ * constraint specific interface methods
+ */
+
 /** returns the expression of the given nonlinear constraint */
 SCIP_EXPR* SCIPgetExprConsNonlinear(
    SCIP_CONS*            cons                /**< constraint data */
@@ -8156,6 +8160,28 @@ void SCIPgetLinvarMayIncreaseNonlinear(
  * Methods for Expressions in Nonlinear Constraints
  */
 
+/** returns the number of positive rounding locks of an expression */
+int SCIPgetExprNLocksPosNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->nlockspos;
+}
+
+/** returns the number of negative rounding locks of an expression */
+int SCIPgetExprNLocksNegNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->nlocksneg;
+}
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
@@ -8172,6 +8198,212 @@ SCIP_VAR* SCIPgetExprAuxVarNonlinear(
    assert(ownerdata != NULL);
 
    return ownerdata->filterpos >= -1 ? SCIPgetVarExprVar(expr) : ownerdata->auxvar;
+}
+
+/** returns the number of enforcements for an expression */
+int SCIPgetExprNEnfosNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->nenfos;
+}
+
+/** returns the data for one of the enforcements of an expression */
+void SCIPgetExprEnfoDataNonlinear(
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   idx,                /**< position of enforcement in enfos array */
+   SCIP_NLHDLR**         nlhdlr,             /**< buffer to store nlhldr */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_Bool*            sepabelowusesactivity, /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
+   SCIP_Bool*            sepaaboveusesactivity, /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
+   SCIP_Real*            auxvalue            /**< buffer to store current auxvalue, or NULL */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+   assert(idx >= 0);
+   assert(idx < ownerdata->nenfos);
+   assert(ownerdata->enfos[idx] != NULL);
+   assert(nlhdlr != NULL);
+
+   *nlhdlr = ownerdata->enfos[idx]->nlhdlr;
+
+   if( nlhdlrexprdata != NULL )
+      *nlhdlrexprdata = ownerdata->enfos[idx]->nlhdlrexprdata;
+
+   if( nlhdlrparticipation != NULL )
+      *nlhdlrparticipation = ownerdata->enfos[idx]->nlhdlrparticipation;
+
+   if( sepabelowusesactivity != NULL )
+      *sepabelowusesactivity = ownerdata->enfos[idx]->sepabelowusesactivity;
+
+   if( sepaaboveusesactivity != NULL )
+      *sepaaboveusesactivity = ownerdata->enfos[idx]->sepaaboveusesactivity;
+
+   if( auxvalue != NULL )
+      *auxvalue = ownerdata->enfos[idx]->auxvalue;
+}
+
+/** sets the auxiliary value of expression for one of the enforcements of an expression */
+void SCIPsetExprEnfoAuxValueNonlinear(
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   idx,                /**< position of enforcement in enfos array */
+   SCIP_Real             auxvalue            /**< the new value of auxval */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   assert(idx >= 0);
+   assert(idx < ownerdata->nenfos);
+   assert(ownerdata->enfos[idx] != NULL);
+
+   ownerdata->enfos[idx]->auxvalue = auxvalue;
+}
+
+/** number of nonlinear handlers whose activity computation and propagation methods depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+unsigned int SCIPgetExprNPropUsesActivityNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->nactivityusesprop;
+}
+
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) depend on the activity of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+unsigned int SCIPgetExprNSepaUsesActivityNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->nactivityusessepa;
+}
+
+/** number of nonlinear handlers whose separation methods (estimate or enforcement) use auxiliary variable of the expression
+ *
+ * @note This method can only be used after the detection methods of the nonlinear handlers have been called.
+ */
+unsigned int SCIPgetExprNAuxvarUsesNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+   assert(SCIPexprGetOwnerData(expr) != NULL);
+
+   return SCIPexprGetOwnerData(expr)->nauxvaruses;
+}
+
+/** method to be called by a nlhdlr during NLHDLRDETECT to notify expression that it will be used
+ *
+ * - if useauxvar is enabled, then ensures that an auxiliary variable will be created in INITLP
+ * - if useactivityforprop or useactivityforsepa{below,above} is enabled, then ensured that activity will be updated for expr
+ * - if useactivityforprop is enabled, then increments the count returned by \ref SCIPgetExprNPropUsesActivityNonlinear
+ * - if useactivityforsepa{below,above} is enabled, then increments the count returned by \ref SCIPgetExprNSepaUsesActivityNonlinear
+ *   and also increments this count for all variables in the expression.
+ *
+ * The distinction into useactivityforprop and useactivityforsepa{below,above} is to recognize variables which domain influences
+ * under/overestimators. Domain propagation routines (like OBBT) may invest more work for these variables.
+ * The distinction into useactivityforsepabelow and useactivityforsepaabove is to recognize whether a nlhdlr that called this method
+ * will use activity of expr in enfomethod sepabelow or enfomethod sepaabove.
+ */
+SCIP_RETCODE SCIPregisterExprUsageNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool             useauxvar,          /**< whether an auxiliary variable will be used for estimate or cut generation */
+   SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
+   SCIP_Bool             useactivityforsepabelow, /**< whether activity of expr will be used by underestimation */
+   SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   /* do not store auxvar request for variable expressions */
+   if( useauxvar && SCIPisExprVar(scip, expr) )
+      useauxvar = FALSE;
+
+   if( ownerdata->nenfos >= 0 &&
+      ( (ownerdata->nactivityusesprop == 0 && ownerdata->nactivityusessepa == 0 && (useactivityforprop || useactivityforsepabelow || useactivityforsepaabove)) ||
+        (ownerdata->nauxvaruses == 0 && useauxvar)
+      ) )
+   {
+      /* if we already have ran detect of nlhdlrs on expr (nenfos >= 0), then we need to rerun detection if
+       * we require additional enforcement methods, that is,
+       * - activity of expr was not used before but will be used now, or
+       * - auxiliary variable of expr was not required before but will be used now
+       */
+      SCIP_CALL( freeEnfoData(scip, expr, FALSE) );
+   }
+
+   if( useauxvar )
+      ++ownerdata->nauxvaruses;
+
+   if( useactivityforprop )
+      ++ownerdata->nactivityusesprop;
+
+   if( useactivityforsepabelow || useactivityforsepaabove )
+      ++ownerdata->nactivityusessepa;
+
+   /* remember that SCIPregisterExprUsageNonlinear() has been called with useactivityforsepa{below,above}=TRUE; this
+    * information is used in detectNlhdlr()
+    */
+   if( useactivityforsepabelow )
+      SCIPconshdlrGetData(ownerdata->conshdlr)->registerusesactivitysepabelow = TRUE;
+   if( useactivityforsepaabove )
+      SCIPconshdlrGetData(ownerdata->conshdlr)->registerusesactivitysepaabove = TRUE;
+
+   if( useactivityforprop )
+   {
+      /* if activity will be used for propagation, then make sure there is a valid activity
+       * this way, we can do a reversepropcall after detectNlhdlr
+       */
+      SCIP_CALL( SCIPevalExprActivity(scip, expr) );
+   }
+
+   /* increase the nactivityusedsepa counter for all variables used in the given expression */
+   if(( useactivityforsepabelow || useactivityforsepaabove) && SCIPexprGetNChildren(expr) > 0 )
+   {
+      SCIP_EXPRITER* it;
+
+      /* create and initialize iterator */
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+      SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+
+      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         if( SCIPisExprVar(scip, expr) )
+            ++SCIPexprGetOwnerData(expr)->nactivityusessepa;
+
+      /* free iterator */
+      SCIPfreeExpriter(&it);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns bounds on the expression
@@ -8372,6 +8604,57 @@ SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
 
    /* update bounds on variable or auxiliary variable */
    SCIP_CALL( tightenAuxVarBounds(scip, ownerdata->conshdlr, expr, newbounds, cutoff, ntightenings) );
+
+   return SCIP_OKAY;
+}
+
+/** mark constraints that include this expression to be propagated again
+ *
+ * This can be used by, e.g., nlhdlrs, to trigger a new propagation of constraints without
+ * a change of variable bounds, e.g., because new information on the expression is available
+ * that could potentially lead to tighter expression activity values.
+ *
+ * Note, that this call marks also constraints for propagation which only share some variable
+ * with this expression.
+ */
+SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression to propagate again */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   SCIPincrementCurBoundsTagNonlinear(ownerdata->conshdlr, FALSE);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, FALSE) );
+
+   for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      if( !SCIPisExprVar(scip, expr) )
+         continue;
+
+      ownerdata = SCIPexprGetOwnerData(expr);
+      assert(ownerdata != NULL);
+
+      for( c = 0; c < ownerdata->nconss; ++c )
+      {
+         consdata = SCIPconsGetData(ownerdata->conss[c]);
+         assert(consdata != NULL);
+         consdata->ispropagated = FALSE;
+      }
+   }
+
+   SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
 }

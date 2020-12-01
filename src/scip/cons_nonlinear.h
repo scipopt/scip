@@ -642,6 +642,18 @@ void SCIPgetLinvarMayIncreaseNonlinear(
 /**@name Methods for Expressions in Nonlinear Constraints */
 /**@{ */
 
+/** returns the number of positive rounding locks of an expression */
+SCIP_EXPORT
+int SCIPgetExprNLocksPosNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** returns the number of negative rounding locks of an expression */
+SCIP_EXPORT
+int SCIPgetExprNLocksNegNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 /** returns the variable used for linearizing a given expression (return value might be NULL)
  *
  * @note for variable expression it returns the corresponding variable
@@ -660,14 +672,14 @@ int SCIPgetExprNEnfosNonlinear(
 /** returns the data for one of the enforcements of an expression */
 SCIP_EXPORT
 void SCIPgetExprEnfoDataNonlinear(
-   SCIP_EXPR*            expr,                         /**< expression */
-   int                   idx,                          /**< position of enforcement in enfos array */
-   SCIP_NLHDLR**         nlhdlr,                       /**< buffer to store nlhldr */
-   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,               /**< buffer to store nlhdlr data for expression, or NULL */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   idx,                /**< position of enforcement in enfos array */
+   SCIP_NLHDLR**         nlhdlr,             /**< buffer to store nlhldr */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< buffer to store nlhdlr data for expression, or NULL */
    SCIP_CONSNONLINEAR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
-   SCIP_Bool*            sepabelowusesactivity,        /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
-   SCIP_Bool*            sepaaboveusesactivity,        /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
-   SCIP_Real*            auxvalue                      /**< buffer to store current auxvalue, or NULL */
+   SCIP_Bool*            sepabelowusesactivity, /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
+   SCIP_Bool*            sepaaboveusesactivity, /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
+   SCIP_Real*            auxvalue            /**< buffer to store current auxvalue, or NULL */
    );
 
 /** sets the auxiliary value of expression for one of the enforcements of an expression */
@@ -720,10 +732,9 @@ unsigned int SCIPgetExprNAuxvarUsesNonlinear(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPregisterExprUsageNonlinear(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,         /**< nonlinear constraint handler */
-   SCIP_EXPR*            expr,             /**< expression */
-   SCIP_Bool             useauxvar,        /**< whether an auxiliary variable will be used for estimate or cut generation */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Bool             useauxvar,          /**< whether an auxiliary variable will be used for estimate or cut generation */
    SCIP_Bool             useactivityforprop, /**< whether activity of expr will be used by domain propagation or activity calculation (inteval) */
    SCIP_Bool             useactivityforsepabelow, /**< whether activity of expr will be used by underestimation */
    SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
@@ -798,45 +809,6 @@ SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
    SCIP_Real*            viol,               /**< buffer to store computed violation */
    SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
    SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
-   );
-
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
- *
- * @note expression must belong to a nonlinear constraint
- */
-SCIP_EXPORT
-SCIP_Real SCIPgetExprPartialDiffNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
-   );
-
-/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
- *
- * @note expression must belong to a nonlinear constraint
- */
-SCIP_EXPORT
-SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprHessianDir() call */
-   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
-   );
-
-/** possibly reevaluates and then returns the activity of the expression
- *
- * Reevaluate activity if currently stored is not valid (some bound was relaxed since last evaluation).
- * If validsufficient is set to FALSE, then it will also reevaluate activity if a bound tightening was happening
- * since last evaluation.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPevalExprActivityNonlinear(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,         /**< nonlinear constraint handler, or NULL */
-   SCIP_EXPR*            expr,             /**< expression */
-   SCIP_INTERVAL*        activity,         /**< interval where to store expression */
-   SCIP_Bool             validsufficient   /**< whether any valid activity is sufficient */
    );
 
 /** returns bounds on the expression
@@ -925,16 +897,28 @@ SCIP_Real SCIPgetExprViolScoreNonlinear(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** returns the number of positive rounding locks of an expression */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a nonlinear constraint
+ */
 SCIP_EXPORT
-int SCIPgetExprNLocksPosNonlinear(
-   SCIP_EXPR*            expr                /**< expression */
+SCIP_Real SCIPgetExprPartialDiffNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
-/** returns the number of negative rounding locks of an expression */
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
+ *
+ * @note expression must belong to a nonlinear constraint
+ */
 SCIP_EXPORT
-int SCIPgetExprNLocksNegNonlinear(
-   SCIP_EXPR*            expr                /**< expression */
+SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
 /** evaluates quadratic term in a solution w.r.t. auxiliary variables
