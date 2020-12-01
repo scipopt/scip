@@ -1605,7 +1605,7 @@ SCIP_RETCODE SCIPevalExprGradient(
  */
 SCIP_RETCODE SCIPevalExprHessianDir(
    SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_EXPR*            expr,             /**< expression to be differentiated */
    SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
    SCIP_Longint          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
    SCIP_SOL*             direction         /**< direction */

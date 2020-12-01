@@ -232,9 +232,9 @@ static
 SCIP_DECL_EXPRFWDIFF(fwdiffVar)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(SCIPexprGetData(expr) != NULL);
+   assert(SCIPgetVarExprVar(expr) != NULL);
 
-   *dot = SCIPexprGetDot(expr);
+   *dot = SCIPgetSolVal(scip, direction, SCIPgetVarExprVar(expr));
 
    return SCIP_OKAY;
 }

@@ -639,8 +639,10 @@ void SCIPgetLinvarMayIncreaseNonlinear(
 /** @} */
 
 
-/**@name Methods for Expressions in Nonlinear Constraints */
-/**@{ */
+/**@name Methods for Expressions in Nonlinear Constraints
+ * @note All functions in this group assume that the expression is owned by a the nonlinear constraint handler.
+ * @{
+ */
 
 /** returns the number of positive rounding locks of an expression */
 SCIP_EXPORT
@@ -897,26 +899,18 @@ SCIP_Real SCIPgetExprViolScoreNonlinear(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
- *
- * @note expression must belong to a nonlinear constraint
- */
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
 SCIP_EXPORT
 SCIP_Real SCIPgetExprPartialDiffNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprGradient() call */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );
 
-/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error)
- *
- * @note expression must belong to a nonlinear constraint
- */
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
 SCIP_EXPORT
 SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprHessianDir() call */
    SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
    );

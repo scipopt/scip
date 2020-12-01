@@ -1552,7 +1552,7 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
 
    partialchild = SCIPexprGetChildren(expr)[childidx];
    assert(partialchild != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(partialchild)), "val") != 0);
+   assert(!SCIPisExprValue(scip, partialchild));
    assert(SCIPexprGetEvalValue(partialchild) != SCIP_INVALID); /*lint !e777*/
 
    *bardot = 0.0;
@@ -1572,7 +1572,7 @@ SCIP_DECL_EXPRBWFWDIFF(bwfwdiffProduct)
          continue;
 
       if( SCIPexprGetEvalValue(child) != 0.0 && SCIPexprGetEvalValue(partialchild) != 0.0 )
-         *bardot += SCIPexprGetEvalValue(expr) /(SCIPexprGetEvalValue(child) * SCIPexprGetEvalValue(partialchild)) * SCIPexprGetDot(child);
+         *bardot += SCIPexprGetEvalValue(expr) / (SCIPexprGetEvalValue(child) * SCIPexprGetEvalValue(partialchild)) * SCIPexprGetDot(child);
       else
       {
          SCIP_Real partial;

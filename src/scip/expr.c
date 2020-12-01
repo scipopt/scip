@@ -168,7 +168,10 @@ SCIP_RETCODE quadDetectGetQuadexprterm(
 /** @} */
 
 
-/** evaluate and forward-differentiate expression */
+/** evaluate and forward-differentiate expression
+ *
+ * also initializes derivative and bardot to 0.0
+ */
 static
 SCIP_RETCODE evalAndDiff(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -176,7 +179,8 @@ SCIP_RETCODE evalAndDiff(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_SOL*             sol,                /**< solution to be evaluated */
-   SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_Longint          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction           /**< direction for directional derivative */
    )
 {
    SCIP_EXPRITER* it;
@@ -192,6 +196,9 @@ SCIP_RETCODE evalAndDiff(
    expr->evalvalue = SCIP_INVALID;
    expr->evaltag = soltag;
    expr->dot = SCIP_INVALID;
+
+   /* start a new difftag */
+   ++stat->exprlastdifftag;
 
    SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
    SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
@@ -210,11 +217,18 @@ SCIP_RETCODE evalAndDiff(
       if( expr->evalvalue == SCIP_INVALID )
          break;
 
-      /* compute forward diff */
-      SCIP_CALL( SCIPexprhdlrFwDiffExpr(expr->exprhdlr, set, expr, &expr->dot, NULL) );
+      if( expr->difftag != stat->exprlastdifftag )
+      {
+         /* compute forward diff */
+         SCIP_CALL( SCIPexprhdlrFwDiffExpr(expr->exprhdlr, set, expr, &expr->dot, direction) );
 
-      if( expr->dot == SCIP_INVALID )
-         break;
+         if( expr->dot == SCIP_INVALID )
+            break;
+
+         expr->derivative = 0.0;
+         expr->bardot = 0.0;
+         expr->difftag = stat->exprlastdifftag;
+      }
    }
 
    SCIPexpriterFree(&it);
@@ -2511,15 +2525,11 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_SOL*             direction           /**< direction */
    )
 {
-   /* TODO: handle tags
-    *       better way to handle direction?
-    */
    SCIP_EXPRITER* it;
    SCIP_EXPR* expr;
    SCIP_EXPR* child;
    SCIP_Real derivative;
    SCIP_Real hessiandir;
-   SCIP_Longint difftag;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -2533,12 +2543,9 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    }
 
    /* evaluate expression and directional derivative */
-   SCIP_CALL( evalAndDiff(set, stat, blkmem, rootexpr, sol, soltag) );
-
-   difftag = ++(stat->exprlastdifftag);
+   SCIP_CALL( evalAndDiff(set, stat, blkmem, rootexpr, sol, soltag, direction) );
 
    rootexpr->derivative = 1.0;
-   rootexpr->difftag = difftag;
 
    SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
    SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
@@ -2558,24 +2565,6 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
 
       child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);
-
-      if( child->difftag != difftag && SCIPexprIsVar(set, child) )
-      {
-         /* reset the value of the partial derivative w.r.t. a variable expression if we see it for the first time */
-         child->derivative = 0.0;
-
-         /* set up direction if we see var for the first time */
-         /* child->dot = SCIPgetSolVal(set->scip, direction, SCIPgetVarExprVar(child)); */
-         if( sol != NULL )
-            child->dot = SCIPsolGetVal(sol, set, stat, SCIPgetVarExprVar(child));
-         else
-            child->dot = SCIPvarGetSol(SCIPgetVarExprVar(child), SCIPtreeHasCurrentNodeLP(tree));
-
-         child->bardot = 0.0;
-      }
-
-      /* update differentiation tag of the child */
-      child->difftag = difftag;
 
       /* call backward and forward-backward differentiation callback */
       if( SCIPexprIsValue(set, child) )
@@ -3492,6 +3481,16 @@ SCIP_Real SCIPexprGetDot(
    assert(expr != NULL);
 
    return expr->dot;
+}
+
+/** gives the value of directional derivative from the last evaluation of a directional derivative of derivative of root (or SCIP_INVALID if there was an error) */
+SCIP_Real SCIPexprGetBardot(
+   SCIP_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->bardot;
 }
 
 /** returns the difftag stored in an expression

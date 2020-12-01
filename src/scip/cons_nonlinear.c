@@ -8676,3 +8676,89 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
 
    return SCIP_OKAY;
 }
+
+/** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetExprPartialDiffNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprGradient() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EXPR* varexpr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(var != NULL);
+
+   /* return 0.0 for value expression */
+   if( SCIPisExprValue(scip, expr) )
+   {
+      assert(SCIPexprGetDerivative(expr) == 0.0);
+      return 0.0;
+   }
+
+   /* check if an error occurred during the last SCIPevalExprGradient() call */
+   if( SCIPexprGetDerivative(expr) == SCIP_INVALID )
+      return SCIP_INVALID;
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* use variable to expressions mapping which is stored in the constraint handler data */
+   assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
+
+   varexpr = (SCIP_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, var);
+   assert(varexpr != NULL);
+   assert(SCIPisExprVar(scip, varexpr));
+
+   /* use difftag to decide whether the variable belongs to the expression */
+   return (SCIPexprGetDiffTag(expr) != SCIPexprGetDiffTag(varexpr)) ? 0.0 : SCIPexprGetDerivative(varexpr);
+}
+
+/** returns the var's coordinate of Hu partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */
+SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< root expression of constraint used in the last SCIPevalExprHessianDir() call */
+   SCIP_VAR*             var                 /**< variable (needs to be in the expression) */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_EXPR* varexpr;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(var != NULL);
+
+   /* return 0.0 for value expression */
+   if( SCIPisExprValue(scip, expr) )
+      return 0.0;
+
+   /* check if an error occurred during the last SCIPevalExprHessianDir() call */
+   if( SCIPexprGetBardot(expr) == SCIP_INVALID )
+      return SCIP_INVALID;
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* use variable to expressions mapping which is stored in the constraint handler data;
+    * if this fails it means that we are asking for the var's component of H*u for a var
+    * that doesn't appear in any nonlinear constraint, so maybe we can also just return 0.0
+    */
+   assert(SCIPhashmapExists(conshdlrdata->var2expr, var));
+
+   varexpr = (SCIP_EXPR*)SCIPhashmapGetImage(conshdlrdata->var2expr, var);
+   assert(varexpr != NULL);
+   assert(SCIPisExprVar(scip, varexpr));
+
+   /* use difftag to decide whether the variable belongs to the expression */
+   return (SCIPexprGetDiffTag(expr) != SCIPexprGetDiffTag(varexpr)) ? 0.0 : SCIPexprGetBardot(varexpr);
+}

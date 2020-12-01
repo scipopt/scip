@@ -318,6 +318,12 @@ SCIP_Real SCIPexprGetDot(
    SCIP_EXPR*     expr              /**< expression */
    );
 
+/** gives the value of directional derivative from the last evaluation of a directional derivative of derivative of root (or SCIP_INVALID if there was an error) */
+SCIP_EXPORT
+SCIP_Real SCIPexprGetBardot(
+   SCIP_EXPR*     expr              /**< expression */
+   );
+
 /** returns the difftag stored in an expression
  *
  * can be used to check whether partial derivative value is valid
