@@ -71,6 +71,7 @@ SCIP_DECL_CUTSELCOPY(cutselCopyXyz)
 #define cutselCopyXyz NULL
 #endif
 
+
 /** destructor of cut selector to free user data (called when SCIP is exiting) */
 #if 0
 static
@@ -166,14 +167,12 @@ SCIP_RETCODE SCIPincludeCutselXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CUTSELDATA* cutseldata;
-   SCIP_CUTSEL* cutsel;
+   SCIP_CUTSELDATA* cutseldata = NULL;
+   SCIP_CUTSEL* cutsel = NULL;
 
    /* create xyz cut selector data */
-   cutseldata = NULL;
-   /* TODO: (optional) create cut selector specific data here */
 
-   cutsel = NULL;
+   /* TODO: (optional) create cut selector specific data here */
 
    /* include cut selector */
 #if 0
@@ -185,10 +184,10 @@ SCIP_RETCODE SCIPincludeCutselXyz(
          cutseldata) );
 #else
    /* use SCIPincludeCutselBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
+    * compile independently of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectXyz,
-            cutseldata) );
+         cutseldata) );
 
    assert(cutsel != NULL);
 
