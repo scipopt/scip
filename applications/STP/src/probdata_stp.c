@@ -80,6 +80,9 @@
 const char*
 getBranchLinearConsName(const char* names, int i);
 
+const char*
+getBranchSetppcConsName(const char* names, int i);
+
 extern
 int getUgRank(void);
 #endif
@@ -4060,18 +4063,20 @@ void initReceivedSubproblem(
 
    for( int i = 0; i < lLinearConsNames; i++ )
    {
+      SCIP_Bool conflict = FALSE;
       const char* consname = getBranchLinearConsName(linearConsNames, i);
       SCIPdebugMessage("add lin cons %s \n", consname);
       if( consname != NULL)
-         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(nodestate, consname) );
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(nodestate, consname, &conflict) );
    }
 
    for( int i = 0; i < lSetppcConsNames; i++ )
    {
+      SCIP_Bool conflict = FALSE;
       const char* consname = getBranchSetppcConsName(setppcConsNames, i);
       SCIPdebugMessage("add ppc cons %s \n", consname);
       if( consname != NULL)
-         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(nodestate, consname) );
+         SCIP_CALL_ABORT( STPStpBranchruleParseConsname(nodestate, consname, &conflict) );
    }
 
    for( int k = 0; k < nnodes; k++ )
@@ -4082,15 +4087,10 @@ void initReceivedSubproblem(
 
          if( graph_pc_isPcMw(graph) )
          {
-            if( Is_pseudoTerm(graph->term[k]) )
-            {
-               graph_pc_enforcePterm(graph, k);
-            }
-            else if( graph_pc_isRootedPcMw(graph) )
-            {
-               graph->prize[k] = FARAWAY;
-               graph_knot_chg(graph, k, 0);
-            }
+            if( graph_pc_isMw(graph) && !Is_anyTerm(graph->term[k])  )
+               continue;
+
+            graph_pc_enforceNode(scip, graph, k, NULL);
          }
          else
          {
@@ -4113,8 +4113,10 @@ void initReceivedSubproblem(
          if( Is_pseudoTerm(graph->term[k]) )
          {
             const int twinterm = graph_pc_getTwinTerm(graph, k);
-            const int root2twin = graph_pc_getRoot2PtermEdge(graph, twinterm);
             const int k2twin = graph->term2edge[k];
+#ifndef NDEBUG
+            const int root2twin = graph_pc_getRoot2PtermEdge(graph, twinterm);
+#endif
 
             assert(graph_pc_isPcMw(graph));
             assert(k2twin >= 0 && graph->tail[k2twin] == k && graph->head[k2twin] == twinterm);

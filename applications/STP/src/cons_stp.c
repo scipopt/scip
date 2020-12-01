@@ -1240,7 +1240,7 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolStp)
 {  /*lint --e{715}*/
 #ifdef WITH_UG
-   SCIPStpConshdlrSetGraph(scip, SCIPprobdataGetGraph2(scip));
+   SCIPStpConshdlrSetGraph(scip);
 #endif
    return SCIP_OKAY;
 }
