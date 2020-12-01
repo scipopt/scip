@@ -40,12 +40,12 @@
 #define GOODSCORE                 0.9
 #define BADSCORE                  0.0
 
-#define DEFAULT_EFFICACYWEIGHT    0.6 /**< weight of efficacy in score calculation */
-#define DEFAULT_DIRCUTOFFDISTWEIGHT  0.5 /**< weight of directed cutoff distance in score calculation */
-#define DEFAULT_OBJPARALWEIGHT    0.1 /**< weight of objective parallelism in score calculation */
-#define DEFAULT_INTSUPPORTWEIGHT  0.1 /**< weight of integral support in cut score calculation */
-#define DEFAULT_MINORTHO          0.90 /**< minimal orthogonality for a cut to enter the LP */
-#define DEFAULT_MINORTHOROOT      0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
+#define DEFAULT_EFFICACYWEIGHT          0.6  /**< weight of efficacy in score calculation */
+#define DEFAULT_DIRCUTOFFDISTWEIGHT     0.5  /**< weight of directed cutoff distance in score calculation */
+#define DEFAULT_OBJPARALWEIGHT          0.1  /**< weight of objective parallelism in score calculation */
+#define DEFAULT_INTSUPPORTWEIGHT        0.1  /**< weight of integral support in cut score calculation */
+#define DEFAULT_MINORTHO                0.90 /**< minimal orthogonality for a cut to enter the LP */
+#define DEFAULT_MINORTHOROOT            0.90 /**< minimal orthogonality for a cut to enter the LP in the root node */
 
 /*
  * Data structures
@@ -85,11 +85,9 @@ SCIP_Real scoring(
    SCIP_Real*            scores              /**< array to store the score of cuts or NULL */
    )
 {
-   SCIP_Real maxscore;
+   SCIP_Real maxscore = 0.0;
    SCIP_SOL* sol;
    int i;
-
-   maxscore = 0.0;
 
    sol = SCIPgetBestSol(scip);
 
@@ -257,7 +255,6 @@ int filterWithParallelism(
 static
 SCIP_DECL_CUTSELCOPY(cutselCopyHybrid)
 {  /*lint --e{715}*/
-
    assert(scip != NULL);
    assert(cutsel != NULL);
    assert(strcmp(SCIPcutselGetName(cutsel), CUTSEL_NAME) == 0);
@@ -293,6 +290,7 @@ SCIP_DECL_CUTSELINIT(cutselInitHybrid)
    assert(cutseldata != NULL);
 
    SCIP_CALL( SCIPcreateRandom(scip, &(cutseldata)->randnumgen, RANDSEED, TRUE) );
+
    return SCIP_OKAY;
 }
 
@@ -304,6 +302,7 @@ SCIP_DECL_CUTSELEXIT(cutselExitHybrid)
 
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
+   assert(cutseldata->randnumgen != NULL);
 
    SCIPfreeRandom(scip, &cutseldata->randnumgen);
 
@@ -318,9 +317,13 @@ SCIP_DECL_CUTSELSELECT(cutselSelectHybrid)
    SCIP_Real goodmaxparall;
    SCIP_Real maxparall;
 
+   assert(cutsel != NULL);
+   assert(result != NULL);
+
    *result = SCIP_SUCCESS;
 
    cutseldata = SCIPcutselGetData(cutsel);
+   assert(cutseldata != NULL);
 
    if( root )
    {
@@ -334,8 +337,8 @@ SCIP_DECL_CUTSELSELECT(cutselSelectHybrid)
    }
 
    SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->goodscore, cutseldata->badscore,
-            goodmaxparall, maxparall, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
-            cutseldata->objparalweight, cutseldata->intsupportweight, ncuts, nforcedcuts, maxnselectedcuts, nselectedcuts) );
+         goodmaxparall, maxparall, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
+         cutseldata->objparalweight, cutseldata->intsupportweight, ncuts, nforcedcuts, maxnselectedcuts, nselectedcuts) );
 
    return SCIP_OKAY;
 }
@@ -360,7 +363,7 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
    cutseldata->badscore  = BADSCORE;
 
    SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectHybrid,
-            cutseldata) );
+         cutseldata) );
 
    assert(cutsel != NULL);
 
@@ -373,9 +376,9 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
 
    /* add hybrid cut selector parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-            "cutselection/" CUTSEL_NAME "/efficacyweight",
-            "weight of efficacy in cut score calculation",
-            &cutseldata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+         "cutselection/" CUTSEL_NAME "/efficacyweight",
+         "weight of efficacy in cut score calculation",
+         &cutseldata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "cutselection/" CUTSEL_NAME "/dircutoffdistweight",
@@ -406,10 +409,11 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
 }
 
 
-/** perform a cut selection algorithm for the given array of cuts;
- *  this is the selection method of the hybrid cut selector which does a weighted sum of the
+/** perform a cut selection algorithm for the given array of cuts
+ *
+ *  This is the selection method of the hybrid cut selector which uses a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
- *  The input cuts array gets resorted s.t the selected cuts comes first and the remaining
+ *  The input cuts array gets resorted s.t the selected cuts come first and the remaining
  *  ones are the end.
  */
 SCIP_RETCODE SCIPselectCutsHybrid(
@@ -449,9 +453,7 @@ SCIP_RETCODE SCIPselectCutsHybrid(
 
    /* if all cuts are forced cuts, no cuts from cuts array can be selected */
    if( nforcedcuts >= MIN(ncuts, maxselectedcuts) )
-   {
       return SCIP_OKAY;
-   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &scores, ncuts) );
 
@@ -466,39 +468,38 @@ SCIP_RETCODE SCIPselectCutsHybrid(
    goodscore *= goodscorefac;
 
    /* perform cut selection algorithm for the cuts */
+
+   /* forced cuts are going to be selected so use them to filter cuts */
+   for( i = 0; i < nforcedcuts && ncuts > 0; ++i )
    {
-      /* forced cuts are going to be selected so use them to filter cuts */
-      for( i = 0; i < nforcedcuts && ncuts > 0; ++i )
-      {
-         ncuts = filterWithParallelism(forcedcuts[i], cuts, scores, ncuts, goodscore, goodmaxparall, maxparall);
-      }
+      ncuts = filterWithParallelism(forcedcuts[i], cuts, scores, ncuts, goodscore, goodmaxparall, maxparall);
+   }
 
-      /* now greedily select the remaining cuts */
-      scoresptr = scores;
-      while( ncuts > 0 )
-      {
-         SCIP_ROW* selectedcut;
+   /* now greedily select the remaining cuts */
+   scoresptr = scores;
+   while( ncuts > 0 )
+   {
+      SCIP_ROW* selectedcut;
 
-         selectBestCut(cuts, scores, ncuts);
-         selectedcut = cuts[0];
+      selectBestCut(cuts, scores, ncuts);
+      selectedcut = cuts[0];
 
-         /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
-         if( scores[0] < badscore )
-            goto TERMINATE;
+      /* if the best cut of the remaining cuts is considered bad, we discard it and all remaining cuts */
+      if( scores[0] < badscore )
+         goto TERMINATE;
 
-         ++(*nselectedcuts);
+      ++(*nselectedcuts);
 
-         /* if the maximal number of cuts was selected, we can stop here */
-         if( *nselectedcuts == maxselectedcuts )
-            goto TERMINATE;
+      /* if the maximal number of cuts was selected, we can stop here */
+      if( *nselectedcuts == maxselectedcuts )
+         goto TERMINATE;
 
-         /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
-         ++cuts;
-         ++scores;
-         --ncuts;
+      /* move the pointers to the next position and filter the remaining cuts to enforce the maximum parallelism constraint */
+      ++cuts;
+      ++scores;
+      --ncuts;
 
-         ncuts = filterWithParallelism(selectedcut, cuts, scores, ncuts, goodscore, goodmaxparall, maxparall);
-      }
+      ncuts = filterWithParallelism(selectedcut, cuts, scores, ncuts, goodscore, goodmaxparall, maxparall);
    }
 
 TERMINATE:
