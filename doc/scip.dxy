@@ -829,6 +829,8 @@ INPUT                  = . \
                          ../examples/Queens/doc/xternal_queens.c \
                          ../examples/Relaxator/src/ \
                          ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/Sudoku/src/ \
+                         ../examples/Sudoku/doc/xternal_sudoku.c \
                          ../examples/SCFLP/src/ \
                          ../examples/SCFLP/doc/xternal_scflp.c \
                          ../examples/TSP/src/ \
