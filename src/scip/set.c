@@ -4227,7 +4227,6 @@ void SCIPsetSortCutsels(
    }
 }
 
-
 /** inserts propagator in propagator list */
 SCIP_RETCODE SCIPsetIncludeProp(
    SCIP_SET*             set,                /**< global SCIP settings */

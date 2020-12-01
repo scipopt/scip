@@ -58,7 +58,8 @@
 extern "C" {
 #endif
 
-// TODO: maybe add bools to find out if cut sels are sorted and whatnot, i.e. make it more similar to other plugins as long as it makes sense
+/** @todo Maybe add bools to find out if cut sels are sorted and whatnot, i.e. make it more similar to other plugins as long as it makes sense. */
+
 /** global SCIP settings */
 struct SCIP_Set
 {
