@@ -200,24 +200,23 @@ SCIP_RETCODE graph_knot_contract(
    int sgrad;
 
    assert(g && scip);
-   assert(t >= 0 && t < g->knots);
-   assert(s >= 0 && s < g->knots);
-   assert(g->grad[s] > 0 && g->grad[t] > 0);
-   assert(g->layers == 1);
+   assert(graph_knot_isInRange(g, t));
+   assert(graph_knot_isInRange(g, s));
+   assert(t != s);
 
-   /* save solution */
-   if( solnode != NULL )
+   /* save solution nodes? */
+   if( solnode )
    {
       if( solnode[s] == CONNECT )
          solnode[t] = CONNECT;
    }
 
+   /* trace contractions? */
    if( g->contracttrace )
    {
       assert(g->contracttrace[s] == -1);
       g->contracttrace[s] = t;
-      printf("trace %d->%d \n", s, t);
-
+      SCIPdebugMessage("contract trace %d->%d \n", s, t);
    }
 
    /* change terminal property */
@@ -232,14 +231,14 @@ SCIP_RETCODE graph_knot_contract(
       g->source = t;
 
    sgrad = g->grad[s];
-   if( sgrad >= 2 )
+   if( sgrad >= 1 )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &incost, sgrad - 1) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &outcost, sgrad - 1) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mark, sgrad - 1) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &edge, sgrad - 1) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &knot, sgrad - 1) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ancestors, sgrad - 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &incost, sgrad) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &outcost, sgrad) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &mark, sgrad) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &edge, sgrad) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &knot, sgrad) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ancestors, sgrad) );
    }
 
    /* store edges to be moved/removed */
@@ -250,6 +249,7 @@ SCIP_RETCODE graph_knot_contract(
       if( g->head[es] != t )
       {
          assert(ancestors && mark && incost && outcost && edge && knot);
+         assert(slc < sgrad);
 
          SCIP_CALL( graph_singletonAncestors_init(scip, g, es, &(ancestors[slc])) );
          mark[slc] = FALSE;
@@ -258,12 +258,10 @@ SCIP_RETCODE graph_knot_contract(
          outcost[slc] = g->cost[es];
          incost[slc] = g->cost[Edge_anti(es)];
          slc++;
-
-         assert(slc < sgrad);
       }
    }
 
-   assert(slc == sgrad - 1);
+   assert(slc == sgrad - 1 || slc == sgrad);
 
    /* traverse edges */
    for( int i = 0; i < slc; i++ )
@@ -389,19 +387,19 @@ SCIP_RETCODE graph_knot_contract(
    /* delete remaining edges */
    graph_knot_del(scip, g, s, TRUE);
 
-   if( sgrad >= 2 )
+   if( sgrad >= 1 )
    {
       assert(ancestors && knot && outcost && edge && mark && incost);
 
       for( int i = 0; i < slc; i++ )
          graph_singletonAncestors_freeMembers(scip, &(ancestors[i]));
 
-      SCIPfreeBlockMemoryArray(scip, &ancestors, sgrad - 1);
-      SCIPfreeBlockMemoryArray(scip, &knot, sgrad - 1);
-      SCIPfreeBlockMemoryArray(scip, &edge, sgrad - 1);
-      SCIPfreeBlockMemoryArray(scip, &mark, sgrad - 1);
-      SCIPfreeBlockMemoryArray(scip, &outcost, sgrad - 1);
-      SCIPfreeBlockMemoryArray(scip, &incost, sgrad - 1);
+      SCIPfreeBlockMemoryArray(scip, &ancestors, sgrad);
+      SCIPfreeBlockMemoryArray(scip, &knot, sgrad);
+      SCIPfreeBlockMemoryArray(scip, &edge, sgrad);
+      SCIPfreeBlockMemoryArray(scip, &mark, sgrad);
+      SCIPfreeBlockMemoryArray(scip, &outcost, sgrad);
+      SCIPfreeBlockMemoryArray(scip, &incost, sgrad);
    }
 
    return SCIP_OKAY;

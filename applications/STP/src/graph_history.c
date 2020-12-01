@@ -1689,6 +1689,18 @@ SCIP_RETCODE graph_initContractTracing(
 }
 
 
+/** has the node a contract trace? */
+SCIP_Bool graph_knot_hasContractTrace(
+   int                   node,               /**< node to trace back from */
+   const GRAPH*          graph               /**< graph */
+   )
+{
+   assert(graph && graph->contracttrace);
+   assert(graph_knot_isInRange(graph, node));
+
+   return (graph->contracttrace[node] != -1);
+}
+
 
 /** traces contraction back; returns traced node */
 int graph_contractTrace(
@@ -1704,7 +1716,7 @@ int graph_contractTrace(
    assert(graph->grad[node] == 0);
    assert(trace[node] != -1);
 
-   for( newnode = node; trace[node] != -1; newnode = trace[newnode]  )
+   for( newnode = node; trace[newnode] != -1; newnode = trace[newnode]  )
    {
       assert(graph_knot_isInRange(graph, newnode));
    }

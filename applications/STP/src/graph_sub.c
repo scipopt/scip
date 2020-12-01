@@ -25,6 +25,7 @@
 
 /*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                             */
+
 //#define SCIP_DEBUG
 
 #include "scip/misc.h"
@@ -54,6 +55,7 @@ struct subgraph_extraction_insertion
 {
    STP_Vectype(int)      org_bordernodes;
    STP_Vectype(int)      org_spareedges;
+   int*                  org_contractRecord;
    int*                  nodemap_subToOrg;    /**< node map */
    int*                  nodemap_orgToSub;    /**< node map */
    int                   org_nnodes;
@@ -264,15 +266,15 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
 
    for( int i = 0; i < subnnodes; i++ )
    {
-      const int orgnode = nodemap_subToOrg[i];
-      assert(graph_knot_isInRange(orggraph, orgnode));
+      const int orgtail = nodemap_subToOrg[i];
+      assert(graph_knot_isInRange(orggraph, orgtail));
 
-      for( int e = orggraph->outbeg[orgnode]; e != EAT_LAST; e = orggraph->oeat[e] )
+      for( int e = orggraph->outbeg[orgtail]; e != EAT_LAST; e = orggraph->oeat[e] )
       {
          const int orghead = orggraph->head[e];
-         const int orgtail = orggraph->tail[e];
 
          assert(isMarked[orgtail]);
+         assert(orgtail == orggraph->tail[e]);
 
          /* NOTE: avoid double inclusion of edge */
          if( isMarked[orghead] && orghead > orgtail )
@@ -290,6 +292,100 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
 
    subgraph->orgedges = orggraph->edges;
    assert(subgraph->edges == subgraph->esize);
+
+   return SCIP_OKAY;
+}
+
+
+/** collects border nodes (cut vertices) of subgraph */
+static
+void borderNodesCollect(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   const GRAPH*          subgraph,           /**< sub graph */
+   SUBINOUT*             subinout
+   )
+{
+   const int* const isMarked = orggraph->mark;
+   const int subnnodes = graph_get_nNodes(subgraph);
+   const int* const nodemap_subToOrg = subinout->nodemap_subToOrg;
+
+   assert(StpVecGetSize(subinout->org_bordernodes) == 0);
+
+   for( int i = 0; i < subnnodes; i++ )
+   {
+      const int orgnode = nodemap_subToOrg[i];
+      assert(graph_knot_isInRange(orggraph, orgnode));
+      assert(isMarked[orgnode]);
+
+      for( int e = orggraph->outbeg[orgnode]; e != EAT_LAST; e = orggraph->oeat[e] )
+      {
+         const int orghead = orggraph->head[e];
+
+         if( !isMarked[orghead] )
+         {
+            StpVecPushBack(scip, subinout->org_bordernodes, orgnode);
+            SCIPdebugMessage("added border node %d \n", orgnode);
+
+            assert(Is_term(subgraph->term[i]));
+            break;
+         }
+      }
+   }
+}
+
+
+/** contracts border nodes of subgraph with remaining */
+static
+SCIP_RETCODE borderNodesContract(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          subgraph,           /**< sub graph */
+   SUBINOUT*             subinout,           /**< helper */
+   GRAPH*                orggraph            /**< original graph */
+   )
+{
+   const int* const nodemap_subToOrg = subinout->nodemap_subToOrg;
+   const int* const nodemap_orgToSub = subinout->nodemap_orgToSub;
+   int* const contractRecord = subinout->org_contractRecord;
+   STP_Vectype(int) bordernodes = subinout->org_bordernodes;
+
+   for( int i = 0; i < StpVecGetSize(bordernodes); i++ )
+   {
+      const int orgnode = bordernodes[i];
+      const int subnode = nodemap_orgToSub[orgnode];
+
+      assert(graph_knot_isInRange(orggraph, orgnode));
+      assert(graph_knot_isInRange(subgraph, subnode));
+      assert(orggraph->grad[orgnode] > 0);
+
+      if( subgraph->grad[subnode] == 0 )
+      {
+         int subnode_traced;
+         int orgnode_traced;
+
+         if( Is_term(subgraph->term[subnode]) )
+         {
+            assert(!graph_knot_hasContractTrace(subnode, subgraph));
+            assert(subgraph->terms == 1);
+            subnode_traced = subnode;
+            continue;
+         }
+
+         subnode_traced = graph_contractTrace(subnode, subgraph);
+         orgnode_traced = nodemap_subToOrg[subnode_traced];
+
+         SCIPdebugMessage("traced %d to %d \n", orgnode, orgnode_traced);
+         SCIPdebugMessage("contracting %d->%d \n", orgnode, orgnode_traced);
+
+         /* NOTE: orgnode_traced survives */
+         SCIP_CALL( graph_knot_contract(scip, orggraph, NULL, orgnode_traced, orgnode) );
+         assert(contractRecord[orgnode] == -1 && contractRecord[orgnode_traced] == -1);
+         contractRecord[orgnode] = orgnode_traced;
+      }
+   }
+
+   if( bordernodes )
+      StpVecClear(bordernodes);
 
    return SCIP_OKAY;
 }
@@ -484,7 +580,6 @@ SCIP_RETCODE reinsertSubgraph(
    )
 {
    assert(StpVecGetSize(subinout->org_spareedges) == 0);
-   assert(StpVecGetSize(subinout->org_bordernodes) == 0);
    assert(subgraph->edges <= orggraph->edges);
    assert(subgraph->knots <= orggraph->knots);
    assert(subinout->sub_nnodes == subgraph->knots);
@@ -495,13 +590,13 @@ SCIP_RETCODE reinsertSubgraph(
    SCIP_CALL( reinsertSubgraphTransferEdges(scip, subgraph, subinout, orggraph) );
    reinsertSubgraphTransferTerminals(subgraph, subinout, orggraph);
 
-   // merge border vertices!
+   SCIP_CALL( borderNodesContract(scip, subgraph, subinout, orggraph) );
 
    StpVecClear(subinout->org_spareedges);
-   StpVecClear(subinout->org_bordernodes);
 
    return SCIP_OKAY;
 }
+
 
 /*
  * Interface methods
@@ -526,7 +621,7 @@ SCIP_RETCODE graph_subgraphExtract(
 
    SCIP_CALL( extractSubgraphBuild(scip, orggraph, subinout, subgraph) );
 
-   // mark border vertices!
+   borderNodesCollect(scip, orggraph, *subgraph, subinout);
 
    return SCIP_OKAY;
 }
@@ -551,10 +646,14 @@ SCIP_RETCODE graph_subinoutInit(
    sub->sub_nnodes = -1;
    sub->rootIsTransfered = FALSE;
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->org_contractRecord), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->nodemap_subToOrg), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->nodemap_orgToSub), nnodes) );
    sub->org_spareedges = NULL;
    sub->org_bordernodes = NULL;
+
+   for( int i = 0; i < nnodes; i++ )
+      sub->org_contractRecord[i] = -1;
 
    return SCIP_OKAY;
 }
@@ -568,6 +667,18 @@ const int* graph_subinoutGetSubToOrgNodeMap(
    assert(subinout);
 
    return subinout->nodemap_subToOrg;
+}
+
+
+
+/** get contraction record for cut nodes (-1 if no contraction) */
+const int* graph_subinoutGetContractionRecord(
+  const SUBINOUT*       subinout
+  )
+{
+   assert(subinout);
+
+   return subinout->org_contractRecord;
 }
 
 
@@ -587,6 +698,7 @@ void graph_subinoutFree(
    StpVecFree(scip, sub->org_spareedges);
    SCIPfreeMemoryArray(scip, &(sub->nodemap_orgToSub));
    SCIPfreeMemoryArray(scip, &(sub->nodemap_subToOrg));
+   SCIPfreeMemoryArray(scip, &(sub->org_contractRecord));
 
    SCIPfreeMemory(scip, subinout);
 }

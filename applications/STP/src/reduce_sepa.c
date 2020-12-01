@@ -1079,6 +1079,7 @@ SCIP_RETCODE decomposeReduceSub(
    GRAPH* subgraph;
    int* const gMark = g->mark;
    const int* const compnodes = bidecomp->nodes;
+   const int* const contractionRecord = graph_subinoutGetContractionRecord(bidecomp->subinout);
    const int nnodes = graph_get_nNodes(g);
    const int compstart = bidecomp->starts[compindex];
    const int compend = bidecomp->starts[compindex + 1];
@@ -1099,9 +1100,25 @@ SCIP_RETCODE decomposeReduceSub(
    for( int i = compstart; i != compend; i++ )
    {
       const int compnode = compnodes[i];
+      int realnode;
 
       assert(graph_knot_isInRange(g, compnode));
-      gMark[compnode] = TRUE;
+
+      if( contractionRecord[compnode] != -1 )
+      {
+         SCIPdebugMessage("(taking contracted node %d instead of %d:) \n", contractionRecord[compnode], compnode);
+         realnode = contractionRecord[compnode];
+      }
+      else
+      {
+         realnode = compnode;
+      }
+#ifdef SCIP_DEBUG
+      graph_knot_printInfo(g, realnode);
+#endif
+
+      assert(graph_knot_isInRange(g, realnode));
+      gMark[realnode] = TRUE;
    }
 
    /** extract, reduce, re-insert: */
@@ -1109,14 +1126,14 @@ SCIP_RETCODE decomposeReduceSub(
    SCIP_CALL(graph_subgraphExtract(scip, g, bidecomp->subinout, &subgraph));
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("subgraph before reduction: ");
-   graph_printInfo(subgraph);
+   graph_printInfoReduced(subgraph);
 #endif
 
    SCIP_CALL(redLoopStp(scip, subgraph, redbase));
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("subgraph after reduction: ");
-   graph_printInfo(subgraph);
+   graph_printInfoReduced(subgraph);
 #endif
    SCIP_CALL(graph_subgraphReinsert(scip, bidecomp->subinout, g, &subgraph));
 
@@ -1135,6 +1152,10 @@ SCIP_RETCODE decomposeExec(
    )
 {
    BIDECOMP bidecomp;
+
+   /* NOTE: does not work because we do node contractions when reinserting the subgraph,
+    * and because order of nodes is changed in subbgraph */
+   assert(redbase->solnode == NULL && "not supported");
 
    SCIP_CALL( decomposeInit(scip, cutnodes, g, &bidecomp) );
 

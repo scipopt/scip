@@ -45,6 +45,7 @@ extern SCIP_Bool show; // todo delete
  */
 extern SCIP_RETCODE   graph_initContractTracing(SCIP*, GRAPH*);
 extern int            graph_contractTrace(int, const GRAPH*);
+extern SCIP_Bool            graph_knot_hasContractTrace(int, const GRAPH*);
 extern SCIP_RETCODE  graph_singletonAncestors_init(SCIP*, const GRAPH*, int, SINGLETONANS*);
 extern void          graph_singletonAncestors_freeMembers(SCIP*, SINGLETONANS*);
 extern SCIP_Bool     graph_valid_ancestors(SCIP*, const GRAPH*);
@@ -192,6 +193,7 @@ extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, const GRAPH*, SUBINOUT*, GRAP
 extern SCIP_RETCODE   graph_subinoutInit(SCIP*, const GRAPH*, SUBINOUT**);
 extern void           graph_subinoutFree(SCIP*, SUBINOUT**);
 const int* graph_subinoutGetSubToOrgNodeMap(const SUBINOUT*);
+const int* graph_subinoutGetContractionRecord(const SUBINOUT*);
 extern SCIP_RETCODE   graph_subgraphReinsert(SCIP*, SUBINOUT*, GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_subgraphFree(SCIP*, GRAPH**);
 
