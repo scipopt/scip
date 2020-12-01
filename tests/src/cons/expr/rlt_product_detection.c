@@ -442,12 +442,6 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
    /* x1 <= b2 + 0.0 */
    SCIP_CALL( SCIPaddVarVub(scip, x1, b2, 1.0, 0.0, &infeasible, &nbdchgs) );
 
-   SCIPinfoMessage(scip, NULL, "\nvar x1 has %d vubs:", SCIPvarGetNVubs(x1));
-   for( int i = 0; i < SCIPvarGetNVubs(x1); ++i )
-   {
-      SCIPinfoMessage(scip, NULL, "\nx1 <= %f%s + %f", SCIPvarGetVubCoefs(x1)[i], SCIPvarGetName(SCIPvarGetVubVars(x1)[i]), SCIPvarGetVubConstants(x1)[i]);
-   }
-
    /* construct the LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
@@ -561,8 +555,16 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    /* fill in the relevant data structures */
    SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
 
+   /* check the linked list of rows (should correspond to 3 -> 2 -> 1 and 4 -> 0) */
+   cr_expect_eq(row_list[0], -1);
+   cr_expect_eq(row_list[1], -1);
+   cr_expect_eq(row_list[2], 1);
+   cr_expect_eq(row_list[3], 2);
+   cr_expect_eq(row_list[4], 0);
+
+   /* check the hashtable for 3-variable relations */
    cr_expect_eq(SCIPhashtableGetNElements(hashtable3), 1, "expected 1 var triple, got %d",
-      SCIPhashtableGetNElements(hashtable3));
+         SCIPhashtableGetNElements(hashtable3));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
    {
@@ -570,22 +572,18 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
       if( foundhashdata == NULL )
          continue;
 
-      SCIPdebugMsg(scip, "(%s, %s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
-         SCIPvarGetName(foundhashdata->vars[1]), SCIPvarGetName(foundhashdata->vars[2]));
+      cr_expect_eq(foundhashdata->nvars, 3, "expected 3 vars in an element of hashtable3, got %d", foundhashdata->nvars);
+      cr_expect_eq(foundhashdata->vars[0], b1, "expected first var in the triple to be b1, got %s",
+            SCIPvarGetName(foundhashdata->vars[0]));
+      cr_expect_eq(foundhashdata->vars[1], x1, "expected second var in the triple to be x1, got %s",
+            SCIPvarGetName(foundhashdata->vars[1]));
+      cr_expect_eq(foundhashdata->vars[2], x2, "expected third var in the triple to be x2, got %s",
+            SCIPvarGetName(foundhashdata->vars[2]));
 
-      SCIPinfoMessage(scip, NULL, "\nrow array:");
-      r = foundhashdata->firstrow;
-      while( r != -1 )
-      {
-         assert(r < nrows && r >= 0);
-         row1 = prob_rows[r];
-         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(row1));
-         r = row_list[r];
-      }
-
-      SCIPfreeBuffer(scip, &foundhashdata);
+      cr_expect_eq(foundhashdata->firstrow, 3);
    }
 
+   /* check the hashtable for 2-variable relations */
    cr_expect_eq(SCIPhashtableGetNElements(hashtable2), 1, "expected 1 var pair, got %d",
          SCIPhashtableGetNElements(hashtable2));
 
@@ -595,26 +593,56 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
       if( foundhashdata == NULL )
          continue;
 
+      cr_expect_eq(foundhashdata->nvars, 2, "expected 2 vars in an element of hashtable2, got %d", foundhashdata->nvars);
+      cr_expect_eq(foundhashdata->vars[0], x1, "expected first var in the triple to be x1, got %s",
+            SCIPvarGetName(foundhashdata->vars[0]));
+      cr_expect_eq(foundhashdata->vars[1], x2, "expected second var in the triple to be x2, got %s",
+            SCIPvarGetName(foundhashdata->vars[1]));
+
       SCIPdebugMsg(scip, "(%s, %s): ", SCIPvarGetName(foundhashdata->vars[0]),
       SCIPvarGetName(foundhashdata->vars[1]));
 
-      SCIPinfoMessage(scip, NULL, "\nrow array:");
-      r = foundhashdata->firstrow;
-      while( r != -1 )
-      {
-         assert(r < nrows && r >= 0);
-         row1 = prob_rows[r];
-         SCIPinfoMessage(scip, NULL, "%d; ", SCIProwGetIndex(row1));
-         r = row_list[r];
-      }
-
-      SCIPfreeBuffer(scip, &foundhashdata);
+      cr_expect_eq(foundhashdata->firstrow, 4);
    }
 
+   /* check the data structure storing variables participating together in 2-variable relations */
+   cr_expect_eq(vars_in_2rels->nvars, 2, "expected 2 vars in vars_in_2rels, got %d", vars_in_2rels->nvars);
+   cr_expect_eq(vars_in_2rels->vars[0], x1, "expected first var in vars_in_2rels to be x1, got %s",
+         vars_in_2rels->vars[0]);
+   cr_expect_eq(vars_in_2rels->vars[1], x2, "expected second var in vars_in_2rels to be x2, got %s",
+         vars_in_2rels->vars[1]);
+   cr_expect_eq(vars_in_2rels->nadjacentvars[0], 1, "expected 1 vars adjacent to x1, got %d",
+         vars_in_2rels->nadjacentvars[0]);
+   cr_expect_eq(vars_in_2rels->nadjacentvars[1], 1, "expected 1 vars adjacent to x2, got %d",
+         vars_in_2rels->nadjacentvars[1]);
+   cr_expect_eq(vars_in_2rels->adjacentvars[0][0], x2, "expected x2 to be adjacent to x1, got %s",
+         SCIPvarGetName(vars_in_2rels->adjacentvars[0][0]));
+   cr_expect_eq(vars_in_2rels->adjacentvars[1][0], x1, "expected x1 to be adjacent to x2, got %s",
+         SCIPvarGetName(vars_in_2rels->adjacentvars[1][0]));
+
+   /* free memory */
    clearVarAdjacence(scip, vars_in_2rels);
    SCIPfreeCleanBuffer(scip, &vars_in_2rels);
 
    SCIPfreeBufferArray(scip, &row_list);
+
+   for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
+   {
+      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashtable2, i);
+      if( foundhashdata == NULL )
+         continue;
+
+      SCIPfreeBuffer(scip, &foundhashdata);
+   }
+
+   for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
+   {
+      foundhashdata = (HASHDATA*)SCIPhashtableGetEntry(hashtable3, i);
+      if( foundhashdata == NULL )
+         continue;
+
+      SCIPfreeBuffer(scip, &foundhashdata);
+   }
 
    SCIPhashtableFree(&hashtable2);
    SCIPhashtableFree(&hashtable3);

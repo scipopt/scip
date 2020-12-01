@@ -1725,7 +1725,7 @@ SCIP_RETCODE detectHiddenProducts(
       }
    }
 
-   SCIPinfoMessage(scip, NULL, "\nTime spent on handling cliques: %10.2f", SCIPgetClockTime(scip, sepadata->cliquetime));
+   SCIPinfoMessage(scip, NULL, "\nTime spent on handling cliques: %10.2f\n", SCIPgetClockTime(scip, sepadata->cliquetime));
    SCIP_CALL( SCIPfreeClock(scip, &sepadata->cliquetime) );
 
    clearVarAdjacence(scip, vars_in_2rels);
