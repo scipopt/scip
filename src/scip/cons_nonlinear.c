@@ -591,7 +591,7 @@ SCIP_DECL_EXPR_OWNERCREATE(exprownerCreate)
       else
       {
          /* if expr was just created, then it shouldn't already be stored as image of var */
-         assert(SCIPhashmapGetImage(conshdlrdata->var2expr, (void*)var) !=  (void*)expr);
+         assert(SCIPhashmapGetImage(conshdlrdata->var2expr, (void*)var) != (void*)expr);
       }
    }
    else
@@ -704,6 +704,9 @@ SCIP_RETCODE storeVarExprs(
    SCIP_CONSDATA*          consdata          /**< constraint data */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
    assert(consdata != NULL);
 
    /* skip if we have stored the variable expressions already */
@@ -723,6 +726,21 @@ SCIP_RETCODE storeVarExprs(
    if( SCIPgetNTotalVars(scip) > consdata->nvarexprs )
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->varexprs, SCIPgetNTotalVars(scip), consdata->nvarexprs) );
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->var2expr != NULL);
+
+   /* ensure that for every variable an entry exists in the var2expr hashmap
+    * when removing duplicate subexpressions it can happen than a var->varexpr map was removed from the hashmap
+    */
+   for( i = 0; i < consdata->nvarexprs; ++i )
+   {
+      if( !SCIPhashmapExists(conshdlrdata->var2expr, SCIPgetVarExprVar(consdata->varexprs[i])) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->var2expr, SCIPgetVarExprVar(consdata->varexprs[i]), consdata->varexprs[i]) );
+      }
    }
 
    return SCIP_OKAY;
