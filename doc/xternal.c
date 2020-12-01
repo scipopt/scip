@@ -3617,7 +3617,7 @@
 /**@page CUTSEL How to add cut selectors
  *
  * Cut selectors are used to select the cuts that are going to be added to the relaxation.
- * For more information on how SCIP manages cuts, see "What is the difference between a sepastore and the cutpool?" on
+ * For more information on how SCIP manages cuts, see "What is the difference between a sepastore and the cutpool?" in the
  * \ref FAQ.
  * \n
  * A complete list of all cut selectors contained in this release can be found \ref CUTSELECTORS "here".
@@ -3689,7 +3689,7 @@
  *
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the cut selector. For this, you can either call
- * SCIPincludeCutsel(),
+ * SCIPincludeCutsel()
  * or SCIPincludeCutselBasic(). In the latter variant, \ref CUTSEL_ADDITIONALCALLBACKS "additional callbacks"
  * must be added via setter functions as, e.g., SCIPsetCutselCopy(). We recommend this latter variant because
  * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
@@ -3716,7 +3716,7 @@
  *
  * Cut selector plugins have a single fundamental callback method, namely the CUTSELSELECT method.
  * This method has to be implemented for every cut selector; the other callback methods are optional.
- * It implements the single requirement every cut selector has to fulfill: Selecting cuts to be added to the relaxation.
+ * It implements the single contribution every selector has to provide: Selecting cuts to be added to the relaxation.
  * In the C++ wrapper class scip::ObjCutsel, the scip_select() method is a virtual abstract member function.
  * You have to implement it in order to be able to construct an object of your cut selector class.
  *
@@ -3756,7 +3756,7 @@
  *
  * @subsection CUTSELCOPY
  *
- * The CUTSELCOPY callback is executed when a SCIP instance is copied, e.g. to solve a sub-SCIP. By defining this
+ * The CUTSELCOPY callback is executed when a SCIP instance is copied, e.g., to solve a sub-SCIP. By defining this
  * callback as <code>NULL</code> the user disables the execution of the specified cut selector for all copied SCIP
  * instances.
  *

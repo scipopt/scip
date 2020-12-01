@@ -1080,7 +1080,7 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         <code>SCIPaddPoolCut()</code> (although only when they are globally valid).
         The difference is that a cut added with <code>SCIPaddPoolCut()</code> does not go to the sepastore, but to
         SCIP's global cutpool.
-        In each separation round, the global cutpool can also add cuts to SCIP's sepastore.
+        In each separation round, the global cutpool can then also add cuts to SCIP's sepastore.
     </p>
     <p>
         If a cut in the global cutpool is not added to the sepastore (e.g. because it is not efficacious enough),
@@ -1091,7 +1091,7 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         global cutpool.
         This might make sense because of the following reasons.
         Even if the cut makes it to the sepastore, it does not mean it is going to enter the LP
-        relaxation because it might be filtered out by a cutselector.
+        relaxation, because it might be filtered out by a cutselector.
         Furthermore, if the cut enters the LP it can still age out of the LP (e.g. because it is not active in enough
         consecutive LP relaxations), but the cut might still be interesting in other parts of the search tree.
         Thus, it makes sense to add cuts to the global cutpool that are known to be strong or expensive to generate.
@@ -1104,7 +1104,7 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         As a summary, the purpose of the global cutpool is to store globally valid cuts that can be reused in later
         separation rounds, while the purpose of the sepastore is to collect the cuts that are to be added in a single
         separation round.
-        In each separation round, constraint handler and separators can add cuts to the global cutpool, and
+        In each separation round, constraint handlers and separators can add cuts to the global cutpool, and
         contraint handlers, separators and the global cutpool can add cuts directly to the sepastore.
         Furthermore, locally valid cuts can only be added to the sepastore and expensive globally valid cuts might be
         better suited for the global cutpool.
