@@ -2459,12 +2459,6 @@ SCIP_RETCODE SCIPexprEvalGradient(
    {
       assert(expr->evalvalue != SCIP_INVALID);
 
-      if( expr->exprhdlr->bwdiff == NULL )
-      {
-         rootexpr->derivative = SCIP_INVALID;
-         break;
-      }
-
       child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);
 
@@ -2563,13 +2557,6 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       assert(expr->evalvalue != SCIP_INVALID);
-
-      if( expr->exprhdlr->bwdiff == NULL || expr->exprhdlr->bwfwdiff == NULL )
-      {
-         rootexpr->derivative = SCIP_INVALID;
-         rootexpr->bardot = SCIP_INVALID;
-         break;
-      }
 
       child = SCIPexpriterGetChildExprDFS(it);
       assert(child != NULL);

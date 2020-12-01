@@ -108,14 +108,11 @@ SCIP_DECL_EXPREVAL(evalValue)
    return SCIP_OKAY;
 }
 
-/** expression derivative evaluation callback */
+/** expression backward derivative evaluation callback */
 static
 SCIP_DECL_EXPRBWDIFF(bwdiffValue)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(SCIPexprGetData(expr) != NULL);
-
-   /* this should never happen because variable expressions do not have children */
+   /* should never be called since value expressions do not have children */
    return SCIP_INVALIDCALL;
 }
 
@@ -128,6 +125,14 @@ SCIP_DECL_EXPRFWDIFF(fwdiffValue)
    *dot = 0.0;
 
    return SCIP_OKAY;
+}
+
+/** derivative evaluation callback for Hessian directions (backward over forward) */
+static
+SCIP_DECL_EXPRBWFWDIFF(bwfwdiffValue)
+{  /*lint --e{715}*/
+   /* should never be called since value expressions do not have children */
+   return SCIP_INVALIDCALL;
 }
 
 /** expression interval evaluation callback */
@@ -220,7 +225,7 @@ SCIP_RETCODE SCIPincludeExprHdlrValue(
    SCIPexprhdlrSetPrint(exprhdlr, printValue);
    SCIPexprhdlrSetIntEval(exprhdlr, intevalValue);
    SCIPexprhdlrSetHash(exprhdlr, hashValue);
-   SCIPexprhdlrSetDiff(exprhdlr, bwdiffValue, fwdiffValue, NULL);
+   SCIPexprhdlrSetDiff(exprhdlr, bwdiffValue, fwdiffValue, bwfwdiffValue);
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureValue);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityValue);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityValue);
