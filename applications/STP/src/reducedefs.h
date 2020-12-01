@@ -127,6 +127,23 @@ typedef struct reduce_costs_reduction_parameters
 } RPDA;
 
 
+
+/** single special distance for PC */
+typedef struct single_special_distance_pc
+{
+   PATH*  pathtail;
+   PATH*  pathhead;
+   int*    heap;
+   int*    statetail;
+   int*    statehead;
+   int*    memlbltail;
+   int*    memlblhead;
+   int*    pathmaxnodetail;
+   int*    pathmaxnodehead;
+} SD1PC;
+
+
+
 /** gets profit for given node */
 inline static
 SCIP_Real reduce_sdprofitGetProfit(

@@ -472,6 +472,7 @@ SCIP_Bool sddeltable(
 }
 
 
+/** gets distances to close terminals */
 static
 int getcloseterms(
    SCIP*                 scip,
@@ -725,27 +726,16 @@ SCIP_Real getSd(
    )
 {
    SCIP_Real sd;
-   SCIP_Real max;
-   SCIP_Real dist;
-   int l;
-   int e;
-   int j;
-   int k;
-   int tj;
-   int tk;
-   int nnodes;
    int nnterms1;
    int nnterms2;
    SCIP_Real termdist1[4];
    SCIP_Real termdist2[4];
    int neighbterms1[4];
    int neighbterms2[4];
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip != NULL);
    assert(g != NULL);
-
-   nnodes = g->knots;
-   l = 0;
 
    if( sd_initial >= 0.0 )
       sd = sd_initial;
@@ -753,7 +743,7 @@ SCIP_Real getSd(
       sd = FARAWAY;
 
    /* compare restricted sd with edge cost (if existing) */
-   for( e = g->outbeg[i]; (l++ <= limit) && (e != EAT_LAST); e = g->oeat[e] )
+   for( int e = g->outbeg[i], l = 0; (l <= limit) && (e != EAT_LAST); e = g->oeat[e], l++ )
    {
       if( g->head[e] == i2 )
       {
@@ -794,40 +784,36 @@ SCIP_Real getSd(
          return sd;
    }
 
-   for( j = 0; j < nnterms1; j++ )
+   for( int j = 0; j < nnterms1; j++ )
    {
-      tj = neighbterms1[j];
+      const int tj = neighbterms1[j];
       assert(tj >= 0);
-      for( k = 0; k < nnterms2; k++ )
+
+      for( int k = 0; k < nnterms2; k++ )
       {
-         tk = neighbterms2[k];
+         SCIP_Real maxdist;
+         const int tk = neighbterms2[k];
+
          assert(Is_term(g->term[tk]));
          assert(Is_term(g->term[tj]));
          assert(tk >= 0);
 
-         if( SCIPisGT(scip, termdist1[j], termdist2[k]) )
-            max = termdist1[j];
-         else
-            max = termdist2[k];
+         maxdist = MAX(termdist1[j], termdist2[k]);
 
-         if( tj == tk )
+         if( tj != tk )
          {
-            if( SCIPisLT(scip, max, sd) )
-               sd = max;
-         }
-         else
-         {
-            /* get sd between (terminals) tj and tk */
-            dist = reduce_sdgraphGetSd(tj, tk, sdgraph);
+            const SCIP_Real dist = reduce_sdgraphGetSd(tj, tk, sdgraph);
 
             assert(SCIPisGT(scip, dist, 0.0));
-            if( SCIPisGT(scip, dist, max) )
-               max = dist;
-            if( SCIPisLT(scip, max, sd) )
-               sd = max;
+            if( GT(dist, maxdist) )
+               maxdist = dist;
          }
+
+         if( LT(maxdist, sd) )
+            sd = maxdist;
       } /* k < nnterms2 */
    } /* j < nnterms1 */
+
    return sd;
 }
 
@@ -1061,8 +1047,10 @@ SCIP_Bool isPseudoDeletable(
    SCIP_Real mstcost = 0.0;
    PATH mst[STP_BD_MAXDEGREE];
 
+#ifndef NDEBUG
    for( int l = 0; l < STP_BD_MAXDEGREE; l++ )
       mst[l].dist = UNKNOWN;
+#endif
 
    assert(graph_isMarked(auxg));
    assert(degree == 4);
@@ -1072,7 +1060,7 @@ SCIP_Bool isPseudoDeletable(
 
 #ifndef NDEBUG
    for( int l = 1; l < STP_BD_MAXDEGREE; l++ )
-      assert(mst[l].dist != UNKNOWN);
+      assert(!EQ(mst[l].dist, UNKNOWN));
 #endif
 
    for( int l = 1; l < STP_BD_MAXDEGREE; l++ )
@@ -1086,41 +1074,47 @@ SCIP_Bool isPseudoDeletable(
          success = TRUE;
    }
 
-   /* check all 3-subsets of neighbors */
-   for( int k = 0; k < 4 && success; k++ )
+#ifndef NDEBUG
    {
-      const int auxvertex1 = (k + 1) % 4;
-      const int auxvertex2 = (k + 2) % 4;
-      const int auxvertex3 = (k + 3) % 4;
-      const int edgesK3[] = { edges[auxvertex1], edges[auxvertex2], edges[auxvertex3] };
-      SCIP_Real sdK3[3];
-      int sdcount = 0;
-
-      assert(auxvertex1 != k && auxvertex2 != k && auxvertex3 != k);
-
-      for( int e = auxg->outbeg[auxvertex1]; e != EAT_LAST; e = auxg->oeat[e] )
+      /* check all 3-subsets of neighbors */
+      for( int k = 0; k < 4; k++ )
       {
-         if( auxg->head[e] != k )
+         const int auxvertex1 = (k + 1) % 4;
+         const int auxvertex2 = (k + 2) % 4;
+         const int auxvertex3 = (k + 3) % 4;
+         const int edgesK3[] = { edges[auxvertex1], edges[auxvertex2], edges[auxvertex3] };
+         SCIP_Real sdK3[3];
+         int sdcount = 0;
+         SCIP_Bool success_debug;
+
+         assert(auxvertex1 != k && auxvertex2 != k && auxvertex3 != k);
+
+         for( int e = auxg->outbeg[auxvertex1]; e != EAT_LAST; e = auxg->oeat[e] )
          {
-            assert(sdcount < 2);
-            sdK3[sdcount++] = auxg->cost[e];
+            if( auxg->head[e] != k )
+            {
+               assert(sdcount < 2);
+               sdK3[sdcount++] = auxg->cost[e];
+            }
          }
-      }
 
-      assert(sdcount == 2);
+         assert(sdcount == 2);
 
-      for( int e = auxg->outbeg[auxvertex2]; e != EAT_LAST; e = auxg->oeat[e] )
-      {
-         if( auxg->head[e] == auxvertex3 )
+         for( int e = auxg->outbeg[auxvertex2]; e != EAT_LAST; e = auxg->oeat[e] )
          {
-            sdK3[sdcount++] = auxg->cost[e];
-            break;
+            if( auxg->head[e] == auxvertex3 )
+            {
+               sdK3[sdcount++] = auxg->cost[e];
+               break;
+            }
          }
-      }
 
-      assert(sdcount == 3);
-      success = isPseudoDeletableDeg3(scip, g, sdK3, edgesK3, costsum - ecost[k], TRUE);
+         assert(sdcount == 3);
+         success_debug = isPseudoDeletableDeg3(scip, g, sdK3, edgesK3, costsum - ecost[k], TRUE);
+         assert(success_debug);
+      }
    }
+#endif
 
    return success;
 }
@@ -2473,25 +2467,26 @@ SCIP_Real reduce_sdGetSdIntermedTerms(
 
 
 /** get SD to a single edge*/
-SCIP_RETCODE reduce_getSdPcMw(
+static
+SCIP_Real sdGetSdPcMw(
    SCIP* scip,
    const GRAPH* g,
-   PATH*  pathtail,
-   PATH*  pathhead,
-   SCIP_Real*    sdist,
-   SCIP_Real     distlimit,
-   int*    heap,
-   int*    statetail,
-   int*    statehead,
-   int*    memlbltail,
-   int*    memlblhead,
-   int*    pathmaxnodetail,
-   int*    pathmaxnodehead,
+   SCIP_Real  distlimit,
    int     i,
    int     i2,
-   int     limit
+   int     edgelimit,
+   SD1PC*  sd1pc
    )
 {
+   PATH *pathtail = sd1pc->pathtail;
+   PATH *pathhead = sd1pc->pathhead;
+   int *heap = sd1pc->heap;
+   int *statetail = sd1pc->statetail;
+   int *statehead = sd1pc->statehead;
+   int *memlbltail = sd1pc->memlbltail;
+   int *memlblhead = sd1pc->memlblhead;
+   int *pathmaxnodetail = sd1pc->pathmaxnodetail;
+   int *pathmaxnodehead = sd1pc->pathmaxnodehead;
    SCIP_Real sd;
    int nlbltail;
    int nlblhead;
@@ -2510,10 +2505,9 @@ SCIP_RETCODE reduce_getSdPcMw(
    assert(memlblhead != NULL);
    assert(pathmaxnodetail != NULL);
    assert(pathmaxnodehead != NULL);
-   assert(sdist != NULL);
 
-   graph_path_PcMwSd(scip, g, pathtail, g->cost, distlimit, pathmaxnodetail, heap, statetail, NULL, memlbltail, &nlbltail, i, i2, limit);
-   graph_path_PcMwSd(scip, g, pathhead, g->cost, distlimit, pathmaxnodehead, heap, statehead, statetail, memlblhead, &nlblhead, i2, i, limit);
+   graph_path_PcMwSd(scip, g, pathtail, g->cost, distlimit, pathmaxnodetail, heap, statetail, NULL, memlbltail, &nlbltail, i, i2, edgelimit);
+   graph_path_PcMwSd(scip, g, pathhead, g->cost, distlimit, pathmaxnodehead, heap, statehead, statetail, memlblhead, &nlblhead, i2, i, edgelimit);
 
    sd = FARAWAY;
 
@@ -2652,7 +2646,7 @@ SCIP_RETCODE reduce_getSdPcMw(
    }
 
    /* compare restricted sd with edge cost (if existing) */
-   for( int e = g->outbeg[i], count = 0; (count++ <= limit) && (e != EAT_LAST); e = g->oeat[e] )
+   for( int e = g->outbeg[i], count = 0; (count++ <= edgelimit) && (e != EAT_LAST); e = g->oeat[e] )
    {
       if( g->head[e] == i2 )
       {
@@ -2664,9 +2658,7 @@ SCIP_RETCODE reduce_getSdPcMw(
       }
    }
 
-   *sdist = sd;
-
-   return SCIP_OKAY;
+   return sd;
 }
 
 
@@ -2891,7 +2883,8 @@ SCIP_RETCODE reduce_ledge(
 
 
 
-/** Non-Terminal-Set test*/
+/** Non-Terminal-Set test
+ * DEPRECATED! */
 SCIP_RETCODE reduce_nts(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph structure */
@@ -3053,11 +3046,16 @@ SCIP_RETCODE reduce_nts(
                      SCIP_Real s1 = -1.0;
 
                      if( pc )
-                        SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                                    pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit) );
+                     {
+                        assert(0 && "fix me");
+                   //     SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
+                     //               pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit) );
+                     }
                      else
+                     {
                         SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
                               adjvert[k], adjvert[k2], limit, pc, FALSE) );
+                     }
 
                      assert(s1 >= 0);
 
@@ -4906,12 +4904,9 @@ SCIP_RETCODE reduce_bd34WithSd(
          {
             const SCIP_Real costsum = ecost[0] + ecost[1] + ecost[2];
 
-            sd[0] = getSd(scip, g, sdgraph, vnoi, ecost[0] + ecost[1], vbase, adjvert[0],
-                  adjvert[1], 300);
-            sd[1] = getSd(scip, g, sdgraph, vnoi, ecost[1] + ecost[2], vbase, adjvert[1],
-                  adjvert[2], 300);
-            sd[2] = getSd(scip, g, sdgraph, vnoi, ecost[2] + ecost[0], vbase, adjvert[2],
-                  adjvert[0], 300);
+            sd[0] = getSd(scip, g, sdgraph, vnoi, ecost[0] + ecost[1], vbase, adjvert[0], adjvert[1], 300);
+            sd[1] = getSd(scip, g, sdgraph, vnoi, ecost[1] + ecost[2], vbase, adjvert[1], adjvert[2], 300);
+            sd[2] = getSd(scip, g, sdgraph, vnoi, ecost[2] + ecost[0], vbase, adjvert[2], adjvert[0], 300);
 
             if( isPseudoDeletableDeg3(scip, g, sd, edges, costsum, TRUE) )
             {
@@ -4933,18 +4928,66 @@ SCIP_RETCODE reduce_bd34WithSd(
          /* vertex of degree 4? */
          else if( degree == 4 )
          {
+
+            /* SDs of adjacent vertices in canonical order */
+            SCIP_Real adjsds[6];
             SCIP_Bool success = TRUE;
 
-            for( int k = 0; k < 4; k++ )
+            adjsds[0] = getSd(scip, g, sdgraph, vnoi, ecost[0] + ecost[1], vbase, adjvert[0], adjvert[1], 200);
+            adjsds[1] = getSd(scip, g, sdgraph, vnoi, ecost[0] + ecost[2], vbase, adjvert[0], adjvert[2], 200);
+            adjsds[3] = getSd(scip, g, sdgraph, vnoi, ecost[1] + ecost[2], vbase, adjvert[1], adjvert[2], 200);
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[1], adjsds[3] },
+               (int[3]){ edges[0], edges[1], edges[2]},
+               ecost[0] + ecost[1] + ecost[2], TRUE) )
             {
+               continue;
+            }
+
+            adjsds[2] = getSd(scip, g, sdgraph, vnoi, ecost[0] + ecost[3], vbase, adjvert[0], adjvert[3], 200);
+            adjsds[4] = getSd(scip, g, sdgraph, vnoi, ecost[1] + ecost[3], vbase, adjvert[1], adjvert[3], 200);
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[2], adjsds[4] },
+               (int[3]){ edges[0], edges[1], edges[3]},
+               ecost[0] + ecost[1] + ecost[3], TRUE) )
+            {
+               continue;
+            }
+
+            adjsds[5] = getSd(scip, g, sdgraph, vnoi, ecost[2] + ecost[3], vbase, adjvert[2], adjvert[3], 200);
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[1], adjsds[2], adjsds[5] },
+                (int[3]){ edges[0], edges[2], edges[3]},
+               ecost[0] + ecost[2] + ecost[3], TRUE) )
+            {
+               continue;
+            }
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[3], adjsds[4], adjsds[5] },
+                (int[3]){ edges[1], edges[2], edges[3]},
+               ecost[1] + ecost[2] + ecost[3], TRUE) )
+            {
+               continue;
+            }
+
+            for( int k = 0; k < 4; k++ )
                auxg->mark[k] = TRUE;
+
+            for( int k = 0; k < 3; k++ )
+            {
                for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
                {
                   const int k2 = auxg->head[e];
                   if( k2 > k )
                   {
-                     auxg->cost[e] = getSd(scip, g, sdgraph, vnoi, ecost[k] + ecost[k2], vbase,
-                           adjvert[k], adjvert[k2], 200);
+                     if( k == 0  )
+                        auxg->cost[e] = adjsds[k2 - 1];
+                     else
+                        auxg->cost[e] = adjsds[k + k2];
+
+                     assert(EQ(auxg->cost[e], getSd(scip, g, sdgraph, vnoi, ecost[k] + ecost[k2], vbase,
+                        adjvert[k], adjvert[k2], 200)));
+
                      auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
                }
@@ -4968,7 +5011,9 @@ SCIP_RETCODE reduce_bd34WithSd(
                SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, NULL, &success));
 
                if( success )
+               {
                   (*nelims)++;
+               }
             }
          }
       }
@@ -4988,6 +5033,9 @@ SCIP_RETCODE reduce_bd34WithSd(
  * Networks, Volume 19 (1989), 549-567
  *
  * Bottleneck Degree 3,4 Test
+ *
+ * ONLY USED FOR PC!
+ * todo adapt
  */
 SCIP_RETCODE reduce_bd34(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5004,6 +5052,7 @@ SCIP_RETCODE reduce_bd34(
    SCIP_Real*            offset              /**< offset */
    )
 {
+   SD1PC sd1pc;
    SCIP_Real cutoffs[STP_BD_MAXDNEDGES];
    int edges[STP_BD_MAXDEGREE];
    SCIP_Real sd[STP_BD_MAXDEGREE];
@@ -5013,12 +5062,12 @@ SCIP_RETCODE reduce_bd34(
    int* pathmaxnodehead = NULL;
    int adjvert[STP_BD_MAXDEGREE];
    const int nnodes = g->knots;
-   const SCIP_Bool pc = g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG;
 
    SCIPdebugMessage("BD34-Reduction: ");
 
    assert(scip && g && heap && nelims);
    assert(!g->extended);
+   assert(graph_pc_isPc(g));
 
    /* build auxiliary graph */
    SCIP_CALL( graph_buildCompleteGraph(scip, &auxg, STP_BD_MAXDEGREE) );
@@ -5031,11 +5080,8 @@ SCIP_RETCODE reduce_bd34(
    for( int i = 0; i < STP_BD_MAXDEGREE; i++ )
       sd[i] = 0.0;
 
-   if( pc )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodetail, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodehead, nnodes) );
-   }
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodetail, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathmaxnodehead, nnodes) );
 
    graph_mark(g);
 
@@ -5047,12 +5093,14 @@ SCIP_RETCODE reduce_bd34(
       statehead[i]     = UNKNOWN;
       pathhead[i].dist = FARAWAY;
       pathhead[i].edge = UNKNOWN;
-      if( pc )
-      {
-         pathmaxnodetail[i] = -1;
-         pathmaxnodehead[i] = -1;
-      }
+
+      pathmaxnodetail[i] = -1;
+      pathmaxnodehead[i] = -1;
    }
+
+   sd1pc = (SD1PC) { .pathtail = pathtail, .pathhead = pathhead, .heap = heap,
+    .statetail = statetail, .statehead = statehead, .memlbltail = memlbltail,
+    .memlblhead = memlblhead, .pathmaxnodetail = pathmaxnodetail, .pathmaxnodehead = pathmaxnodehead };
 
    for( int degree = 3; degree <= STP_BD_MAXDEGREE; degree++ )
    {
@@ -5060,7 +5108,6 @@ SCIP_RETCODE reduce_bd34(
       {
          int edgecount;
 
-         if( pc )
          {
             int pcdegree;
 
@@ -5075,11 +5122,7 @@ SCIP_RETCODE reduce_bd34(
             if( pcdegree != degree )
                continue;
          }
-         else
-         {
-            if( Is_term(g->term[i]) || g->grad[i] != degree )
-               continue;
-         }
+
 
          edgecount = 0;
          for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -5094,7 +5137,7 @@ SCIP_RETCODE reduce_bd34(
             }
             else
             {
-               assert(pc && Is_term(g->term[i]));
+               assert(Is_term(g->term[i]));
             }
          }
 
@@ -5103,33 +5146,15 @@ SCIP_RETCODE reduce_bd34(
          /* vertex of degree 3? */
          if( degree == 3 )
          {
-            const SCIP_Real iprize = (pc && Is_term(g->term[i])) ? g->prize[i] : 0.0;
+            const SCIP_Real iprize = (Is_term(g->term[i])) ? g->prize[i] : 0.0;
             const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] - iprize;
 
             assert(edgecount == 3);
             assert(iprize <= ecost[0] && iprize <= ecost[1] && iprize <= ecost[2]);
 
-            if( pc )
-            {
-               SCIP_CALL(
-                     reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                           pathmaxnodetail, pathmaxnodehead, adjvert[0], adjvert[1], limit));
-               SCIP_CALL(
-                     reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                           pathmaxnodetail, pathmaxnodehead, adjvert[1], adjvert[2], limit));
-               SCIP_CALL(
-                     reduce_getSdPcMw(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                           pathmaxnodetail, pathmaxnodehead, adjvert[2], adjvert[0], limit));
-            }
-            else
-            {
-               SCIP_CALL(
-                     reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sd[0]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[0], adjvert[1], limit, pc, FALSE));
-               SCIP_CALL(
-                     reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sd[1]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[1], adjvert[2], limit, pc, FALSE));
-               SCIP_CALL(
-                     reduce_getSdByPaths(scip, g, pathtail, pathhead, &(sd[2]), csum, heap, statetail, statehead, memlbltail, memlblhead, adjvert[2], adjvert[0], limit, pc, FALSE));
-            }
+            sd[0] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[1], limit, &sd1pc);
+            sd[1] = sdGetSdPcMw(scip, g, csum, adjvert[1], adjvert[2], limit, &sd1pc);
+            sd[2] = sdGetSdPcMw(scip, g, csum, adjvert[2], adjvert[0], limit, &sd1pc);
 
             if( isPseudoDeletableDeg3(scip, g, sd, edges, csum, !Is_term(g->term[i])) )
             {
@@ -5155,38 +5180,69 @@ SCIP_RETCODE reduce_bd34(
                (*nelims)++;
             }
          }
-         /* vertex of degree 4? */
-         else if( degree == 4 )
+         /* non-terminal of degree 4? */
+         else if( degree == 4 && !Is_term(g->term[i]) )
          {
+            /* SDs of adjacent vertices in canonical order */
+            SCIP_Real adjsds[6];
             SCIP_Bool success = TRUE;
             const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
 
-            if( Is_term(g->term[i]) )
+            // csum = ecost[0] + ecost[1]
+            adjsds[0] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[1], limit, &sd1pc);
+            adjsds[1] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[2], limit, &sd1pc);
+            adjsds[3] = sdGetSdPcMw(scip, g, csum, adjvert[1], adjvert[2], limit, &sd1pc);
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[1], adjsds[3] },
+               (int[3]){ edges[0], edges[1], edges[2]},
+               ecost[0] + ecost[1] + ecost[2], TRUE) )
             {
-               assert(pc);
                continue;
             }
 
-            assert(edgecount == 4);
+            adjsds[2] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[3], limit, &sd1pc);
+            adjsds[4] = sdGetSdPcMw(scip, g, csum, adjvert[1], adjvert[3], limit, &sd1pc);
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[2], adjsds[4] },
+               (int[3]){ edges[0], edges[1], edges[3]},
+               ecost[0] + ecost[1] + ecost[3], TRUE) )
+            {
+               continue;
+            }
+
+            adjsds[5] = sdGetSdPcMw(scip, g, csum, adjvert[2], adjvert[3], limit, &sd1pc);
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[1], adjsds[2], adjsds[5] },
+                (int[3]){ edges[0], edges[2], edges[3]},
+               ecost[0] + ecost[2] + ecost[3], TRUE) )
+            {
+               continue;
+            }
+
+            if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[3], adjsds[4], adjsds[5] },
+                (int[3]){ edges[1], edges[2], edges[3]},
+               ecost[1] + ecost[2] + ecost[3], TRUE) )
+            {
+               continue;
+            }
 
             for( int k = 0; k < 4; k++ )
-            {
                auxg->mark[k] = TRUE;
+
+            for( int k = 0; k < 3; k++ )
+            {
                for( int e = auxg->outbeg[k]; e != EAT_LAST; e = auxg->oeat[e] )
                {
                   const int k2 = auxg->head[e];
                   if( k2 > k )
                   {
-                     SCIP_Real s1 = -1.0;
-                     if( pc )
-                        SCIP_CALL( reduce_getSdPcMw(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                                    pathmaxnodetail, pathmaxnodehead, adjvert[k], adjvert[k2], limit));
+                     if( k == 0  )
+                        auxg->cost[e] = adjsds[k2 - 1];
                      else
-                        SCIP_CALL( reduce_getSdByPaths(scip, g, pathtail, pathhead, &(s1), csum, heap, statetail, statehead, memlbltail, memlblhead,
-                              adjvert[k], adjvert[k2], limit, pc, FALSE));
-                     assert(s1 >= 0);
-                     auxg->cost[e] = s1;
-                     auxg->cost[flipedge(e)] = s1;
+                        auxg->cost[e] = adjsds[k + k2];
+
+                     assert(EQ(auxg->cost[e], sdGetSdPcMw(scip, g, csum, adjvert[k], adjvert[k2], limit, &sd1pc)));
+                     auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
                }
             }
@@ -5210,13 +5266,14 @@ SCIP_RETCODE reduce_bd34(
                SCIP_CALL(graph_knot_delPseudo(scip, g, g->cost, cutoffs, NULL, i, NULL, &success));
 
                if( success )
+               {
                   (*nelims)++;
+               }
             }
          }
       }
    }
 
-   /* free memory */
 
    SCIPfreeBufferArrayNull(scip, &pathmaxnodehead);
    SCIPfreeBufferArrayNull(scip, &pathmaxnodetail);
