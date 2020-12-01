@@ -492,7 +492,7 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
 }
 
 /* TODO proper checks */
-Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .description = "test creating linked lists of rows")
+Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .description = "test creating relation tables")
 {
    SCIP_CONS* conss[5];
    SCIP_VAR* vars[3];
@@ -500,16 +500,13 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
    SCIP_Bool cutoff;
    int nrows;
    int i;
-   int nvars_in_2rels;
    int r;
    SCIP_ROW** prob_rows;
    SCIP_ROW* row1;
    int* row_list;
    SCIP_HASHTABLE* hashtable2;
    SCIP_HASHTABLE* hashtable3;
-   SCIP_VAR** vars_in_2rels;
-   SCIP_VAR*** related_vars;
-   int* nrelated_vars;
+   VARADJACENCE* vars_in_2rels;
    HASHDATA* foundhashdata;
 
    /* create linear relations */
@@ -558,15 +555,14 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
       hashdataKeyEqConss, hashdataKeyValConss, (void*) scip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
 
-   /* allocate the array of variables that appear in 2-var relations */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars_in_2rels, SCIPgetNVars(scip)) );
-   /* allocate the array of arrays of variables that appear in 2-var relations with each variable */
-   SCIP_CALL( SCIPallocBufferArray(scip, &related_vars, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nrelated_vars, SCIPgetNVars(scip)) );
+   /* allocate the data structure for variables that appear in 2-var relations */
+   SCIP_CALL( SCIPallocCleanBuffer(scip, &vars_in_2rels) );
 
-   /* create separator data - this will also detect the products */
-   SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
-      nrelated_vars, &nvars_in_2rels, row_list) );
+   /* fill in the relevant data structures */
+   SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
+
+   cr_expect_eq(SCIPhashtableGetNElements(hashtable3), 1, "expected 1 var triple, got %d",
+      SCIPhashtableGetNElements(hashtable3));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
    {
@@ -587,9 +583,11 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
          r = row_list[r];
       }
 
-      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
       SCIPfreeBuffer(scip, &foundhashdata);
    }
+
+   cr_expect_eq(SCIPhashtableGetNElements(hashtable2), 1, "expected 1 var pair, got %d",
+         SCIPhashtableGetNElements(hashtable2));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
    {
@@ -610,18 +608,11 @@ Test(rlt_product_detection, rowlist, .init = setup, .fini = teardown, .descripti
          r = row_list[r];
       }
 
-      SCIPfreeBufferArray(scip, &(foundhashdata->vars));
       SCIPfreeBuffer(scip, &foundhashdata);
    }
 
-   for( i = 0; i < nvars_in_2rels; ++i )
-   {
-      SCIPfreeBufferArray(scip, &related_vars[i]);
-   }
-
-   SCIPfreeBufferArray(scip, &nrelated_vars);
-   SCIPfreeBufferArray(scip, &related_vars);
-   SCIPfreeBufferArray(scip, &vars_in_2rels);
+   clearVarAdjacence(scip, vars_in_2rels);
+   SCIPfreeCleanBuffer(scip, &vars_in_2rels);
 
    SCIPfreeBufferArray(scip, &row_list);
 

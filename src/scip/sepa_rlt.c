@@ -58,7 +58,7 @@
 #define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 #define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
-#define DEFAULT_DETECTHIDDEN      FALSE /**< default value for parameter detecthidden */
+#define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
 #define DEFAULT_HIDDENRLT         FALSE /**< default value for parameter hiddenrlt */
 #define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
 
@@ -158,6 +158,18 @@ struct RLT_SimpleRow
 };
 typedef struct RLT_SimpleRow RLT_SIMPLEROW;
 
+/* data structure used to store connections between pairs of variables */
+struct varAdjacence
+{
+   SCIP_VAR**            vars;               /**< array of variables */
+   SCIP_VAR***           adjacentvars;       /**< for each variable in vars, an array of adjacent variables */
+   int                   nvars;              /**< number of elements in the vars array */
+   int                   svars;              /**< size of the vars array */
+   int*                  nadjacentvars;      /**< for each variable in vars, number of adjacent variables */
+   int*                  sadjacentvars;      /**< for each variable in vars, size of the array of adjacent variables */
+};
+typedef struct varAdjacence VARADJACENCE;
+
 /*
  * Local methods
  */
@@ -226,6 +238,163 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
    return SCIPhashFour(hashdata->nvars, minidx, mididx, maxidx);
 }
 
+/* store a pair of adjacent variables */
+static
+SCIP_RETCODE addAdjacentVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARADJACENCE*         varadjacence,       /**< data structure to store adjacent pairs */
+   SCIP_VAR**            vars                /**< variable pair to be stored */
+   )
+{
+   int v1;
+   int v2;
+   SCIP_Bool found;
+   int pos1;
+   int pos2;
+   int i;
+   int newsize;
+
+   assert(varadjacence != NULL);
+
+   /* repeat for each variable of the new pair */
+   for( v1 = 0; v1 < 2; ++v1 )
+   {
+      v2 = 1 - v1;
+
+      /* look for the first variable */
+      if( varadjacence->vars == NULL )
+      {
+         found = FALSE;
+         pos1 = 0;
+      }
+      else
+      {
+         found = SCIPsortedvecFindPtr((void**)varadjacence->vars, SCIPvarComp, vars[v1], varadjacence->nvars, &pos1);
+      }
+
+      /* if the first variable has not been added to varadjacence.vars yet, add it here */
+      if( !found )
+      {
+         /* ensure size of varadjacence.vars */
+         if( varadjacence->nvars + 1 > varadjacence->svars )
+         {
+            newsize = SCIPcalcMemGrowSize(scip, varadjacence->nvars + 1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &varadjacence->vars, newsize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &varadjacence->adjacentvars, newsize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &varadjacence->nadjacentvars, newsize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &varadjacence->sadjacentvars, newsize) );
+            varadjacence->svars = newsize;
+         }
+
+         /* insert the first variable at the correct position */
+         for( i = varadjacence->nvars; i > pos1; --i )
+         {
+            varadjacence->vars[i] = varadjacence->vars[i-1];
+            varadjacence->adjacentvars[i] = varadjacence->adjacentvars[i-1];
+            varadjacence->nadjacentvars[i] = varadjacence->nadjacentvars[i-1];
+            varadjacence->sadjacentvars[i] = varadjacence->sadjacentvars[i-1];
+         }
+         varadjacence->vars[pos1] = vars[v1];
+
+         varadjacence->adjacentvars[pos1] = NULL;
+         varadjacence->nadjacentvars[pos1] = 0;
+         varadjacence->sadjacentvars[pos1] = 0;
+
+         ++varadjacence->nvars;
+      }
+
+      assert(varadjacence->vars[pos1] == vars[v1]);
+
+      /* look for second variable in adjacentvars */
+      if( varadjacence->adjacentvars == NULL || varadjacence->adjacentvars[pos1] == NULL )
+      {
+         found = FALSE;
+         pos2 = 0;
+      }
+      else
+      {
+         found = SCIPsortedvecFindPtr((void**)varadjacence->adjacentvars[pos1], SCIPvarComp, vars[v2],
+               varadjacence->nadjacentvars[pos1], &pos2);
+      }
+
+      /* add second var to varadjacence->adjacentvars[pos1], if not already added */
+      if( !found )
+      {
+         /* ensure size of varadjacence->adjacentvars[pos1] */
+         if( varadjacence->sadjacentvars[pos1] < varadjacence->nadjacentvars[pos1] + 1 )
+         {
+            newsize = SCIPcalcMemGrowSize(scip, varadjacence->nadjacentvars[pos1] + 1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &varadjacence->adjacentvars[pos1], newsize) );
+            varadjacence->sadjacentvars[pos1] = newsize;
+         }
+
+         /* insert second var at the correct position */
+         for( i = varadjacence->nadjacentvars[pos1]; i > pos2; --i )
+            varadjacence->adjacentvars[pos1][i] = varadjacence->adjacentvars[pos1][i-1];
+         varadjacence->adjacentvars[pos1][pos2] = vars[v2];
+         ++varadjacence->nadjacentvars[pos1];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns the array of adjacent variables for a given variable */
+static
+SCIP_VAR** getAdjacentVars(
+   VARADJACENCE*         varadjacence,       /**< data structure to store adjacent pairs */
+   SCIP_VAR*             var,                /**< variable */
+   int*                  nadjacentvars       /**< buffer to store the number of variables in the returned array */
+   )
+{
+   SCIP_VAR** adjacentvars;
+   SCIP_Bool found;
+   int pos;
+
+   assert(varadjacence != NULL);
+
+   if( varadjacence->vars == NULL )
+      return NULL;
+
+   *nadjacentvars = 0;
+   found = SCIPsortedvecFindPtr((void**)varadjacence->vars, SCIPvarComp, var, varadjacence->nvars, &pos);
+   if( !found )
+      return NULL;
+
+   *nadjacentvars = varadjacence->nadjacentvars[pos];
+
+   return varadjacence->adjacentvars[pos];
+}
+
+static
+void clearVarAdjacence(
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARADJACENCE*         varadjacence        /**< data structure to store adjacent pairs */
+   )
+{
+   int i;
+
+   for( i = 0; i < varadjacence->nvars; ++i )
+   {
+      SCIPfreeBufferArray(scip, &varadjacence->adjacentvars[i]);
+   }
+
+   if( varadjacence->nvars != 0 )
+   {
+      SCIPfreeBufferArray(scip, &varadjacence->nadjacentvars);
+      SCIPfreeBufferArray(scip, &varadjacence->sadjacentvars);
+      SCIPfreeBufferArray(scip, &varadjacence->adjacentvars);
+      SCIPfreeBufferArray(scip, &varadjacence->vars);
+   }
+
+   assert(varadjacence->nadjacentvars == NULL);
+   assert(varadjacence->sadjacentvars == NULL);
+   assert(varadjacence->adjacentvars == NULL);
+   assert(varadjacence->vars == NULL);
+
+   varadjacence->nvars = 0;
+   varadjacence->svars = 0;
+}
 
 /* helper method to free the separation data */
 static
@@ -1066,10 +1235,7 @@ SCIP_RETCODE fillRelationTables(
    int                   nrows,              /**< number of rows */
    SCIP_HASHTABLE*       hashtable2,         /**< hashtable to store 2-variable relations */
    SCIP_HASHTABLE*       hashtable3,         /**< hashtable to store implied relations */
-   SCIP_VAR**            vars_in_2rels,      /**< array of variables that appear in 2-variable relations */
-   SCIP_VAR***           related_vars,       /**< for each var in vars_in_2rels, array of related vars */
-   int*                  nrelated_vars,      /**< for each var in vars_in_2rels, number of related vars */
-   int*                  nvars_in_2rels,     /**< number of variables that appear in 2-variable relations */
+   VARADJACENCE*         vars_in_2rels,      /**< connections between variables that appear in 2-variable relations */
    int*                  row_list            /**< linked lists of row positions for each 2 or 3 variable set */
    )
 {
@@ -1080,8 +1246,8 @@ SCIP_RETCODE fillRelationTables(
    int varpos1;
    int varpos2;
    SCIP_COL** cols;
-   HASHDATA hashdata;
-   HASHDATA* foundhashdata;
+   HASHDATA searchhashdata;
+   HASHDATA* elementhashdata;
    SCIP_Bool found;
 
    assert(prob_rows != NULL);
@@ -1089,15 +1255,9 @@ SCIP_RETCODE fillRelationTables(
    assert(hashtable2 != NULL);
    assert(hashtable3 != NULL);
    assert(vars_in_2rels != NULL);
-   assert(related_vars != NULL);
-   assert(nrelated_vars != NULL);
-   assert(nvars_in_2rels != NULL);
    assert(row_list != NULL);
 
-   *nvars_in_2rels = 0;
-
-   /* look for implied relations and unconditional relations with 2 variables */
-   for( r = 0; r < nrows; ++r ) /* go through rows */
+   for( r = 0; r < nrows; ++r )
    {
       assert(prob_rows[r] != NULL);
 
@@ -1126,78 +1286,39 @@ SCIP_RETCODE fillRelationTables(
             continue;
          }
 
-         /* fill in hashdata so that to search for the two variables in hashtable2 */
-         hashdata.nvars = 2;
-         hashdata.firstrow = -1;
-         hashdata.vars[0] = SCIPcolGetVar(cols[0]);
-         hashdata.vars[1] = SCIPcolGetVar(cols[1]);
+         /* fill in searchhashdata so that to search for the two variables in hashtable2 */
+         searchhashdata.nvars = 2;
+         searchhashdata.firstrow = -1;
+         searchhashdata.vars[0] = SCIPcolGetVar(cols[0]);
+         searchhashdata.vars[1] = SCIPcolGetVar(cols[1]);
 
          /* get the element corresponding to the two variables */
-         foundhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashtable2, &hashdata);
+         elementhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashtable2, &searchhashdata);
 
-         if( foundhashdata != NULL )
+         if( elementhashdata != NULL )
          {
             /* if element exists, update it by adding the row */
-            row_list[r] = foundhashdata->firstrow;
-            foundhashdata->firstrow = r;
-            ++foundhashdata->nrows;
+            row_list[r] = elementhashdata->firstrow;
+            elementhashdata->firstrow = r;
+            ++elementhashdata->nrows;
          }
          else
          {
             /* create an element for the combination of two variables */
-            SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata) );
+            SCIP_CALL( SCIPallocBuffer(scip, &elementhashdata) );
 
-            foundhashdata->nvars = 2;
-            foundhashdata->nrows = 1;
-            foundhashdata->vars[0] = hashdata.vars[0];
-            foundhashdata->vars[1] = hashdata.vars[1];
-            foundhashdata->firstrow = r;
+            elementhashdata->nvars = 2;
+            elementhashdata->nrows = 1;
+            elementhashdata->vars[0] = searchhashdata.vars[0];
+            elementhashdata->vars[1] = searchhashdata.vars[1];
+            elementhashdata->firstrow = r;
 
-            SCIP_CALL( SCIPhashtableInsert(hashtable2, (void*)foundhashdata) );
+            SCIP_CALL( SCIPhashtableInsert(hashtable2, (void*)elementhashdata) );
 
             /* hashdata.vars are two variables participating together in a two variable array, therefore update the
-             * variable arrays: make sure that each variable is in vars_in_2rels and that the other variable is in the
-             * corresponding array in related_vars
+             * variable adjacence data
              */
-            for( v1 = 0; v1 < 2; ++v1 )
-            {
-               v2 = 1 - v1;
-               found = SCIPsortedvecFindPtr((void**)vars_in_2rels, SCIPvarComp, hashdata.vars[v1], *nvars_in_2rels, &varpos1);
-
-               if( found )
-               {
-                  assert(vars_in_2rels[varpos1] == hashdata.vars[v1]);
-
-                  /* add second var to corresponding array in related_vars */
-                  found = SCIPsortedvecFindPtr((void**)related_vars[varpos1], SCIPvarComp, hashdata.vars[v2], nrelated_vars[varpos1], &varpos2);
-                  if( !found )
-                  {
-                     /* insert var at the correct position */
-                     for( i = nrelated_vars[varpos1]; i > varpos2; --i )
-                        related_vars[varpos1][i] = related_vars[varpos1][i-1];
-                     related_vars[varpos1][varpos2] = hashdata.vars[v2];
-                     nrelated_vars[varpos1]++;
-                  }
-               }
-               else
-               {  /* the first variable has not been added to vars_in_2rels yet, add it here */
-
-                  /* insert variable at the correct position */
-                  for( i = *nvars_in_2rels; i > varpos1; --i )
-                  {
-                     vars_in_2rels[i] = vars_in_2rels[i-1];
-                     related_vars[i] = related_vars[i-1];
-                     nrelated_vars[i] = nrelated_vars[i-1];
-                  }
-                  vars_in_2rels[varpos1] = hashdata.vars[v1];
-
-                  /* FIXME doesn't allocating with length SCIPgetNVars(scip) may use a lot of memory, potentially O(NVars^2)? */
-                  SCIP_CALL( SCIPallocBufferArray(scip, &related_vars[varpos1], SCIPgetNVars(scip)) );
-                  related_vars[varpos1][0] = hashdata.vars[v2];
-                  nrelated_vars[varpos1] = 1;
-                  ++(*nvars_in_2rels);
-               }
-            }
+            SCIP_CALL( addAdjacentVars(scip, vars_in_2rels, searchhashdata.vars) );
          }
       }
 
@@ -1211,36 +1332,35 @@ SCIP_RETCODE fillRelationTables(
             continue;
 
          /* fill in hashdata so that to search for the three variables in hashtable3 */
-         hashdata.nvars = 3;
-         hashdata.firstrow = -1;
-         hashdata.vars[0] = SCIPcolGetVar(cols[0]);
-         hashdata.vars[1] = SCIPcolGetVar(cols[1]);
-         hashdata.vars[2] = SCIPcolGetVar(cols[2]);
+         searchhashdata.nvars = 3;
+         searchhashdata.firstrow = -1;
+         searchhashdata.vars[0] = SCIPcolGetVar(cols[0]);
+         searchhashdata.vars[1] = SCIPcolGetVar(cols[1]);
+         searchhashdata.vars[2] = SCIPcolGetVar(cols[2]);
 
          /* get the element corresponding to the three variables */
-         foundhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashtable3, &hashdata);
+         elementhashdata = (HASHDATA*)SCIPhashtableRetrieve(hashtable3, &searchhashdata);
 
-         if( foundhashdata != NULL )
+         if( elementhashdata != NULL )
          {
             /* if element exists, update it by adding the row */
-            row_list[r] = foundhashdata->firstrow;
-            foundhashdata->firstrow = r;
-            ++foundhashdata->nrows;
-            SCIPfreeBufferArray(scip, &(hashdata.vars));
+            row_list[r] = elementhashdata->firstrow;
+            elementhashdata->firstrow = r;
+            ++elementhashdata->nrows;
          }
          else
          {
             /* create an element for the combination of three variables */
-            SCIP_CALL( SCIPallocBuffer(scip, &foundhashdata) );
+            SCIP_CALL( SCIPallocBuffer(scip, &elementhashdata) );
 
-            foundhashdata->nvars = 3;
-            foundhashdata->nrows = 1;
-            foundhashdata->vars[0] = hashdata.vars[0];
-            foundhashdata->vars[1] = hashdata.vars[1];
-            foundhashdata->vars[2] = hashdata.vars[2];
-            foundhashdata->firstrow = r;
+            elementhashdata->nvars = 3;
+            elementhashdata->nrows = 1;
+            elementhashdata->vars[0] = searchhashdata.vars[0];
+            elementhashdata->vars[1] = searchhashdata.vars[1];
+            elementhashdata->vars[2] = searchhashdata.vars[2];
+            elementhashdata->firstrow = r;
 
-            SCIP_CALL( SCIPhashtableInsert(hashtable3, (void*)foundhashdata) );
+            SCIP_CALL( SCIPhashtableInsert(hashtable3, (void*)elementhashdata) );
          }
       }
    }
@@ -1274,11 +1394,9 @@ SCIP_RETCODE detectHiddenProducts(
    int ypos;
    int wpos;
    int f; /* value of the binary variable */
-   int nvars_in_2rels;
    int varpos;
-   SCIP_VAR** vars_in_2rels;
-   SCIP_VAR*** related_vars;
-   int* nrelated_vars;
+   SCIP_VAR** relatedvars;
+   int nrelatedvars;
    SCIP_Bool found;
    SCIP_Bool xfixing;
    SCIP_SIDETYPE sidetype1;
@@ -1286,6 +1404,7 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_Real side1;
    SCIP_Real side2;
    int* row_list;
+   VARADJACENCE* vars_in_2rels;
 
    /* get the (initial) rows */
    SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
@@ -1303,30 +1422,25 @@ SCIP_RETCODE detectHiddenProducts(
       hashdataKeyEqConss, hashdataKeyValConss, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
 
-   /* allocate the array of variables that appear in 2-var relations */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars_in_2rels, SCIPgetNVars(scip)) );
-   /* allocate the array of arrays of variables that appear in 2-var relations with each variable */
-   SCIP_CALL( SCIPallocBufferArray(scip, &related_vars, SCIPgetNVars(scip)) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nrelated_vars, SCIPgetNVars(scip)) );
+   /* allocate the adjacence data for variables that appear in 2-var relations */
+   SCIP_CALL( SCIPallocCleanBuffer(scip, &vars_in_2rels) );
 
    /* fill the data structures that will be used for product detection: hashtables and linked lists allowing to access
-    * two and three variable relations by the variables; and arrays for accessing variables participating in two
+    * two and three variable relations by the variables; and the structure for accessing variables participating in two
     * variable relations with each given variable */
-   SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, related_vars,
-      nrelated_vars, &nvars_in_2rels, row_list) );
+   SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "\nrelated vars:");
-   for( i = 0; i < nvars_in_2rels; ++i )
+   SCIPinfoMessage(scip, NULL, "\nadjacent vars (in two-var relations):");
+   for( i = 0; i < vars_in_2rels->nvars; ++i )
    {
       int j;
 
-      SCIPinfoMessage(scip, NULL, "\nfor var <%s>: ", SCIPvarGetName(vars_in_2rels[i]));
-      for( j = 0; j < nrelated_vars[i]; ++j )
-         SCIPinfoMessage(scip, NULL, "<%s>; ", SCIPvarGetName(related_vars[i][j]));
+      SCIPinfoMessage(scip, NULL, "\nfor var <%s>: ", SCIPvarGetName(vars_in_2rels->vars[i]));
+      for( j = 0; j < vars_in_2rels->nadjacentvars[i]; ++j )
+         SCIPinfoMessage(scip, NULL, "<%s>; ", SCIPvarGetName(vars_in_2rels->adjacentvars[i][j]));
    }
    SCIPinfoMessage(scip, NULL, "\n");
-   SCIPinfoMessage(scip, NULL, "\nImplied relations table:\n");
 #endif
 
    SCIP_CALL( SCIPcreateClock(scip, &sepadata->cliquetime) );
@@ -1596,13 +1710,13 @@ SCIP_RETCODE detectHiddenProducts(
             }
 
             /* use unconditional relations containing w */
-            found = SCIPsortedvecFindPtr((void**)vars_in_2rels, SCIPvarComp, vars_xwy[1], nvars_in_2rels, &varpos);
-            if( !found )
+            relatedvars = getAdjacentVars(vars_in_2rels, vars_xwy[1], &nrelatedvars);
+            if( relatedvars == NULL )
                continue;
 
-            for( r2 = 0; r2 < nrelated_vars[varpos]; ++r2 )
+            for( r2 = 0; r2 < nrelatedvars; ++r2 )
             {
-               vars_xwy[2] = related_vars[varpos][r2];
+               vars_xwy[2] = relatedvars[r2];
                SCIPdebugMsg(scip, "Implied bound + unconditional with w and y:\n");
                SCIP_CALL( detectProductsUnconditional(scip, sepadata, prob_rows, row_list, hashtable2, coefs1,
                   vars_xwy, side1, sidetype1, 1, 2, varmap, xfixing, TRUE) );
@@ -1614,10 +1728,8 @@ SCIP_RETCODE detectHiddenProducts(
    SCIPinfoMessage(scip, NULL, "\nTime spent on handling cliques: %10.2f", SCIPgetClockTime(scip, sepadata->cliquetime));
    SCIP_CALL( SCIPfreeClock(scip, &sepadata->cliquetime) );
 
-   for( i = 0; i < nvars_in_2rels; ++i )
-   {
-      SCIPfreeBufferArray(scip, &related_vars[i]);
-   }
+   clearVarAdjacence(scip, vars_in_2rels);
+   SCIPfreeCleanBuffer(scip, &vars_in_2rels);
 
    SCIPdebugMsg(scip, "Unconditional relations table:\n");
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
@@ -1631,10 +1743,6 @@ SCIP_RETCODE detectHiddenProducts(
 
       SCIPfreeBuffer(scip, &foundhashdata);
    }
-
-   SCIPfreeBufferArray(scip, &nrelated_vars);
-   SCIPfreeBufferArray(scip, &related_vars);
-   SCIPfreeBufferArray(scip, &vars_in_2rels);
 
    SCIPfreeBufferArray(scip, &row_list);
 
