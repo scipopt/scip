@@ -1041,6 +1041,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    propdata.componentblocked = &componentblocked;
    propdata.computedsymmetry = TRUE;
    propdata.permvars = permvars;
+   propdata.preferlessrows = TRUE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
 
