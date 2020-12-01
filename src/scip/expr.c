@@ -2539,11 +2539,19 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
    if( SCIPexprIsValue(set, rootexpr) )
    {
       rootexpr->dot = 0.0;
+      rootexpr->bardot = 0.0;
       return SCIP_OKAY;
    }
 
    /* evaluate expression and directional derivative */
    SCIP_CALL( evalAndDiff(set, stat, blkmem, rootexpr, sol, soltag, direction) );
+
+   if( rootexpr->evalvalue == SCIP_INVALID )
+   {
+      rootexpr->derivative = SCIP_INVALID;
+      rootexpr->bardot = SCIP_INVALID;
+      return SCIP_OKAY;
+   }
 
    rootexpr->derivative = 1.0;
 
