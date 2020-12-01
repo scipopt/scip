@@ -2509,7 +2509,7 @@ SCIP_Real sdGetSdPcMw(
    graph_path_PcMwSd(scip, g, pathtail, g->cost, distlimit, pathmaxnodetail, heap, statetail, NULL, memlbltail, &nlbltail, i, i2, edgelimit);
    graph_path_PcMwSd(scip, g, pathhead, g->cost, distlimit, pathmaxnodehead, heap, statehead, statetail, memlblhead, &nlblhead, i2, i, edgelimit);
 
-   sd = FARAWAY;
+   sd = distlimit;
 
    /* get restore state and path of tail and head */
    for( int k = 0; k < nlbltail; k++ )
@@ -5152,9 +5152,9 @@ SCIP_RETCODE reduce_bd34(
             assert(edgecount == 3);
             assert(iprize <= ecost[0] && iprize <= ecost[1] && iprize <= ecost[2]);
 
-            sd[0] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[1], limit, &sd1pc);
-            sd[1] = sdGetSdPcMw(scip, g, csum, adjvert[1], adjvert[2], limit, &sd1pc);
-            sd[2] = sdGetSdPcMw(scip, g, csum, adjvert[2], adjvert[0], limit, &sd1pc);
+            sd[0] = sdGetSdPcMw(scip, g, ecost[0] + ecost[1], adjvert[0], adjvert[1], limit, &sd1pc);
+            sd[1] = sdGetSdPcMw(scip, g, ecost[1] + ecost[2], adjvert[1], adjvert[2], limit, &sd1pc);
+            sd[2] = sdGetSdPcMw(scip, g, ecost[2] + ecost[0], adjvert[2], adjvert[0], limit, &sd1pc);
 
             if( isPseudoDeletableDeg3(scip, g, sd, edges, csum, !Is_term(g->term[i])) )
             {
@@ -5186,12 +5186,10 @@ SCIP_RETCODE reduce_bd34(
             /* SDs of adjacent vertices in canonical order */
             SCIP_Real adjsds[6];
             SCIP_Bool success = TRUE;
-            const SCIP_Real csum = ecost[0] + ecost[1] + ecost[2] + ecost[3];
 
-            // csum = ecost[0] + ecost[1]
-            adjsds[0] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[1], limit, &sd1pc);
-            adjsds[1] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[2], limit, &sd1pc);
-            adjsds[3] = sdGetSdPcMw(scip, g, csum, adjvert[1], adjvert[2], limit, &sd1pc);
+            adjsds[0] = sdGetSdPcMw(scip, g, ecost[0] + ecost[1], adjvert[0], adjvert[1], limit, &sd1pc);
+            adjsds[1] = sdGetSdPcMw(scip, g, ecost[0] + ecost[2], adjvert[0], adjvert[2], limit, &sd1pc);
+            adjsds[3] = sdGetSdPcMw(scip, g, ecost[1] + ecost[2], adjvert[1], adjvert[2], limit, &sd1pc);
 
             if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[1], adjsds[3] },
                (int[3]){ edges[0], edges[1], edges[2]},
@@ -5200,8 +5198,8 @@ SCIP_RETCODE reduce_bd34(
                continue;
             }
 
-            adjsds[2] = sdGetSdPcMw(scip, g, csum, adjvert[0], adjvert[3], limit, &sd1pc);
-            adjsds[4] = sdGetSdPcMw(scip, g, csum, adjvert[1], adjvert[3], limit, &sd1pc);
+            adjsds[2] = sdGetSdPcMw(scip, g, ecost[0] + ecost[3], adjvert[0], adjvert[3], limit, &sd1pc);
+            adjsds[4] = sdGetSdPcMw(scip, g, ecost[1] + ecost[3], adjvert[1], adjvert[3], limit, &sd1pc);
 
             if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[0], adjsds[2], adjsds[4] },
                (int[3]){ edges[0], edges[1], edges[3]},
@@ -5210,7 +5208,7 @@ SCIP_RETCODE reduce_bd34(
                continue;
             }
 
-            adjsds[5] = sdGetSdPcMw(scip, g, csum, adjvert[2], adjvert[3], limit, &sd1pc);
+            adjsds[5] = sdGetSdPcMw(scip, g, ecost[2] + ecost[3], adjvert[2], adjvert[3], limit, &sd1pc);
 
             if( !isPseudoDeletableDeg3(scip, g, (SCIP_Real[3]){ adjsds[1], adjsds[2], adjsds[5] },
                 (int[3]){ edges[0], edges[2], edges[3]},
@@ -5241,7 +5239,7 @@ SCIP_RETCODE reduce_bd34(
                      else
                         auxg->cost[e] = adjsds[k + k2];
 
-                     assert(EQ(auxg->cost[e], sdGetSdPcMw(scip, g, csum, adjvert[k], adjvert[k2], limit, &sd1pc)));
+                     assert(EQ(auxg->cost[e], sdGetSdPcMw(scip, g, ecost[k] + ecost[k2], adjvert[k], adjvert[k2], limit, &sd1pc)));
                      auxg->cost[flipedge(e)] = auxg->cost[e];
                   }
                }
