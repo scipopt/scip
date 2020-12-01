@@ -25,18 +25,18 @@
  * parallelism after selecting each cut.
  *
  * If a cut is given by \f$ a^T x \leq b \f$, then
- *  - the efficacy is defined as the distance between the LP solution and the hyperplane \f$ a^T x = b \f$.
- *  - the directed cutoff distance is defined as the distance between the LP solution and the hyperplane \f$ a^T x = b
- *  \f$ restricted to the line segment joining the LP solution to the best primal solution. Therefore, it is only
- *  defined when a primal solution is available.
+ *  - the efficacy is defined as the distance between the LP solution and the hyperplane \f$ a^T x = b \f$;
+ *  - the directed cutoff distance is defined as the distance between the LP solution and the hyperplane \f$ a^T x = b \f$
+ *    restricted to the line segment joining the LP solution to the currently best primal solution; therefore, it is only
+ *    defined when a primal solution is available;
  *  - the objective parallelism is how parallel the vector \f$ a \f$ is w.r.t. the objective function \f$ c \f$. That
- *  is, the objective parallelism is given by \f$ \frac{a^T c}{\|a\| \|c\|} \f$. Notice that the vectors are parallel
- *  when this formula returns 1.
+ *    is, the objective parallelism is given by \f$ \frac{a^T c}{\|a\| \|c\|} \f$. Notice that the vectors are parallel
+ *    when this formula returns 1;
  *  - the integer support of a cut is the ratio between the number of nonzero integer columns and the number of nonzero
- *  columns.
+ *    columns.
  *
  * These features of a cut can be recovered and/or computed with the functions @ref SCIPgetCutEfficacy(), @ref
- * SCIPgetCutLPSolCutoffDistance(), @ref SCIPgetRowObjParallelism(), and @ref SCIPgetRowNumIntCols() ÷ @ref
+ * SCIPgetCutLPSolCutoffDistance(), @ref SCIPgetRowObjParallelism(), and @ref SCIPgetRowNumIntCols(), @ref
  * SCIProwGetNNonz().
  *
  * The filtering step works as follows.
@@ -44,12 +44,12 @@
  * to 90% of the largest score is considered a good score.
  *
  * First, the forced cuts --- cuts that are going to enter the LP no matter what --- are used to filter the non-forced
- * cuts. This means that for each forced cut, fcut, the parallelism between fcut and
- * every non-forced cut, cut, is computed (the parallelism between two cuts \f$ a^T x \leq b \f$ and \f$ d^T x \leq e
- * \f$ is \f$ \frac{a^T d}{\|a\| \|d\|} \f$).
- * If the score of cut is good, then cut is dropped if its parallelism with fcut is larger or equal than the maximum
+ * cuts. This means that for each forced cut, @p fcut, the parallelism between @p fcut and
+ * every non-forced cut, @p cut, is computed (the parallelism between two cuts \f$ a^T x \leq b \f$ and \f$ d^T x \leq e\f$
+ * is \f$ \frac{a^T d}{\|a\| \|d\|} \f$).
+ * If the score of cut is good, then cut is dropped if its parallelism with @p fcut is larger or equal than the maximum
  * between \f$ \frac{1}{2} \f$ and 1 - minimum orthogonality.
- * If the score of cut is not good, then cut is dropped if its parallelism with fcut is larger or equal than 1 - minimum
+ * If the score of cut is not good, then cut is dropped if its parallelism with @p fcut is larger or equal than 1 - minimum
  * orthogonality.
  *
  * @note The minimum orthogonality is a parameter that can be set, as well as the weights for the score.
@@ -84,10 +84,11 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
  * @{
  */
 
-/** perform a cut selection algorithm for the given array of cuts;
- *  this is the selection method of the hybrid cut selector which does a weighted sum of the
+/** perform a cut selection algorithm for the given array of cuts
+ *
+ *  This is the selection method of the hybrid cut selector which uses a weighted sum of the
  *  efficacy, parallelism, directed cutoff distance, and the integral support.
- *  The input cuts array gets resorted s.t the selected cuts comes first and the remaining
+ *  The input cuts array gets resorted s.t the selected cuts come first and the remaining
  *  ones are the end.
  */
 SCIP_EXPORT
