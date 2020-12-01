@@ -56,10 +56,10 @@ SCIP_RETCODE SCIPcutselCreate(
    SCIP_CUTSELDATA*     cutseldata           /**< cut selector data */
    );
 
-/** enables or disables all clocks of \p cutsel, depending on the value of the flag */
+/** enables or disables all clocks of @p cutsel, depending on the value of the flag */
 void SCIPcutselEnableOrDisableClocks(
-   SCIP_CUTSEL*          cutsel,             /**< the node selector for which all clocks should be enabled or disabled */
-   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   SCIP_CUTSEL*          cutsel,             /**< the cut selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the cut selector be enabled? */
    );
 
 /** calls cut selectors to select cuts */
@@ -75,20 +75,20 @@ SCIP_RETCODE SCIPcutselsSelect(
 
 /** copies the given cut selector to a new scip */
 SCIP_RETCODE SCIPcutselCopyInclude(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
    );
 
 /** sets copy method of cut selector */
 void SCIPcutselSetCopy(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_DECL_CUTSELCOPY  ((*cutselcopy))  /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELCOPY  ((*cutselcopy))     /**< copy method of cut selector or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
-/** initializes node selector */
+/** initializes cut selector */
 SCIP_RETCODE SCIPcutselInit(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** deinitializes cut selector */
@@ -99,8 +99,8 @@ SCIP_RETCODE SCIPcutselExit(
 
 /** frees memory of cut selector */
 SCIP_RETCODE SCIPcutselFree(
-        SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
-        SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_CUTSEL**         cutsel,             /**< pointer to cut selector data structure */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** informs cut selector that the branch and bound process is being started */
@@ -117,14 +117,14 @@ SCIP_RETCODE SCIPcutselExitsol(
 
 /** sets destructor method of cut selector */
 void SCIPcutselSetFree(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_DECL_CUTSELFREE  ((*cutselfree))    /**< destructor of cut selector */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELFREE  ((*cutselfree))     /**< destructor of cut selector */
    );
 
 /** sets initialization method of cut selector */
 void SCIPcutselSetInit(
-        SCIP_CUTSEL*          cutsel,             /**< cut selector */
-        SCIP_DECL_CUTSELINIT  ((*cutselinit))     /**< initialize cut selector */
+   SCIP_CUTSEL*          cutsel,             /**< cut selector */
+   SCIP_DECL_CUTSELINIT  ((*cutselinit))     /**< initialize cut selector */
    );
 
 /** sets deinitialization method of cut selector */

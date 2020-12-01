@@ -54,7 +54,7 @@ SCIP_CUTSELDATA* SCIPcutselGetData(
 /** gets description of cut selector */
 SCIP_EXPORT
 const char* SCIPcutselGetDesc(
-   SCIP_CUTSEL*          cutsel             /**< cut selector */
+   SCIP_CUTSEL*          cutsel              /**< cut selector */
    );
 
 /** gets priority of cut selector */

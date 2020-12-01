@@ -100,8 +100,8 @@ SCIP_RETCODE doCutselCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "cutselection/%s/priority", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of cut selection rule <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*cutsel)->priority, FALSE, priority, INT_MIN/4, INT_MAX/2,
-                  paramChgdCutselPriority, (SCIP_PARAMDATA*)(*cutsel)) ); /*lint !e740*/
+         &(*cutsel)->priority, FALSE, priority, INT_MIN/4, INT_MAX/2,
+         paramChgdCutselPriority, (SCIP_PARAMDATA*)(*cutsel)) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -132,8 +132,8 @@ SCIP_RETCODE SCIPcutselCreate(
    assert(cutselselect != NULL);
 
    SCIP_CALL_FINALLY( doCutselCreate(cutsel, set, messagehdlr, blkmem, name, desc, priority,
-      cutselcopy, cutselfree, cutselinit, cutselexit, cutselinitsol, cutselexitsol, cutselselect,
-      cutseldata), (void) SCIPcutselFree(cutsel, set) );
+         cutselcopy, cutselfree, cutselinit, cutselexit, cutselinitsol, cutselexitsol, cutselselect,
+         cutseldata), (void) SCIPcutselFree(cutsel, set) );
 
    return SCIP_OKAY;
 }
@@ -162,6 +162,8 @@ SCIP_RETCODE SCIPcutselsSelect(
    int i;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
 
+   assert(nselectedcuts != NULL);
+
    /* sort the cut selectors by priority */
    SCIPsetSortCutsels(set);
 
@@ -173,6 +175,7 @@ SCIP_RETCODE SCIPcutselsSelect(
    for( i = 0; i < set->ncutsels && result == SCIP_DIDNOTFIND; ++i )
    {
       SCIP_CUTSEL* cutsel;
+
       cutsel = set->cutsels[i];
 
       assert(cutsel != NULL);
@@ -180,7 +183,7 @@ SCIP_RETCODE SCIPcutselsSelect(
       assert(maxnselectedcuts > 0);
 
       SCIP_CALL( cutsel->cutselselect(set->scip, cutsel, &(cuts[nforcedcuts]), ncuts - nforcedcuts, cuts, nforcedcuts,
-               root, maxnselectedcuts, nselectedcuts, &result) );
+            root, maxnselectedcuts, nselectedcuts, &result) );
 
       assert(*nselectedcuts <= maxnselectedcuts);
       assert(result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND);
@@ -225,6 +228,7 @@ SCIP_RETCODE SCIPcutselFree(
    )
 {
    assert(cutsel != NULL);
+
    if( *cutsel == NULL )
       return SCIP_OKAY;
 
@@ -383,10 +387,10 @@ int SCIPcutselGetPriority(
    return cutsel->priority;
 }
 
-/** enables or disables all clocks of \p cutsel, depending on the value of the flag */
+/** enables or disables all clocks of @p cutsel, depending on the value of the flag */
 void SCIPcutselEnableOrDisableClocks(
-   SCIP_CUTSEL*          cutsel,             /**< the node selector for which all clocks should be enabled or disabled */
-   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   SCIP_CUTSEL*          cutsel,             /**< the cut selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the cut selector be enabled? */
    )
 {
    assert(cutsel != NULL);
@@ -394,6 +398,7 @@ void SCIPcutselEnableOrDisableClocks(
    SCIPclockEnableOrDisable(cutsel->setuptime, enable);
    SCIPclockEnableOrDisable(cutsel->cutseltime, enable);
 }
+
 
 /* new callback/method setter methods */
 
@@ -477,7 +482,7 @@ void SCIPcutselSetPriority(
    set->cutselssorted = FALSE;
 }
 
-/** is node selector initialized? */
+/** is cut selector initialized? */
 SCIP_Bool SCIPcutselIsInitialized(
    SCIP_CUTSEL*          cutsel               /**< cut selector */
    )
