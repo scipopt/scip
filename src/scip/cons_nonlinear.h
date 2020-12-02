@@ -936,16 +936,16 @@ SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
 /** creates the nonlinearity handler and includes it into the nonlinear constraint handler */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
-   SCIP*                  scip,              /**< SCIP data structure */
-   SCIP_CONSHDLR*         conshdlr,          /**< expression constraint handler */
-   SCIP_NLHDLR**          nlhdlr,            /**< buffer where to store nonlinear handler */
-   const char*            name,              /**< name of nonlinear handler (must not be NULL) */
-   const char*            desc,              /**< description of nonlinear handler (can be NULL) */
-   int                    detectpriority,    /**< detection priority of nonlinear handler */
-   int                    enfopriority,      /**< enforcement priority of nonlinear handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_NLHDLR**         nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*           name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*           desc,               /**< description of nonlinear handler (can be NULL) */
+   int                   detectpriority,     /**< detection priority of nonlinear handler */
+   int                   enfopriority,       /**< enforcement priority of nonlinear handler */
    SCIP_DECL_NLHDLRDETECT((*detect)),        /**< structure detection callback of nonlinear handler */
    SCIP_DECL_NLHDLREVALAUX((*evalaux)),      /**< auxiliary evaluation callback of nonlinear handler */
-   SCIP_NLHDLRDATA*       data               /**< data of nonlinear handler (can be NULL) */
+   SCIP_NLHDLRDATA*      nlhdlrdata          /**< data of nonlinear handler (can be NULL) */
    );
 
 /** returns a nonlinear handler of a given name (or NULL if not found) */

@@ -8762,3 +8762,118 @@ SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    /* use difftag to decide whether the variable belongs to the expression */
    return (SCIPexprGetDiffTag(expr) != SCIPexprGetDiffTag(varexpr)) ? 0.0 : SCIPexprGetBardot(varexpr);
 }
+
+
+/* Nonlinear Handler Methods */
+
+/** creates the nonlinearity handler and includes it into the nonlinear constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_NLHDLR**         nlhdlr,             /**< buffer where to store nonlinear handler */
+   const char*           name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*           desc,               /**< description of nonlinear handler (can be NULL) */
+   int                   detectpriority,     /**< detection priority of nonlinear handler */
+   int                   enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_NLHDLRDETECT((*detect)),        /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_NLHDLREVALAUX((*evalaux)),      /**< auxiliary evaluation callback of nonlinear handler */
+   SCIP_NLHDLRDATA*      nlhdlrdata                /**< data of nonlinear handler (can be NULL) */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   char paramname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nlhdlr != NULL);
+   assert(name != NULL);
+   assert(detect != NULL);
+   assert(evalaux != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPallocClearMemory(scip, nlhdlr) );
+
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->name, name, strlen(name)+1) );
+   if( desc != NULL )
+   {
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
+   }
+
+   (*nlhdlr)->detectpriority = detectpriority;
+   (*nlhdlr)->enfopriority = enfopriority;
+   (*nlhdlr)->data = nlhdlrdata;
+   (*nlhdlr)->detect = detect;
+   (*nlhdlr)->evalaux = evalaux;
+
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->enfotime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/" CONSHDLR_NAME "/nlhdlr/%s/enabled", name);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
+      &(*nlhdlr)->enabled, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->nlhdlrs, &conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1) );
+
+   conshdlrdata->nlhdlrs[conshdlrdata->nnlhdlrs] = *nlhdlr;
+   ++conshdlrdata->nnlhdlrs;
+
+   /* sort nonlinear handlers by detection priority, in decreasing order
+    * will happen in INIT, so only do when called late
+    */
+   if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
+      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
+
+   return SCIP_OKAY;
+}
+
+/** returns a nonlinear handler of a given name (or NULL if not found) */
+SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   const char*           name                /**< name of nonlinear handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int h;
+
+   assert(conshdlr != NULL);
+   assert(name != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+      if( strcmp(conshdlrdata->nlhdlrs[h]->name, name) == 0 )
+         return conshdlrdata->nlhdlrs[h];
+
+   return NULL;
+}
+
+/** gives nonlinear handler expression data
+ *
+ * @return NULL if expr has not been detected by nlhdlr or nlhdlr did not store data
+ */
+SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_EXPR*            expr                /**< expression */
+)
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   int e;
+
+   assert(nlhdlr != NULL);
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   for( e = 0; e < ownerdata->nenfos; ++e )
+      if( ownerdata->enfos[e]->nlhdlr == nlhdlr )
+         return ownerdata->enfos[e]->nlhdlrexprdata;
+
+   return NULL;
+}
