@@ -5019,6 +5019,8 @@ SCIP_RETCODE reduce_bd34WithSd(
       }
    }
 
+   assert(graph_valid(scip, g));
+
    graph_path_exit(scip, auxg);
    graph_free(scip, &auxg, TRUE);
 
