@@ -166,6 +166,50 @@ void graph_knot_printInfo(
 }
 
 
+/** graph with multi-edges? */
+SCIP_Bool graph_hasMultiEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g                   /**< graph data structure */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   int* count;
+   SCIP_Bool hasMultiEdges = FALSE;
+
+   assert(scip);
+
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &count, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      count[k] = 0;
+
+   for( int k = 0; k < nnodes && !hasMultiEdges; k++ )
+   {
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+
+         if( count[head] > 0 )
+         {
+            SCIPdebugMessage("problem for edge %d->%d \n", k, head);
+            hasMultiEdges = TRUE;
+         }
+
+         count[head]++;
+      }
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         count[head]--;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &count);
+
+   return hasMultiEdges;
+}
+
 
 /** has the graph almost uniform edge weights? */
 SCIP_Bool graph_isAlmostUniform(

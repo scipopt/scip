@@ -1603,6 +1603,7 @@ SCIP_RETCODE graph_load(
 #endif
 
       assert(graph_valid(scip, g));
+      assert(!graph_hasMultiEdges(scip, g));
       return SCIP_OKAY;
    }
    else
