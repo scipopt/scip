@@ -13,15 +13,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_default.h
+/**@file   nlhdlr_default.h
  * @brief  default nonlinear handler that calls expression handler methods
  * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_NLHDLR_DEFAULT_H__
-#define __SCIP_CONS_EXPR_NLHDLR_DEFAULT_H__
+#ifndef __SCIP_NLHDLR_DEFAULT_H__
+#define __SCIP_NLHDLR_DEFAULT_H__
 
 #include "scip/scip.h"
 
@@ -29,15 +29,14 @@
 extern "C" {
 #endif
 
-/** includes default nonlinear handler to consexpr */
+/** includes default nonlinear handler in nonlinear constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprNlhdlrDefault(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrDefault(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_DEFAULT_H__ */
+#endif /* __SCIP_NLHDLR_DEFAULT_H__ */

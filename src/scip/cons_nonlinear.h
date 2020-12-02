@@ -379,17 +379,6 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
    SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    );
 
-/** returns whether we are ok to branch on auxiliary variables
- *
- * Currently returns whether depth of node in B&B tree is at least value of constraints/expr/branching/aux parameter.
- * TODO make private function
- */
-SCIP_EXPORT
-SCIP_Bool SCIPgetBranchAuxNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-);
-
 /** add the cut and maybe report branchscores */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprocessRowprepNonlinear(
@@ -792,7 +781,6 @@ SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             auxvalue,           /**< the value of f(w) */
    SCIP_SOL*             sol,                /**< solution that has been evaluated */
@@ -858,7 +846,6 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
 SCIP_EXPORT
 void SCIPaddExprViolScoreNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR*            expr,               /**< expression where to add branching score */
    SCIP_Real             violscore           /**< violation score to add to expression */
    );
@@ -872,7 +859,6 @@ void SCIPaddExprViolScoreNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR**           exprs,              /**< expressions where to add branching score */
    int                   nexprs,             /**< number of expressions */
    SCIP_Real             violscore,          /**< violation score to add to expression */
@@ -883,7 +869,6 @@ SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
 /** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
 SCIP_EXPORT
 SCIP_Real SCIPgetExprViolScoreNonlinear(
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_EXPR*            expr                /**< expression */
    );
 

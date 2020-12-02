@@ -1563,6 +1563,32 @@ SCIP_RETCODE SCIPevalExpr(
    return SCIP_OKAY;
 }
 
+/** calls the eval callback of an expression
+ *
+ * Does not iterates over expressions, but requires values for children to be given.
+ * Value is not stored in expression, but returned in @par val.
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPevalExprShallow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            childrenvalues,     /**< values for children */
+   SCIP_Real*            val                 /**< buffer to store evaluated value */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+   assert(childrenvalues != NULL);
+   assert(val != NULL);
+
+   SCIP_CALL( SCIPexprhdlrEvalExpr(SCIPexprGetHdlr(expr), scip->set, scip->mem->buffer, expr, val, childrenvalues, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /** returns a previously unused solution tag for expression evaluation */
 SCIP_EXPORT
 SCIP_Longint SCIPgetExprNewSoltag(

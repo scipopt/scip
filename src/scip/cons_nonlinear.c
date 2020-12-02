@@ -1373,6 +1373,74 @@ SCIP_RETCODE createCons(
    return SCIP_OKAY;
 }
 
+/** returns absolute violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * If there are negative locks, then return the violation of z <= f(w) and sets violover to TRUE.
+ * If there are positive locks, then return the violation of z >= f(w) and sets violunder to TRUE.
+ * Of course, if there both negative and positive locks, then return the violation of z == f(w).
+ * If f could not be evaluated, then return SCIPinfinity and set both violover and violunder to TRUE.
+ *
+ * @note This does not reevaluate the violation, but assumes that f(w) is passed in with auxvalue.
+ */
+static
+SCIP_Real getExprAbsAuxViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_Real auxvarvalue;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+   assert(ownerdata->auxvar != NULL);
+
+   if( auxvalue == SCIP_INVALID )
+   {
+      if( violunder != NULL )
+         *violunder = TRUE;
+      if( violover != NULL )
+         *violover = TRUE;
+      return SCIPinfinity(scip);
+   }
+
+   auxvarvalue = SCIPgetSolVal(scip, sol, ownerdata->auxvar);
+
+   if( ownerdata->nlocksneg > 0 && auxvarvalue > auxvalue )
+   {
+      if( violunder != NULL )
+         *violunder = FALSE;
+      if( violover != NULL )
+         *violover = TRUE;
+      return auxvarvalue - auxvalue;
+   }
+
+   if( ownerdata->nlockspos > 0 && auxvalue > auxvarvalue )
+   {
+      if( violunder != NULL )
+         *violunder = TRUE;
+      if( violover != NULL )
+         *violover = FALSE;
+      return auxvalue - auxvarvalue;
+   }
+
+   if( violunder != NULL )
+      *violunder = FALSE;
+   if( violover != NULL )
+      *violover = FALSE;
+
+   return 0.0;
+}
+
 /** computes violation of a constraint */
 static
 SCIP_RETCODE computeViolation(
@@ -5103,6 +5171,227 @@ SCIP_RETCODE presolveImplint(
    return SCIP_OKAY;
 }
 
+/** returns whether we are ok to branch on auxiliary variables
+ *
+ * Currently returns whether depth of node in B&B tree is at least value of constraints/nonlinear/branching/aux parameter.
+ */
+static
+SCIP_Bool branchAuxNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   return conshdlrdata->branchauxmindepth <= SCIPgetDepth(scip);
+}
+
+/** gets weight of variable when splitting violation score onto several variables in an expression */
+static
+SCIP_Real getViolSplitWeight(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          conshdlr,         /**< expr constraint handler */
+   SCIP_VAR*               var,              /**< variable */
+   SCIP_SOL*               sol               /**< current solution */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   switch( conshdlrdata->branchviolsplit )
+   {
+      case 'e' :  /* evenly: everyone gets the same score */
+         return 1.0;
+
+      case 'm' :  /* midness of solution: 0.5 if in middle of domain, 0.05 if close to lower or upper bound */
+      {
+         SCIP_Real weight;
+         weight = MIN(SCIPgetSolVal(scip, sol, var) - SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var) - SCIPgetSolVal(scip, sol, var)) / (SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var)); /*lint !e666*/
+         return MAX(0.05, weight);
+      }
+
+      case 'd' :  /* domain width */
+         return SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+
+      case 'l' :  /* logarithmic domain width: log-scale if width is below 0.1 or above 10, otherwise actual width */
+      {
+         SCIP_Real width = SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var);
+         assert(width > 0.0);
+         if( width > 10.0 )
+            return 10.0*log10(width);
+         if( width < 0.1 )
+            return 0.1/(-log10(width));
+         return width;
+      }
+
+      default :
+         SCIPerrorMessage("invalid value for parameter constraints/expr/branching/violsplit");
+         SCIPABORT();
+         return SCIP_INVALID;
+   }
+}
+
+/** adds violation-branching score to a set of expressions, thereby distributing the score
+ *
+ * Each expression must either be a variable expression or have an aux-variable.
+ *
+ * If unbounded variables are present, each unbounded var gets an even score.
+ * If no unbounded variables, then parameter constraints/expr/branching/violsplit decides weight for each var.
+ */
+static
+void addExprsViolScore(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPR**             exprs,            /**< expressions where to add branching score */
+   int                     nexprs,           /**< number of expressions */
+   SCIP_Real               violscore,        /**< violation-branching score to add to expression */
+   SCIP_SOL*               sol,              /**< current solution */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* var;
+   SCIP_Real weight;
+   SCIP_Real weightsum = 0.0; /* sum of weights over all candidates with bounded domain */
+   int nunbounded = 0;  /* number of candidates with unbounded domain */
+   int i;
+
+   assert(exprs != NULL);
+   assert(nexprs > 0);
+   assert(success != NULL);
+
+   if( nexprs == 1 )
+   {
+      SCIPaddExprViolScoreNonlinear(scip, exprs[0], violscore);
+      *success = TRUE;
+      return;
+   }
+
+   conshdlr = SCIPexprGetOwnerData(exprs[0])->conshdlr;
+
+   for( i = 0; i < nexprs; ++i )
+   {
+      var = SCIPgetExprAuxVarNonlinear(exprs[i]);
+      assert(var != NULL);
+
+      if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+         ++nunbounded;
+      else if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+         weightsum += getViolSplitWeight(scip, conshdlr, var, sol);
+   }
+
+   *success = FALSE;
+   for( i = 0; i < nexprs; ++i )
+   {
+      var = SCIPgetExprAuxVarNonlinear(exprs[i]);
+      assert(var != NULL);
+
+      if( nunbounded > 0 )
+      {
+         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+         {
+            SCIPaddExprViolScoreNonlinear(scip, exprs[i], violscore / nunbounded);
+            *success = TRUE;
+         }
+      }
+      else if( !SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      {
+         assert(weightsum > 0.0);
+
+         weight = getViolSplitWeight(scip, conshdlr, var, sol);
+         SCIPaddExprViolScoreNonlinear(scip, exprs[i], violscore * weight / weightsum);
+         SCIPdebugMsg(scip, "add score %g (%g%% of %g) to <%s>[%g,%g]\n", violscore * weight / weightsum,
+            100*weight / weightsum, violscore,
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         *success = TRUE;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "skip score for fixed variable <%s>[%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      }
+   }
+}
+
+#if SCIP_DISABLED_CODE
+/** adds violation-branching score to children of expression for given auxiliary variables
+ *
+ * Iterates over the successors of expr to find expressions that are associated with one of the given auxiliary variables.
+ * Adds violatoin-branching scores to all found exprs by means of addConsExprExprsViolScore().
+ *
+ * @note This method may modify the given auxvars array by means of sorting.
+ */
+static
+SCIP_RETCODE addExprViolScoresAuxVars(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_EXPR*              expr,             /**< expression where to start searching */
+   SCIP_Real               violscore,        /**< violation score to add to expression */
+   SCIP_VAR**              auxvars,          /**< auxiliary variables for which to find expression */
+   int                     nauxvars,         /**< number of auxiliary variables */
+   SCIP_SOL*               sol,              /**< current solution (NULL for the LP solution) */
+   SCIP_Bool*              success           /**< buffer to store whether at least one violscore was added */
+   )
+{
+   SCIP_EXPRITER* it;
+   SCIP_VAR* auxvar;
+   SCIP_EXPR** exprs;
+   int nexprs;
+   int pos;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(auxvars != NULL);
+   assert(success != NULL);
+
+   /* sort variables to make lookup below faster */
+   SCIPsortPtr((void**)auxvars, SCIPvarComp, nauxvars);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_BFS, FALSE) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nauxvars) );
+   nexprs = 0;
+
+   for( expr = SCIPexpriterGetNext(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      auxvar = SCIPgetExprAuxVarNonlinear(expr);
+      if( auxvar == NULL )
+         continue;
+
+      /* if auxvar of expr is contained in auxvars array, add branching score to expr */
+      if( SCIPsortedvecFindPtr((void**)auxvars, SCIPvarComp, auxvar, nauxvars, &pos) )
+      {
+         assert(auxvars[pos] == auxvar);
+
+         SCIPdebugMsg(scip, "adding branchingscore for expr %p with auxvar <%s>\n", expr, SCIPvarGetName(auxvar));
+         exprs[nexprs++] = expr;
+
+         if( nexprs == nauxvars )
+            break;
+      }
+   }
+
+   SCIPfreeExpriter(&it);
+
+   if( nexprs > 0 )
+   {
+      SCIP_CALL( SCIPaddExprsViolScoreNonlinear(scip, exprs, nexprs, violscore, sol, success) );
+   }
+   else
+      *success = FALSE;
+
+   SCIPfreeBufferArray(scip, &exprs);
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** print statistics for constraint handlers */
 static
 void printConshdlrStatistics(
@@ -8304,6 +8593,43 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
    return SCIP_OKAY;
 }
 
+/** computes relative violation for auxvar relation in an expression w.r.t. auxiliary variables
+ *
+ * Assume the expression is f(w), where w are auxiliary variables that were introduced by some nlhdlr.
+ * Assume that f(w) is associated with auxiliary variable z.
+ *
+ * Taking the absolute violation from SCIPgetExprAbsAuxViolationNonlinear, this function returns
+ * the absolute violation divided by max(1,|f(w)|).
+ *
+ * If the given value of f(w) is SCIP_INVALID, then viol is set to SCIPinfinity and
+ * both violover and violunder are set to TRUE.
+ */
+SCIP_RETCODE SCIPgetExprRelAuxViolationNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             auxvalue,           /**< the value of f(w) */
+   SCIP_SOL*             sol,                /**< solution that has been evaluated */
+   SCIP_Real*            viol,               /**< buffer to store computed violation */
+   SCIP_Bool*            violunder,          /**< buffer to store whether z >= f(w) is violated, or NULL */
+   SCIP_Bool*            violover            /**< buffer to store whether z <= f(w) is violated, or NULL */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(viol != NULL);
+
+   /* get violation from internal method */
+   *viol = getExprAbsAuxViolation(scip, expr, auxvalue, sol, violunder, violover);
+
+   if( !SCIPisInfinity(scip, *viol) )
+   {
+      assert(auxvalue != SCIP_INVALID);
+      *viol /= MAX(1.0, REALABS(auxvalue));
+   }
+
+   return SCIP_OKAY;
+}
+
 /** returns bounds on the expression
  *
  * This gives an intersection of bounds from
@@ -8555,6 +8881,176 @@ SCIP_RETCODE SCIPmarkExprPropagateNonlinear(
    SCIPfreeExpriter(&it);
 
    return SCIP_OKAY;
+}
+
+/** adds violation-branching score to an expression
+ *
+ * Adds a score to the expression-specific violation-branching score, thereby marking it as branching candidate.
+ * The expression must either be a variable expression or have an aux-variable.
+ * In the latter case, branching on auxiliary variables must have been enabled.
+ * In case of doubt, use SCIPaddExprsViolScoreNonlinear(). Roughly, the difference between these functions is that the current
+ * function adds the violscore to the expression directly, while SCIPaddExprsViolScoreNonlinear() will split the
+ * violation score among all the given expressions according to constraints/expr/branching/violsplit. See
+ * SCIPaddExprsViolScoreNonlinear() for more details.
+ */
+void SCIPaddExprViolScoreNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression where to add branching score */
+   SCIP_Real             violscore           /**< violation score to add to expression */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(violscore >= 0.0);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if not allowing to branch on auxvars, then expr must be a var-expr */
+   assert(branchAuxNonlinear(scip, ownerdata->conshdlr) || SCIPisExprVar(scip, expr));
+   /* if allowing to branch on auxvars, then expr must be a var-expr or have an auxvar */
+   assert(!branchAuxNonlinear(scip, ownerdata->conshdlr) || SCIPisExprVar(scip, expr) || ownerdata->auxvar != NULL);
+
+   /* reset branching score if we are in a different enfo round */
+   if( ownerdata->violscoretag != conshdlrdata->enforound )
+   {
+      ownerdata->violscoresum = violscore;
+      ownerdata->violscoremax = violscore;
+      ownerdata->nviolscores = 1;
+      ownerdata->violscoretag = conshdlrdata->enforound;
+      return;
+   }
+
+   ownerdata->violscoresum += violscore;
+   if( violscore > ownerdata->violscoremax )
+      ownerdata->violscoremax = violscore;
+   ++ownerdata->nviolscores;
+}
+
+/** adds violation-branching score to a set of expressions, distributing the score among all the expressions
+ *
+ * Each expression must either be a variable expression or have an aux-variable.
+ * If branching on aux-variables is disabled, then the violation branching score will be distributed among all among the
+ * variables present in exprs
+ */
+SCIP_RETCODE SCIPaddExprsViolScoreNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR**           exprs,              /**< expressions where to add branching score */
+   int                   nexprs,             /**< number of expressions */
+   SCIP_Real             violscore,          /**< violation score to add to expression */
+   SCIP_SOL*             sol,                /**< current solution */
+   SCIP_Bool*            success             /**< buffer to store whether at least one violscore was added */
+   )
+{
+   /* distribute violation as branching score to original variables in children of expr that are marked in branchcand */
+   SCIP_EXPRITER* it;
+   SCIP_EXPR** varexprs;
+   SCIP_EXPR* e;
+   int nvars;
+   int varssize;
+   int i;
+
+   assert(exprs != NULL || nexprs == 0);
+   assert(success != NULL);
+
+   if( nexprs == 0 )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* if allowing to branch on auxiliary variables, then call internal addConsExprExprsViolScore immediately */
+   if( branchAuxNonlinear(scip, SCIPexprGetOwnerData(exprs[0])->conshdlr) )
+   {
+      addExprsViolScore(scip, exprs, nexprs, violscore, sol, success);
+      return SCIP_OKAY;
+   }
+
+   /* if not allowing to branch on aux vars, then create new array containing var expressions that exprs depend on */
+   nvars = 0;
+   varssize = 5;
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, varssize) );
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+
+   for( i = 0; i < nexprs; ++i )
+   {
+      for( e = SCIPexpriterRestartDFS(it, exprs[i]); !SCIPexpriterIsEnd(it); e = SCIPexpriterGetNext(it) )
+      {
+         assert(e != NULL);
+
+         if( SCIPisExprVar(scip, e) )
+         {
+            /* add variable expression to vars array */
+            if( varssize == nvars )
+            {
+               varssize = SCIPcalcMemGrowSize(scip, nvars + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &varexprs, varssize) );
+            }
+            assert(varssize > nvars);
+
+            varexprs[nvars++] = e;
+         }
+      }
+   }
+
+   SCIPfreeExpriter(&it);
+
+   addExprsViolScore(scip, varexprs, nvars, violscore, sol, success);
+
+   SCIPfreeBufferArray(scip, &varexprs);
+
+   return SCIP_OKAY;
+}
+
+/** gives violation-branching score stored in expression, or 0.0 if no valid score has been stored */
+SCIP_Real SCIPgetExprViolScoreNonlinear(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->enforound != ownerdata->violscoretag )
+      return 0.0;
+
+   if( ownerdata->nviolscores == 0 )
+      return 0.0;
+
+   switch( conshdlrdata->branchscoreagg )
+   {
+      case 'a' :
+         /* average */
+         return ownerdata->violscoresum / ownerdata->nviolscores;
+
+      case 'm' :
+         /* maximum */
+         return ownerdata->violscoremax;
+
+      case 's' :
+         /* sum */
+         return ownerdata->violscoresum;
+
+      default:
+         SCIPerrorMessage("Invalid value %c for branchscoreagg parameter\n", conshdlrdata->branchscoreagg);
+         SCIPABORT();
+         return SCIP_INVALID;
+   }
 }
 
 /** returns the partial derivative of an expression w.r.t. a variable (or SCIP_INVALID if there was an evaluation error) */

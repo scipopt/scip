@@ -387,6 +387,21 @@ SCIP_RETCODE SCIPevalExpr(
    SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
+/** calls the eval callback of an expression
+ *
+ * Does not iterates over expressions, but requires values for children to be given.
+ * Value is not stored in expression, but returned in @par val.
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPevalExprShallow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            childrenvalues,     /**< values for children */
+   SCIP_Real*            val                 /**< buffer to store evaluated value */
+   );
+
 /** returns a previously unused solution tag for expression evaluation */
 SCIP_EXPORT
 SCIP_Longint SCIPgetExprNewSoltag(
