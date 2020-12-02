@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   sudoku_utils.cpp
+/**@file   sudoku_utils.h
  * @brief  A set of utilities that are used to read the puzzle and display the puzzle
  * @author Naga V C Gudapati
 */
@@ -31,7 +31,7 @@ namespace sudoku
      * of a vector of ints. The actual number is stored as itself and the blanks are stored as -1.
      *
      */
-   std::vector<std::vector<int>> getSudokuPuzzle( std::string &filepath )
+   inline std::vector<std::vector<int>> getSudokuPuzzle( std::string &filepath )
    {
       /* setting up a 9x9 grid forstoring the sudoku puzzle. */
       std::vector<std::vector<int>> puzzle(9, std::vector<int>(9));
@@ -76,7 +76,7 @@ namespace sudoku
    }
 
    /** prints the sudoku puzzle to console */
-   void printSudoku( const std::vector<std::vector<int>> &sudokupuzzle )
+   inline void printSudoku( const std::vector<std::vector<int>> &sudokupuzzle )
    {
       std::cout << "+----------+-----------+-----------+" << "\n";
       for( int i = 0; i < 9; ++i )
