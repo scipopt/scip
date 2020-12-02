@@ -67,6 +67,7 @@ typedef struct reduction_parameters
 
 
 // todo: parameter so that after restart only standard SD is performed...
+// todo: need to adapt reductbound?? make smaller... */
 /** bi-decomposition reduction parameters */
 typedef struct bidecomposition_reduction_parameters
 {
