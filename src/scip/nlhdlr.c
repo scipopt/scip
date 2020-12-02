@@ -28,6 +28,10 @@
 #include "scip/nlhdlr.h"
 #include "scip/struct_nlhdlr.h"
 #include "scip/scip_timing.h"
+#include "scip/scip_mem.h"
+#include "scip/scip_param.h"
+#include "scip/scip_message.h"
+#include "scip/pub_misc.h"
 
 /* nlhdlr public API functions from pub_nlhdlr.h */
 
@@ -206,7 +210,171 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
    return nlhdlr->estimate != NULL;
 }
 
+/** compares two nonlinear handlers by detection priority
+ *
+ * if handlers have same detection priority, then compare by name
+ */
+SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrComp)
+{
+   SCIP_NLHDLR* h1;
+   SCIP_NLHDLR* h2;
+
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   h1 = (SCIP_NLHDLR*)elem1;
+   h2 = (SCIP_NLHDLR*)elem2;
+
+   if( h1->detectpriority != h2->detectpriority )
+      return (int)(h1->detectpriority - h2->detectpriority);
+
+   return strcmp(h1->name, h2->name);
+}
+
 /* nlhdlr private API functions from pub_nlhdlr.h */
+
+/** creates a nonlinear handler */
+SCIP_RETCODE SCIPnlhdlrCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR**         nlhdlr,             /**< buffer to store pointer to created nonlinear handler */
+   const char*           name,               /**< name of nonlinear handler (must not be NULL) */
+   const char*           desc,               /**< description of nonlinear handler (can be NULL) */
+   int                   detectpriority,     /**< detection priority of nonlinear handler */
+   int                   enfopriority,       /**< enforcement priority of nonlinear handler */
+   SCIP_DECL_NLHDLRDETECT((*detect)),        /**< structure detection callback of nonlinear handler */
+   SCIP_DECL_NLHDLREVALAUX((*evalaux)),      /**< auxiliary evaluation callback of nonlinear handler */
+   SCIP_NLHDLRDATA*      nlhdlrdata          /**< data of nonlinear handler (can be NULL) */
+   )
+{
+   char paramname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(nlhdlr != NULL);
+   assert(name != NULL);
+   assert(detect != NULL);
+   assert(evalaux != NULL);
+
+   SCIP_CALL( SCIPallocClearMemory(scip, nlhdlr) );
+
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->name, name, strlen(name)+1) );
+   if( desc != NULL )
+   {
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
+   }
+
+   (*nlhdlr)->detectpriority = detectpriority;
+   (*nlhdlr)->enfopriority = enfopriority;
+   (*nlhdlr)->data = nlhdlrdata;
+   (*nlhdlr)->detect = detect;
+   (*nlhdlr)->evalaux = evalaux;
+
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->enfotime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/nonlinear/nlhdlr/%s/enabled", name);
+   SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
+      &(*nlhdlr)->enabled, FALSE, TRUE, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPnlhdlrFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR**         nlhdlr              /**< pointer to nonlinear handler to be freed */
+   )
+{
+   assert(nlhdlr != NULL);
+   assert(*nlhdlr != NULL);
+
+   if( (*nlhdlr)->freehdlrdata != NULL )
+   {
+      SCIP_CALL( (*nlhdlr)->freehdlrdata(scip, *nlhdlr, &(*nlhdlr)->data) );
+   }
+
+   /* free clocks */
+   SCIP_CALL( SCIPfreeClock(scip, &(*nlhdlr)->detecttime) );
+   SCIP_CALL( SCIPfreeClock(scip, &(*nlhdlr)->enfotime) );
+   SCIP_CALL( SCIPfreeClock(scip, &(*nlhdlr)->proptime) );
+   SCIP_CALL( SCIPfreeClock(scip, &(*nlhdlr)->intevaltime) );
+
+   SCIPfreeMemory(scip, &(*nlhdlr)->name);
+   SCIPfreeMemoryNull(scip, &(*nlhdlr)->desc);
+
+   SCIPfreeMemory(scip, nlhdlr);
+
+   return SCIP_OKAY;
+}
+
+/** call the handler copy callback of a nonlinear handler */
+SCIP_DECL_NLHDLRCOPYHDLR(SCIPnlhdlrCopyhdlr)
+{
+   /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
+   if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
+   {
+      SCIP_CALL( sourcenlhdlr->copyhdlr(targetscip, targetconshdlr, sourceconshdlr, sourcenlhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** call the free expression specific data callback of a nonlinear handler */
+SCIP_DECL_NLHDLRFREEEXPRDATA(SCIPnlhdlrFreeexprdata)
+{
+   assert(nlhdlr != NULL);
+   assert(nlhdlrexprdata != NULL);
+   assert(*nlhdlrexprdata != NULL);
+
+   if( nlhdlr->freeexprdata != NULL )
+   {
+      SCIP_CALL( nlhdlr->freeexprdata(scip, nlhdlr, expr, nlhdlrexprdata) );
+      assert(*nlhdlrexprdata == NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** call the initialization callback of a nonlinear handler */
+SCIP_DECL_NLHDLRINIT(SCIPnlhdlrInit)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->nenfocalls = 0;
+   nlhdlr->nintevalcalls = 0;
+   nlhdlr->npropcalls = 0;
+   nlhdlr->nseparated = 0;
+   nlhdlr->ncutoffs = 0;
+   nlhdlr->ndomreds = 0;
+   nlhdlr->nbranchscores = 0;
+   nlhdlr->ndetections = 0;
+   nlhdlr->ndetectionslast = 0;
+
+   SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
+   SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
+   SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
+   SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
+
+   if( nlhdlr->init != NULL )
+   {
+      SCIP_CALL( nlhdlr->init(scip, nlhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** call the deinitialization callback of a nonlinear handler */
+SCIP_DECL_NLHDLREXIT(SCIPnlhdlrExit)
+{
+   assert(nlhdlr != NULL);
+
+   if( nlhdlr->exit != NULL )
+   {
+      SCIP_CALL( nlhdlr->exit(scip, nlhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /** call the detect callback of a nonlinear handler */
 SCIP_DECL_NLHDLRDETECT(SCIPnlhdlrDetect)
@@ -415,4 +583,49 @@ SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate)
    ++nlhdlr->nenfocalls;
 
    return SCIP_OKAY;
+}
+
+/** reset number of detections counter for last round */
+void SCIPnlhdlrResetNDetectionslast(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+   )
+{
+   assert(nlhdlr != NULL);
+   nlhdlr->ndetectionslast = 0;
+}
+
+/** print statistics for nonlinear handlers */
+void SCIPnlhdlrPrintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR**         nlhdlrs,            /**< nonlinear handlers */
+   int                   nnlhdlrs,           /**< number of nonlinear handlers */
+   FILE*                 file                /**< file handle, or NULL for standard out */
+   )
+{
+   int i;
+
+   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "Detects", "EnfoCalls", "#IntEval", "PropCalls", "DetectAll", "Separated", "Cutoffs", "DomReds", "BranchScor", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi");
+
+   for( i = 0; i < nnlhdlrs; ++i )
+   {
+      /* skip disabled nlhdlr */
+      if( !nlhdlrs[i]->enabled )
+         continue;
+
+      SCIPinfoMessage(scip, file, "  %-17s:", nlhdlrs[i]->name);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ndetectionslast);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nenfocalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nintevalcalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->npropcalls);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ndetections);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nseparated);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ncutoffs);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->ndomreds);
+      SCIPinfoMessage(scip, file, " %10lld", nlhdlrs[i]->nbranchscores);
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->detecttime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->enfotime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->proptime));
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlrs[i]->intevaltime));
+      SCIPinfoMessage(scip, file, "\n");
+   }
 }

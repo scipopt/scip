@@ -148,6 +148,12 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
 );
 
+/** compares two nonlinear handlers by detection priority
+ *
+ * if handlers have same detection priority, then compare by name
+ */
+SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrComp);
+
 /** @} */
 
 #ifdef __cplusplus

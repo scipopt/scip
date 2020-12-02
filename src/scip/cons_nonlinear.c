@@ -42,6 +42,7 @@
 #include <ctype.h>
 
 #include "scip/cons_nonlinear.h"
+#include "scip/nlhdlr.h"
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
@@ -53,7 +54,6 @@
 #include "scip/heur_trysol.h"
 #include "nlpi/nlpi_ipopt.h"  /* for SCIPsolveLinearProb */
 #include "scip/debug.h"
-#include "scip/struct_nlhdlr.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -414,14 +414,14 @@ SCIP_RETCODE freeEnfoData(
       if( mydata->enfos[e]->issepainit )
       {
          /* call the separation deinitialization callback of the nonlinear handler */
-//FIXME         SCIP_CALL( SCIPnlhdlrExitsepa(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
+         SCIP_CALL( SCIPnlhdlrExitsepa(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
          mydata->enfos[e]->issepainit = FALSE;
       }
 
       /* free nlhdlr exprdata, if there is any and there is a method to free this data */
-      if( mydata->enfos[e]->nlhdlrexprdata != NULL && nlhdlr->freeexprdata != NULL )
+      if( mydata->enfos[e]->nlhdlrexprdata != NULL )
       {
-         SCIP_CALL( nlhdlr->freeexprdata(scip, nlhdlr, expr, &mydata->enfos[e]->nlhdlrexprdata) );
+         SCIP_CALL( SCIPnlhdlrFreeexprdata(scip, nlhdlr, expr, &mydata->enfos[e]->nlhdlrexprdata) );
          assert(mydata->enfos[e]->nlhdlrexprdata == NULL);
       }
 
@@ -504,7 +504,7 @@ SCIP_DECL_EXPR_OWNERPRINT(exprownerPrint)
 
       for( i = 0; i < ownerdata->nenfos; ++i )
       {
-         SCIPinfoMessage(scip, file, "%s:", ownerdata->enfos[i]->nlhdlr->name);
+         SCIPinfoMessage(scip, file, "%s:", SCIPnlhdlrGetName(ownerdata->enfos[i]->nlhdlr));
          if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_ACTIVITY )
             SCIPinfoMessage(scip, file, "a");
          if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW )
@@ -2054,13 +2054,13 @@ SCIP_RETCODE forwardPropExpr(
                   assert(nlhdlr != NULL);
 
                   /* skip nlhdlr if it does not provide interval evaluation (so it may only provide reverse propagation) */
-//FIXME                  if( !SCIPnlhdlrHasIntEval(nlhdlr) )
-//                     continue;
+                  if( !SCIPnlhdlrHasIntEval(nlhdlr) )
+                     continue;
 
                   /* let nlhdlr evaluate current expression */
                   nlhdlrinterval = activity;
-//FIXME                  SCIP_CALL( SCIPnlhdlrInteval(scip, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
-//                     &nlhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+                  SCIP_CALL( SCIPnlhdlrInteval(scip, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
+                     &nlhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
                   SCIPdebugMsg(scip, " nlhdlr <%s>::inteval = [%.20g, %.20g]", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
 #endif
@@ -2293,7 +2293,7 @@ SCIP_RETCODE reversePropQueue(
 #endif
 
             nreds = 0;
-//FIXME            SCIP_CALL( SCIPnlhdlrReverseprop(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, propbounds, infeasible, &nreds) );
+            SCIP_CALL( SCIPnlhdlrReverseprop(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, propbounds, infeasible, &nreds) );
             assert(nreds >= 0);
             *ntightenings += nreds;
          }
@@ -2639,8 +2639,8 @@ SCIP_RETCODE propExprDomains(
             SCIPdebugMsg(scip, "propExprDomains calling reverseprop for expression %p [%g,%g]\n", (void*)expr,
                   SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup);
             ntightenings = 0;
-//FIXME            SCIP_CALL( SCIPnlhdlrReverseprop(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
-//                     SCIPexprGetActivity(expr), &cutoff, &ntightenings) );
+            SCIP_CALL( SCIPnlhdlrReverseprop(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
+                    SCIPexprGetActivity(expr), &cutoff, &ntightenings) );
 
             if( cutoff )
             {
@@ -4293,7 +4293,7 @@ SCIP_RETCODE canonicalizeConstraints(
    {
       /* reset one of the number of detections counter to count only current presolving round */
       for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
-         conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
+         SCIPnlhdlrResetNDetectionslast(conshdlrdata->nlhdlrs[i]);
 
       SCIP_CALL( initSolve(scip, conshdlr, conss, nconss) );
    }
@@ -5101,77 +5101,6 @@ SCIP_RETCODE presolveImplint(
    }
 
    return SCIP_OKAY;
-}
-
-/** compares nonlinear handler by detection priority
- *
- * if handlers have same detection priority, then compare by name
- */
-static
-int nlhdlrCmp(
-   void*                 hdlr1,              /**< first handler */
-   void*                 hdlr2               /**< second handler */
-   )
-{
-   SCIP_NLHDLR* h1;
-   SCIP_NLHDLR* h2;
-
-   assert(hdlr1 != NULL);
-   assert(hdlr2 != NULL);
-
-   h1 = (SCIP_NLHDLR*)hdlr1;
-   h2 = (SCIP_NLHDLR*)hdlr2;
-
-   if( h1->detectpriority != h2->detectpriority )
-      return (int)(h1->detectpriority - h2->detectpriority);
-
-   return strcmp(h1->name, h2->name);
-}
-
-/** print statistics for nonlinear handlers */
-static
-void printNlhdlrStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   FILE*                 file                /**< file handle, or NULL for standard out */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int i;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   SCIPinfoMessage(scip, file, "Nlhdlrs            : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s\n", "Detects", "EnfoCalls", "#IntEval", "PropCalls", "DetectAll", "Separated", "Cutoffs", "DomReds", "BranchScor", "DetectTime", "EnfoTime", "PropTime", "IntEvalTi");
-
-   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
-   {
-      SCIP_NLHDLR* nlhdlr = conshdlrdata->nlhdlrs[i];
-      assert(nlhdlr != NULL);
-
-      /* skip disabled nlhdlr */
-      if( !nlhdlr->enabled )
-         continue;
-
-      SCIPinfoMessage(scip, file, "  %-17s:", nlhdlr->name);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetectionslast);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nenfocalls);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nintevalcalls);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->npropcalls);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndetections);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nseparated);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ncutoffs);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->ndomreds);
-      SCIPinfoMessage(scip, file, " %10lld", nlhdlr->nbranchscores);
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->detecttime));
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->enfotime));
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->proptime));
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, nlhdlr->intevaltime));
-      SCIPinfoMessage(scip, file, "\n");
-   }
 }
 
 /** print statistics for constraint handlers */
@@ -5985,14 +5914,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyNonlinear)
    /* copy nonlinear handlers */
    for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
    {
-      SCIP_NLHDLR* sourcenlhdlr;
-
-      /* TODO for now just don't copy disabled nlhdlr, a clean way would probably be to first copy and disable then */
-      sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
-      if( sourcenlhdlr->copyhdlr != NULL && sourcenlhdlr->enabled )
-      {
-         SCIP_CALL( sourcenlhdlr->copyhdlr(scip, targetconshdlr, conshdlr, sourcenlhdlr) );
-      }
+      SCIP_CALL( SCIPnlhdlrCopyhdlr(scip, targetconshdlr, conshdlr, sourceconshdlrdata->nlhdlrs[i]) );
    }
 
    *valid = TRUE;
@@ -6010,30 +5932,12 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   /* free nonlinear handlers */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
-      SCIP_NLHDLR* nlhdlr;
-
-      nlhdlr = conshdlrdata->nlhdlrs[i];
-      assert(nlhdlr != NULL);
-
-      if( nlhdlr->freehdlrdata != NULL )
-      {
-         SCIP_CALL( (*nlhdlr->freehdlrdata)(scip, nlhdlr, &nlhdlr->data) );
-      }
-
-      /* free clocks */
-      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->detecttime) );
-      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->enfotime) );
-      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->proptime) );
-      SCIP_CALL( SCIPfreeClock(scip, &nlhdlr->intevaltime) );
-
-      SCIPfreeMemory(scip, &nlhdlr->name);
-      SCIPfreeMemoryNull(scip, &nlhdlr->desc);
-
-      SCIPfreeMemory(scip, &nlhdlr);
+      SCIP_CALL( SCIPnlhdlrFree(scip, &conshdlrdata->nlhdlrs[i]) );
+      assert(conshdlrdata->nlhdlrs[i] == NULL);
    }
-
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize);
    conshdlrdata->nlhdlrssize = 0;
 
@@ -6078,7 +5982,6 @@ static
 SCIP_DECL_CONSINIT(consInitNonlinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_NLHDLR* nlhdlr;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -6097,7 +6000,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
 
    /* sort nonlinear handlers by detection priority, in decreasing order */
    if( conshdlrdata->nnlhdlrs > 1 )
-      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
+      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, SCIPnlhdlrComp, conshdlrdata->nnlhdlrs);
 
    /* get heuristics for later use */
    conshdlrdata->subnlpheur = SCIPfindHeur(scip, "subnlp");
@@ -6106,28 +6009,7 @@ SCIP_DECL_CONSINIT(consInitNonlinear)
    /* reset statistics in nonlinear handlers (TODO only if misc/resetstat == TRUE) */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
-      nlhdlr = conshdlrdata->nlhdlrs[i];
-      assert(nlhdlr != NULL);
-
-      nlhdlr->nenfocalls = 0;
-      nlhdlr->nintevalcalls = 0;
-      nlhdlr->npropcalls = 0;
-      nlhdlr->nseparated = 0;
-      nlhdlr->ncutoffs = 0;
-      nlhdlr->ndomreds = 0;
-      nlhdlr->nbranchscores = 0;
-      nlhdlr->ndetections = 0;
-      nlhdlr->ndetectionslast = 0;
-
-      SCIP_CALL( SCIPresetClock(scip, nlhdlr->detecttime) );
-      SCIP_CALL( SCIPresetClock(scip, nlhdlr->enfotime) );
-      SCIP_CALL( SCIPresetClock(scip, nlhdlr->proptime) );
-      SCIP_CALL( SCIPresetClock(scip, nlhdlr->intevaltime) );
-
-      if( nlhdlr->init != NULL )
-      {
-         SCIP_CALL( (*nlhdlr->init)(scip, nlhdlr) );
-      }
+      SCIP_CALL( SCIPnlhdlrInit(scip, conshdlrdata->nlhdlrs[i]) );
    }
 
    /* reset statistics in constraint handler */
@@ -6194,13 +6076,7 @@ SCIP_DECL_CONSEXIT(consExitNonlinear)
    /* deinitialize nonlinear handlers */
    for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
    {
-      SCIP_NLHDLR* nlhdlr;
-
-      nlhdlr = conshdlrdata->nlhdlrs[i];
-      if( nlhdlr->exit != NULL )
-      {
-         SCIP_CALL( nlhdlr->exit(scip, nlhdlr) );
-      }
+      SCIP_CALL( SCIPnlhdlrExit(scip, conshdlrdata->nlhdlrs[i]) );
    }
 
    ENFOLOG(
@@ -6278,7 +6154,7 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
 
       /* reset one of the number of detections counter to count only current round */
       for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
-         conshdlrdata->nlhdlrs[i]->ndetectionslast = 0;
+         SCIPnlhdlrResetNDetectionslast(conshdlrdata->nlhdlrs[i]);
 
       SCIP_CALL( initSolve(scip, conshdlr, conss, nconss) );
    }
@@ -7183,12 +7059,16 @@ static
 SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
 { /*lint --e{715}*/
    SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    assert(conshdlr != NULL);
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* print statistics for nonlinear handlers */
-   printNlhdlrStatistics(scip, conshdlr, file);
+   SCIPnlhdlrPrintStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, file);
 
    /* print statistics for constraint handler */
    printConshdlrStatistics(scip, conshdlr, file);
@@ -8843,41 +8723,18 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   char paramname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nlhdlr != NULL);
-   assert(name != NULL);
-   assert(detect != NULL);
-   assert(evalaux != NULL);
 
+   /* create nlhdlr */
+   SCIP_CALL( SCIPnlhdlrCreate(scip, nlhdlr, name, desc, detectpriority, enfopriority, detect, evalaux, nlhdlrdata) );
+
+   /* include into constraint handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   SCIP_CALL( SCIPallocClearMemory(scip, nlhdlr) );
-
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->name, name, strlen(name)+1) );
-   if( desc != NULL )
-   {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
-   }
-
-   (*nlhdlr)->detectpriority = detectpriority;
-   (*nlhdlr)->enfopriority = enfopriority;
-   (*nlhdlr)->data = nlhdlrdata;
-   (*nlhdlr)->detect = detect;
-   (*nlhdlr)->evalaux = evalaux;
-
-   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->detecttime) );
-   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->enfotime) );
-   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->proptime) );
-   SCIP_CALL( SCIPcreateClock(scip, &(*nlhdlr)->intevaltime) );
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/" CONSHDLR_NAME "/nlhdlr/%s/enabled", name);
-   SCIP_CALL( SCIPaddBoolParam(scip, paramname, "should this nonlinear handler be used",
-      &(*nlhdlr)->enabled, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->nlhdlrs, &conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1) );
 
@@ -8888,7 +8745,7 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
     * will happen in INIT, so only do when called late
     */
    if( SCIPgetStage(scip) >= SCIP_STAGE_INIT && conshdlrdata->nnlhdlrs > 1 )
-      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, nlhdlrCmp, conshdlrdata->nnlhdlrs);
+      SCIPsortDownPtr((void**)conshdlrdata->nlhdlrs, SCIPnlhdlrComp, conshdlrdata->nnlhdlrs);
 
    return SCIP_OKAY;
 }
@@ -8909,7 +8766,7 @@ SCIP_NLHDLR* SCIPfindNlhdlrNonlinear(
    assert(conshdlrdata != NULL);
 
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
-      if( strcmp(conshdlrdata->nlhdlrs[h]->name, name) == 0 )
+      if( strcmp(SCIPnlhdlrGetName(conshdlrdata->nlhdlrs[h]), name) == 0 )
          return conshdlrdata->nlhdlrs[h];
 
    return NULL;
