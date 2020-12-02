@@ -197,6 +197,7 @@ SCIP_RETCODE testBiconnectedDecomposition(
    int nnodes = 8;
    int nedges = 22;
    SCIP_Real offset = 0.0;
+   SCIP_Bool wasDecomposed;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -235,7 +236,7 @@ SCIP_RETCODE testBiconnectedDecomposition(
       redbase->fixed = &offset;
       graph->stp_type = STP_SPG;
 
-      SCIP_CALL( reduce_bidecomposition(scip, graph, redbase) );
+      SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
    }
 
    reduce_baseFree(scip, &redbase);
@@ -259,6 +260,7 @@ SCIP_RETCODE testBiconnectedDecomposition2(
    int nnodes = 11;
    int nedges = 24;
    SCIP_Real offset = 0.0;
+   SCIP_Bool wasDecomposed;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -294,7 +296,7 @@ SCIP_RETCODE testBiconnectedDecomposition2(
       redbase->fixed = &offset;
       graph->stp_type = STP_SPG;
 
-      SCIP_CALL( reduce_bidecomposition(scip, graph, redbase) );
+      SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
    }
 
    reduce_baseFree(scip, &redbase);
@@ -318,6 +320,7 @@ SCIP_RETCODE testBiconnectedDecomposition3(
    int nedges = 16;
    SCIP_Real offset = 0.0;
    REDBASE* redbase;
+   SCIP_Bool wasDecomposed;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
 
@@ -348,7 +351,7 @@ SCIP_RETCODE testBiconnectedDecomposition3(
       redbase->fixed = &offset;
       graph->stp_type = STP_SPG;
 
-      SCIP_CALL( reduce_bidecomposition(scip, graph, redbase) );
+      SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
    }
 
    reduce_baseFree(scip, &redbase);

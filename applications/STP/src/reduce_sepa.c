@@ -1181,7 +1181,8 @@ SCIP_RETCODE decomposeExec(
 SCIP_RETCODE reduce_bidecomposition(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   REDBASE*              redbase             /**< reduction base */
+   REDBASE*              redbase,            /**< reduction base */
+   SCIP_Bool*            wasDecomposed       /**< performed recursive reduction? */
    )
 {
 #ifdef CUTTREE_PRINT_STATISTICS
@@ -1190,9 +1191,10 @@ SCIP_RETCODE reduce_bidecomposition(
    CUTNODES cutnodes = { NULL, NULL, NULL, NULL, NULL, NULL, 0, -1, -1, -1 };
 #endif
 
-   assert(scip && g && redbase);
+   assert(scip && g && redbase && wasDecomposed);
    assert(graph_typeIsSpgLike(g) && "only SPG decomposition supported yet");
 
+   *wasDecomposed = FALSE;
    graph_mark(g);
 
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
@@ -1206,6 +1208,7 @@ SCIP_RETCODE reduce_bidecomposition(
 
       /* decompose and reduce recursively? */
       SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase) );
+      *wasDecomposed = TRUE;
    }
 
    cutNodesExit(scip, &cutnodes);

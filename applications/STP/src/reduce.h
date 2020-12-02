@@ -145,7 +145,7 @@ extern void            reduce_identifyNonLeafTerms(SCIP*, GRAPH*);
 /* reduce_sepa.c
  */
 extern SCIP_RETCODE    reduce_articulations(SCIP*, GRAPH*, SCIP_Real*, int*);
-extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*);
+extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*, SCIP_Bool*);
 
 
 
