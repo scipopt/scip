@@ -97,11 +97,11 @@ SCIP_RETCODE detectNlhdlr(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD enforcemethodsallowed;
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD enforcemethods;
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD enforcemethodsnew;
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD nlhdlrenforcemethods;
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD nlhdlrparticipating;
+   SCIP_NLHDLR_METHOD enforcemethodsallowed;
+   SCIP_NLHDLR_METHOD enforcemethods;
+   SCIP_NLHDLR_METHOD enforcemethodsnew;
+   SCIP_NLHDLR_METHOD nlhdlrenforcemethods;
+   SCIP_NLHDLR_METHOD nlhdlrparticipating;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata;
    int enfossize;  /* allocated length of expr->enfos array */
    int h;
@@ -124,24 +124,24 @@ SCIP_RETCODE detectNlhdlr(
     * - if auxiliary variable usage, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
     * - if no one uses activity, then do not need activity methods
     */
-   enforcemethods = SCIP_CONSNONLINEAR_EXPRENFO_NONE;
+   enforcemethods = SCIP_NLHDLR_METHOD_NONE;
    if( expr->nauxvaruses == 0 )
-      enforcemethods |= SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH;
+      enforcemethods |= SCIP_NLHDLR_METHOD_SEPABOTH;
    else
    {
       if( SCIPgetExprNLocksPosNonlinear(expr) == 0 )  /* no need for underestimation */
-         enforcemethods |= SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW;
+         enforcemethods |= SCIP_NLHDLR_METHOD_SEPABELOW;
       if( SCIPgetExprNLocksNegNonlinear(expr) == 0 )  /* no need for overestimation */
-         enforcemethods |= SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE;
+         enforcemethods |= SCIP_NLHDLR_METHOD_SEPAABOVE;
    }
    if( expr->nactivityusesprop == 0 && expr->nactivityusessepa == 0 )
-      enforcemethods |= SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY;
+      enforcemethods |= SCIP_NLHDLR_METHOD_ACTIVITY;
 
    /* it doesn't make sense to have been called on detectNlhdlr, if the expr isn't used for anything */
-   assert(enforcemethods != SCIP_CONSNONLINEAR_EXPRENFO_ALL);
+   assert(enforcemethods != SCIP_NLHDLR_METHOD_ALL);
 
    /* all methods that have not been flagged above are the ones that we want to be handled by nlhdlrs */
-   enforcemethodsallowed = ~enforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_ALL;
+   enforcemethodsallowed = ~enforcemethods & SCIP_NLHDLR_METHOD_ALL;
 
    expr->nenfos = 0;
    enfossize = 2;
@@ -150,9 +150,9 @@ SCIP_RETCODE detectNlhdlr(
 
    SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); requiring%s%s%s\n",
       cons != NULL ? "root" : "non-root", (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)),
-      (enforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW) != 0 ? "" : " sepabelow",
-      (enforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE) != 0 ? "" : " sepaabove",
-      (enforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) != 0 ? "" : " activity");
+      (enforcemethods & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 ? "" : " sepabelow",
+      (enforcemethods & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 ? "" : " sepaabove",
+      (enforcemethods & SCIP_NLHDLR_METHOD_ACTIVITY) != 0 ? "" : " activity");
 
    for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
    {
@@ -168,10 +168,10 @@ SCIP_RETCODE detectNlhdlr(
       /* call detect routine of nlhdlr */
       nlhdlrexprdata = NULL;
       enforcemethodsnew = enforcemethods;
-      nlhdlrparticipating = SCIP_CONSNONLINEAR_EXPRENFO_NONE;
+      nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
-      SCIP_CALL( SCIPcallNlhdlrDetectNonlinear(scip, conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
+      SCIP_CALL( SCIPnlhdlrDetect(scip, conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
       nlhdlrparticipating &= enforcemethodsallowed;
@@ -187,7 +187,7 @@ SCIP_RETCODE detectNlhdlr(
       /* nlhdlr needs to participate for the methods it is enforcing */
       assert((nlhdlrparticipating & nlhdlrenforcemethods) == nlhdlrenforcemethods);
 
-      if( nlhdlrparticipating == SCIP_CONSNONLINEAR_EXPRENFO_NONE )
+      if( nlhdlrparticipating == SCIP_NLHDLR_METHOD_NONE )
       {
          /* nlhdlr might not have detected anything, or all set flags might have been removed by
           * clean up; in the latter case, we may need to free nlhdlrexprdata */
@@ -199,7 +199,7 @@ SCIP_RETCODE detectNlhdlr(
             assert(nlhdlrexprdata == NULL);
          }
          /* nlhdlr cannot have added an enforcement method if it doesn't participate (actually redundant due to previous asserts) */
-         assert(nlhdlrenforcemethods == SCIP_CONSNONLINEAR_EXPRENFO_NONE);
+         assert(nlhdlrenforcemethods == SCIP_NLHDLR_METHOD_NONE);
 
          SCIPdebugMsg(scip, "nlhdlr <%s> detect unsuccessful\n", SCIPnlhdlrGetName(nlhdlr));
 
@@ -208,9 +208,9 @@ SCIP_RETCODE detectNlhdlr(
 
       SCIPdebugMsg(scip, "nlhdlr <%s> detect successful; sepabelow: %s, sepaabove: %s, activity: %s\n",
          SCIPnlhdlrGetName(nlhdlr),
-         ((nlhdlrenforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW) != 0) ? "participating" : "no",
-         ((nlhdlrenforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE) != 0) ? "participating" : "no",
-         ((nlhdlrenforcemethods & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) != 0) ? "participating" : "no");
+         ((nlhdlrenforcemethods & SCIP_NLHDLR_METHOD_SEPABELOW) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_NLHDLR_METHOD_SEPABELOW) != 0) ? "participating" : "no",
+         ((nlhdlrenforcemethods & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0) ? "participating" : "no",
+         ((nlhdlrenforcemethods & SCIP_NLHDLR_METHOD_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_NLHDLR_METHOD_ACTIVITY) != 0) ? "participating" : "no");
 
       /* store nlhdlr and its data */
       if( expr->nenfos == enfossize )
@@ -236,7 +236,7 @@ SCIP_RETCODE detectNlhdlr(
    /* stop if an enforcement method is missing but we are already in solving stage
     * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
     */
-   if( enforcemethods != SCIP_CONSNONLINEAR_EXPRENFO_ALL && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( enforcemethods != SCIP_NLHDLR_METHOD_ALL && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
       SCIPerrorMessage("no nonlinear handler provided some of the required enforcement methods\n");
       return SCIP_ERROR;
@@ -1112,7 +1112,7 @@ SCIP_RETCODE initSepa(
                continue;
 
             /* only call initsepa if it will actually separate */
-            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH) == 0 )
+            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABOTH) == 0 )
                continue;
 
             nlhdlr = expr->enfos[e]->nlhdlr;
@@ -1130,7 +1130,7 @@ SCIP_RETCODE initSepa(
             SCIPdebugMsg(scip, "initsepa under=%u over=%u for expression %p\n", underestimate, overestimate, (void*)expr);
 
             /* call the separation initialization callback of the nonlinear handler */
-            SCIP_CALL( SCIPcallNlhdlrInitSepaNonlinear(scip, conshdlr, conss[c], nlhdlr, expr,
+            SCIP_CALL( SCIPnlhdlrInitsepa(scip, conshdlr, conss[c], nlhdlr, expr,
                expr->enfos[e]->nlhdlrexprdata, overestimate, underestimate, infeasible) );
             expr->enfos[e]->issepainit = TRUE;
 
@@ -2254,7 +2254,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    assert(result != NULL);
 
    /* call enforcement callback of the nlhdlr */
-   SCIP_CALL( SCIPcallNlhdlrEnfoNonlinear(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
+   SCIP_CALL( SCIPnlhdlrEnfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
             allowweakcuts, separated, inenforcement, result) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
@@ -2288,7 +2288,7 @@ SCIP_RETCODE enforceExprNlhdlr(
       auxvar = SCIPgetExprAuxVarNonlinear(expr);
       assert(auxvar != NULL);
 
-      SCIP_CALL( SCIPcallNlhdlrEstimateNonlinear(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
+      SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
                SCIPgetSolVal(scip, sol, auxvar), rowpreps, &sepasuccess, inenforcement, &branchscoresuccess) );
 
       minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps);
@@ -2380,14 +2380,14 @@ SCIP_RETCODE enforceExpr(
       SCIP_NLHDLR* nlhdlr;
 
       /* skip nlhdlr that do not want to participate in any separation */
-      if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH) == 0 )
+      if( (expr->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABOTH) == 0 )
          continue;
 
       nlhdlr = expr->enfos[e]->nlhdlr;
       assert(nlhdlr != NULL);
 
       /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
-      SCIP_CALL( SCIPcallNlhdlrEvalauxNonlinear(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+      SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
       ENFOLOG(
          SCIPinfoMessage(scip, enfologfile, "  expr ");
          SCIPprintExpr(scip, conshdlr, expr, enfologfile);
@@ -2436,7 +2436,7 @@ SCIP_RETCODE enforceExpr(
       /* if we want to overestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
        * wants to be called for separation on this side, then call separation of nlhdlr
        */
-      if( overestimate && auxoverestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE) != 0 )  /*lint !e777*/
+      if( overestimate && auxoverestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
@@ -2484,7 +2484,7 @@ SCIP_RETCODE enforceExpr(
       /* if we want to underestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
        * wants to be called for separation on this side, then call separation of nlhdlr
        */
-      if( underestimate && auxunderestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW) != 0 )  /*lint !e777*/
+      if( underestimate && auxunderestimate && (expr->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 )  /*lint !e777*/
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
@@ -2921,14 +2921,14 @@ SCIP_RETCODE analyzeViolation(
             SCIP_NLHDLR* nlhdlr;
 
             /* eval in auxvars is only defined for nlhdrs that separate; there might not even be auxvars otherwise */
-            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH) == 0 )
+            if( (expr->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABOTH) == 0 )
                continue;
 
             nlhdlr = expr->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
 
             /* evaluate the expression w.r.t. the nlhdlrs auxiliary variables */
-            SCIP_CALL( SCIPcallNlhdlrEvalauxNonlinear(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
+            SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, expr->enfos[e]->nlhdlrexprdata, &expr->enfos[e]->auxvalue, sol) );
 
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, "  nlhdlr <%s> = %.15g", nlhdlr->name, expr->enfos[e]->auxvalue); )
 
@@ -4723,396 +4723,6 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
                      "branching candidates%s\n", SCIPnlhdlrGetName(nlhdlr), (allowweakcuts && inenforcement) ?
                                                                                     " (!)" : ""); )
    }
-
-   return SCIP_OKAY;
-}
-
-/** set the copy handler callback of a nonlinear handler */
-void SCIPnlhdlrSetCopyHdlr(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->copyhdlr = copy;
-}
-
-/** set the nonlinear handler callback to free the nonlinear handler data */
-void SCIPnlhdlrSetFreeHdlrData(
-   SCIP*                      scip,              /**< SCIP data structure */
-   SCIP_NLHDLR*      nlhdlr,            /**< nonlinear handler */
-   SCIP_DECL_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->freehdlrdata = freehdlrdata;
-}
-
-/** set the expression handler callback to free expression specific data of nonlinear handler */
-void SCIPnlhdlrSetFreeExprData(
-   SCIP*                      scip,              /**< SCIP data structure */
-   SCIP_NLHDLR*      nlhdlr,            /**< nonlinear handler */
-   SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->freeexprdata = freeexprdata;
-}
-
-/** set the initialization and deinitialization callback of a nonlinear handler */
-void SCIPnlhdlrSetInitExit(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
-   SCIP_DECL_NLHDLREXIT((*exit_))    /**< deinitialization callback (can be NULL) */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->init = init;
-   nlhdlr->exit = exit_;
-}
-
-/** set the propagation callbacks of a nonlinear handler */
-void SCIPnlhdlrSetProp(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_NLHDLRINTEVAL((*inteval)), /**< interval evaluation callback (can be NULL) */
-   SCIP_DECL_NLHDLRREVERSEPROP((*reverseprop)) /**< reverse propagation callback (can be NULL) */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   nlhdlr->inteval = inteval;
-   nlhdlr->reverseprop = reverseprop;
-}
-
-/** set the separation callbacks of a nonlinear handler */
-void SCIPnlhdlrSetSepa(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_NLHDLR*      nlhdlr,        /**< nonlinear handler */
-   SCIP_DECL_NLHDLRINITSEPA((*initsepa)), /**< separation initialization callback (can be NULL) */
-   SCIP_DECL_NLHDLRENFO((*enfo)),         /**< enforcement callback (can be NULL if estimate is not NULL) */
-   SCIP_DECL_NLHDLRESTIMATE((*estimate)), /**< estimation callback (can be NULL if sepa is not NULL) */
-   SCIP_DECL_NLHDLREXITSEPA((*exitsepa))  /**< separation deinitialization callback (can be NULL) */
-   )
-{
-   assert(nlhdlr != NULL);
-   assert(enfo != NULL || estimate != NULL);
-
-   nlhdlr->initsepa = initsepa;
-   nlhdlr->enfo = enfo;
-   nlhdlr->estimate = estimate;
-   nlhdlr->exitsepa = exitsepa;
-}
-
-/** gives name of nonlinear handler */
-const char* SCIPnlhdlrGetName(
-   SCIP_NLHDLR*      nlhdlr         /**< nonlinear handler */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   return nlhdlr->name;
-}
-
-/** gives description of nonlinear handler, can be NULL */
-const char* SCIPnlhdlrGetDesc(
-   SCIP_NLHDLR*      nlhdlr         /**< nonlinear handler */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   return nlhdlr->desc;
-}
-
-/** gives detection priority of nonlinear handler */
-int SCIPnlhdlrGetDetectPriority(
-   SCIP_NLHDLR*      nlhdlr         /**< nonlinear handler */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   return nlhdlr->detectpriority;
-}
-
-/** gives enforcement priority of nonlinear handler */
-int SCIPnlhdlrGetEnfoPriority(
-   SCIP_NLHDLR*      nlhdlr         /**< nonlinear handler */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   return nlhdlr->enfopriority;
-}
-
-/** gives handler data of nonlinear handler */
-SCIP_NLHDLRDATA* SCIPnlhdlrGetData(
-   SCIP_NLHDLR*      nlhdlr         /**< nonlinear handler */
-   )
-{
-   assert(nlhdlr != NULL);
-
-   return nlhdlr->data;
-}
-
-/** returns whether nonlinear handler implements the interval evaluation callback */
-SCIP_Bool SCIPnlhdlrHasIntEval(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
-   )
-{
-   return nlhdlr->inteval != NULL;
-}
-
-/** returns whether nonlinear handler implements the reverse propagation callback */
-SCIP_Bool SCIPnlhdlrHasReverseProp(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
-   )
-{
-   return nlhdlr->reverseprop != NULL;
-}
-
-/** returns whether nonlinear handler implements the separation initialization callback */
-SCIP_Bool SCIPnlhdlrHasInitSepa(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
-   )
-{
-   return nlhdlr->initsepa != NULL;
-}
-
-/** returns whether nonlinear handler implements the separation deinitialization callback */
-SCIP_Bool SCIPnlhdlrHasExitSepa(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
-   )
-{
-   return nlhdlr->exitsepa != NULL;
-}
-
-/** returns whether nonlinear handler implements the enforcement callback */
-SCIP_Bool SCIPnlhdlrHasEnfo(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
-   )
-{
-   return nlhdlr->enfo != NULL;
-}
-
-/** returns whether nonlinear handler implements the estimator callback */
-SCIP_Bool SCIPnlhdlrHasEstimate(
-   SCIP_NLHDLR* nlhdlr              /**< nonlinear handler */
-   )
-{
-   return nlhdlr->estimate != NULL;
-}
-
-/** call the detect callback of a nonlinear handler */
-SCIP_DECL_NLHDLRDETECT(SCIPcallNlhdlrDetectNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->detect != NULL);
-   assert(nlhdlr->detecttime != NULL);
-   assert(participating != NULL);
-
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->detecttime) );
-   SCIP_CALL( nlhdlr->detect(scip, conshdlr, nlhdlr, expr, cons, enforcing, participating, nlhdlrexprdata) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->detecttime) );
-
-   if( *participating != SCIP_CONSNONLINEAR_EXPRENFO_NONE )
-   {
-      ++nlhdlr->ndetections;
-      ++nlhdlr->ndetectionslast;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** call the auxiliary evaluation callback of a nonlinear handler */
-SCIP_DECL_NLHDLREVALAUX(SCIPcallNlhdlrEvalauxNonlinear)
-{
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->evalaux != NULL);
-
-   SCIP_CALL( nlhdlr->evalaux(scip, nlhdlr, expr, nlhdlrexprdata, auxvalue, sol) );
-
-   return SCIP_OKAY;
-}
-
-/** calls the interval evaluation callback of a nonlinear handler */
-SCIP_DECL_NLHDLRINTEVAL(SCIPcallNlhdlrIntEvalNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->intevaltime != NULL);
-
-   if( nlhdlr->inteval != NULL )
-   {
-      SCIP_CALL( SCIPstartClock(scip, nlhdlr->intevaltime) );
-      SCIP_CALL( nlhdlr->inteval(scip, nlhdlr, expr, nlhdlrexprdata, interval, intevalvar, intevalvardata) );
-      SCIP_CALL( SCIPstopClock(scip, nlhdlr->intevaltime) );
-
-      ++nlhdlr->nintevalcalls;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls the reverse propagation callback of a nonlinear handler */
-SCIP_DECL_NLHDLRREVERSEPROP(SCIPcallNlhdlrReversePropNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->proptime != NULL);
-   assert(infeasible != NULL);
-   assert(nreductions != NULL);
-
-   if( nlhdlr->reverseprop == NULL )
-   {
-      *infeasible = FALSE;
-      *nreductions = 0;
-
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->proptime) );
-   SCIP_CALL( nlhdlr->reverseprop(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, bounds, infeasible, nreductions) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->proptime) );
-
-   /* update statistics */
-   nlhdlr->ndomreds += *nreductions;
-   if( *infeasible )
-      ++nlhdlr->ncutoffs;
-   ++nlhdlr->npropcalls;
-
-   return SCIP_OKAY;
-}
-
-/** calls the separation initialization callback of a nonlinear handler */
-SCIP_DECL_NLHDLRINITSEPA(SCIPcallNlhdlrInitSepaNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->enfotime != NULL);
-   assert(infeasible != NULL);
-
-   if( nlhdlr->initsepa == NULL )
-   {
-      *infeasible = FALSE;
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->initsepa(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, overestimate, underestimate, infeasible) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
-
-   ++nlhdlr->nenfocalls;
-   if( *infeasible )
-      ++nlhdlr->ncutoffs;
-
-   return SCIP_OKAY;
-}
-
-/** calls the separation deinitialization callback of a nonlinear handler */
-SCIP_DECL_NLHDLREXITSEPA(SCIPcallNlhdlrExitSepaNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->enfotime != NULL);
-
-   if( nlhdlr->exitsepa != NULL )
-   {
-      SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-      SCIP_CALL( nlhdlr->exitsepa(scip, nlhdlr, expr, nlhdlrexprdata) );
-      SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** calls the enforcement callback of a nonlinear handler */
-SCIP_DECL_NLHDLRENFO(SCIPcallNlhdlrEnfoNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->enfotime != NULL);
-   assert(result != NULL);
-
-   if( nlhdlr->enfo == NULL )
-   {
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
-
-#ifndef NDEBUG
-   /* check that auxvalue is correct by reevaluating */
-   {
-      SCIP_Real auxvaluetest;
-      SCIP_CALL( SCIPcallNlhdlrEvalauxNonlinear(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
-   }
-#endif
-
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->enfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, allowweakcuts, separated, addbranchscores, result) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
-
-   /* update statistics */
-   ++nlhdlr->nenfocalls;
-   switch( *result )
-   {
-      case SCIP_SEPARATED :
-         ++nlhdlr->nseparated;
-         break;
-      case SCIP_BRANCHED:
-         ++nlhdlr->nbranchscores;
-         break;
-      case SCIP_CUTOFF:
-         ++nlhdlr->ncutoffs;
-         break;
-      case SCIP_REDUCEDDOM:
-         ++nlhdlr->ndomreds;
-         break;
-      default: ;
-   }  /*lint !e788*/
-
-   return SCIP_OKAY;
-}
-
-/** calls the estimator callback of a nonlinear handler */
-SCIP_DECL_NLHDLRESTIMATE(SCIPcallNlhdlrEstimateNonlinear)
-{
-   assert(scip != NULL);
-   assert(nlhdlr != NULL);
-   assert(nlhdlr->enfotime != NULL);
-   assert(success != NULL);
-   assert(addedbranchscores != NULL);
-
-   if( nlhdlr->estimate == NULL )
-   {
-      *success = FALSE;
-      *addedbranchscores = FALSE;
-      return SCIP_OKAY;
-   }
-
-#ifndef NDEBUG
-   /* check that auxvalue is correct by reevaluating */
-   {
-      SCIP_Real auxvaluetest;
-      SCIP_CALL( SCIPcallNlhdlrEvalauxNonlinear(scip, nlhdlr, expr, nlhdlrexprdata, &auxvaluetest, sol) );
-      assert(auxvalue == auxvaluetest);  /* we should get EXACTLY the same value from calling evalaux with the same solution as before */  /*lint !e777*/
-   }
-#endif
-
-   SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
-   SCIP_CALL( nlhdlr->estimate(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate, targetvalue,
-         rowpreps, success, addbranchscores, addedbranchscores) );
-   SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
-
-   /* update statistics */
-   ++nlhdlr->nenfocalls;
 
    return SCIP_OKAY;
 }

@@ -107,18 +107,6 @@ struct SCIP_RowPrep
 };
 typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
-/** @name expression enforcement */
-/** @{ */
-#define SCIP_CONSNONLINEAR_EXPRENFO_NONE           0x0u /**< no enforcement */
-#define SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW      0x1u /**< separation for expr <= auxvar, thus might estimate expr from below */
-#define SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE      0x2u /**< separation for expr >= auxvar, thus might estimate expr from above */
-#define SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH       (SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW | SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE)  /**< separation for expr == auxvar */
-#define SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY       0x4u /**< activity computation (interval evaluation) and propagation (reverse propagation) */
-#define SCIP_CONSNONLINEAR_EXPRENFO_ALL            (SCIP_CONSNONLINEAR_EXPRENFO_SEPABOTH | SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) /**< all enforcement methods */
-
-typedef unsigned int  SCIP_CONSNONLINEAR_EXPRENFO_METHOD; /**< exprenfo bitflags */
-/** @} */
-
 /** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
  *
  * input:
@@ -678,7 +666,7 @@ void SCIPgetExprEnfoDataNonlinear(
    int                   idx,                /**< position of enforcement in enfos array */
    SCIP_NLHDLR**         nlhdlr,             /**< buffer to store nlhldr */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< buffer to store nlhdlr data for expression, or NULL */
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_NLHDLR_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
    SCIP_Bool*            sepabelowusesactivity, /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
    SCIP_Bool*            sepaaboveusesactivity, /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
    SCIP_Real*            auxvalue            /**< buffer to store current auxvalue, or NULL */
@@ -928,8 +916,6 @@ SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
 
 /** @} */
 
-
-
 /**@name Nonlinear Handler Methods */
 /**@{ */
 
@@ -965,43 +951,10 @@ SCIP_NLHDLREXPRDATA* SCIPgetNlhdlrExprDataNonlinear(
    SCIP_EXPR*            expr                /**< expression */
 );
 
-/** call the detect callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLRDETECT(SCIPcallNlhdlrDetectNonlinear);
-
-/** call the auxiliary evaluation callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLREVALAUX(SCIPcallNlhdlrEvalauxNonlinear);
-
-/** calls the interval evaluation callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLRINTEVAL(SCIPcallNlhdlrIntEvalNonlinear);
-
-/** calls the reverse propagation callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLRREVERSEPROP(SCIPcallNlhdlrReversePropNonlinear);
-
-/** calls the separation initialization callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLRINITSEPA(SCIPcallNlhdlrInitSepaNonlinear);
-
-/** calls the separation deinitialization callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLREXITSEPA(SCIPcallNlhdlrExitSepaNonlinear);
-
-/** calls the enforcement callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLRENFO(SCIPcallNlhdlrEnfoNonlinear);
-
-/** calls the estimator callback of a nonlinear handler */
-SCIP_EXPORT
-SCIP_DECL_NLHDLRESTIMATE(SCIPcallNlhdlrEstimateNonlinear);
-
 /** @} */
 
 /** @} */
 /** @} */
-
 
 #ifdef __cplusplus
 }

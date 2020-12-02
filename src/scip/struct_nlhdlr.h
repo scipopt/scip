@@ -24,8 +24,10 @@
 #ifndef SCIP_STRUCT_NLHLDR_H_
 #define SCIP_STRUCT_NLHLDR_H_
 
+#include "scip/def.h"
 #include "scip/type_scip.h"
 #include "scip/type_nlhdlr.h"
+#include "scip/type_clock.h"
 
 /** generic data and callback methods of an nonlinear handler */
 struct SCIP_Nlhdlr

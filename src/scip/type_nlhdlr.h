@@ -24,9 +24,18 @@
 #ifndef SCIP_TYPE_NLHDLR_H_
 #define SCIP_TYPE_NLHDLR_H_
 
-/** @name Nonlinear Handler
- * @{
- */
+#include "scip/type_expr.h"
+#include "scip/type_cons.h"
+#include "scip/type_misc.h"
+
+#define SCIP_NLHDLR_METHOD_NONE       0x0u   /**< no enforcement */
+#define SCIP_NLHDLR_METHOD_SEPABELOW  0x1u   /**< separation for expr <= auxvar, thus might estimate expr from below */
+#define SCIP_NLHDLR_METHOD_SEPAABOVE  0x2u   /**< separation for expr >= auxvar, thus might estimate expr from above */
+#define SCIP_NLHDLR_METHOD_SEPABOTH   (SCIP_NLHDLR_METHOD_SEPABELOW | SCIP_NLHDLR_METHOD_SEPAABOVE)  /**< separation for expr == auxvar */
+#define SCIP_NLHDLR_METHOD_ACTIVITY   0x4u   /**< activity computation (interval evaluation) and propagation (reverse propagation) */
+#define SCIP_NLHDLR_METHOD_ALL        (SCIP_NLHDLR_METHOD_SEPABOTH | SCIP_NLHDLR_METHOD_ACTIVITY) /**< all enforcement methods */
+
+typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 
 /** nonlinear handler copy callback
  *
@@ -95,9 +104,9 @@
  * linear under- or overestimation, cut generation, and/or activity computation and propagation.
  *
  * We distinguish the following enforcement methods:
- * - SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW: linear underestimation or cut generation for the relation expr <= auxvar (denoted as "below")
- * - SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
- * - SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
+ * - SCIP_NLHDLR_METHOD_SEPABELOW: linear underestimation or cut generation for the relation expr <= auxvar (denoted as "below")
+ * - SCIP_NLHDLR_METHOD_SEPAABOVE: linear overestimation or cut generation for the relation expr >= auxvar (denoted as "above")
+ * - SCIP_NLHDLR_METHOD_ACTIVITY: domain propagation (i.e., constant under/overestimation) for the relation expr == auxvar.
  *
  * On input, parameter 'enforcing' indicates for any of these methods, whether
  * - it is not necessary to have such a method, e.g., because no auxvar will exist for expr, or no one uses or set activities of this expression,
@@ -115,14 +124,14 @@
  * cutting planes in some situations only.
  *
  * A nonlinear handler will be called only for those callbacks that it mentioned in participating, which is
- * - ENFO and/or ESTIMATE will be called with overestimate==FALSE if SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW has been set
- * - ENFO and/or ESTIMATE will be called with overestimate==TRUE if SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE has been set
- * - INTEVAL and/or REVERSEPROP will be called if SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY has been set
- * If SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW or SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE has been set, then at least one of the
+ * - ENFO and/or ESTIMATE will be called with overestimate==FALSE if SCIP_NLHDLR_METHOD_SEPABELOW has been set
+ * - ENFO and/or ESTIMATE will be called with overestimate==TRUE if SCIP_NLHDLR_METHOD_SEPAABOVE has been set
+ * - INTEVAL and/or REVERSEPROP will be called if SCIP_NLHDLR_METHOD_ACTIVITY has been set
+ * If SCIP_NLHDLR_METHOD_SEPABELOW or SCIP_NLHDLR_METHOD_SEPAABOVE has been set, then at least one of the
  * callbacks ENFO and ESTIMATE need to be implemented. Also EVALAUX will be called in this case.
- * If SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP needs to be implemented.
+ * If SCIP_NLHDLR_METHOD_ACTIVITY has been set, then at least one of INTEVAL and REVERSEPROP needs to be implemented.
  * If the nlhdlr chooses not to participate, then it must not return nlhdlrexprdata and can leave participating at its
- * initial value (SCIP_CONSNONLINEAR_EXPRENFO_NONE).
+ * initial value (SCIP_NLHDLR_METHOD_NONE).
  *
  * Additionally, a nonlinear handler that decides to participate in any of the enforcement methods must call
  * @ref SCIPregisterExprUsageNonlinear() for every subexpression that it will use and indicate whether
@@ -148,8 +157,8 @@
    SCIP_NLHDLR* nlhdlr, \
    SCIP_EXPR* expr, \
    SCIP_CONS* cons, \
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* enforcing, \
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* participating, \
+   SCIP_NLHDLR_METHOD* enforcing, \
+   SCIP_NLHDLR_METHOD* participating, \
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata)
 
 /** auxiliary evaluation callback of nonlinear handler
@@ -366,7 +375,5 @@
 typedef struct SCIP_Nlhdlr         SCIP_NLHDLR;          /**< nonlinear handler */
 typedef struct SCIP_NlhdlrData     SCIP_NLHDLRDATA;      /**< nonlinear handler data */
 typedef struct SCIP_NlhdlrExprData SCIP_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
-
-/** @} */
 
 #endif /* SCIP_TYPE_NLHDLR_H_ */

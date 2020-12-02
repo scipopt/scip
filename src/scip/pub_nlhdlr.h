@@ -38,7 +38,7 @@ extern "C" {
 /** set the copy handler callback of a nonlinear handler */
 SCIP_EXPORT
 void SCIPnlhdlrSetCopyHdlr(
-   SCIP_NLHDLR*           nlhdlr,            /**< nonlinear handler */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRCOPYHDLR((*copy))         /**< copy callback (can be NULL) */
 );
 

@@ -116,7 +116,7 @@ typedef struct
 {
    SCIP_NLHDLR*          nlhdlr;             /**< nonlinear handler */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata;     /**< data of nonlinear handler */
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
+   SCIP_NLHDLR_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
    SCIP_Bool             issepainit;         /**< was the initsepa callback of nlhdlr called */
    SCIP_Real             auxvalue;           /**< auxiliary value of expression w.r.t. currently enforced solution */
    SCIP_Bool             sepabelowusesactivity;/**< whether sepabelow uses activity of some expression */
@@ -414,7 +414,7 @@ SCIP_RETCODE freeEnfoData(
       if( mydata->enfos[e]->issepainit )
       {
          /* call the separation deinitialization callback of the nonlinear handler */
-//FIXME         SCIP_CALL( SCIPcallNlhdlrExitSepaNonlinear(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
+//FIXME         SCIP_CALL( SCIPnlhdlrExitsepa(scip, nlhdlr, expr, mydata->enfos[e]->nlhdlrexprdata) );
          mydata->enfos[e]->issepainit = FALSE;
       }
 
@@ -505,11 +505,11 @@ SCIP_DECL_EXPR_OWNERPRINT(exprownerPrint)
       for( i = 0; i < ownerdata->nenfos; ++i )
       {
          SCIPinfoMessage(scip, file, "%s:", ownerdata->enfos[i]->nlhdlr->name);
-         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY )
+         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_ACTIVITY )
             SCIPinfoMessage(scip, file, "a");
-         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPABELOW )
+         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW )
             SCIPinfoMessage(scip, file, "u");
-         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_SEPAABOVE )
+         if( ownerdata->enfos[i]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE )
             SCIPinfoMessage(scip, file, "o");
          if( i < ownerdata->nenfos-1 )
             SCIPinfoMessage(scip, file, ", ");
@@ -2047,7 +2047,7 @@ SCIP_RETCODE forwardPropExpr(
                for( e = 0; e < ownerdata->nenfos && !SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity); ++e )
                {
                   /* skip nlhdlr if it does not want to participate in activity computation */
-                  if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) == 0 )
+                  if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_ACTIVITY) == 0 )
                      continue;
 
                   nlhdlr = ownerdata->enfos[e]->nlhdlr;
@@ -2059,7 +2059,7 @@ SCIP_RETCODE forwardPropExpr(
 
                   /* let nlhdlr evaluate current expression */
                   nlhdlrinterval = activity;
-//FIXME                  SCIP_CALL( SCIPcallNlhdlrIntEvalNonlinear(scip, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
+//FIXME                  SCIP_CALL( SCIPnlhdlrInteval(scip, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
 //                     &nlhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
                   SCIPdebugMsg(scip, " nlhdlr <%s>::inteval = [%.20g, %.20g]", nlhdlr->name, nlhdlrinterval.inf, nlhdlrinterval.sup);
@@ -2279,7 +2279,7 @@ SCIP_RETCODE reversePropQueue(
             int nreds;
 
             /* skip nlhdlr if it does not want to participate in activity computation */
-            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) == 0 )
+            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_ACTIVITY) == 0 )
                continue;
 
             nlhdlr = ownerdata->enfos[e]->nlhdlr;
@@ -2293,7 +2293,7 @@ SCIP_RETCODE reversePropQueue(
 #endif
 
             nreds = 0;
-//FIXME            SCIP_CALL( SCIPcallNlhdlrReversePropNonlinear(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, propbounds, infeasible, &nreds) );
+//FIXME            SCIP_CALL( SCIPnlhdlrReverseprop(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, propbounds, infeasible, &nreds) );
             assert(nreds >= 0);
             *ntightenings += nreds;
          }
@@ -2633,13 +2633,13 @@ SCIP_RETCODE propExprDomains(
 
             nlhdlr = ownerdata->enfos[e]->nlhdlr;
             assert(nlhdlr != NULL);
-            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_CONSNONLINEAR_EXPRENFO_ACTIVITY) == 0 )
+            if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_ACTIVITY) == 0 )
                continue;
 
             SCIPdebugMsg(scip, "propExprDomains calling reverseprop for expression %p [%g,%g]\n", (void*)expr,
                   SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup);
             ntightenings = 0;
-//FIXME            SCIP_CALL( SCIPcallNlhdlrReversePropNonlinear(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
+//FIXME            SCIP_CALL( SCIPnlhdlrReverseprop(scip, conshdlr, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata,
 //                     SCIPexprGetActivity(expr), &cutoff, &ntightenings) );
 
             if( cutoff )
@@ -8235,7 +8235,7 @@ void SCIPgetExprEnfoDataNonlinear(
    int                   idx,                /**< position of enforcement in enfos array */
    SCIP_NLHDLR**         nlhdlr,             /**< buffer to store nlhldr */
    SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< buffer to store nlhdlr data for expression, or NULL */
-   SCIP_CONSNONLINEAR_EXPRENFO_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
+   SCIP_NLHDLR_METHOD* nlhdlrparticipation, /**< buffer to store methods where nonlinear handler participates, or NULL */
    SCIP_Bool*            sepabelowusesactivity, /**< buffer to store whether sepabelow uses activity of some expression, or NULL */
    SCIP_Bool*            sepaaboveusesactivity, /**< buffer to store whether sepaabove uses activity of some expression, or NULL */
    SCIP_Real*            auxvalue            /**< buffer to store current auxvalue, or NULL */
