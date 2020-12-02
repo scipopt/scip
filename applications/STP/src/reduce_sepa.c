@@ -1160,6 +1160,7 @@ SCIP_RETCODE decomposeExec(
    assert(redbase->solnode == NULL && "not supported");
    assert(redbase->bidecompparams);
    assert(redbase->bidecompparams->depth < redbase->bidecompparams->maxdepth);
+   assert(graph_valid(scip, g));
 
    redbase->bidecompparams->depth++;
 
@@ -1172,6 +1173,8 @@ SCIP_RETCODE decomposeExec(
    }
 
    decomposeFreeMembers(scip, &bidecomp);
+
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
