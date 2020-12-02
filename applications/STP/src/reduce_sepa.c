@@ -1159,7 +1159,7 @@ SCIP_RETCODE decomposeExec(
     * and because order of nodes is changed in subbgraph */
    assert(redbase->solnode == NULL && "not supported");
    assert(redbase->bidecompparams);
-   assert(redbase->bidecompparams->depth < redbase->bidecompparams->maxdept);
+   assert(redbase->bidecompparams->depth < redbase->bidecompparams->maxdepth);
 
    redbase->bidecompparams->depth++;
 
@@ -1201,6 +1201,10 @@ SCIP_RETCODE reduce_bidecomposition(
    assert(graph_typeIsSpgLike(g) && "only SPG decomposition supported yet");
 
    *wasDecomposed = FALSE;
+
+   if( g->terms == 1 )
+      return SCIP_OKAY;
+
    graph_mark(g);
 
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );

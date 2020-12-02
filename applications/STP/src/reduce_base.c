@@ -412,7 +412,8 @@ SCIP_RETCODE redLoopStp_inner(
    SCIP_Bool*            wasDecomposed       /**< pointer to mark whether to exit early */
 )
 {
-   const RPARAMS* redparameters = redbase->redparameters;
+   const RPARAMS* const redparameters = redbase->redparameters;
+   BIDECPARAMS* const bidecompparams = redbase->bidecompparams;
    SCIP_Real ub = -1.0;
    SCIP_Real timelimit;
    SCIP_Bool rerun = TRUE;
@@ -447,6 +448,8 @@ SCIP_RETCODE redLoopStp_inner(
       int brednelims = 0;
       int degtnelims = 0;
       int sdbiasnelims = 0;
+
+      assert(*wasDecomposed == FALSE);
 
       // for debugging of extended reductions todo deleteme
 #if 0
@@ -564,15 +567,20 @@ SCIP_RETCODE redLoopStp_inner(
 //#define XXX
 #ifdef XXX
       // todo extra method
-      if( g->terms > 1 && redbase->bidecompparams && redbase->bidecompparams->depth < redbase->bidecompparams->maxdept  )
+      if( bidecompparams && bidecompparams->depth < bidecompparams->maxdepth )
       {
          int todo;
-         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
+         printf("go with depth %d \n", bidecompparams->depth);
 
+         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
+         printf("wasDecomposed=%d \n", *wasDecomposed);
+
+         // todo...second check after da!
+
+         if( *wasDecomposed )
+            break;
       }
 #endif
-
-
 
 
       if( da )
@@ -1153,7 +1161,7 @@ SCIP_RETCODE reduceStp(
    {
       const RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing,
                                    .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
-      BIDECPARAMS decparameters = { .depth = 0, .maxdept = 1 };
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2 };
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
                           .solnode = NULL, .fixed = fixed,
                           .vnoi = vnoi, .path = path, .heap = heap,

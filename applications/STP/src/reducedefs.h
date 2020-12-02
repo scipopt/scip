@@ -72,7 +72,7 @@ typedef struct reduction_parameters
 typedef struct bidecomposition_reduction_parameters
 {
    int                   depth;              /**< current depth */
-   int                   maxdept;            /**< maximum recursive depth of decomposition */
+   int                   maxdepth;           /**< maximum recursive depth of decomposition */
 } BIDECPARAMS;
 
 
