@@ -747,7 +747,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
       {
          const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                       .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
-         REDBASE redbase = { .redparameters = &parameters, .solnode = NULL, .fixed = &offset,
+         REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
+                                  .solnode = NULL, .fixed = &offset,
                                   .vnoi = vnoi, .path = path, .heap = heap,
                                   .nodearrreal = nodearrreal,
                                   .state = state, .vbase = vbase, .nodearrint = nodearrint,
@@ -855,7 +856,8 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
             const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                  .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
 
-            REDBASE redbase = { .redparameters = &parameters, .solnode = solnode, .fixed = &offset,
+            REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
+                                .solnode = solnode, .fixed = &offset,
                                 .vnoi = vnoi, .path = path, .heap = heap,
                                 .nodearrreal = nodearrreal,
                                 .state = state, .vbase = vbase, .nodearrint = nodearrint,

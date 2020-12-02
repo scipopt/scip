@@ -553,7 +553,7 @@ SCIP_RETCODE redLoopStp_inner(
 
       ub = -1.0;
 
-      if( fullreduce && 0 )
+      if( !fullreduce && 0 )
       {
          int nelims = 0;
 
@@ -563,37 +563,12 @@ SCIP_RETCODE redLoopStp_inner(
 
 //#define XXX
 #ifdef XXX
-      static int bi = FALSE;
-
-      if( g->terms > 1 && 1 && !bi )
+      // todo extra method
+      if( g->terms > 1 && redbase->bidecompparams && redbase->bidecompparams->depth < redbase->bidecompparams->maxdept  )
       {
          int todo;
-         GRAPH *sub;
-         SUBINOUT *subinout = NULL;
-         //   printf("go \n");
+         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
 
-         bi = TRUE;
-         SCIP_CALL(graph_subinoutInit(scip, g, &subinout));
-         graph_mark(g);
-
-         SCIP_CALL(graph_subgraphExtract(scip, g, subinout, &sub));
-         graph_printInfo(g);
-         graph_printInfo(sub);
-
-         SCIP_CALL(redLoopStp(scip, sub, redbase));
-
-         printf("after red: \n");
-         graph_printInfo(sub);
-
-         printf("go \n");
-
-         SCIP_CALL(graph_subgraphReinsert(scip, subinout, g, &sub));
-         graph_printInfo(g);
-         //     graph_subgraphFree(scip, &sub);
-
-         graph_subinoutFree(scip, &subinout);
-         //assert(0);
-         *wasDecomposed = TRUE;
       }
 #endif
 
@@ -1178,7 +1153,9 @@ SCIP_RETCODE reduceStp(
    {
       const RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing,
                                    .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
-      REDBASE redbase = { .redparameters = &parameters, .solnode = NULL, .fixed = fixed,
+      BIDECPARAMS decparameters = { .depth = 0, .maxdept = 1 };
+      REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
+                          .solnode = NULL, .fixed = fixed,
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,

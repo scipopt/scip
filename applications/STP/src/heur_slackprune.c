@@ -270,7 +270,8 @@ SCIP_RETCODE reduceExact(
       const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                     .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
-      REDBASE redbase = { .redparameters = &parameters, .solnode = solnode, .fixed = offset,
+      REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
+                          .solnode = solnode, .fixed = offset,
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,

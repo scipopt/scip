@@ -66,11 +66,20 @@ typedef struct reduction_parameters
 } RPARAMS;
 
 
+// todo: parameter so that after restart only standard SD is performed...
+/** bi-decomposition reduction parameters */
+typedef struct bidecomposition_reduction_parameters
+{
+   int                   depth;              /**< current depth */
+   int                   maxdept;            /**< maximum recursive depth of decomposition */
+} BIDECPARAMS;
+
 
 /** reduction information and some buffers */
 typedef struct reduction_base
 {
    const RPARAMS*        redparameters;      /**< parameters */
+   BIDECPARAMS*          bidecompparams;     /**< bidecomposition parameters or NULL */
    int*                  solnode;            /**< solution nodes array (or NULL) */
    SCIP_Real*            fixed;              /**< pointer to fixed value */
  /* buffer: */

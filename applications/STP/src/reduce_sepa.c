@@ -1156,6 +1156,10 @@ SCIP_RETCODE decomposeExec(
    /* NOTE: does not work because we do node contractions when reinserting the subgraph,
     * and because order of nodes is changed in subbgraph */
    assert(redbase->solnode == NULL && "not supported");
+   assert(redbase->bidecompparams);
+   assert(redbase->bidecompparams->depth < redbase->bidecompparams->maxdept);
+
+   redbase->bidecompparams->depth++;
 
    SCIP_CALL( decomposeInit(scip, cutnodes, g, &bidecomp) );
 

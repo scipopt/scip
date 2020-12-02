@@ -264,7 +264,8 @@ SCIP_RETCODE reduceExact(
       const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
                                                     .reductbound = LURKPRUNE_MINREDELIMS, .userec = FALSE, .fullreduce = FALSE };
 
-      REDBASE redbase = { .redparameters = &parameters, .solnode = NULL, .fixed = &(lurkprune->offsetnew),
+      REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
+                          .solnode = NULL, .fixed = &(lurkprune->offsetnew),
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
