@@ -522,9 +522,10 @@ void graph_get_nVET(
       {
          v++;
          e += graph->grad[k];
-         if( Is_term(graph->term[k]) )
-            t++;
       }
+
+      if( nterms && Is_term(graph->term[k]) )
+         t++;
    }
 
    if( nnodes )
