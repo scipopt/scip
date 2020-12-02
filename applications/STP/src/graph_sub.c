@@ -290,7 +290,7 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
       }
    }
 
-   subgraph->orgedges = orggraph->edges;
+   subgraph->orgedges = MAX(orggraph->edges, orggraph->orgedges);
    assert(subgraph->edges == subgraph->esize);
 
    return SCIP_OKAY;
