@@ -458,7 +458,7 @@ SCIP_Real extSdGetProper(
    SCIP_Real             sd_in               /**< the special distance */
 )
 {
-   assert(LT(sd_in, FARAWAY));
+   assert(LE(sd_in, FARAWAY));
    assert(EQ(sd_in, -1.0) || GE(sd_in, 0.0));
 
    return (sd_in >= -0.5) ? sd_in : FARAWAY;
