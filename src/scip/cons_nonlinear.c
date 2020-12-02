@@ -8763,6 +8763,68 @@ SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
    return (SCIPexprGetDiffTag(expr) != SCIPexprGetDiffTag(varexpr)) ? 0.0 : SCIPexprGetBardot(varexpr);
 }
 
+/** evaluates quadratic term in a solution w.r.t. auxiliary variables
+ *
+ * \note This requires that for every expr used in the quadratic data, a variable or auxiliary variable is available
+ */
+SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< quadratic expression */
+   SCIP_SOL*             sol                 /**< solution to evaluate, or NULL for LP solution */
+   )
+{
+   SCIP_Real auxvalue;
+   int nlinexprs;
+   SCIP_Real* lincoefs;
+   SCIP_EXPR** linexprs;
+   int nquadexprs;
+   int nbilinexprs;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   SCIPexprGetQuadraticData(expr, &auxvalue, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprs, NULL, NULL);
+
+   /* linear terms */
+   for( i = 0; i < nlinexprs; ++i )
+   {
+      assert(SCIPgetExprAuxVarNonlinear(linexprs[i]) != NULL);
+      auxvalue += lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(linexprs[i]));
+   }
+
+   /* quadratic terms */
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_EXPR* quadexprterm;
+      SCIP_Real lincoef;
+      SCIP_Real sqrcoef;
+      SCIP_Real solval;
+
+      SCIPexprGetQuadraticQuadTerm(expr, i, &quadexprterm, &lincoef, &sqrcoef, NULL, NULL, NULL);
+
+      assert(SCIPgetExprAuxVarNonlinear(quadexprterm) != NULL);
+
+      solval = SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(quadexprterm));
+      auxvalue += (lincoef + sqrcoef * solval) * solval;
+   }
+
+   /* bilinear terms */
+   for( i = 0; i < nbilinexprs; ++i )
+   {
+      SCIP_EXPR* expr1;
+      SCIP_EXPR* expr2;
+      SCIP_Real coef;
+
+      SCIPexprGetQuadraticBilinTerm(expr, i, &expr1, &expr2, &coef, NULL, NULL);
+
+      assert(SCIPgetExprAuxVarNonlinear(expr1) != NULL);
+      assert(SCIPgetExprAuxVarNonlinear(expr2) != NULL);
+      auxvalue += coef * SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr1)) * SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr2));
+   }
+
+   return auxvalue;
+}
 
 /* Nonlinear Handler Methods */
 

@@ -2262,13 +2262,15 @@ SCIP_Real SCIPevalExprQuadratic(
 
    SCIPexprGetQuadraticData(expr, &auxvalue, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, &nbilinexprs, NULL, NULL);
 
-   for( i = 0; i < nlinexprs; ++i ) /* linear exprs */
+   /* linear terms */
+   for( i = 0; i < nlinexprs; ++i )
    {
       assert(SCIPexprIsVar(scip->set, linexprs[i]));
       auxvalue += lincoefs[i] * SCIPgetSolVal(scip, sol, SCIPgetVarExprVar(linexprs[i]));
    }
 
-   for( i = 0; i < nquadexprs; ++i ) /* quadratic terms */
+   /* quadratic terms */
+   for( i = 0; i < nquadexprs; ++i )
    {
       SCIP_EXPR* quadexprterm;
       SCIP_Real lincoef;
@@ -2283,7 +2285,8 @@ SCIP_Real SCIPevalExprQuadratic(
       auxvalue += (lincoef + sqrcoef * solval) * solval;
    }
 
-   for( i = 0; i < nbilinexprs; ++i ) /* bilinear terms */
+   /* bilinear terms */
+   for( i = 0; i < nbilinexprs; ++i )
    {
       SCIP_EXPR* expr1;
       SCIP_EXPR* expr2;

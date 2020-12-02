@@ -917,7 +917,7 @@ SCIP_Real SCIPgetExprPartialDiffGradientDirNonlinear(
 
 /** evaluates quadratic term in a solution w.r.t. auxiliary variables
  *
- * \note This requires that for every expr used in the quadratic data, an auxiliary variable is available (or the expression is a variable-expression).
+ * \note This requires that for every expr used in the quadratic data, a variable or auxiliary variable is available
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
