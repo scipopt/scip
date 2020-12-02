@@ -2801,6 +2801,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       graph_copy(scip, graph, &(newgraph));
       probdata->orggraph = graph;
       graph = newgraph;
+      probdata->graph = newgraph;
    }
 #endif
 
