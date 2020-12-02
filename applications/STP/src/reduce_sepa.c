@@ -1077,9 +1077,10 @@ SCIP_RETCODE decomposeReduceSub(
    )
 {
    GRAPH* subgraph;
+   const SUBINOUT* const subinout = bidecomp->subinout;
    int* const gMark = g->mark;
    const int* const compnodes = bidecomp->nodes;
-   const int* const contractionRecord = graph_subinoutGetContractionRecord(bidecomp->subinout);
+   const int* const contractionRecord = graph_subinoutGetContractionRecord(subinout);
    const int nnodes = graph_get_nNodes(g);
    const int compstart = bidecomp->starts[compindex];
    const int compend = bidecomp->starts[compindex + 1];
@@ -1106,8 +1107,9 @@ SCIP_RETCODE decomposeReduceSub(
 
       if( contractionRecord[compnode] != -1 )
       {
+         realnode = graph_knot_getContractionRecordAncestor(compnode, subinout);
+
          SCIPdebugMessage("(taking contracted node %d instead of %d:) \n", contractionRecord[compnode], compnode);
-         realnode = contractionRecord[compnode];
       }
       else
       {

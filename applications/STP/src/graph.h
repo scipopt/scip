@@ -192,8 +192,9 @@ extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
 extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, const GRAPH*, SUBINOUT*, GRAPH**);
 extern SCIP_RETCODE   graph_subinoutInit(SCIP*, const GRAPH*, SUBINOUT**);
 extern void           graph_subinoutFree(SCIP*, SUBINOUT**);
-const int* graph_subinoutGetSubToOrgNodeMap(const SUBINOUT*);
-const int* graph_subinoutGetContractionRecord(const SUBINOUT*);
+const int*            graph_subinoutGetSubToOrgNodeMap(const SUBINOUT*);
+const int*            graph_subinoutGetContractionRecord(const SUBINOUT*);
+int                   graph_knot_getContractionRecordAncestor(int, const SUBINOUT*);
 extern SCIP_RETCODE   graph_subgraphReinsert(SCIP*, SUBINOUT*, GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_subgraphFree(SCIP*, GRAPH**);
 

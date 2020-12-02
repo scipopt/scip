@@ -682,6 +682,33 @@ const int* graph_subinoutGetContractionRecord(
 }
 
 
+
+/** gets ancesotr */
+int graph_knot_getContractionRecordAncestor(
+  int                   node,
+  const SUBINOUT*       subinout
+  )
+{
+   int ancestor;
+   const int* record;
+
+   assert(subinout);
+   assert(subinout->org_contractRecord);
+   assert(0 <= node && node < subinout->org_nnodes);
+
+   record = subinout->org_contractRecord;
+
+
+   for( ancestor = node; record[ancestor] != -1; ancestor = record[ancestor]  )
+   {
+      assert(0 <= ancestor && ancestor < subinout->org_nnodes);
+   }
+
+   return ancestor;
+}
+
+
+
 /** frees */
 void graph_subinoutFree(
   SCIP*                 scip,               /**< SCIP data structure */
