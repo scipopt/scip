@@ -743,11 +743,10 @@ SCIP_RETCODE reduce_fixedConflicts(
    )
 {
    int* hasharr;
-
-   const int nedges = g->edges;
-   const int nnodes = g->knots;
-   const int nfixednodes = graph_get_nFixpseudonodes(g);
    const int* fixednodes = graph_get_fixpseudonodes(scip, g);
+   const int nedges = graph_get_nEdges(g);
+   const int arrsize = graph_pseudoAncestorsGetHashArraySize(g->pseudoancestors);
+   const int nfixednodes = graph_get_nFixpseudonodes(g);
 
    *countnew = 0;
 
@@ -761,13 +760,13 @@ SCIP_RETCODE reduce_fixedConflicts(
 
    assert(fixednodes);
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, nnodes) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, arrsize) );
 
    /* hash fixed nodes */
    for( int k = 0; k < nfixednodes; k++  )
    {
       const int node = fixednodes[k];
-      assert(node >= 0 && node < nnodes);
+      assert(node >= 0 && node < arrsize);
       assert(hasharr[node] == 0 );
 
       hasharr[node] = 1;
@@ -789,7 +788,7 @@ SCIP_RETCODE reduce_fixedConflicts(
          for( int k = 0; k < nPseudoancestors; k++  )
          {
             const int ancestor = pseudoancestors[k];
-            assert(ancestor >= 0 && ancestor < nnodes);
+            assert(ancestor >= 0 && ancestor < arrsize);
 
             if( hasharr[ancestor] != 0 )
             {
