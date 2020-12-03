@@ -30,6 +30,12 @@
 #define NLHDLR_DETECTPRIORITY  0
 #define NLHDLR_ENFOPRIORITY    0
 
+/** translate from one value of infinity to another
+ *
+ *  if val is >= infty1, then give infty2, else give val
+ */
+#define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
+
 /** evaluates an expression w.r.t. the values in the auxiliary variables */
 static
 SCIP_RETCODE evalExprInAux(
@@ -194,8 +200,9 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
       assert(auxvar != NULL);
 
-      // TODO infty to infty
-      SCIPintervalSetBounds(&childrenbounds[i], SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar));
+      SCIPintervalSetBounds(&childrenbounds[i],
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
    }
 
    /* allocate each coefficients array */
@@ -305,9 +312,13 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[c]);
       assert(auxvar != NULL);
 
-      // TODO infty to infty
-      SCIPintervalSetBounds(&localbounds[c], SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar));
-      SCIPintervalSetBounds(&globalbounds[c], SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar));
+      SCIPintervalSetBounds(&localbounds[c],
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbLocal(auxvar)),
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbLocal(auxvar)));
+
+      SCIPintervalSetBounds(&globalbounds[c],
+         -infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY, -SCIPvarGetLbGlobal(auxvar)),
+          infty2infty(SCIPinfinity(scip), SCIP_INTERVAL_INFINITY,  SCIPvarGetUbGlobal(auxvar)));
 
       refpoint[c] = SCIPgetSolVal(scip, sol, auxvar);
 
