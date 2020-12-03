@@ -1086,6 +1086,7 @@ SCIP_RETCODE decomposeReduceSub(
    const int compend = bidecomp->starts[compindex + 1];
 
    assert(compstart <= compend);
+   assert(redbase && redbase->bidecompparams);
 
    if( compend - compstart <= 1 )
    {
@@ -1093,7 +1094,7 @@ SCIP_RETCODE decomposeReduceSub(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("reduce component %d: \n", compindex);
+   SCIPdebugMessage("(depth %d) reduce component %d: \n", redbase->bidecompparams->depth, compindex);
 
    for( int i = 0; i < nnodes; i++ )
       gMark[i] = FALSE;
@@ -1139,6 +1140,7 @@ SCIP_RETCODE decomposeReduceSub(
 #endif
    SCIP_CALL(graph_subgraphReinsert(scip, bidecomp->subinout, g, &subgraph));
 
+   assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }

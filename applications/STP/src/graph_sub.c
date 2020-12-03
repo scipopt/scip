@@ -743,6 +743,7 @@ SCIP_RETCODE graph_subgraphReinsert(
    assert(scip && subinout && orggraph && subgraph);
    assert(*subgraph);
    assert(!graph_pc_isPcMw(orggraph) && "not yet supported");
+   assert(graph_valid(scip, orggraph));
 
    SCIP_CALL( reinsertSubgraph(scip, *subgraph, subinout, orggraph) );
 
@@ -750,6 +751,8 @@ SCIP_RETCODE graph_subgraphReinsert(
 
    /* NOTE: fixed components are not deleted */
    graph_free(scip, subgraph, FALSE);
+
+   assert(graph_valid(scip, orggraph));
 
    return SCIP_OKAY;
 }
