@@ -152,6 +152,16 @@ int SCIPnlhdlrGetEnfoPriority(
    return nlhdlr->enfopriority;
 }
 
+/** returns whether nonlinear handler is enabled */
+SCIP_Bool SCIPnlhdlrIsEnabled(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+)
+{
+   assert(nlhdlr != NULL);
+
+   return nlhdlr->enabled;
+}
+
 /** gives handler data of nonlinear handler */
 SCIP_NLHDLRDATA* SCIPnlhdlrGetData(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */

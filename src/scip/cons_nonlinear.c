@@ -2950,6 +2950,336 @@ SCIP_RETCODE addLocks(
    return SCIP_OKAY;
 }
 
+/** compares enfodata by enforcement priority of nonlinear handler
+ *
+ * if handlers have same enforcement priority, then compare by detection priority, then by name
+ */
+static
+SCIP_DECL_SORTPTRCOMP(enfodataCmp)
+{
+   SCIP_NLHDLR* h1;
+   SCIP_NLHDLR* h2;
+
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   h1 = ((EXPRENFO*)elem1)->nlhdlr;
+   h2 = ((EXPRENFO*)elem2)->nlhdlr;
+
+   assert(h1 != NULL);
+   assert(h2 != NULL);
+
+   if( SCIPnlhdlrGetEnfoPriority(h1) != SCIPnlhdlrGetEnfoPriority(h2) )
+      return SCIPnlhdlrGetEnfoPriority(h1) - SCIPnlhdlrGetEnfoPriority(h2);
+
+   if( SCIPnlhdlrGetDetectPriority(h1) != SCIPnlhdlrGetDetectPriority(h2) )
+      return SCIPnlhdlrGetDetectPriority(h1) - SCIPnlhdlrGetDetectPriority(h2);
+
+   return strcmp(SCIPnlhdlrGetName(h1), SCIPnlhdlrGetName(h2));
+}
+
+/** install nlhdlrs in one expression */
+static
+SCIP_RETCODE detectNlhdlr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression for which to run detection routines */
+   SCIP_CONS*            cons                /**< constraint for which expr == consdata->expr, otherwise NULL */
+   )
+{
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_NLHDLR_METHOD enforcemethodsallowed;
+   SCIP_NLHDLR_METHOD enforcemethods;
+   SCIP_NLHDLR_METHOD enforcemethodsnew;
+   SCIP_NLHDLR_METHOD nlhdlrenforcemethods;
+   SCIP_NLHDLR_METHOD nlhdlrparticipating;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata;
+   int enfossize;  /* allocated length of expr->enfos array */
+   int h;
+
+   assert(expr != NULL);
+
+   ownerdata = SCIPexprGetOwnerData(expr);
+   assert(ownerdata != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(ownerdata->conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->auxvarid >= 0);
+   assert(!conshdlrdata->indetect);
+
+   /* there should be no enforcer yet and detection should not even have considered expr yet */
+   assert(ownerdata->nenfos < 0);
+   assert(ownerdata->enfos == NULL);
+
+   /* check which enforcement methods are required by setting flags in enforcemethods for those that are NOT required
+    * - if no auxiliary variable usage, then do not need sepabelow or sepaabove
+    * - if auxiliary variable usage, but nobody positively (up) locks expr -> only need to enforce expr >= auxvar -> no need for underestimation
+    * - if auxiliary variable usage, but nobody negatively (down) locks expr -> only need to enforce expr <= auxvar -> no need for overestimation
+    * - if no one uses activity, then do not need activity methods
+    */
+   enforcemethods = SCIP_NLHDLR_METHOD_NONE;
+   if( ownerdata->nauxvaruses == 0 )
+      enforcemethods |= SCIP_NLHDLR_METHOD_SEPABOTH;
+   else
+   {
+      if( ownerdata->nlockspos == 0 )  /* no need for underestimation */
+         enforcemethods |= SCIP_NLHDLR_METHOD_SEPABELOW;
+      if( ownerdata->nlocksneg == 0 )  /* no need for overestimation */
+         enforcemethods |= SCIP_NLHDLR_METHOD_SEPAABOVE;
+   }
+   if( ownerdata->nactivityusesprop == 0 && ownerdata->nactivityusessepa == 0 )
+      enforcemethods |= SCIP_NLHDLR_METHOD_ACTIVITY;
+
+   /* it doesn't make sense to have been called on detectNlhdlr, if the expr isn't used for anything */
+   assert(enforcemethods != SCIP_NLHDLR_METHOD_ALL);
+
+   /* all methods that have not been flagged above are the ones that we want to be handled by nlhdlrs */
+   enforcemethodsallowed = ~enforcemethods & SCIP_NLHDLR_METHOD_ALL;
+
+   ownerdata->nenfos = 0;
+   enfossize = 2;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ownerdata->enfos, enfossize) );
+   conshdlrdata->indetect = TRUE;
+
+   SCIPdebugMsg(scip, "detecting nlhdlrs for %s expression %p (%s); requiring%s%s%s\n",
+      cons != NULL ? "root" : "non-root", (void*)expr, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)),
+      (enforcemethods & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 ? "" : " sepabelow",
+      (enforcemethods & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 ? "" : " sepaabove",
+      (enforcemethods & SCIP_NLHDLR_METHOD_ACTIVITY) != 0 ? "" : " activity");
+
+   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
+   {
+      SCIP_NLHDLR* nlhdlr;
+
+      nlhdlr = conshdlrdata->nlhdlrs[h];
+      assert(nlhdlr != NULL);
+
+      /* skip disabled nlhdlrs */
+      if( !SCIPnlhdlrIsEnabled(nlhdlr) )
+         continue;
+
+      /* call detect routine of nlhdlr */
+      nlhdlrexprdata = NULL;
+      enforcemethodsnew = enforcemethods;
+      nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
+      conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
+      conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
+      SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
+
+      /* nlhdlr might have claimed more than needed: clean up sepa flags */
+      nlhdlrparticipating &= enforcemethodsallowed;
+
+      /* detection is only allowed to augment to nlhdlrenforcemethods, so previous enforcemethods must still be set */
+      assert((enforcemethodsnew & enforcemethods) == enforcemethods);
+
+      /* Because of the previous assert, nlhdlrenforcenew ^ enforcemethods are the methods enforced by this nlhdlr.
+       * They are also cleaned up here to ensure that only the needed methods are claimed.
+       */
+      nlhdlrenforcemethods = (enforcemethodsnew ^ enforcemethods) & enforcemethodsallowed;
+
+      /* nlhdlr needs to participate for the methods it is enforcing */
+      assert((nlhdlrparticipating & nlhdlrenforcemethods) == nlhdlrenforcemethods);
+
+      if( nlhdlrparticipating == SCIP_NLHDLR_METHOD_NONE )
+      {
+         /* nlhdlr might not have detected anything, or all set flags might have been removed by
+          * clean up; in the latter case, we may need to free nlhdlrexprdata */
+
+         /* free nlhdlr exprdata, if there is any and there is a method to free this data */
+         if( nlhdlrexprdata != NULL )
+         {
+            SCIP_CALL( SCIPnlhdlrFreeexprdata(scip, nlhdlr, expr, &nlhdlrexprdata) );
+         }
+         /* nlhdlr cannot have added an enforcement method if it doesn't participate (actually redundant due to previous asserts) */
+         assert(nlhdlrenforcemethods == SCIP_NLHDLR_METHOD_NONE);
+
+         SCIPdebugMsg(scip, "nlhdlr <%s> detect unsuccessful\n", SCIPnlhdlrGetName(nlhdlr));
+
+         continue;
+      }
+
+      SCIPdebugMsg(scip, "nlhdlr <%s> detect successful; sepabelow: %s, sepaabove: %s, activity: %s\n",
+         SCIPnlhdlrGetName(nlhdlr),
+         ((nlhdlrenforcemethods & SCIP_NLHDLR_METHOD_SEPABELOW) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_NLHDLR_METHOD_SEPABELOW) != 0) ? "participating" : "no",
+         ((nlhdlrenforcemethods & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0) ? "participating" : "no",
+         ((nlhdlrenforcemethods & SCIP_NLHDLR_METHOD_ACTIVITY) != 0) ? "enforcing" : ((nlhdlrparticipating & SCIP_NLHDLR_METHOD_ACTIVITY) != 0) ? "participating" : "no");
+
+      /* store nlhdlr and its data */
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ownerdata->enfos, &enfossize, ownerdata->nenfos+1) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[ownerdata->nenfos]) );
+      ownerdata->enfos[ownerdata->nenfos]->nlhdlr = nlhdlr;
+      ownerdata->enfos[ownerdata->nenfos]->nlhdlrexprdata = nlhdlrexprdata;
+      ownerdata->enfos[ownerdata->nenfos]->nlhdlrparticipation = nlhdlrparticipating;
+      ownerdata->enfos[ownerdata->nenfos]->issepainit = FALSE;
+      ownerdata->enfos[ownerdata->nenfos]->sepabelowusesactivity = conshdlrdata->registerusesactivitysepabelow;
+      ownerdata->enfos[ownerdata->nenfos]->sepaaboveusesactivity = conshdlrdata->registerusesactivitysepaabove;
+      ownerdata->nenfos++;
+
+      /* update enforcement flags */
+      enforcemethods = enforcemethodsnew;
+   }
+
+   conshdlrdata->indetect = FALSE;
+
+   /* stop if an enforcement method is missing but we are already in solving stage
+    * (as long as the expression provides its callbacks, the default nlhdlr should have provided all enforcement methods)
+    */
+   if( enforcemethods != SCIP_NLHDLR_METHOD_ALL && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      SCIPerrorMessage("no nonlinear handler provided some of the required enforcement methods\n");
+      return SCIP_ERROR;
+   }
+
+   assert(ownerdata->nenfos > 0);
+
+   /* sort nonlinear handlers by enforcement priority, in decreasing order */
+   if( ownerdata->nenfos > 1 )
+      SCIPsortDownPtr((void**)ownerdata->enfos, enfodataCmp, ownerdata->nenfos);
+
+   /* resize enfos array to be nenfos long */
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &ownerdata->enfos, enfossize, ownerdata->nenfos) );
+
+   return SCIP_OKAY;
+}
+
+/** detect nlhdlrs that can handle the expressions */
+static
+SCIP_RETCODE detectNlhdlrs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints for which to run nlhdlr detect */
+   int                   nconss              /**< total number of constraints */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPR* expr;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_EXPRITER* it;
+   int i;
+
+   assert(conss != NULL || nconss == 0);
+   assert(nconss >= 0);
+   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, TRUE) );
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
+   {
+      /* ensure that activities are recomputed w.r.t. the global variable bounds if CONSACTIVE is called in a local node;
+       * for example, this happens if globally valid expression constraints are added during the tree search
+       */
+      SCIPincrementCurBoundsTagNonlinear(conshdlr, TRUE);
+      conshdlrdata->globalbounds = TRUE;
+      conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
+   }
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss != NULL && conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+      assert(consdata->expr != NULL);
+
+      /* if a constraint is separated, we currently need it to be initial, too
+       * this is because INITLP will create the auxiliary variables that are used for any separation
+       * TODO we may relax this with a little more programming effort when required, see also TODO in INITLP
+       */
+      assert((!SCIPconsIsSeparated(conss[i]) && !SCIPconsIsEnforced(conss[i])) || SCIPconsIsInitial(conss[i]));
+
+      ownerdata = SCIPexprGetOwnerData(consdata->expr);
+      assert(ownerdata != NULL);
+
+      /* because of common sub-expressions it might happen that we already detected a nonlinear handler and added it to the expr
+       * then we would normally skip to run DETECT again
+       * HOWEVER: most likely we have been running DETECT with cons == NULL, which may interest less nlhdlrs
+       * thus, if expr is the root expression, we rerun DETECT
+       */
+      if( ownerdata->nenfos > 0 )
+      {
+         SCIP_CALL( freeEnfoData(scip, consdata->expr, FALSE) );
+         assert(ownerdata->nenfos < 0);
+      }
+
+      /* if constraint will be enforced, and we are in solve, then ensure auxiliary variable for root expression
+       *   this way we can treat the root expression like any other expression when enforcing via separation
+       * if constraint will be propagated, then register activity usage of root expression
+       * this can trigger a call to forwardPropExpr, for which we better have the indetect flag set
+       */
+      conshdlrdata->indetect = TRUE;
+      SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, consdata->expr,
+         SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE && (SCIPconsIsSeparated(conss[i]) || SCIPconsIsEnforced(conss[i])),
+         SCIPconsIsPropagated(conss[i]),
+         FALSE, FALSE) );
+      conshdlrdata->indetect = FALSE;
+
+      /* compute integrality information for all subexpressions */
+      SCIP_CALL( SCIPcomputeExprIntegrality(scip, consdata->expr) );
+
+      /* run detectNlhdlr on all expr where required */
+      for( expr = SCIPexpriterRestartDFS(it, consdata->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )  /*lint !e441*/
+      {
+         ownerdata = SCIPexprGetOwnerData(expr);
+         assert(ownerdata != NULL);
+
+         /* skip exprs that we already looked at */
+         if( ownerdata->nenfos >= 0 )
+            continue;
+
+         /* if there is auxvar usage, then someone requires that
+          *   auxvar == expr (or auxvar >= expr or auxvar <= expr) or we are at the root expression (expr==consdata->expr)
+          *   thus, we need to find nlhdlrs that separate or estimate
+          * if there is activity usage, then there is someone requiring that
+          *   activity of this expression is updated; this someone would also benefit from better bounds on the activity
+          *   of this expression thus, we need to find nlhdlrs that do interval-evaluation
+          */
+         if( ownerdata->nauxvaruses > 0 || ownerdata->nactivityusesprop > 0 || ownerdata->nactivityusessepa > 0 )
+         {
+            SCIP_CALL( detectNlhdlr(scip, expr, expr == consdata->expr ? conss[i] : NULL) );
+
+            assert(ownerdata->nenfos >= 0);
+         }
+         else
+         {
+            /* remember that we looked at this expression during detectNlhdlrs
+             * even though we have not actually run detectNlhdlr, because no nlhdlr showed interest in this expr,
+             * in some situations (forwardPropExpr, to be specific) we will have to distinguish between exprs for which
+             * we have not initialized enforcement yet (nenfos < 0) and expressions which are just not used in enforcement (nenfos == 0)
+             */
+            ownerdata->nenfos = 0;
+         }
+      }
+
+      /* include this constraint into the next propagation round because the added nlhdlr may do find tighter bounds now */
+      if( SCIPconsIsPropagated(conss[i]) )
+         consdata->ispropagated = FALSE;
+   }
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPgetDepth(scip) != 0 )
+   {
+      /* ensure that the local bounds are used again when reevaluating the expressions later;
+       * this is only needed if CONSACTIVE is called in a local node (see begin of this function)
+       */
+      SCIPincrementCurBoundsTagNonlinear(conshdlr, FALSE);
+      conshdlrdata->globalbounds = FALSE;
+      conshdlrdata->lastvaractivitymethodchange = conshdlrdata->curboundstag;
+   }
+   else
+   {
+      /* ensure that all activities (except for var-exprs) are reevaluated since better methods may be available now */
+      SCIPincrementCurBoundsTagNonlinear(conshdlr, FALSE);
+   }
+
+   SCIPfreeExpriter(&it);
+
+   return SCIP_OKAY;
+}
+
 /** initializes (pre)solving data of constraints
  *
  * This initializes data in a constraint that is used for separation, propagation, etc, and assumes that expressions will
@@ -3023,7 +3353,7 @@ SCIP_RETCODE initSolve(
    }
 
    /* register non linear handlers */
-//FIXME   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, conss, nconss) );
 
    return SCIP_OKAY;
 }

@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
    SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
-   // SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
