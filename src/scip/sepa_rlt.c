@@ -1997,7 +1997,7 @@ SCIP_RETCODE isAcceptableRow(
 
 /** computes coefficients of an auxiliary expression (coef*auxexpr) for a product term */
 static
-void addAuxexprToRow(  /*TODO rename, as this doesn't actually add anything to a row; addAuxexprCoefs ? */
+void addAuxexprCoefs(
    SCIP_VAR*             var1,               /**< first product variable */
    SCIP_VAR*             var2,               /**< second product variable */
    SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to be added */
@@ -2126,7 +2126,7 @@ SCIP_RETCODE addRltTerm(
    {
       SCIPdebugMsg(scip, "auxiliary expression for <%s> and <%s> found, will be added to cut:\n",
                           SCIPvarGetName(colvar), SCIPvarGetName(var));
-      addAuxexprToRow(var, colvar, terms[idx].aux.exprs[auxpos], coefterm, &coefauxvar, coefvar, &coefcolvar, cst);
+      addAuxexprCoefs(var, colvar, terms[idx].aux.exprs[auxpos], coefterm, &coefauxvar, coefvar, &coefcolvar, cst);
       auxvar = terms[idx].aux.exprs[auxpos]->auxvar;
    }
    /* for an existing term, use the auxvar if there is one */
@@ -2901,7 +2901,7 @@ SCIP_RETCODE separateMcCormickImplicit(
          success = TRUE;
 
          /* subtract auxexpr from the cut */
-         addAuxexprToRow(terms[i].x, terms[i].y, auxexpr, -1.0, &auxcoef, &xcoef, &ycoef, &constant);
+         addAuxexprCoefs(terms[i].x, terms[i].y, auxexpr, -1.0, &auxcoef, &xcoef, &ycoef, &constant);
 
          /* add McCormick terms: ask for an overestimator if relation is auxexpr <= x*y, and vice versa */
          SCIPaddBilinMcCormick(scip, 1.0, bndx.inf, bndx.sup, refpointx, bndy.inf, bndy.sup, refpointy, underestimate,
