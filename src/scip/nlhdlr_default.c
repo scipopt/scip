@@ -180,14 +180,15 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    SCIP_Real* coefs[SCIP_EXPR_MAXINITESTIMATES];
    SCIP_Real constant[SCIP_EXPR_MAXINITESTIMATES];
    SCIP_VAR* auxvar;
+   SCIP_ROWPREP* rowprep;
    int nreturned;
    int i;
 
    assert(scip != NULL);
    assert(expr != NULL);
 
+   /* get global bounds of auxiliary variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &childrenbounds, SCIPexprGetNChildren(expr)) );
-
    for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
    {
       auxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
@@ -197,19 +198,66 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
       SCIPintervalSetBounds(&childrenbounds[i], SCIPvarGetLbGlobal(auxvar), SCIPvarGetUbGlobal(auxvar));
    }
 
-   /* call the separation initialization callback of the expression handler */
-   if( underestimate )
+   /* allocate each coefficients array */
+   for( i = 0; i < SCIP_EXPR_MAXINITESTIMATES; ++i )
    {
-      SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(scip, expr, childrenbounds, FALSE, coefs, constant, &nreturned) );
-
-      // TODO create rowprep, cleanup, create row, add row
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs[i], SCIPexprGetNChildren(expr)) );
    }
 
-   if( overestimate )
-   {
-      SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(scip, expr, childrenbounds, TRUE, coefs, constant, &nreturned) );
+   /* create rowprep */
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, FALSE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, SCIPexprGetNChildren(expr)+1) );
 
-      // TODO create rowprep, cleanup, create row, add row
+   /* call the separation initialization callback of the expression handler and turn estimates into SCIP rows */
+   for( i = 0; i < 2; ++i )
+   {
+      nreturned = 0;
+      if( i == 0 && underestimate )
+      {
+         SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(scip, expr, childrenbounds, FALSE, coefs, constant, &nreturned) );
+         assert(SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_RIGHT);
+      }
+      if( i == 1 && overestimate )
+      {
+         SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(scip, expr, childrenbounds, TRUE, coefs, constant, &nreturned) );
+         SCIProwprepSetSidetype(rowprep, SCIP_SIDETYPE_LEFT);
+      }
+
+      for( --nreturned; nreturned >= 0; --nreturned )
+      {
+         SCIP_Bool success;
+         int v;
+
+         SCIProwprepReset(rowprep);
+
+         for( v = 0; v < SCIPexprGetNChildren(expr); ++v )
+         {
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[v]), coefs[nreturned][v]) );
+         }
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(expr), -1.0) );
+         SCIProwprepAddConstant(rowprep, constant[nreturned]);
+
+         /* straighten out numerics */
+         SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, NULL, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetHugeValue(scip), &success) );
+
+         /* if cleanup removed all but one variable, then the cut is essentially a bound; we can skip this and rely on boundtightening */
+         if( success && SCIProwprepGetNVars(rowprep) > 1 )
+         {
+            /* add the cut */
+            SCIP_ROW* row;
+
+            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
+            SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
+         }
+      }
+   }
+
+   SCIPfreeRowprep(scip, &rowprep);
+
+   for( i = SCIP_EXPR_MAXINITESTIMATES-1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &coefs[i]);
    }
 
    SCIPfreeBufferArray(scip, &childrenbounds);

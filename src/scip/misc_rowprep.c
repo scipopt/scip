@@ -649,6 +649,17 @@ char* SCIProwprepGetName(
    return rowprep->name;
 }
 
+/** resets rowprep to have 0 terms and side 0 */
+void SCIProwprepReset(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+)
+{
+   assert(rowprep != NULL);
+
+   rowprep->nvars = 0;
+   rowprep->side = 0.0;
+}
+
 #ifdef NDEBUG
 #undef SCIProwprepAddSide
 #undef SCIProwprepAddConstant
@@ -674,9 +685,18 @@ void SCIProwprepAddConstant(
    SCIP_Real             constant            /**< constant value to be added */
    )
 {
+   SCIProwprepAddSide(rowprep, -constant);
+}
+
+/** sets side type of rowprep */
+void SCIProwprepSetSidetype(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_SIDETYPE         sidetype            /**< new side type */
+)
+{
    assert(rowprep != NULL);
 
-   SCIProwprepAddSide(rowprep, -constant);
+   rowprep->sidetype = sidetype;
 }
 
 /** sets whether rowprep is local */

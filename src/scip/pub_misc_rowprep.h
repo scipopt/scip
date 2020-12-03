@@ -100,6 +100,12 @@ char* SCIProwprepGetName(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
    );
 
+/** resets rowprep to have 0 terms and side 0 */
+SCIP_EXPORT
+void SCIProwprepReset(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+);
+
 /** adds constant value to side of rowprep */
 SCIP_EXPORT
 void SCIProwprepAddSide(
@@ -115,6 +121,13 @@ SCIP_EXPORT
 void SCIProwprepAddConstant(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Real             constant            /**< constant value to be added */
+);
+
+/** sets side type of rowprep */
+SCIP_EXPORT
+void SCIProwprepSetSidetype(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_SIDETYPE         sidetype            /**< new side type */
 );
 
 /** sets whether rowprep is local */
