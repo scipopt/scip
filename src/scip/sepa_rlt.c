@@ -1133,10 +1133,9 @@ SCIP_RETCODE detectProductsUnconditional(
    int                   varpos1,            /**< position of the first unconditional variable in the vars_xwy array */
    int                   varpos2,            /**< position of the second unconditional variable in the vars_xwy array */
    SCIP_HASHMAP*         varmap,             /**< variable map */
-   SCIP_Bool             f,                  /**< the value of x that activates the first relation */
-   SCIP_Bool             fixedside           /**< indicates if there is no need to subtract the big-M from side1 */
+   SCIP_Bool             f                   /**< the value of x that activates the first relation */
    )
-{  /*lint --e{715}*/  /* TODO fixedside is not used in this function; remove? if so, then also remove this lint suppression */
+{
    HASHDATA hashdata;
    HASHDATA* foundhashdata;
    SCIP_ROW* row2;
@@ -1626,7 +1625,7 @@ SCIP_RETCODE detectHiddenProducts(
                   {
                      SCIPdebugMsg(scip, "Implied relation + unconditional with w and y:\n");
                      SCIP_CALL( detectProductsUnconditional(scip, sepadata, prob_rows, row_list, hashtable2, coefs1,
-                        vars_xwy, side1, sidetype1, 1, 2, varmap, xfixing, FALSE) );
+                        vars_xwy, side1, sidetype1, 1, 2, varmap, xfixing) );
                   }
                }
             }
@@ -1719,7 +1718,7 @@ SCIP_RETCODE detectHiddenProducts(
                vars_xwy[2] = relatedvars[r2];
                SCIPdebugMsg(scip, "Implied bound + unconditional with w and y:\n");
                SCIP_CALL( detectProductsUnconditional(scip, sepadata, prob_rows, row_list, hashtable2, coefs1,
-                  vars_xwy, side1, sidetype1, 1, 2, varmap, xfixing, TRUE) );
+                  vars_xwy, side1, sidetype1, 1, 2, varmap, xfixing) );
             }
          }
       }
