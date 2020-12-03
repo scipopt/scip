@@ -192,6 +192,9 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
 
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    /* get global bounds of auxiliary variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &childrenbounds, SCIPexprGetNChildren(expr)) );
@@ -216,7 +219,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, SCIPexprGetNChildren(expr)+1) );
 
    /* call the separation initialization callback of the expression handler and turn estimates into SCIP rows */
-   for( i = 0; i < 2; ++i )
+   for( i = 0; i < 2 && !*infeasible; ++i )
    {
       nreturned = 0;
       if( i == 0 && underestimate )
@@ -230,7 +233,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
          SCIProwprepSetSidetype(rowprep, SCIP_SIDETYPE_LEFT);
       }
 
-      for( --nreturned; nreturned >= 0; --nreturned )
+      for( --nreturned; nreturned >= 0 && !*infeasible; --nreturned )
       {
          SCIP_Bool success;
          int v;

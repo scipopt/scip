@@ -100,6 +100,18 @@ char* SCIProwprepGetName(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
    );
 
+/** returns number of variables which coefficients were modified in cleanup */
+SCIP_EXPORT
+int SCIProwprepGetNModifiedVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** returns variables which coefficients were modified in cleanup */
+SCIP_EXPORT
+SCIP_VAR** SCIProwprepGetModifiedVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
 /** resets rowprep to have 0 terms and side 0 */
 SCIP_EXPORT
 void SCIProwprepReset(
@@ -135,6 +147,12 @@ SCIP_EXPORT
 void SCIProwprepSetLocal(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Bool             islocal             /**< whether rowprep is local */
+);
+
+/** enables recording for where modifications were done in cleanup */
+SCIP_EXPORT
+void SCIProwprepRecordModifications(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
 );
 
 #ifdef NDEBUG

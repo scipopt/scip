@@ -649,6 +649,26 @@ char* SCIProwprepGetName(
    return rowprep->name;
 }
 
+/** returns number of variables which coefficients were modified in cleanup */
+int SCIProwprepGetNModifiedVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->nmodifiedvars;
+}
+
+/** returns variables which coefficients were modified in cleanup */
+SCIP_VAR** SCIProwprepGetModifiedVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->modifiedvars;
+}
+
 /** resets rowprep to have 0 terms and side 0 */
 void SCIProwprepReset(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
@@ -658,6 +678,10 @@ void SCIProwprepReset(
 
    rowprep->nvars = 0;
    rowprep->side = 0.0;
+
+   rowprep->recordmodifications = FALSE;
+   rowprep->nmodifiedvars = 0;
+   rowprep->modifiedside = FALSE;
 }
 
 #ifdef NDEBUG
@@ -708,6 +732,16 @@ void SCIProwprepSetLocal(
    assert(rowprep != NULL);
 
    rowprep->local = islocal;
+}
+
+/** enables recording for where modifications were done in cleanup */
+void SCIProwprepRecordModifications(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+)
+{
+   assert(rowprep != NULL);
+
+   rowprep->recordmodifications = TRUE;
 }
 
 /** prints a rowprep */

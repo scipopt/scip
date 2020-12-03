@@ -355,11 +355,10 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
    SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
    );
 
-/** add the cut and maybe report branchscores */
+/** processes a rowprep for cut addition and maybe report branchscores */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler which provided the estimator */
    SCIP_CONS*            cons,               /**< nonlinear constraint */
    SCIP_EXPR*            expr,               /**< expression */
@@ -554,7 +553,6 @@ SCIP_RETCODE SCIPgetAbsViolationConsNonlinear(
    SCIP_Real*            viol                /**< buffer to store computed violation */
    );
 
-#if SCIP_DISABLED_CODE
 /** gets scaled violation of nonlinear constraint
  *
  * This function evaluates the constraints in the given solution.
@@ -569,7 +567,6 @@ SCIP_RETCODE SCIPgetRelViolationConsNonlinear(
    SCIP_SOL*             sol,                /**< solution to check */
    SCIP_Real*            viol                /**< buffer to store computed violation */
    );
-#endif
 
 /** returns a variable that appears linearly that may be decreased without making any other constraint infeasible */
 SCIP_EXPORT
