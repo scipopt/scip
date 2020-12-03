@@ -2095,6 +2095,22 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    return SCIP_OKAY;
 }
 
+/** calls the curvature callback for an expression
+ *
+ * @see SCIP_DECL_EXPRCURVATURE
+ *
+ * Returns unknown curvature if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRCURVATURE(SCIPcallExprCurvature)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrCurvatureExpr(SCIPexprGetHdlr(expr), scip->set, expr, exprcurvature, success, childcurv) );
+
+   return SCIP_OKAY;
+}
+
 /** calls the monotonicity callback for an expression
  *
  * @see SCIP_DECL_EXPRMONOTONICITY
@@ -2104,7 +2120,6 @@ SCIP_RETCODE SCIPgetExprVarExprs(
 SCIP_DECL_EXPRMONOTONICITY(SCIPcallExprMonotonicity)
 {
    assert(scip != NULL);
-   assert(expr != NULL);
 
    SCIP_CALL( SCIPexprhdlrMonotonicityExpr(SCIPexprGetHdlr(expr), scip->set, expr, childidx, result) );
 
@@ -2127,7 +2142,6 @@ SCIP_RETCODE SCIPcallExprEval(
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
-   assert(expr != NULL);
    assert(childrenvalues != NULL);
    assert(val != NULL);
 
@@ -2145,9 +2159,40 @@ SCIP_RETCODE SCIPcallExprEval(
 SCIP_DECL_EXPRINTEVAL(SCIPcallExprInteval)
 {
    assert(scip != NULL);
-   assert(expr != NULL);
 
    SCIP_CALL( SCIPexprhdlrIntEvalExpr(SCIPexprGetHdlr(expr), scip->set, expr, interval, intevalvar, intevalvardata) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the estimate callback for an expression
+ *
+ * @see SCIP_DECL_EXPRESTIMATE
+ *
+ * Returns without success if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRESTIMATE(SCIPcallExprEstimate)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrEstimateExpr(SCIPexprGetHdlr(expr), scip->set, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, coefs, constant, islocal, success, branchcand) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the initial estimators callback for an expression
+ *
+ * @see SCIP_DECL_EXPRINITESTIMATES
+ *
+ * Returns no estimators if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRINITESTIMATES(SCIPcallExprInitestimates)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, overestimate, coefs, constant, nreturned) );
 
    return SCIP_OKAY;
 }

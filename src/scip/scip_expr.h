@@ -760,6 +760,15 @@ SCIP_RETCODE SCIPgetExprVarExprs(
  * @{
  */
 
+/** calls the curvature callback for an expression
+ *
+ * @see SCIP_DECL_EXPRCURVATURE
+ *
+ * Returns unknown curvature if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRCURVATURE(SCIPcallExprCurvature);
+
 /** calls the monotonicity callback for an expression
  *
  * @see SCIP_DECL_EXPRMONOTONICITY
@@ -792,6 +801,24 @@ SCIP_RETCODE SCIPcallExprEval(
  */
 SCIP_EXPORT
 SCIP_DECL_EXPRINTEVAL(SCIPcallExprInteval);
+
+/** calls the estimate callback for an expression
+ *
+ * @see SCIP_DECL_EXPRESTIMATE
+ *
+ * Returns without success if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRESTIMATE(SCIPcallExprEstimate);
+
+/** calls the initial estimators callback for an expression
+ *
+ * @see SCIP_DECL_EXPRINITESTIMATES
+ *
+ * Returns no estimators if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRINITESTIMATES(SCIPcallExprInitestimates);
 
 /** calls the simplify callback for an expression
  *

@@ -136,7 +136,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
       {
          /* check whether the expression is convex */
          SCIP_Bool isconvex;
-         SCIP_CALL( SCIPexprhdlrCurvatureExpr(scip, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
+         SCIP_CALL( SCIPcallExprCurvature(scip, expr, SCIP_EXPRCURV_CONVEX, &isconvex, childcurv) );
          estimatebelowusesactivity = !isconvex;
       }
 
@@ -144,7 +144,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectDefault)
       {
          /* check whether the expression is concave */
          SCIP_Bool isconcave;
-         SCIP_CALL( SCIPexprhdlrCurvatureExpr(scip, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
+         SCIP_CALL( SCIPcallExprCurvature(scip, expr, SCIP_EXPRCURV_CONCAVE, &isconcave, childcurv) );
          estimateaboveusesactivity = !isconcave;
       }
 
@@ -221,12 +221,12 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaDefault)
       nreturned = 0;
       if( i == 0 && underestimate )
       {
-         SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(scip, expr, childrenbounds, FALSE, coefs, constant, &nreturned) );
+         SCIP_CALL( SCIPcallExprInitestimates(scip, expr, childrenbounds, FALSE, coefs, constant, &nreturned) );
          assert(SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_RIGHT);
       }
       if( i == 1 && overestimate )
       {
-         SCIP_CALL( SCIPexprhdlrInitEstimatesExpr(scip, expr, childrenbounds, TRUE, coefs, constant, &nreturned) );
+         SCIP_CALL( SCIPcallExprInitestimates(scip, expr, childrenbounds, TRUE, coefs, constant, &nreturned) );
          SCIProwprepSetSidetype(rowprep, SCIP_SIDETYPE_LEFT);
       }
 
@@ -326,7 +326,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    }
 
    /* call the estimation callback of the expression handler */
-   SCIP_CALL( SCIPexprhdlrEstimateExpr(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
+   SCIP_CALL( SCIPcallExprEstimate(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
 
    if( *success )
    {
@@ -409,18 +409,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 }
 
 static
-SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaDefault)
-{ /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   /* call the separation deinitialization callback of the expression handler */
-   SCIP_CALL( SCIPexitsepaConsExprExprHdlr(scip, expr) );
-
-   return SCIP_OKAY;
-}
-
-static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalDefault)
 { /*lint --e{715}*/
    assert(scip != NULL);
@@ -496,7 +484,7 @@ SCIP_RETCODE SCIPincludeNlhdlrDefault(
    assert(nlhdlr != NULL);
 
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrDefault);
-   SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, nlhdlrExitSepaDefault);
+   SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaDefault, NULL, nlhdlrEstimateDefault, NULL);
    SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalDefault, nlhdlrReversepropDefault);
 
    return SCIP_OKAY;
