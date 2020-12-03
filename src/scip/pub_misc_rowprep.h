@@ -58,16 +58,76 @@ SCIP_RETCODE SCIPcopyRowprep(
    SCIP_ROWPREP*         source              /**< rowprep to copy */
 );
 
-/** ensures that rowprep has space for at least given number of additional terms
+/** gives number of terms in rowprep */
+SCIP_EXPORT
+int SCIProwprepGetNVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** gives variables of rowprep (feel free to modify) */
+SCIP_EXPORT
+SCIP_VAR** SCIProwprepGetVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** gives coefficients of rowprep (feel free to modify) */
+SCIP_EXPORT
+SCIP_Real* SCIProwprepGetCoefs(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** gives side of rowprep */
+SCIP_EXPORT
+SCIP_Real SCIProwprepGetSide(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** gives kind of inequality of rowprep */
+SCIP_EXPORT
+SCIP_SIDETYPE SCIProwprepGetSidetype(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** returns whether rowprep is locally valid only */
+SCIP_EXPORT
+SCIP_Bool SCIProwprepIsLocal(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** returns name of rowprep (feel free to modify) */
+SCIP_EXPORT
+char* SCIProwprepGetName(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** adds constant value to side of rowprep */
+SCIP_EXPORT
+void SCIProwprepAddSide(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             side                /**< constant value to be added to side */
+);
+
+/** adds constant term to rowprep
  *
- * Useful when knowing in advance how many terms will be added.
+ * Substracts constant from side.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPensureRowprepSize(
-   SCIP*                 scip,               /**< SCIP data structure */
+void SCIProwprepAddConstant(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   int                   size                /**< number of additional terms for which to alloc space in rowprep */
+   SCIP_Real             constant            /**< constant value to be added */
 );
+
+/** sets whether rowprep is local */
+SCIP_EXPORT
+void SCIProwprepSetLocal(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Bool             islocal             /**< whether rowprep is local */
+);
+
+#ifdef NDEBUG
+#define SCIProwprepAddSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
+#define SCIProwprepAddConstant(rowprep, constant)  SCIProwprepAddSide(rowprep, -(constant))
+#endif
 
 /** prints a rowprep */
 SCIP_EXPORT
@@ -84,6 +144,17 @@ void SCIPprintRowprepSol(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
    SCIP_SOL*             sol,                /**< solution for activity */
    FILE*                 file                /**< file to print to, or NULL for stdout */
+);
+
+/** ensures that rowprep has space for at least given number of additional terms
+ *
+ * Useful when knowing in advance how many terms will be added.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPensureRowprepSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   size                /**< number of additional terms for which to alloc space in rowprep */
 );
 
 /** adds a term coef*var to a rowprep */
@@ -104,28 +175,6 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    SCIP_VAR**            vars,               /**< variables to add */
    SCIP_Real*            coefs               /**< coefficients to add */
 );
-
-/** adds constant value to side of rowprep */
-SCIP_EXPORT
-void SCIPaddRowprepSide(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_Real             side                /**< constant value to be added to side */
-);
-
-/** adds constant term to rowprep
- *
- * Substracts constant from side.
- */
-SCIP_EXPORT
-void SCIPaddRowprepConstant(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_Real             constant            /**< constant value to be added */
-);
-
-#ifdef NDEBUG
-#define SCIPaddRowprepSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
-#define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
-#endif
 
 /** computes violation of cut in a given solution
  *

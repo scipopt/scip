@@ -23,7 +23,6 @@
 #include "scip/nlhdlr_default.h"
 #include "scip/pub_nlhdlr.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/struct_misc.h" //FIXME
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME            "default"
@@ -222,6 +221,7 @@ static
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 { /*lint --e{715}*/
    SCIP_Real constant;
+   SCIP_Bool local;
    SCIP_Bool* branchcand = NULL;
    int nchildren;
    int c;
@@ -248,7 +248,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
 
    /* make sure enough space is available in rowprep arrays */
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nchildren) );
-   assert(rowprep->varssize >= nchildren);
 
    /* we need to pass a branchcand array to exprhdlr's estimate also if not asked to add branching scores */
    SCIP_CALL( SCIPallocBufferArray(scip, &branchcand, nchildren) );
@@ -268,25 +267,25 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateDefault)
    }
 
    /* call the estimation callback of the expression handler */
-   SCIP_CALL( SCIPexprhdlrEstimateExpr(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, rowprep->coefs, &constant, &rowprep->local, success, branchcand) );
+   SCIP_CALL( SCIPexprhdlrEstimateExpr(scip, expr, localbounds, globalbounds, refpoint, overestimate, targetvalue, SCIProwprepGetCoefs(rowprep), &constant, &local, success, branchcand) );
 
    if( *success )
    {
       int i;
 
-      /* add variables to rowprep */
-      rowprep->nvars = nchildren;
-      for( i = 0; i < rowprep->nvars; ++i )
+      SCIProwprepSetLocal(rowprep, local);
+
+      /* add variables to rowprep (coefs were already added by SCIPexprhdlrEstimateExpr) */
+      for( i = 0; i < nchildren; ++i )
       {
-         rowprep->vars[i] = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]);
-         assert(rowprep->vars[i] != NULL);
+         SCIPaddRowprepTerm(scip, rowprep, SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[i]), SCIProwprepGetCoefs(rowprep)[i]);
       }
 
-      rowprep->side = -constant;
+      SCIProwprepAddConstant(rowprep, constant);
 
       SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
 
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
+      (void) SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "%sestimate_%s%p_%s%d",
          overestimate ? "over" : "under",
          SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)),
          (void*)expr,

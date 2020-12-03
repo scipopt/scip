@@ -253,7 +253,7 @@ SCIP_RETCODE rowprepCleanupImproveCoefrange(
       {
          /* we aggregate with -coef*var <= -coef*lb(x) */
          assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-         SCIPaddRowprepConstant(rowprep, coef * SCIPvarGetLbLocal(var));
+         SCIProwprepAddConstant(rowprep, coef * SCIPvarGetLbLocal(var));
          rowprep->local |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
       }
       else
@@ -261,7 +261,7 @@ SCIP_RETCODE rowprepCleanupImproveCoefrange(
          assert((coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT));
          /* we aggregate with -coef*var >= -coef*ub(x) */
          assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-         SCIPaddRowprepConstant(rowprep, coef * SCIPvarGetUbLocal(var));
+         SCIProwprepAddConstant(rowprep, coef * SCIPvarGetUbLocal(var));
          rowprep->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
       }
 
@@ -455,7 +455,7 @@ SCIP_RETCODE rowprepCleanupIntegralCoefs(
             /* if there is a bound, then relax row side so rounding coef will not introduce an error */
             SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.15g, round coefficient to %g and add constant %g\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
-            SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);
+            SCIProwprepAddConstant(rowprep, (coef-roundcoef) * xbnd);
          }
          else
          {
@@ -579,33 +579,115 @@ SCIP_RETCODE SCIPcopyRowprep(
    return SCIP_OKAY;
 }
 
-/** ensures that rowprep has space for at least given number of additional terms
- *
- * Useful when knowing in advance how many terms will be added.
- */
-SCIP_RETCODE SCIPensureRowprepSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   int                   size                /**< number of additional terms for which to alloc space in rowprep */
+/** gives number of terms in rowprep */
+int SCIProwprepGetNVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
    )
 {
-   int oldsize;
-
-   assert(scip != NULL);
    assert(rowprep != NULL);
-   assert(size >= 0);
 
-   if( rowprep->varssize >= rowprep->nvars + size )
-      return SCIP_OKAY;  /* already enough space left */
+   return rowprep->nvars;
+}
 
-   /* realloc vars and coefs array */
-   oldsize = rowprep->varssize;
-   rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + size);
+/** gives variables of rowprep (feel free to modify) */
+SCIP_VAR** SCIProwprepGetVars(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
 
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
+   return rowprep->vars;
+}
 
-   return SCIP_OKAY;
+/** gives coefficients of rowprep (feel free to modify) */
+SCIP_Real* SCIProwprepGetCoefs(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->coefs;
+}
+
+/** gives side of rowprep */
+SCIP_Real SCIProwprepGetSide(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->side;
+}
+
+/** gives kind of inequality of rowprep */
+SCIP_SIDETYPE SCIProwprepGetSidetype(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->sidetype;
+}
+
+/** returns whether rowprep is locally valid only */
+SCIP_Bool SCIProwprepIsLocal(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->local;
+}
+
+/** returns name of rowprep (feel free to modify) */
+char* SCIProwprepGetName(
+   SCIP_ROWPREP*         rowprep             /**< rowprep */
+   )
+{
+   assert(rowprep != NULL);
+
+   return rowprep->name;
+}
+
+#ifdef NDEBUG
+#undef SCIProwprepAddSide
+#undef SCIProwprepAddConstant
+#endif
+
+/** adds constant value to side of rowprep */
+void SCIProwprepAddSide(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             side                /**< constant value to be added to side */
+   )
+{
+   assert(rowprep != NULL);
+
+   rowprep->side += side;
+}
+
+/** adds constant term to rowprep
+ *
+ * Substracts constant from side.
+ */
+void SCIProwprepAddConstant(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             constant            /**< constant value to be added */
+   )
+{
+   assert(rowprep != NULL);
+
+   SCIProwprepAddSide(rowprep, -constant);
+}
+
+/** sets whether rowprep is local */
+void SCIProwprepSetLocal(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Bool             islocal             /**< whether rowprep is local */
+)
+{
+   assert(rowprep != NULL);
+
+   rowprep->local = islocal;
 }
 
 /** prints a rowprep */
@@ -691,6 +773,35 @@ void SCIPprintRowprepSol(
    SCIPinfoMessage(scip, file, "; maxterm %e at pos %d\n", maxterm, maxtermidx);
 }
 
+/** ensures that rowprep has space for at least given number of additional terms
+ *
+ * Useful when knowing in advance how many terms will be added.
+ */
+SCIP_RETCODE SCIPensureRowprepSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   size                /**< number of additional terms for which to alloc space in rowprep */
+   )
+{
+   int oldsize;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+   assert(size >= 0);
+
+   if( rowprep->varssize >= rowprep->nvars + size )
+      return SCIP_OKAY;  /* already enough space left */
+
+   /* realloc vars and coefs array */
+   oldsize = rowprep->varssize;
+   rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + size);
+
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
+
+   return SCIP_OKAY;
+}
+
 /** adds a term coef*var to a rowprep */
 SCIP_RETCODE SCIPaddRowprepTerm(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -742,36 +853,6 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    rowprep->nvars += nvars;
 
    return SCIP_OKAY;
-}
-
-#ifdef NDEBUG
-#undef SCIPaddRowprepSide
-#undef SCIPaddRowprepConstant
-#endif
-
-/** adds constant value to side of rowprep */
-void SCIPaddRowprepSide(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_Real             side                /**< constant value to be added to side */
-   )
-{
-   assert(rowprep != NULL);
-
-   rowprep->side += side;
-}
-
-/** adds constant term to rowprep
- *
- * Substracts constant from side.
- */
-void SCIPaddRowprepConstant(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_Real             constant            /**< constant value to be added */
-   )
-{
-   assert(rowprep != NULL);
-
-   SCIPaddRowprepSide(rowprep, -constant);
 }
 
 /** computes violation of cut in a given solution
