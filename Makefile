@@ -753,6 +753,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/misc_linear.o \
+			scip/misc_rowprep.o \
 			scip/nlhdlr.o \
 			scip/nodesel.o \
 			scip/paramset.o \

@@ -83,30 +83,6 @@ struct SCIP_ConsNonlinear_BilinTerm
 };
 typedef struct SCIP_ConsNonlinear_BilinTerm SCIP_CONSNONLINEAR_BILINTERM; /**< bilinear term structure */
 
-/** storage for a linear row in preparation
- *
- * Uses to assemble data that could eventually make a SCIP_ROW.
- * @note Only one-sided rows are allowed here.
- */
-struct SCIP_RowPrep
-{
-   SCIP_VAR**            vars;               /**< variables */
-   SCIP_Real*            coefs;              /**< coefficients of variables */
-   int                   nvars;              /**< number of variables (= number of coefficients) */
-   int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
-   SCIP_Real             side;               /**< side */
-   SCIP_SIDETYPE         sidetype;           /**< type of side */
-   SCIP_Bool             local;              /**< whether the row is only locally valid (i.e., for the current node) */
-   char                  name[SCIP_MAXSTRLEN]; /**< row name */
-
-   SCIP_Bool             recordmodifications;/**< whether to remember variables which coefficients were modified during cleanup */
-   SCIP_VAR**            modifiedvars;       /**< variables which coefficient were modified by cleanup */
-   int                   nmodifiedvars;      /**< number of variables which coefficient was modified */
-   int                   modifiedvarssize;   /**< length of modifiedvars array */
-   SCIP_Bool             modifiedside;       /**< whether the side was modified (relaxed) by cleanup */
-};
-typedef struct SCIP_RowPrep SCIP_ROWPREP;
-
 /** evaluation callback for (vertex-polyhedral) functions used as input for facet computation of its envelopes
  *
  * input:

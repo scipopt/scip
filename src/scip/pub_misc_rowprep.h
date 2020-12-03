@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_rowprep.h
- * @brief  linear inequalities in preparation
+/**@file   pub_misc_rowprep.h
+ * @brief  preparation of a linear inequalities to become a SCIP_ROW
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  * @author Felipe Serrano
@@ -22,19 +22,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_ROWPREP_H__
-#define __SCIP_CONS_EXPR_ROWPREP_H__
+#ifndef __SCIP_PUB_MISC_ROWPREP_H__
+#define __SCIP_PUB_MISC_ROWPREP_H__
 
-#include "scip/def.h"
+#include "scip/type_misc.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
 #include "scip/type_sepa.h"
-#include "scip/type_sol.h"
 #include "scip/type_var.h"
-#include "scip/type_cons_expr.h"
-
 
 /** creates a SCIP_ROWPREP datastructure
  *
@@ -172,7 +167,7 @@ void SCIPmergeRowprepTerms(
    SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
 );
 
-/* Cleans up and attempts to improve rowprep
+/** Cleans up and attempts to improve rowprep
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
  * Scales coefficients up to reach minimal violation, if possible.
@@ -203,8 +198,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_Bool*            success             /**< buffer to store whether cut cleanup was successful, or NULL if not of interest */
 );
 
-
-/* Cleans up and attempts to improve rowprep
+/** Cleans up and attempts to improve rowprep
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
  * Scales coefficients and side to have maximal coefficient in [1/maxcoefbound,maxcoefbound].
@@ -287,4 +281,4 @@ SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP_SEPA*            sepa                /**< separator */
 );
 
-#endif /* __SCIP_CONS_EXPR_ROWPREP_H__ */
+#endif /* __SCIP_PUB_MISC_ROWPREP_H__ */

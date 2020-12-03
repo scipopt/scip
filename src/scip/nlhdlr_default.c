@@ -23,7 +23,7 @@
 #include "scip/nlhdlr_default.h"
 #include "scip/pub_nlhdlr.h"
 #include "scip/cons_nonlinear.h"
-//#include "scip/cons_expr_rowprep.h"
+#include "scip/struct_misc.h" //FIXME
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME            "default"
