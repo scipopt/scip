@@ -454,7 +454,7 @@ SCIP_RETCODE mergeProductExprlist(
          SCIP_CALL( SCIPappendExprSumExpr(scip, sum, SCIPexprGetChildren(tomergenode->expr)[0], 1.0) );
 
          /* simplify sum */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
          /* create exponential */
@@ -462,7 +462,7 @@ SCIP_RETCODE mergeProductExprlist(
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, expexpr, &simplifiedexp, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, expexpr, &simplifiedexp, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &expexpr) );
 
          /* note that simplified exponential might be a product exp(x) * exp(-x + log(y*z)) -> y*z and so it is not a
@@ -565,7 +565,7 @@ SCIP_RETCODE mergeProductExprlist(
                {
                   /* if expo2 is even, then sign(x)^(1+expo2) = sign(x), so we have signpower: sign(x) |x|^(expo1+expo2)
                    * TODO: we can remove this case distinction once the simplification of power expressions tranform
-                   * |expr|^even -> expr^even, since the call to SCIPsimplifyExprShallow(scip, conshdlr, power,
+                   * |expr|^even -> expr^even, since the call to SCIPcallExprSimplify(scip, conshdlr, power,
                    * &simplifiedpower) below will take care of this.
                    */
                   SCIP_CALL( SCIPcreateExprSignpower(scip, &power, base1, expo1 + expo2, ownercreate, ownercreatedata) );
@@ -614,7 +614,7 @@ SCIP_RETCODE mergeProductExprlist(
             SCIP_EXPR* simplifiedpower;
 
             /* call simplifyPow or simplifySignpower */
-            SCIP_CALL( SCIPsimplifyExprShallow(scip, power, &simplifiedpower, ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPcallExprSimplify(scip, power, &simplifiedpower, ownercreate, ownercreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &power) );
 
             /* replace tomergenode's expression with simplifiedpower */
@@ -817,7 +817,7 @@ SCIP_RETCODE enforceSP10(
       /* simplifying here is necessary, the product could have sums as children e.g., (prod 2 (sum 1 <x>))
        * -> (sum 0 2 (sum 1 <x>)) and that needs to be simplified to (sum 0 2 <x>)
        */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, sum, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
       return SCIP_OKAY;
    }
@@ -1033,7 +1033,7 @@ SCIP_RETCODE enforceSP12(
       }
 
       /* simplify the sum */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &expanded) );
  
       return SCIP_OKAY;
@@ -1091,7 +1091,7 @@ SCIP_RETCODE enforceSP12(
       }
 
       /* simplify the sum */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, expanded, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &expanded) );
    }
 
@@ -1144,7 +1144,7 @@ SCIP_RETCODE buildSimplifiedProduct(
       SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
 
       /* simplify sum */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, sum, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
       goto CLEANUP;

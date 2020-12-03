@@ -1039,7 +1039,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
       /* update the activity of the var-expr here immediately
        * (we could call expr->activity = intevalvar(var, consdhlr) directly, but then the exprhdlr statistics are not updated)
        */
-      SCIP_CALL( SCIPevalExprInterval(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
+      SCIP_CALL( SCIPcallExprInteval(scip, expr, &activity, conshdlrdata->intevalvar, conshdlrdata) );
       /* activity = conshdlrdata->intevalvar(scip, SCIPgetVarExprVar(expr), conshdlrdata); */
 #ifdef DEBUG_PROP
       SCIPdebugMsg(scip, "  var-exprhdlr::inteval = [%.20g, %.20g]\n", activity.inf, activity.sup);
@@ -1155,7 +1155,7 @@ SCIP_RETCODE catchVarEvents(
       if( SCIPexprGetActivityTag(expr) < conshdlrdata->curboundstag )
       {
          SCIP_INTERVAL activity;
-         SCIP_CALL( SCIPevalExprInterval(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
+         SCIP_CALL( SCIPcallExprInteval(scip, expr, &activity, intEvalVarBoundTightening, conshdlrdata) );
          /* activity = intEvalVarBoundTightening(scip, SCIPgetVarExprVar(expr), conshdlrdata); */
          SCIPexprSetActivity(expr, activity, conshdlrdata->curboundstag);
 #ifdef DEBUG_PROP
@@ -2045,7 +2045,7 @@ SCIP_RETCODE forwardPropExpr(
 #ifndef NDEBUG
                SCIP_INTERVAL exprhdlrinterval;
 
-               SCIP_CALL( SCIPevalExprInterval(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+               SCIP_CALL( SCIPcallExprInteval(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
                assert(SCIPisRelEQ(scip, exprhdlrinterval.inf, SCIPexprGetActivity(expr).inf));
                assert(SCIPisRelEQ(scip, exprhdlrinterval.sup, SCIPexprGetActivity(expr).sup));
 #endif
@@ -2144,7 +2144,7 @@ SCIP_RETCODE forwardPropExpr(
             {
                /* for node without enforcement (before or during detect), call the callback of the exprhdlr directly */
                SCIP_INTERVAL exprhdlrinterval = activity;
-               SCIP_CALL( SCIPevalExprInterval(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
+               SCIP_CALL( SCIPcallExprInteval(scip, expr, &exprhdlrinterval, conshdlrdata->intevalvar, conshdlrdata) );
 #ifdef DEBUG_PROP
                SCIPdebugMsg(scip, " exprhdlr <%s>::inteval = [%.20g, %.20g]", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), exprhdlrinterval.inf, exprhdlrinterval.sup);
 #endif
@@ -2388,7 +2388,7 @@ SCIP_RETCODE reversePropQueue(
             childrenbounds[c] = SCIPgetExprBoundsNonlinear(scip, SCIPexprGetChildren(expr)[c]);
 
          /* call the reverseprop of the exprhdlr */
-         SCIP_CALL( SCIPreversepropExpr(scip, expr, propbounds, childrenbounds, infeasible) );
+         SCIP_CALL( SCIPcallExprReverseprop(scip, expr, propbounds, childrenbounds, infeasible) );
 
          if( !*infeasible )
             for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
@@ -2818,7 +2818,7 @@ SCIP_RETCODE propagateLocks(
                /* store the monotonicity for each child */
                for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
                {
-                  SCIP_CALL( SCIPgetExprMonotonicity(scip, expr, i, &ownerdata->monotonicity[i]) );
+                  SCIP_CALL( SCIPcallExprMonotonicity(scip, expr, i, &ownerdata->monotonicity[i]) );
                }
             }
             break;
@@ -2846,7 +2846,7 @@ SCIP_RETCODE propagateLocks(
 
             /* get monotonicity of child */
             /* NOTE: the monotonicity stored in an expression might be different from the result obtained by
-             * SCIPgetExprMonotonicity
+             * SCIPcallExprMonotonicity
              */
             monotonicity = ownerdata->monotonicity != NULL ? ownerdata->monotonicity[SCIPexpriterGetChildIdxDFS(it)] : SCIP_MONOTONE_UNKNOWN;
 

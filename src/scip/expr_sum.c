@@ -221,7 +221,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPcreateExprSum(scip, &sum, 1, SCIPexprGetChildren(expchild), NULL, expconstant, ownercreate, ownercreatedata) );
 
          /* simplify sum */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, sum, &simplifiedsum, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &sum) );
 
          /* create exponential with new child */
@@ -229,7 +229,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedsum) );
 
          /* simplify exponential */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, exponential, &simplifiedexp, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, exponential, &simplifiedexp, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &exponential) );
 
          /* create product with new child */
@@ -249,7 +249,7 @@ SCIP_RETCODE simplifyTerm(
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedexp) );
 
          /* simplify product */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &prod) );
 
          /* replace current child with simplified product */

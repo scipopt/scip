@@ -1563,32 +1563,6 @@ SCIP_RETCODE SCIPevalExpr(
    return SCIP_OKAY;
 }
 
-/** calls the eval callback of an expression
- *
- * Does not iterates over expressions, but requires values for children to be given.
- * Value is not stored in expression, but returned in @par val.
- * If an evaluation error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPevalExprShallow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be evaluated */
-   SCIP_Real*            childrenvalues,     /**< values for children */
-   SCIP_Real*            val                 /**< buffer to store evaluated value */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->mem != NULL);
-   assert(expr != NULL);
-   assert(childrenvalues != NULL);
-   assert(val != NULL);
-
-   SCIP_CALL( SCIPexprhdlrEvalExpr(SCIPexprGetHdlr(expr), scip->set, scip->mem->buffer, expr, val, childrenvalues, NULL) );
-
-   return SCIP_OKAY;
-}
-
 /** returns a previously unused solution tag for expression evaluation */
 SCIP_EXPORT
 SCIP_Longint SCIPgetExprNewSoltag(
@@ -1660,43 +1634,6 @@ SCIP_RETCODE SCIPevalExprActivity(
    assert(scip->mem != NULL);
 
    SCIP_CALL( SCIPexprEvalActivity(scip->set, scip->stat, scip->mem->probmem, expr) );
-
-   return SCIP_OKAY;
-}
-
-/** calls the interval evaluation callback of an expression handler */
-SCIP_RETCODE SCIPevalExprInterval(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be evaluated */
-   SCIP_INTERVAL*        interval,           /**< buffer where to store interval */
-   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), /**< callback to be called when interval-evaluating a variable */
-   void*                 intevalvardata      /**< data to be passed to intevalvar callback */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   SCIP_CALL( SCIPexprhdlrIntEvalExpr(SCIPexprGetHdlr(expr), scip->set, expr, interval, intevalvar, intevalvardata) );
-
-   return SCIP_OKAY;
-}
-
-/** calls the reverse propagation callback of an expression handler
- *
- * The method propagates given bounds over the children of an expression.
- */
-SCIP_RETCODE SCIPreversepropExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to propagate */
-   SCIP_INTERVAL         bounds,             /**< the bounds on the expression that should be propagated */
-   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
-   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   SCIP_CALL( SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, childrenbounds, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -1830,27 +1767,6 @@ SCIP_RETCODE SCIPsimplifyExpr(
    assert(*simplified != NULL);
 
    SCIPexpriterFree(&it);
-
-   return SCIP_OKAY;
-}
-
-/** calls the simplify callback for an expression
- *
- * Does not simplify descendants (children, etc).
- * This function is mainly used by the simplify callback of exprhdlrs.
- */
-SCIP_RETCODE SCIPsimplifyExprShallow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be simplified */
-   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
-   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
-   void*                 ownercreatedata     /**< data to pass to ownercreate */
-)
-{
-   assert(scip != NULL);
-
-   /* use simplification of expression handlers */
-   SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, simplified, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }
@@ -2057,22 +1973,6 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
    return SCIP_OKAY;
 }
 
-/** get the monotonicity of an expression w.r.t. to a given child */
-SCIP_RETCODE SCIPgetExprMonotonicity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   int                   childidx,           /**< index of child */
-   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
-   )
-{
-   assert(scip != NULL);
-   assert(expr != NULL);
-
-   SCIP_CALL( SCIPexprhdlrMonotonicityExpr(SCIPexprGetHdlr(expr), scip->set, expr, childidx, monotonicity) );
-
-   return SCIP_OKAY;
-}
-
 /** computes integrality information of a given expression and all its subexpressions
  *
  * the integrality information can be accessed via SCIPexprIsIntegral()
@@ -2191,6 +2091,97 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    /* @todo sort variable expressions here? */
 
    SCIPexpriterFree(&it);
+
+   return SCIP_OKAY;
+}
+
+/** calls the monotonicity callback for an expression
+ *
+ * @see SCIP_DECL_EXPRMONOTONICITY
+ *
+ * Returns unknown monotonicity if callback not implemented.
+ */
+SCIP_DECL_EXPRMONOTONICITY(SCIPcallExprMonotonicity)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPexprhdlrMonotonicityExpr(SCIPexprGetHdlr(expr), scip->set, expr, childidx, result) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the eval callback of an expression with given values for children
+ *
+ * Does not iterates over expressions, but requires values for children to be given.
+ * Value is not stored in expression, but returned in @par val.
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPcallExprEval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            childrenvalues,     /**< values for children */
+   SCIP_Real*            val                 /**< buffer to store evaluated value */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+   assert(expr != NULL);
+   assert(childrenvalues != NULL);
+   assert(val != NULL);
+
+   SCIP_CALL( SCIPexprhdlrEvalExpr(SCIPexprGetHdlr(expr), scip->set, scip->mem->buffer, expr, val, childrenvalues, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the interval evaluation callback of an expression handler
+ *
+ * @see SCIP_DECL_EXPRMONOTONICITY
+ *
+ * Returns entire interval if callback not implemented.
+ */
+SCIP_DECL_EXPRINTEVAL(SCIPcallExprInteval)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPexprhdlrIntEvalExpr(SCIPexprGetHdlr(expr), scip->set, expr, interval, intevalvar, intevalvardata) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the simplify callback for an expression
+ *
+ * @see SCIP_DECL_EXPRSIMPLIFY
+ *
+ * Returns unmodified expression if simplify callback not implemented.
+ *
+ * Does not simplify descendants (children, etc). Use SCIPsimplifyExpr() for that.
+ */
+SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify)
+{
+   assert(scip != NULL);
+
+   /* use simplification of expression handlers */
+   SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, simplifiedexpr, ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the reverse propagation callback for an expression
+ *
+ * @see SCIP_DECL_EXPRREVERSEPROP
+ *
+ * Returns unmodified childrenbounds if reverseprop callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, childrenbounds, infeasible) );
 
    return SCIP_OKAY;
 }

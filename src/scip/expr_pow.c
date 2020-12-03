@@ -1373,7 +1373,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_CALL( SCIPcreateExprProduct(scip, &prod, 1, &child, exponent, ownercreate, ownercreatedata) );
 
       /* simplify product */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &prod) );
 
       /* create exponential with new child */
@@ -1381,7 +1381,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
       SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedprod) );
 
       /* the final simplified expression is the simplification of the just created exponential */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, exponential, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, exponential, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &exponential) );
 
       return SCIP_OKAY;
@@ -1441,7 +1441,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          /* simplify (prod 1.0 (pow n expr_1) ... (pow n expr_k))
           * this calls simplifyProduct directly, since we know its children are simplified */
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, auxproduct, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, auxproduct, simplifiedexpr, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &auxproduct) );
          return SCIP_OKAY;
       }
@@ -1470,7 +1470,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          /* create (sum (pow n expr)) and simplify it
           * this calls simplifySum directly, since we know its children are simplified */
          SCIP_CALL( SCIPcreateExprSum(scip, &aux, 1, &simplifiedaux, &newcoef, 0.0, ownercreate, ownercreatedata) );
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, aux, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, aux, simplifiedexpr, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
          return SCIP_OKAY;
@@ -1513,7 +1513,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
                coefs[i*(i+1)/2 + j] = 2 * SCIPgetCoefsExprSum(base)[i] * SCIPgetCoefsExprSum(base)[j];
 
                SCIP_CALL( SCIPcreateExprProduct(scip, &expansionchild, 2, prodchildren, 1.0, ownercreate, ownercreatedata) );
-               SCIP_CALL( SCIPsimplifyExprShallow(scip, expansionchild, &expandedchildren[i*(i+1)/2 + j], ownercreate, ownercreatedata) ); /* this calls simplifyProduct */
+               SCIP_CALL( SCIPcallExprSimplify(scip, expansionchild, &expandedchildren[i*(i+1)/2 + j], ownercreate, ownercreatedata) ); /* this calls simplifyProduct */
                SCIP_CALL( SCIPreleaseExpr(scip, &expansionchild) );
             }
             /* create and simplify expr_i * expr_i */
@@ -1521,7 +1521,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
             coefs[i*(i+1)/2 + i] = SCIPgetCoefsExprSum(base)[i] * SCIPgetCoefsExprSum(base)[i];
 
             SCIP_CALL( SCIPcreateExprProduct(scip, &expansionchild, 2, prodchildren, 1.0, ownercreate, ownercreatedata) );
-            SCIP_CALL( SCIPsimplifyExprShallow(scip, expansionchild, &expandedchildren[i*(i+1)/2 + i], ownercreate, ownercreatedata) ); /* this calls simplifyProduct */
+            SCIP_CALL( SCIPcallExprSimplify(scip, expansionchild, &expandedchildren[i*(i+1)/2 + i], ownercreate, ownercreatedata) ); /* this calls simplifyProduct */
             SCIP_CALL( SCIPreleaseExpr(scip, &expansionchild) );
          }
          /* create const * alpha_i expr_i */
@@ -1535,7 +1535,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
          constant *= constant;
          /* create sum of all the above and simplify it with simplifySum since all of its children are simplified! */
          SCIP_CALL( SCIPcreateExprSum(scip, &expansion, nexpandedchildren, expandedchildren, coefs, constant, ownercreate, ownercreatedata) );
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, expansion, simplifiedexpr, ownercreate, ownercreatedata) ); /* this calls simplifySum */
+         SCIP_CALL( SCIPcallExprSimplify(scip, expansion, simplifiedexpr, ownercreate, ownercreatedata) ); /* this calls simplifySum */
 
          /* release eveything */
          SCIP_CALL( SCIPreleaseExpr(scip, &expansion) );
@@ -1579,7 +1579,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
           * this calls simplifySum directly, since we know its child is simplified! */
          newcoef = pow(SCIPgetCoefsExprSum(base)[0], exponent);
          SCIP_CALL( SCIPcreateExprSum(scip, &aux, 1, &simplifiedaux, &newcoef, 0.0, ownercreate, ownercreatedata) );
-         SCIP_CALL( SCIPsimplifyExprShallow(scip, aux, simplifiedexpr, ownercreate, ownercreatedata) );
+         SCIP_CALL( SCIPcallExprSimplify(scip, aux, simplifiedexpr, ownercreate, ownercreatedata) );
          SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
          SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
 
@@ -1622,7 +1622,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
             SCIP_EXPR* simplifiedaux;
 
             SCIP_CALL( SCIPcreateExprAbs(scip, &aux, SCIPexprGetChildren(base)[0], ownercreate, ownercreatedata) );
-            SCIP_CALL( SCIPsimplifyExprShallow(scip, aux, &simplifiedaux, ownercreate, ownercreatedata) );
+            SCIP_CALL( SCIPcallExprSimplify(scip, aux, &simplifiedaux, ownercreate, ownercreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
             SCIP_CALL( SCIPcreateExprPow(scip, &aux, simplifiedaux, newexponent, ownercreate, ownercreatedata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
@@ -2377,7 +2377,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       SCIP_CALL( SCIPcreateExprProduct(scip, &prod, 1, &child, exponent, ownercreate, ownercreatedata) );
 
       /* simplify product */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, prod, &simplifiedprod, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &prod) );
 
       /* create exponential with new child */
@@ -2385,7 +2385,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedprod) );
 
       /* the final simplified expression is the simplification of the just created exponential */
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, exponential, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, exponential, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &exponential) );
 
       return SCIP_OKAY;
@@ -2477,7 +2477,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySignpower)
       /* create (sum (signpow n expr)) and simplify it
        * this calls simplifySum directly, since we know its child is simplified */
       SCIP_CALL( SCIPcreateExprSum(scip, &aux, 1, &simplifiedaux, &newcoef, 0.0, ownercreate, ownercreatedata) );
-      SCIP_CALL( SCIPsimplifyExprShallow(scip, aux, simplifiedexpr, ownercreate, ownercreatedata) );
+      SCIP_CALL( SCIPcallExprSimplify(scip, aux, simplifiedexpr, ownercreate, ownercreatedata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &aux) );
       SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedaux) );
       return SCIP_OKAY;

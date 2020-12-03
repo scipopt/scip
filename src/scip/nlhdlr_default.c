@@ -68,7 +68,7 @@ SCIP_RETCODE evalExprInAux(
       childvals[c] = SCIPgetSolVal(scip, sol, childvar);
    }
 
-   SCIP_CALL( SCIPevalExprShallow(scip, expr, childvals, val) );
+   SCIP_CALL( SCIPcallExprEval(scip, expr, childvals, val) );
 
    SCIPfreeBufferArray(scip, &childvals);
 
@@ -427,7 +427,7 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalDefault)
    assert(expr != NULL);
 
    /* call the interval evaluation callback of the expression handler */
-   SCIP_CALL( SCIPevalExprInterval(scip, expr, interval, intevalvar, intevalvardata) );
+   SCIP_CALL( SCIPcallExprInteval(scip, expr, interval, intevalvar, intevalvardata) );
 
    return SCIP_OKAY;
 }
@@ -450,7 +450,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropDefault)
       childrenbounds[c] = SCIPgetExprBoundsNonlinear(scip, SCIPexprGetChildren(expr)[c]);
 
    /* call the reverse propagation callback of the expression handler */
-   SCIP_CALL( SCIPreversepropExpr(scip, expr, bounds, childrenbounds, infeasible) );
+   SCIP_CALL( SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) );
 
    if( !*infeasible )
       for( c = 0; c < SCIPexprGetNChildren(expr); ++c )

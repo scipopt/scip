@@ -387,21 +387,6 @@ SCIP_RETCODE SCIPevalExpr(
    SCIP_Longint          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** calls the eval callback of an expression
- *
- * Does not iterates over expressions, but requires values for children to be given.
- * Value is not stored in expression, but returned in @par val.
- * If an evaluation error (division by zero, ...) occurs, this value will
- * be set to SCIP_INVALID.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPevalExprShallow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be evaluated */
-   SCIP_Real*            childrenvalues,     /**< values for children */
-   SCIP_Real*            val                 /**< buffer to store evaluated value */
-   );
-
 /** returns a previously unused solution tag for expression evaluation */
 SCIP_EXPORT
 SCIP_Longint SCIPgetExprNewSoltag(
@@ -537,29 +522,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprActivity(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
-   );
-
-/** calls the interval evaluation callback of an expression handler */
-SCIP_EXPORT
-SCIP_RETCODE SCIPevalExprInterval(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be evaluated */
-   SCIP_INTERVAL*        interval,           /**< buffer where to store interval */
-   SCIP_DECL_EXPR_INTEVALVAR((*intevalvar)), /**< callback to be called when interval-evaluating a variable */
-   void*                 intevalvardata      /**< data to be passed to intevalvar callback */
-   );
-
-/** calls the reverse propagation callback of an expression handler
- *
- * The method propagates given bounds over the children of an expression.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPreversepropExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to propagate */
-   SCIP_INTERVAL         bounds,             /**< the bounds on the expression that should be propagated */
-   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
-   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
    );
 
 /** compare expressions
@@ -726,20 +688,6 @@ SCIP_RETCODE SCIPsimplifyExpr(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** calls the simplify callback for an expression
- *
- * Does not simplify descendants (children, etc).
- * This function is mainly used by the simplify callback of exprhdlrs.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsimplifyExprShallow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression to be simplified */
-   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
-   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
-   void*                 ownercreatedata     /**< data to pass to ownercreate */
-);
-
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
  *
  *  The algorithm consists of two steps:
@@ -769,15 +717,6 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr                /**< expression */
-   );
-
-/** get the monotonicity of an expression w.r.t. to a given child */
-SCIP_EXPORT
-SCIP_RETCODE SCIPgetExprMonotonicity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   int                   childidx,           /**< index of child */
-   SCIP_MONOTONE*        monotonicity        /**< buffer to store monotonicity */
    );
 
 /** computes integrality information of a given expression and all its subexpressions
@@ -816,6 +755,65 @@ SCIP_RETCODE SCIPgetExprVarExprs(
    SCIP_EXPR**           varexprs,           /**< array to store all variable expressions */
    int*                  nvarexprs           /**< buffer to store the total number of variable expressions */
    );
+
+/**@name Direct calls to exprhdlr callbacks
+ * @{
+ */
+
+/** calls the monotonicity callback for an expression
+ *
+ * @see SCIP_DECL_EXPRMONOTONICITY
+ *
+ * Returns unknown monotonicity if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRMONOTONICITY(SCIPcallExprMonotonicity);
+
+/** calls the eval callback for an expression with given values for children
+ *
+ * Does not iterates over expressions, but requires values for children to be given.
+ * Value is not stored in expression, but returned in @par val.
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcallExprEval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be evaluated */
+   SCIP_Real*            childrenvalues,     /**< values for children */
+   SCIP_Real*            val                 /**< buffer to store evaluated value */
+   );
+
+/** calls the interval evaluation callback for an expression
+ *
+ * @see SCIP_DECL_EXPRMONOTONICITY
+ *
+ * Returns entire interval if callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRINTEVAL(SCIPcallExprInteval);
+
+/** calls the simplify callback for an expression
+ *
+ * @see SCIP_DECL_EXPRSIMPLIFY
+ *
+ * Returns unmodified expression if simplify callback not implemented.
+ *
+ * Does not simplify descendants (children, etc). Use SCIPsimplifyExpr() for that.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
+
+/** calls the reverse propagation callback for an expression
+ *
+ * @see SCIP_DECL_EXPRREVERSEPROP
+ *
+ * Returns unmodified childrenbounds if reverseprop callback not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
+
+/** @} */
 
 /** @} */
 

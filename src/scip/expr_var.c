@@ -109,7 +109,7 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    }
 
    /* simplify since it might not really be a sum */
-   SCIP_CALL( SCIPsimplifyExprShallow(scip, sumexpr, simplifiedexpr, ownercreate, ownercreatedata) );
+   SCIP_CALL( SCIPcallExprSimplify(scip, sumexpr, simplifiedexpr, ownercreate, ownercreatedata) );
 
 #ifdef SCIP_DEBUG
    SCIPinfoMessage(scip, NULL, "expr_var simplify: <%s> := ", SCIPvarGetName(var));

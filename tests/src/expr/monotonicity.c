@@ -135,7 +135,7 @@ SCIP_RETCODE testMonotonicity(
    cr_assert(i < SCIPexprGetNChildren(expr));
 
    /* evaluate monotonicity */
-   SCIP_CALL( SCIPgetExprMonotonicity(scip, expr, i, &monotonicity) );
+   SCIP_CALL( SCIPcallExprMonotonicity(scip, expr, i, &monotonicity) );
 
    /* check monotonicity */
    cr_expect(monotonicity == expectedres, "got %d, expected %d", monotonicity, expectedres);
