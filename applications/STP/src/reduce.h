@@ -34,6 +34,7 @@
 
 /* reduce_base.c
  */
+extern int reduce_getMinNreductions(const GRAPH*, int);
 extern SCIP_RETCODE reduce_baseInit(SCIP*, const GRAPH*, REDBASE**);
 extern void reduce_baseFree(SCIP*, REDBASE**);
 extern SCIP_RETCODE reduceLevel0(SCIP*, GRAPH*);

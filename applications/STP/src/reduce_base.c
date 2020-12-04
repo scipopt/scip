@@ -838,6 +838,39 @@ SCIP_RETCODE redLoopMw_inner(
  */
 
 
+/** gets reduction bound */
+int reduce_getMinNreductions(
+   const GRAPH*          g,                  /**< graph data structure */
+   int                   lowerbound          /**< lower bound on number of reductions (>= 1) */
+   )
+{
+   int min;
+   const int nedges = graph_get_nEdges(g);
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(lowerbound >= 1);
+
+   if( graph_typeIsSpgLike(g) )
+   {
+      min = MAX(nedges / 1000, lowerbound);
+   }
+   else if( graph_pc_isPc(g) )
+   {
+      min = MAX(nnodes / 500, lowerbound);
+   }
+   else if( graph_pc_isMw(g) )
+   {
+      min = MAX(nnodes / 500, lowerbound);
+   }
+   else
+   {
+      min = MAX(nnodes / 1000, lowerbound);
+   }
+
+   return min;
+}
+
+
 /** initializes */
 SCIP_RETCODE reduce_baseInit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1165,7 +1198,7 @@ SCIP_RETCODE reduceStp(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
    path = NULL;
-   reductbound = MAX(nedges / 1000, minelims);
+   reductbound = reduce_getMinNreductions(g, minelims);
 
    /* reduction loop */
    {
@@ -1259,7 +1292,7 @@ SCIP_RETCODE reducePc(
    }
 
    /* define minimal number of edge/node eliminations for a reduction test to be continued */
-   reductbound = MAX(nnodes / 1000, minelims);
+   reductbound = reduce_getMinNreductions(g, minelims);
 
    /* reduction loop */
    SCIP_CALL( redLoopPc(scip, edgestate, g, vnoi, path, nodearrreal, heap, state,
@@ -1295,18 +1328,14 @@ SCIP_RETCODE reduceMw(
    int* state;
    int* vbase;
    int* nodearrint;
-   int nterms;
-   int nnodes;
-   int redbound;
+   const int nnodes = graph_get_nNodes(g);
+   const int nterms = graph_get_nTerms(g);
+   const int redbound = reduce_getMinNreductions(g, minelims);
    STP_Bool* nodearrchar;
    STP_Bool bred = FALSE;
 
    assert(scip != NULL);
-   assert(g != NULL);
    assert(fixed != NULL);
-   nnodes = g->knots;
-   nterms = g->terms;
-   redbound = MAX(nnodes / 500, minelims);
 
    if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.1) )
       bred = TRUE;
