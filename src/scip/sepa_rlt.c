@@ -92,7 +92,7 @@ struct AdjacentVarData
 {
    SCIP_VAR**            adjacentvars;       /**< vars */
    int                   nadjacentvars;      /**< number of vars in adjacentvars */
-   int                   adjacentvarssize;   /**< size of adjacentvars */
+   int                   sadjacentvars;      /**< size of adjacentvars */
 };
 typedef struct AdjacentVarData ADJACENTVARDATA;
 
@@ -109,7 +109,7 @@ struct SCIP_SepaData
    SCIP_HASHMAP*         bilinvardatamap;    /**< for each bilinear var: all vars that appear together with it in a product */
    int*                  varpriorities;      /**< priorities of variables */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
-   int                   bilinvarssize;      /**< size of arrays for variables occurring in bilinear terms */
+   int                   sbilinvars;         /**< size of arrays for variables occurring in bilinear terms */
 
    /* information about bilinear terms */
    int*                  eqauxexpr;          /**< position of the auxexpr that is equal to the product (-1 if none) */
@@ -424,7 +424,7 @@ SCIP_RETCODE freeSepaData(
          bilinvardata = SCIPhashmapEntryGetImage(entry);
          assert(bilinvardata != NULL);
          assert(bilinvardata->adjacentvars != NULL);
-         SCIPfreeBlockMemoryArray(scip, &bilinvardata->adjacentvars, bilinvardata->adjacentvarssize);
+         SCIPfreeBlockMemoryArray(scip, &bilinvardata->adjacentvars, bilinvardata->sadjacentvars);
          SCIPfreeBlockMemory(scip, &bilinvardata);
       }
 
@@ -435,10 +435,10 @@ SCIP_RETCODE freeSepaData(
       }
 
       SCIPhashmapFree(&sepadata->bilinvardatamap);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->bilinvarssize);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->bilinvarssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->sbilinvars);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->sbilinvars);
       sepadata->nbilinvars = 0;
-      sepadata->bilinvarssize = 0;
+      sepadata->sbilinvars = 0;
    }
 
    /* free the remaining array */
@@ -607,7 +607,7 @@ SCIP_RETCODE ensureVarsSize(
    int newsize;
 
    /* check whether array is large enough */
-   if( n <= sepadata->bilinvarssize )
+   if( n <= sepadata->sbilinvars )
       return SCIP_OKAY;
 
    /* compute new size */
@@ -615,10 +615,10 @@ SCIP_RETCODE ensureVarsSize(
    assert(n <= newsize);
 
    /* realloc arrays */
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varssorted, sepadata->bilinvarssize, newsize) );
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->bilinvarssize, newsize) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varssorted, sepadata->sbilinvars, newsize) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->sbilinvars, newsize) );
 
-   sepadata->bilinvarssize = newsize;
+   sepadata->sbilinvars = newsize;
 
    return SCIP_OKAY;
 }
@@ -692,7 +692,7 @@ SCIP_RETCODE addProductVars(
    /* if y is not yet in xdata, add it */
    if( !found )
    {
-      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &xdata->adjacentvars, &xdata->adjacentvarssize, xdata->nadjacentvars + 1) );
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &xdata->adjacentvars, &xdata->sadjacentvars, xdata->nadjacentvars + 1) );
       assert(xdata->adjacentvars != NULL);
 
       for( i = xdata->nadjacentvars; i > pos; --i )
@@ -742,7 +742,7 @@ SCIP_RETCODE addProductVars(
 
       if( !found )
       {
-         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ydata->adjacentvars, &ydata->adjacentvarssize, ydata->nadjacentvars + 1) );
+         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ydata->adjacentvars, &ydata->sadjacentvars, ydata->nadjacentvars + 1) );
          assert(ydata->adjacentvars != NULL);
 
          for( i = ydata->nadjacentvars; i > pos; --i )
@@ -1788,7 +1788,7 @@ SCIP_RETCODE createSepaData(
    sepadata->varpriorities = NULL;
    sepadata->bilinvardatamap = NULL;
    sepadata->eqauxexpr = NULL;
-   sepadata->bilinvarssize = 0;
+   sepadata->sbilinvars = 0;
    sepadata->nbilinvars = 0;
 
    /* get all bilinear terms from the expression constraint handler */
