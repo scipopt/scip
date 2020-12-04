@@ -570,12 +570,22 @@ SCIP_RETCODE redLoopStp_inner(
       if( bidecompparams && bidecompparams->depth < bidecompparams->maxdepth )
       {
          int todo;
-         printf("go with depth %d \n", bidecompparams->depth);
+         if( bidecompparams->depth == 0 || inner_rounds > 0  )
+         {
 
-         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
-         printf("wasDecomposed=%d \n", *wasDecomposed);
+            printf("go with depth %d \n", bidecompparams->depth);
 
-         // todo...second check after da!
+            SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
+            printf("wasDecomposed=%d \n", *wasDecomposed);
+
+            // todo...second check after da!
+
+         }
+         else
+         {
+            printf("skip \n");
+
+         }
 
          if( *wasDecomposed )
             break;

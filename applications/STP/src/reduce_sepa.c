@@ -1176,6 +1176,8 @@ SCIP_RETCODE decomposeExec(
 
    decomposeFreeMembers(scip, &bidecomp);
 
+   redbase->bidecompparams->depth--;
+
    assert(graph_valid(scip, g));
 
    return SCIP_OKAY;

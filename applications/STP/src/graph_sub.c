@@ -325,13 +325,15 @@ void borderNodesCollect(
          if( !isMarked[orghead] )
          {
             StpVecPushBack(scip, subinout->org_bordernodes, orgnode);
-            SCIPdebugMessage("added border node %d \n", orgnode);
+            SCIPdebugMessage("added border node %d (subnode=%d) \n", orgnode, i);
 
             assert(Is_term(subgraph->term[i]));
             break;
          }
       }
    }
+
+   SCIPdebugMessage("number of collected border nodes %d \n", StpVecGetSize(subinout->org_bordernodes));
 }
 
 
@@ -348,6 +350,8 @@ SCIP_RETCODE borderNodesContract(
    const int* const nodemap_orgToSub = subinout->nodemap_orgToSub;
    int* const contractRecord = subinout->org_contractRecord;
    STP_Vectype(int) bordernodes = subinout->org_bordernodes;
+
+   SCIPdebugMessage("number of border nodes to contract: %d \n", StpVecGetSize(subinout->org_bordernodes));
 
    for( int i = 0; i < StpVecGetSize(bordernodes); i++ )
    {
@@ -370,6 +374,8 @@ SCIP_RETCODE borderNodesContract(
             subnode_traced = subnode;
             continue;
          }
+         SCIPdebugMessage("border subnode %d orgnode %d \n", subnode, orgnode);
+
 
          subnode_traced = graph_contractTrace(subnode, subgraph);
          orgnode_traced = nodemap_subToOrg[subnode_traced];
@@ -507,14 +513,25 @@ SCIP_RETCODE reinsertSubgraphTransferTerminals(
 {
    const int* nodemap_subToOrg = subinout->nodemap_subToOrg;
    const int sub_nnodes = graph_get_nNodes(subgraph);
+   int* const org_contracttrace = orggraph->contracttrace;
 
    assert(nodemap_subToOrg);
 
-   for( int i = 0; i < sub_nnodes; i++ )
+   for( int subnode = 0; subnode < sub_nnodes; subnode++ )
    {
-      const int orgnode = nodemap_subToOrg[i];
+      const int orgnode = nodemap_subToOrg[subnode];
 
-      graph_knot_chg(orggraph, orgnode, subgraph->term[i]);
+      graph_knot_chg(orggraph, orgnode, subgraph->term[subnode]);
+
+      if( org_contracttrace && graph_knot_hasContractTrace(subnode, subgraph) && orggraph->grad[orgnode] == 0 )
+      {
+         const int i_traced = graph_contractTrace(subnode, subgraph);
+         const int orgnode_traced = nodemap_subToOrg[i_traced];
+         assert(org_contracttrace[orgnode] == -1);
+         assert(subgraph->grad[subnode] == 0);
+
+         org_contracttrace[orgnode] = orgnode_traced;
+      }
    }
 
    if( subinout->rootIsTransfered )
