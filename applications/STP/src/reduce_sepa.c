@@ -1141,8 +1141,10 @@ SCIP_RETCODE decomposeReduceSub(
       redbase->redparameters->reductbound =
             BIDECOMP_MINRED_MULTIPLIER * reduce_getMinNreductions(subgraph, redbase->redparameters->reductbound_min);
 
-      printf("subgraph: reductbound_min=%d reductbound=%d \n",
+      SCIPdebugMessage("subgraph: reductbound_min=%d reductbound=%d \n",
             redbase->redparameters->reductbound_min,redbase->redparameters->reductbound );
+
+      redbase->bidecompparams->newLevelStarted = TRUE;
 
       SCIP_CALL(redLoopStp(scip, subgraph, redbase));
 
@@ -1178,10 +1180,9 @@ SCIP_Bool decomposeIsPromising(
    int maxcompnnodes = 0;
    const SCIP_Real mincompratio = bidecompparams->depth == 0 ? BIDECOMP_MINCOMPRATIO_FIRST : BIDECOMP_MINCOMPRATIO;
 
-   assert(0 < ncompnodes && ncompnodes <= g->knots);
+   assert(0 < ncompnodes);
 
-
-   printf("all component nodes=%d \n", ncompnodes);
+   SCIPdebugMessage("all component nodes=%d \n", ncompnodes);
 
    for( int i = 0; i < ncomps; i++ )
    {
@@ -1192,8 +1193,8 @@ SCIP_Bool decomposeIsPromising(
 
    maxratio = (SCIP_Real) maxcompnnodes / (SCIP_Real) ncompnodes;
 
-   printf("max. component number of nodes=%d \n", maxcompnnodes);
-   printf("maxratio=%f \n", maxratio);
+   SCIPdebugMessage("max. component number of nodes=%d \n", maxcompnnodes);
+   SCIPdebugMessage("maxratio=%f \n", maxratio);
 
    return (maxratio < mincompratio);
 }

@@ -439,6 +439,8 @@ SCIP_RETCODE redLoopStp_inner(
    /* inner reduction loop */
    while( rerun && !SCIPisStopped(scip) )
    {
+      SCIP_Bool skiptests = FALSE;
+
       int danelims = 0;
       int sdnelims = 0;
       int sdcnelims = 0;
@@ -448,6 +450,12 @@ SCIP_RETCODE redLoopStp_inner(
       int brednelims = 0;
       int degtnelims = 0;
       int sdbiasnelims = 0;
+
+      if( bidecompparams && bidecompparams->newLevelStarted )
+      {
+         skiptests = TRUE;
+         bidecompparams->newLevelStarted = FALSE;
+      }
 
       assert(*wasDecomposed == FALSE);
 
@@ -465,13 +473,13 @@ SCIP_RETCODE redLoopStp_inner(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      if( sd || extensive )
+      if( sd && !skiptests )
       {
          SCIP_CALL( reduce_sd(scip, g, redbase->vnoi,
                redbase->state, redbase->vbase, redbase->nodearrint, redbase->nodearrint2, redbase->edgearrint, &sdnelims,
                nodereplacing, NULL));
 
-         if( sdnelims <= reductbound )
+         if( sdnelims <= reductbound && !extensive )
             sd = FALSE;
 
          reduceStatsPrint(fullreduce, "sd", sdnelims);
@@ -480,24 +488,27 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      if( sdstar || extensive )
+      if( sd && !skiptests )
+         SCIP_CALL(reduce_simple(scip, g, redbase->fixed, redbase->solnode, &degtnelims, NULL));
+
+      if( sdstar && !skiptests )
       {
          SCIP_CALL( reduce_sdStarBiased(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_sdstar), NULL, g, &sdstarnelims) );
 
-         if( sdstarnelims <= reductbound )
+         if( sdstarnelims <= reductbound && !extensive )
             sdstar = FALSE;
 
          reduceStatsPrint(fullreduce, "sdstar", sdstarnelims);
       }
 
-      if( sdc || extensive )
+      if( sdc && !skiptests )
       {
          SCIP_CALL( reduce_sdsp(scip, g, redbase->vnoi,
                redbase->heap, redbase->state, redbase->vbase, redbase->nodearrint,
                redbase->nodearrint2, &sdcnelims,
                ((inner_rounds > 0) ? STP_REDBOUND_SDSP2 : STP_REDBOUND_SDSP), NULL));
 
-         if( sdcnelims <= reductbound )
+         if( sdcnelims <= reductbound && !extensive )
             sdc = FALSE;
 
          reduceStatsPrint(fullreduce, "sdsp", sdcnelims);
@@ -506,14 +517,14 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      if( sd || sdc || sdstar )
+      if( (sdc || sdstar) && !skiptests )
          SCIP_CALL(reduce_simple(scip, g, redbase->fixed, redbase->solnode, &degtnelims, NULL));
 
-      if( bdk || extensive )
+      if( bdk && !skiptests )
       {
          SCIP_CALL( reduce_bdk(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_bdk), g, &bdknelims) );
 
-         if( bdknelims <= STP_RED_EXPENSIVEFACTOR * reductbound )
+         if( bdknelims <= STP_RED_EXPENSIVEFACTOR * reductbound && !extensive )
             bdk = FALSE;
          else
             SCIP_CALL(reduce_simple(scip, g, redbase->fixed, redbase->solnode, &degtnelims, NULL));
@@ -524,12 +535,12 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      if( sdbiased || extensive )
+      if( sdbiased && !skiptests )
       {
          SCIP_CALL( reduce_impliedProfitBased(scip, getWorkLimits_stp(g, inner_rounds, fullreduce, stp_sdstarbot), g,
                redbase->solnode, redbase->fixed, &sdbiasnelims) );
 
-         if( sdbiasnelims <= reductbound  )
+         if( sdbiasnelims <= reductbound && !extensive  )
             sdbiased = FALSE;
 
          reduceStatsPrint(fullreduce, "sdbiasnelims", sdbiasnelims);
@@ -538,14 +549,14 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      if( nvsl || extensive )
+      if( nvsl )
       {
          SCIP_CALL( nvreduce_sl(scip, NULL, g, redbase->vnoi,
                redbase->nodearrreal, redbase->fixed, redbase->edgearrint,
                redbase->state, redbase->vbase, redbase->nodearrint, NULL,
                redbase->solnode, redbase->nodearrchar, &nvslnelims, reductbound));
 
-         if( nvslnelims <= reductbound )
+         if( nvslnelims <= reductbound && !extensive )
             nvsl = FALSE;
 
          reduceStatsPrint(fullreduce, "nvsl", nvslnelims);
@@ -554,44 +565,17 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      ub = -1.0;
-
-      if( !fullreduce && 0 )
-      {
-         int nelims = 0;
-
-         SCIP_CALL(reduce_articulations(scip, g, redbase->fixed, &nelims));
-         printf("cutelims=%d \n", nelims);
-      }
-
-//#define XXX
-#ifdef XXX
-      // todo extra method
       if( bidecompparams && bidecompparams->depth < bidecompparams->maxdepth )
       {
-         int todo;
-         if( bidecompparams->depth == 0 || inner_rounds > 0  )
-         {
-
-            printf("go with depth %d \n", bidecompparams->depth);
-
-            SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
-            printf("wasDecomposed=%d \n", *wasDecomposed);
-
-            // todo...second check after da!
-
-         }
-         else
-         {
-            printf("skip \n");
-
-         }
+         SCIPdebugMessage("go with depth %d \n", bidecompparams->depth);
+         SCIP_CALL( reduce_bidecomposition(scip, g, redbase, wasDecomposed) );
+         SCIPdebugMessage("wasDecomposed=%d \n", *wasDecomposed);
 
          if( *wasDecomposed )
             break;
       }
-#endif
 
+      ub = -1.0;
 
       if( da )
       {
@@ -1204,7 +1188,7 @@ SCIP_RETCODE reduceStp(
    {
       RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing, .reductbound_min = minelims,
                                    .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
-      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2 };
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
                           .solnode = NULL, .fixed = fixed,
                           .vnoi = vnoi, .path = path, .heap = heap,

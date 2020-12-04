@@ -74,6 +74,7 @@ typedef struct bidecomposition_reduction_parameters
 {
    int                   depth;              /**< current depth */
    int                   maxdepth;           /**< maximum recursive depth of decomposition */
+   SCIP_Bool             newLevelStarted;    /**< no level? */
 } BIDECPARAMS;
 
 
