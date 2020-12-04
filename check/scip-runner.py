@@ -1,11 +1,14 @@
 #! /usr/bin/env python
 
 # This script allows to run PySCIPOpt using the SCIP make test environment.
-# usage: make test[cluster] EXECUTABLE=check/pyscipopt-runner.py [options]
+# usage: make test[cluster] EXECUTABLE=check/pyscipopt-runner.py PYTHON=python [options]
 #
 # You may use this file as template to extend it and add custom code.
 # The executable needs to have the .py file extension to be recognized by
-# the check scripts.
+# the check scripts and _must_ be an executable file.
+#
+# It should _not_ be necessary to modify parse_tmp_file() nor get_model(),
+# unless you need to add a plugin before the problem instance is read.
 
 from pyscipopt import Model
 import os
@@ -51,8 +54,13 @@ def parse_tmp_file(tmpfile):
    return {"instance" : instance, "settings" : settings, "outsettings" : outsettings, "params" : params}
 
 
-def prepare_model(model, data):
-   """prepares a PySCIPOpt model for given input data that has been parsed by a TMPFILE"""
+def get_model():
+   """builds a model, reads input data provided by the scripts, and writes out setting file"""
+   # generate a model
+   model = Model()
+
+   # parse TMP file
+   data = parse_tmp_file(sys.stdin)
 
    # read settings file
    model.readParams(data["settings"])
@@ -69,17 +77,6 @@ def prepare_model(model, data):
    # read problem
    model.readProblem(data["instance"])
 
-#
-# example main
-#
-if __name__ == "__main__":
-
-   # generate a model
-   model = Model()
-
-   # parse TMP file
-   data = parse_tmp_file(sys.stdin)
-
    # prepare model
    prepare_model(model, data)
 
@@ -88,6 +85,15 @@ if __name__ == "__main__":
 
    # write parameters
    model.writeParams(data["outsettings"])
+
+   return model
+
+#
+# example main
+#
+if __name__ == "__main__":
+
+   model = get_model()
 
    # optimize and print statistics
    model.optimize()
