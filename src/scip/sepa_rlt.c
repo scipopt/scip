@@ -88,14 +88,13 @@ struct HashData
 typedef struct HashData HASHDATA;
 
 /** data of a bilinear (i.e. appearing in bilinear products) variable */
-struct BilinVarData
+struct AdjacentVarData
 {
-   int                   priority;           /**< priority of the variable */
-   SCIP_VAR**            varbilinvars;       /**< vars appearing in a bilinear term together with the variable */
-   int                   nvarbilinvars;      /**< number of vars in varbilinvars */
-   int                   varbilinvarssize;   /**< size of varbilinvars */
+   SCIP_VAR**            adjacentvars;       /**< vars */
+   int                   nadjacentvars;      /**< number of vars in adjacentvars */
+   int                   adjacentvarssize;   /**< size of adjacentvars */
 };
-typedef struct BilinVarData BILINVARDATA;
+typedef struct AdjacentVarData ADJACENTVARDATA;
 
 /** separator data */
 struct SCIP_SepaData
@@ -405,7 +404,7 @@ SCIP_RETCODE freeSepaData(
    )
 {  /*lint --e{715}*/
    int i;
-   BILINVARDATA* bilinvardata;
+   ADJACENTVARDATA* bilinvardata;
 
    assert(sepadata->iscreated);
    assert(sepadata->bilinvarsmap != NULL);
@@ -424,8 +423,8 @@ SCIP_RETCODE freeSepaData(
 
          bilinvardata = SCIPhashmapEntryGetImage(entry);
          assert(bilinvardata != NULL);
-         assert(bilinvardata->varbilinvars != NULL);
-         SCIPfreeBlockMemoryArray(scip, &bilinvardata->varbilinvars, bilinvardata->varbilinvarssize);
+         assert(bilinvardata->adjacentvars != NULL);
+         SCIPfreeBlockMemoryArray(scip, &bilinvardata->adjacentvars, bilinvardata->adjacentvarssize);
          SCIPfreeBlockMemory(scip, &bilinvardata);
       }
 
@@ -645,8 +644,8 @@ SCIP_RETCODE addProductVars(
    int pos;
    int i;
    SCIP_Bool found;
-   BILINVARDATA* xdata;
-   BILINVARDATA* ydata;
+   ADJACENTVARDATA* xdata;
+   ADJACENTVARDATA* ydata;
 
    if( sepadata->bilinvardatamap == NULL )
    {
@@ -672,7 +671,7 @@ SCIP_RETCODE addProductVars(
    }
    else
    {
-      xdata = (BILINVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) xidx);
+      xdata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) xidx);
    }
 
    assert(xpos >= 0 && xpos < sepadata->nbilinvars );
@@ -680,30 +679,29 @@ SCIP_RETCODE addProductVars(
    assert(xdata != NULL);
 
    /* add y to bilinvardata for x */
-   if( xdata->varbilinvars == NULL )
+   if( xdata->adjacentvars == NULL )
    {
       found = FALSE;
       pos = 0;
    }
    else
    {
-      found = SCIPsortedvecFindPtr((void**) xdata->varbilinvars, SCIPvarComp, y, xdata->nvarbilinvars, &pos);
+      found = SCIPsortedvecFindPtr((void**) xdata->adjacentvars, SCIPvarComp, y, xdata->nadjacentvars, &pos);
    }
 
    /* if y is not yet in xdata, add it */
    if( !found )
    {
-      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &xdata->varbilinvars, &xdata->varbilinvarssize, xdata->nvarbilinvars + 1) );
-      assert(xdata->varbilinvars != NULL);
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &xdata->adjacentvars, &xdata->adjacentvarssize, xdata->nadjacentvars + 1) );
+      assert(xdata->adjacentvars != NULL);
 
-      for( i = xdata->nvarbilinvars; i > pos; --i )
-         xdata->varbilinvars[i] = xdata->varbilinvars[i - 1];
-      xdata->varbilinvars[pos] = y;
-      ++xdata->nvarbilinvars;
+      for( i = xdata->nadjacentvars; i > pos; --i )
+         xdata->adjacentvars[i] = xdata->adjacentvars[i - 1];
+      xdata->adjacentvars[pos] = y;
+      ++xdata->nadjacentvars;
    }
 
    /* add locks to priority of x */
-   xdata->priority += nlocks;
    sepadata->varpriorities[xpos] += nlocks;
 
    if( xidx != yidx )
@@ -724,7 +722,7 @@ SCIP_RETCODE addProductVars(
       }
       else
       {
-         ydata = (BILINVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) yidx);
+         ydata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) yidx);
       }
 
       assert(ypos >= 0 && ypos < sepadata->nbilinvars);
@@ -732,29 +730,28 @@ SCIP_RETCODE addProductVars(
       assert(ydata != NULL);
 
       /* add x to bilinvardata for y */
-      if( ydata->varbilinvars == NULL )
+      if( ydata->adjacentvars == NULL )
       {
          found = FALSE;
          pos = 0;
       }
       else
       {
-         found = SCIPsortedvecFindPtr((void**) ydata->varbilinvars, SCIPvarComp, x, ydata->nvarbilinvars, &pos);
+         found = SCIPsortedvecFindPtr((void**) ydata->adjacentvars, SCIPvarComp, x, ydata->nadjacentvars, &pos);
       }
 
       if( !found )
       {
-         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ydata->varbilinvars, &ydata->varbilinvarssize, ydata->nvarbilinvars + 1) );
-         assert(ydata->varbilinvars != NULL);
+         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ydata->adjacentvars, &ydata->adjacentvarssize, ydata->nadjacentvars + 1) );
+         assert(ydata->adjacentvars != NULL);
 
-         for( i = ydata->nvarbilinvars; i > pos; --i )
-            ydata->varbilinvars[i] = ydata->varbilinvars[i - 1];
-         ydata->varbilinvars[pos] = x;
-         ++ydata->nvarbilinvars;
+         for( i = ydata->nadjacentvars; i > pos; --i )
+            ydata->adjacentvars[i] = ydata->adjacentvars[i - 1];
+         ydata->adjacentvars[pos] = x;
+         ++ydata->nadjacentvars;
       }
 
       /* add locks to priority of y */
-      ydata->priority += nlocks;
       sepadata->varpriorities[ypos] += nlocks;
    }
 
@@ -2683,7 +2680,7 @@ SCIP_RETCODE markRowsXj(
    SCIP_Real* colvals;
    SCIP_ROW** colrows;
    SCIP_CONSEXPR_BILINTERM* terms;
-   BILINVARDATA* bilinvardata;
+   ADJACENTVARDATA* bilinvardata;
    SCIP_Bool violatedbelow;
    SCIP_Bool violatedabove;
 
@@ -2704,12 +2701,12 @@ SCIP_RETCODE markRowsXj(
    }
 
    terms = SCIPgetConsExprBilinTerms(conshdlr);
-   bilinvardata = (BILINVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(xj));
+   bilinvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(xj));
 
    /* for each var which appears in a bilinear product together with xj, mark rows */
-   for( i = 0; i < bilinvardata->nvarbilinvars; ++i )
+   for( i = 0; i < bilinvardata->nadjacentvars; ++i )
    {
-      xi = bilinvardata->varbilinvars[i];
+      xi = bilinvardata->adjacentvars[i];
 
       if( SCIPvarGetStatus(xi) != SCIP_VARSTATUS_COLUMN )
          continue;
