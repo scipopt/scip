@@ -48,19 +48,19 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXUNKNOWNTERMS      -1 /**< default value for parameter maxunknownterms */
-#define DEFAULT_MAXUSEDVARS         100 /**< default value for parameter maxusedvars */
-#define DEFAULT_MAXNCUTS             -1 /**< default value for parameter maxncuts */
-#define DEFAULT_MAXROUNDS             1 /**< default value for parameter maxrounds */
-#define DEFAULT_MAXROUNDSROOT        10 /**< default value for parameter maxroundsroot */
-#define DEFAULT_ONLYEQROWS        FALSE /**< default value for parameter eqrowsfirst */
-#define DEFAULT_ONLYCONTROWS      FALSE /**< default value for parameter eqrowsfirst */
-#define DEFAULT_ONLYINITIAL        TRUE /**< default value for parameter onlyinitial */
-#define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
-#define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
-#define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
-#define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
-#define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
+#define DEFAULT_MAXUNKNOWNTERMS      -1 /**< maximum number of unknown bilinear terms a row can have to be used */
+#define DEFAULT_MAXUSEDVARS         100 /**< maximum number of variables that will be used to compute rlt cuts */
+#define DEFAULT_MAXNCUTS             -1 /**< maximum number of cuts that will be added per round */
+#define DEFAULT_MAXROUNDS             1 /**< maximum number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        10 /**< maximum number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_ONLYEQROWS        FALSE /**< whether only equality rows should be used for rlt cuts */
+#define DEFAULT_ONLYCONTROWS      FALSE /**< whether only continuous rows should be used for rlt cuts */
+#define DEFAULT_ONLYINITIAL        TRUE /**< whether only initial rows should be used for rlt cuts */
+#define DEFAULT_USEINSUBSCIP      FALSE /**< whether the separator should also be used in sub-scips */
+#define DEFAULT_USEPROJECTION     FALSE /**< whether the separator should first check projected rows */
+#define DEFAULT_DETECTHIDDEN       TRUE /**< whether implicit products should be detected and separated by McCormick */
+#define DEFAULT_HIDDENRLT          TRUE /**< whether RLT cuts should be added for hidden products */
+#define DEFAULT_ADDTOPOOL          TRUE /**< whether globally valid RLT cuts are added to the global cut pool */
 
 #define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
                                          *   so that less strict filtering is applied */
@@ -80,7 +80,7 @@
 /** data object for pairs and triples of variables */
 struct HashData
 {
-   SCIP_VAR*             vars[3];               /**< variables in the pair or triple, used for hash comparison */
+   SCIP_VAR*             vars[3];            /**< variables in the pair or triple, used for hash comparison */
    int                   nvars;              /**< number of variables */
    int                   nrows;              /**< number of rows */
    int                   firstrow;           /**< beginning of the corresponding row linked list */
@@ -119,15 +119,15 @@ struct SCIP_SepaData
    int                   maxunknownterms;    /**< maximum number of unknown bilinear terms a row can have to be used */
    int                   maxusedvars;        /**< maximum number of variables that will be used to compute rlt cuts */
    int                   maxncuts;           /**< maximum number of cuts that will be added per round */
-   int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
-   int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
+   int                   maxrounds;          /**< maximum number of separation rounds per node (-1: unlimited) */
+   int                   maxroundsroot;      /**< maximum number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             onlyeqrows;         /**< whether only equality rows should be used for rlt cuts */
    SCIP_Bool             onlycontrows;       /**< whether only continuous rows should be used for rlt cuts */
    SCIP_Bool             onlyinitial;        /**< whether only initial rows should be used for rlt cuts */
    SCIP_Bool             useinsubscip;       /**< whether the separator should also be used in sub-scips */
    SCIP_Bool             useprojection;      /**< whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
-   SCIP_Bool             hiddenrlt;          /**< whether RLT cuts (TRUE) or only McCormick inequalities (FALSE) should be added for hidden products */
+   SCIP_Bool             hiddenrlt;          /**< whether RLT cuts should be added for hidden products */
    SCIP_Bool             addtopool;          /**< whether globally valid RLT cuts are added to the global cut pool */
 
    /* cut selection parameters */
@@ -2868,12 +2868,12 @@ SCIP_RETCODE separateMcCormickImplicit(
       /* one iteration for underestimation and one for overestimation */
       for( j = 0; j < 2; ++j )
       {
-         /* if underestimate, separate auxexpr <= x*y; if !underestimate, separate x*y <= auxexpr */
+         /* if underestimate, separate xy <= auxexpr; if !underestimate, separate xy >= auxexpr */
          underestimate = j == 0;
-         if( underestimate && bestunderestimators[i] != -1 )
-            auxexpr = terms[i].aux.exprs[bestunderestimators[i]];
-         else if( !underestimate && bestoverestimators[i] != -1 )
+         if( underestimate && bestoverestimators[i] != -1 )
             auxexpr = terms[i].aux.exprs[bestoverestimators[i]];
+         else if( !underestimate && bestunderestimators[i] != -1 )
+            auxexpr = terms[i].aux.exprs[bestunderestimators[i]];
          else
             continue;
 
@@ -2885,8 +2885,9 @@ SCIP_RETCODE separateMcCormickImplicit(
          productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
 
-         assert((underestimate && SCIPisFeasGT(scip, auxval, productval)) ||
-               (!underestimate && SCIPisFeasGT(scip, productval, auxval)));
+         /* if underestimate, then xy <= aux must be violated; otherwise aux <= xy must be violated */
+         assert((underestimate && SCIPisFeasLT(scip, auxval, productval)) ||
+               (!underestimate && SCIPisFeasLT(scip, productval, auxval)));
 #endif
 
          /* create an empty row */
@@ -2906,7 +2907,7 @@ SCIP_RETCODE separateMcCormickImplicit(
          /* subtract auxexpr from the cut */
          addAuxexprCoefs(terms[i].x, terms[i].y, auxexpr, -1.0, &auxcoef, &xcoef, &ycoef, &constant);
 
-         /* add McCormick terms: ask for an overestimator if relation is auxexpr <= x*y, and vice versa */
+         /* add McCormick terms: ask for an underestimator if relation is xy <= auxexpr, and vice versa */
          SCIPaddBilinMcCormick(scip, 1.0, bndx.inf, bndx.sup, refpointx, bndy.inf, bndy.sup, refpointy, underestimate,
                &xcoef, &ycoef, &constant, &success);
 
@@ -2925,9 +2926,9 @@ SCIP_RETCODE separateMcCormickImplicit(
 
             /* set side */
             if( underestimate )
-               SCIP_CALL( SCIPchgRowLhs(scip, cut, -constant) );
-            else
                SCIP_CALL( SCIPchgRowRhs(scip, cut, -constant) );
+            else
+               SCIP_CALL( SCIPchgRowLhs(scip, cut, -constant) );
 
             /* if the cut is violated, add it to SCIP */
             if( SCIPisFeasNegative(scip, SCIPgetRowFeasibility(scip, cut)) )
