@@ -107,7 +107,8 @@ struct SCIP_SepaData
    /* bilinear variables */
    SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the auxiliary variables/exprs of each bilinear term */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
-   BILINVARDATA**        bilinvardatas;      /**< for each bilinear var: all vars that appear together with it in a product */
+   SCIP_HASHMAP*         bilinvardatamap;    /**< for each bilinear var: all vars that appear together with it in a product */
+   int*                  varpriorities;      /**< priorities of variables */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
    int                   bilinvarssize;      /**< size of arrays for variables occurring in bilinear terms */
 
@@ -413,17 +414,30 @@ SCIP_RETCODE freeSepaData(
    {
       /* release bilinvars that were captured for rlt and free all related arrays */
 
+      for( i = 0; i < SCIPhashmapGetNEntries(sepadata->bilinvardatamap); ++i )
+      {
+         SCIP_HASHMAPENTRY* entry;
+
+         entry = SCIPhashmapGetEntry(sepadata->bilinvardatamap, i);
+         if( entry == NULL )
+            continue;
+
+         bilinvardata = SCIPhashmapEntryGetImage(entry);
+         assert(bilinvardata != NULL);
+         assert(bilinvardata->varbilinvars != NULL);
+         SCIPfreeBlockMemoryArray(scip, &bilinvardata->varbilinvars, bilinvardata->varbilinvarssize);
+         SCIPfreeBlockMemory(scip, &bilinvardata);
+      }
+
       for( i = 0; i < sepadata->nbilinvars; ++i )
       {
          assert(sepadata->varssorted[i] != NULL);
          SCIP_CALL( SCIPreleaseVar(scip, &(sepadata->varssorted[i])) );
-
-         bilinvardata = sepadata->bilinvardatas[i];
-         SCIPfreeBlockMemoryArray(scip, &bilinvardata->varbilinvars, bilinvardata->varbilinvarssize);
-         SCIPfreeBlockMemory(scip, &bilinvardata);
       }
-      SCIPfreeBlockMemoryArray(scip, &sepadata->bilinvardatas, sepadata->bilinvarssize);
+
+      SCIPhashmapFree(&sepadata->bilinvardatamap);
       SCIPfreeBlockMemoryArray(scip, &sepadata->varssorted, sepadata->bilinvarssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->bilinvarssize);
       sepadata->nbilinvars = 0;
       sepadata->bilinvarssize = 0;
    }
@@ -434,7 +448,7 @@ SCIP_RETCODE freeSepaData(
       SCIPfreeBlockMemoryArray(scip, &sepadata->eqauxexpr, sepadata->nbilinterms);
    }
 
-   /* free the hashmap */
+   /* free the hashmap */ /* TODO is it created only when nbilinvars > 0? */
    SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
@@ -603,40 +617,11 @@ SCIP_RETCODE ensureVarsSize(
 
    /* realloc arrays */
    SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varssorted, sepadata->bilinvarssize, newsize) );
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->bilinvardatas, sepadata->bilinvarssize, newsize) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->varpriorities, sepadata->bilinvarssize, newsize) );
 
    sepadata->bilinvarssize = newsize;
 
    return SCIP_OKAY;
-}
-
-/** compares the priority of two bilinear variables
- *
- * returns -1 if first is smaller than, and +1 if first is greater than second variable priority;
- * returns 0 if both priorities are equal
- */
-static
-int bilinVarDataCompare(
-   BILINVARDATA*         bilinvardata1,               /**< data of the first bilinear variable */
-   BILINVARDATA*         bilinvardata2                /**< data of the second bilinear variable */
-   )
-{
-   assert(bilinvardata1 != NULL);
-   assert(bilinvardata2 != NULL);
-
-   if( bilinvardata1->priority < bilinvardata2->priority )
-      return -1;
-   else if( bilinvardata1->priority > bilinvardata2->priority )
-      return +1;
-   else
-      return 0;
-}
-
-/** comparison method for sorting bilinear variable data by non-decreasing priority */
-static
-SCIP_DECL_SORTPTRCOMP(bilinVarDataComp)
-{
-   return bilinVarDataCompare((BILINVARDATA*)elem1, (BILINVARDATA*)elem2);
 }
 
 /** saves variables x and y to separator data and stores information about their connection
@@ -663,6 +648,11 @@ SCIP_RETCODE addProductVars(
    BILINVARDATA* xdata;
    BILINVARDATA* ydata;
 
+   if( sepadata->bilinvardatamap == NULL )
+   {
+      SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvardatamap, SCIPblkmem(scip), 10) );
+   }
+
    xidx = SCIPvarGetIndex(x);
    yidx = SCIPvarGetIndex(y);
 
@@ -674,17 +664,22 @@ SCIP_RETCODE addProductVars(
       SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
       sepadata->varssorted[sepadata->nbilinvars] = x;
-      SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) ); /*lint !e866*/
+      sepadata->varpriorities[sepadata->nbilinvars] = 0;
+      SCIP_CALL( SCIPallocClearBlockMemory(scip, &xdata) );
+      SCIP_CALL( SCIPhashmapInsert(sepadata->bilinvardatamap, (void*)(size_t) xidx, (void*) xdata) );
       xpos = sepadata->nbilinvars;
       ++sepadata->nbilinvars;
    }
+   else
+   {
+      xdata = (BILINVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) xidx);
+   }
 
-   assert(sepadata->bilinvardatas != NULL);
    assert(xpos >= 0 && xpos < sepadata->nbilinvars );
    assert(xpos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)); /*lint !e571 */
+   assert(xdata != NULL);
 
    /* add y to bilinvardata for x */
-   xdata = sepadata->bilinvardatas[xpos];
    if( xdata->varbilinvars == NULL )
    {
       found = FALSE;
@@ -695,6 +690,7 @@ SCIP_RETCODE addProductVars(
       found = SCIPsortedvecFindPtr((void**) xdata->varbilinvars, SCIPvarComp, y, xdata->nvarbilinvars, &pos);
    }
 
+   /* if y is not yet in xdata, add it */
    if( !found )
    {
       SCIP_CALL( SCIPensureBlockMemoryArray(scip, &xdata->varbilinvars, &xdata->varbilinvarssize, xdata->nvarbilinvars + 1) );
@@ -708,6 +704,7 @@ SCIP_RETCODE addProductVars(
 
    /* add locks to priority of x */
    xdata->priority += nlocks;
+   sepadata->varpriorities[xpos] += nlocks;
 
    if( xidx != yidx )
    {
@@ -719,15 +716,20 @@ SCIP_RETCODE addProductVars(
          SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
          SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
          sepadata->varssorted[sepadata->nbilinvars] = y;
-         SCIP_CALL( SCIPallocClearBlockMemory(scip, &sepadata->bilinvardatas[sepadata->nbilinvars]) ); /*lint !e866*/
+         sepadata->varpriorities[sepadata->nbilinvars] = 0;
+         SCIP_CALL( SCIPallocClearBlockMemory(scip, &ydata) );
+         SCIP_CALL( SCIPhashmapInsert(sepadata->bilinvardatamap, (void*)(size_t) yidx, (void*) ydata) );
          ypos = sepadata->nbilinvars;
          ++sepadata->nbilinvars;
+      }
+      else
+      {
+         ydata = (BILINVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) yidx);
       }
 
       assert(ypos >= 0 && ypos < sepadata->nbilinvars);
       assert(ypos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)); /*lint !e571 */
-
-      ydata = sepadata->bilinvardatas[ypos];
+      assert(ydata != NULL);
 
       /* add x to bilinvardata for y */
       if( ydata->varbilinvars == NULL )
@@ -753,6 +755,7 @@ SCIP_RETCODE addProductVars(
 
       /* add locks to priority of y */
       ydata->priority += nlocks;
+      sepadata->varpriorities[ypos] += nlocks;
    }
 
    return SCIP_OKAY;
@@ -1785,7 +1788,8 @@ SCIP_RETCODE createSepaData(
 
    /* initialize some fields of sepadata */
    sepadata->varssorted = NULL;
-   sepadata->bilinvardatas = NULL;
+   sepadata->varpriorities = NULL;
+   sepadata->bilinvardatamap = NULL;
    sepadata->eqauxexpr = NULL;
    sepadata->bilinvarssize = 0;
    sepadata->nbilinvars = 0;
@@ -1866,8 +1870,8 @@ SCIP_RETCODE createSepaData(
    /* find maxnumber of variables that occurrence most often and sort them by number of occurrences
     * (same as normal sort, except that entries at positions maxusedvars..nbilinvars may be unsorted at end)
     */
-   SCIPselectDownPtrPtr((void**) sepadata->bilinvardatas, (void**) sepadata->varssorted, bilinVarDataComp,
-         sepadata->maxusedvars, sepadata->nbilinvars);
+   SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, sepadata->maxusedvars,
+         sepadata->nbilinvars);
 
    /* capture all variables */
    for( i = 0; i < sepadata->nbilinvars; ++i )
@@ -2700,7 +2704,7 @@ SCIP_RETCODE markRowsXj(
    }
 
    terms = SCIPgetConsExprBilinTerms(conshdlr);
-   bilinvardata = sepadata->bilinvardatas[j];
+   bilinvardata = (BILINVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(xj));
 
    /* for each var which appears in a bilinear product together with xj, mark rows */
    for( i = 0; i < bilinvardata->nvarbilinvars; ++i )
