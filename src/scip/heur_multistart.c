@@ -450,12 +450,13 @@ SCIP_RETCODE improvePoint(
 
       /* if there are no violated rows, stop since start point is feasible */
       if( nviolnlrows == 0 )
+      {
+         assert(updatevec[i] == 0.0);
          return SCIP_OKAY;
+      }
 
       for( i = 0; i < nvars; ++i )
       {
-         assert(updatevec[i] != 0.0);
-
          /* adjust point */
          updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
          updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
