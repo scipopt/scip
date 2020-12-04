@@ -1888,7 +1888,9 @@ SCIP_RETCODE createSepaData(
    return SCIP_OKAY;
 }
 
-/** get the positions of the most violated auxiliary under- and overestimators for all products */
+/** get the positions of the most violated auxiliary under- and overestimators for all products; -1 means
+ * no relation with given product is violated
+ */
 static
 void getBestEstimators(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1914,8 +1916,8 @@ void getBestEstimators(
 
    for( j = 0; j < SCIPgetConsExprNBilinTerms(sepadata->conshdlr); ++j )
    {
-      viol_below = -SCIPinfinity(scip);
-      viol_above = -SCIPinfinity(scip);
+      viol_below = SCIPfeastol(scip);
+      viol_above = SCIPfeastol(scip);
 
       /* evaluate the product expression */
       prodval = SCIPgetSolVal(scip, sol, terms[j].x) * SCIPgetSolVal(scip, sol, terms[j].y);
@@ -1923,18 +1925,12 @@ void getBestEstimators(
       bestunderestimators[j] = -1;
       bestoverestimators[j] = -1;
 
-      /* look for the best under- and overestimator, store their positions */
-
       /* if there are any auxexprs, look there */
       for( i = 0; i < terms[j].nauxexprs; ++i )
       {
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
          prodviol = auxval - prodval;
 
-         /* TODO would it make sense to check here already whether the aux.exprs is violated at all (check sign of prodviol) ?
-          *   I see a "skip non-violated terms" in separateMcCormickImplicit(), but that has to reeval the aux-expr first
-          *   just change the init above to viol_below=viol_above=0 (or SCIPepsilon or SCIPfeastol) would probably be sufficient
-          */
          if( terms[j].aux.exprs[i]->underestimate && prodviol > viol_below )
          {
             viol_below = prodviol;
@@ -2607,9 +2603,9 @@ void freeProjRows(
 static
 void addRowMark(
    int                   ridx,               /**< row index */
-   SCIP_Real             coef,               /**< ai*(w - xy) */
-   SCIP_Real             prod_viol_below,    /**< violation of the product from below (0 or positive) */
-   SCIP_Real             prod_viol_above,    /**< violation of the product from above (0 or positive) */
+   SCIP_Real             coef,               /**< ai*(auxexpr - xy) */
+   SCIP_Bool             violatedbelow,      /**< whether the relation auxexpr <= xy is violated */
+   SCIP_Real             violatedabove,      /**< whether the relation xy <= auxexpr is violated */
    int*                  row_idcs,           /**< sparse array with indices of marked rows */
    int*                  row_marks,          /**< sparse array to store the marks */
    int*                  nmarked             /**< number of marked rows */
@@ -2621,7 +2617,7 @@ void addRowMark(
 
    assert(coef != 0.0);
 
-   if( (coef > 0.0 && prod_viol_below > 0.0) || (coef < 0.0 && prod_viol_above > 0.0 ) )
+   if( (coef > 0.0 && violatedbelow) || (coef < 0.0 && violatedabove) )
       newmark = 1; /* a xy < a w case */
    else
       newmark = 2; /* a xy > a w case */
@@ -2681,11 +2677,11 @@ SCIP_RETCODE markRowsXj(
    SCIP_Real a;
    SCIP_COL* coli;
    SCIP_Real* colvals;
-   SCIP_Real viol_below;
-   SCIP_Real viol_above;
    SCIP_ROW** colrows;
    SCIP_CONSEXPR_BILINTERM* terms;
    BILINVARDATA* bilinvardata;
+   SCIP_Bool violatedbelow;
+   SCIP_Bool violatedabove;
 
    *nmarked = 0;
 
@@ -2718,64 +2714,70 @@ SCIP_RETCODE markRowsXj(
       vlb = local ? SCIPvarGetLbLocal(xi) : SCIPvarGetLbGlobal(xi);
       vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
 
-      if( sepadata->useprojection && (SCIPisEQ(scip, vlb, vali) || SCIPisEQ(scip, vub, vali)) ) /* we aren't interested in products with variables that are at bound */
+      /* if we use projection, we aren't interested in products with variables that are at bound */
+      if( sepadata->useprojection && (SCIPisEQ(scip, vlb, vali) || SCIPisEQ(scip, vub, vali)) )
          continue;
 
       /* get the index of the bilinear product */
       idx = SCIPgetConsExprBilinTermIdx(conshdlr, xj, xi);
       assert(idx >= 0 && idx < SCIPgetConsExprNBilinTerms(conshdlr));
 
+      /* skip implicit products if we don't want to add RLT cuts for them */
       if( !sepadata->hiddenrlt && !terms[idx].existing )
          continue;
 
       /* use the most violated under- and overestimators for this product;
-       * if equality cuts are computed, we might end up using a different auxiliry expression;
+       * if equality cuts are computed, we might end up using a different auxiliary expression;
        * so this is an optimistic (i.e. taking the largest possible violation) estimation
        */
       if( bestunderest == NULL || bestunderest[idx] == -1 )
-      {
+      { /* no violated implicit underestimation relations -> either use auxvar or set violatedbelow to FALSE */
          if( terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
          {
             assert(terms[idx].existing);
-            viol_below = SCIPgetSolVal(scip, sol, terms[idx].aux.var) - valj * vali;
+            violatedbelow = SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, terms[idx].aux.var) - valj * vali);
          }
          else
          {
             assert(bestunderest != NULL);
-            viol_below = 0.0;
+            violatedbelow = FALSE;
          }
       }
       else
       {
          assert(bestunderest[idx] >= 0 && bestunderest[idx] < terms[idx].nauxexprs);
-         viol_below = SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
-               terms[idx].aux.exprs[bestunderest[idx]], sol) - valj * vali;
+
+         /* if we are here, the relation with the best underestimator must be violated */
+         assert(SCIPisFeasPositive(scip, SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
+               terms[idx].aux.exprs[bestunderest[idx]], sol) - valj * vali));
+         violatedbelow = TRUE;
       }
 
       if( bestoverest == NULL || bestoverest[idx] == -1 )
-      {
+      { /* no violated implicit overestimation relations -> either use auxvar or set violatedabove to FALSE */
          if( terms[idx].nauxexprs == 0 && terms[idx].aux.var != NULL )
          {
             assert(terms[idx].existing);
-            viol_above = valj * vali - SCIPgetSolVal(scip, sol, terms[idx].aux.var);
+            violatedabove = SCIPisFeasPositive(scip, valj * vali - SCIPgetSolVal(scip, sol, terms[idx].aux.var));
          }
          else
          {
             assert(bestoverest != NULL);
-            viol_above = 0.0;
+            violatedabove = FALSE;
          }
       }
       else
       {
          assert(bestoverest[idx] >= 0 && bestoverest[idx] < terms[idx].nauxexprs);
-         viol_above = valj * vali - SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
-               terms[idx].aux.exprs[bestoverest[idx]], sol);
+
+         /* if we are here, the relation with the best overestimator must be violated */
+         assert(SCIPisFeasPositive(scip, valj * vali - SCIPevalConsExprBilinAuxExpr(scip, terms[idx].x, terms[idx].y,
+               terms[idx].aux.exprs[bestoverest[idx]], sol)));
+         violatedabove = TRUE;
       }
 
-      SCIPdebugMsg(scip, "prodval = %g, prod viol below = %g, above = %g\n", valj * vali, viol_below, viol_above);
-
-      /* we are interested only in product relations where the relation with auxiliary expression is violated */
-      if( !SCIPisFeasPositive(scip, viol_below) && !SCIPisFeasPositive(scip, viol_above) )
+      /* only violated products contribute to row marks */
+      if( !violatedbelow && !violatedabove )
       {
          SCIPdebugMsg(scip, "the product for vars <%s> and <%s> is not violated\n", SCIPvarGetName(xj), SCIPvarGetName(xi));
          continue;
@@ -2802,7 +2804,7 @@ SCIP_RETCODE markRowsXj(
             continue;
 
          SCIPdebugMsg(scip, "Marking row %d\n", ridx);
-         addRowMark(ridx, a, viol_below, viol_above, row_idcs, row_marks, nmarked);
+         addRowMark(ridx, a, violatedbelow, violatedabove, row_idcs, row_marks, nmarked);
       }
    }
 
@@ -2827,8 +2829,6 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_ROW* cut;
    char name[SCIP_MAXSTRLEN];
    SCIP_Bool underestimate;
-   SCIP_Real productval;
-   SCIP_Real auxval;
    SCIP_Real xcoef;
    SCIP_Real ycoef;
    SCIP_Real auxcoef;
@@ -2854,8 +2854,6 @@ SCIP_RETCODE separateMcCormickImplicit(
 
       assert(terms[i].nauxexprs > 0);
 
-      productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
-
       bndx.inf = SCIPvarGetLbLocal(terms[i].x);
       bndx.sup = SCIPvarGetUbLocal(terms[i].x);
       bndy.inf = SCIPvarGetLbLocal(terms[i].y);
@@ -2879,11 +2877,17 @@ SCIP_RETCODE separateMcCormickImplicit(
          else
             continue;
 
+#ifndef NDEBUG
+         /* make sure that the term is violated */
+         SCIP_Real productval;
+         SCIP_Real auxval;
+
+         productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
 
-         /* skip non-violated terms */
-         if( (underestimate && productval <= auxval) || (!underestimate && productval >= auxval) )
-            continue;
+         assert((underestimate && SCIPisFeasGT(scip, auxval, productval)) ||
+               (!underestimate && SCIPisFeasGT(scip, productval, auxval)));
+#endif
 
          /* create an empty row */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%d",
