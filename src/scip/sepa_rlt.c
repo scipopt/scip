@@ -59,7 +59,7 @@
 #define DEFAULT_USEINSUBSCIP      FALSE /**< default value for parameter useinsubscip */
 #define DEFAULT_USEPROJECTION     FALSE /**< default value for parameter useprojection */
 #define DEFAULT_DETECTHIDDEN       TRUE /**< default value for parameter detecthidden */
-#define DEFAULT_HIDDENRLT         FALSE /**< default value for parameter hiddenrlt */
+#define DEFAULT_HIDDENRLT          TRUE /**< default value for parameter hiddenrlt */
 #define DEFAULT_ADDTOPOOL          TRUE /**< default value for parameter addtopool */
 
 #define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
@@ -2596,31 +2596,31 @@ void freeProjRows(
 /** mark a row for rlt cut selection
  *
  * depending on the sign of the coefficient and violation, set or update mark which cut is required:
- * 1 - cuts for a xy < a w case,
- * 2 - cuts for a xy > a w case,
+ * 1 - cuts for axy < aw case,
+ * 2 - cuts for axy > aw case,
  * 3 - cuts for both cases
  */
 static
 void addRowMark(
    int                   ridx,               /**< row index */
-   SCIP_Real             coef,               /**< ai*(auxexpr - xy) */
+   SCIP_Real             a,                  /**< coefficient of x in the row */
    SCIP_Bool             violatedbelow,      /**< whether the relation auxexpr <= xy is violated */
    SCIP_Real             violatedabove,      /**< whether the relation xy <= auxexpr is violated */
    int*                  row_idcs,           /**< sparse array with indices of marked rows */
-   int*                  row_marks,          /**< sparse array to store the marks */
+   unsigned int*         row_marks,          /**< sparse array to store the marks */
    int*                  nmarked             /**< number of marked rows */
    )
 {
-   int newmark;
+   unsigned int newmark;
    int pos;
    SCIP_Bool exists;
 
-   assert(coef != 0.0);
+   assert(a != 0.0);
 
-   if( (coef > 0.0 && violatedbelow) || (coef < 0.0 && violatedabove) )
-      newmark = 1; /* a xy < a w case */
+   if( (a > 0.0 && violatedbelow) || (a < 0.0 && violatedabove) )
+      newmark = 1; /* axy < aw case */
    else
-      newmark = 2; /* a xy > a w case */
+      newmark = 2; /* axy > aw case */
 
    /* find row idx in row_idcs */
    exists = SCIPsortedvecFindInt(row_idcs, ridx, *nmarked, &pos);
@@ -2658,7 +2658,7 @@ SCIP_RETCODE markRowsXj(
    SCIP_HASHMAP*         row_to_pos,         /**< hashmap linking row indices to positions in array */
    int*                  bestunderest,       /**< positions of most violated underestimators for each product term */
    int*                  bestoverest,        /**< positions of most violated overestimators for each product term */
-   int*                  row_marks,          /**< sparse array storing the row marks */
+   unsigned int*         row_marks,          /**< sparse array storing the row marks */
    int*                  row_idcs,           /**< sparse array storing the marked row positions */
    int*                  nmarked             /**< number of marked rows */
    )
@@ -2985,7 +2985,7 @@ SCIP_RETCODE separateRltCuts(
    int cutssize;
    int ncuts;
    SCIP_VAR* xj;
-   int* row_marks;
+   unsigned int* row_marks;
    int* row_idcs;
    SCIP_ROW* cut;
    SCIP_ROW** cuts;
