@@ -61,6 +61,7 @@ typedef struct reduction_parameters
    SCIP_Bool             boundreduce;        /**< do bound-based reduction? */
    SCIP_Bool             nodereplacing;      /**< should node replacement (by edges) be performed? */
    int                   reductbound;        /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   int                   reductbound_min;    /**< absolute minimum */
    SCIP_Bool             userec;             /**< use recombination heuristic? */
    SCIP_Bool             fullreduce;         /**< use full reductions? (including extended techniques) */
 } RPARAMS;
@@ -79,7 +80,7 @@ typedef struct bidecomposition_reduction_parameters
 /** reduction information and some buffers */
 typedef struct reduction_base
 {
-   const RPARAMS*        redparameters;      /**< parameters */
+   RPARAMS*              redparameters;      /**< parameters */
    BIDECPARAMS*          bidecompparams;     /**< bidecomposition parameters or NULL */
    int*                  solnode;            /**< solution nodes array (or NULL) */
    SCIP_Real*            fixed;              /**< pointer to fixed value */

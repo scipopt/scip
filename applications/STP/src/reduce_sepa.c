@@ -36,6 +36,8 @@
 #include "portab.h"
 #include "stpvector.h"
 #include "scip/scip.h"
+
+#define BIDECOMP_MINRED_MULTIPLIER 2
 //#define CUTTREE_PRINT_STATISTICS
 
 
@@ -1132,7 +1134,18 @@ SCIP_RETCODE decomposeReduceSub(
    graph_printInfoReduced(subgraph);
 #endif
 
-   SCIP_CALL(redLoopStp(scip, subgraph, redbase));
+   {
+      const int reductbound_org = redbase->redparameters->reductbound;
+      redbase->redparameters->reductbound =
+            BIDECOMP_MINRED_MULTIPLIER * reduce_getMinNreductions(subgraph, redbase->redparameters->reductbound_min);
+
+      printf("subgraph: reductbound_min=%d reductbound=%d \n",
+            redbase->redparameters->reductbound_min,redbase->redparameters->reductbound );
+
+      SCIP_CALL(redLoopStp(scip, subgraph, redbase));
+
+      redbase->redparameters->reductbound = reductbound_org;
+   }
 
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("subgraph after reduction: ");

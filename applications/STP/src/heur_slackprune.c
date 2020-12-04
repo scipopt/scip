@@ -267,7 +267,7 @@ SCIP_RETCODE reduceExact(
    }
    else
    {
-      const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+      RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = SLACKPRUNE_MINREDELIMS,
                                                     .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,

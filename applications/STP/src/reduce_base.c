@@ -1202,7 +1202,7 @@ SCIP_RETCODE reduceStp(
 
    /* reduction loop */
    {
-      const RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing,
+      RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing, .reductbound_min = minelims,
                                    .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
       BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2 };
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,

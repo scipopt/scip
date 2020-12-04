@@ -230,7 +230,7 @@ SCIP_RETCODE testBiconnectedDecomposition(
    SCIP_CALL( reduce_baseInit(scip, graph, &redbase) );
 
    {
-      const RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1,
+      RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1, .reductbound_min = 10,
                                         .reductbound = 10, .userec = 1, .fullreduce = 1 };
       redbase->redparameters = &parameters;
       redbase->fixed = &offset;
@@ -290,7 +290,7 @@ SCIP_RETCODE testBiconnectedDecomposition2(
    SCIP_CALL( reduce_baseInit(scip, graph, &redbase) );
 
    {
-      const RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1,
+      RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1, .reductbound_min = 10,
                                         .reductbound = 10, .userec = 1, .fullreduce = 1 };
       redbase->redparameters = &parameters;
       redbase->fixed = &offset;
@@ -345,8 +345,8 @@ SCIP_RETCODE testBiconnectedDecomposition3(
    SCIP_CALL( reduce_baseInit(scip, graph, &redbase) );
 
    {
-      const RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1,
-                                        .reductbound = 10, .userec = 1, .fullreduce = 1 };
+      RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1,
+                                .reductbound_min = 10, .reductbound = 10, .userec = 1, .fullreduce = 1 };
       redbase->redparameters = &parameters;
       redbase->fixed = &offset;
       graph->stp_type = STP_SPG;

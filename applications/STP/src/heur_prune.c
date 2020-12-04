@@ -745,7 +745,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                vbase, nodearrint, NULL, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
       else
       {
-         const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+         RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = PRUNE_MINREDELIMS,
                                       .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
          REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
                                   .solnode = NULL, .fixed = &offset,
@@ -853,7 +853,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                   vbase, nodearrint, solnode, nodearrchar, &offset, FALSE, FALSE, FALSE, reductbound, FALSE) );
          else
          {
-            const RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE,
+            RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = PRUNE_MINREDELIMS,
                                                  .reductbound = reductbound, .userec = FALSE, .fullreduce = FALSE };
 
             REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
