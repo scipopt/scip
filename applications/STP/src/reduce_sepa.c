@@ -38,6 +38,8 @@
 #include "scip/scip.h"
 
 #define BIDECOMP_MINRED_MULTIPLIER 2
+#define BIDECOMP_MINCOMPRATIO_FIRST     0.95
+#define BIDECOMP_MINCOMPRATIO           0.80
 //#define CUTTREE_PRINT_STATISTICS
 
 
@@ -1159,13 +1161,52 @@ SCIP_RETCODE decomposeReduceSub(
 }
 
 
+
+
+/** is promising? */
+static
+SCIP_Bool decomposeIsPromising(
+   const GRAPH*          g,                  /**< graph data structure */
+   const BIDECPARAMS*    bidecompparams,     /**< bidecomposition */
+   const BIDECOMP*       bidecomp
+   )
+{
+   const int* starts = bidecomp->starts;
+   SCIP_Real maxratio;
+   const int ncomps = bidecomp->nbicomps;
+   const int ncompnodes = starts[ncomps] - starts[0];
+   int maxcompnnodes = 0;
+   const SCIP_Real mincompratio = bidecompparams->depth == 0 ? BIDECOMP_MINCOMPRATIO_FIRST : BIDECOMP_MINCOMPRATIO;
+
+   assert(0 < ncompnodes && ncompnodes <= g->knots);
+
+
+   printf("all component nodes=%d \n", ncompnodes);
+
+   for( int i = 0; i < ncomps; i++ )
+   {
+      const int compnnodes = starts[i + 1] - starts[i];
+      if( maxcompnnodes < compnnodes )
+         maxcompnnodes = compnnodes;
+   }
+
+   maxratio = (SCIP_Real) maxcompnnodes / (SCIP_Real) ncompnodes;
+
+   printf("max. component number of nodes=%d \n", maxcompnnodes);
+   printf("maxratio=%f \n", maxratio);
+
+   return (maxratio < mincompratio);
+}
+
 /** solves biconnected components separately */
 static
 SCIP_RETCODE decomposeExec(
    SCIP*                 scip,               /**< SCIP data structure */
    const CUTNODES*       cutnodes,           /**< cut nodes */
    GRAPH*                g,                  /**< graph data structure */
-   REDBASE*              redbase             /**< reduction stuff */
+   REDBASE*              redbase,            /**< reduction stuff */
+   SCIP_Bool*            wasDecomposed       /**< performed recursive reduction? */
+
    )
 {
    BIDECOMP bidecomp;
@@ -1176,20 +1217,26 @@ SCIP_RETCODE decomposeExec(
    assert(redbase->bidecompparams);
    assert(redbase->bidecompparams->depth < redbase->bidecompparams->maxdepth);
    assert(graph_valid(scip, g));
-
-   redbase->bidecompparams->depth++;
+   assert(*wasDecomposed == FALSE);
 
    SCIP_CALL( decomposeInit(scip, cutnodes, g, &bidecomp) );
 
-   /* reduce each biconnected component individually */
-   for( int i = 0; i < bidecomp.nbicomps; i++ )
+   if( decomposeIsPromising(g, redbase->bidecompparams, &bidecomp) )
    {
-      SCIP_CALL( decomposeReduceSub(scip, &bidecomp, i, g, redbase) );
+      redbase->bidecompparams->depth++;
+
+      /* reduce each biconnected component individually */
+      for( int i = 0; i < bidecomp.nbicomps; i++ )
+      {
+         SCIP_CALL( decomposeReduceSub(scip, &bidecomp, i, g, redbase) );
+      }
+
+      *wasDecomposed = TRUE;
+
+      redbase->bidecompparams->depth--;
    }
 
    decomposeFreeMembers(scip, &bidecomp);
-
-   redbase->bidecompparams->depth--;
 
    assert(graph_valid(scip, g));
 
@@ -1237,8 +1284,7 @@ SCIP_RETCODE reduce_bidecomposition(
       SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, redbase->fixed, &dummy) );
 
       /* decompose and reduce recursively? */
-      SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase) );
-      *wasDecomposed = TRUE;
+      SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase, wasDecomposed) );
    }
 
    cutNodesExit(scip, &cutnodes);
