@@ -7695,7 +7695,7 @@
   * @section OTHER Interfaces for other programming languages
   *
   * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
-  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * on <a href="https://github.com/scipopt">GitHub</a> in order to provide extensions and patches faster
   * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
   * for Julia available. Contributions to these projects are very welcome.
   *
