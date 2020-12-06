@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scipdefplugins.h"
-#include "scip/cons_nonlinear.c"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -74,34 +73,35 @@ void teardown(void)
 TestSuite(bilinhash, .init = setup, .fini = teardown);
 
 /* tests the creating and release of the hash table using non-API methods from cons_expr.c */
-Test(bilinhash, createInsertFree)
+Test(bilinhash, createInsert)
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSNONLINEAR_BILINTERM* bilinterms;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
 
    /* inserts two bilinear terms into the hash table */
    SCIP_CALL( SCIPinsertBilinearTermExistingNonlinear(scip, conshdlr, x, y, NULL, 0, 0) );
    SCIP_CALL( SCIPinsertBilinearTermExistingNonlinear(scip, conshdlr, y, z, NULL, 0, 0) );
-   cr_expect(conshdlrdata->nbilinterms == 2);
-   cr_expect(conshdlrdata->bilinterms[0].x == x);
-   cr_expect(conshdlrdata->bilinterms[0].y == y);
-   cr_expect(conshdlrdata->bilinterms[1].x == y);
-   cr_expect(conshdlrdata->bilinterms[1].y == z);
 
-   /* free hash table */
-   SCIP_CALL( bilinearTermsFree(scip, conshdlrdata) );
+   cr_assert_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 2);
+
+   bilinterms = SCIPgetBilinTermsNonlinear(conshdlr);
+   cr_expect_eq(bilinterms[0].x, x);
+   cr_expect_eq(bilinterms[0].y, y);
+   cr_expect_eq(bilinterms[1].x, y);
+   cr_expect_eq(bilinterms[1].y, z);
 }
 
 /* tests API methods for a simple problem containing two expression constraints */
 Test(bilinhash, api_methods)
 {
    const char* inputs[2] = {"[nonlinear] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
-      "[nonlinear] <c2>: abs(<y>[C] * <z>[C] + <x>[C] * <y>[C]) * (log(<x>[C] + <z>[C]))^2 <= 1;"};
+      "[nonlinear] <c2>: abs(<y>[C] * <z>[C] + <x>[C] * <y>[C]) - (log(<x>[C] + <z>[C]))^2 <= 1;"};
    SCIP_CONSNONLINEAR_BILINTERM* bilinterms;
    SCIP_VAR* tx;
    SCIP_VAR* ty;
    SCIP_VAR* tz;
+   SCIP_Bool cutoff;
    int i;
 
    /* create, add, and release expression constraints */
@@ -125,35 +125,43 @@ Test(bilinhash, api_methods)
    ty = SCIPvarGetTransVar(y);
    tz = SCIPvarGetTransVar(z);
 
-   /* collect all bilinear terms manually because CONSINITLP has not been called yet */
-   SCIP_CALL( bilinearTermsInsertAll(scip, conshdlr, SCIPgetConss(scip), SCIPgetNConss(scip)) );
+   /* collect all bilinear terms by getting CONSINITLP called */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+   cr_expect_not(cutoff);
 
    /*
-    * because no auxiliary variables are present, there are only three bilinear terms: xx, xy, yz
+    * because auxiliary variables are present, there are four bilinear terms: xx, xy, yz, log()^2
     */
-   cr_expect(SCIPgetNBilinTermsNonlinear(conshdlr) == 3);
+   cr_expect_eq(SCIPgetNBilinTermsNonlinear(conshdlr), 4);
 
    bilinterms = SCIPgetBilinTermsNonlinear(conshdlr);
    cr_assert(bilinterms != NULL);
-   cr_expect(bilinterms[0].x == tx && bilinterms[0].y == tx && bilinterms[0].aux.var == NULL);
-   cr_expect(bilinterms[1].x == tx && bilinterms[1].y == ty && bilinterms[1].aux.var == NULL);
-   cr_expect(bilinterms[2].x == ty && bilinterms[2].y == tz && bilinterms[2].aux.var == NULL);
+   cr_expect_eq(bilinterms[0].x, tx);
+   cr_expect_eq(bilinterms[0].y, tx);
+   cr_expect_not_null(bilinterms[0].aux.var);
+   cr_expect_eq(bilinterms[1].x, tx);
+   cr_expect_eq(bilinterms[1].y, ty);
+   cr_expect_not_null(bilinterms[1].aux.var);
+   cr_expect_eq(bilinterms[2].x, ty);
+   cr_expect_eq(bilinterms[2].y, tz);
+   cr_expect_not_null(bilinterms[2].aux.var);
+   cr_expect_eq(bilinterms[3].x, bilinterms[3].y);
 
    /* xx exists */
-   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tx, tx) != NULL);
+   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, tx, tx));
 
    /* xy exists */
-   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tx, ty) != NULL);
+   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, tx, ty));
 
    /* yx = xy exists */
-   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, ty, tx) != NULL);
+   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, ty, tx));
 
    /* yz exists */
-   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, ty, tz) != NULL);
+   cr_expect_not_null(SCIPgetBilinTermNonlinear(conshdlr, ty, tz));
 
    /* xz does not exist */
-   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tx, tz) == NULL);
+   cr_expect_null(SCIPgetBilinTermNonlinear(conshdlr, tx, tz));
 
    /* zz does not exist */
-   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tz, tz) == NULL);
+   cr_expect_null(SCIPgetBilinTermNonlinear(conshdlr, tz, tz));
 }
