@@ -8023,8 +8023,8 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    }
    else
    {
-      term->aux.exprs[pos]->underestimate += auxexpr->underestimate;
-      term->aux.exprs[pos]->overestimate += auxexpr->overestimate;
+      term->aux.exprs[pos]->underestimate |= auxexpr->underestimate;
+      term->aux.exprs[pos]->overestimate  |= auxexpr->overestimate;
    }
 
    return SCIP_OKAY;
