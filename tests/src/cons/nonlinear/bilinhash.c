@@ -20,9 +20,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scip.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr.c"
+#include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.c"
 #include "include/scip_test.h"
 
 static SCIP* scip;
@@ -36,12 +35,10 @@ void setup(void)
 {
    /* create SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
-
-   /* include expression constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    /* store expression constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert(conshdlr != NULL);
 
    /* create problem */
@@ -54,6 +51,9 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
+
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 }
 
 static
@@ -81,8 +81,8 @@ Test(bilinhash, createInsertFree)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    /* inserts two bilinear terms into the hash table */
-   SCIP_CALL( SCIPinsertBilinearTermExisting(scip, conshdlr, x, y, NULL, 0, 0) );
-   SCIP_CALL( SCIPinsertBilinearTermExisting(scip, conshdlr, y, z, NULL, 0, 0) );
+   SCIP_CALL( SCIPinsertBilinearTermExistingNonlinear(scip, conshdlr, x, y, NULL, 0, 0) );
+   SCIP_CALL( SCIPinsertBilinearTermExistingNonlinear(scip, conshdlr, y, z, NULL, 0, 0) );
    cr_expect(conshdlrdata->nbilinterms == 2);
    cr_expect(conshdlrdata->bilinterms[0].x == x);
    cr_expect(conshdlrdata->bilinterms[0].y == y);
@@ -96,9 +96,9 @@ Test(bilinhash, createInsertFree)
 /* tests API methods for a simple problem containing two expression constraints */
 Test(bilinhash, api_methods)
 {
-   const char* inputs[2] = {"[expr] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
-      "[expr] <c2>: abs(<y>[C] * <z>[C] + <x>[C] * <y>[C]) * (log(<x>[C] + <z>[C]))^2 <= 1;"};
-   SCIP_CONSEXPR_BILINTERM* bilinterms;
+   const char* inputs[2] = {"[nonlinear] <c1>: (<x>[C])^2 + <x>[C] * <y>[C] <= 4;",
+      "[nonlinear] <c2>: abs(<y>[C] * <z>[C] + <x>[C] * <y>[C]) * (log(<x>[C] + <z>[C]))^2 <= 1;"};
+   SCIP_CONSNONLINEAR_BILINTERM* bilinterms;
    SCIP_VAR* tx;
    SCIP_VAR* ty;
    SCIP_VAR* tz;
@@ -131,29 +131,29 @@ Test(bilinhash, api_methods)
    /*
     * because no auxiliary variables are present, there are only three bilinear terms: xx, xy, yz
     */
-   cr_expect(SCIPgetConsExprNBilinTerms(conshdlr) == 3);
+   cr_expect(SCIPgetNBilinTermsNonlinear(conshdlr) == 3);
 
-   bilinterms = SCIPgetConsExprBilinTerms(conshdlr);
+   bilinterms = SCIPgetBilinTermsNonlinear(conshdlr);
    cr_assert(bilinterms != NULL);
    cr_expect(bilinterms[0].x == tx && bilinterms[0].y == tx && bilinterms[0].aux.var == NULL);
    cr_expect(bilinterms[1].x == tx && bilinterms[1].y == ty && bilinterms[1].aux.var == NULL);
    cr_expect(bilinterms[2].x == ty && bilinterms[2].y == tz && bilinterms[2].aux.var == NULL);
 
    /* xx exists */
-   cr_expect(SCIPgetConsExprBilinTerm(conshdlr, tx, tx) != NULL);
+   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tx, tx) != NULL);
 
    /* xy exists */
-   cr_expect(SCIPgetConsExprBilinTerm(conshdlr, tx, ty) != NULL);
+   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tx, ty) != NULL);
 
    /* yx = xy exists */
-   cr_expect(SCIPgetConsExprBilinTerm(conshdlr, ty, tx) != NULL);
+   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, ty, tx) != NULL);
 
    /* yz exists */
-   cr_expect(SCIPgetConsExprBilinTerm(conshdlr, ty, tz) != NULL);
+   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, ty, tz) != NULL);
 
    /* xz does not exist */
-   cr_expect(SCIPgetConsExprBilinTerm(conshdlr, tx, tz) == NULL);
+   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tx, tz) == NULL);
 
    /* zz does not exist */
-   cr_expect(SCIPgetConsExprBilinTerm(conshdlr, tz, tz) == NULL);
+   cr_expect(SCIPgetBilinTermNonlinear(conshdlr, tz, tz) == NULL);
 }
