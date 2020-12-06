@@ -33,24 +33,19 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_product.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_var.h"
-#include "scip/cons_expr_rowprep.h"
+#include "scip/pub_nlhdlr.h"
 
 /*
- * NONLINEAR HANDLER (i.e. SCIP code)
+ * NONLINEAR HANDLER
  */
 
-struct SCIP_ConsExpr_NlhdlrData
+struct SCIP_NlhdlrData
 {
    SCIP_Bool             initialized;        /**< whether handler has been initialized and not yet de-initialized */
 };
 
 /** compact storage for variables and coefficients in a bivariate quadratic term that is either convex or concave */
-struct SCIP_ConsExpr_NlhdlrExprData
+struct SCIP_NlhdlrExprData
 {
    SCIP_VAR*             varx;               /**< first variable */
    SCIP_VAR*             vary;               /**< second variable */
@@ -62,13 +57,13 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_Real             constant;           /**< constant term */
    SCIP_Bool             convex;             /**< whether convex or concave */
 
-   SCIP_CONSEXPR_EXPR*   exprx;               /**< expression corresponding to first variable */
-   SCIP_CONSEXPR_EXPR*   expry;               /**< expression corresponding to second variable */
+   SCIP_EXPR*            exprx;               /**< expression corresponding to first variable */
+   SCIP_EXPR*            expry;               /**< expression corresponding to second variable */
 };
 
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
+SCIP_DECL_NLHDLRFREEHDLRDATA(freeHdlrData)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -82,7 +77,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(freeHdlrData)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(freeExprData)
+SCIP_DECL_NLHDLRFREEEXPRDATA(freeExprData)
 {
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -93,14 +88,14 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(freeExprData)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
+SCIP_DECL_NLHDLRINIT(initHdlr)
 {
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
 
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    assert(!nlhdlrdata->initialized);
@@ -111,14 +106,14 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(initHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHdlr)
+SCIP_DECL_NLHDLREXIT(exitHdlr)
 {
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
 
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    assert(nlhdlrdata->initialized);
@@ -129,11 +124,10 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(exitHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
+SCIP_DECL_NLHDLRDETECT(detectHdlr)
 {
-   SCIP_CONSEXPR_EXPRHDLR* powhdlr;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSEXPR_NLHDLREXPRDATA exprdata;
+   SCIP_EXPR* child;
+   SCIP_NLHDLREXPRDATA exprdata;
    int c;
 
    assert(scip != NULL);
@@ -144,48 +138,45 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    assert(participating != NULL);
 
    /* only look at sum expressions */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) )
+   if( !SCIPisExprSum(scip, expr) )
       return SCIP_OKAY;
 
-   powhdlr = SCIPfindConsExprExprHdlr(conshdlr, "pow");
-   assert(powhdlr != NULL);
-
    BMSclearMemory(&exprdata);
-   exprdata.constant = SCIPgetConsExprExprSumConstant(expr);
+   exprdata.constant = SCIPgetConstantExprSum(expr);
 
-   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
-      child = SCIPgetConsExprExprChildren(expr)[c];
+      child = SCIPexprGetChildren(expr)[c];
       assert(child != NULL);
 
-      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrVar(conshdlr) )
+      if( SCIPisExprVar(scip, child) )
       {
          SCIP_VAR* var;
 
-         var = SCIPgetConsExprExprVarVar(child);
+         var = SCIPgetVarExprVar(child);
          assert(var != NULL);
 
          if( var == exprdata.varx )
          {
-            exprdata.xcoef += SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.xcoef += SCIPgetCoefsExprSum(expr)[c];
          }
          else if( var == exprdata.vary )
          {
-            exprdata.ycoef += SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.ycoef += SCIPgetCoefsExprSum(expr)[c];
          }
          else if( exprdata.varx == NULL )
          {
             exprdata.varx = var;
             exprdata.exprx = child;
             assert(exprdata.xcoef == 0.0);
-            exprdata.xcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.xcoef = SCIPgetCoefsExprSum(expr)[c];
          }
          else if( exprdata.vary == NULL )
          {
             exprdata.vary = var;
             exprdata.expry = child;
             assert(exprdata.ycoef == 0.0);
-            exprdata.ycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.ycoef = SCIPgetCoefsExprSum(expr)[c];
          }
          else
          {
@@ -193,41 +184,41 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
             return SCIP_OKAY;
          }
       }
-      else if( SCIPgetConsExprExprHdlr(child) == powhdlr )
+      else if( SCIPisExprPower(scip, child) )
       {
          SCIP_VAR* var;
 
-         if( SCIPgetConsExprExprPowExponent(child) != 2.0 )
+         if( SCIPgetExponentExprPow(child) != 2.0 )
             return SCIP_OKAY;  /* only allow for exponent 2 (square terms) */
 
-         assert(SCIPgetConsExprExprNChildren(child) == 1);
-         child = SCIPgetConsExprExprChildren(child)[0];
+         assert(SCIPexprGetNChildren(child) == 1);
+         child = SCIPexprGetChildren(child)[0];
 
-         if( SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrVar(conshdlr) )
+         if( !SCIPisExprVar(scip, child) )
             return SCIP_OKAY;  /* only allow for variable as base of power */
 
-         var = SCIPgetConsExprExprVarVar(child);
+         var = SCIPgetVarExprVar(child);
          if( var == exprdata.varx )
          {
-            exprdata.xxcoef += SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.xxcoef += SCIPgetCoefsExprSum(expr)[c];
          }
          else if( var == exprdata.vary )
          {
-            exprdata.yycoef += SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.yycoef += SCIPgetCoefsExprSum(expr)[c];
          }
          else if( exprdata.varx == NULL )
          {
             assert(exprdata.xxcoef == 0.0);
             exprdata.varx = var;
             exprdata.exprx = child;
-            exprdata.xxcoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.xxcoef = SCIPgetCoefsExprSum(expr)[c];
          }
          else if( exprdata.vary == NULL )
          {
             assert(exprdata.yycoef == 0.0);
             exprdata.vary = var;
             exprdata.expry = child;
-            exprdata.yycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.yycoef = SCIPgetCoefsExprSum(expr)[c];
          }
          else
          {
@@ -235,43 +226,43 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
             return SCIP_OKAY;
          }
       }
-      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      else if( SCIPisExprProduct(scip, child) )
       {
          SCIP_VAR* var1;
          SCIP_VAR* var2;
 
-         if( SCIPgetConsExprExprNChildren(child) != 2 )
+         if( SCIPexprGetNChildren(child) != 2 )
             return SCIP_OKAY; /* only allow for bilinear term */
 
-         if( SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(child)[0]) != SCIPgetConsExprExprHdlrVar(conshdlr) )
+         if( !SCIPisExprVar(scip, SCIPexprGetChildren(child)[0]) )
             return SCIP_OKAY; /* only allow for variables in bilinear term */
-         if( SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(child)[1]) != SCIPgetConsExprExprHdlrVar(conshdlr) )
+         if( !SCIPisExprVar(scip, SCIPexprGetChildren(child)[1]) )
             return SCIP_OKAY; /* only allow for variables in bilinear term */
 
-         var1 = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[0]);
-         var2 = SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(child)[1]);
+         var1 = SCIPgetVarExprVar(SCIPexprGetChildren(child)[0]);
+         var2 = SCIPgetVarExprVar(SCIPexprGetChildren(child)[1]);
          assert(var1 != var2);
 
          if( (var1 == exprdata.varx && var2 == exprdata.vary) || (var1 == exprdata.vary && var2 == exprdata.varx)  )
          {
-            exprdata.xycoef += SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.xycoef += SCIPgetCoefsExprSum(expr)[c];
          }
          else if( ((var1 == exprdata.varx) || (var2 == exprdata.varx)) && exprdata.vary == NULL )
          {
             assert(exprdata.xycoef == 0.0);
             exprdata.vary = (var1 == exprdata.varx) ? var2 : var1;
-            exprdata.expry = (var1 == exprdata.varx) ? SCIPgetConsExprExprChildren(child)[1] : SCIPgetConsExprExprChildren(child)[0];
-            exprdata.xycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.expry = (var1 == exprdata.varx) ? SCIPexprGetChildren(child)[1] : SCIPexprGetChildren(child)[0];
+            exprdata.xycoef = SCIPgetCoefsExprSum(expr)[c];
          }
          else if( exprdata.varx == NULL )
          {
             assert(exprdata.xycoef == 0.0);
             assert(exprdata.vary == NULL);
             exprdata.varx = var1;
-            exprdata.exprx = SCIPgetConsExprExprChildren(child)[0];
+            exprdata.exprx = SCIPexprGetChildren(child)[0];
             exprdata.vary = var2;
-            exprdata.expry = SCIPgetConsExprExprChildren(child)[0];
-            exprdata.xycoef = SCIPgetConsExprExprSumCoefs(expr)[c];
+            exprdata.expry = SCIPexprGetChildren(child)[0];
+            exprdata.xycoef = SCIPgetCoefsExprSum(expr)[c];
          }
          else
          {
@@ -287,7 +278,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
    }
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPprintConsExprExpr(scip, conshdlr, expr, NULL) );
+   SCIP_CALL( SCIPprintExpr(scip, conshdlr, expr, NULL) );
    SCIPinfoMessage(scip, NULL, " -> %gx%+gy%+gxy%+gx^2%+gy^2%+g (x=<%s>, y=<%s>)\n", exprdata.xcoef, exprdata.ycoef, exprdata.xycoef, exprdata.xxcoef, exprdata.yycoef, exprdata.constant, SCIPvarGetName(exprdata.varx), exprdata.vary != NULL ? SCIPvarGetName(exprdata.vary) : "na");
 #endif
 
@@ -304,14 +295,14 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
       return SCIP_OKAY; /* indefinite */
 
    /* communicate that we will participate on one side by separation */
-   *participating = exprdata.convex ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   *participating = exprdata.convex ? SCIP_NLHDLR_METHOD_SEPABELOW : SCIP_NLHDLR_METHOD_SEPAABOVE;
    /* communicate that we will also do inteval and reverseprop */
-   *participating |= SCIP_CONSEXPR_EXPRENFO_ACTIVITY;
+   *participating |= SCIP_NLHDLR_METHOD_ACTIVITY;
    /* everything where we participate, we do thoroughly */
    *enforcing |= *participating;
 
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, exprdata.exprx, FALSE, TRUE, FALSE, FALSE) );
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, exprdata.expry, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, exprdata.exprx, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, exprdata.expry, FALSE, TRUE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPduplicateMemory(scip, nlhdlrexprdata, &exprdata) );
 
@@ -319,7 +310,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(detectHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
+SCIP_DECL_NLHDLREVALAUX(evalauxHdlr)
 {
    SCIP_Real xval;
    SCIP_Real yval;
@@ -327,8 +318,8 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
    assert(auxvalue != NULL);
 
    xval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->varx);
@@ -345,7 +336,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(evalauxHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRENFO(enfoHdlr)
+SCIP_DECL_NLHDLRENFO(enfoHdlr)
 {
    SCIP_VAR* auxvar;
    SCIP_ROWPREP* rowprep = NULL;
@@ -360,13 +351,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(enfoHdlr)
    assert(scip != NULL);
    assert(nlhdlr != NULL);
    assert(nlhdlrexprdata != NULL);
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    *result = SCIP_DIDNOTFIND;
 
    /* get auxiliary variable */
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   auxvar = SCIPgetExprAuxVarNonlinear(expr);
    assert(auxvar != NULL);
 
    xval = SCIPgetSolVal(scip, sol, nlhdlrexprdata->varx);
@@ -389,7 +380,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(enfoHdlr)
       side = nlhdlrexprdata->xxcoef * xval * xval + nlhdlrexprdata->yycoef * yval * yval + nlhdlrexprdata->xycoef * xval * yval - nlhdlrexprdata->constant;
 
       SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, FALSE) );
-      SCIPaddRowprepSide(rowprep, side);
+      SCIProwprepAddSide(rowprep, side);
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->varx, xcoef) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->vary, ycoef) );
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
@@ -406,13 +397,13 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(enfoHdlr)
 
    /* check whether its violation and numerical properties are ok (and maybe improve) */
    /* TODO if not allowweakcuts, maybe use SCIPcleanupRowprep2 */
-   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPgetLPFeastol(scip), NULL, &success) );
+   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPgetLPFeastol(scip), NULL, &success) );
 
    if( success )
    {
       SCIP_ROW* cut;
 
-      SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "testhdlrcut_cvx");
+      SCIPsnprintf(SCIProwprepGetName(rowprep), SCIP_MAXSTRLEN, "testhdlrcut_cvx");
       SCIP_CALL( SCIPgetRowprepRowConshdlr(scip, &cut, rowprep, conshdlr) );
 
       assert(-SCIPgetRowSolFeasibility(scip, cut, sol) >= SCIPgetLPFeastol(scip));
@@ -443,67 +434,66 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(enfoHdlr)
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(intevalHdlr)
+SCIP_DECL_NLHDLRINTEVAL(intevalHdlr)
 {
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
-   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry));
+   SCIPintervalQuadBivar(SCIP_INTERVAL_INFINITY, interval, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, SCIPexprGetActivity(nlhdlrexprdata->exprx), SCIPexprGetActivity(nlhdlrexprdata->expry));
    SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, interval, *interval, nlhdlrexprdata->constant);
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(reversepropHdlr)
+SCIP_DECL_NLHDLRREVERSEPROP(reversepropHdlr)
 {
    SCIP_INTERVAL childbounds;
    SCIP_INTERVAL rhs;
 
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
-   assert(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->exprx) == nlhdlrexprdata->varx);
+   assert(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->expry) == nlhdlrexprdata->vary);
 
    rhs = bounds;
    SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &rhs, rhs, nlhdlrexprdata->constant);
 
    /* solve conv({x in xbnds : xxcoef*x^2 + yycoef*y^2 + xycoef*x*y + xcoef*x + ycoef*y \in rhs, y \in ybnds}) */
-   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry));
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->exprx, childbounds, infeasible, nreductions) );
+   SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->xxcoef, nlhdlrexprdata->yycoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->xcoef, nlhdlrexprdata->ycoef, rhs, SCIPexprGetActivity(nlhdlrexprdata->exprx), SCIPexprGetActivity(nlhdlrexprdata->expry));
+   SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->exprx, childbounds, infeasible, nreductions) );
 
    if( !*infeasible )
    {
       /* solve conv({y in ybnds : yycoef*y^2 + xxcoef*x^2 + xycoef*y*x + ycoef*y + xcoef*x \in rhs, x \in xbnds}) */
-      SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->expry), SCIPgetConsExprExprActivity(scip, nlhdlrexprdata->exprx));
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, conshdlr, nlhdlrexprdata->expry, childbounds, infeasible, nreductions) );
+      SCIPintervalSolveBivariateQuadExpressionAllScalar(SCIP_INTERVAL_INFINITY, &childbounds, nlhdlrexprdata->yycoef, nlhdlrexprdata->xxcoef, nlhdlrexprdata->xycoef, nlhdlrexprdata->ycoef, nlhdlrexprdata->xcoef, rhs, SCIPexprGetActivity(nlhdlrexprdata->expry), SCIPexprGetActivity(nlhdlrexprdata->exprx));
+      SCIP_CALL( SCIPtightenExprIntervalNonlinear(scip, nlhdlrexprdata->expry, childbounds, infeasible, nreductions) );
    }
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(copyHdlr)
+SCIP_DECL_NLHDLRCOPYHDLR(copyHdlr)
 {
-   SCIP_CONSEXPR_NLHDLR* targetnlhdlr;
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLR* targetnlhdlr;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(targetscip != NULL);
-   assert(targetconsexprhdlr != NULL);
-   assert(sourceconsexprhdlr != NULL);
+   assert(targetconshdlr != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), "testhdlr") == 0);
+   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), "testhdlr") == 0);
 
    SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(targetscip, targetconsexprhdlr, &targetnlhdlr,
-      SCIPgetConsExprNlhdlrName(sourcenlhdlr), SCIPgetConsExprNlhdlrDesc(sourcenlhdlr),
-      SCIPgetConsExprNlhdlrDetectPriority(sourcenlhdlr), SCIPgetConsExprNlhdlrEnfoPriority(sourcenlhdlr),
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(targetscip, targetconshdlr, &targetnlhdlr,
+      SCIPnlhdlrGetName(sourcenlhdlr), SCIPnlhdlrGetDesc(sourcenlhdlr),
+      SCIPnlhdlrGetDetectPriority(sourcenlhdlr), SCIPnlhdlrGetEnfoPriority(sourcenlhdlr),
       detectHdlr, evalauxHdlr, nlhdlrdata) );
-   SCIPsetConsExprNlhdlrFreeHdlrData(targetscip, targetnlhdlr, freeHdlrData);
-   SCIPsetConsExprNlhdlrFreeExprData(targetscip, targetnlhdlr, freeExprData);
-   SCIPsetConsExprNlhdlrCopyHdlr(targetscip, targetnlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(targetscip, targetnlhdlr, initHdlr, exitHdlr);
-   SCIPsetConsExprNlhdlrSepa(targetscip, targetnlhdlr, NULL, enfoHdlr, NULL, NULL);
-   SCIPsetConsExprNlhdlrProp(targetscip, targetnlhdlr, intevalHdlr, reversepropHdlr);
+   SCIPnlhdlrSetFreeHdlrData(targetnlhdlr, freeHdlrData);
+   SCIPnlhdlrSetFreeExprData(targetnlhdlr, freeExprData);
+   SCIPnlhdlrSetCopyHdlr(targetnlhdlr, copyHdlr);
+   SCIPnlhdlrSetInitExit(targetnlhdlr, initHdlr, exitHdlr);
+   SCIPnlhdlrSetSepa(targetnlhdlr, NULL, enfoHdlr, NULL, NULL);
+   SCIPnlhdlrSetProp(targetnlhdlr, intevalHdlr, reversepropHdlr);
 
    return SCIP_OKAY;
 }
@@ -523,10 +513,10 @@ static SCIP_VAR* y;
 static
 void setup(void)
 {
-   SCIP_CONS* consexpr;
+   SCIP_CONS* cons;
    SCIP_Bool success;
-   const char* input1 = "[expr] <test>: (<x>+<y>-0)^2 + (<y>-0)^2 <= 1.5;";
-   const char* input2 = "[expr] <test>: (<x>+<y>-1)^2 + (<y>-1)^2 <= 1.0;";
+   const char* input1 = "[nonlinear] <test>: (<x>+<y>-0)^2 + (<y>-0)^2 <= 1.5;";
+   const char* input2 = "[nonlinear] <test>: (<x>+<y>-1)^2 + (<y>-1)^2 <= 1.0;";
 
    /* create scip with all plugins */
    SCIP_CALL( SCIPcreate(&scip) );
@@ -541,18 +531,16 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, y) );
 
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input1,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, input1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &consexpr, input2,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPparseCons(scip, &cons, input2, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
-   SCIP_CALL( SCIPaddCons(scip, consexpr) );
-   SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* releases variables, frees scip */
@@ -571,24 +559,24 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLR* nlhdlr;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    assert(conshdlr != NULL);
 
    SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, conshdlr, &nlhdlr, "testhdlr",
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, conshdlr, &nlhdlr, "testhdlr",
          "tests nonlinear handler functionality", 10000, 10000, detectHdlr, evalauxHdlr, nlhdlrdata) );
 
-   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, freeHdlrData);
-   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, freeExprData);
-   SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, copyHdlr);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, initHdlr, exitHdlr);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, NULL, enfoHdlr, NULL, NULL);
-   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, intevalHdlr, reversepropHdlr);
+   SCIPnlhdlrSetFreeHdlrData(nlhdlr, freeHdlrData);
+   SCIPnlhdlrSetFreeExprData(nlhdlr, freeExprData);
+   SCIPnlhdlrSetCopyHdlr(nlhdlr, copyHdlr);
+   SCIPnlhdlrSetInitExit(nlhdlr, initHdlr, exitHdlr);
+   SCIPnlhdlrSetSepa(nlhdlr, NULL, enfoHdlr, NULL, NULL);
+   SCIPnlhdlrSetProp(nlhdlr, intevalHdlr, reversepropHdlr);
 
 #ifndef SCIP_DEBUG
    SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
