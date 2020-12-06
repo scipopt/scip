@@ -908,40 +908,6 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
    return interval;
 }
 
-#if !1
-/** gives number of constraints for which the expression catches bound change events on the variable */
-int SCIPgetConsExprExprVarNConss(
-   SCIP_EXPR*   expr                /**< variable expression */
-   )
-{
-   SCIP_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-
-   exprdata = SCIPexprGetData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->nconss;
-}
-
-/** gives constraints for which the expression catches bound change events on the variable */
-SCIP_CONS** SCIPgetConsExprExprVarConss(
-   SCIP_EXPR*   expr                /**< variable expression */
-   )
-{
-   SCIP_EXPRDATA* exprdata;
-
-   assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-
-   exprdata = SCIPexprGetData(expr);
-   assert(exprdata != NULL);
-
-   return exprdata->conss;
-}
-#endif
-
 /** compares two expression constraints by its index
  *
  * Usable as compare operator in array sort functions.
@@ -10672,6 +10638,66 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
    return SCIP_OKAY;
 }
 
+/** gets tag indicating current local variable bounds */
+SCIP_Longint SCIPgetCurBoundsTagNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->curboundstag;
+}
+
+/** gets the curboundstag at the last time where variable bounds were relaxed */
+SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   return conshdlrdata->lastboundrelax;
+
+}
+
+/** increments the curboundstag and resets lastboundrelax in constraint handler data
+ *
+ * @note This method is not intended for normal use.
+ *   These tags are maintained by the event handler for variable bound change events.
+ *   This method is used by some unittests.
+ */
+void SCIPincrementCurBoundsTagNonlinear(
+   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
+   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   ++conshdlrdata->curboundstag;
+   assert(conshdlrdata->curboundstag > 0);
+
+   if( boundrelax )
+      conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
+}
+
+/** returns the hashmap that is internally used to map variables to their corresponding variable expressions */
+SCIP_HASHMAP* SCIPgetVarExprHashmapNonlinear(
+   SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->var2expr;
+}
+
 /** processes a rowprep for cut addition and maybe report branchscores */
 SCIP_RETCODE SCIPprocessRowprepNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10941,29 +10967,6 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
    }
 
    return SCIP_OKAY;
-}
-
-/** increments the curboundstag and resets lastboundrelax in constraint handler data
- *
- * @note This method is not intended for normal use.
- *   These tags are maintained by the event handler for variable bound change events.
- *   This method is used by some unittests.
- */
-void SCIPincrementCurBoundsTagNonlinear(
-   SCIP_CONSHDLR*          conshdlr,         /**< expression constraint handler */
-   SCIP_Bool               boundrelax        /**< indicates whether a bound was relaxed, i.e., lastboundrelax should be set too */
-   )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   ++conshdlrdata->curboundstag;
-   assert(conshdlrdata->curboundstag > 0);
-
-   if( boundrelax )
-      conshdlrdata->lastboundrelax = conshdlrdata->curboundstag;
 }
 
 /** collects all bilinear terms for a given set of constraints

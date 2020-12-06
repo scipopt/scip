@@ -234,13 +234,13 @@ SCIP_RETCODE SCIPcreateConsQuadraticNonlinear(
 
 /** gets tag indicating current local variable bounds */
 SCIP_EXPORT
-unsigned int SCIPgetCurBoundsTagNonlinear(
+SCIP_Longint SCIPgetCurBoundsTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
 /** gets the curboundstag at the last time where variable bounds were relaxed */
 SCIP_EXPORT
-unsigned int SCIPgetLastBoundRelaxTagNonlinear(
+SCIP_Longint SCIPgetLastBoundRelaxTagNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
    );
 
@@ -260,6 +260,24 @@ void SCIPincrementCurBoundsTagNonlinear(
 SCIP_EXPORT
 SCIP_HASHMAP* SCIPgetVarExprHashmapNonlinear(
    SCIP_CONSHDLR*        conshdlr            /**< nonlinear constraint handler */
+   );
+
+/** processes a rowprep for cut addition and maybe report branchscores */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprocessRowprepNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler which provided the estimator */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
+   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
+   SCIP_VAR*             auxvar,             /**< auxiliary variable */
+   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
+   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
+   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
+   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
+   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    );
 
 /** collects all bilinear terms for a given set of constraints
@@ -353,36 +371,6 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
    SCIP_Real             coefaux,            /**< coefficient of auxvar in the auxiliary expression */
    SCIP_Real             cst,                /**< constant of the auxiliary expression */
    SCIP_Bool             overestimate        /**< whether the auxiliary expression overestimates the bilinear product */
-   );
-
-/** processes a rowprep for cut addition and maybe report branchscores */
-SCIP_EXPORT
-SCIP_RETCODE SCIPprocessRowprepNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler which provided the estimator */
-   SCIP_CONS*            cons,               /**< nonlinear constraint */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_ROWPREP*         rowprep,            /**< cut to be added */
-   SCIP_Bool             overestimate,       /**< whether the expression needs to be over- or underestimated */
-   SCIP_VAR*             auxvar,             /**< auxiliary variable */
-   SCIP_Real             auxvalue,           /**< current value of expression w.r.t. auxiliary variables as obtained from EVALAUX */
-   SCIP_Bool             allowweakcuts,      /**< whether we should only look for "strong" cuts, or anything that separates is fine */
-   SCIP_Bool             branchscoresuccess, /**< buffer to store whether the branching score callback of the estimator was successful */
-   SCIP_Bool             inenforcement,      /**< whether we are in enforcement, or only in separation */
-   SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
-   SCIP_RESULT*          result              /**< pointer to store the result */
-   );
-
-/** runs the detect of nonlinear handlers for a set of nonlinear constraints
- *
- *  @note this method is only used for testing purposes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPdetectNlhdlrsNonlinear(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
-   SCIP_CONS**           conss,              /**< constraints where to run detect */
-   int                   nconss              /**< total number of constraints */
    );
 
 /** computes a facet of the convex or concave envelope of a vertex polyhedral function
