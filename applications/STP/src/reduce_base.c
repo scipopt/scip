@@ -607,7 +607,7 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      SCIP_CALL(reduceLevel0(scip, g));
+      SCIP_CALL(reduce_unconnected(scip, g));
       SCIP_CALL(reduce_simple(scip, g, redbase->fixed, redbase->solnode, &degtnelims, NULL));
 
       /* too few eliminations? */
@@ -915,223 +915,6 @@ void reduce_baseFree(
    SCIPfreeMemory(scip, redbase);
 }
 
-
-/* remove unconnected vertices */
-SCIP_RETCODE reduceLevel0(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g                   /**< graph data structure */
-)
-{
-   const int nnodes = g->knots;
-   SCIP_Bool* nodevisited;
-
-   assert(scip && g);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
-
-   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
-
-   for( int k = nnodes - 1; k >= 0 ; k-- )
-   {
-      if( !nodevisited[k] && (g->grad[k] > 0) )
-      {
-         if( Is_term(g->term[k]) )
-         {
-            assert(graph_pc_isPc(g));
-            assert(graph_pc_termIsNonLeafTerm(g, k));
-
-            continue;
-         }
-
-         graph_knot_del(scip, g, k, TRUE);
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &nodevisited);
-
-   return SCIP_OKAY;
-}
-
-
-/* remove unconnected vertices, including pseudo terminals, and checks for feasibility (adapts g->mark) */
-SCIP_RETCODE reduceLevel0RpcRmwInfeas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            offsetp,            /**< pointer to offset */
-   SCIP_Bool*            infeas              /**< is problem infeasible? */
-)
-{
-   int* stackarr;
-   SCIP_Bool* gmark;
-   int stacksize;
-   const int nnodes = g->knots;
-   const SCIP_Bool isExtended = g->extended;
-
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(offsetp != NULL);
-   assert(graph_pc_isRootedPcMw(g));
-
-   if( !isExtended )
-      graph_pc_2trans(scip, g);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
-
-   BMSclearMemoryArray(gmark, nnodes);
-
-   *infeas = FALSE;
-   stacksize = 0;
-   stackarr[stacksize++] = g->source;
-   assert(!gmark[g->source]);
-   gmark[g->source] = TRUE;
-
-   /* DFS loop */
-   while( stacksize != 0 )
-   {
-      const int node = stackarr[--stacksize];
-
-      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
-      {
-         const int head = g->head[a];
-
-         if( !gmark[head] )
-         {
-            /* don't mark pseudo-terminals from the root */
-            if( node == g->source && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
-            {
-               assert(g->cost[flipedge(a)] == FARAWAY && g->grad[head] == 2);
-               continue;
-            }
-
-            gmark[head] = TRUE;
-            stackarr[stacksize++] = head;
-         }
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &stackarr);
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( !gmark[k] && Is_term(g->term[k]) )
-      {
-         assert(k != g->source);
-         assert(graph_pc_knotIsFixedTerm(g, k) || (g->grad[k] > 0));
-
-         if( graph_pc_knotIsFixedTerm(g, k) )
-         {
-            *infeas = TRUE;
-            SCIPfreeBufferArray(scip, &gmark);
-
-            if( !isExtended )
-               graph_pc_2org(scip, g);
-
-            return SCIP_OKAY;
-         }
-         else if( graph_pc_termIsNonLeafTerm(g, k) )
-         {
-#ifdef SCIP_DEBUG
-            SCIPdebugMessage("delete: \n");
-            graph_knot_printInfo(g, k);
-#endif
-
-            /* offset is not necessary, because graph is in extended mode */
-            graph_knot_del(scip, g, k, TRUE);
-         }
-         else
-         {
-#ifdef SCIP_DEBUG
-            SCIPdebugMessage("delete: \n");
-            graph_knot_printInfo(g, k);
-#endif
-
-            assert(g->term2edge[k] >= 0);
-            assert(!gmark[graph_pc_getTwinTerm(g, k)]);
-
-            (void) graph_pc_deleteTerm(scip, g, k, offsetp);
-         }
-      }
-   }
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( !gmark[k] && (g->grad[k] > 0) )
-      {
-         assert(!graph_pc_knotIsFixedTerm(g, k));
-         while( g->inpbeg[k] != EAT_LAST )
-            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
-         g->mark[k] = FALSE;
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &gmark);
-
-   if( !isExtended )
-      graph_pc_2org(scip, g);
-
-   return SCIP_OKAY;
-}
-
-/* remove unconnected vertices, including pseudo terminals, adapts g->mark */
-SCIP_RETCODE reduceLevel0RpcRmw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            offsetp             /**< pointer to offset */
-)
-{
-   SCIP_Bool infeas;
-
-   SCIP_CALL( reduceLevel0RpcRmwInfeas(scip, g, offsetp, &infeas) );
-
-   if( infeas )
-   {
-      printf("level0RpcRmw detected infeasibility \n");
-      return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
-/* remove unconnected vertices and checks whether problem is infeasible  */
-SCIP_RETCODE reduceLevel0infeas(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Bool*            infeas              /**< is problem infeasible? */
-)
-{
-   const int nnodes = g->knots;
-   SCIP_Bool* nodevisited;
-
-   assert(scip && g && infeas);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
-
-   *infeas = FALSE;
-
-   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
-
-   for( int k = 0; k < nnodes; k++ )
-      if( !nodevisited[k] && Is_term(g->term[k]) )
-      {
-         assert(k != g->source);
-         *infeas = TRUE;
-         break;
-      }
-
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( !nodevisited[k] && (g->grad[k] > 0) )
-      {
-         while( g->inpbeg[k] != EAT_LAST )
-            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &nodevisited);
-
-   return SCIP_OKAY;
-}
 
 /** basic reduction package for the STP */
 SCIP_RETCODE reduceStp(
@@ -1745,7 +1528,7 @@ SCIP_RETCODE redLoopMw(
    /* go back to the extended graph */
    graph_pc_2trans(scip, g);
 
-   SCIP_CALL( reduceLevel0(scip, g) );
+   SCIP_CALL( reduce_unconnected(scip, g) );
 
    SCIPfreeRandom(scip, &randnumgen);
 
@@ -2006,7 +1789,7 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
-            SCIP_CALL(reduceLevel0RpcRmw(scip, g, &fix));
+            SCIP_CALL(reduce_unconnectedRpcRmw(scip, g, &fix));
             rerun = TRUE;
             advancedrun = dualascent;
             outterrounds = 0;
@@ -2152,7 +1935,7 @@ SCIP_RETCODE reduce(
    /* initialize shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, graph) );
 
-   SCIP_CALL( reduceLevel0(scip, graph) );
+   SCIP_CALL( reduce_unconnected(scip, graph) );
 
    /* if no reduction methods available, return */
    if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
@@ -2221,7 +2004,7 @@ SCIP_RETCODE reduce(
    }
    SCIPdebugMessage("offset : %f \n", *offset);
 
-   SCIP_CALL( reduceLevel0(scip, graph) );
+   SCIP_CALL( reduce_unconnected(scip, graph) );
    show = FALSE;
 
    assert(graph_valid(scip, graph));

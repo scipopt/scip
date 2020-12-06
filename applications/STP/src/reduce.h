@@ -37,10 +37,6 @@
 extern int reduce_getMinNreductions(const GRAPH*, int);
 extern SCIP_RETCODE reduce_baseInit(SCIP*, const GRAPH*, REDBASE**);
 extern void reduce_baseFree(SCIP*, REDBASE**);
-extern SCIP_RETCODE reduceLevel0(SCIP*, GRAPH*);
-extern SCIP_RETCODE reduceLevel0infeas(SCIP*, GRAPH*, SCIP_Bool*);
-extern SCIP_RETCODE reduceLevel0RpcRmw(SCIP*, GRAPH*, SCIP_Real*);
-extern SCIP_RETCODE reduceLevel0RpcRmwInfeas(SCIP*, GRAPH*, SCIP_Real*, SCIP_Bool*);
 extern SCIP_RETCODE reduceStp(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reducePc(SCIP*, const int*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reduceMw(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool);
@@ -141,6 +137,8 @@ extern SCIP_RETCODE    reduce_fixedConflicts(SCIP*, const int*, GRAPH*, int*);
 extern SCIP_RETCODE    reduce_cutEdgeTryPrune(SCIP*, int, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern void            reduce_identifyNonLeafTerms(SCIP*, GRAPH*);
+extern SCIP_RETCODE reduce_unconnected(SCIP*, GRAPH*);
+extern SCIP_RETCODE reduce_unconnectedInfeas(SCIP*, GRAPH*, SCIP_Bool*);
 
 
 /* reduce_sepa.c
@@ -155,6 +153,8 @@ extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*, SCIP_Bool
 extern SCIP_RETCODE    reduce_simple_mw(SCIP*, GRAPH*, int*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_simple_pc(SCIP*, const int*, GRAPH*, SCIP_Real*, int*, int*, int*);
 extern void            reduce_removeDeg0NonLeafTerms(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE reduce_unconnectedRpcRmw(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE reduce_unconnectedRpcRmwInfeas(SCIP*, GRAPH*, SCIP_Real*, SCIP_Bool*);
 
 
 /* reduce_util.c

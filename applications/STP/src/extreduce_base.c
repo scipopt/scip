@@ -1719,7 +1719,7 @@ SCIP_RETCODE extreduce_pseudoDeleteNodes(
 
    /* todo otherwise (I015) we get isolated vertices...not sure whether this is a bug or normal behavior */
    if( *nelims > 0 )
-      SCIP_CALL( reduceLevel0(scip, graph));
+      SCIP_CALL( reduce_unconnected(scip, graph));
 
    if( graph_pc_isPc(graph) && isExtendedOrg != graph->extended )
       graph_pc_2trans(scip, graph);

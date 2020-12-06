@@ -88,7 +88,7 @@ SCIP_RETCODE cutEdgePrune(
       graph_edge_del(scip, g, cutedge, TRUE);
    }
 
-   SCIP_CALL( reduceLevel0(scip, g) );
+   SCIP_CALL( reduce_unconnected(scip, g) );
 
    return SCIP_OKAY;
 }
@@ -339,7 +339,7 @@ SCIP_RETCODE reduce_simple(
    /* NOTE: in this case we might have made the graph unconnected... */
    if( replaceConflict )
    {
-      SCIP_CALL( reduceLevel0(scip, g) );
+      SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
    /* NOTE: seems to hurt performance in ascend-prune, not sure why.... */
@@ -982,4 +982,83 @@ void reduce_identifyNonLeafTerms(
    }
 
    assert(graph_pc_term2edgeIsConsistent(scip, g));
+}
+
+
+
+/* remove unconnected vertices */
+SCIP_RETCODE reduce_unconnected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int nnodes = g->knots;
+   SCIP_Bool* nodevisited;
+
+   assert(scip && g);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
+
+   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
+
+   for( int k = nnodes - 1; k >= 0 ; k-- )
+   {
+      if( !nodevisited[k] && (g->grad[k] > 0) )
+      {
+         if( Is_term(g->term[k]) )
+         {
+            assert(graph_pc_isPc(g));
+            assert(graph_pc_termIsNonLeafTerm(g, k));
+
+            continue;
+         }
+
+         graph_knot_del(scip, g, k, TRUE);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodevisited);
+
+   return SCIP_OKAY;
+}
+
+
+/** remove unconnected vertices and checks whether problem is infeasible  */
+SCIP_RETCODE reduce_unconnectedInfeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Bool*            infeas              /**< is problem infeasible? */
+)
+{
+   const int nnodes = g->knots;
+   SCIP_Bool* nodevisited;
+
+   assert(scip && g && infeas);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
+
+   *infeas = FALSE;
+
+   SCIP_CALL( graph_trail_arr(scip, g, g->source, nodevisited) );
+
+   for( int k = 0; k < nnodes; k++ )
+      if( !nodevisited[k] && Is_term(g->term[k]) )
+      {
+         assert(k != g->source);
+         *infeas = TRUE;
+         break;
+      }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !nodevisited[k] && (g->grad[k] > 0) )
+      {
+         while( g->inpbeg[k] != EAT_LAST )
+            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodevisited);
+
+   return SCIP_OKAY;
 }

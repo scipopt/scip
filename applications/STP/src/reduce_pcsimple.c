@@ -1235,7 +1235,7 @@ SCIP_RETCODE reduce_simple_mw(
    assert(!hasAdjacentTerminals(g));
    assert(graph_valid(scip, g));
 
-   SCIP_CALL( reduceLevel0(scip, g) );
+   SCIP_CALL( reduce_unconnected(scip, g) );
 
    return SCIP_OKAY;
 }
@@ -1375,7 +1375,7 @@ SCIP_RETCODE reduce_simple_pc(
 
    assert(graph_valid(scip, g));
 
-   SCIP_CALL( reduceLevel0(scip, g) );
+   SCIP_CALL( reduce_unconnected(scip, g) );
 
    return SCIP_OKAY;
 }
@@ -1403,4 +1403,145 @@ reduce_removeDeg0NonLeafTerms(
          graph_pc_deleteTerm(scip, g, k, offsetp);
       }
    }
+}
+
+
+/* remove unconnected vertices, including pseudo terminals, and checks for feasibility (adapts g->mark) */
+SCIP_RETCODE reduce_unconnectedRpcRmwInfeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp,            /**< pointer to offset */
+   SCIP_Bool*            infeas              /**< is problem infeasible? */
+)
+{
+   int* stackarr;
+   SCIP_Bool* gmark;
+   int stacksize;
+   const int nnodes = g->knots;
+   const SCIP_Bool isExtended = g->extended;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(offsetp != NULL);
+   assert(graph_pc_isRootedPcMw(g));
+
+   if( !isExtended )
+      graph_pc_2trans(scip, g);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
+
+   BMSclearMemoryArray(gmark, nnodes);
+
+   *infeas = FALSE;
+   stacksize = 0;
+   stackarr[stacksize++] = g->source;
+   assert(!gmark[g->source]);
+   gmark[g->source] = TRUE;
+
+   /* DFS loop */
+   while( stacksize != 0 )
+   {
+      const int node = stackarr[--stacksize];
+
+      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+
+         if( !gmark[head] )
+         {
+            /* don't mark pseudo-terminals from the root */
+            if( node == g->source && Is_term(g->term[head]) && !graph_pc_knotIsFixedTerm(g, head) )
+            {
+               assert(g->cost[flipedge(a)] == FARAWAY && g->grad[head] == 2);
+               continue;
+            }
+
+            gmark[head] = TRUE;
+            stackarr[stacksize++] = head;
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &stackarr);
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !gmark[k] && Is_term(g->term[k]) )
+      {
+         assert(k != g->source);
+         assert(graph_pc_knotIsFixedTerm(g, k) || (g->grad[k] > 0));
+
+         if( graph_pc_knotIsFixedTerm(g, k) )
+         {
+            *infeas = TRUE;
+            SCIPfreeBufferArray(scip, &gmark);
+
+            if( !isExtended )
+               graph_pc_2org(scip, g);
+
+            return SCIP_OKAY;
+         }
+         else if( graph_pc_termIsNonLeafTerm(g, k) )
+         {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("delete: \n");
+            graph_knot_printInfo(g, k);
+#endif
+
+            /* offset is not necessary, because graph is in extended mode */
+            graph_knot_del(scip, g, k, TRUE);
+         }
+         else
+         {
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("delete: \n");
+            graph_knot_printInfo(g, k);
+#endif
+
+            assert(g->term2edge[k] >= 0);
+            assert(!gmark[graph_pc_getTwinTerm(g, k)]);
+
+            (void) graph_pc_deleteTerm(scip, g, k, offsetp);
+         }
+      }
+   }
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !gmark[k] && (g->grad[k] > 0) )
+      {
+         assert(!graph_pc_knotIsFixedTerm(g, k));
+         while( g->inpbeg[k] != EAT_LAST )
+            graph_edge_del(scip, g, g->inpbeg[k], TRUE);
+         g->mark[k] = FALSE;
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &gmark);
+
+   if( !isExtended )
+      graph_pc_2org(scip, g);
+
+   return SCIP_OKAY;
+}
+
+/* remove unconnected vertices, including pseudo terminals, adapts g->mark */
+SCIP_RETCODE reduce_unconnectedRpcRmw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            offsetp             /**< pointer to offset */
+)
+{
+   SCIP_Bool infeas;
+
+   SCIP_CALL( reduce_unconnectedRpcRmwInfeas(scip, g, offsetp, &infeas) );
+
+   if( infeas )
+   {
+      printf("level0RpcRmw detected infeasibility \n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
 }

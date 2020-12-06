@@ -2374,7 +2374,7 @@ SCIP_RETCODE reduce_dapaths(
    redcosts_free(scip, &redcostdata);
    SCIPfreeBufferArray(scip, &result);
 
-   SCIP_CALL( reduceLevel0(scip, g) );
+   SCIP_CALL( reduce_unconnected(scip, g) );
 
    assert(!graph_pc_isPcMw(g) || !g->extended);
    assert(graph_valid(scip, g));
@@ -2545,7 +2545,7 @@ SCIP_RETCODE reduce_da(
          }
 
          if( ndeletions_run > 0 && !isRpcmw )
-            reduceLevel0(scip, graph);
+            reduce_unconnected(scip, graph);
 
          assert(graph_valid(scip, graph));
 

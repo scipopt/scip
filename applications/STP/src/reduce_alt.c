@@ -2538,11 +2538,11 @@ SCIP_RETCODE reduce_impliedProfitBased(
    /* NOTE: pruning is necessary, because we need remaining graph to be connected */
    if( isPcMw )
    {
-      reduceLevel0RpcRmw(scip, g, fixed);
+      reduce_unconnectedRpcRmw(scip, g, fixed);
    }
    else
    {
-      SCIP_CALL( reduceLevel0(scip, g) );
+      SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
    SCIP_CALL( reduce_sdInitBiasedBottleneck(scip, g, &sdistance) );

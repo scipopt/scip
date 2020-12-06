@@ -377,7 +377,7 @@ SCIP_RETCODE reduceLurk(
       }
    }
 
-   SCIP_CALL( reduceLevel0(scip, prunegraph) );
+   SCIP_CALL( reduce_unconnected(scip, prunegraph) );
    assert(graph_valid(scip, prunegraph));
 
    SCIPfreeBufferArray(scip, &lurkingbounds_local);

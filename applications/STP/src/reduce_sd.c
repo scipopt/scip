@@ -1377,7 +1377,7 @@ SCIP_RETCODE ledgeFromNetgraph(
    /* graph might have become disconnected */
    if( *nelims > 0 )
    {
-      SCIP_CALL( reduceLevel0(scip, g) );
+      SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
    SCIPfreeBufferArray(scip, &blocked);
@@ -1507,7 +1507,7 @@ SCIP_RETCODE reduce_sdImpLongEdge(
    /* graph might have become disconnected */
    if( nelims_new > 0 )
    {
-      SCIP_CALL( reduceLevel0(scip, g) );
+      SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
    *nelims += nelims_new;
@@ -2866,7 +2866,7 @@ SCIP_RETCODE reduce_ledge(
    /* graph might have become disconnected */
    if( *nelims > 0 )
    {
-      SCIP_CALL( reduceLevel0(scip, g) );
+      SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
    /* free netgraph and  MST data structure */

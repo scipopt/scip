@@ -829,9 +829,9 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          /* delete all vertices not reachable from the root */
          if( graph_pc_isRootedPcMw(prunegraph) )
-            SCIP_CALL(reduceLevel0RpcRmw(scip, prunegraph, &offset));
+            SCIP_CALL(reduce_unconnectedRpcRmw(scip, prunegraph, &offset));
          else
-            SCIP_CALL(reduceLevel0(scip, prunegraph));
+            SCIP_CALL(reduce_unconnected(scip, prunegraph));
 
          assert(graph_valid(scip, prunegraph));
 
@@ -868,9 +868,9 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
 
          /* delete all vertices not reachable from the root */
          if( graph_pc_isRootedPcMw(prunegraph) )
-            SCIP_CALL(reduceLevel0RpcRmw(scip, prunegraph, &offset));
+            SCIP_CALL(reduce_unconnectedRpcRmw(scip, prunegraph, &offset));
          else
-            SCIP_CALL(reduceLevel0(scip, prunegraph));
+            SCIP_CALL(reduce_unconnected(scip, prunegraph));
 
          graph_get_nVET(prunegraph, &annodes, &anedges, &anterms);
 

@@ -904,7 +904,7 @@ SCIP_RETCODE reduce_bdkWithSd(
 
    if( *nelims > nelims_initial  )
    {
-      SCIP_CALL( reduceLevel0(scip, g) );
+      SCIP_CALL( reduce_unconnected(scip, g) );
    }
 
    return SCIP_OKAY;

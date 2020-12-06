@@ -726,7 +726,7 @@ SCIP_RETCODE SCIPStpHeurSlackPruneRun(
       SCIP_CALL( reduce_daSlackPrune(scip, prunegraph, minnelims, solgiven, soledge, solnode, &danelims, &ubnew, &solIsImproved, &solIsRebuilt) );
 
       /* delete all vertices not reachable from the root */
-      SCIP_CALL( reduceLevel0(scip, prunegraph) );
+      SCIP_CALL( reduce_unconnected(scip, prunegraph) );
 
       assert(graph_valid(scip, prunegraph));
 

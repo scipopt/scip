@@ -480,7 +480,7 @@ SCIP_RETCODE redcostGraphComputeSteinerTree(
    SCIP_Bool success;
 
    SCIP_CALL( graph_path_init(scip, newgraph) );
-   SCIP_CALL( reduceLevel0(scip, newgraph) );
+   SCIP_CALL( reduce_unconnected(scip, newgraph) );
    assert(graph_valid(scip, newgraph));
 
 #ifdef DEBUG_ASCENDPRUNE
