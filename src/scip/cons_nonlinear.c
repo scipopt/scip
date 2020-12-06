@@ -5598,7 +5598,17 @@ SCIP_RETCODE createAuxVar(
       SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
    }
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf), MIN(SCIPinfinity(scip), activity.sup), 0.0, vartype) );
+   /* if root node, then activity is globall valid, so use it to initialize the global bounds of the auxvar
+    * otherwise, we create var without bounds here and use activity to set local bounds below (needs to be after adding var)
+    */
+   if( SCIPgetDepth(scip) == 0 )
+   {
+      SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf), MIN(SCIPinfinity(scip), activity.sup), 0.0, vartype) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, vartype) );
+   }
 
    /* mark the auxiliary variable to be added for the relaxation only
     * this prevents SCIP to create linear constraints from cuts or conflicts that contain auxiliary variables,
@@ -5625,6 +5635,14 @@ SCIP_RETCODE createAuxVar(
       SCIP_CALL( SCIPdebugAddSolVal(scip, ownerdata->auxvar, SCIPexprGetEvalValue(expr)) );
    }
 #endif
+
+   if( SCIPgetDepth(scip) > 0 )
+   {
+      /* initialize local bounds to (locally valid) activity */
+      SCIP_Bool cutoff;
+      SCIP_CALL( tightenAuxVarBounds(scip, ownerdata->conshdlr, expr, activity, &cutoff, NULL) );
+      assert(!cutoff);  /* should not happen as activity wasn't empty and variable is new */
+   }
 
    return SCIP_OKAY;
 }
