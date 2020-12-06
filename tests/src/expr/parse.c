@@ -21,10 +21,6 @@
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
-#include "scip/expr_sum.h"
-#include "scip/expr_product.h"
-#include "scip/expr_pow.h"
-#include "scip/expr_var.h"
 #include "scip/struct_expr.h"
 #include "include/scip_test.h"
 
@@ -213,50 +209,6 @@ Test(parse, unusual_var_name)
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }
-
-#if !1  // FIXME move into test for cons_nonlinear
-Test(parse, constraint_with_spaces)
-{
-      SCIP_CONS* consexpr_xy5;
-      SCIP_Bool success;
-      const char* input = "[nonlinear] <test1>: <x>[C] / <y>[I] *(5) >= 1;";
-
-      /* parse constraint */
-      success = FALSE;
-      SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, input,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-      cr_expect(success);
-
-      /* print constraint */
-      SCIPinfoMessage(scip, NULL, "printing constraint %s after parsing from string:", input);
-      SCIP_CALL( SCIPprintCons(scip, consexpr_xy5, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
-
-      /* release constraint */
-      SCIP_CALL( SCIPreleaseCons(scip, &consexpr_xy5) );
-}
-
-Test(parse, constraint_with_sides)
-{
-      SCIP_CONS* cons;
-      SCIP_Bool success;
-      const char* input = "[nonlinear] <test2>: 1 <= <x>[C] / <y>[I] *(5) - <x> <= 2;";
-
-      /* parse constraint */
-      success = FALSE;
-      SCIP_CALL( SCIPparseCons(scip, &cons, input,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-      cr_expect(success);
-
-      /* print constraint */
-      SCIPinfoMessage(scip, NULL, "printing constraint %s after parsing from string:", input);
-      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
-
-      /* release constraint */
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-}
-#endif
 
 Test(parse, invalid_expressions)
 {

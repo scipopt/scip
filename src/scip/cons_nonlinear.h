@@ -707,7 +707,6 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_SOL*             sol,                /**< solution */
    unsigned int          soltag,             /**< tag of solution */
@@ -731,7 +730,6 @@ SCIP_RETCODE SCIPgetExprAbsOrigViolationNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgetExprAbsAuxViolationNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             auxvalue,           /**< the value of f(w) */
    SCIP_SOL*             sol,                /**< solution that has been evaluated */

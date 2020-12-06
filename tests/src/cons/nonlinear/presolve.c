@@ -200,7 +200,7 @@ Test(presolve, singlelockedvars3)
  *
  * consider x + 2 y^2 - 3 y^3 - 4 z == 5 with x continuous, y integer, and z binary
  */
-Test(presolve, implint, .disabled = 1)  // FIXME enable when detectNlhdlr() runs SCIPcomputeExprIntegrality again
+Test(presolve, implint)
 {
    SCIP_Bool infeasible;
 

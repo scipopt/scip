@@ -40,7 +40,7 @@ void setup(void)
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 5.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 5.0, 2.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 5.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 5.0, 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
@@ -65,9 +65,10 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
-Test(conshdlr, check, .init = setup, .fini = teardown,
-   .description = "test feasibility check of the nonlinear constraint handler."
-   )
+TestSuite(conshdlr, .init = setup, .fini = teardown);
+
+Test(conshdlr, check,
+   .description = "test feasibility check of the nonlinear constraint handler.")
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -106,7 +107,6 @@ Test(conshdlr, check, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-#if SCIP_DISABLED_CODE
 static
 SCIP_Real getActivity(void)
 {
@@ -149,7 +149,7 @@ SCIP_Real getGradNorm(void)
       SQR(-1.1*xval*yval/(zval*zval) + 3.2*xval*xval*pow(yval,-5) + 1.5*zval*zval) );
 }
 
-Test(conshdlr, relviol_n, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_n,
    .description = "test relative constraint violation of the nonlinear constraint handler for violscale=n."
    )
 {
@@ -219,7 +219,7 @@ Test(conshdlr, relviol_n, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(conshdlr, relviol_a, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_a,
    .description = "test relative constraint violation of the cons_expr constraint handler for violscale=a."
    )
 {
@@ -228,7 +228,7 @@ Test(conshdlr, relviol_a, .init = setup, .fini = teardown,
    SCIP_Real activity;
    SCIP_Real absviol;
    SCIP_Real relviol;
-   const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
+   const char* input = "[nonlinear] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
 
    /* scale by max(activity, rhs) */
    SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/violscale", 'a') );
@@ -289,7 +289,7 @@ Test(conshdlr, relviol_a, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(conshdlr, relviol_g, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_g,
    .description = "test relative constraint violation of the cons_expr constraint handler for violscale=g."
    )
 {
@@ -299,7 +299,7 @@ Test(conshdlr, relviol_g, .init = setup, .fini = teardown,
    SCIP_Real gradnorm;
    SCIP_Real absviol;
    SCIP_Real relviol;
-   const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
+   const char* input = "[nonlinear] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
 
    /* scale by norm of gradient */
    SCIP_CALL( SCIPsetCharParam(scip, "constraints/nonlinear/violscale", 'g') );
@@ -362,7 +362,7 @@ Test(conshdlr, relviol_g, .init = setup, .fini = teardown,
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-Test(conshdlr, relviol_g2, .init = setup, .fini = teardown,
+Test(conshdlr, relviol_g2,
    .description = "test relative constraint violation of the cons_expr constraint handler for violscale=g."
    )
 {
@@ -372,7 +372,7 @@ Test(conshdlr, relviol_g2, .init = setup, .fini = teardown,
    SCIP_Real gradnorm;
    SCIP_Real absviol;
    SCIP_Real relviol;
-   const char* input = "[expr] <test>: <x>^0.5*<y>^0.5 >= 1;";
+   const char* input = "[nonlinear] <test>: <x>^0.5*<y>^0.5 >= 1;";
    /* dx: 0.5*sqrt(y/x)  dy: 0.5*sqrt(x/y) */
 
    /* scale by norm of gradient */
@@ -417,4 +417,83 @@ Test(conshdlr, relviol_g2, .init = setup, .fini = teardown,
    /* release constraints */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
-#endif
+
+/* test violation in expression in nonlinear constraint */
+Test(conshdlr, exprviol,
+   .description = "Tests expression violation.")
+{
+   SCIP_EXPR* mainexpr;
+   SCIP_VAR* auxvar;
+   SCIP_Real viol;
+   SCIP_Bool violunder;
+   SCIP_Bool violover;
+   SCIP_Bool success;
+   SCIP_Bool cutoff;
+   SCIP_CONS* cons;
+
+   SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE);
+   SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE);
+
+   /* dualfix will fix y to its lower bound, but 0 isn't in the domain of y^1, so propagation would declare the problem to be infeasible
+    * (this indicates that the locks in cons_nonlinear miss to take domain-restrictions into account)
+    */
+   SCIP_CALL( SCIPchgVarLbGlobal(scip, y, 0.1) );
+
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[nonlinear] <test>: 0.5 * (<x>^2*<y>^(-1)*5^(-4))^2 * (2*<x> + 1)^(-1) >= 0", TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );  /* we need a sol in transformed space */
+
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   /* initialize solution values */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, 4.0) );
+
+   cr_assert_eq(SCIPgetNConss(scip), 1);
+   mainexpr = SCIPgetExprConsNonlinear(SCIPgetConss(scip)[0]);
+   SCIP_CALL( SCIPdismantleExpr(scip, NULL, mainexpr) );
+
+   /* construct LP to get auxvar */
+   SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+   cr_expect_not(cutoff);
+
+   auxvar = SCIPgetExprAuxVarNonlinear(mainexpr);
+   cr_assert_not_null(auxvar);
+
+   SCIP_CALL( SCIPevalExpr(scip, mainexpr, sol, 1) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPexprGetEvalValue(mainexpr) + 5.0) );
+   SCIP_CALL( SCIPgetExprAbsOrigViolationNonlinear(scip, mainexpr, sol, 1, &viol, &violunder, &violover) );
+   cr_expect(!violunder);
+   cr_expect(violover);
+   cr_expect_float_eq(viol, 5.0, 1e-12, "got violation %g, but expected 5", viol);
+
+   /* because we don't have a positive lock, there should be no violation "on the other side" */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPexprGetEvalValue(mainexpr) - 5.0) );
+   SCIP_CALL( SCIPgetExprAbsOrigViolationNonlinear(scip, mainexpr, sol, 1, &viol, &violunder, &violover) );
+   cr_expect(!violunder);
+   cr_expect(!violover);
+   cr_expect_eq(viol, 0.0, "got violation %g, but none was expected", viol);
+
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPexprGetEvalValue(mainexpr) + 5.0) );
+   SCIP_CALL( SCIPgetExprAbsAuxViolationNonlinear(scip, mainexpr, SCIPexprGetEvalValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_expect(!violunder);
+   cr_expect(violover);
+   cr_expect_float_eq(viol, 8.0, 1e-12, "got violation %g, but expected 8", viol);
+
+   SCIP_CALL( SCIPgetExprRelAuxViolationNonlinear(scip, mainexpr, SCIPexprGetEvalValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_expect(!violunder);
+   cr_expect(violover);
+   cr_expect_float_eq(viol, 8.0 / REALABS(SCIPexprGetEvalValue(mainexpr)-3.0), 1e-12, "got violation %g, but expected %g", viol, viol / REALABS(SCIPexprGetEvalValue(mainexpr)-3.0));
+
+   /* because we don't have a positive lock, there should be no violation "on the other side" */
+   SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, SCIPexprGetEvalValue(mainexpr) - 5.0) );
+   SCIP_CALL( SCIPgetExprAbsAuxViolationNonlinear(scip, mainexpr, SCIPexprGetEvalValue(mainexpr)-3.0, sol, &viol, &violunder, &violover) );
+   cr_expect(!violunder);
+   cr_expect(!violover);
+   cr_expect_eq(viol, 0.0, "got violation %g, but none was expected", viol);
+}
