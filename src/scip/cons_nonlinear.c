@@ -8009,8 +8009,8 @@ SCIP_RETCODE bilinTermAddAuxExpr(
       if( term->nauxexprs >= conshdlrdata->bilinmaxnauxexprs )
          return SCIP_OKAY;
 
-      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &term->aux.exprs, &term->sauxexprs, term->nauxexprs + 1) );
-      assert(term->sauxexprs >= term->nauxexprs + 1);
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &term->aux.exprs, &term->auxexprssize, term->nauxexprs + 1) );
+      assert(term->auxexprssize >= term->nauxexprs + 1);
 
       /* insert expression at the correct position */
       for( i = term->nauxexprs; i > pos; --i )
@@ -8164,7 +8164,7 @@ SCIP_RETCODE bilinearTermsInsertEntry(
       term->x = x;
       term->y = y;
       term->nauxexprs = 0;
-      term->sauxexprs = 0;
+      term->auxexprssize = 0;
       term->nlockspos = nlockspos;
       term->nlocksneg = nlocksneg;
       term->existing = existing;
@@ -8237,7 +8237,7 @@ SCIP_RETCODE bilinearTermsFree(
 
       if( conshdlrdata->bilinterms[i].nauxexprs > 0 )
       {
-         SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->bilinterms[i].aux.exprs), conshdlrdata->bilinterms[i].sauxexprs);
+         SCIPfreeBlockMemoryArray(scip, &(conshdlrdata->bilinterms[i].aux.exprs), conshdlrdata->bilinterms[i].auxexprssize);
          continue;
       }
 

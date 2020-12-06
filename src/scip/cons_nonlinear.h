@@ -76,7 +76,7 @@ struct SCIP_ConsNonlinear_BilinTerm
       SCIP_VAR*          var;                /**< auxiliary variable for the explicit product of x and y */
    } aux;
    int                   nauxexprs;          /**< number of auxexprs (0 for products without implicit relations) */
-   int                   sauxexprs;          /**< size of the auxexprs array */
+   int                   auxexprssize;       /**< size of the auxexprs array */
    int                   nlockspos;          /**< number of positive expression locks */
    int                   nlocksneg;          /**< number of negative expression locks */
    SCIP_Bool             existing;           /**< does the product exist explicitly in the problem? */
