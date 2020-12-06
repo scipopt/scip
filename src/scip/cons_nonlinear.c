@@ -7949,33 +7949,6 @@ SCIP_DECL_HASHKEYVAL(bilinearTermsGetHashkeyVal)
    return SCIPhashTwo(SCIPvarGetIndex(entry->x), SCIPvarGetIndex(entry->y));
 }
 
-/** ensures the auxexprs array in the bilinear term is large enough to store n entries */
-static
-SCIP_RETCODE ensureBilinTermSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSNONLINEAR_BILINTERM* term,       /**< bilinear term */
-   int                   n                   /**< number of entries to store */
-   )
-{
-   int newsize;
-
-   assert(term != NULL);
-
-   /* check whether array is large enough */
-   if( n <= term->sauxexprs )
-      return SCIP_OKAY;
-
-   /* compute new size */
-   newsize = SCIPcalcMemGrowSize(scip, n);
-   assert(n <= newsize);
-
-   /* realloc array */
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &term->aux.exprs, term->sauxexprs, newsize) );
-   term->sauxexprs = newsize;
-
-   return SCIP_OKAY;
-}
-
 /** compare two auxiliary expressions
  *
  *  Compares auxiliary variables, followed by coefficients and then constants.
@@ -8036,7 +8009,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
       if( term->nauxexprs >= conshdlrdata->bilinmaxnauxexprs )
          return SCIP_OKAY;
 
-      SCIP_CALL( ensureBilinTermSize(scip, term, term->nauxexprs + 1) );
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &term->aux.exprs, &term->sauxexprs, term->nauxexprs + 1) );
       assert(term->sauxexprs >= term->nauxexprs + 1);
 
       /* insert expression at the correct position */
@@ -8053,34 +8026,6 @@ SCIP_RETCODE bilinTermAddAuxExpr(
       term->aux.exprs[pos]->underestimate += auxexpr->underestimate;
       term->aux.exprs[pos]->overestimate += auxexpr->overestimate;
    }
-
-   return SCIP_OKAY;
-}
-
-/** resizes an array of bilinear terms */
-static
-SCIP_RETCODE bilinearTermsResize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   int                   reqsize             /**< required size */
-   )
-{
-   int newsize;
-
-   assert(conshdlrdata != NULL);
-
-   /* check whether array is large enough */
-   if( reqsize <= conshdlrdata->bilintermssize )
-      return SCIP_OKAY;
-
-   /* compute new size */
-   newsize = SCIPcalcMemGrowSize(scip, reqsize);
-   assert(reqsize <= newsize);
-
-   /* realloc array */
-   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->bilinterms, conshdlrdata->bilintermssize,
-      newsize) );
-   conshdlrdata->bilintermssize = newsize;
 
    return SCIP_OKAY;
 }
@@ -8209,7 +8154,7 @@ SCIP_RETCODE bilinearTermsInsertEntry(
    else
    { /* this is the first time we encounter this product */
       /* ensure size of bilinterms array */
-      SCIP_CALL( bilinearTermsResize(scip, conshdlrdata, conshdlrdata->nbilinterms + 1) );
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->bilinterms, &conshdlrdata->bilintermssize, conshdlrdata->nbilinterms + 1) );
 
       *idx = conshdlrdata->nbilinterms;
 
