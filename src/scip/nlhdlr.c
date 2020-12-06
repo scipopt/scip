@@ -604,6 +604,24 @@ void SCIPnlhdlrResetNDetectionslast(
    nlhdlr->ndetectionslast = 0;
 }
 
+/** increments number of cutoffs in statistics */
+void SCIPnlhdlrIncrementNCutoffs(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+   )
+{
+   assert(nlhdlr != NULL);
+   ++nlhdlr->ncutoffs;
+}
+
+/** increments number of separations in statistics */
+void SCIPnlhdlrIncrementNSeparated(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+   )
+{
+   assert(nlhdlr != NULL);
+   ++nlhdlr->nseparated;
+}
+
 /** print statistics for nonlinear handlers */
 void SCIPnlhdlrPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */

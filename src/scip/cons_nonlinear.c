@@ -10938,12 +10938,12 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          if( infeasible )
          {
             *result = SCIP_CUTOFF;
-//FIXME            ++nlhdlr->ncutoffs;
+            SCIPnlhdlrIncrementNCutoffs(nlhdlr);
          }
          else
          {
             *result = SCIP_SEPARATED;
-//FIXME            ++nlhdlr->nseparated;
+            SCIPnlhdlrIncrementNSeparated(nlhdlr);
          }
       }
 

@@ -101,6 +101,18 @@ void SCIPnlhdlrResetNDetectionslast(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
+/** increments number of cutoffs in statistics */
+SCIP_EXPORT
+void SCIPnlhdlrIncrementNCutoffs(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+   );
+
+/** increments number of separations in statistics */
+SCIP_EXPORT
+void SCIPnlhdlrIncrementNSeparated(
+   SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
+   );
+
 /** print statistics for nonlinear handlers */
 SCIP_EXPORT
 void SCIPnlhdlrPrintStatistics(
