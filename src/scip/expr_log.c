@@ -219,7 +219,7 @@ SCIP_DECL_EXPRINTEVAL(intevalLog)
       if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
       {
          SCIPinfoMessage(scip, NULL, "Changing lower bound for child of log() from %g to %g.\n"
-            "Check your model formulation or use option constraints/expr/exprhdlr/log/minzerodistance to avoid this warning.\n",
+            "Check your model formulation or use option expr/" EXPRHDLR_NAME "/minzerodistance to avoid this warning.\n",
             childinterval.inf, exprhdlrdata->minzerodistance);
          SCIPinfoMessage(scip, NULL, "Expression: ");
          SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
@@ -392,7 +392,7 @@ SCIP_DECL_EXPRREVERSEPROP(reversepropLog)
       if( !exprhdlrdata->warnedonpole && SCIPgetVerbLevel(scip) > SCIP_VERBLEVEL_NONE )
       {
          SCIPinfoMessage(scip, NULL, "Changing lower bound for child of log() from %g to %g.\n"
-            "Check your model formulation or use option constraints/expr/exprhdlr/log/minzerodistance to avoid this warning.\n",
+            "Check your model formulation or use option expr/" EXPRHDLR_NAME "/minzerodistance to avoid this warning.\n",
             childrenbounds[0].inf, exprhdlrdata->minzerodistance);
          SCIPinfoMessage(scip, NULL, "Expression: ");
          SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
