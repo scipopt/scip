@@ -26,7 +26,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h) */
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -164,7 +164,7 @@ SCIP_Real reduce_primalGetOffset(
 
 /** gets */
 SCIP_Real* reduce_primalGetOffsetPointer(
-   const REDPRIMAL*      primal              /**< primal */
+  REDPRIMAL*            primal              /**< primal */
    )
 {
    assert(primal);

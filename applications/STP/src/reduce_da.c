@@ -2505,7 +2505,7 @@ SCIP_RETCODE reduce_da(
          }
 
          redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, &cutoffbound);
-         printf("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havenewsol);
+         SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havenewsol);
          if( SCIPisZero(scip, cutoffbound) )
             useExtRed = FALSE;
 

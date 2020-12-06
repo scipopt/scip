@@ -57,7 +57,7 @@ extern void reduce_primalSetLevel(int, REDPRIMAL*);
 extern void reduce_primalUpdateUpperBound(SCIP_Real, REDPRIMAL*);
 extern SCIP_Real reduce_primalGetUpperBound(const REDPRIMAL*);
 extern SCIP_Real reduce_primalGetOffset(const REDPRIMAL*);
-extern SCIP_Real* reduce_primalGetOffsetPointer(const REDPRIMAL*);
+extern SCIP_Real* reduce_primalGetOffsetPointer(REDPRIMAL*);
 
 /* reduce_alt.c
  */
