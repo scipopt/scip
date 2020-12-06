@@ -1776,10 +1776,9 @@ SCIP_DECL_EXPRESTIMATE(estimateProduct)
       SCIPdebugMsg(scip, "%sestimating product with %d variables\n", overestimate ? "over": "under", SCIPexprGetNChildren(expr));
       for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
       {
-         child = SCIPexprGetChildren(expr)[c];
          SCIPdebugMsg(scip, "child %d = %g in [%g, %g]\n", c, refpoint[c], localbounds[c].inf, localbounds[c].sup);
 
-         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(localbounds[c].sup)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(localbounds[c].inf)) )
+         if( SCIPisInfinity(scip, localbounds[c].sup) || SCIPisInfinity(scip, -localbounds[c].inf) )
          {
             SCIPdebugMsg(scip, "unbounded factor related to\n");
             SCIP_CALL( SCIPdismantleExpr(scip, NULL, SCIPexprGetChildren(expr)[0]) );
