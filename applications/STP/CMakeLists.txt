@@ -73,6 +73,7 @@ add_executable(scipstp
     src/reduce_sdgraph.c
     src/reduce_sdutil.c
     src/reduce_simple.c
+    src/reduce_sol.c
     src/reduce_util.c
     src/sepaspecial.c
     src/shortestpath.c

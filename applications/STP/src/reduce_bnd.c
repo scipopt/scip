@@ -684,7 +684,7 @@ SCIP_RETCODE reduce_bound(
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
    STP_Bool* stnode = NULL;
-   SCIP_Bool ub;
+   SCIP_Bool hasInitialUb;
    const SCIP_Bool pc = graph_pc_isPc(graph);
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
    SCIP_Bool success = TRUE;
@@ -699,7 +699,7 @@ SCIP_RETCODE reduce_bound(
    mstobj = 0.0;
    *nelims = 0;
    mstobj2 = 0.0;
-   ub = SCIPisGT(scip, *upperbound, 0.0);
+   hasInitialUb = GT(*upperbound, 0.0) && LT(*upperbound, FARAWAY);
 
    graph_mark(graph);
 
@@ -820,7 +820,7 @@ SCIP_RETCODE reduce_bound(
       radiim3 = 0;
 
    /* no upper bound available? */
-   if( !ub )
+   if( !hasInitialUb )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &stnode, nnodes) );
       SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );

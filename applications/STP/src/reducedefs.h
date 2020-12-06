@@ -51,6 +51,9 @@ typedef struct special_distance_neighbors SDN;
 /** link-cut tree for bottleneck operations */
 typedef struct bottleneck_link_cut_tree BLCTREE;
 
+/** INTERNAL primal solution data retained during reduction loop */
+typedef struct reduction_primal_bound_storage REDPRIMAL;
+
 enum EXTRED_MODE { extred_none = 0, extred_fast = 1, extred_full = 2 };
 
 

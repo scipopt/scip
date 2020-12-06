@@ -2387,7 +2387,7 @@ SCIP_RETCODE reduce_da(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
-   SCIP_Real*            ub,                 /**< pointer to provide upper bound and return upper bound found during ascent and prune (if better) */
+   REDPRIMAL*            redprimal,          /**< primal bound info */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
@@ -2441,7 +2441,14 @@ SCIP_RETCODE reduce_da(
    if( isRpc )
       reduce_identifyNonLeafTerms(scip, graph);
 
-   upperbound = (NULL != ub && SCIPisGE(scip, *ub, 0.0)) ? (*ub) : FARAWAY;
+   upperbound = FARAWAY;
+
+   if( redprimal )
+   {
+      reduce_primalSetOffset(*offsetp, redprimal);
+      upperbound = reduce_primalGetUpperBound(redprimal);
+   }
+
    graph_mark(graph);
 
    for( int e = 0; e < nedges; e++ )
@@ -2498,7 +2505,7 @@ SCIP_RETCODE reduce_da(
          }
 
          redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, &cutoffbound);
-         SCIPdebugMessage("upper=%f lower=%f (round=%d, outerround=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, 0);
+         printf("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havenewsol);
          if( SCIPisZero(scip, cutoffbound) )
             useExtRed = FALSE;
 
@@ -2557,6 +2564,13 @@ SCIP_RETCODE reduce_da(
          *nelims += ndeletions_run;
       } /* root loop */
 
+      if( redprimal )
+      {
+         reduce_primalSetOffset(*offsetp, redprimal);
+         reduce_primalUpdateUpperBound(upperbound, redprimal);
+      }
+
+
       /* do pseudo-elimination? */
       if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
       {
@@ -2598,9 +2612,6 @@ SCIP_RETCODE reduce_da(
 
    if( isRpcmw )
       graph_pc_2orgcheck(scip, graph);
-
-   if( NULL != ub && (SCIPisLT(scip, upperbound, *ub) || SCIPisLT(scip, *ub, 0.0)) )
-      *ub = upperbound;
 
    if( userec )
       solpool_free(scip, &pool);

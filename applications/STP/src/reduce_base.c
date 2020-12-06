@@ -408,13 +408,13 @@ SCIP_RETCODE redLoopStp_inner(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RANDNUMGEN*      randnumgen,         /**< generator */
    GRAPH*                g,                  /**< graph data structure */
+   REDPRIMAL*            redprimal,
    REDBASE*              redbase,            /**< parameters */
    SCIP_Bool*            wasDecomposed       /**< pointer to mark whether to exit early */
 )
 {
    const RPARAMS* const redparameters = redbase->redparameters;
    BIDECPARAMS* const bidecompparams = redbase->bidecompparams;
-   SCIP_Real ub = -1.0;
    SCIP_Real timelimit;
    SCIP_Bool rerun = TRUE;
    int inner_rounds = 0;
@@ -440,7 +440,6 @@ SCIP_RETCODE redLoopStp_inner(
    while( rerun && !SCIPisStopped(scip) )
    {
       SCIP_Bool skiptests = FALSE;
-
       int danelims = 0;
       int sdnelims = 0;
       int sdcnelims = 0;
@@ -575,13 +574,12 @@ SCIP_RETCODE redLoopStp_inner(
             break;
       }
 
-      ub = -1.0;
-
       if( da )
       {
          const RPDA paramsda = { .prevrounds = inner_rounds, .useRec = FALSE,
            .useSlackPrune = FALSE, .extredMode = extred_none, .nodereplacing = nodereplacing };
-         SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, redbase->fixed, &danelims, randnumgen));
+         SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal,
+             redbase->fixed, &danelims, randnumgen));
 
          if( danelims <= STP_RED_EXPENSIVEFACTOR * reductbound )
             da = FALSE;
@@ -594,6 +592,9 @@ SCIP_RETCODE redLoopStp_inner(
 
       if( bred && nodereplacing )
       {
+         SCIP_Real ub;
+         reduce_primalSetOffset(*redbase->fixed, redprimal);
+         ub = reduce_primalGetUpperBound(redprimal);
          SCIP_CALL(reduce_bound(scip, g,
                redbase->vnoi, redbase->nodearrreal, redbase->fixed, &ub,
                redbase->heap, redbase->state, redbase->vbase, &brednelims));
@@ -606,6 +607,7 @@ SCIP_RETCODE redLoopStp_inner(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
+
 
       SCIP_CALL(reduce_unconnected(scip, g));
       SCIP_CALL(reduce_simple(scip, g, redbase->fixed, redbase->solnode, &degtnelims, NULL));
@@ -650,6 +652,7 @@ static
 SCIP_RETCODE redLoopMw_inner(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
+   REDPRIMAL*            redprimal,
    PATH*                 vnoi,               /**< Voronoi data structure */
    SCIP_Real*            nodearrreal,        /**< nodes-sized array  */
    int*                  state,              /**< shortest path array  */
@@ -692,6 +695,7 @@ SCIP_RETCODE redLoopMw_inner(
       int ansad2elims = 0;
       int chain2elims = 0;
       int degelims = 0;
+      int todo; // run nnp early to solve ACTMOD FASTER!
 
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -722,7 +726,7 @@ SCIP_RETCODE redLoopMw_inner(
 
          if( graph_pc_isRootedPcMw(g) )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &daelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, fixed, &daelims, randnumgen) );
          }
          else
          {
@@ -820,6 +824,7 @@ SCIP_RETCODE redLoopMw_inner(
 /*
  * Interface methods
  */
+
 
 
 /** gets reduction bound */
@@ -1265,7 +1270,6 @@ SCIP_RETCODE reduceSap(
 {
    PATH*   vnoi;
    PATH*   path;
-   SCIP_Real ub = FARAWAY;
    SCIP_Real timelimit;
    SCIP_Real*  nodearrreal;
    int*    heap;
@@ -1337,9 +1341,7 @@ SCIP_RETCODE reduceSap(
       {
          const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
 
-         ub = -1.0;
-
-         SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, fixed, &danelims, randnumgen) );
+         SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
 
          if( danelims <= 2 * redbound )
             da = FALSE;
@@ -1441,6 +1443,7 @@ SCIP_RETCODE redLoopMw(
    SCIP_Bool             userec              /**< use recombination heuristic? */
    )
 {
+   REDPRIMAL* redprimal;
    SCIP_Real da = advanced;
    SCIP_Real timelimit;
    int degelims;
@@ -1457,6 +1460,8 @@ SCIP_RETCODE redLoopMw(
    tryrmw = tryrmw && userec;
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   SCIP_CALL( reduce_primalInit(scip, g, &redprimal) );
 
    graph_pc_2org(scip, g);
    degelims = 0;
@@ -1475,7 +1480,7 @@ SCIP_RETCODE redLoopMw(
 
       fullrerun = FALSE;
 
-      SCIP_CALL( redLoopMw_inner(scip, g, vnoi, nodearrreal, state,
+      SCIP_CALL( redLoopMw_inner(scip, g, redprimal, vnoi, nodearrreal, state,
             vbase, nodearrint, solnode, nodearrchar, fixed, da, bred, redbound, userec, prizesum) );
 
       if( advanced && g->terms > 2 )
@@ -1484,7 +1489,7 @@ SCIP_RETCODE redLoopMw(
 
          if( graph_pc_isRootedPcMw(g) )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &daelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, fixed, &daelims, randnumgen) );
          }
          else
          {
@@ -1531,6 +1536,7 @@ SCIP_RETCODE redLoopMw(
    SCIP_CALL( reduce_unconnected(scip, g) );
 
    SCIPfreeRandom(scip, &randnumgen);
+   reduce_primalFree(scip, &redprimal);
 
    return SCIP_OKAY;
 }
@@ -1560,6 +1566,7 @@ SCIP_RETCODE redLoopPc(
    SCIP_Bool             nodereplacing       /**< should node replacement (by edges) be performed? */
    )
 {
+   REDPRIMAL* redprimal;
    DHEAP* dheap;
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real fix = 0.0;
@@ -1576,6 +1583,8 @@ SCIP_RETCODE redLoopPc(
    /* already finished? */
    if( g->grad[g->source] == 0 )
       return SCIP_OKAY;
+
+   SCIP_CALL( reduce_primalInit(scip, g, &redprimal) );
 
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
    SCIP_CALL( graph_heap_create(scip, g->knots, NULL, NULL, &dheap) );
@@ -1718,11 +1727,13 @@ SCIP_RETCODE redLoopPc(
 
             if( rpc )
             {
-               SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, &fix, &danelims, randnumgen) );
+               SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, &fix, &danelims, randnumgen) );
             }
             else
-            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, heap,
+            {
+               SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, heap,
                   state, nodearrchar, &danelims, randnumgen, prizesum) );
+            }
 
             if( danelims <= reductbound )
                da = FALSE;
@@ -1755,7 +1766,7 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, &fix, &danelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, &fix, &danelims, randnumgen) );
          }
          else
          {
@@ -1811,6 +1822,8 @@ SCIP_RETCODE redLoopPc(
    graph_heap_free(scip, TRUE, TRUE, &dheap);
    SCIPfreeRandom(scip, &randnumgen);
 
+   reduce_primalFree(scip, &redprimal);
+
    *fixed += fix;
 
    SCIPdebugMessage("Reduction Level PC 1: Fixed Cost = %.12e\n", *fixed);
@@ -1824,16 +1837,18 @@ SCIP_RETCODE redLoopStp(
    REDBASE*              redbase             /**< parameters */
 )
 {
+   REDPRIMAL* redprimal;
    SCIP_RANDNUMGEN* randnumgen;
-   SCIP_Real ub;
-   SCIP_Real timelimit;
-   SCIP_Bool rerun = TRUE;
    const RPARAMS* redparameters = redbase->redparameters;
+   SCIP_Real timelimit;
    const int reductbound = redparameters->reductbound;
    const SCIP_Bool fullreduce = redparameters->fullreduce;
    const SCIP_Bool nodereplacing = redparameters->nodereplacing;
    int dummy = 0;
    int nruns = 0;
+   SCIP_Bool rerun = TRUE;
+
+   SCIP_CALL( reduce_primalInit(scip, g, &redprimal) );
 
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1841,8 +1856,6 @@ SCIP_RETCODE redLoopStp(
    assert(reductbound > 0);
    assert(graph_valid(scip, g));
    assert(graph_typeIsSpgLike(g));
-
-   ub = -1.0;
 
    SCIP_CALL( reduce_contract0Edges(scip, g, TRUE) );
    SCIP_CALL( reduce_simple(scip, g, redbase->fixed, redbase->solnode, &dummy, NULL) );
@@ -1853,7 +1866,7 @@ SCIP_RETCODE redLoopStp(
       SCIP_Bool wasDecomposed;
       rerun = FALSE;
 
-      SCIP_CALL( redLoopStp_inner(scip, randnumgen, g, redbase, &wasDecomposed) );
+      SCIP_CALL( redLoopStp_inner(scip, randnumgen, g, redprimal, redbase, &wasDecomposed) );
 
       if( wasDecomposed )
       {
@@ -1875,7 +1888,9 @@ SCIP_RETCODE redLoopStp(
 
          assert(!rerun);
 
-         SCIP_CALL( reduce_da(scip, g, &paramsda, &ub, redbase->fixed, &extendedelims, randnumgen) );
+         reduce_primalSetOffset(*redbase->fixed, redprimal);
+
+         SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, redbase->fixed, &extendedelims, randnumgen) );
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
@@ -1903,6 +1918,8 @@ SCIP_RETCODE redLoopStp(
 
    assert(graph_valid_ancestors(scip, g));
    SCIPfreeRandom(scip, &randnumgen);
+
+   reduce_primalFree(scip, &redprimal);
 
    return SCIP_OKAY;
 }
