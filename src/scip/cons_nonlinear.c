@@ -8130,14 +8130,14 @@ SCIP_RETCODE bilinearTermsInsertEntry(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *idx = SCIPgetBilinTermIdxNonlinear(conshdlr, x, y);
-
    /* ensure that x.index <= y.index */
    if( SCIPvarCompare(x, y) == 1 )
    {
       SCIPswapPointers((void**)&x, (void**)&y);
    }
    assert(SCIPvarCompare(x, y) < 1);
+
+   *idx = SCIPgetBilinTermIdxNonlinear(conshdlr, x, y);
 
    /* update or create the term */
    if( *idx >= 0 )
