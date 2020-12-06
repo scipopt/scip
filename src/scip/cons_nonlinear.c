@@ -11189,14 +11189,6 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
 
    SCIP_CALL( bilinearTermsInsertEntry(scip, conshdlr, x, y, nlockspos, nlocksneg, &idx, FALSE) );
 
-   /* ensure that x.index <= y.index */
-   if( SCIPvarCompare(x, y) == 1 )
-   {
-      SCIPswapPointers((void**)&x, (void**)&y);
-      SCIPswapReals(&coefx, &coefy);
-   }
-   assert(SCIPvarCompare(x, y) < 1);
-
    term = &conshdlrdata->bilinterms[idx];
    assert(term != NULL);
    assert(SCIPvarCompare(term->x, term->y) < 1);
@@ -11235,8 +11227,19 @@ SCIP_RETCODE SCIPinsertBilinearTermImplicitNonlinear(
    auxexpr->overestimate = overestimate;
    auxexpr->auxvar = auxvar;
    auxexpr->coefs[0] = coefaux;
-   auxexpr->coefs[1] = coefx;
-   auxexpr->coefs[2] = coefy;
+   if( term->x == x )
+   {
+      assert(term->y == y);
+      auxexpr->coefs[1] = coefx;
+      auxexpr->coefs[2] = coefy;
+   }
+   else
+   {
+      assert(term->x == y);
+      assert(term->y == x);
+      auxexpr->coefs[1] = coefy;
+      auxexpr->coefs[2] = coefx;
+   }
    auxexpr->cst = cst;
    SCIP_CALL( bilinTermAddAuxExpr(scip, conshdlrdata, term, auxexpr, &added) );
 
