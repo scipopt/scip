@@ -221,7 +221,8 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIP_Bool             useRec,             /**< use recombination? */
    STPSOLPOOL*           pool,               /**< solution pool */
    int*                  result,             /**< result array */
-   SCIP_Bool*            bestimproved,       /**< could best solution be improved ? */
+   int*                  bestresult,         /**< result array */
+   SCIP_Bool*            havebestsol,        /**< could best solution be stored in bestresult? */
    SCIP_Real*            bestobjval          /**< pointer to the objective value */
 )
 {
@@ -232,7 +233,6 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    SCIP_Bool soladded;
    SCIP_Real objval;
 
-   *bestimproved = FALSE;
    soladded = FALSE;
 
    SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, daroot, &success, FALSE));
@@ -306,9 +306,18 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
 
    if( SCIPisLE(scip, objval, *bestobjval) )
    {
-      *bestimproved = TRUE;
+      *havebestsol = TRUE;
       *bestobjval = objval;
+      BMScopyMemoryArray(bestresult, result, nedges);
    }
+   else if( *havebestsol )
+   {
+      *havebestsol = solstp_isUnreduced(scip, graph, bestresult);
+
+      printf("still *havebestsol? %d \n", *havebestsol);
+   }
+
+   assert(*havebestsol == FALSE || solstp_isValid(scip, graph, bestresult));
 
    return SCIP_OKAY;
 }
@@ -2404,6 +2413,7 @@ SCIP_RETCODE reduce_da(
    const SCIP_Bool isDirected = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
    int* terms;
    int* result;
+   int* bestresult;
    SCIP_Bool* pseudoDelNodes;
    int nFixedTerms;
    const int nedges = graph->edges;
@@ -2429,6 +2439,7 @@ SCIP_RETCODE reduce_da(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &pseudoDelNodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestresult, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &arcsdeleted, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgefixingbounds, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodefixingbounds, nnodes) );
@@ -2451,9 +2462,6 @@ SCIP_RETCODE reduce_da(
 
    graph_mark(graph);
 
-   for( int e = 0; e < nedges; e++ )
-      result[e] = UNKNOWN;
-
    if( isDirected )
       SCIP_CALL( computeSteinerTreeTM(scip, graph, result, &upperbound) );
 
@@ -2469,7 +2477,7 @@ SCIP_RETCODE reduce_da(
       REDCOST* redcostdata;
 	   const int nruns = daGetNruns(paramsda, nFixedTerms);
       SCIP_Real cutoffbound = -1.0;
-      SCIP_Bool havenewsol = FALSE;
+      SCIP_Bool havebestsol = FALSE;
 
       SCIP_CALL( daRedcostsInit(scip, graph, paramsda, nruns, &redcostdata) );
 
@@ -2479,7 +2487,6 @@ SCIP_RETCODE reduce_da(
          int ndeletions_run = 0;
          const SCIP_Real damaxdeviation = daGetMaxDeviation(paramsda, randnumgen);
          const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
-         havenewsol = FALSE;
 
          if( useExtRed && run > 0 )
             redcosts_addLevel(redcostdata);
@@ -2501,11 +2508,11 @@ SCIP_RETCODE reduce_da(
          {
             const SCIP_Bool useSlackPrune = (run == 1 && paramsda->useSlackPrune);
             SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, redcostdata, useSlackPrune,
-                        userec, pool, result, &havenewsol, &upperbound) );
+                        userec, pool, result, bestresult, &havebestsol, &upperbound) );
          }
 
          redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, &cutoffbound);
-         SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havenewsol);
+         SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
 
          if( SCIPisZero(scip, cutoffbound) )
             useExtRed = FALSE;
@@ -2526,13 +2533,13 @@ SCIP_RETCODE reduce_da(
                redcosts_getRootToNodeDistTop(redcostdata), redcosts_getNodeToTermsPathsTop(redcostdata), redcosts_getDualBoundTop(redcostdata),
                nedges, (run == 0), TRUE);
 
-         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, redcostdata, result, havenewsol, &ndeletions_run) );
+         SCIP_CALL( reduceRootedProb(scip, graph, arcsdeleted, redcostdata, bestresult, havebestsol, &ndeletions_run) );
 
          if( !SCIPisZero(scip, cutoffbound) )
          {
             ndeletions_run += reduceWithNodeFixingBounds(scip, graph, NULL, nodefixingbounds, upperbound);
-            havenewsol = havenewsol && solstp_isUnreduced(scip, graph, result);
-            ndeletions_run += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havenewsol ? result : NULL), upperbound);
+            havebestsol = havebestsol && solstp_isUnreduced(scip, graph, bestresult);
+            ndeletions_run += reduceWithEdgeFixingBounds(scip, graph, NULL, edgefixingbounds, (havebestsol ? bestresult : NULL), upperbound);
          }
 
          if( useExtRed )
@@ -2542,8 +2549,8 @@ SCIP_RETCODE reduce_da(
          {
             const SCIP_Bool useSd = !graph_pc_isPc(graph);
             SCIP_CALL( extreduce_init(scip, useSd, paramsda->extredMode, graph, redcostdata, arcsdeleted, &extpermanent) );
-            extpermanent->solIsValid = havenewsol;
-            extpermanent->result = havenewsol ? result : NULL;
+            extpermanent->solIsValid = havebestsol;
+            extpermanent->result = havebestsol ? bestresult : NULL;
 
             SCIP_CALL( reduceWithEdgeExtReds(scip, upperbound, extpermanent, graph, &ndeletions_run) );
          }
@@ -2621,6 +2628,7 @@ SCIP_RETCODE reduce_da(
    SCIPfreeBufferArray(scip, &nodefixingbounds);
    SCIPfreeBufferArray(scip, &edgefixingbounds);
    SCIPfreeBufferArray(scip, &arcsdeleted);
+   SCIPfreeBufferArray(scip, &bestresult);
    SCIPfreeBufferArray(scip, &result);
    SCIPfreeBufferArray(scip, &pseudoDelNodes);
 
