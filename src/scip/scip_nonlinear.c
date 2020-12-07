@@ -240,12 +240,12 @@ void SCIPaddBilinMcCormick(
    assert(!SCIPisInfinity(scip, -ubx));
    assert(!SCIPisInfinity(scip,  lby));
    assert(!SCIPisInfinity(scip, -uby));
-   assert(SCIPisLE(scip, lbx, ubx));
-   assert(SCIPisLE(scip, lby, uby));
-   assert(SCIPisLE(scip, lbx, refpointx));
-   assert(SCIPisGE(scip, ubx, refpointx));
-   assert(SCIPisLE(scip, lby, refpointy));
-   assert(SCIPisGE(scip, uby, refpointy));
+   assert(SCIPisInfinity(scip,  -lbx) || SCIPisLE(scip, lbx, ubx));
+   assert(SCIPisInfinity(scip,  -lby) || SCIPisLE(scip, lby, uby));
+   assert(SCIPisInfinity(scip,  -lbx) || SCIPisLE(scip, lbx, refpointx));
+   assert(SCIPisInfinity(scip,  -lby) || SCIPisLE(scip, lby, refpointy));
+   assert(SCIPisInfinity(scip,  ubx) || SCIPisGE(scip, ubx, refpointx));
+   assert(SCIPisInfinity(scip,  uby) || SCIPisGE(scip, uby, refpointy));
    assert(lincoefx != NULL);
    assert(lincoefy != NULL);
    assert(linconstant != NULL);
