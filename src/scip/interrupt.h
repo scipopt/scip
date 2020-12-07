@@ -63,7 +63,10 @@ SCIP_Bool SCIPterminated(
    void
    );
 
-/** send a termination signal to the process so that SCIP tries to terminate as soon as possible */
+/** sends a termination signal to all SCIP processes so that they try to terminate as soon as possible
+ *
+ *  @note For terminating a specific SCIP process use SCIPinterruptSolve().
+ */
 void SCIPtryTerminate(
    void
    );
