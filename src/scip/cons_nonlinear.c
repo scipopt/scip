@@ -1689,7 +1689,7 @@ void findUnlockedLinearVar(
             poslock = !SCIPisInfinity(scip, -consdata->lhs) ? 1 : 0;
             neglock = !SCIPisInfinity(scip,  consdata->rhs) ? 1 : 0;
          }
-         printf("child <%s> locks: %d %d\n", SCIPvarGetName(var), SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL), SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL));
+         SCIPdebugMsg(scip, "child <%s> locks: %d %d\n", SCIPvarGetName(var), SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL), SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL));
 
          if( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) - neglock == 0 )
          {
