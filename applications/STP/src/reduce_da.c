@@ -2387,7 +2387,7 @@ SCIP_RETCODE reduce_da(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
-   REDPRIMAL*            redprimal,          /**< primal bound info */
+   REDPRIMAL*            redprimal,          /**< primal bound info or NULL */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
@@ -2506,6 +2506,7 @@ SCIP_RETCODE reduce_da(
 
          redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, &cutoffbound);
          SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havenewsol);
+
          if( SCIPisZero(scip, cutoffbound) )
             useExtRed = FALSE;
 
@@ -2569,7 +2570,6 @@ SCIP_RETCODE reduce_da(
          reduce_primalSetOffset(*offsetp, redprimal);
          reduce_primalUpdateUpperBound(upperbound, redprimal);
       }
-
 
       /* do pseudo-elimination? */
       if( !isDirected && !SCIPisZero(scip, cutoffbound) && nodereplacing )
@@ -3068,6 +3068,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
+   REDPRIMAL*            redprimal,          /**< primal bound info or NULL */
    PATH*                 vnoi,               /**< Voronoi data structure array */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    int*                  vbase,              /**< Voronoi base array */
@@ -3167,6 +3168,12 @@ SCIP_RETCODE reduce_daPcMw(
    /* compute first primal solution */
    upperbound = FARAWAY;
    havenewsol = FALSE;
+
+   if( redprimal )
+   {
+      upperbound = reduce_primalGetUpperBound(redprimal);
+   }
+
    SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, pathedge, nodearrchar, &havenewsol) );
 
    assert(havenewsol && upperbound < FARAWAY);
@@ -3174,6 +3181,9 @@ SCIP_RETCODE reduce_daPcMw(
 
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
+
+   SCIPdebugMessage("havenewsol=%d upperbound=%f lpobjval=%f \n", havenewsol, upperbound, lpobjval);
+
    if( userec)
       SCIPdebugMessage("DA first minpathcost %f \n", minpathcost);
 
@@ -3490,6 +3500,12 @@ SCIP_RETCODE reduce_daPcMw(
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &transresult);
    SCIPfreeBufferArray(scip, &result);
+
+
+   if( redprimal )
+   {
+      reduce_primalUpdateUpperBound(upperbound, redprimal);
+   }
 
    assert(graph_valid(scip, graph));
 

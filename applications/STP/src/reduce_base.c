@@ -730,7 +730,9 @@ SCIP_RETCODE redLoopMw_inner(
          }
          else
          {
-            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, nodearrint, state, nodearrchar, &daelims, randnumgen, prizesum) );
+            reduce_primalSetOffset(*fixed, redprimal);
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, redprimal,
+                  vnoi, nodearrreal, vbase, nodearrint, state, nodearrchar, &daelims, randnumgen, prizesum) );
          }
 
          if( daelims <= 2 * redbound )
@@ -1493,7 +1495,9 @@ SCIP_RETCODE redLoopMw(
          }
          else
          {
-            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, nodearrint, state, nodearrchar, &daelims, randnumgen, prizesum) );
+            reduce_primalSetOffset(*fixed, redprimal);
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, redprimal, vnoi, nodearrreal, vbase,
+                  nodearrint, state, nodearrchar, &daelims, randnumgen, prizesum) );
          }
 
          da = FALSE;
@@ -1569,7 +1573,6 @@ SCIP_RETCODE redLoopPc(
    REDPRIMAL* redprimal;
    DHEAP* dheap;
    SCIP_RANDNUMGEN* randnumgen;
-   SCIP_Real fix = 0.0;
    SCIP_Real timelimit;
    SCIP_Bool rerun = TRUE;
    const SCIP_Bool extensive = STP_RED_EXTENSIVE;
@@ -1594,7 +1597,7 @@ SCIP_RETCODE redLoopPc(
 
    SCIP_CALL( graph_pc_presolInit(scip, g) );
 
-   SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &degnelims, NULL, solnode) );
+   SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &degnelims, NULL, solnode) );
    if( verbose ) printf("initial degnelims: %d \n", degnelims);
 
    prizesum = graph_pc_getPosPrizeSum(scip, g);
@@ -1650,7 +1653,7 @@ SCIP_RETCODE redLoopPc(
                sdstar = FALSE;
          }
 
-         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
 
          if( (graph_pc_isRootedPcMw(g) && dapaths) || extensive )
          {
@@ -1667,7 +1670,7 @@ SCIP_RETCODE redLoopPc(
          }
 
          if( sd )
-            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
 
          if( sdw || extensive )
          {
@@ -1696,23 +1699,23 @@ SCIP_RETCODE redLoopPc(
              break;
 
          if( sdw )
-            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
 
          if( bd3 && dualascent )
          {
             SCIP_CALL( execPc_BDk(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2,
-                  &bd3nelims, getWorkLimits_pc(g, rounds, pc_bd3), &fix, reductbound, verbose, &bd3) );
+                  &bd3nelims, getWorkLimits_pc(g, rounds, pc_bd3), fixed, reductbound, verbose, &bd3) );
          }
 
          if( nvsl || extensive )
          {
-            SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, &fix, edgearrint, state, vbase,
+            SCIP_CALL( execPc_NVSL(scip, edgestate, g, vnoi, nodearrreal, fixed, edgearrint, state, vbase,
                   nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound, verbose, &nvsl) );
          }
 
          if( bred )
          {
-            SCIP_CALL( execPc_BND(scip, g, vnoi, nodearrreal, &fix, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
+            SCIP_CALL( execPc_BND(scip, g, vnoi, nodearrreal, fixed, heap, state, vbase, &brednelims, reductbound, verbose, &bred) );
          }
 
          if( SCIPgetTotalTime(scip) > timelimit )
@@ -1723,15 +1726,16 @@ SCIP_RETCODE redLoopPc(
             const RPDA paramsda = { .prevrounds = 0, .useRec = userec, .extredMode = extred_none, .nodereplacing = nodereplacing, .useSlackPrune = FALSE,
                 .pcmw_solbasedda = TRUE, .pcmw_useMultRoots = FALSE, .pcmw_markroots = FALSE, .pcmw_fastDa = (rounds == 0) };
 
-            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+            SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
 
             if( rpc )
             {
-               SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, &fix, &danelims, randnumgen) );
+               SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, fixed, &danelims, randnumgen) );
             }
             else
             {
-               SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, heap,
+               reduce_primalSetOffset(*fixed, redprimal);
+               SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, redprimal, vnoi,  nodearrreal, vbase, heap,
                   state, nodearrchar, &danelims, randnumgen, prizesum) );
             }
 
@@ -1741,7 +1745,7 @@ SCIP_RETCODE redLoopPc(
             if( verbose ) printf("daX: %d \n", danelims);
          }
 
-         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
 
          nelims = degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims + sdwnelims + sdstarnelims + dapathelims;
          ninnerelims += nelims;
@@ -1766,15 +1770,16 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
-            SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, &fix, &danelims, randnumgen) );
+            SCIP_CALL( reduce_da(scip, g, &paramsda, redprimal, fixed, &danelims, randnumgen) );
          }
          else
          {
-            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, vnoi, nodearrreal, vbase, heap,
+            reduce_primalSetOffset(*fixed, redprimal);
+            SCIP_CALL( reduce_daPcMw(scip, g, &paramsda, redprimal, vnoi, nodearrreal, vbase, heap,
                   state, nodearrchar, &danelims, randnumgen, prizesum) );
          }
 
-         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, &fix, &nelims, &degnelims, solnode) );
+         SCIP_CALL( reduce_simple_pc(scip, edgestate, g, fixed, &nelims, &degnelims, solnode) );
 
          ninnerelims += danelims + degnelims;
 
@@ -1800,7 +1805,7 @@ SCIP_RETCODE redLoopPc(
 
          if( rpc )
          {
-            SCIP_CALL(reduce_unconnectedRpcRmw(scip, g, &fix));
+            SCIP_CALL(reduce_unconnectedRpcRmw(scip, g, fixed));
             rerun = TRUE;
             advancedrun = dualascent;
             outterrounds = 0;
@@ -1823,8 +1828,6 @@ SCIP_RETCODE redLoopPc(
    SCIPfreeRandom(scip, &randnumgen);
 
    reduce_primalFree(scip, &redprimal);
-
-   *fixed += fix;
 
    SCIPdebugMessage("Reduction Level PC 1: Fixed Cost = %.12e\n", *fixed);
    return SCIP_OKAY;

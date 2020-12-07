@@ -42,6 +42,7 @@ struct reduction_primal_bound_storage
    SCIP_Real             offset;             /**< offset */
    SCIP_Real             primalbound;        /**< best primal bound */
    int                   decomplevel;        /**< decomposition level */
+   SCIP_Bool             isPcMw;
    // todo: also save level and bound per level
 };
 
@@ -67,6 +68,7 @@ SCIP_RETCODE reduce_primalInit(
    rp->offset = 0.0;
    rp->primalbound = FARAWAY;
    rp->decomplevel = 0;
+   rp->isPcMw = graph_pc_isPcMw(g);
 
    return SCIP_OKAY;
 }
@@ -93,6 +95,11 @@ void reduce_primalSetOffset(
 {
    assert(primal);
    assert(GE(offsetnew, 0.0));
+
+   if( primal->isPcMw && !EQ(primal->offset, offsetnew) )
+   {
+      primal->primalbound = FARAWAY;
+   }
 
    primal->offset = offsetnew;
 }
@@ -128,6 +135,7 @@ void reduce_primalUpdateUpperBound(
 
    if( ubnew_scaled < primal->primalbound )
    {
+      SCIPdebugMessage("updating upper bound %f->%f \n", primal->primalbound, ubnew_scaled);
       primal->primalbound = ubnew_scaled;
    }
 }
@@ -145,8 +153,7 @@ SCIP_Real reduce_primalGetUpperBound(
 
    assert(GE(primal->primalbound - primal->offset, 0.0));
 
-   SCIPdebugMessage("returning best bound: %f \n", primal->primalbound - primal->offset);
-
+   SCIPdebugMessage("returning best bound: %f (%f-%f) \n", primal->primalbound - primal->offset, primal->primalbound, primal->offset);
    return (primal->primalbound - primal->offset);
 }
 
