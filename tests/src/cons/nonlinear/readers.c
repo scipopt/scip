@@ -26,7 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-Test(readers, pip, .disabled = 1)  //FIXME reenable when pip reader is back
+Test(readers, pip)
 {
    SCIP* scip;
    SCIP_VAR** vars;

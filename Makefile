@@ -681,6 +681,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/reader_mst.o \
 			scip/reader_opb.o \
 			scip/reader_osil.o \
+			scip/reader_pip.o \
 			scip/reader_pbm.o \
 			scip/reader_ppm.o \
 			scip/reader_rlp.o \
@@ -707,7 +708,6 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_zerohalf.o \
 			scip/table_default.o
 #			scip/prop_obbt.o \
-#			scip/reader_pip.o \
 #			scip/sepa_eccuts.o \
 #			scip/sepa_minor.o \
 #			scip/sepa_rlt.o \

@@ -69,7 +69,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
-//   SCIP_CALL( SCIPincludeReaderPip(scip) );
+   SCIP_CALL( SCIPincludeReaderPip(scip) );
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
