@@ -507,3 +507,14 @@ SCIP_RETCODE SCIPcreateExprLog(
 
    return SCIP_OKAY;
 }
+
+/** indicates whether expression is of log-type */
+SCIP_Bool SCIPisExprLog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
+}

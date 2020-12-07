@@ -47,6 +47,13 @@ SCIP_RETCODE SCIPincludeExprHdlrLog(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** indicates whether expression is of log-type */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprLog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
 #ifdef __cplusplus
 }
 #endif

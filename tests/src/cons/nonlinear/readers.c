@@ -14,29 +14,27 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   readers.c
- * @brief  tests readers
+ * @brief  tests readers that create nonlinear constraints
  * @author Benjamin Mueller
  * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scipdefplugins.h"
-#include "scip/cons_expr.c"
 #include <libgen.h>
+
+#include "scip/scipdefplugins.h"
 #include "include/scip_test.h"
 
-Test(readers, pip)
+Test(readers, pip, .disabled = 1)  //FIXME reenable when pip reader is back
 {
    SCIP* scip;
    SCIP_VAR** vars;
    SCIP_CONS** conss;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR** children;
-   SCIP_CONSEXPR_EXPR** grandchildren;
+   SCIP_EXPR* expr;
+   SCIP_EXPR** children;
+   SCIP_EXPR** grandchildren;
    char filename[SCIP_MAXSTRLEN];
-   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
 
    /* get file to read: test.mps that lives in the same directory as this file */
    (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
@@ -67,12 +65,6 @@ Test(readers, pip)
    cr_expect_str_eq(SCIPconsGetName(conss[1]), "e1");
    cr_expect_str_eq(SCIPconsGetName(conss[2]), "e2");
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert_not_null(conshdlr);
-   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
-   cr_assert_not_null(sumhdlr);
-
    /* check objective coefficients */
    cr_expect_eq(SCIPvarGetObj(vars[0]), 0.0);
    cr_expect_eq(SCIPvarGetObj(vars[1]), 0.0);
@@ -84,35 +76,36 @@ Test(readers, pip)
     * check whether the first constraint is nonlinear and of the form + x - y^3 z^2 - nonlinobj <= 0
     */
 
-   cr_expect_eq(SCIPconsGetHdlr(conss[0]), SCIPfindConshdlr(scip, "expr"));
-   expr = SCIPgetExprConsExpr(scip, conss[0]);
+   cr_expect_eq(SCIPconsGetHdlr(conss[0]), SCIPfindConshdlr(scip, "nonlinear"));
+   expr = SCIPgetExprConsNonlinear(conss[0]);
    cr_expect_not_null(expr);
-   children = SCIPgetConsExprExprChildren(expr);
+   children = SCIPexprGetChildren(expr);
    cr_expect_not_null(children);
-   cr_expect_eq(SCIPgetConsExprExprNChildren(expr), 3);
+   cr_expect_eq(SCIPexprGetNChildren(expr), 3);
 
    /* check sides */
-   cr_expect(SCIPisInfinity(scip, -SCIPgetLhsConsExpr(scip, conss[0])));
-   cr_expect_eq(SCIPgetRhsConsExpr(scip, conss[0]), 0.0);
+   cr_expect(SCIPisInfinity(scip, -SCIPgetLhsConsNonlinear(conss[0])));
+   cr_expect_eq(SCIPgetRhsConsNonlinear(conss[0]), 0.0);
 
    /* check constant and coefficients of the sum expression */
-   cr_expect_eq(SCIPgetConsExprExprSumConstant(expr), 0.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[0], 1.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[1], -1.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[2], -1.0);
+   cr_expect(SCIPisExprSum(scip, expr));
+   cr_expect_eq(SCIPgetConstantExprSum(expr), 0.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(expr)[0], 1.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(expr)[1], -1.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(expr)[2], -1.0);
 
    /* check whether first and third child is a variable */
-   cr_expect(SCIPisConsExprExprVar(children[0]));
-   cr_expect(SCIPisConsExprExprVar(children[2]));
+   cr_expect(SCIPisExprVar(scip, children[0]));
+   cr_expect(SCIPisExprVar(scip, children[2]));
 
    /* check whether second child is a product; both grandchildren need to be power expressions */
-   cr_expect(SCIPgetConsExprExprHdlr(children[1]) == SCIPfindConsExprExprHdlr(conshdlr, "prod"));
-   grandchildren = SCIPgetConsExprExprChildren(children[1]);
-   cr_expect_eq(SCIPgetConsExprExprNChildren(children[1]), 2);
-   cr_expect(SCIPgetConsExprExprHdlr(grandchildren[0]) == SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_expect(SCIPgetConsExprExprHdlr(grandchildren[1]) == SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[0]), 3.0);
-   cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[1]), 2.0);
+   cr_expect(SCIPisExprProduct(scip, children[1]));
+   grandchildren = SCIPexprGetChildren(children[1]);
+   cr_expect_eq(SCIPexprGetNChildren(children[1]), 2);
+   cr_expect(SCIPisExprPower(scip, grandchildren[0]));
+   cr_expect(SCIPisExprPower(scip, grandchildren[1]));
+   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[0]), 3.0);
+   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[1]), 2.0);
 
    /*
     * check whether the second constraint is linear and of the form x + 2y + 3z <= 1
@@ -130,33 +123,34 @@ Test(readers, pip)
     * check whether the third constraint is nonlinear and of the form x^2 y^3 z^4 + x + y + 2 = 10
     */
 
-   cr_expect_eq(SCIPconsGetHdlr(conss[2]), SCIPfindConshdlr(scip, "expr"));
-   expr = SCIPgetExprConsExpr(scip, conss[2]);
+   cr_expect_eq(SCIPconsGetHdlr(conss[2]), SCIPfindConshdlr(scip, "nonlinear"));
+   expr = SCIPgetExprConsNonlinear(conss[2]);
    cr_expect_not_null(expr);
-   children = SCIPgetConsExprExprChildren(expr);
+   children = SCIPexprGetChildren(expr);
    cr_expect_not_null(children);
-   cr_expect_eq(SCIPgetConsExprExprNChildren(expr), 3);
+   cr_expect_eq(SCIPexprGetNChildren(expr), 3);
 
    /* check sides */
-   cr_expect_eq(SCIPgetLhsConsExpr(scip, conss[2]), 10.0);
-   cr_expect_eq(SCIPgetRhsConsExpr(scip, conss[2]), 10.0);
+   cr_expect_eq(SCIPgetLhsConsNonlinear(conss[2]), 10.0);
+   cr_expect_eq(SCIPgetRhsConsNonlinear(conss[2]), 10.0);
 
    /* check constant and coefficients of the sum expression */
-   cr_expect_eq(SCIPgetConsExprExprSumConstant(expr), 7.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[0], 4.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[1], 5.0);
-   cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[2], 6.0);
+   cr_expect(SCIPisExprSum(scip, expr));
+   cr_expect_eq(SCIPgetConstantExprSum(expr), 7.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(expr)[0], 4.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(expr)[1], 5.0);
+   cr_expect_eq(SCIPgetCoefsExprSum(expr)[2], 6.0);
 
    /* check whether first child is a product; all three grandchildren need to be power expressions */
-   cr_expect(SCIPgetConsExprExprHdlr(children[0]) == SCIPfindConsExprExprHdlr(conshdlr, "prod"));
-   grandchildren = SCIPgetConsExprExprChildren(children[0]);
-   cr_expect_eq(SCIPgetConsExprExprNChildren(children[0]), 3);
-   cr_expect(SCIPgetConsExprExprHdlr(grandchildren[0]) == SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_expect(SCIPgetConsExprExprHdlr(grandchildren[1]) == SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_expect(SCIPgetConsExprExprHdlr(grandchildren[2]) == SCIPfindConsExprExprHdlr(conshdlr, "pow"));
-   cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[0]), 2.0);
-   cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[1]), 3.0);
-   cr_expect_eq(SCIPgetConsExprExprPowExponent(grandchildren[2]), 4.0);
+   cr_expect(SCIPisExprProduct(scip, children[0]));
+   grandchildren = SCIPexprGetChildren(children[0]);
+   cr_expect_eq(SCIPexprGetNChildren(children[0]), 3);
+   cr_expect(SCIPisExprPower(scip, grandchildren[0]));
+   cr_expect(SCIPisExprPower(scip, grandchildren[1]));
+   cr_expect(SCIPisExprPower(scip, grandchildren[2]));
+   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[0]), 2.0);
+   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[1]), 3.0);
+   cr_expect_eq(SCIPgetExponentExprPow(grandchildren[2]), 4.0);
 }
 
 Test(readers, mps1)
@@ -164,10 +158,8 @@ Test(readers, mps1)
    SCIP* scip;
    SCIP_VAR** vars;
    SCIP_CONS** conss;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    char filename[SCIP_MAXSTRLEN];
-   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
 
    /* get file to read: test.mps that lives in the same directory as this file */
    (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
@@ -198,12 +190,6 @@ Test(readers, mps1)
    cr_expect_str_eq(SCIPconsGetName(conss[2]), "c2");
    cr_expect_str_eq(SCIPconsGetName(conss[3]), "qmatrix");
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert_not_null(conshdlr);
-   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
-   cr_assert_not_null(sumhdlr);
-
    /* check some things from the constraints which should be
     * c0: x1 + 9 x1^2 + 0.5 x1 * x2 + 0.5 x2 * x1 = 0.1
     * c1: x2 + 2 x3^2 <= 0.2
@@ -220,29 +206,28 @@ Test(readers, mps1)
 
    for( int i = 0; i < 4; ++i )
    {
-      cr_assert_eq(conshdlr, SCIPconsGetHdlr(conss[i]));
-      cr_expect_eq(SCIPgetLhsConsExpr(scip, conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsConsExpr(scip, conss[i]));
-      cr_expect_eq(SCIPgetRhsConsExpr(scip, conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsConsExpr(scip, conss[i]));
+      cr_expect_eq(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
+      cr_expect_eq(SCIPgetLhsConsNonlinear(conss[i]), lhs[i], "lhs cons %d: expected %g, got %g\n", i, lhs[i], SCIPgetLhsConsNonlinear(conss[i]));
+      cr_expect_eq(SCIPgetRhsConsNonlinear(conss[i]), rhs[i], "rhs cons %d: expected %g, got %g\n", i, rhs[i], SCIPgetRhsConsNonlinear(conss[i]));
 
-      expr = SCIPgetExprConsExpr(scip, conss[i]);
-
+      expr = SCIPgetExprConsNonlinear(conss[i]);
       cr_assert_not_null(expr);
-      cr_assert_eq(expr->exprhdlr, sumhdlr);
-      cr_expect_eq(SCIPgetConsExprExprNChildren(expr), expectednnonz[i]);
-      cr_expect_eq(SCIPgetConsExprExprSumConstant(expr), 0.0);
+      cr_expect(SCIPisExprSum(scip, expr));
+      cr_expect_eq(SCIPexprGetNChildren(expr), expectednnonz[i]);
+      cr_expect_eq(SCIPgetConstantExprSum(expr), 0.0);
       for( int j = 0; j < expectednnonz[i]; ++j )
-         cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
-               i, j, expectedcoeffs[i][j], SCIPgetConsExprExprSumCoefs(expr)[j]);
+         cr_expect_eq(SCIPgetCoefsExprSum(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
+               i, j, expectedcoeffs[i][j], SCIPgetCoefsExprSum(expr)[j]);
    }
 
    /* check constraint c1 */
-   expr = SCIPgetExprConsExpr(scip, conss[1]);
-   cr_expect_eq(expr->children[0]->exprhdlr, SCIPgetConsExprExprHdlrPower(conshdlr));
-   cr_expect_eq(expr->children[0]->children[0]->exprhdlr, SCIPgetConsExprExprHdlrVar(conshdlr));
-   cr_expect_eq(SCIPgetConsExprExprVarVar(expr->children[0]->children[0]), vars[2]);
+   expr = SCIPgetExprConsNonlinear(conss[1]);
+   cr_expect(SCIPisExprPower(scip, SCIPexprGetChildren(expr)[0]));;
+   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]));
+   cr_expect_eq(SCIPgetVarExprVar(SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]), vars[2]);
 
-   cr_expect_eq(expr->children[1]->exprhdlr, SCIPgetConsExprExprHdlrVar(conshdlr));
-   cr_expect_eq(SCIPgetConsExprExprVarVar(expr->children[1]), vars[1]);
+   cr_expect(SCIPisExprVar(scip, SCIPexprGetChildren(expr)[1]));
+   cr_expect_eq(SCIPgetVarExprVar(SCIPexprGetChildren(expr)[1]), vars[1]);
 }
 
 Test(readers, zimpl)
@@ -250,10 +235,8 @@ Test(readers, zimpl)
    SCIP* scip;
    SCIP_VAR** vars;
    SCIP_CONS** conss;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_EXPR* expr;
    char filename[SCIP_MAXSTRLEN];
-   SCIP_CONSEXPR_EXPRHDLR* sumhdlr;
 
    /* get file to read: test.zpl that lives in the same directory as this file */
    (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s", __FILE__);
@@ -289,12 +272,6 @@ Test(readers, zimpl)
    cr_expect_str_eq(SCIPconsGetName(conss[3]), "polyfun_1_b_1");
    cr_expect_str_eq(SCIPconsGetName(conss[4]), "polyfun_1");
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   cr_assert_not_null(conshdlr);
-   sumhdlr = SCIPgetConsExprExprHdlrSum(conshdlr);
-   cr_assert_not_null(sumhdlr);
-
    /* check the constraints which should be
     * quad: X2^2 + 4*X1^2 == 0;
     * poly: X2^2 + 2 * X1 * X2^3 - X1^2 >= -0.2;
@@ -318,63 +295,65 @@ Test(readers, zimpl)
 
    for( int i = 0; i < 5; ++i )
    {
-      cr_assert_eq(conshdlr, SCIPconsGetHdlr(conss[i]));
-      cr_assert(SCIPisEQ(scip, SCIPgetLhsConsExpr(scip, conss[i]), lhs[i]));
-      cr_assert(SCIPisEQ(scip, SCIPgetRhsConsExpr(scip, conss[i]), rhs[i]));
+      cr_assert_eq(SCIPfindConshdlr(scip, "nonlinear"), SCIPconsGetHdlr(conss[i]));
+      cr_assert(SCIPisEQ(scip, SCIPgetLhsConsNonlinear(conss[i]), lhs[i]));
+      cr_assert(SCIPisEQ(scip, SCIPgetRhsConsNonlinear(conss[i]), rhs[i]));
 
-      expr = SCIPgetExprConsExpr(scip, conss[i]);
-
+      expr = SCIPgetExprConsNonlinear(conss[i]);
       cr_assert_not_null(expr);
-      cr_assert_eq(expr->exprhdlr, sumhdlr);
-      cr_expect_eq(SCIPgetConsExprExprNChildren(expr), expectednnonz[i]);
-      cr_expect_eq(SCIPgetConsExprExprSumConstant(expr), 0.0);
+
+      cr_expect(SCIPisExprSum(scip, expr));
+      cr_expect_eq(SCIPexprGetNChildren(expr), expectednnonz[i]);
+      cr_expect_eq(SCIPgetConstantExprSum(expr), 0.0);
       for( int j = 0; j < expectednnonz[i]; ++j )
       {
-         SCIP_CONSEXPR_EXPR* childexpr = NULL;
+         SCIP_EXPR* childj;
+         SCIP_EXPR* childexpr = NULL;
          SCIP_VAR* childvar;
 
-         cr_expect_eq(SCIPgetConsExprExprSumCoefs(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
-                      i, j, expectedcoeffs[i][j], SCIPgetConsExprExprSumCoefs(expr)[j]);
+         cr_expect_eq(SCIPgetCoefsExprSum(expr)[j], expectedcoeffs[i][j], "i,j = %d,%d: expected %g, got %g\n",
+                      i, j, expectedcoeffs[i][j], SCIPgetCoefsExprSum(expr)[j]);
+         childj = SCIPexprGetChildren(expr)[j];
          switch( exprhdlrtypes[i][j] )
          {
-         case POW:
-            cr_expect_eq(expr->children[j]->exprhdlr, SCIPgetConsExprExprHdlrPower(conshdlr));
-            cr_expect_eq(SCIPgetConsExprExprPowExponent(expr->children[j]), expectedexps[i][j]);
-            childexpr = expr->children[j]->children[0];
-            break;
-         case PRODUCT:
-            cr_expect_eq(expr->children[j]->exprhdlr, SCIPgetConsExprExprHdlrProduct(conshdlr));
-            cr_expect_eq(SCIPgetConsExprExprNChildren(expr->children[j]), 2);
-
-            /* there is only one product expression, check the power child here */
-            /* for some reason the order of product children is non-deterministic, so check which child is power */
-            childexpr = expr->children[j]->children[0]->exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) ?
-                        expr->children[j]->children[0] : expr->children[j]->children[1];
-
-            cr_expect_eq(childexpr->exprhdlr, SCIPgetConsExprExprHdlrPower(conshdlr));
-            cr_expect_eq(SCIPgetConsExprExprPowExponent(childexpr), 3);
-            childvar = SCIPgetConsExprExprVarVar(childexpr->children[0]);
-            cr_expect_eq(childvar, vars[1]);
-
-            /* save the other expr to childexpr */
-            childexpr = expr->children[j]->children[0]->exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) ?
-                        expr->children[j]->children[1] : expr->children[j]->children[0];
+            case POW:
+               cr_expect(SCIPisExprPower(scip, childj));
+               cr_expect_eq(SCIPgetExponentExprPow(childj), expectedexps[i][j]);
+               childexpr = SCIPexprGetChildren(childj)[0];
                break;
-         case VAR:
-            cr_expect_eq(expr->children[j]->exprhdlr, SCIPgetConsExprExprHdlrVar(conshdlr));
-            childexpr = expr->children[j];
+            case PRODUCT:
+               cr_expect(SCIPisExprProduct(scip, childj));
+               cr_expect_eq(SCIPexprGetNChildren(childj), 2);
+
+               /* there is only one product expression, check the power child here */
+               /* for some reason the order of product children is non-deterministic, so check which child is power */
+               childexpr = SCIPisExprPower(scip, SCIPexprGetChildren(childj)[0]) ?
+                  SCIPexprGetChildren(childj)[0] : SCIPexprGetChildren(childj)[1];
+
+               cr_expect(SCIPisExprPower(scip, childexpr));
+               cr_expect_eq(SCIPgetExponentExprPow(childexpr), 3);
+               childvar = SCIPgetVarExprVar(SCIPexprGetChildren(childexpr)[0]);
+               cr_expect_eq(childvar, vars[1]);
+
+               /* save the other expr to childexpr */
+               childexpr = SCIPisExprPower(scip, SCIPexprGetChildren(childj)[0]) ?
+                  SCIPexprGetChildren(childj)[1] : SCIPexprGetChildren(childj)[0];
                break;
-         case LOG:
-            cr_expect_eq(expr->children[j]->exprhdlr, SCIPgetConsExprExprHdlrLog(conshdlr));
-            childexpr = expr->children[j]->children[0];
+            case VAR:
+               cr_expect(SCIPisExprVar(scip, childj));
+               childexpr = childj;
                break;
-         default:
-            cr_assert_fail("\nshouldn't have reached this, i, j = %d, %d", i, j);
+            case LOG:
+               cr_expect(SCIPisExprLog(scip, childj));
+               childexpr = SCIPexprGetChildren(childj)[0];
+               break;
+            default:
+               cr_assert_fail("\nshouldn't have reached this, i, j = %d, %d", i, j);
          }
 
          cr_assert(childexpr != NULL);
-         cr_expect_eq(childexpr->exprhdlr, SCIPgetConsExprExprHdlrVar(conshdlr));
-         cr_expect_eq(SCIPgetConsExprExprVarVar(childexpr), expectedvars[i][j]);
+         cr_expect(SCIPisExprVar(scip, childexpr));
+         cr_expect_eq(SCIPgetVarExprVar(childexpr), expectedvars[i][j]);
       }
    }
 }
