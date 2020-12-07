@@ -632,6 +632,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
 			scip/message_default.o \
+			scip/nlhdlr_bilinear.o \
 			scip/nlhdlr_convex.o \
 			scip/nlhdlr_default.o \
 			scip/nodesel_bfs.o \

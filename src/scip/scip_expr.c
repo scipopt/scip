@@ -1621,7 +1621,7 @@ SCIP_RETCODE SCIPevalExprHessianDir(
 
 /** evaluates activity of expression w.r.t. current local variable bounds
  *
- * Value van be received via SCIPexprGetActivity().
+ * Value can be received via SCIPexprGetActivity().
  *
  * Reevaluate activity if any variable has changed bounds since last eval call.
  */

@@ -236,6 +236,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
    SCIP_CALL( SCIPincludeNlhdlrConvex(scip) );
    SCIP_CALL( SCIPincludeNlhdlrConcave(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrBilinear(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
