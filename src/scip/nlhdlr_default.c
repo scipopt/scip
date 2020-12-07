@@ -471,19 +471,11 @@ SCIP_RETCODE SCIPincludeNlhdlrDefault(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_NLHDLR* nlhdlr;
 
    assert(scip != NULL);
 
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   if( conshdlr == NULL )
-   {
-      SCIPerrorMessage("nonlinear constraint handler not found");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, conshdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectDefault, nlhdlrEvalAuxDefault, NULL) );
    assert(nlhdlr != NULL);
 
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrDefault);

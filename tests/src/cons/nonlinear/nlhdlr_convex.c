@@ -15,17 +15,18 @@
 
 /**@file   nlhdlr_convex.c
  * @brief  tests convex nonlinear handler
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
 
-#include "scip/cons_expr.c"
+#include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.c"
+#include "nlpi/nlpi_ipopt.h" /* to check whether LAPACK is around */
 
 #define NLHDLR_CONVEX_UNITTEST
-#include "scip/cons_expr_nlhdlr_convex.c"
+#include "scip/nlhdlr_convex.c"
 
 
 /*
@@ -40,39 +41,27 @@ static SCIP_VAR* x_2;
 static SCIP_VAR* x_3;
 
 static SCIP_CONSHDLR* conshdlr;
-static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
+static SCIP_NLHDLR* nlhdlr = NULL;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
 void setup(void)
 {
-   int h;
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include cons_expr: this adds the operator handlers and nonlinear handlers; get perspective handler and conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   cr_assert_not_null(conshdlrdata);
 
    /* get nlhdlr */
-   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
-   {
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), CONVEX_NLHDLR_NAME) == 0 )
-      {
-         nlhdlr = conshdlrdata->nlhdlrs[h];
-         break;
-      }
-   }
-
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, CONVEX_NLHDLR_NAME);
    cr_assert_not_null(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE);
+   SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE);
 
    /* go to SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
@@ -110,56 +99,54 @@ SCIP_RETCODE detect(
    SCIP_Bool             simplify
 )
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* oexpr;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_INTERVAL activity;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* oexpr;
+   SCIP_EXPR* expr;
    SCIP_Bool changed;
    SCIP_Bool infeas;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
    SCIP_CONS* cons;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &oexpr) );
+   SCIP_CALL( SCIPparseExpr(scip, &oexpr, (char*)exprstr, NULL, NULL, NULL) );
    if( simplify )
    {
-      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+      SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
       cr_expect(!infeas);
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    }
    else
       expr = oexpr;
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " and %s\n", SCIPexprcurvGetName(exprrootcurv));
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
-
    /* detect */
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
-   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
+   enforcing = SCIP_NLHDLR_METHOD_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
+   SCIP_CALL( nlhdlrDetectConvex(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
    cr_expect_eq(enforcing, participating);
    if( (exprrootcurv & SCIP_EXPRCURV_CONVEX) != 0 )
    {
-      cr_expect(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+      cr_expect(enforcing & SCIP_NLHDLR_METHOD_SEPABELOW);
    }
 
    if( (exprrootcurv & SCIP_EXPRCURV_CONCAVE) != 0 )
    {
-      cr_expect(enforcing & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE);
+      cr_expect(enforcing & SCIP_NLHDLR_METHOD_SEPAABOVE);
    }
 
-   if( participating != SCIP_CONSEXPR_EXPRENFO_NONE )
+   if( participating != SCIP_NLHDLR_METHOD_NONE )
    {
       cr_assert_not_null(nlhdlrexprdata);
       SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
    }
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;
@@ -191,63 +178,68 @@ Test(nlhdlrconvex, detect, .init = setup, .fini = teardown)
 
    /* quadratic */
    detect("exp(<x1>^2+<x2>^2)", SCIP_EXPRCURV_CONVEX, FALSE);
-   detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
+   if( SCIPisIpoptAvailableIpopt() )
+      detect("<x1>^2+2*<x1>*<x2>+<x2>^2", SCIP_EXPRCURV_CONVEX, TRUE);
 }
 
 /** test detection for block-decomposable quadratic */
 Test(nlhdlrconvex, detectquad, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* oexpr;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* oexpr;
+   SCIP_EXPR* expr;
    SCIP_Bool changed;
    SCIP_Bool infeas;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_QUADEXPR* quaddata;
+   SCIP_Bool isquadratic;
    int nquadexprs;
    int i;
 
+   /* need Lapack for convexity check to succeed at the moment */
+   if( !SCIPisIpoptAvailableIpopt() )
+      return;
+
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x1>^2+2*<x1>*<x2>+<x2>^2+5*<x3>^2", NULL, &oexpr) );
-   SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+   SCIP_CALL( SCIPparseExpr(scip, &oexpr, "<x1>^2+2*<x1>*<x2>+<x2>^2+5*<x3>^2", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
    cr_expect(!infeas);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = SCIPgetExprConsExpr(scip, cons);
+   SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, "\n");
 
    /* detect */
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
-   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
+   enforcing = SCIP_NLHDLR_METHOD_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
+   SCIP_CALL( nlhdlrDetectConvex(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
 
    cr_expect_eq(enforcing, participating);
-   cr_expect(enforcing == SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   cr_expect(enforcing == SCIP_NLHDLR_METHOD_SEPABELOW);
    cr_assert_not_null(nlhdlrexprdata);
 
-   SCIP_CALL( SCIPgetConsExprQuadratic(scip, conshdlr, expr, &quaddata) );
-   cr_assert_not_null(quaddata);
-   SCIPgetConsExprQuadraticData(quaddata, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+   SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
+   cr_expect(isquadratic);
+   SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
    cr_expect(nquadexprs == 3);
 
    for( i = 0; i < nquadexprs; ++i )
    {
-      SCIP_CONSEXPR_EXPR* varexpr;
-      SCIP_CONSEXPR_EXPR* sqrexpr;
+      SCIP_EXPR* varexpr;
+      SCIP_EXPR* sqrexpr;
       SCIP_VAR* var;
 
-      SCIPgetConsExprQuadraticQuadTermData(quaddata, i, &varexpr, NULL, NULL, NULL, NULL, &sqrexpr);
-      cr_assert(SCIPisConsExprExprVar(varexpr));
+      SCIPexprGetQuadraticQuadTerm(expr, i, &varexpr, NULL, NULL, NULL, NULL, &sqrexpr);
+      cr_assert(SCIPisExprVar(scip, varexpr));
       cr_assert_not_null(sqrexpr);
 
-      var = SCIPgetConsExprExprVarVar(varexpr);
-      cr_expect(var != x_3 || sqrexpr->nauxvaruses == 1);
-      cr_expect(var == x_3 || sqrexpr->nauxvaruses == 0);
+      var = SCIPgetVarExprVar(varexpr);
+      cr_expect(var != x_3 || SCIPgetExprNAuxvarUsesNonlinear(sqrexpr) == 1);
+      cr_expect(var == x_3 || SCIPgetExprNAuxvarUsesNonlinear(sqrexpr) == 0);
    }
 
    SCIP_CALL( nlhdlrfreeExprDataConvexConcave(scip, nlhdlr, expr, &nlhdlrexprdata) );
@@ -267,17 +259,16 @@ SCIP_RETCODE estimate(
    SCIP_Real             constant_expected
 )
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* oexpr;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_INTERVAL activity;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* oexpr;
+   SCIP_EXPR* expr;
    SCIP_Real auxvalue;
    SCIP_Real targetvalue;
    SCIP_ROWPREP* rowprep;
    SCIP_Bool changed;
    SCIP_Bool infeas;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
    SCIP_Bool enforceabove;
    SCIP_Bool success;
    SCIP_Bool addedbranchscores;
@@ -290,61 +281,59 @@ SCIP_RETCODE estimate(
    SCIP_PTRARRAY* rowpreps;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)exprstr, NULL, &oexpr) );
+   SCIP_CALL( SCIPparseExpr(scip, &oexpr, (char*)exprstr, NULL, NULL, NULL) );
    if( simplify )
    {
-      SCIP_CALL( SCIPsimplifyConsExprExpr(scip, conshdlr, oexpr, &expr, &changed, &infeas) );
+      SCIP_CALL( SCIPsimplifyExpr(scip, oexpr, &expr, &changed, &infeas, NULL, NULL) );
       cr_expect(!infeas);
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &oexpr) );
+      SCIP_CALL( SCIPreleaseExpr(scip, &oexpr) );
    }
    else
       expr = oexpr;
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = SCIPgetExprConsExpr(scip, cons);
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, 0.0, 0.0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
 
    SCIPprintCons(scip, cons, NULL);
    SCIPinfoMessage(scip, NULL, " at x1=%g x2=%g x3=%g\n",
       SCIPgetSolVal(scip, sol, x_1), SCIPgetSolVal(scip, sol, x_2), SCIPgetSolVal(scip, sol, x_3));
 
-   SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &activity, FALSE) );
-
    /* detect */
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
-   SCIP_CALL( SCIPdetectConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
+   enforcing = SCIP_NLHDLR_METHOD_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
+   SCIP_CALL( nlhdlrDetectConvex(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
    cr_expect_eq(enforcing, participating);
-   cr_expect((participating & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) != 0);
-   enforceabove = (participating & SCIP_CONSEXPR_EXPRENFO_SEPAABOVE) != 0;
+   cr_expect((participating & SCIP_NLHDLR_METHOD_SEPABOTH) != 0);
+   enforceabove = (participating & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0;
 
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeas) );
-   SCIP_CALL( SCIPinitsepaConsExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
+   SCIP_CALL( nlhdlrInitSepaConvex(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, TRUE, TRUE, &infeas) );
 
    /* estimate on enforced side */
    targetvalue = enforceabove ? SCIPinfinity(scip) : -SCIPinfinity(scip);
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
-   SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &auxvalue, sol) );
-   SCIP_CALL( SCIPestimateConsExprNlhdlr(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove,
+   SCIP_CALL( nlhdlrEvalAuxConvexConcave(scip, nlhdlr, expr, nlhdlrexprdata, &auxvalue, sol) );
+   SCIP_CALL( nlhdlrEstimateConvex(scip, conshdlr, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, enforceabove,
          targetvalue, rowpreps, &success, FALSE, &addedbranchscores) );
 
    cr_assert(success);
    cr_expect(SCIPgetPtrarrayMinIdx(scip, rowpreps) == 0);
    cr_expect(SCIPgetPtrarrayMaxIdx(scip, rowpreps) == 0);
    rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
-   cr_assert(!rowprep->local);  /* nlhdlr should have set rowprep->local to FALSE */
+   cr_assert(!SCIProwprepIsLocal(rowprep));  /* nlhdlr should have set rowprep->local to FALSE */
 
    SCIPmergeRowprepTerms(scip, rowprep);
-   constant = -rowprep->side;
-   for( i = 0; i < rowprep->nvars; ++i )
+   constant = -SCIProwprepGetSide(rowprep);
+   for( i = 0; i < SCIProwprepGetNVars(rowprep); ++i )
    {
-      if( rowprep->vars[i] == x_1 )
-         x1coef = rowprep->coefs[i];
-      else if( rowprep->vars[i] == x_2 )
-         x2coef = rowprep->coefs[i];
-      else if( rowprep->vars[i] == x_3 )
-         x3coef = rowprep->coefs[i];
+      if( SCIProwprepGetVars(rowprep)[i] == x_1 )
+         x1coef = SCIProwprepGetCoefs(rowprep)[i];
+      else if( SCIProwprepGetVars(rowprep)[i] == x_2 )
+         x2coef = SCIProwprepGetCoefs(rowprep)[i];
+      else if( SCIProwprepGetVars(rowprep)[i] == x_3 )
+         x3coef = SCIProwprepGetCoefs(rowprep)[i];
       else
       {
          SCIPerrorMessage("unexpected variable in rowprep");

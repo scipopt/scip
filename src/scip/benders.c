@@ -1690,10 +1690,10 @@ SCIP_RETCODE checkSubproblemConvexity(
             {
                /* if not found convex, compute curvature via nlhdlr_convex and decide again */
 
-               /* make sure activities are uptodate, SCIPhasConsExprExprCurvature currently assumes that this is already the case */
+               /* make sure activities are uptodate, SCIPhasExprCurvature currently assumes that this is already the case */
                SCIP_CALL( SCIPevalExprActivity(subproblem, SCIPgetExprConsNonlinear(cons)) );  // FIXME use cons_nonlinear specific activity-eval function
 
-               SCIP_CALL( SCIPhasConsExprExprCurvature(subproblem, SCIPgetExprConsNonlinear(cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
+               SCIP_CALL( SCIPhasExprCurvature(subproblem, SCIPgetExprConsNonlinear(cons), havelhs ? SCIP_EXPRCURV_CONCAVE : SCIP_EXPRCURV_CONVEX, &isconvex, assumevarfixed) );
             }
          }
 

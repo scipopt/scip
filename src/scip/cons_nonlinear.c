@@ -3354,13 +3354,13 @@ SCIP_RETCODE initSolve(
          SCIP_Bool success = FALSE;
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+            SCIP_CALL( SCIPhasExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
             if( success )
                consdata->curv = SCIP_EXPRCURV_CONCAVE;
          }
          if( !success && !SCIPisInfinity(scip, consdata->rhs) )
          {
-            SCIP_CALL( SCIPhasConsExprExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+            SCIP_CALL( SCIPhasExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
             if( success )
                consdata->curv = SCIP_EXPRCURV_CONVEX;
          }
@@ -12761,7 +12761,6 @@ SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
 /** creates the nonlinearity handler and includes it into the nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_NLHDLR**         nlhdlr,             /**< buffer where to store nonlinear handler */
    const char*           name,               /**< name of nonlinear handler (must not be NULL) */
    const char*           desc,               /**< description of nonlinear handler (can be NULL) */
@@ -12772,12 +12771,20 @@ SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP_NLHDLRDATA*      nlhdlrdata                /**< data of nonlinear handler (can be NULL) */
    )
 {
+   SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(nlhdlr != NULL);
+   assert(detect != NULL);
+
+   /* find myself */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("nonlinear constraint handler not found");
+      return SCIP_PLUGINNOTFOUND;
+   }
 
    /* create nlhdlr */
    SCIP_CALL( SCIPnlhdlrCreate(scip, nlhdlr, name, desc, detectpriority, enfopriority, detect, evalaux, nlhdlrdata) );

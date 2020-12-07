@@ -867,7 +867,6 @@ SCIP_Real SCIPevalExprQuadraticAuxNonlinear(
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrNonlinear(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
    SCIP_NLHDLR**         nlhdlr,             /**< buffer where to store nonlinear handler */
    const char*           name,               /**< name of nonlinear handler (must not be NULL) */
    const char*           desc,               /**< description of nonlinear handler (can be NULL) */

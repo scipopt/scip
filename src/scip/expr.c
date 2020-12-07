@@ -3738,8 +3738,6 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 
 // some dummy function implementations to resolve symbols
 #define DUMMYIMPL(x)  int x(void); int x(void) { return 0; }
-DUMMYIMPL(SCIPhasConsExprExprCurvature)
-DUMMYIMPL(SCIPexitsepaConsExprExprHdlr)
 DUMMYIMPL(SCIPexprtreeGetRoot)
 DUMMYIMPL(SCIPexprtreeGetVars)
 DUMMYIMPL(SCIPexprtreeGetNVars)

@@ -478,13 +478,12 @@ SCIP_DECL_NLHDLRCOPYHDLR(copyHdlr)
    SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(targetscip != NULL);
-   assert(targetconshdlr != NULL);
    assert(sourcenlhdlr != NULL);
    assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), "testhdlr") == 0);
 
    SCIP_CALL( SCIPallocClearMemory(targetscip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeNlhdlrNonlinear(targetscip, targetconshdlr, &targetnlhdlr,
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(targetscip, &targetnlhdlr,
       SCIPnlhdlrGetName(sourcenlhdlr), SCIPnlhdlrGetDesc(sourcenlhdlr),
       SCIPnlhdlrGetDetectPriority(sourcenlhdlr), SCIPnlhdlrGetEnfoPriority(sourcenlhdlr),
       detectHdlr, evalauxHdlr, nlhdlrdata) );
@@ -558,17 +557,12 @@ Test(conshdlr, nlhdlr, .init = setup, .fini = teardown,
    .description = "test basic functionality of nonlinear handler of the cons_expr constraint handler."
    )
 {
-   SCIP_CONSHDLR* conshdlr;
    SCIP_NLHDLR* nlhdlr;
    SCIP_NLHDLRDATA* nlhdlrdata;
 
-   /* get expr conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   assert(conshdlr != NULL);
-
    SCIP_CALL( SCIPallocClearMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, conshdlr, &nlhdlr, "testhdlr",
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, "testhdlr",
          "tests nonlinear handler functionality", 10000, 10000, detectHdlr, evalauxHdlr, nlhdlrdata) );
 
    SCIPnlhdlrSetFreeHdlrData(nlhdlr, freeHdlrData);

@@ -13,35 +13,33 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_convex.h
+/**@file   nlhdlr_convex.h
  * @brief  nonlinear handlers for convex and concave expressions, respectively
  * @author Benjamin Mueller
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_NLHDLR_CONVEX_H__
-#define __SCIP_CONS_EXPR_NLHDLR_CONVEX_H__
+#ifndef __SCIP_NLHDLR_CONVEX_H__
+#define __SCIP_NLHDLR_CONVEX_H__
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** includes convex nonlinear handler to consexpr */
+/** includes convex nonlinear handler in nonlinear constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprNlhdlrConvex(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrConvex(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** includes concave nonlinear handler to consexpr */
+/** includes concave nonlinear handler in nonlinear constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrConcave(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** checks whether a given expression is convex or concave w.r.t. the original variables
@@ -49,10 +47,9 @@ SCIP_RETCODE SCIPincludeConsExprNlhdlrConcave(
  * This function uses the methods that are used in the detection algorithm of the convex nonlinear handler.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPhasConsExprExprCurvature(
+SCIP_RETCODE SCIPhasExprCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_EXPRCURV         curv,               /**< curvature to check for */
    SCIP_Bool*            success,            /**< buffer to store whether expression has curvature curv (w.r.t. original variables) */
    SCIP_HASHMAP*         assumevarfixed      /**< hashmap containing variables that should be assumed to be fixed, or NULL */
@@ -62,4 +59,4 @@ SCIP_RETCODE SCIPhasConsExprExprCurvature(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_CONVEX_H__ */
+#endif /* __SCIP_NLHDLR_CONVEX_H__ */

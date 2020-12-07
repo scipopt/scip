@@ -145,6 +145,7 @@
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zeroobj.h"
 #include "scip/heur_zirounding.h"
+#include "scip/nlhdlr_convex.h"
 #include "scip/nlhdlr_default.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_breadthfirst.h"
