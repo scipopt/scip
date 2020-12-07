@@ -46,6 +46,7 @@
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
+#include "scip/nlhdlr_convex.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_and.h"
@@ -3337,10 +3338,10 @@ SCIP_RETCODE initSolve(
       /* check for a linear variable that can be increase or decreased without harming feasibility */
       findUnlockedLinearVar(scip, conss[c]);
 
-#if !1
       if( SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
       {
          SCIP_CONSDATA* consdata;
+         SCIP_Bool success = FALSE;
 
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
@@ -3351,16 +3352,15 @@ SCIP_RETCODE initSolve(
           * whether f(x) is concave when f(x) >= lhs and/or f(x) is convex when f(x) <= rhs.
           * Also we can assume that we are nonlinear, so do not check for convex if already concave.
           */
-         SCIP_Bool success = FALSE;
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
+            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONCAVE, &success, NULL) );
             if( success )
                consdata->curv = SCIP_EXPRCURV_CONCAVE;
          }
          if( !success && !SCIPisInfinity(scip, consdata->rhs) )
          {
-            SCIP_CALL( SCIPhasExprCurvature(scip, conshdlr, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
+            SCIP_CALL( SCIPhasExprCurvature(scip, consdata->expr, SCIP_EXPRCURV_CONVEX, &success, NULL) );
             if( success )
                consdata->curv = SCIP_EXPRCURV_CONVEX;
          }
@@ -3369,6 +3369,7 @@ SCIP_RETCODE initSolve(
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
          {
+#if !1 //FIXME
             if( consdata->nlrow == NULL )
             {
                SCIP_CALL( createNlRow(scip, conss[c]) );
@@ -3376,9 +3377,9 @@ SCIP_RETCODE initSolve(
             }
             SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
+#endif
          }
       }
-#endif
    }
 
    /* register non linear handlers */
