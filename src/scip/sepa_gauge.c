@@ -154,7 +154,7 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
       assert(nlrow != NULL);
 
       /* linear case */
-      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR || SCIPnlrowGetExprtree(nlrow) == NULL )
+      if( SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_LINEAR || SCIPnlrowGetExpr(nlrow) == NULL )
          continue;
 
       /* nonlinear case */
@@ -225,7 +225,7 @@ SCIP_RETCODE computeInteriorPoint(
    objvarlb = INTERIOROBJVARLB;
    one = 1.0;
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, 1, &objvarlb, NULL, NULL) );
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, NULL, 0.0) );
 
    /* add objective variables to constraints; for this we need to get nlpi oracle to have access to number of
     * constraints and which constraints are nonlinear
@@ -542,13 +542,13 @@ SCIP_RETCODE findBoundaryPoint(
 }
 
 
-/** computes gradient of exprtree at sol */
+/** computes gradient of expr at sol */
 static
 SCIP_RETCODE computeGradient(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< expressions interpreter */
    SCIP_SOL*             sol,                /**< point where we compute gradient */
-   SCIP_EXPRTREE*        exprtree,           /**< exprtree for which we compute the gradient */
+   SCIP_EXPR*            expr,               /**< expression for which we compute the gradient */
    SCIP_Real*            grad                /**< buffer to store the gradient */
    )
 {
@@ -560,28 +560,28 @@ SCIP_RETCODE computeGradient(
    assert(scip != NULL);
    assert(exprint != NULL);
    assert(sol != NULL);
-   assert(exprtree != NULL);
+   assert(expr != NULL);
    assert(grad != NULL);
 
-   nvars = SCIPexprtreeGetNVars(exprtree);
+   nvars = SCIPexprtreeGetNVars(expr);
    assert(nvars > 0);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &x, nvars) );
 
-   /* compile expression exprtree, if not done before */
-   if( SCIPexprtreeGetInterpreterData(exprtree) == NULL )
+   /* compile expression, if not done before */
+   if( SCIPexprtreeGetInterpreterData(expr) == NULL )
    {
-      SCIP_CALL( SCIPexprintCompile(exprint, exprtree) );
+      SCIP_CALL( SCIPexprintCompile(exprint, expr) );
    }
 
    for( i = 0; i < nvars; ++i )
    {
-      x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(exprtree)[i]);
+      x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(expr)[i]);
    }
 
-   SCIP_CALL( SCIPexprintGrad(exprint, exprtree, x, TRUE, &val, grad) );
+   SCIP_CALL( SCIPexprintGrad(exprint, expr, x, TRUE, &val, grad) );
 
-   /*SCIPdebug( for( i = 0; i < nvars; ++i ) printf("%e [%s]\n", grad[i], SCIPvarGetName(SCIPexprtreeGetVars(exprtree)[i])) );*/
+   /*SCIPdebug( for( i = 0; i < nvars; ++i ) printf("%e [%s]\n", grad[i], SCIPvarGetName(SCIPexprGetVars(expr)[i])) );*/
 
    SCIPfreeBufferArray(scip, &x);
 
@@ -613,7 +613,7 @@ SCIP_RETCODE generateCut(
    gradx0 = 0.0;
    *success = TRUE;
 
-   /* an nlrow has a linear part, quadratic part and expression tree; ideally one would just build the gradient but we
+   /* an nlrow has a linear part, quadratic part and expression; ideally one would just build the gradient but we
     * do not know if the different parts share variables or not, so we can't just build the gradient; for this reason
     * we create the row right away and compute the gradients of each part independently and add them to the row; the
     * row takes care to add coeffs corresponding to the same variable when they appear in different parts of the nlrow
@@ -628,20 +628,21 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPnlrowGetLinearVars(nlrow)[i], SCIPnlrowGetLinearCoefs(nlrow)[i]) );
    }
 
-   /* expression tree part */
+#if !1  // FIXME
+   /* expression part */
    {
       SCIP_Real* grad;
-      SCIP_EXPRTREE* tree;
+      SCIP_EXPR* expr;
 
-      tree = SCIPnlrowGetExprtree(nlrow);
+      expr = SCIPnlrowGetExpr(nlrow);
 
-      if( tree != NULL && SCIPexprtreeGetNVars(tree) > 0 )
+      if( expr != NULL && SCIPexprtreeGetNVars(expr) > 0 )
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &grad, SCIPexprtreeGetNVars(tree)) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &grad, SCIPexprtreeGetNVars(expr)) );
 
-         SCIP_CALL( computeGradient(scip, exprint, sol, tree, grad) );
+         SCIP_CALL( computeGradient(scip, exprint, sol, expr, grad) );
 
-         for( i = 0; i < SCIPexprtreeGetNVars(tree); i++ )
+         for( i = 0; i < SCIPexprtreeGetNVars(expr); i++ )
          {
             /* check gradient entries: function might not be differentiable */
             if( !SCIPisFinite(grad[i]) || SCIPisInfinity(scip, grad[i]) || SCIPisInfinity(scip, -grad[i]) )
@@ -650,13 +651,14 @@ SCIP_RETCODE generateCut(
                break;
             }
 
-            gradx0 +=  grad[i] * SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(tree)[i]);
-            SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPexprtreeGetVars(tree)[i], grad[i]) );
+            gradx0 +=  grad[i] * SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(expr)[i]);
+            SCIP_CALL( SCIPaddVarToRow(scip, row, SCIPexprtreeGetVars(expr)[i], grad[i]) );
          }
 
          SCIPfreeBufferArray(scip, &grad);
       }
    }
+#endif
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 

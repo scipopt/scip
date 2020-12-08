@@ -258,7 +258,7 @@ SCIP_RETCODE addRegularScholtes(
    return SCIP_OKAY;
 }
 
-/** recursive helper function to count the number of nodes in a sub-tree */
+/** recursive helper function to count the number of nodes in a sub-expr */
 static
 int getExprSize(
    SCIP_EXPR*            expr                /**< expression */
@@ -278,16 +278,6 @@ int getExprSize(
    return 1 + sum;
 }
 
-/** returns the number of nodes in an expression tree */
-static
-int getExprtreeSize(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   if( tree == NULL )
-      return 0;
-   return getExprSize(SCIPexprtreeGetRoot(tree));
-}
 
 /** returns the available time limit that is left */
 static
@@ -369,7 +359,7 @@ SCIP_RETCODE heurExec(
       assert(nlrow != NULL);
 
       nlpcostperiter += 1.0 * SCIPnlrowGetNLinearVars(nlrow)
-               + 3.0 * getExprtreeSize(SCIPnlrowGetExprtree(nlrow));
+               + 3.0 * getExprSize(SCIPnlrowGetExpr(nlrow));
    }
 
    /* set initial guess */

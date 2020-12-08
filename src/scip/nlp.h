@@ -45,20 +45,6 @@
 extern "C" {
 #endif
 
-/**@name Expressions and Expression tree methods */
-/**@{ */
-
-/** removes fixed variables from an expression tree, so that at exit all variables are active */
-SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
-   int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
-   int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
-   );
-
-/**@} */
-
 /**@name Nonlinear row methods */
 /**@{ */
 
@@ -74,7 +60,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   SCIP_EXPRTREE*        exprtree,           /**< expression tree, or NULL */
+   SCIP_EXPR*            expr,               /**< expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
@@ -165,34 +151,13 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    );
 
 /** replaces or deletes an expression tree in nonlinear row */
-SCIP_RETCODE SCIPnlrowChgExprtree(
+SCIP_RETCODE SCIPnlrowChgExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL to delete current one */
-   );
-
-/** changes a parameter in an expression of a nonlinear row */
-SCIP_RETCODE SCIPnlrowChgExprtreeParam(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   paramidx,           /**< index of parameter in expression tree's parameter array */
-   SCIP_Real             paramval            /**< new value of parameter */
-   );
-
-/** changes all parameters in an expression of a nonlinear row */
-SCIP_RETCODE SCIPnlrowChgExprtreeParams(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_Real*            paramvals           /**< new values of parameters */
+   SCIP_EXPR*            expr                /**< new expression, or NULL to delete current one */
    );
 
 /** changes constant of nonlinear row */

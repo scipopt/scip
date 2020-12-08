@@ -61,8 +61,7 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIDELVARSET         ((*nlpidelvarset)),          /**< delete a set of constraints */
    SCIP_DECL_NLPIDELCONSSET        ((*nlpidelconsset)),         /**< delete a set of constraints */
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
-   SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree)),        /**< change nonlinear expression a constraint or objective */
-   SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef)),      /**< change one parameter in nonlinear expressions of a constraint or objective */
+   SCIP_DECL_NLPICHGEXPR           ((*nlpichgexpr)),            /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
    SCIP_DECL_NLPISETINITIALGUESS   ((*nlpisetinitialguess)),    /**< set initial guess for primal variables */
    SCIP_DECL_NLPISOLVE             ((*nlpisolve)),              /**< solve NLP */
@@ -151,12 +150,9 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   int* const*           exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression
-                                              * tree to indices in nlp, entry of array may be NULL in case of no expression
-                                              * tree, may be NULL in case of no expression tree in any constraint */
-   SCIP_EXPRTREE* const* exprtrees,          /**< exprtrees expression tree for nonquadratic part of constraints, entry of
-                                              * array may be NULL in case of no nonquadratic part, may be NULL in case of no
-                                              * nonquadratic part in any constraint */
+   SCIP_EXPR* const*     exprs,              /**< expressions for nonlinear part of constraints, entry of
+                                              *   array may be NULL in case of no nonlinear part, may be NULL in case of no
+                                              *   nonlinear part in any constraint */
    const char**          names               /**< names of constraints, may be NULL or entries may be NULL */
    );
 
@@ -169,10 +165,7 @@ SCIP_RETCODE SCIPnlpiSetObjective(
    int                   nlins,              /**< number of linear variables */
    const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
    const SCIP_Real*      linvals,            /**< coefficient values, may be NULL in case of no linear part */
-   const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression
-                                              * tree to indices in nlp, may be NULL in case of no expression tree */
-   const SCIP_EXPRTREE*  exprtree,           /**< expression tree for nonquadratic part of objective function, may be NULL in
-                                              * case of no nonquadratic part */
+   const SCIP_EXPR*      expr,               /**< expression for nonlinear part of objective function, may be NULL in case of no nonlinear part */
    const SCIP_Real       constant            /**< objective value offset*/
    );
 
@@ -229,14 +222,13 @@ SCIP_RETCODE SCIPnlpiChgLinearCoefs(
    const SCIP_Real*      vals                /**< new values for coefficient */
    );
 
-/** change the expression tree in the nonlinear part */
+/** change the expression in the nonlinear part */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgExprtree(
+SCIP_RETCODE SCIPnlpiChgExpr(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    int                   idxcons,            /**< index of constraint or -1 for objective */
-   const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL */
-   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL for no tree */
+   const SCIP_EXPR*      expr                /**< new expression, or NULL for no nonlinear part */
    );
 
 /** change the value of one parameter in the nonlinear part */

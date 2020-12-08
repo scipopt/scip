@@ -548,7 +548,7 @@ SCIP_RETCODE nlrowLinearCoefChanged(
 
 /** announces, that an expression tree changed */
 static
-SCIP_RETCODE nlrowExprtreeChanged(
+SCIP_RETCODE nlrowExprChanged(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -578,20 +578,20 @@ SCIP_RETCODE nlrowExprtreeChanged(
          int* nlinidxs;
 
          /* get indices of variables in expression tree part of row */
-         if( nlrow->exprtree != NULL )
+         if( nlrow->expr != NULL )
          {
             int i;
             int n;
             SCIP_VAR* var;
 
-            n = SCIPexprtreeGetNVars(nlrow->exprtree);
-            assert(n == 0 || SCIPexprtreeGetVars(nlrow->exprtree) != NULL);
+            n = SCIPexprtreeGetNVars(nlrow->expr);
+            assert(n == 0 || SCIPexprtreeGetVars(nlrow->expr) != NULL);
 
             SCIP_CALL( SCIPsetAllocBufferArray(set, &nlinidxs, n) );
 
             for( i = 0; i < n; ++i )
             {
-               var = SCIPexprtreeGetVars(nlrow->exprtree)[i];
+               var = SCIPexprtreeGetVars(nlrow->expr)[i];
                assert(var != NULL);
                assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
@@ -599,13 +599,13 @@ SCIP_RETCODE nlrowExprtreeChanged(
                nlinidxs[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
             }
 
-            SCIP_CALL( SCIPnlpiChgExprtree(nlp->solver, nlp->problem, nlrow->nlpiindex, nlinidxs, nlrow->exprtree) );
+            SCIP_CALL( SCIPnlpiChgExpr(nlp->solver, nlp->problem, nlrow->nlpiindex, nlrow->expr) );
 
             SCIPsetFreeBufferArray(set, &nlinidxs);
          }
          else
          {
-            SCIP_CALL( SCIPnlpiChgExprtree(nlp->solver, nlp->problem, nlrow->nlpiindex, NULL, NULL) );
+            SCIP_CALL( SCIPnlpiChgExpr(nlp->solver, nlp->problem, nlrow->nlpiindex, NULL) );
          }
       }
    }
@@ -974,21 +974,21 @@ SCIP_RETCODE nlrowCalcActivityBounds(
       SCIPintervalAdd(inf, &activity, activity, bounds);
    }
 
-   if( nlrow->exprtree != NULL && !SCIPintervalIsEntire(inf, activity))
+   if( nlrow->expr != NULL && !SCIPintervalIsEntire(inf, activity))
    {
       SCIP_INTERVAL* varvals;
       int n;
 
-      n = SCIPexprtreeGetNVars(nlrow->exprtree);
+      n = SCIPexprtreeGetNVars(nlrow->expr);
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
 
       for( i = 0; i < n; ++i )
       {
-         SCIPintervalSetBounds(&varvals[i], SCIPvarGetLbLocal(SCIPexprtreeGetVars(nlrow->exprtree)[i]), SCIPvarGetUbLocal(SCIPexprtreeGetVars(nlrow->exprtree)[i]));
+         SCIPintervalSetBounds(&varvals[i], SCIPvarGetLbLocal(SCIPexprtreeGetVars(nlrow->expr)[i]), SCIPvarGetUbLocal(SCIPexprtreeGetVars(nlrow->expr)[i]));
       }
 
-      SCIP_CALL( SCIPexprtreeEvalInt(nlrow->exprtree, inf, varvals, &bounds) );
+      SCIP_CALL( SCIPexprtreeEvalInt(nlrow->expr, inf, varvals, &bounds) );
       SCIPintervalAdd(inf, &activity, activity, bounds);
 
       SCIPsetFreeBufferArray(set, &varvals);
@@ -1134,7 +1134,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
 
 /** removes fixed variables from expression tree of a nonlinear row */
 static
-SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
+SCIP_RETCODE nlrowRemoveFixedExprVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -1143,23 +1143,24 @@ SCIP_RETCODE nlrowRemoveFixedExprtreeVars(
 {
    SCIP_Bool changed;
 
-   if( nlrow->exprtree == NULL )
+   if( nlrow->expr == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &changed, NULL, NULL) );
+//FIXME   SCIP_CALL( SCIPexprRemoveFixedVars(nlrow->expr, set, &changed, NULL, NULL) );
+   changed = FALSE;
    if( changed )
    {
-      SCIP_CALL( nlrowExprtreeChanged(nlrow, set, stat, nlp) );
+      SCIP_CALL( nlrowExprChanged(nlrow, set, stat, nlp) );
    }
 
-   if( SCIPexprtreeGetNVars(nlrow->exprtree) == 0 )
+   if( SCIPexprtreeGetNVars(nlrow->expr) == 0 )
    {
       /* if expression tree is constant and not parameterized now, remove it */
       SCIP_Real exprval;
-      SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, NULL, &exprval) );
+      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, NULL, &exprval) );
       SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + exprval) );
 
-      SCIP_CALL( SCIPexprtreeFree(&nlrow->exprtree) );
+      SCIP_CALL( SCIPexprtreeFree(&nlrow->expr) );
    }
 
    return SCIP_OKAY;
@@ -1190,9 +1191,9 @@ SCIP_RETCODE nlrowRemoveFixedVar(
    }
 
    /* search for variable in non-quadratic part and remove all fixed variables in expression tree if existing */
-   if( nlrow->exprtree != NULL && SCIPexprtreeFindVar(nlrow->exprtree, var) >= 0 )
+   if( nlrow->expr != NULL && SCIPexprtreeFindVar(nlrow->expr, var) >= 0 )
    {
-      SCIP_CALL( nlrowRemoveFixedExprtreeVars(nlrow, set, stat, nlp) );
+      SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, set, stat, nlp) );
    }
 
    return SCIP_OKAY;
@@ -1214,7 +1215,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   SCIP_EXPRTREE*        exprtree,           /**< expression tree, or NULL */
+   SCIP_EXPR*            expr,               /**< expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
@@ -1264,13 +1265,13 @@ SCIP_RETCODE SCIPnlrowCreate(
    }
 
    /* nonlinear part */
-   if( exprtree != NULL )
+   if( expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeCopy( blkmem, &(*nlrow)->exprtree, exprtree) );
+      SCIP_CALL( SCIPexprtreeCopy( blkmem, &(*nlrow)->expr, expr) );
    }
    else
    {
-      (*nlrow)->exprtree = NULL;
+      (*nlrow)->expr = NULL;
    }
 
    /* left and right hand sides, asserted above that lhs is relatively less equal than rhs */
@@ -1316,7 +1317,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, sourcenlrow->name,
          sourcenlrow->constant,
          sourcenlrow->nlinvars, sourcenlrow->linvars, sourcenlrow->lincoefs,
-         sourcenlrow->exprtree,
+         sourcenlrow->expr,
          sourcenlrow->lhs, sourcenlrow->rhs, sourcenlrow->curvature) );
 
    (*nlrow)->linvarssorted          = sourcenlrow->linvarssorted;
@@ -1413,9 +1414,9 @@ SCIP_RETCODE SCIPnlrowFree(
    BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->lincoefs,  (*nlrow)->linvarssize);
 
    /* nonlinear part */
-   if( (*nlrow)->exprtree != NULL )
+   if( (*nlrow)->expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeFree(&(*nlrow)->exprtree) );
+      SCIP_CALL( SCIPexprtreeFree(&(*nlrow)->expr) );
    }
 
    /* miscellaneous */
@@ -1458,10 +1459,10 @@ SCIP_RETCODE SCIPnlrowPrint(
    }
 
    /* print non-quadratic part */
-   if( nlrow->exprtree != NULL )
+   if( nlrow->expr != NULL )
    {
       SCIPmessageFPrintInfo(messagehdlr, file, " + ");
-      SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->exprtree, messagehdlr, file) );
+      SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->expr, messagehdlr, file) );
    }
 
    /* print right hand side */
@@ -1651,40 +1652,40 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
 }
 
 /** replaces an expression tree in nonlinear row */
-SCIP_RETCODE SCIPnlrowChgExprtree(
+SCIP_RETCODE SCIPnlrowChgExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_EXPRTREE*        exprtree            /**< new expression tree */
+   SCIP_EXPR*            expr                /**< new expression */
    )
 {
    assert(nlrow  != NULL);
    assert(blkmem != NULL);
 
    /* free previous expression tree */
-   if( nlrow->exprtree != NULL )
+   if( nlrow->expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeFree(&nlrow->exprtree) );
-      assert(nlrow->exprtree == NULL);
+      SCIP_CALL( SCIPexprtreeFree(&nlrow->expr) );
+      assert(nlrow->expr == NULL);
    }
 
    /* adds new expression tree */
-   if( exprtree != NULL )
+   if( expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeCopy(blkmem, &nlrow->exprtree, exprtree) );
+      SCIP_CALL( SCIPexprtreeCopy(blkmem, &nlrow->expr, expr) );
 
-      /* if row is already in NLP, ensure that exprtree has only active variables */
+      /* if row is already in NLP, ensure that expr has only active variables */
       if( nlrow->nlpindex >= 0 )
       {
          SCIP_Bool dummy;
-         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->exprtree, set, &dummy, NULL, NULL) );
+         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->expr, set, &dummy, NULL, NULL) );
       }  /*lint !e438*/
    }
 
    /* notify row about the change */
-   SCIP_CALL( nlrowExprtreeChanged(nlrow, set, stat, nlp) );
+   SCIP_CALL( nlrowExprChanged(nlrow, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -1759,7 +1760,7 @@ SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    )
 {
    SCIP_CALL( nlrowRemoveFixedLinearCoefs(nlrow, blkmem, set, stat, nlp) );
-   SCIP_CALL( nlrowRemoveFixedExprtreeVars(nlrow, set, stat, nlp) );
+   SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -1793,22 +1794,22 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
       nlrow->activity += nlrow->lincoefs[i] * SCIPvarGetNLPSol(nlrow->linvars[i]);
    }
 
-   if( nlrow->exprtree != NULL )
+   if( nlrow->expr != NULL )
    {
       SCIP_Real* varvals;
       SCIP_Real val;
       int n;
 
-      n = SCIPexprtreeGetNVars(nlrow->exprtree);
+      n = SCIPexprtreeGetNVars(nlrow->expr);
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
 
       for( i = 0; i < n; ++i )
       {
-         varvals[i] = SCIPvarGetNLPSol(SCIPexprtreeGetVars(nlrow->exprtree)[i]);
+         varvals[i] = SCIPvarGetNLPSol(SCIPexprtreeGetVars(nlrow->expr)[i]);
       }
 
-      SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, varvals, &val) );
+      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, varvals, &val) );
       nlrow->activity += val;
 
       SCIPsetFreeBufferArray(set, &varvals);
@@ -1888,19 +1889,19 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
       nlrow->pseudoactivity += nlrow->lincoefs[i] * val1;
    }
 
-   if( nlrow->exprtree != NULL )
+   if( nlrow->expr != NULL )
    {
       SCIP_Real* varvals;
       int n;
 
-      n = SCIPexprtreeGetNVars(nlrow->exprtree);
+      n = SCIPexprtreeGetNVars(nlrow->expr);
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
 
       for( i = 0; i < n; ++i )
-         varvals[i] = SCIPvarGetBestBoundLocal(SCIPexprtreeGetVars(nlrow->exprtree)[i]);
+         varvals[i] = SCIPvarGetBestBoundLocal(SCIPexprtreeGetVars(nlrow->expr)[i]);
 
-      SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, varvals, &val1) );
+      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, varvals, &val1) );
       nlrow->pseudoactivity += val1;
 
       SCIPsetFreeBufferArray(set, &varvals);
@@ -1989,18 +1990,18 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
       *activity += nlrow->lincoefs[i] * val1;
    }
 
-   if( nlrow->exprtree != NULL )
+   if( nlrow->expr != NULL )
    {
       SCIP_Real* varvals;
       int n;
 
-      n = SCIPexprtreeGetNVars(nlrow->exprtree);
+      n = SCIPexprtreeGetNVars(nlrow->expr);
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
 
       for( i = 0; i < n; ++i )
       {
-         varvals[i] = SCIPsolGetVal(sol, set, stat, SCIPexprtreeGetVars(nlrow->exprtree)[i]);
+         varvals[i] = SCIPsolGetVal(sol, set, stat, SCIPexprtreeGetVars(nlrow->expr)[i]);
          if( varvals[i] == SCIP_UNKNOWN ) /*lint !e777*/
          {
             *activity = SCIP_INVALID;
@@ -2009,7 +2010,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
          }
       }
 
-      SCIP_CALL( SCIPexprtreeEval(nlrow->exprtree, varvals, &val1) );
+      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, varvals, &val1) );
       *activity += val1;
 
       SCIPsetFreeBufferArray(set, &varvals);
@@ -2139,14 +2140,14 @@ SCIP_Real* SCIPnlrowGetLinearCoefs(
    return nlrow->lincoefs;
 }
 
-/** gets expression tree */
-SCIP_EXPRTREE* SCIPnlrowGetExprtree(
+/** gets expression */
+SCIP_EXPR* SCIPnlrowGetExpr(
    SCIP_NLROW*           nlrow               /**< NLP row */
    )
 {
    assert(nlrow != NULL);
 
-   return nlrow->exprtree;
+   return nlrow->expr;
 }
 
 /** returns the left hand side of a nonlinear row */
@@ -2313,15 +2314,15 @@ SCIP_RETCODE nlpAddNlRows(
       for( i = 0; i < nlrow->nlinvars; ++i )
          assert(SCIPhashmapExists(nlp->varhash, nlrow->linvars[i]));
 
-      if( nlrow->exprtree )
+      if( nlrow->expr )
       {
          int n;
 
-         n = SCIPexprtreeGetNVars(nlrow->exprtree);
-         assert(SCIPexprtreeGetVars(nlrow->exprtree) != NULL || n == 0);
+         n = SCIPexprtreeGetNVars(nlrow->expr);
+         assert(SCIPexprtreeGetVars(nlrow->expr) != NULL || n == 0);
 
          for( i = 0; i < n; ++i )
-            assert(SCIPhashmapExists(nlp->varhash, SCIPexprtreeGetVars(nlrow->exprtree)[i]));
+            assert(SCIPhashmapExists(nlp->varhash, SCIPexprtreeGetVars(nlrow->expr)[i]));
       }
 #endif
 
@@ -2714,7 +2715,7 @@ SCIP_RETCODE nlpDelVarPos(
          for( j = 0; j < nlrow->nlinvars; ++j )
             assert( nlrow->linvars[j] != var );
 
-      assert(nlrow->exprtree == NULL || SCIPexprtreeFindVar(nlrow->exprtree, var) == -1);
+      assert(nlrow->expr == NULL || SCIPexprtreeFindVar(nlrow->expr, var) == -1);
    }
 #endif
 
@@ -2828,18 +2829,18 @@ SCIP_RETCODE nlpSetupNlpiIndices(
       *linidxs = NULL;
 
    /* get indices of variables in expression tree part of row */
-   if( nlrow->exprtree != NULL )
+   if( nlrow->expr != NULL )
    {
       int n;
 
-      n = SCIPexprtreeGetNVars(nlrow->exprtree);
-      assert(n == 0 || SCIPexprtreeGetVars(nlrow->exprtree) != NULL);
+      n = SCIPexprtreeGetNVars(nlrow->expr);
+      assert(n == 0 || SCIPexprtreeGetVars(nlrow->expr) != NULL);
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, nlinidxs, n) );
 
       for( i = 0; i < n; ++i )
       {
-         var = SCIPexprtreeGetVars(nlrow->exprtree)[i];
+         var = SCIPexprtreeGetVars(nlrow->expr)[i];
          assert(var != NULL);
          assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
 
@@ -3112,7 +3113,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    int**       linidxs;
    SCIP_Real** lincoefs;
    int**       nlidxs;
-   SCIP_EXPRTREE** exprtrees;
+   SCIP_EXPR** exprs;
    const char** names;
 
    assert(nlp    != NULL);
@@ -3138,15 +3139,15 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
    SCIP_CALL( nlpEnsureNlRowsSolverSize(nlp, blkmem, set, nlp->nnlrows_solver + nlp->nunflushednlrowadd) );
 
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &lhss,        nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &rhss,        nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &nlinvars,    nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &linidxs,     nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &lincoefs,    nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &nlidxs,      nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &exprtrees,   nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &lhss,     nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rhss,     nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &nlinvars, nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &linidxs,  nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &lincoefs, nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &nlidxs,   nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &exprs,    nlp->nunflushednlrowadd) );
 #if ADDNAMESTONLPI
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &names,       nlp->nunflushednlrowadd) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &names,    nlp->nunflushednlrowadd) );
 #else
    names = NULL;
 #endif
@@ -3164,8 +3165,8 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
       /* get indices in NLPI */
       SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlrow, &linidxs[c], &nlidxs[c]) );
-      assert(linidxs[c]   != NULL || nlrow->nlinvars  == 0);
-      assert(nlidxs[c]    != NULL || nlrow->exprtree  == NULL);
+      assert(linidxs[c]   != NULL || nlrow->nlinvars == 0);
+      assert(nlidxs[c]    != NULL || nlrow->expr     == NULL);
 
       nlp->nlrowmap_nlpi2nlp[nlp->nnlrows_solver+c] = i;
       nlrow->nlpiindex = nlp->nnlrows_solver+c;
@@ -3188,7 +3189,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       nlinvars[c] = nlrow->nlinvars;
       lincoefs[c] = nlrow->lincoefs;
 
-      exprtrees[c]  = nlrow->exprtree;
+      exprs[c]  = nlrow->expr;
 
 #if ADDNAMESTONLPI
       names[c]      = nlrow->name;
@@ -3208,7 +3209,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
    SCIP_CALL( SCIPnlpiAddConstraints(nlp->solver, nlp->problem, c, lhss, rhss,
          nlinvars, linidxs, lincoefs,
-         nlidxs, exprtrees,
+         exprs,
          names) );
 
    for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
@@ -3222,7 +3223,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 #if ADDNAMESTONLPI
    SCIPsetFreeBufferArray(set, &names);
 #endif
-   SCIPsetFreeBufferArray(set, &exprtrees);
+   SCIPsetFreeBufferArray(set, &exprs);
    SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &lincoefs);
    SCIPsetFreeBufferArray(set, &linidxs);
@@ -3372,7 +3373,7 @@ SCIP_RETCODE nlpFlushObjective(
 
    SCIP_CALL( SCIPnlpiSetObjective(nlp->solver, nlp->problem,
          nz, linindices, lincoefs,
-         0, NULL,
+         NULL,
          0.0) );
 
    SCIPsetFreeBufferArray(set, &lincoefs);
@@ -4570,19 +4571,19 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
       }
 #endif
 
-      if( nlrow->exprtree != NULL )
+      if( nlrow->expr != NULL )
       {
-         SCIP_VAR** exprtreevars;
-         int nexprtreevars;
+         SCIP_VAR** exprvars;
+         int nexprvars;
 
-         exprtreevars = SCIPexprtreeGetVars(nlrow->exprtree);
-         nexprtreevars = SCIPexprtreeGetNVars(nlrow->exprtree);
-         assert(exprtreevars != NULL || nexprtreevars == 0);
-         for( i = 0; i < nexprtreevars; ++i )
+         exprvars = SCIPexprtreeGetVars(nlrow->expr);
+         nexprvars = SCIPexprtreeGetNVars(nlrow->expr);
+         assert(exprvars != NULL || nexprvars == 0);
+         for( i = 0; i < nexprvars; ++i )
          {
-            assert(SCIPhashmapExists(nlp->varhash, (void*)exprtreevars[i]));  /*lint !e613 */
+            assert(SCIPhashmapExists(nlp->varhash, (void*)exprvars[i]));  /*lint !e613 */
 
-            varidx = SCIPhashmapGetImageInt(nlp->varhash, (void*)exprtreevars[i]);  /*lint !e613 */
+            varidx = SCIPhashmapGetImageInt(nlp->varhash, (void*)exprvars[i]);  /*lint !e613 */
             assert(varidx < nlp->nvars);
             assert(nlcount != NULL);
             ++nlcount[varidx];  /*lint !e613 */
@@ -4613,17 +4614,17 @@ SCIP_Bool SCIPnlpHasContinuousNonlinearity(
       nlrow = nlp->nlrows[c];
       assert(nlrow != NULL);
 
-      if( nlrow->exprtree != NULL )
+      if( nlrow->expr != NULL )
       {
-         SCIP_VAR** exprtreevars;
-         int nexprtreevars;
+         SCIP_VAR** exprvars;
+         int nexprvars;
 
-         exprtreevars = SCIPexprtreeGetVars(nlrow->exprtree);
-         nexprtreevars = SCIPexprtreeGetNVars(nlrow->exprtree);
-         assert(exprtreevars != NULL || nexprtreevars == 0);
+         exprvars = SCIPexprtreeGetVars(nlrow->expr);
+         nexprvars = SCIPexprtreeGetNVars(nlrow->expr);
+         assert(exprvars != NULL || nexprvars == 0);
 
-         for( i = 0; i < nexprtreevars; ++i )
-            if( SCIPvarGetType(exprtreevars[i]) == SCIP_VARTYPE_CONTINUOUS ) /*lint !e613*/
+         for( i = 0; i < nexprvars; ++i )
+            if( SCIPvarGetType(exprvars[i]) == SCIP_VARTYPE_CONTINUOUS ) /*lint !e613*/
                return TRUE;
       }
    }

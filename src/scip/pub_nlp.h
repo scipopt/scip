@@ -122,9 +122,10 @@ SCIP_EXPORT
 SCIP_Real* SCIPnlrowGetLinearCoefs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
-/** gets expression tree */
+
+/** gets expression */
 SCIP_EXPORT
-SCIP_EXPRTREE* SCIPnlrowGetExprtree(
+SCIP_EXPR* SCIPnlrowGetExpr(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
 

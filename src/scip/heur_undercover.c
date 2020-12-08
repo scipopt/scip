@@ -289,7 +289,7 @@ SCIP_RETCODE processNlRow(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< nonlinear row representation of a nonlinear constraint */
    SCIP_EXPRINT*         exprint,            /**< expression interpreter for computing sparsity pattern of the Hessian;
-                                              *   if NULL, we will simply fix all variables in the expression tree */
+                                              *   if NULL, we will simply fix all variables in the expression */
    struct HessianData*   hessiandata,        /**< working memory for retrieving dense sparsity of Hessian matrices */
    SCIP*                 coveringscip,       /**< SCIP data structure for the covering problem */
    int                   nvars,              /**< number of variables */
@@ -302,7 +302,7 @@ SCIP_RETCODE processNlRow(
    SCIP_Bool*            success             /**< pointer to store whether row was processed successfully */
    )
 {
-   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR* expr;
    SCIP_Bool infeas;
    SCIP_Bool fixed;
    int t;
@@ -333,20 +333,20 @@ SCIP_RETCODE processNlRow(
 
    BMSclearMemoryArray(consmarker, nvars);
 
-   /* go through expression tree */
-   exprtree = SCIPnlrowGetExprtree(nlrow);
-   if( exprtree != NULL )
+   /* go through expression */
+   expr = SCIPnlrowGetExpr(nlrow);
+   if( expr != NULL )
    {
-      SCIP_VAR** exprtreevars;
-      int nexprtreevars;
+      SCIP_VAR** exprvars;
+      int nexprvars;
       int probidx1;
       int probidx2;
 
-      /* get variables in expression tree */
-      nexprtreevars = SCIPexprtreeGetNVars(exprtree);
-      exprtreevars = SCIPexprtreeGetVars(exprtree);
+      /* get variables in expression */
+      nexprvars = SCIPexprtreeGetNVars(expr);
+      exprvars = SCIPexprtreeGetVars(expr);
 
-      if( exprtreevars != NULL && nexprtreevars > 0 )
+      if( exprvars != NULL && nexprvars > 0 )
       {
          SCIP_Bool usehessian;
          int i;
@@ -362,15 +362,15 @@ SCIP_RETCODE processNlRow(
             assert(hessiandata->nvars == 0 || hessiandata->varvals != NULL);
             assert(hessiandata->nvars == 0 || hessiandata->sparsity != NULL);
 
-            /* compile expression tree */
-            SCIP_CALL( SCIPexprintCompile(exprint, exprtree) );
+            /* compile expression */
+            SCIP_CALL( SCIPexprintCompile(exprint, expr) );
 
             /* ensure memory */
-            if( hessiandata->nvars < nexprtreevars )
+            if( hessiandata->nvars < nexprvars )
             {
-               SCIP_CALL( SCIPreallocBufferArray(scip, &hessiandata->varvals, nexprtreevars) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &hessiandata->sparsity, nexprtreevars*nexprtreevars) );
-               hessiandata->nvars = nexprtreevars;
+               SCIP_CALL( SCIPreallocBufferArray(scip, &hessiandata->varvals, nexprvars) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &hessiandata->sparsity, nexprvars*nexprvars) );
+               hessiandata->nvars = nexprvars;
             }
 
             /* get point at which to evaluate the Hessian sparsity */
@@ -379,15 +379,15 @@ SCIP_RETCODE processNlRow(
                SCIP_CALL( SCIPcreateSol(scip, &hessiandata->evalsol, NULL) );
                SCIP_CALL( SCIPlinkCurrentSol(scip, hessiandata->evalsol) );
             }
-            SCIP_CALL( SCIPgetSolVals(scip, hessiandata->evalsol, nexprtreevars, exprtreevars, hessiandata->varvals) );
+            SCIP_CALL( SCIPgetSolVals(scip, hessiandata->evalsol, nexprvars, exprvars, hessiandata->varvals) );
 
             /* get sparsity of the Hessian at current LP solution */
-            SCIP_CALL( SCIPexprintHessianSparsityDense(exprint, exprtree, hessiandata->varvals, hessiandata->sparsity) );
+            SCIP_CALL( SCIPexprintHessianSparsityDense(exprint, expr, hessiandata->varvals, hessiandata->sparsity) );
 
-            for( idx1 = nexprtreevars-1; idx1 >= 0; idx1-- )
+            for( idx1 = nexprvars-1; idx1 >= 0; idx1-- )
             {
                /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
-               probidx1 = SCIPvarGetProbindex(exprtreevars[idx1]);
+               probidx1 = SCIPvarGetProbindex(exprvars[idx1]);
                if( probidx1 == -1 )
                {
                   SCIPdebugMsg(scip, "strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
@@ -396,8 +396,8 @@ SCIP_RETCODE processNlRow(
 
                /* nonzero diagonal element of the Hessian: fix */
                assert(hessiandata->sparsity != NULL);  /* for lint */
-               if( hessiandata->sparsity[idx1*nexprtreevars + idx1]
-                  && !termIsConstant(scip, exprtreevars[idx1], 1.0, globalbounds) )
+               if( hessiandata->sparsity[idx1*nexprvars + idx1]
+                  && !termIsConstant(scip, exprvars[idx1], 1.0, globalbounds) )
                {
                   SCIP_CALL( SCIPfixVar(coveringscip, coveringvars[probidx1], 1.0, &infeas, &fixed) );
                   assert(!infeas);
@@ -413,21 +413,21 @@ SCIP_RETCODE processNlRow(
                }
 
                /* two different variables relate nonlinearly */
-               for( idx2 = nexprtreevars-1; idx2 > idx1; idx2-- )
+               for( idx2 = nexprvars-1; idx2 > idx1; idx2-- )
                {
                   SCIP_CONS* coveringcons;
                   SCIP_VAR* coveringconsvars[2];
 
                   /* do not assume symmetry */
-                  if( !hessiandata->sparsity[idx1*nexprtreevars + idx2] && !hessiandata->sparsity[idx2*nexprtreevars + idx1] )
+                  if( !hessiandata->sparsity[idx1*nexprvars + idx2] && !hessiandata->sparsity[idx2*nexprvars + idx1] )
                      continue;
 
                   /* if diagonal has entry already, then covering constraint would always be satisfied, thus no need to add */
-                  if( hessiandata->sparsity[idx2*nexprtreevars + idx2] && !termIsConstant(scip, exprtreevars[idx2], 1.0, globalbounds) )
+                  if( hessiandata->sparsity[idx2*nexprvars + idx2] && !termIsConstant(scip, exprvars[idx2], 1.0, globalbounds) )
                      continue;
 
                   /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
-                  probidx2 = SCIPvarGetProbindex(exprtreevars[idx2]);
+                  probidx2 = SCIPvarGetProbindex(exprvars[idx2]);
                   if( probidx2 == -1 )
                   {
                      SCIPdebugMsg(scip, "strange: inactive variables detected in nonlinear row <%s>\n", SCIPnlrowGetName(nlrow));
@@ -435,8 +435,8 @@ SCIP_RETCODE processNlRow(
                   }
 
                   /* if the term is linear because one of the variables is fixed, nothing to do */
-                  if( termIsConstant(scip, exprtreevars[idx1], 1.0, globalbounds)
-                     || termIsConstant(scip, exprtreevars[idx2], 1.0, globalbounds) )
+                  if( termIsConstant(scip, exprvars[idx1], 1.0, globalbounds)
+                     || termIsConstant(scip, exprvars[idx2], 1.0, globalbounds) )
                      continue;
 
                   /* create covering constraint */
@@ -464,24 +464,24 @@ SCIP_RETCODE processNlRow(
                }
             }
          }
-         /* fix all variables contained in the expression tree */
+         /* fix all variables contained in the expression */
          else
          {
-            for( i = nexprtreevars-1; i >= 0; i-- )
+            for( i = nexprvars-1; i >= 0; i-- )
             {
-               assert(exprtreevars[i] != NULL);
+               assert(exprvars[i] != NULL);
 
                /* if constraints with inactive variables are present, we will have difficulties creating the sub-CIP later */
-               probidx1 = SCIPvarGetProbindex(exprtreevars[i]);
+               probidx1 = SCIPvarGetProbindex(exprvars[i]);
                if( probidx1 == -1 )
                {
                   SCIPdebugMsg(scip, "strange: inactive variable <%s> detected in nonlinear row <%s>\n",
-                     SCIPvarGetName(exprtreevars[i]), SCIPnlrowGetName(nlrow));
+                     SCIPvarGetName(exprvars[i]), SCIPnlrowGetName(nlrow));
                   return SCIP_OKAY;
                }
 
                /* term is constant, nothing to do */
-               if( termIsConstant(scip, exprtreevars[i], 1.0, globalbounds) )
+               if( termIsConstant(scip, exprvars[i], 1.0, globalbounds) )
                   continue;
 
                /* otherwise fix variable */
@@ -3180,12 +3180,12 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       nnlrows = SCIPgetNNLPNlRows(scip);
       nlrows = SCIPgetNLPNlRows(scip);
 
-      /* check for an nlrow with nontrivial expression tree; start from 0 since we expect the linear
+      /* check for an nlrow with nontrivial expression; start from 0 since we expect the linear
        * nlrows at the end */
       for( i = nnlrows-1; i >= 0 && !run; i-- )
       {
          assert(nlrows[i] != NULL);
-         run = SCIPnlrowGetExprtree(nlrows[i]) != NULL && SCIPexprtreeGetNVars(SCIPnlrowGetExprtree(nlrows[i])) > 0;
+         run = SCIPnlrowGetExpr(nlrows[i]) != NULL && SCIPexprtreeGetNVars(SCIPnlrowGetExpr(nlrows[i])) > 0;
       }
    }
 

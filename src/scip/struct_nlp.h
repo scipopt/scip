@@ -37,8 +37,8 @@
  *
  *  The main datastructures for storing an NLP are the nonlinear rows.
  *  A nonlinear row can live on its own (if it was created by a separator),
- *  or as relaxation of a constraint. Thus, it has a nuses-counter, and is
- *  deleted, if not needed any more.
+ *  or as relaxation of a constraint. Thus, it has a nuses-counter and is
+ *  deleted if not used any more.
  *  In difference to columns of an LP, nonlinear rows are defined
  *  with respect SCIP variables.
  */
@@ -78,7 +78,7 @@ struct SCIP_NlRow
    SCIP_Bool             linvarssorted;      /**< are the linear coefficients sorted (by variable indices?) */
 
    /* nonlinear part */
-   SCIP_EXPRTREE*        exprtree;           /**< expression tree representing nonlinear part */
+   SCIP_EXPR*            expr;               /**< expression representing nonlinear part */
 
    /* miscellaneous */
    char*                 name;               /**< name */

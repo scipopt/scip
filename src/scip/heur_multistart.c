@@ -248,7 +248,7 @@ SCIP_RETCODE computeGradient(
    SCIP_Real*            norm                /**< buffer to store ||grad||^2  */
    )
 {
-   SCIP_EXPRTREE* tree;
+   SCIP_EXPR* expr;
    SCIP_VAR* var;
    int i;
 
@@ -272,42 +272,42 @@ SCIP_RETCODE computeGradient(
       grad[getVarIndex(varindex, var)] += SCIPnlrowGetLinearCoefs(nlrow)[i];
    }
 
-   /* tree part */
-   tree = SCIPnlrowGetExprtree(nlrow);
-   if( tree != NULL )
+   /* expression part */
+   expr = SCIPnlrowGetExpr(nlrow);
+   if( expr != NULL )
    {
-      SCIP_Real* treegrad;
+      SCIP_Real* exprgrad;
       SCIP_Real* x;
       SCIP_Real val;
 
-      assert(SCIPexprtreeGetNVars(tree) <= SCIPgetNVars(scip));
+      assert(SCIPexprtreeGetNVars(expr) <= SCIPgetNVars(scip));
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &x, SCIPexprtreeGetNVars(tree)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &treegrad, SCIPexprtreeGetNVars(tree)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &x, SCIPexprtreeGetNVars(expr)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &exprgrad, SCIPexprtreeGetNVars(expr)) );
 
-      /* compile expression tree, if not done before */
-      if( SCIPexprtreeGetInterpreterData(tree) == NULL )
+      /* compile expression, if not done before */
+      if( SCIPexprtreeGetInterpreterData(expr) == NULL )
       {
-         SCIP_CALL( SCIPexprintCompile(exprint, tree) );
+         SCIP_CALL( SCIPexprintCompile(exprint, expr) );
       }
 
       /* sets the solution value */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-         x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(tree)[i]);
+      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
+         x[i] = SCIPgetSolVal(scip, sol, SCIPexprtreeGetVars(expr)[i]);
 
-      SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
+      SCIP_CALL( SCIPexprintGrad(exprint, expr, x, TRUE, &val, exprgrad) );
 
       /* update corresponding gradient entry */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
       {
-         var = SCIPexprtreeGetVars(tree)[i];
+         var = SCIPexprtreeGetVars(expr)[i];
          assert(var != NULL);
          assert(getVarIndex(varindex, var) >= 0 && getVarIndex(varindex, var) < SCIPgetNVars(scip));
 
-         grad[getVarIndex(varindex, var)] += treegrad[i];
+         grad[getVarIndex(varindex, var)] += exprgrad[i];
       }
 
-      SCIPfreeBufferArray(scip, &treegrad);
+      SCIPfreeBufferArray(scip, &exprgrad);
       SCIPfreeBufferArray(scip, &x);
    }
 
@@ -721,7 +721,7 @@ SCIP_RETCODE solveNLP(
    return SCIP_OKAY;
 }
 
-/** recursive helper function to count the number of nodes in a sub-tree */
+/** recursive helper function to count the number of nodes in a sub-expr */
 static
 int getExprSize(
    SCIP_EXPR*            expr                /**< expression */
@@ -739,17 +739,6 @@ int getExprSize(
       sum += getExprSize(child);
    }
    return 1 + sum;
-}
-
-/** returns the number of nodes in an expression tree */
-static
-int getExprtreeSize(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   if( tree == NULL )
-      return 0;
-   return getExprSize(SCIPexprtreeGetRoot(tree));
 }
 
 /** main function of the multi-start heuristic (see @ref heur_multistart.h for more details); it consists of the
@@ -819,7 +808,7 @@ SCIP_RETCODE applyHeur(
    for( i = 0; i < nnlrows; ++i )
    {
       nlrowgradcosts[i] = GRADCOSTFAC_LINEAR * SCIPnlrowGetNLinearVars(nlrows[i])
-         + GRADCOSTFAC_NONLINEAR * getExprtreeSize(SCIPnlrowGetExprtree(nlrows[i]));
+         + GRADCOSTFAC_NONLINEAR * getExprSize(SCIPnlrowGetExpr(nlrows[i]));
    }
 
    /*

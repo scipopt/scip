@@ -164,7 +164,7 @@ SCIP_Bool isNlobbtApplicable(
 
    for( i = 0; i < nnlrows; ++i )
    {
-      if( SCIPnlrowGetExprtree(nlrows[i]) == NULL )
+      if( SCIPnlrowGetExpr(nlrows[i]) == NULL )
          ++nlinearnlrows;
       else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX )
       {
@@ -382,7 +382,7 @@ SCIP_RETCODE solveNlp(
 
    /* set corresponding objective coefficient and solve NLP */
    obj = boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : -1.0;
-   SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, 0.0) );
 
    SCIPdebugMsg(scip, "solve var=%s boundtype=%d nlscore=%g\n", SCIPvarGetName(var), boundtype,
       propdata->nlscore[propdata->currpos]);
@@ -449,7 +449,7 @@ SCIP_RETCODE solveNlp(
 
    /* reset objective function */
    obj = 0.0;
-   SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(propdata->nlpi, propdata->nlpiprob, 1, &varidx, &obj, NULL, 0.0) );
 
    return SCIP_OKAY;
 }

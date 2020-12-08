@@ -1525,7 +1525,7 @@ SCIP_RETCODE isCandidate(
    *lhscandidate = TRUE;
 
    /* skip if the nlrow is not in the NLP, there are other nonlinearities, or too few quadratic variables */
-   if( !SCIPnlrowIsInNLP(nlrow) || SCIPnlrowGetExprtree(nlrow) != NULL
+   if( !SCIPnlrowIsInNLP(nlrow) || SCIPnlrowGetExpr(nlrow) != NULL
       || SCIPnlrowGetNQuadVars(nlrow) < sepadata->minaggrsize )
    {
       *rhscandidate = FALSE;

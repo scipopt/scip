@@ -1616,7 +1616,7 @@ SCIP_RETCODE SCIPchgNlRowQuadElement(
 }
 #endif
 
-/** sets or deletes expression tree in the nonlinear row
+/** sets or deletes expression in the nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1626,15 +1626,15 @@ SCIP_RETCODE SCIPchgNlRowQuadElement(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPsetNlRowExprtree(
+SCIP_RETCODE SCIPsetNlRowExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
+   SCIP_EXPR*            expr                /**< expression, or NULL */
    )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetNlRowExprtree", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowChgExprtree(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, exprtree) );
+   SCIP_CALL( SCIPnlrowChgExpr(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->nlp, expr) );
 
    /* invalidate curvature */
    SCIPnlrowSetCurvature(nlrow, SCIP_EXPRCURV_UNKNOWN);

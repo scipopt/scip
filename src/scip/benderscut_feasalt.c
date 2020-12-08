@@ -237,7 +237,7 @@ SCIP_RETCODE createAuxiliaryNonlinearSubproblem(
 
    /* setting the objective function */
    SCIP_CALL( SCIPnlpiSetObjective(benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,
-         benderscutdata->slackvarinds, obj, NULL, NULL, 0.0) );
+         benderscutdata->slackvarinds, obj, NULL, 0.0) );
 
    /* unfixing the slack variables */
    SCIP_CALL( SCIPnlpiChgVarBounds(benderscutdata->nlpi, benderscutdata->nlpiprob, benderscutdata->nlpinslackvars,

@@ -865,10 +865,7 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    SCIP_Real             coef                /**< new value of coefficient */
    );
 
-#if !1
-/** adds quadratic variable to the nonlinear row
- *
- *  After adding a quadratic variable, it can be used to add quadratic elements.
+/** sets or deletes expression in the nonlinear row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -879,107 +876,10 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPaddQuadVarToNlRow(
+SCIP_RETCODE SCIPsetNlRowExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_VAR*             var                 /**< problem variable */
-   );
-
-/** adds quadratic variables to the nonlinear row
- *
- *  After adding quadratic variables, they can be used to add quadratic elements.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddQuadVarsToNlRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   nvars,              /**< number of problem variables */
-   SCIP_VAR**            vars                /**< problem variables */
-   );
-
-/** add a quadratic element to the nonlinear row
- *
- *  Variable indices of the quadratic element need to be relative to quadratic variables array of row.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddQuadElementToNlRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_QUADELEM         quadelem            /**< quadratic element */
-   );
-
-/** adds quadratic elements to the nonlinear row
- *
- *  Variable indices of the quadratic elements need to be relative to quadratic variables array of row.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPaddQuadElementsToNlRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int                   nquadelems,         /**< number of quadratic elements */
-   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
-   );
-
-/** changes coefficient in quadratic part of a row
- *
- *  Setting the coefficient in the quadelement to 0.0 means that it is removed from the row
- *  the element does not need to exists before.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPchgNlRowQuadElement(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_QUADELEM         quadelement         /**< new quadratic element, or update for existing one */
-   );
-#endif
-
-/** sets or deletes expression tree in the nonlinear row
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPsetNlRowExprtree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   SCIP_EXPRTREE*        exprtree            /**< expression tree, or NULL */
+   SCIP_EXPR*            expr                /**< expression, or NULL */
    );
 
 /** recalculates the activity of a nonlinear row in the last NLP solution

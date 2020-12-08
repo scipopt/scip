@@ -1040,7 +1040,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
    int*                  varssize            /**< the number of variables in the array */
    )
 {
-   SCIP_EXPRTREE* tree;
+   SCIP_EXPR* expr;
    SCIP_VAR* var;
    SCIP_VAR* mastervar;
    SCIP_Real coef;
@@ -1076,33 +1076,34 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
       *dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
    }
 
-   /* tree part */
-   tree = SCIPnlrowGetExprtree(nlrow);
-   if( tree != NULL )
+   /* expression part */
+   expr = SCIPnlrowGetExpr(nlrow);
+   if( expr != NULL )
    {
-      SCIP_Real* treegrad;
+#if !1 //FIXME
+      SCIP_Real* exprgrad;
       SCIP_Real* x;
       SCIP_Real val;
 
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &x, SCIPexprtreeGetNVars(tree)) );
-      SCIP_CALL( SCIPallocBufferArray(subproblem, &treegrad, SCIPexprtreeGetNVars(tree)) );
+      SCIP_CALL( SCIPallocBufferArray(subproblem, &x, SCIPexprtreeGetNVars(expr)) );
+      SCIP_CALL( SCIPallocBufferArray(subproblem, &exprgrad, SCIPexprtreeGetNVars(expr)) );
 
-      /* compile expression tree, if not done before */
+      /* compile expression, if not done before */
       if( SCIPexprtreeGetInterpreterData(tree) == NULL )
       {
-         SCIP_CALL( SCIPexprintCompile(exprint, tree) );
+         SCIP_CALL( SCIPexprintCompile(exprint, expr) );
       }
 
       /* sets the solution value */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-         x[i] = getNlpVarSol(SCIPexprtreeGetVars(tree)[i], primalvals, var2idx);
+      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
+         x[i] = getNlpVarSol(SCIPexprtreeGetVars(expr)[i], primalvals, var2idx);
 
-      SCIP_CALL( SCIPexprintGrad(exprint, tree, x, TRUE, &val, treegrad) );
+      SCIP_CALL( SCIPexprintGrad(exprint, expr, x, TRUE, &val, exprgrad) );
 
       /* update corresponding gradient entry */
-      for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
+      for( i = 0; i < SCIPexprtreeGetNVars(expr); ++i )
       {
-         var = SCIPexprtreeGetVars(tree)[i];
+         var = SCIPexprtreeGetVars(expr)[i];
          assert(var != NULL);
 
          /* retrieving the master problem variable for the given subproblem variable. */
@@ -1110,7 +1111,7 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
          if( mastervar == NULL )
             continue;
 
-         coef = mult * treegrad[i];
+         coef = mult * exprgrad[i];
 
          /* adding the variable to the storage */
          SCIP_CALL( addVariableToArray(masterprob, vars, vals, mastervar, coef, nvars, varssize) );
@@ -1118,8 +1119,9 @@ SCIP_RETCODE SCIPaddNlRowGradientBenderscutOpt(
          *dirderiv += coef * getNlpVarSol(var, primalvals, var2idx);
       }
 
-      SCIPfreeBufferArray(subproblem, &treegrad);
+      SCIPfreeBufferArray(subproblem, &exprgrad);
       SCIPfreeBufferArray(subproblem, &x);
+#endif
    }
 
    return SCIP_OKAY;

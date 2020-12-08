@@ -82,7 +82,7 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
 };
 typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination status */
-   
+
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
@@ -167,17 +167,14 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *    may be NULL in case of no linear part
  *  - linvals values of linear coefficient for each constraint
  *    may be NULL in case of no linear part
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
- *    entry of array may be NULL in case of no expression tree
- *    may be NULL in case of no expression tree in any constraint
- *  - exprtrees expression tree for nonquadratic part of constraints
- *    entry of array may be NULL in case of no nonquadratic part
- *    may be NULL in case of no nonquadratic part in any constraint
+ *  - exprs expressions for nonlinear part of constraints
+ *    entry of array may be NULL in case of no nonlinear part
+ *    may be NULL in case of no nonlinear part in any constraint
  *  - names of constraints, may be NULL or entries may be NULL
  */
 #define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int ncons, const SCIP_Real* lhss, \
       const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, \
-      int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
+      SCIP_EXPR* const* exprs, const char** names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
@@ -190,14 +187,12 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *    may be NULL in case of no linear part
  *  - linvals coefficient values
  *    may be NULL in case of no linear part
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
- *    may be NULL in case of no expression tree
- *  - exprtree expression tree for nonquadratic part of objective function
- *    may be NULL in case of no nonquadratic part
+ *  - expr expression for nonlinear part of objective function
+ *    may be NULL in case of no nonlinear part
  *  - constant objective value offset
  */
 #define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nlins, const int* lininds, \
-      const SCIP_Real* linvals, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, \
+      const SCIP_Real* linvals, const SCIP_EXPR* expr, \
       const SCIP_Real constant)
 
 /** change variable bounds
@@ -265,31 +260,15 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 #define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nvals, \
       const int* varidxs, const SCIP_Real* vals)
 
-/** replaces the expression tree of a constraint or objective
+/** replaces the expression of a constraint or objective
  *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idxcons index of constraint or -1 for objective
- *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL
- *  - exprtree new expression tree for constraint or objective, or NULL to only remove previous tree
+ *  - expr new expression for constraint or objective, or NULL to only remove previous tree
  */
-#define SCIP_DECL_NLPICHGEXPRTREE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, \
-      const int* exprvaridxs, const SCIP_EXPRTREE* exprtree)
-
-/** change the value of one parameter in the nonlinear part
- * 
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idxcons index of constraint or -1 for objective
- *  - idxparam index of parameter
- *  - value new value for nonlinear parameter
- *
- * return: Error if parameter does not exist
- */
-#define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, int idxparam, \
-      SCIP_Real value)
+#define SCIP_DECL_NLPICHGEXPR(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, const SCIP_EXPR* expr)
 
 /** change the constant offset in the objective
  *
