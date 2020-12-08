@@ -247,7 +247,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
       SCIP_CALL(solpool_addSol(scip, objval, result, pool, &soladded));
 
    /* should we try recombination? */
-   if( useRec && soladded && pool->size >= 2 && LT(objval, *bestobjval) )
+   if( useRec && soladded && pool->size >= 2 && LE(objval, *bestobjval) )
    {
       /* get index of just added solution */
       int solindex = pool->maxindex;
@@ -295,8 +295,6 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
       SCIP_Real upperbound_sp;
       SCIP_CALL( SCIPStpHeurSlackPruneRun(scip, NULL, graph, result, &success, FALSE, FALSE) );
       upperbound_sp = getSolObj(scip, graph, result);
-    //  printf("old %f \n", objval);
-    //  printf("new %f \n", upperbound_sp);
 
       if( LT(upperbound_sp, objval) )
       {
@@ -313,8 +311,6 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
    else if( *havebestsol )
    {
       *havebestsol = solstp_isUnreduced(scip, graph, bestresult);
-
-      printf("still *havebestsol? %d \n", *havebestsol);
    }
 
    assert(*havebestsol == FALSE || solstp_isValid(scip, graph, bestresult));
