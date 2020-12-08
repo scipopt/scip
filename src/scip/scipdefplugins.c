@@ -159,7 +159,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurAlns(scip) );
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
-   SCIP_CALL( SCIPincludeHeurMultistart(scip) );
+//   SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurMpec(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurTrustregion(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
    SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
-   SCIP_CALL( SCIPincludeHeurUndercover(scip) );
+//   SCIP_CALL( SCIPincludeHeurUndercover(scip) );
    SCIP_CALL( SCIPincludeHeurVbounds(scip) );
    SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
@@ -202,10 +202,10 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
    SCIP_CALL( SCIPincludeSepaAggregation(scip) );
-   SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
+//   SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
 //   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
-   SCIP_CALL( SCIPincludeSepaGauge(scip) );
+//   SCIP_CALL( SCIPincludeSepaGauge(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
