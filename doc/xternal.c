@@ -7526,7 +7526,7 @@
  *  It is the responsability of the python script <code>python-script.py</code> to parse this information.
  *  Thus, you need to modify your python script to read the setting files and the other options provided by the testing scripts.
  *  An example of how to do this is provided in <code>scip/check/scip_runner.py</code>.
- *  One should either modify <code>scip/check/scip_runner.py</code> or include the <code>build_model()</code> function
+ *  One should either modify <code>scip/check/scip-runner.py</code> or include the <code>build_model()</code> function
  *  into your script to correctly read the options passed by the scripts.
  *
  *  An example of how to run the tests is
