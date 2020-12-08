@@ -216,26 +216,28 @@ SCIP_Bool SCIPisNLPConstructed(
    return (scip->nlp != NULL);
 }
 
-/** returns whether the NLP has a continuous variable in a nonlinear term
+/** checks whether the NLP has a continuous variable in a nonlinear term
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_Bool SCIPhasNLPContinuousNonlinearity(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPhasNLPContinuousNonlinearity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            result              /**< buffer to store result */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPhasNLPContinuousNonlinearity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
       SCIPerrorMessage("NLP has not been not constructed.\n");
-      SCIPABORT();
-      return FALSE; /*lint !e527*/
+      return SCIP_ERROR;
    }
 
-   return SCIPnlpHasContinuousNonlinearity(scip->nlp);
+   SCIP_CALL( SCIPnlpHasContinuousNonlinearity(scip->nlp, scip->mem->probmem, scip->set, scip->stat, result) );
+
+   return SCIP_OKAY;
 }
 
 /** gets current NLP variables along with the current number of NLP variables
@@ -331,7 +333,7 @@ SCIP_RETCODE SCIPgetNLPVarsNonlinearity(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, nlcount) );
+   SCIP_CALL( SCIPnlpGetVarsNonlinearity(scip->nlp, scip->mem->probmem, scip->set, scip->stat, nlcount) );
 
    return SCIP_OKAY;
 }
@@ -497,7 +499,7 @@ SCIP_RETCODE SCIPdelNlRow(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpDelNlRow(scip->nlp, SCIPblkmem(scip), scip->set, nlrow) );
+   SCIP_CALL( SCIPnlpDelNlRow(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, nlrow) );
 
    return SCIP_OKAY;
 }
@@ -605,7 +607,7 @@ SCIP_RETCODE SCIPsolveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
+   SCIP_CALL( SCIPnlpSolve(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat, scip->primal, scip->tree) );
 
    return SCIP_OKAY;
 }
@@ -948,7 +950,7 @@ SCIP_RETCODE SCIPwriteNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpWrite(scip->nlp, scip->set, scip->messagehdlr, filename) );
+   SCIP_CALL( SCIPnlpWrite(scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->messagehdlr, filename) );
 
    return SCIP_OKAY;
 }
@@ -1052,7 +1054,7 @@ SCIP_RETCODE SCIPendDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpEndDive(scip->nlp, SCIPblkmem(scip), scip->set) );
+   SCIP_CALL( SCIPnlpEndDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -1169,7 +1171,7 @@ SCIP_RETCODE SCIPsolveDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSolveDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat) );
+   SCIP_CALL( SCIPnlpSolveDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->messagehdlr, scip->stat, scip->primal, scip->tree) );
 
    return SCIP_OKAY;
 }
@@ -1199,7 +1201,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
+   SCIP_EXPR*            expr,               /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
@@ -1207,8 +1209,8 @@ SCIP_RETCODE SCIPcreateNlRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
-         name, constant, nlinvars, linvars, lincoefs, expression, lhs, rhs, curvature) );
+   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set, scip->stat,
+         name, constant, nlinvars, linvars, lincoefs, expr, lhs, rhs, curvature) );
 
    return SCIP_OKAY;
 }
@@ -1233,7 +1235,7 @@ SCIP_RETCODE SCIPcreateEmptyNlRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set,
+   SCIP_CALL( SCIPnlrowCreate(nlrow, scip->mem->probmem, scip->set, scip->stat,
          name, 0.0, 0, NULL, NULL, NULL, lhs, rhs, SCIP_EXPRCURV_UNKNOWN) );
 
    return SCIP_OKAY;
@@ -1257,7 +1259,7 @@ SCIP_RETCODE SCIPcreateNlRowFromRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateNlRowFromRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowCreateFromRow(nlrow, scip->mem->probmem, scip->set, row) );
+   SCIP_CALL( SCIPnlrowCreateFromRow(nlrow, scip->mem->probmem, scip->set, scip->stat, row) );
 
    return SCIP_OKAY;
 }
@@ -1302,7 +1304,7 @@ SCIP_RETCODE SCIPreleaseNlRow(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPreleaseNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowRelease(nlrow, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPnlrowRelease(nlrow, scip->mem->probmem, scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -1657,7 +1659,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
    SCIP_NLROW*           nlrow               /**< NLP nonlinear row */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPrecalcNlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPrecalcNlRowNLPActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( scip->nlp == NULL )
    {
@@ -1665,7 +1667,7 @@ SCIP_RETCODE SCIPrecalcNlRowNLPActivity(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->set, scip->stat, scip->nlp) );
+   SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp) );
 
    return SCIP_OKAY;
 }
@@ -1693,7 +1695,7 @@ SCIP_RETCODE SCIPgetNlRowNLPActivity(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
+   SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, activity) );
 
    return SCIP_OKAY;
 }
@@ -1721,7 +1723,7 @@ SCIP_RETCODE SCIPgetNlRowNLPFeasibility(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
+   SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, feasibility) );
 
    return SCIP_OKAY;
 }
@@ -1742,7 +1744,7 @@ SCIP_RETCODE SCIPrecalcNlRowPseudoActivity(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPrecalcNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->set, scip->stat) );
+   SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp) );
 
    return SCIP_OKAY;
 }
@@ -1764,7 +1766,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoActivity(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNlRowPseudoActivity", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, pseudoactivity) );
+   SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, pseudoactivity) );
 
    return SCIP_OKAY;
 }
@@ -1786,7 +1788,7 @@ SCIP_RETCODE SCIPgetNlRowPseudoFeasibility(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNlRowPseudoFeasibility", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, pseudofeasibility) );
+   SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, pseudofeasibility) );
 
    return SCIP_OKAY;
 }
@@ -1809,11 +1811,11 @@ SCIP_RETCODE SCIPrecalcNlRowActivity(
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->set, scip->stat, scip->nlp) );
+      SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->set, scip->stat) );
+      SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp) );
    }
 
    return SCIP_OKAY;
@@ -1838,11 +1840,11 @@ SCIP_RETCODE SCIPgetNlRowActivity(
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
+      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, activity) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, activity) );
+      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, activity) );
    }
 
    return SCIP_OKAY;
@@ -1867,11 +1869,11 @@ SCIP_RETCODE SCIPgetNlRowFeasibility(
 
    if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
+      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, feasibility) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, feasibility) );
+      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, feasibility) );
    }
 
    return SCIP_OKAY;
@@ -1897,15 +1899,15 @@ SCIP_RETCODE SCIPgetNlRowSolActivity(
 
    if( sol != NULL )
    {
-      SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, scip->set, scip->stat, sol, activity) );
+      SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, sol, activity) );
    }
    else if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->set, scip->stat, scip->nlp, activity) );
+      SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, activity) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->set, scip->stat, activity) );
+      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, activity) );
    }
 
    return SCIP_OKAY;
@@ -1931,15 +1933,15 @@ SCIP_RETCODE SCIPgetNlRowSolFeasibility(
 
    if( sol != NULL )
    {
-      SCIP_CALL( SCIPnlrowGetSolFeasibility(nlrow, scip->set, scip->stat, sol, feasibility) );
+      SCIP_CALL( SCIPnlrowGetSolFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, sol, feasibility) );
    }
    else if( scip->nlp != NULL && SCIPnlpHasCurrentNodeNLP(scip->nlp) && SCIPnlpHasSolution(scip->nlp) )
    {
-      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->set, scip->stat, scip->nlp, feasibility) );
+      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, scip->nlp, feasibility) );
    }
    else
    {
-      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->set, scip->stat, feasibility) );
+      SCIP_CALL( SCIPnlrowGetPseudoFeasibility(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp, feasibility) );
    }
 
    return SCIP_OKAY;
@@ -1964,7 +1966,7 @@ SCIP_RETCODE SCIPgetNlRowActivityBounds(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetNlRowActivityBounds", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowGetActivityBounds(nlrow, scip->set, scip->stat, minactivity, maxactivity) );
+   SCIP_CALL( SCIPnlrowGetActivityBounds(nlrow, scip->mem->probmem, scip->set, scip->stat, minactivity, maxactivity) );
 
    return SCIP_OKAY;
 }
@@ -1989,7 +1991,7 @@ SCIP_RETCODE SCIPprintNlRow(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintNlRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnlrowPrint(nlrow, scip->messagehdlr, file) );
+   SCIP_CALL( SCIPnlrowPrint(nlrow, scip->mem->probmem, scip->set, scip->stat, scip->messagehdlr, file) );
 
    return SCIP_OKAY;
 }

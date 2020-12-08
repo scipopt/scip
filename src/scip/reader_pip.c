@@ -2935,7 +2935,9 @@ SCIP_RETCODE SCIPwritePip(
          /* get the quadratic representation of the expression constraint */
          SCIP_CALL( SCIPcheckQuadraticConsNonlinear(scip, cons, &isquadratic) );
 
-         /* we cannot handle expression constraint that are not quadratically representable */
+         /* we cannot handle expression constraint that are not quadratically representable
+          * TODO we should, see disabled printRowNl code
+          */
          if( !isquadratic )
          {
             SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconsGetHdlr(cons));

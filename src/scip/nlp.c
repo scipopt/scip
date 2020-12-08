@@ -33,7 +33,7 @@
 #include "scip/intervalarith.h"
 #include "nlpi/nlpi.h"
 #include "scip/pub_expr.h"
-#include "scip/struct_expr.h"
+#include "scip/expr.h"
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/intervalarith.h"
@@ -95,402 +95,6 @@ SCIP_RETCODE nlpRowChanged(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLROW*           nlrow               /**< nonlinear row which was changed */
    );
-
-#if !1 // TODO remove
-/*
- * public expression tree methods
- */
-
-/** returns variables of expression tree */
-SCIP_VAR** SCIPexprtreeGetVars(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(tree != NULL);
-
-   return (SCIP_VAR**)tree->vars;
-}
-
-/** stores array of variables in expression tree */
-SCIP_RETCODE SCIPexprtreeSetVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   nvars,              /**< number of variables */
-   SCIP_VAR**            vars                /**< variables */
-   )
-{
-   assert(tree != NULL);
-   assert(vars != NULL || nvars == 0);
-
-   if( nvars == 0 )
-   {
-      BMSfreeBlockMemoryArrayNull(tree->blkmem, &tree->vars, tree->nvars);
-      tree->nvars = 0;
-   }
-   else if( tree->vars != NULL )
-   {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, nvars) );
-      BMScopyMemoryArray(tree->vars, (void**)vars, nvars);
-   }
-   else
-   {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->vars, (void**)vars, nvars) );
-   }
-
-   tree->nvars = nvars;
-
-   assert(tree->vars != NULL || tree->nvars == 0);
-
-   return SCIP_OKAY;
-}
-
-/** adds variables to the expression tree variables array */
-SCIP_RETCODE SCIPexprtreeAddVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   nvars,              /**< number of variables */
-   SCIP_VAR**            vars                /**< variables */
-   )
-{
-   assert(tree != NULL);
-   assert(vars != NULL || nvars == 0);
-   assert(tree->vars != NULL || tree->nvars == 0);
-
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   if( tree->nvars == 0 )
-   {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(tree->blkmem, &tree->vars, (void**)vars, nvars) );
-      tree->nvars = nvars;
-      return SCIP_OKAY;
-   }
-
-   /* append vars to tree->vars array */
-   SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, tree->nvars + nvars) );
-   BMScopyMemoryArray(&tree->vars[tree->nvars], (void**)vars, nvars);  /*lint !e866*/
-   tree->nvars += nvars;
-
-   return SCIP_OKAY;
-}
-
-/** prints an expression tree using variable names from variables array */
-SCIP_RETCODE SCIPexprtreePrintWithNames(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< file for printing, or NULL for stdout */
-   )
-{
-   const char** varnames;
-   int i;
-
-   assert(tree != NULL);
-
-   if( tree->nvars == 0 )
-   {
-      SCIPexprtreePrint(tree, messagehdlr, file, NULL, NULL);
-      return SCIP_OKAY;
-   }
-
-   assert(tree->vars != NULL);
-
-   SCIP_ALLOC( BMSallocMemoryArray(&varnames, tree->nvars) );
-   for( i = 0; i < tree->nvars; ++i )
-      varnames[i] = SCIPvarGetName((SCIP_VAR*)tree->vars[i]);
-
-   SCIPexprtreePrint(tree, messagehdlr, file, varnames, NULL);
-
-   BMSfreeMemoryArray(&varnames);
-
-   return SCIP_OKAY;
-}
-
-/** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
- * Note that this is an O(n) operation!
- */
-int SCIPexprtreeFindVar(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_VAR*             var                 /**< variable to search for */
-   )
-{
-   int i;
-
-   assert(tree != NULL);
-   assert(var  != NULL);
-
-   for( i = 0; i < tree->nvars; ++i )
-      if( (SCIP_VAR*)tree->vars[i] == var )
-         return i;
-
-   return -1;
-}
-
-/** removes fixed variables from an expression tree, so that at exit all variables are active */
-SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool*            changed,            /**< buffer to store whether the tree was changed, i.e., whether there was a fixed variable */
-   int*                  varpos,             /**< array of length at least tree->nvars to store new indices of previously existing variables in expression tree, or -1 if variable was removed; set to NULL if not of interest */
-   int*                  newvarsstart        /**< buffer to store index in tree->vars array where new variables begin, or NULL if not of interest */
-   )
-{
-   SCIP_HASHMAP* varhash;
-   int i;
-   int j;
-   int nvarsold;
-   SCIP_VAR* var;
-   SCIP_Real scalar;
-   SCIP_Real constant;
-   SCIP_EXPR** replaceexprs;
-   SCIP_Bool havefixedvar;
-   int idx;
-   int* newpos;
-   int offset;
-
-   assert(tree != NULL);
-   assert(tree->vars != NULL || tree->nvars == 0);
-   assert(changed != NULL);
-
-   *changed = FALSE;
-   if( newvarsstart != NULL )
-      *newvarsstart = tree->nvars;
-
-   if( tree->nvars == 0 )
-      return SCIP_OKAY;
-
-   /* create hash map from variable to indices in tree->vars and check if there is a non-fixed variable */
-   havefixedvar = FALSE;
-   SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, tree->nvars) );
-   for( i = 0; i < tree->nvars; ++i )
-   {
-      /* it's not possible to add a variable twice to the varhash map */
-      if( SCIPhashmapExists(varhash, tree->vars[i]) )
-         continue;
-
-      SCIP_CALL( SCIPhashmapInsertInt(varhash, tree->vars[i], i) );
-
-      if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
-         havefixedvar = TRUE;
-   }
-
-   if( !havefixedvar )
-   {
-      /* nothing to do */
-      if( varpos != NULL )
-         for( i = 0; i < tree->nvars; ++i )
-            varpos[i] = i;
-      SCIPhashmapFree(&varhash);
-      return SCIP_OKAY;
-   }
-
-   /* we will do something */
-   *changed = TRUE;
-
-   nvarsold = tree->nvars;
-
-   /* array to store expressions that replace a variable expression in the tree */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &replaceexprs, nvarsold) );
-   BMSclearMemoryArray(replaceexprs, nvarsold);
-
-   /* construct for each nonactive variable an expression that replaces this variable in the tree */
-   for( i = 0; i < nvarsold; ++i )
-   {
-      var = (SCIP_VAR*)tree->vars[i];
-
-      if( SCIPvarIsActive(var) )
-         continue;
-
-      scalar   = 1.0;
-      constant = 0.0;
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
-
-      if( scalar == 0.0 )
-      {
-         /* variable is fixed, thus replace by constant expression in tree */
-         SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_CONST, constant) );
-         continue;
-      }
-
-      if( SCIPvarIsActive(var) )
-      {
-         /* variable was aggregated or negated, thus replace by scalar * var + constant */
-         if( !SCIPhashmapExists(varhash, var) )
-         {
-            /* var not in tree yet, so add it */
-            SCIP_CALL( SCIPexprtreeAddVars(tree, 1, &var) );
-            idx = tree->nvars - 1;
-            SCIP_CALL( SCIPhashmapInsertInt(varhash, (void*)var, idx) );
-         }
-         else
-         {
-            idx = SCIPhashmapGetImageInt(varhash, (void*)var);
-         }
-         assert(idx >= 0 && idx < tree->nvars);
-         assert((SCIP_VAR*)tree->vars[idx] == var);
-
-         SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_VARIDX, idx) );
-         if( scalar != 1.0 || constant != 0.0 )
-         {
-            /* multiply by scalar and add constant -> linear expression */
-            SCIP_CALL( SCIPexprCreateLinear(tree->blkmem, &replaceexprs[i], 1, &replaceexprs[i], &scalar, constant) );
-         }
-         continue;
-      }
-
-      {
-         SCIP_EXPR** children;
-         SCIP_Real*  coefs;
-         int         nchildren;
-         SCIP_VAR*   mvar;
-         SCIP_Real   mscalar;
-
-         /* var is now multi-aggregated, thus replace by scalar * (multaggrconst + sum_j multaggrscalar_j*multaggrvar_j) + constant */
-         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
-
-         /* allocate array for children and coefficients */
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var)) );  /*lint !e666 */
-         SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var)) );  /*lint !e666 */
-         nchildren = 0;
-
-         /* linear part
-          * turn each variable in SCIPvarGetMultaggrVars(var) into an active or multi-aggregated one and add corresponding term to summands */
-         for( j = 0; j < SCIPvarGetMultaggrNVars(var); ++j )
-         {
-            mvar      = SCIPvarGetMultaggrVars(var)[j];
-            mscalar   = scalar * SCIPvarGetMultaggrScalars(var)[j];
-            SCIP_CALL( SCIPvarGetProbvarSum(&mvar, set, &mscalar, &constant) );
-
-            /* if variable mvar is fixed, constant has been added to constant and we can continue */
-            if( mscalar == 0.0 )
-               continue;
-
-            assert(SCIPvarIsActive(mvar) || SCIPvarGetStatus(mvar) == SCIP_VARSTATUS_MULTAGGR);
-
-            /* add mvar to tree, if not in tree yet */
-            if( !SCIPhashmapExists(varhash, mvar) )
-            {
-               /* var not in tree yet, so add it */
-               SCIP_CALL( SCIPexprtreeAddVars(tree, 1, &mvar) );
-               idx = tree->nvars - 1;
-               SCIP_CALL( SCIPhashmapInsertInt(varhash, (void*)mvar, idx) );
-            }
-            else
-            {
-               idx = SCIPhashmapGetImageInt(varhash, (void*)mvar);
-            }
-            assert(idx >= 0 && idx < tree->nvars);
-            assert((SCIP_VAR*)tree->vars[idx] == mvar);
-
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &children[nchildren], SCIP_EXPR_VARIDX, idx) );
-            coefs[nchildren] = mscalar;
-            ++nchildren;
-         }
-
-         /* constant part */
-         constant += scalar * SCIPvarGetMultaggrConstant(var);
-
-         if( nchildren == 0 )
-         {
-            /* somehow all aggregation variables were fixed */
-            SCIP_CALL( SCIPexprCreate(tree->blkmem, &replaceexprs[i], SCIP_EXPR_CONST, constant) );
-         }
-         else if( nchildren == 1 && constant == 0.0 )
-         {
-            /* somehow everything collapsed to one summand -> use that one for replaceexprs[i]*/
-            replaceexprs[i] = children[0];
-         }
-         else
-         {
-            /* set replaceexprs[i] to linear expression in children */
-            SCIP_CALL( SCIPexprCreateLinear(tree->blkmem, &replaceexprs[i], nchildren, children, coefs, constant) );
-         }
-
-         BMSfreeBlockMemoryArray(tree->blkmem, &children, SCIPvarGetMultaggrNVars(var));
-         BMSfreeBlockMemoryArray(tree->blkmem, &coefs,    SCIPvarGetMultaggrNVars(var));
-      }
-   }
-
-   /* replace variables in tree by assembled expressions */
-   SCIP_CALL( SCIPexprtreeSubstituteVars(tree, replaceexprs) );
-   /* free replaceexprs */
-   for( i = 0; i < nvarsold; ++i )
-      if( replaceexprs[i] != NULL )
-         SCIPexprFreeDeep(tree->blkmem, &replaceexprs[i]);
-   BMSfreeBlockMemoryArray(tree->blkmem, &replaceexprs, nvarsold);
-
-   /* the varhash is not needed anymore */
-   SCIPhashmapFree(&varhash);
-
-   /* remove inactive variables from vars array and recompute variable indices */
-   SCIP_ALLOC( BMSallocBlockMemoryArray(tree->blkmem, &newpos, tree->nvars) );
-   offset = 0;
-   for( i = 0; i < tree->nvars; ++i )
-   {
-      if( SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || i >= nvarsold )
-      {
-         /* a new variable need to be either active or multi-aggregated */
-         assert(i < nvarsold || SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) || SCIPvarGetStatus((SCIP_VAR*)tree->vars[i]) == SCIP_VARSTATUS_MULTAGGR);
-         newpos[i] = i - offset;
-      }
-      else
-      {
-         /* non-active variable are removed */
-         newpos[i] = -1;
-         ++offset;
-      }
-      if( varpos != NULL && i < nvarsold )
-         varpos[i] = newpos[i];
-   }
-   if( newvarsstart != NULL )
-      *newvarsstart -= offset;
-
-   /* update indices in tree */
-   SCIPexprReindexVars(tree->root, newpos);
-
-   /* move variable in expression tree vars array
-    * check if there is a fixed variable left */
-   havefixedvar = FALSE;
-   for( i = 0; i < tree->nvars; ++i )
-   {
-      if( newpos[i] == -1 )
-      {
-         /* variable was removed */
-         assert(!SCIPvarIsActive((SCIP_VAR*)tree->vars[i]));
-         continue;
-      }
-      /* variable is moved */
-      tree->vars[newpos[i]] = tree->vars[i];
-      if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
-         havefixedvar = TRUE;
-   }
-
-   /* free newpos array; resize vars array */
-   BMSfreeBlockMemoryArray(tree->blkmem, &newpos, tree->nvars);
-   if( offset < tree->nvars )
-   {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars, tree->nvars - offset) );
-      tree->nvars -= offset;
-   }
-   else
-   {
-      /* all variables were removed */
-      BMSfreeBlockMemoryArray(tree->blkmem, &tree->vars, tree->nvars);
-      tree->nvars = 0;
-   }
-
-   if( havefixedvar )
-   {
-      /* if there are still fixed variables left, then this are newly added multi-aggregated variables
-       * it is then save to call this function recursively, since the original active variables should not be moved,
-       * i.e., varpos and *newvarsstart will remain valid
-       */
-      SCIP_Bool gotchange;
-
-      SCIP_CALL( SCIPexprtreeRemoveFixedVars(tree, set, &gotchange, NULL, NULL) );
-      assert(gotchange);
-   }
-
-   return SCIP_OKAY;
-}
-#endif
 
 /*
  * private NLP nonlinear row methods
@@ -575,38 +179,7 @@ SCIP_RETCODE nlrowExprChanged(
       if( nlrow->nlpiindex >= 0 )
       {
          /* change expression tree in NLPI problem */
-         int* nlinidxs;
-
-         /* get indices of variables in expression tree part of row */
-         if( nlrow->expr != NULL )
-         {
-            int i;
-            int n;
-            SCIP_VAR* var;
-
-            n = SCIPexprtreeGetNVars(nlrow->expr);
-            assert(n == 0 || SCIPexprtreeGetVars(nlrow->expr) != NULL);
-
-            SCIP_CALL( SCIPsetAllocBufferArray(set, &nlinidxs, n) );
-
-            for( i = 0; i < n; ++i )
-            {
-               var = SCIPexprtreeGetVars(nlrow->expr)[i];
-               assert(var != NULL);
-               assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
-
-               assert(SCIPhashmapExists(nlp->varhash, var));
-               nlinidxs[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
-            }
-
-            SCIP_CALL( SCIPnlpiChgExpr(nlp->solver, nlp->problem, nlrow->nlpiindex, nlrow->expr) );
-
-            SCIPsetFreeBufferArray(set, &nlinidxs);
-         }
-         else
-         {
-            SCIP_CALL( SCIPnlpiChgExpr(nlp->solver, nlp->problem, nlrow->nlpiindex, NULL) );
-         }
+         SCIP_CALL( SCIPnlpiChgExpr(nlp->solver, nlp->problem, nlrow->nlpiindex, nlrow->expr) );
       }
    }
 
@@ -805,6 +378,7 @@ SCIP_RETCODE nlrowAddLinearCoef(
    return SCIP_OKAY;
 }
 
+#if SCIP_DISABLED_CODE
 /** adds a linear coefficient to a nonlinear row
  * if the variable exists in the linear part of the row already, the coefficients are added
  * otherwise the variable is added to the row */
@@ -886,6 +460,7 @@ SCIP_RETCODE nlrowAddToLinearCoef(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** deletes coefficient at given position from row */
 static
@@ -950,6 +525,7 @@ SCIP_RETCODE nlrowChgLinearCoefPos(
 static
 SCIP_RETCODE nlrowCalcActivityBounds(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< problem statistics data */
    )
@@ -974,24 +550,10 @@ SCIP_RETCODE nlrowCalcActivityBounds(
       SCIPintervalAdd(inf, &activity, activity, bounds);
    }
 
-   if( nlrow->expr != NULL && !SCIPintervalIsEntire(inf, activity))
+   if( nlrow->expr != NULL && !SCIPintervalIsEntire(inf, activity) )
    {
-      SCIP_INTERVAL* varvals;
-      int n;
-
-      n = SCIPexprtreeGetNVars(nlrow->expr);
-
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
-
-      for( i = 0; i < n; ++i )
-      {
-         SCIPintervalSetBounds(&varvals[i], SCIPvarGetLbLocal(SCIPexprtreeGetVars(nlrow->expr)[i]), SCIPvarGetUbLocal(SCIPexprtreeGetVars(nlrow->expr)[i]));
-      }
-
-      SCIP_CALL( SCIPexprtreeEvalInt(nlrow->expr, inf, varvals, &bounds) );
-      SCIPintervalAdd(inf, &activity, activity, bounds);
-
-      SCIPsetFreeBufferArray(set, &varvals);
+      SCIP_CALL( SCIPexprEvalActivity(set, stat, blkmem, nlrow->expr) );
+      SCIPintervalAdd(inf, &activity, activity, SCIPexprGetActivity(nlrow->expr));
    }
 
    nlrow->minactivity = SCIPintervalGetInf(activity);
@@ -1136,31 +698,40 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
 static
 SCIP_RETCODE nlrowRemoveFixedExprVars(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp                 /**< current NLP data */
    )
 {
+   SCIP_EXPR* simplified;
    SCIP_Bool changed;
+   SCIP_Bool infeasible;
 
    if( nlrow->expr == NULL )
       return SCIP_OKAY;
 
-//FIXME   SCIP_CALL( SCIPexprRemoveFixedVars(nlrow->expr, set, &changed, NULL, NULL) );
-   changed = FALSE;
-   if( changed )
+   // FIXME SCIPsimplifyExpr is not accessible on this level
+   SCIP_CALL( SCIPsimplifyExpr(set->scip, nlrow->expr, &simplified, &changed, &infeasible, NULL, NULL) );
+   assert(!infeasible);
+
+   if( !changed )
    {
-      SCIP_CALL( nlrowExprChanged(nlrow, set, stat, nlp) );
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &simplified) );
+      return SCIP_OKAY;
    }
 
-   if( SCIPexprtreeGetNVars(nlrow->expr) == 0 )
-   {
-      /* if expression tree is constant and not parameterized now, remove it */
-      SCIP_Real exprval;
-      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, NULL, &exprval) );
-      SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + exprval) );
+   SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
+   nlrow->expr = simplified;
 
-      SCIP_CALL( SCIPexprtreeFree(&nlrow->expr) );
+   SCIP_CALL( nlrowExprChanged(nlrow, set, stat, nlp) );
+
+   if( SCIPexprIsValue(set, nlrow->expr) )
+   {
+      /* if expression tree is constant, remove it */
+      SCIP_CALL( SCIPnlrowChgConstant(nlrow, set, stat, nlp, nlrow->constant + SCIPgetValueExprValue(nlrow->expr)) );
+
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
    }
 
    return SCIP_OKAY;
@@ -1190,10 +761,10 @@ SCIP_RETCODE nlrowRemoveFixedVar(
       SCIP_CALL( nlrowRemoveFixedLinearCoefPos(nlrow, blkmem, set, stat, nlp, pos) );
    }
 
-   /* search for variable in non-quadratic part and remove all fixed variables in expression tree if existing */
-   if( nlrow->expr != NULL && SCIPexprtreeFindVar(nlrow->expr, var) >= 0 )
+   /* search for variable in nonlinear part and remove all fixed variables in expression tree if existing */
+   if( nlrow->expr != NULL /* && SCIPexprtreeFindVar(nlrow->expr, var) >= 0 */ )  // FIXME?
    {
-      SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, set, stat, nlp) );
+      SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, blkmem, set, stat, nlp) );
    }
 
    return SCIP_OKAY;
@@ -1210,6 +781,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    const char*           name,               /**< name of nonlinear row */
    SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of linear variables */
@@ -1267,7 +839,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    /* nonlinear part */
    if( expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeCopy( blkmem, &(*nlrow)->expr, expr) );
+      SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, expr, &(*nlrow)->expr, NULL, NULL, NULL, NULL) );
    }
    else
    {
@@ -1306,6 +878,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLROW*           sourcenlrow         /**< nonlinear row to copy */
    )
 {
@@ -1314,7 +887,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    assert(set    != NULL);
    assert(sourcenlrow != NULL);
 
-   SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, sourcenlrow->name,
+   SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, stat, sourcenlrow->name,
          sourcenlrow->constant,
          sourcenlrow->nlinvars, sourcenlrow->linvars, sourcenlrow->lincoefs,
          sourcenlrow->expr,
@@ -1339,6 +912,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_ROW*             row                 /**< the linear row to copy */
    )
 {
@@ -1364,7 +938,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
          assert(rowvars[i] != NULL);
       }
 
-      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
+      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, stat, SCIProwGetName(row),
             SCIProwGetConstant(row),
             rownz, rowvars, SCIProwGetVals(row), NULL,
             SCIProwGetLhs(row), SCIProwGetRhs(row),
@@ -1378,7 +952,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
 
       rowvar = SCIPcolGetVar(SCIProwGetCols(row)[0]);
 
-      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
+      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, stat, SCIProwGetName(row),
             SCIProwGetConstant(row),
             1, &rowvar, SCIProwGetVals(row), NULL,
             SCIProwGetLhs(row), SCIProwGetRhs(row),
@@ -1386,7 +960,7 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    }
    else
    {
-      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, SCIProwGetName(row),
+      SCIP_CALL( SCIPnlrowCreate(nlrow, blkmem, set, stat, SCIProwGetName(row),
             SCIProwGetConstant(row),
             0, NULL, NULL, NULL,
             SCIProwGetLhs(row), SCIProwGetRhs(row),
@@ -1396,40 +970,12 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    return SCIP_OKAY;   
 }
 
-/** frees a nonlinear row */
-SCIP_RETCODE SCIPnlrowFree(
-   SCIP_NLROW**          nlrow,              /**< pointer to NLP row */
-   BMS_BLKMEM*           blkmem              /**< block memory */
-   )
-{
-   assert(blkmem != NULL);
-   assert(nlrow  != NULL);
-   assert(*nlrow != NULL);
-   assert((*nlrow)->nuses == 0);
-   assert((*nlrow)->nlpindex == -1);
-   assert((*nlrow)->nlpiindex == -1);
-
-   /* linear part */
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->linvars,   (*nlrow)->linvarssize);
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->lincoefs,  (*nlrow)->linvarssize);
-
-   /* nonlinear part */
-   if( (*nlrow)->expr != NULL )
-   {
-      SCIP_CALL( SCIPexprtreeFree(&(*nlrow)->expr) );
-   }
-
-   /* miscellaneous */
-   BMSfreeBlockMemoryArray(blkmem, &(*nlrow)->name, strlen((*nlrow)->name)+1);
-
-   BMSfreeBlockMemory(blkmem, nlrow);
-
-   return SCIP_OKAY;
-}
-
 /** output nonlinear row to file stream */
 SCIP_RETCODE SCIPnlrowPrint(
    SCIP_NLROW*           nlrow,              /**< NLP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
@@ -1462,7 +1008,7 @@ SCIP_RETCODE SCIPnlrowPrint(
    if( nlrow->expr != NULL )
    {
       SCIPmessageFPrintInfo(messagehdlr, file, " + ");
-      SCIP_CALL( SCIPexprtreePrintWithNames(nlrow->expr, messagehdlr, file) );
+      SCIP_CALL( SCIPexprPrint(set, stat, blkmem, messagehdlr, file, nlrow->expr) );
    }
 
    /* print right hand side */
@@ -1487,7 +1033,8 @@ void SCIPnlrowCapture(
 SCIP_RETCODE SCIPnlrowRelease(
    SCIP_NLROW**          nlrow,              /**< nonlinear row to free */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    assert(blkmem != NULL);
@@ -1497,15 +1044,35 @@ SCIP_RETCODE SCIPnlrowRelease(
 
    SCIPsetDebugMsg(set, "release nonlinear row <%s> with nuses=%d\n", (*nlrow)->name, (*nlrow)->nuses);
    (*nlrow)->nuses--;
-   if( (*nlrow)->nuses == 0 )
+   if( (*nlrow)->nuses > 0 )
    {
-      SCIP_CALL( SCIPnlrowFree(nlrow, blkmem) );
+      *nlrow = NULL;
+      return SCIP_OKAY;
    }
 
-   *nlrow = NULL;
+   /* free row */
+
+   assert((*nlrow)->nuses == 0);
+   assert((*nlrow)->nlpindex == -1);
+   assert((*nlrow)->nlpiindex == -1);
+
+   /* linear part */
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->linvars,   (*nlrow)->linvarssize);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*nlrow)->lincoefs,  (*nlrow)->linvarssize);
+
+   /* nonlinear part */
+   if( (*nlrow)->expr != NULL )
+   {
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &(*nlrow)->expr) );
+   }
+
+   /* miscellaneous */
+   BMSfreeBlockMemoryArray(blkmem, &(*nlrow)->name, strlen((*nlrow)->name)+1);
+
+   BMSfreeBlockMemory(blkmem, nlrow);
 
    return SCIP_OKAY;
-} /*lint !e715*/
+}
 
 /** ensures, that linear coefficient array of nonlinear row can store at least num entries */
 SCIP_RETCODE SCIPnlrowEnsureLinearSize(
@@ -1667,21 +1234,29 @@ SCIP_RETCODE SCIPnlrowChgExpr(
    /* free previous expression tree */
    if( nlrow->expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeFree(&nlrow->expr) );
+      SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
       assert(nlrow->expr == NULL);
    }
 
    /* adds new expression tree */
    if( expr != NULL )
    {
-      SCIP_CALL( SCIPexprtreeCopy(blkmem, &nlrow->expr, expr) );
+      SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, expr, &nlrow->expr, NULL, NULL, NULL, NULL) );
 
       /* if row is already in NLP, ensure that expr has only active variables */
       if( nlrow->nlpindex >= 0 )
       {
-         SCIP_Bool dummy;
-         SCIP_CALL( SCIPexprtreeRemoveFixedVars(nlrow->expr, set, &dummy, NULL, NULL) );
-      }  /*lint !e438*/
+         SCIP_EXPR* simplified;
+         SCIP_Bool changed;
+         SCIP_Bool infeasible;
+
+         // FIXME SCIPsimplifyExpr is not accessible on this level
+         SCIP_CALL( SCIPsimplifyExpr(set->scip, nlrow->expr, &simplified, &changed, &infeasible, NULL, NULL) );
+         assert(!infeasible);
+
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
+         nlrow->expr = simplified;
+      }
    }
 
    /* notify row about the change */
@@ -1760,7 +1335,7 @@ SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    )
 {
    SCIP_CALL( nlrowRemoveFixedLinearCoefs(nlrow, blkmem, set, stat, nlp) );
-   SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, set, stat, nlp) );
+   SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, blkmem, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -1768,8 +1343,11 @@ SCIP_RETCODE SCIPnlrowRemoveFixedVars(
 /** recalculates the current activity of a nonlinear row */
 SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp                 /**< current NLP data */
    )
 {
@@ -1796,23 +1374,17 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
 
    if( nlrow->expr != NULL )
    {
-      SCIP_Real* varvals;
-      SCIP_Real val;
-      int n;
+      SCIP_SOL* sol;
 
-      n = SCIPexprtreeGetNVars(nlrow->expr);
+      SCIP_CALL( SCIPsolCreateNLPSol(&sol, blkmem, set, stat, primal, tree, nlp, NULL) );
 
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
+      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0) );
+      if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
+         nlrow->activity = SCIP_INVALID;
+      else
+         nlrow->activity += SCIPexprGetEvalValue(nlrow->expr);
 
-      for( i = 0; i < n; ++i )
-      {
-         varvals[i] = SCIPvarGetNLPSol(SCIPexprtreeGetVars(nlrow->expr)[i]);
-      }
-
-      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, varvals, &val) );
-      nlrow->activity += val;
-
-      SCIPsetFreeBufferArray(set, &varvals);
+      SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
    }
 
    nlrow->validactivitynlp = stat->nnlps;
@@ -1823,8 +1395,11 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
 /** returns the activity of a nonlinear row in the current NLP solution */
 SCIP_RETCODE SCIPnlrowGetNLPActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real*            activity            /**< buffer to store activity value */
    )
@@ -1837,7 +1412,7 @@ SCIP_RETCODE SCIPnlrowGetNLPActivity(
 
    if( nlrow->validactivitynlp != stat->nnlps )
    {
-      SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, set, stat, nlp) );
+      SCIP_CALL( SCIPnlrowRecalcNLPActivity(nlrow, blkmem, set, stat, primal, tree, nlp) );
    }
    assert(nlrow->validactivitynlp == stat->nnlps);
    assert(nlrow->activity < SCIP_INVALID);
@@ -1850,8 +1425,11 @@ SCIP_RETCODE SCIPnlrowGetNLPActivity(
 /** gives the feasibility of a nonlinear row in the current NLP solution: negative value means infeasibility */
 SCIP_RETCODE SCIPnlrowGetNLPFeasibility(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    )
@@ -1861,7 +1439,7 @@ SCIP_RETCODE SCIPnlrowGetNLPFeasibility(
    assert(nlrow != NULL);
    assert(feasibility != NULL);
 
-   SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, set, stat, nlp, &activity) );
+   SCIP_CALL( SCIPnlrowGetNLPActivity(nlrow, blkmem, set, stat, primal, tree, nlp, &activity) );
    *feasibility = MIN(nlrow->rhs - activity, activity - nlrow->lhs);
 
    return SCIP_OKAY;
@@ -1870,8 +1448,13 @@ SCIP_RETCODE SCIPnlrowGetNLPFeasibility(
 /** calculates the current pseudo activity of a nonlinear row */
 SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< SCIP LP */
    )
 {
    SCIP_Real val1;
@@ -1891,20 +1474,17 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
 
    if( nlrow->expr != NULL )
    {
-      SCIP_Real* varvals;
-      int n;
+      SCIP_SOL* sol;
 
-      n = SCIPexprtreeGetNVars(nlrow->expr);
+      SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, prob, primal, tree, lp, NULL) );
 
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
+      SCIP_CALL( SCIPexprEval(set, stat, blkmem, nlrow->expr, sol, 0) );
+      if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
+         nlrow->pseudoactivity = SCIP_INVALID;
+      else
+         nlrow->pseudoactivity += SCIPexprGetEvalValue(nlrow->expr);
 
-      for( i = 0; i < n; ++i )
-         varvals[i] = SCIPvarGetBestBoundLocal(SCIPexprtreeGetVars(nlrow->expr)[i]);
-
-      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, varvals, &val1) );
-      nlrow->pseudoactivity += val1;
-
-      SCIPsetFreeBufferArray(set, &varvals);
+      SCIP_CALL( SCIPsolFree(&sol, blkmem, primal) );
    }
 
    nlrow->validpsactivitydomchg = stat->domchgcount;
@@ -1915,8 +1495,13 @@ SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
 /** returns the pseudo activity of a nonlinear row in the current pseudo solution */
 SCIP_RETCODE SCIPnlrowGetPseudoActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP LP */
    SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
    )
 {
@@ -1928,7 +1513,7 @@ SCIP_RETCODE SCIPnlrowGetPseudoActivity(
    /* check, if pseudo activity has to be calculated */
    if( nlrow->validpsactivitydomchg != stat->domchgcount )
    {
-      SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, set, stat) );
+      SCIP_CALL( SCIPnlrowRecalcPseudoActivity(nlrow, blkmem, set, stat, prob, primal, tree, lp) );
    }
    assert(nlrow->validpsactivitydomchg == stat->domchgcount);
    assert(nlrow->pseudoactivity < SCIP_INVALID);
@@ -1941,8 +1526,13 @@ SCIP_RETCODE SCIPnlrowGetPseudoActivity(
 /** returns the pseudo feasibility of a nonlinear row in the current pseudo solution: negative value means infeasibility */
 SCIP_RETCODE SCIPnlrowGetPseudoFeasibility(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP LP */
    SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
    )
 {
@@ -1952,7 +1542,7 @@ SCIP_RETCODE SCIPnlrowGetPseudoFeasibility(
    assert(stat  != NULL);
    assert(pseudofeasibility != NULL);
 
-   SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, set, stat, &pseudoactivity) );
+   SCIP_CALL( SCIPnlrowGetPseudoActivity(nlrow, blkmem, set, stat, prob, primal, tree, lp, &pseudoactivity) );
    *pseudofeasibility = MIN(nlrow->rhs - pseudoactivity, pseudoactivity - nlrow->lhs);
 
    return SCIP_OKAY;
@@ -1961,6 +1551,7 @@ SCIP_RETCODE SCIPnlrowGetPseudoFeasibility(
 /** returns the activity of a nonlinear row for a given solution */
 SCIP_RETCODE SCIPnlrowGetSolActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -1992,28 +1583,11 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
 
    if( nlrow->expr != NULL )
    {
-      SCIP_Real* varvals;
-      int n;
-
-      n = SCIPexprtreeGetNVars(nlrow->expr);
-
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &varvals, n) );
-
-      for( i = 0; i < n; ++i )
-      {
-         varvals[i] = SCIPsolGetVal(sol, set, stat, SCIPexprtreeGetVars(nlrow->expr)[i]);
-         if( varvals[i] == SCIP_UNKNOWN ) /*lint !e777*/
-         {
-            *activity = SCIP_INVALID;
-            SCIPsetFreeBufferArray(set, &varvals);
-            return SCIP_OKAY;
-         }
-      }
-
-      SCIP_CALL( SCIPexprtreeEval(nlrow->expr, varvals, &val1) );
-      *activity += val1;
-
-      SCIPsetFreeBufferArray(set, &varvals);
+      SCIP_CALL( SCIPexprEvalActivity(set, stat, blkmem, nlrow->expr) );
+      if( SCIPexprGetEvalValue(nlrow->expr) == SCIP_INVALID )
+         *activity = SCIP_INVALID;
+      else
+         *activity = SCIPexprGetEvalValue(nlrow->expr);
    }
 
    inf = SCIPsetInfinity(set);
@@ -2026,6 +1600,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
 /** returns the feasibility of a nonlinear row for the given solution */
 SCIP_RETCODE SCIPnlrowGetSolFeasibility(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -2037,7 +1612,7 @@ SCIP_RETCODE SCIPnlrowGetSolFeasibility(
    assert(nlrow != NULL);
    assert(feasibility != NULL);
 
-   SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, set, stat, sol, &activity) );
+   SCIP_CALL( SCIPnlrowGetSolActivity(nlrow, blkmem, set, stat, sol, &activity) );
 
    *feasibility = MIN(nlrow->rhs - activity, activity - nlrow->lhs);
 
@@ -2047,6 +1622,7 @@ SCIP_RETCODE SCIPnlrowGetSolFeasibility(
 /** returns the minimal activity of a nonlinear row w.r.t. the variables' bounds */
 SCIP_RETCODE SCIPnlrowGetActivityBounds(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_Real*            minactivity,        /**< buffer to store minimal activity, or NULL */
@@ -2061,7 +1637,7 @@ SCIP_RETCODE SCIPnlrowGetActivityBounds(
    /* check, if activity bounds has to be calculated */
    if( nlrow->validactivitybdsdomchg != stat->domchgcount )
    {
-      SCIP_CALL( nlrowCalcActivityBounds(nlrow, set, stat) );
+      SCIP_CALL( nlrowCalcActivityBounds(nlrow, blkmem, set, stat) );
    }
    assert(nlrow->validactivitybdsdomchg == stat->domchgcount);
    assert(nlrow->minactivity < SCIP_INVALID);
@@ -2078,6 +1654,7 @@ SCIP_RETCODE SCIPnlrowGetActivityBounds(
 /** returns whether the nonlinear row is redundant w.r.t. the variables' bounds */
 SCIP_RETCODE SCIPnlrowIsRedundant(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_Bool*            isredundant         /**< buffer to store whether row is redundant */
@@ -2090,7 +1667,7 @@ SCIP_RETCODE SCIPnlrowIsRedundant(
    assert(set != NULL);
    assert(isredundant != NULL);
 
-   SCIP_CALL( SCIPnlrowGetActivityBounds(nlrow, set, stat, &minactivity, &maxactivity) );
+   SCIP_CALL( SCIPnlrowGetActivityBounds(nlrow, blkmem, set, stat, &minactivity, &maxactivity) );
 
    *isredundant = TRUE;
    if( (!SCIPsetIsInfinity(set, -nlrow->lhs) && SCIPsetIsFeasLT(set, minactivity, nlrow->lhs)) ||
@@ -2258,11 +1835,12 @@ SCIP_RETCODE nlpRowChanged(
     */
    if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
    {
+      /* FIXME?
       SCIP_Real feasibility;
-      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, set, stat, nlp, &feasibility) );
+      SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, blkmem, set, stat, primal, tree, nlp, &feasibility) );
       if( !SCIPsetIsFeasNegative(set, feasibility) )
          nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
-      else
+      else */
          nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
    }
    else
@@ -2314,6 +1892,7 @@ SCIP_RETCODE nlpAddNlRows(
       for( i = 0; i < nlrow->nlinvars; ++i )
          assert(SCIPhashmapExists(nlp->varhash, nlrow->linvars[i]));
 
+#if !1 // FIXME?
       if( nlrow->expr )
       {
          int n;
@@ -2324,6 +1903,7 @@ SCIP_RETCODE nlpAddNlRows(
          for( i = 0; i < n; ++i )
             assert(SCIPhashmapExists(nlp->varhash, SCIPexprtreeGetVars(nlrow->expr)[i]));
       }
+#endif
 #endif
 
       /* add row to NLP and capture it */
@@ -2338,11 +1918,13 @@ SCIP_RETCODE nlpAddNlRows(
        */
       if( nlp->solstat <= SCIP_NLPSOLSTAT_FEASIBLE )
       {
+         /* FIXME?
          SCIP_Real feasibility;
-         SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, set, stat, nlp, &feasibility) );
+         SCIP_CALL( SCIPnlrowGetNLPFeasibility(nlrow, blkmem, set, stat, primal, tree, nlp, &feasibility) );
          if( !SCIPsetIsFeasNegative(set, feasibility) )
             nlp->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
+         */
             nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
       }
       else if( nlp->solstat == SCIP_NLPSOLSTAT_UNBOUNDED )
@@ -2391,6 +1973,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    SCIP_NLP*             nlp,                /**< NLP data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    int                   pos                 /**< position of nonlinear row that is to be removed */
    )
 {
@@ -2428,7 +2011,7 @@ SCIP_RETCODE nlpDelNlRowPos(
    nlrow->nlpindex = -1;
 
    /* forget about restriction */
-   SCIP_CALL( SCIPnlrowRelease(&nlrow, blkmem, set) );
+   SCIP_CALL( SCIPnlrowRelease(&nlrow, blkmem, set, stat) );
    --nlp->nnlrows;
 
    if( nlp->solstat < SCIP_NLPSOLSTAT_LOCOPT )
@@ -2715,7 +2298,7 @@ SCIP_RETCODE nlpDelVarPos(
          for( j = 0; j < nlrow->nlinvars; ++j )
             assert( nlrow->linvars[j] != var );
 
-      assert(nlrow->expr == NULL || SCIPexprtreeFindVar(nlrow->expr, var) == -1);
+//FIXME?      assert(nlrow->expr == NULL || SCIPexprtreeFindVar(nlrow->expr, var) == -1);
    }
 #endif
 
@@ -2787,14 +2370,13 @@ SCIP_RETCODE nlpRemoveFixedVar(
    return SCIP_OKAY;
 }
 
-/** creates arrays with NLPI variable indices of variables in a nonlinear row */
+/** creates arrays with NLPI variable indices of linear variables in a nonlinear row */
 static
 SCIP_RETCODE nlpSetupNlpiIndices(
    SCIP_NLP*             nlp,                /**< NLP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   int**                 linidxs,            /**< buffer to store pointer to NLPI indices of linear variables */
-   int**                 nlinidxs            /**< buffer to store pointer to NLPI indices of nonlinear variables */
+   int**                 linidxs             /**< buffer to store pointer to NLPI indices of linear variables */
    )
 {
    int i;
@@ -2804,7 +2386,6 @@ SCIP_RETCODE nlpSetupNlpiIndices(
    assert(set    != NULL);
    assert(nlrow  != NULL);
    assert(linidxs   != NULL);
-   assert(nlinidxs  != NULL);
 
    /* get indices of variables in linear part of row */
    if( nlrow->nlinvars > 0 )
@@ -2827,29 +2408,6 @@ SCIP_RETCODE nlpSetupNlpiIndices(
    }
    else
       *linidxs = NULL;
-
-   /* get indices of variables in expression tree part of row */
-   if( nlrow->expr != NULL )
-   {
-      int n;
-
-      n = SCIPexprtreeGetNVars(nlrow->expr);
-      assert(n == 0 || SCIPexprtreeGetVars(nlrow->expr) != NULL);
-
-      SCIP_CALL( SCIPsetAllocBufferArray(set, nlinidxs, n) );
-
-      for( i = 0; i < n; ++i )
-      {
-         var = SCIPexprtreeGetVars(nlrow->expr)[i];
-         assert(var != NULL);
-         assert(SCIPvarIsActive(var)); /* at this point, there should be only active variables in the row */
-
-         assert(SCIPhashmapExists(nlp->varhash, var));
-         (*nlinidxs)[i] = nlp->varmap_nlp2nlpi[SCIPhashmapGetImageInt(nlp->varhash, var)];
-      }
-   }
-   else
-      *nlinidxs = NULL;
 
    return SCIP_OKAY;
 }
@@ -3112,7 +2670,6 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    int*        nlinvars;
    int**       linidxs;
    SCIP_Real** lincoefs;
-   int**       nlidxs;
    SCIP_EXPR** exprs;
    const char** names;
 
@@ -3144,7 +2701,6 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &nlinvars, nlp->nunflushednlrowadd) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &linidxs,  nlp->nunflushednlrowadd) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lincoefs, nlp->nunflushednlrowadd) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &nlidxs,   nlp->nunflushednlrowadd) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &exprs,    nlp->nunflushednlrowadd) );
 #if ADDNAMESTONLPI
    SCIP_CALL( SCIPsetAllocBufferArray(set, &names,    nlp->nunflushednlrowadd) );
@@ -3164,9 +2720,8 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       assert(c < nlp->nunflushednlrowadd);
 
       /* get indices in NLPI */
-      SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlrow, &linidxs[c], &nlidxs[c]) );
+      SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlrow, &linidxs[c]) );
       assert(linidxs[c]   != NULL || nlrow->nlinvars == 0);
-      assert(nlidxs[c]    != NULL || nlrow->expr     == NULL);
 
       nlp->nlrowmap_nlpi2nlp[nlp->nnlrows_solver+c] = i;
       nlrow->nlpiindex = nlp->nnlrows_solver+c;
@@ -3214,8 +2769,6 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
    for( c = nlp->nunflushednlrowadd - 1; c >= 0 ; --c )
    {
-      if( nlidxs[c] != NULL )
-         SCIPsetFreeBufferArray(set, &nlidxs[c]);
       if( linidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &linidxs[c]);
    }
@@ -3224,7 +2777,6 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIPsetFreeBufferArray(set, &names);
 #endif
    SCIPsetFreeBufferArray(set, &exprs);
-   SCIPsetFreeBufferArray(set, &nlidxs);
    SCIPsetFreeBufferArray(set, &lincoefs);
    SCIPsetFreeBufferArray(set, &linidxs);
    SCIPsetFreeBufferArray(set, &nlinvars);
@@ -3394,7 +2946,9 @@ SCIP_RETCODE nlpSolve(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    SCIP_Real sciptimelimit;
@@ -3493,7 +3047,7 @@ SCIP_RETCODE nlpSolve(
          }
 
          /* evaluate modified diving objective */
-         SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, set, stat, nlp, &nlp->primalsolobjval) );
+         SCIP_CALL( SCIPnlrowGetNLPActivity(nlp->divingobj, blkmem, set, stat, primal, tree, nlp, &nlp->primalsolobjval) );
       }
       else
       {
@@ -3916,6 +3470,7 @@ SCIP_RETCODE SCIPnlpFree(
    SCIP_NLP**            nlp,                /**< pointer to NLP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    )
@@ -3935,7 +3490,7 @@ SCIP_RETCODE SCIPnlpFree(
          SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED,
          (*nlp)->eventhdlr, (SCIP_EVENTDATA*)(*nlp), (*nlp)->globalfilterpos) );
 
-   SCIP_CALL( SCIPnlpReset(*nlp, blkmem, set, eventqueue, lp) );
+   SCIP_CALL( SCIPnlpReset(*nlp, blkmem, set, stat, eventqueue, lp) );
    assert((*nlp)->nnlrows == 0);
    assert((*nlp)->nnlrows_solver == 0);
    assert((*nlp)->nvars == 0);
@@ -3975,6 +3530,7 @@ SCIP_RETCODE SCIPnlpReset(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    )
@@ -3987,7 +3543,7 @@ SCIP_RETCODE SCIPnlpReset(
 
    if( nlp->indiving )
    {
-      SCIP_CALL( SCIPnlpEndDive(nlp, blkmem, set) );
+      SCIP_CALL( SCIPnlpEndDive(nlp, blkmem, set, stat) );
    }
 
    nlp->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -3998,7 +3554,7 @@ SCIP_RETCODE SCIPnlpReset(
 
    for(i = nlp->nnlrows - 1; i >= 0; --i)
    {
-      SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, i) );
+      SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, stat, i) );
    }
 
    for(i = nlp->nvars - 1; i >= 0; --i)
@@ -4226,6 +3782,7 @@ SCIP_RETCODE SCIPnlpDelNlRow(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLROW*           nlrow               /**< nonlinear row */
    )
 {
@@ -4247,7 +3804,7 @@ SCIP_RETCODE SCIPnlpDelNlRow(
       return SCIP_ERROR;
    }
 
-   SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, nlrow->nlpindex) );
+   SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, stat, nlrow->nlpindex) );
 
    return SCIP_OKAY;
 }
@@ -4295,7 +3852,9 @@ SCIP_RETCODE SCIPnlpSolve(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(nlp    != NULL);
@@ -4311,7 +3870,7 @@ SCIP_RETCODE SCIPnlpSolve(
 
    SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
 
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat) );
+   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree) );
 
    return SCIP_OKAY;
 }
@@ -4329,8 +3888,13 @@ SCIP_Real SCIPnlpGetObjval(
 /** gives current pseudo objective value */
 SCIP_RETCODE SCIPnlpGetPseudoObjval(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP LP */
    SCIP_Real*            pseudoobjval        /**< buffer to store pseudo objective value */
    )
 {
@@ -4340,7 +3904,7 @@ SCIP_RETCODE SCIPnlpGetPseudoObjval(
    if( nlp->divingobj != NULL )
    {
       assert(nlp->indiving);
-      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlp->divingobj, set, stat, pseudoobjval) );
+      SCIP_CALL( SCIPnlrowGetPseudoActivity(nlp->divingobj, blkmem, set, stat, prob, primal, tree, lp, pseudoobjval) );
    }
    else
    {
@@ -4420,10 +3984,10 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
 
    for( i = 0; i < nlp->nnlrows; ++i )
    {
-      SCIP_CALL( SCIPnlrowIsRedundant(nlp->nlrows[i], set, stat, &isredundant) );
+      SCIP_CALL( SCIPnlrowIsRedundant(nlp->nlrows[i], blkmem, set, stat, &isredundant) );
       if( isredundant )
       {
-         SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, i) );
+         SCIP_CALL( nlpDelNlRowPos(nlp, blkmem, set, stat, i) );
       }
    }
 
@@ -4471,7 +4035,9 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
 /** writes NLP to a file */
 SCIP_RETCODE SCIPnlpWrite(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           fname               /**< file name */
    )
@@ -4508,7 +4074,7 @@ SCIP_RETCODE SCIPnlpWrite(
    for( i = 0; i < nlp->nnlrows; ++i )
    {
       SCIPmessageFPrintInfo(messagehdlr, file, "  ");
-      SCIP_CALL( SCIPnlrowPrint(nlp->nlrows[i], messagehdlr, file) );
+      SCIP_CALL( SCIPnlrowPrint(nlp->nlrows[i], blkmem, set, stat, messagehdlr, file) );
    }
 
    if( fname != NULL )
@@ -4542,12 +4108,16 @@ int SCIPnlpGetNVars(
 /** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
 SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
    )
 {
    SCIP_NLROW* nlrow;
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
    int varidx;
-   int i;
    int c;
 
    assert(nlp != NULL);
@@ -4555,41 +4125,32 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
 
    BMSclearMemoryArray(nlcount, nlp->nvars);
 
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+
    for( c = 0; c < nlp->nnlrows; ++c )
    {
       nlrow = nlp->nlrows[c];
       assert(nlrow != NULL);
 
-#if !1  // FIXME special handling for quadratic expressions; or better handling for expressions in general below (e.g., polynomial)
-      for( i = 0; i < nlrow->nquadvars; ++i )
+      if( nlrow->expr == NULL )
+         continue;
+
+      SCIP_CALL( SCIPexpriterInit(it, nlrow->expr, SCIP_EXPRITER_DFS, FALSE) );
+      for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
-         assert(SCIPhashmapExists(nlp->varhash, (void*)nlrow->quadvars[i]));
-         varidx = SCIPhashmapGetImageInt(nlp->varhash, (void*)nlrow->quadvars[i]);
+         if( !SCIPexprIsVar(set, expr) )
+            continue;
+
+         assert(SCIPhashmapExists(nlp->varhash, SCIPgetVarExprVar(expr)));
+
+         varidx = SCIPhashmapGetImageInt(nlp->varhash, SCIPgetVarExprVar(expr));
          assert(varidx < nlp->nvars);
          assert(nlcount != NULL);
-         ++nlcount[varidx];  /*lint !e613 */
-      }
-#endif
-
-      if( nlrow->expr != NULL )
-      {
-         SCIP_VAR** exprvars;
-         int nexprvars;
-
-         exprvars = SCIPexprtreeGetVars(nlrow->expr);
-         nexprvars = SCIPexprtreeGetNVars(nlrow->expr);
-         assert(exprvars != NULL || nexprvars == 0);
-         for( i = 0; i < nexprvars; ++i )
-         {
-            assert(SCIPhashmapExists(nlp->varhash, (void*)exprvars[i]));  /*lint !e613 */
-
-            varidx = SCIPhashmapGetImageInt(nlp->varhash, (void*)exprvars[i]);  /*lint !e613 */
-            assert(varidx < nlp->nvars);
-            assert(nlcount != NULL);
-            ++nlcount[varidx];  /*lint !e613 */
-         }
+         ++nlcount[varidx];
       }
    }
+
+   SCIPexpriterFree(&it);
 
    return SCIP_OKAY;
 }
@@ -4599,33 +4160,40 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
  *
  * @note The method may have to touch every row and nonlinear term to compute its result.
  */
-SCIP_Bool SCIPnlpHasContinuousNonlinearity(
-   SCIP_NLP*             nlp                 /**< current NLP data */
+SCIP_RETCODE SCIPnlpHasContinuousNonlinearity(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            result              /**< buffer to store whether continuous variable present in an expression of any row */
    )
 {
    SCIP_NLROW* nlrow;
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
    int c;
-   int i;
 
    assert(nlp != NULL);
 
-   for( c = 0; c < nlp->nnlrows; ++c )
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE) );
+
+   *result = FALSE;
+   for( c = 0; c < nlp->nnlrows && !*result; ++c )
    {
       nlrow = nlp->nlrows[c];
       assert(nlrow != NULL);
 
-      if( nlrow->expr != NULL )
+      if( nlrow->expr == NULL )
+         continue;
+
+      for( expr = SCIPexpriterRestartDFS(it, nlrow->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
-         SCIP_VAR** exprvars;
-         int nexprvars;
-
-         exprvars = SCIPexprtreeGetVars(nlrow->expr);
-         nexprvars = SCIPexprtreeGetNVars(nlrow->expr);
-         assert(exprvars != NULL || nexprvars == 0);
-
-         for( i = 0; i < nexprvars; ++i )
-            if( SCIPvarGetType(exprvars[i]) == SCIP_VARTYPE_CONTINUOUS ) /*lint !e613*/
-               return TRUE;
+         if( SCIPexprIsVar(set, expr) && SCIPvarGetType(SCIPgetVarExprVar(expr)) == SCIP_VARTYPE_CONTINUOUS )
+         {
+            *result = TRUE;
+            break;
+         }
       }
    }
 
@@ -4886,7 +4454,8 @@ SCIP_RETCODE SCIPnlpStartDive(
 SCIP_RETCODE SCIPnlpEndDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    )
 {
    int i;
@@ -4928,7 +4497,7 @@ SCIP_RETCODE SCIPnlpEndDive(
     * the objective in the NLPI will be reset in the next flush */
    if( nlp->divingobj != NULL )
    {
-      SCIP_CALL( SCIPnlrowRelease(&nlp->divingobj, blkmem, set) );
+      SCIP_CALL( SCIPnlrowRelease(&nlp->divingobj, blkmem, set, stat) );
       assert(nlp->divingobj == NULL);
       assert(nlp->objflushed == FALSE);
    }
@@ -4982,7 +4551,7 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
       for( i = 0; i < nlp->nvars; ++i )
          coefs[i] = SCIPvarGetObj(nlp->vars[i]);
 
-      SCIP_CALL( SCIPnlrowCreate(&nlp->divingobj, blkmem, set, "divingobj",
+      SCIP_CALL( SCIPnlrowCreate(&nlp->divingobj, blkmem, set, stat, "divingobj",
             0.0, nlp->nvars, nlp->vars, coefs, NULL,
             -SCIPsetInfinity(set), SCIPsetInfinity(set),
             SCIP_EXPRCURV_LINEAR) );
@@ -5086,10 +4655,12 @@ SCIP_RETCODE SCIPnlpSolveDive(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
-   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat) );
+   SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree) );
 
    return SCIP_OKAY;
 }

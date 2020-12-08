@@ -48,52 +48,6 @@ extern "C" {
  */
 
 
-/**@addtogroup PublicExpressionTreeMethods
- *
- * @{
- */
-
-/** returns variables of expression tree */
-SCIP_EXPORT
-SCIP_VAR** SCIPexprtreeGetVars(
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   );
-
-/** stores array of variables in expression tree */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprtreeSetVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   nvars,              /**< number of variables */
-   SCIP_VAR**            vars                /**< variables */
-   );
-
-/** adds variables to the expression tree variables array */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprtreeAddVars(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   int                   nvars,              /**< number of variables */
-   SCIP_VAR**            vars                /**< variables */
-   );
-
-/** prints an expression tree using variable names from variables array */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprtreePrintWithNames(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   FILE*                 file                /**< file for printing, or NULL for stdout */
-   );
-
-/** searches the variables array of an expression tree for a variable and returns its position, or -1 if not found
- * Note that this is an O(n) operation!
- */
-SCIP_EXPORT
-int SCIPexprtreeFindVar(
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_VAR*             var                 /**< variable to search for */
-   );
-
-/**@} */
-
 /**@addtogroup PublicNLRowMethods
  *
  * @{

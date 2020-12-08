@@ -1368,7 +1368,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
           * expression and the corresponding indices change; this mapping is stored in the exprvaridxs array
           */
          exprs[nconss] = SCIPnlrowGetExpr(nlrow);
-
+#if !1 // FIXME
          SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprs[nconss])) ); /*lint !e866*/
 
          for( k = 0; k < SCIPexprtreeGetNVars(exprs[nconss]); ++k )
@@ -1383,6 +1383,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             if( nlscore != NULL )
                ++nlscore[exprvaridxs[nconss][k]];
          }
+#endif
       }
 
       /* if the row to index hash map is provided, we need to store the row index */

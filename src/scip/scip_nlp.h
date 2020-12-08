@@ -142,15 +142,16 @@ SCIP_Bool SCIPisNLPConstructed(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether the NLP has a continuous variable in a nonlinear term
+/** checks whether the NLP has a continuous variable in a nonlinear term
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-SCIP_Bool SCIPhasNLPContinuousNonlinearity(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPhasNLPContinuousNonlinearity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            result              /**< buffer to store result */
    );
 
 /** gets current NLP variables along with the current number of NLP variables
@@ -681,7 +682,7 @@ SCIP_RETCODE SCIPcreateNlRow(
    int                   nlinvars,           /**< number of linear variables */
    SCIP_VAR**            linvars,            /**< linear variables, or NULL if nlinvars == 0 */
    SCIP_Real*            lincoefs,           /**< linear coefficients, or NULL if nlinvars == 0 */
-   SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
+   SCIP_EXPR*            expr,               /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */

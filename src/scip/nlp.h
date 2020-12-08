@@ -55,6 +55,7 @@ SCIP_RETCODE SCIPnlrowCreate(
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    const char*           name,               /**< name of nonlinear row */
    SCIP_Real             constant,           /**< constant */
    int                   nlinvars,           /**< number of linear variables */
@@ -73,6 +74,7 @@ SCIP_RETCODE SCIPnlrowCreateCopy(
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLROW*           sourcenlrow         /**< nonlinear row to copy */
    );
 
@@ -83,18 +85,16 @@ SCIP_RETCODE SCIPnlrowCreateFromRow(
    SCIP_NLROW**          nlrow,              /**< buffer to store pointer to nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_ROW*             row                 /**< the linear row to copy */
-   );
-
-/** frees a nonlinear row */
-SCIP_RETCODE SCIPnlrowFree(
-   SCIP_NLROW**          nlrow,              /**< pointer to NLP row */
-   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** output nonlinear row to file stream */
 SCIP_RETCODE SCIPnlrowPrint(
    SCIP_NLROW*           nlrow,              /**< NLP row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
@@ -108,7 +108,8 @@ void SCIPnlrowCapture(
 SCIP_RETCODE SCIPnlrowRelease(
    SCIP_NLROW**          nlrow,              /**< nonlinear row to free */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** ensures, that linear coefficient array of nonlinear row can store at least num entries */
@@ -199,16 +200,22 @@ SCIP_RETCODE SCIPnlrowRemoveFixedVars(
 /** recalculates the current activity of a nonlinear row in the current NLP solution */
 SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp                 /**< current NLP data */
    );
 
 /** gives the activity of a nonlinear row in the current NLP solution */
 SCIP_RETCODE SCIPnlrowGetNLPActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real*            activity            /**< buffer to store activity value */
    );
@@ -216,8 +223,11 @@ SCIP_RETCODE SCIPnlrowGetNLPActivity(
 /** gives the feasibility of a nonlinear row in the current NLP solution: negative value means infeasibility */
 SCIP_RETCODE SCIPnlrowGetNLPFeasibility(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_Real*            feasibility         /**< buffer to store feasibility value */
    );
@@ -225,29 +235,45 @@ SCIP_RETCODE SCIPnlrowGetNLPFeasibility(
 /** calculates the current pseudo activity of a nonlinear row */
 SCIP_RETCODE SCIPnlrowRecalcPseudoActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp                  /**< SCIP LP */
    );
 
 /** returns the pseudo activity of a nonlinear row in the current pseudo solution */
 SCIP_RETCODE SCIPnlrowGetPseudoActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP LP */
    SCIP_Real*            pseudoactivity      /**< buffer to store pseudo activity value */
    );
 
 /** returns the pseudo feasibility of a nonlinear row in the current pseudo solution: negative value means infeasibility */
 SCIP_RETCODE SCIPnlrowGetPseudoFeasibility(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP LP */
    SCIP_Real*            pseudofeasibility   /**< buffer to store pseudo feasibility value */
    );
 
 /** returns the activity of a nonlinear row for a given solution */
 SCIP_RETCODE SCIPnlrowGetSolActivity(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -257,6 +283,7 @@ SCIP_RETCODE SCIPnlrowGetSolActivity(
 /** returns the feasibility of a nonlinear row for the given solution */
 SCIP_RETCODE SCIPnlrowGetSolFeasibility(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -266,6 +293,7 @@ SCIP_RETCODE SCIPnlrowGetSolFeasibility(
 /** returns the minimal activity of a nonlinear row w.r.t. the variables' bounds */
 SCIP_RETCODE SCIPnlrowGetActivityBounds(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_Real*            minactivity,        /**< buffer to store minimal activity, or NULL */
@@ -275,6 +303,7 @@ SCIP_RETCODE SCIPnlrowGetActivityBounds(
 /** returns whether the nonlinear row is redundant w.r.t. the variables' bounds */
 SCIP_RETCODE SCIPnlrowIsRedundant(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_Bool*            isredundant         /**< buffer to store whether row is redundant */
@@ -306,6 +335,7 @@ SCIP_RETCODE SCIPnlpFree(
    SCIP_NLP**            nlp,                /**< pointer to NLP data object */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    );
@@ -317,6 +347,7 @@ SCIP_RETCODE SCIPnlpReset(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LP*              lp                  /**< SCIP LP, needed for releasing variables */
    );
@@ -396,6 +427,7 @@ SCIP_RETCODE SCIPnlpDelNlRow(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLROW*           nlrow               /**< nonlinear row */
    );
 
@@ -412,7 +444,9 @@ SCIP_RETCODE SCIPnlpSolve(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** gets objective value of current NLP */
@@ -423,8 +457,13 @@ SCIP_Real SCIPnlpGetObjval(
 /** gives current pseudo objective value */
 SCIP_RETCODE SCIPnlpGetPseudoObjval(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< SCIP problem */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< SCIP LP */
    SCIP_Real*            pseudoobjval        /**< buffer to store pseudo objective value */
    );
 
@@ -463,7 +502,9 @@ SCIP_RETCODE SCIPnlpSetInitialGuess(
 /** writes NLP to a file */
 SCIP_RETCODE SCIPnlpWrite(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           fname               /**< file name */
    );
@@ -483,7 +524,8 @@ SCIP_RETCODE SCIPnlpStartDive(
 SCIP_RETCODE SCIPnlpEndDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics data */
    );
 
 /** changes coefficient of variable in diving NLP */
@@ -525,7 +567,9 @@ SCIP_RETCODE SCIPnlpSolveDive(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_STAT*            stat                /**< problem statistics */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** gets array with variables of the NLP */
@@ -541,6 +585,9 @@ int SCIPnlpGetNVars(
 /** computes for each variables the number of NLP rows in which the variable appears in a nonlinear var */
 SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
    SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
    int*                  nlcount             /**< an array of length at least SCIPnlpGetNVars() to store nonlinearity counts of variables */
    );
 
@@ -548,8 +595,12 @@ SCIP_RETCODE SCIPnlpGetVarsNonlinearity(
  *
  * @note The method may have to touch every row and nonlinear term to compute its result.
  */
-SCIP_Bool SCIPnlpHasContinuousNonlinearity(
-   SCIP_NLP*             nlp                 /**< current NLP data */
+SCIP_RETCODE SCIPnlpHasContinuousNonlinearity(
+   SCIP_NLP*             nlp,                /**< current NLP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool*            result              /**< buffer to store whether continuous variable present in an expression of any row */
    );
 
 /** gives dual solution values associated with lower bounds of NLP variables */
