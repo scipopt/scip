@@ -279,6 +279,14 @@ void RatCanonicalize(
    SCIP_Rational*        r                   /**< rational to put in canonical form */
    );
 
+/* checks if the underlying Rational has a value >= infinity;
+ * needed after underlying value was directly set, e.g. by exact lp solver
+ */
+SCIP_EXPORT
+void RatCheckInfByValue(
+   SCIP_Rational*        rational            /**< rational number */
+   );
+
 /** adds two rationals and saves the result in res */
 SCIP_EXPORT
 void RatAdd(

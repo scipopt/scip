@@ -1594,9 +1594,15 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    for( i = 0; i < len; ++i )
    {
       if( lbs != NULL )
+      {
          QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', RatGetGMP(lbs[i + firstcol])) );
+         RatCheckInfByValue(lbs[i + firstcol]);
+      }
       if( ubs != NULL )
+      {
          QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', RatGetGMP(ubs[i + firstcol])) );
+         RatCheckInfByValue(ubs[i + firstcol]);
+      }
    }
 
    return SCIP_OKAY;
@@ -1688,6 +1694,7 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
    SCIPdebugMessage("getting coefficient of row %d col %d\n", row, col);
 
    rval = mpq_QSget_coef(lpi->prob, row, col, RatGetGMP(val));
+   RatCheckInfByValue(val);
 
    QS_RETURN(rval);
 }
@@ -2061,6 +2068,7 @@ SCIP_RETCODE SCIPlpiExactGetObjval(
    SCIPdebugMessage("getting solution's objective value\n");
 
    rval = mpq_QSget_objval(lpi->prob, RatGetGMP(objval));
+   RatCheckInfByValue(objval);
 
    QS_RETURN(rval);
 }
@@ -2118,6 +2126,7 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    }
 
    rval = mpq_QSget_solution(lpi->prob, RatGetGMP(objval), primsolgmp, dualsolgmp, lpi->irng, redcostgmp);
+   RatCheckInfByValue(objval);
 
    if( redcost != NULL )
    {
@@ -2157,9 +2166,11 @@ SCIP_RETCODE SCIPlpiExactGetSol(
          case 'E':
          case 'G':
             mpq_add(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            RatCheckInfByValue(activity[i]);
             break;
          case 'L':
             mpq_sub(*RatGetGMP(activity[i]), lpi->irhs[i], lpi->irng[i]);
+            RatCheckInfByValue(activity[i]);
             break;
          default:
             SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);

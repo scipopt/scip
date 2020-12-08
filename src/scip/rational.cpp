@@ -342,6 +342,7 @@ void RatSetGMP(
    rational->val = numb;
    rational->isinf = FALSE;
    rational->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   RatCheckInfByValue(rational);
 }
 
 /** init and set value of mpq array from rational array */
@@ -396,7 +397,7 @@ void RatClearGMPArray(
 }
 #endif
 
-/* transform rational into canonical form */
+/* transforms rational into canonical form */
 /** @todo exip: this does not work with cpp_rational currently */
 void RatCanonicalize(
    SCIP_Rational*        rational            /**< rational to put in canonical form */
@@ -405,6 +406,24 @@ void RatCanonicalize(
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    mpq_canonicalize(rational->val.backend().data());
 #endif
+}
+
+/* checks if the underlying Rational has a value >= infinity;
+ * needed after underlying value was directly set, e.g. by exact lp solver
+ */
+void RatCheckInfByValue(
+   SCIP_Rational*        rational            /**< rational number */
+   )
+{
+   if( rational->val * rational->val.sign() >= infinity )
+   {
+      rational->isinf = TRUE;
+      rational->val = rational->val.sign();
+   }
+   else
+   {
+      rational->isinf = FALSE;
+   }
 }
 
 /** free an array of rationals */
