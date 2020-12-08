@@ -326,7 +326,7 @@ mpq_t* RatGetGMP(
    if( rational->isinf )
    {
       /** @todo exip: get proper inf value in here */
-      RatSetReal(rational, 1e100 * rational->val.sign());
+      rational->val = 1e100 * rational->val.sign();
       rational->isinf = TRUE;
    }
 
