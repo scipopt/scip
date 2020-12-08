@@ -7531,7 +7531,7 @@
  *
  *  An example of how to run the tests is
  *  \code
- *  make test EXECUTABLE=/full/path/to/scip/check/scip_runner.py PYTHON=python
+ *  make test EXECUTABLE=/full/path/to/scip/check/scip-runner.py PYTHON=python
  *  \endcode
  */
 
