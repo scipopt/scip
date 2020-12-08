@@ -12,18 +12,20 @@ endif()
 find_path(MPFR_INCLUDE_DIRS
     NAMES mpfr.h
     HINTS ${MPFR_DIR}
-    PATH_SUFFIXES src)
+    PATH_SUFFIXES include)
 
-if(STATIC_MPFR)
+if(STATIC_GMP)
+#  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
     find_library(MPFR_LIBRARY
         NAMES libmpfr.a MPFR
         HINTS ${MPFR_DIR}
-        PATH_SUFFIXES src/.libs)
+        NO_DEFAULT_PATH
+        PATH_SUFFIXES lib)
 else()
     find_library(MPFR_LIBRARY
         NAMES libmpfr.so MPFR
         HINTS ${MPFR_DIR}
-        PATH_SUFFIXES src/.libs)
+        PATH_SUFFIXES lib)
 endif()
 
 SET(MPFR_LIBRARIES ${MPFR_LIBRARY})

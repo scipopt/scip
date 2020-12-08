@@ -25,7 +25,7 @@
 /* #define VERIFY_OUT */ /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
 /* #define USEOBJLIM */  /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
-
+#define SCIP_DEBUG
 #include "scip/def.h"
 
 #ifdef SCIP_WITH_GMP
@@ -437,13 +437,13 @@ void* SCIPlpiExactGetSolverPointer(
 /**@name LPI Creation and Destruction Methods */
 /**@{ */
 
-/** calls initializator of LP solver; this is mainly needed for defining constants in extended and rational precision */
+/** calls initializator of LP solver (if this did not already happen); this is mainly needed for defining constants in extended and rational precision */
 void SCIPlpiExactStart(
    void
    )
 {
-   assert(!__QSexact_setup);
-   QSexactStart();
+   if( !__QSexact_setup )
+      QSexactStart();
 }
 
 /** calls deinitializator of LP solver; this is needed for freeing all internal data of the solver, like constants in
@@ -453,8 +453,8 @@ void SCIPlpiExactEnd(
    void
    )
 {
-   assert(__QSexact_setup);
-   QSexactClear();
+   if( __QSexact_setup )
+      QSexactClear();
 }
 
 /** creates an LP problem object
@@ -479,6 +479,7 @@ SCIP_RETCODE SCIPlpiExactCreate(
 
    /* create LP */
    SCIP_ALLOC( BMSallocMemory(lpi) );
+   SCIPlpiExactStart();
    memset(*lpi, 0, sizeof(struct SCIP_LPiExact));
 
    /* factor work is NULL unless used */
@@ -511,8 +512,6 @@ SCIP_RETCODE SCIPlpiExactCreate(
       mpq_init((*lpi)->irng[i]);
       mpq_init((*lpi)->itab[i]);
    }
-
-   SCIPlpiExactStart();
 
    return SCIP_OKAY;
 }
@@ -801,11 +800,8 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
    RatSetGMPArray(valgmp, val, nnonz);
 
-   for( i = 0; i < nrows; i++ )
-   {
-      rval = mpq_QSadd_row(lpi->prob, lpi->ircnt[i], &ind[beg[i]], &valgmp[beg[i]], RatGetGMP(rhs[i]), lpi->isen[i], (const char*) rownames[i]);
-      QS_ERROR(rval, "failed adding row %i with %d non-zeros", i, lpi->ircnt[i]);
-   }
+   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, valgmp, lpi->irhs, lpi->isen, lpi->irng, (const char**) rownames);
+   QS_CONDRET(rval);
 
    RatClearGMPArray(valgmp, nnonz);
    BMSfreeMemoryArray(&valgmp);
@@ -944,11 +940,11 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
       for( j = 0; j < ncols; ++j )
       {
          if( lb == NULL)
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], ub[j]);
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], *RatGetGMP(ub[j]));
          else if( ub == NULL )
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], lb[j]);
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], *RatGetGMP(lb[j]));
          else
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], lb[j], ub[j]);
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], *RatGetGMP(lb[j]), *RatGetGMP(ub[j]));
          SCIPdebugPrintf(s);
       }
    }
@@ -1595,13 +1591,13 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    {
       if( lbs != NULL )
       {
-         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', RatGetGMP(lbs[i + firstcol])) );
-         RatCheckInfByValue(lbs[i + firstcol]);
+         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'L', RatGetGMP(lbs[i])) );
+         RatCheckInfByValue(lbs[i]);
       }
       if( ubs != NULL )
       {
-         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', RatGetGMP(ubs[i + firstcol])) );
-         RatCheckInfByValue(ubs[i + firstcol]);
+         QS_CONDRET( mpq_QSget_bound(lpi->prob, i + firstcol, 'U', RatGetGMP(ubs[i])) );
+         RatCheckInfByValue(ubs[i]);
       }
    }
 
@@ -2085,7 +2081,7 @@ SCIP_RETCODE SCIPlpiExactGetSol(
 {
    int rval = 0, nrows, ncols;
    register int i;
-   mpq_t* primsolgmp, *dualsolgmp, *redcostgmp;
+   mpq_t* primsolgmp, *dualsolgmp, *redcostgmp, *objvalgmp;
    mpq_t* primsolvec;
    mpq_t* dualsolvec;
    mpq_t* redcostvec;
@@ -2124,8 +2120,12 @@ SCIP_RETCODE SCIPlpiExactGetSol(
       dualsolgmp = dualsolvec;
       RatSetGMPArray(dualsolgmp, dualsol, nrows);
    }
+   if( objval != NULL )
+      objvalgmp = RatGetGMP(objval);
+   else
+      objvalgmp = NULL;
 
-   rval = mpq_QSget_solution(lpi->prob, RatGetGMP(objval), primsolgmp, dualsolgmp, lpi->irng, redcostgmp);
+   rval = mpq_QSget_solution(lpi->prob, objvalgmp, primsolgmp, dualsolgmp, lpi->irng, redcostgmp);
    RatCheckInfByValue(objval);
 
    if( redcost != NULL )
@@ -2141,7 +2141,7 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    if( dualsol != NULL )
    {
       RatSetArrayGMP(dualsol, dualsolgmp, nrows);
-      RatClearGMPArray(dualsolgmp, ncols);
+      RatClearGMPArray(dualsolgmp, nrows);
    }
 
    BMSfreeMemoryArray(&redcostvec);
