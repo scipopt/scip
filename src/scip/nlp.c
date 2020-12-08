@@ -3207,7 +3207,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    nlp->nnlrows_solver += c;
 
    SCIP_CALL( SCIPnlpiAddConstraints(nlp->solver, nlp->problem, c, lhss, rhss,
-         nlinvars, linidxs, lincoefs, NULL, NULL,
+         nlinvars, linidxs, lincoefs,
          nlidxs, exprtrees,
          names) );
 
@@ -3373,7 +3373,6 @@ SCIP_RETCODE nlpFlushObjective(
    SCIP_CALL( SCIPnlpiSetObjective(nlp->solver, nlp->problem,
          nz, linindices, lincoefs,
          0, NULL,
-         NULL, NULL,
          0.0) );
 
    SCIPsetFreeBufferArray(set, &lincoefs);

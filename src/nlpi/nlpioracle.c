@@ -44,10 +44,6 @@ struct SCIP_NlpiOracleCons
    int*                  linidxs;            /**< variable indices in linear part, or NULL if none */
    SCIP_Real*            lincoefs;           /**< variable coefficients in linear part, of NULL if none */
 
-   int                   quadsize;           /**< length of quadelems array */
-   int                   nquadelems;         /**< number of quadratic elements */
-   SCIP_QUADELEM*        quadelems;          /**< quadratic elements, or NULL if none */
-
    int*                  exprvaridxs;        /**< indices of variables in expression tree, or NULL if no exprtree */
    SCIP_EXPRTREE*        exprtree;           /**< expression tree for nonlinear part, or NULL if none */
 
@@ -188,32 +184,6 @@ SCIP_RETCODE ensureConsLinSize(
    return SCIP_OKAY;
 }
 
-/** ensures that arrays for quadratic part in a oracle constraints have at least a given length */
-static
-SCIP_RETCODE ensureConsQuadSize(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_NLPIORACLECONS*  cons,               /**< oracle constraint */
-   int                   minsize             /**< minimal required size */
-   )
-{
-   assert(blkmem != NULL);
-   assert(cons != NULL);
-
-   if( minsize > cons->quadsize )
-   {
-      int newsize;
-
-      newsize = calcGrowSize(minsize);
-      assert(newsize >= minsize);
-
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &cons->quadelems, cons->quadsize, newsize) );
-      cons->quadsize = newsize;
-   }
-   assert(cons->quadsize >= minsize);
-
-   return SCIP_OKAY;
-}
-
 /** ensures that a given array of integers has at least a given length */
 static
 SCIP_RETCODE ensureIntArraySize(
@@ -345,8 +315,6 @@ SCIP_RETCODE createConstraint(
    int                   nlinidxs,           /**< length of linear part */
    const int*            linidxs,            /**< indices of linear part, or NULL if nlinidxs == 0 */
    const SCIP_Real*      lincoefs,           /**< coefficients of linear part, or NULL if nlinidxs == 0 */
-   int                   nquadelems,         /**< lenght of quadratic part */
-   const SCIP_QUADELEM*  quadelems,          /**< quadratic elements, or NULL if nquadelems == 0 */
    const int*            exprvaridxs,        /**< indicies of variables in expression tree, or NULL if exprtree == NULL */
    const SCIP_EXPRTREE*  exprtree,           /**< expression tree, or NULL */
    SCIP_Real             lhs,                /**< left-hand-side of constraint */
@@ -359,8 +327,6 @@ SCIP_RETCODE createConstraint(
    assert(nlinidxs >= 0);
    assert(linidxs != NULL  || nlinidxs == 0);
    assert(lincoefs != NULL || nlinidxs == 0);
-   assert(nquadelems >= 0);
-   assert(quadelems != NULL || nquadelems == 0);
    assert(exprvaridxs != NULL || exprtree == NULL);
    assert(EPSLE(lhs, rhs, SCIP_DEFAULT_EPSILON));
 
@@ -378,19 +344,6 @@ SCIP_RETCODE createConstraint(
       /* sort, merge duplicates, remove zero's */
       sortLinearCoefficients(&(*cons)->nlinidxs, (*cons)->linidxs, (*cons)->lincoefs);
       assert((*cons)->linidxs[0] >= 0);
-   }
-
-   if( nquadelems > 0 )
-   {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*cons)->quadelems, quadelems, nquadelems) );
-      (*cons)->nquadelems = nquadelems;
-      (*cons)->quadsize   = nquadelems;
-
-      /* sort and squeeze quadratic part */
-      SCIPquadelemSort((*cons)->quadelems, nquadelems);
-      SCIPquadelemSqueeze((*cons)->quadelems, nquadelems, &(*cons)->nquadelems);
-      assert((*cons)->nquadelems == 0 || (*cons)->quadelems[0].idx1 >= 0);
-      assert((*cons)->nquadelems == 0 || (*cons)->quadelems[0].idx2 >= 0);
    }
 
    if( exprtree != NULL )
@@ -431,8 +384,6 @@ void freeConstraint(
 
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->linidxs, (*cons)->linsize);
    BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->lincoefs, (*cons)->linsize);
-
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*cons)->quadelems, (*cons)->quadsize);
 
    if( (*cons)->exprtree != NULL )
    {
@@ -565,15 +516,6 @@ void updateVariableDegreesCons(
       if( oracle->vardegrees[cons->linidxs[j]] < 1 )
          oracle->vardegrees[cons->linidxs[j]] = 1;
 
-   for( j = 0; j < cons->nquadelems; ++j )
-   {
-      if( oracle->vardegrees[cons->quadelems[j].idx1] < 2 )
-         oracle->vardegrees[cons->quadelems[j].idx1] = 2;
-
-      if( oracle->vardegrees[cons->quadelems[j].idx2] < 2 )
-         oracle->vardegrees[cons->quadelems[j].idx2] = 2;
-   }
-
    /* we could use exprtreeGetDegree to get actual degree of a variable in tree,
     * but so far no solver could make use of this information */
    if( cons->exprtree != NULL )
@@ -668,73 +610,6 @@ void clearDeletedLinearElements(
    *nidxs -= offset;
 }
 
-/** removes entries with index pair (-1,-1) (marked as deleted) from array of quadratic elements
- * assumes that array is sorted, i.e., all deleted elements are at the beginning
- */
-static
-void clearDeletedQuadElements(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_QUADELEM**       quadelems,          /**< quadratic elements */
-   int*                  nquadelems          /**< number of quadratic elements */
-   )
-{
-   int i;
-   int offset;
-
-   SCIPdebugMessage("clear deleted quad elements\n");
-
-   assert(blkmem      != NULL);
-   assert(quadelems   != NULL);
-   assert(*quadelems  != NULL);
-   assert(nquadelems  != NULL);
-   assert(*nquadelems > 0);
-
-   /* search for beginning of non-delete entries @todo binary search? */
-   for( offset = 0; offset < *nquadelems; ++offset )
-   {
-      /* either both variables are marked as deleted or none of them */
-      assert(((*quadelems)[offset].idx1 >= 0) == ((*quadelems)[offset].idx2 >= 0));
-      if( (*quadelems)[offset].idx1 >= 0 )
-         break;
-   }
-
-   /* nothing was deleted */
-   if( offset == 0 )
-      return;
-
-   /* some or all elements were deleted -> move remaining ones front */
-   for( i = 0; i < *nquadelems - offset; ++i )
-      (*quadelems)[i] = (*quadelems)[i+offset];
-   *nquadelems -= offset;
-}
-
-/** applies a mapping of indices to an array of quadratic elements */
-static
-void mapIndicesQuad(
-   int*                  indexmap,           /**< mapping from old variable indices to new indices */
-   int                   nelems,             /**< number of quadratic elements */
-   SCIP_QUADELEM*        elems               /**< array of quadratic elements to adjust */
-   )
-{
-   assert(indexmap != NULL);
-   assert(nelems == 0 || elems != NULL);
-
-   for( ; nelems ; --nelems, ++elems )
-   {
-      assert(indexmap[elems->idx1] >= 0);
-      assert(indexmap[elems->idx2] >= 0);
-      elems->idx1 = indexmap[elems->idx1];
-      elems->idx2 = indexmap[elems->idx2];
-      /* swap indices if not idx1 <= idx2 */
-      if( elems->idx1 > elems->idx2 )
-      {
-         int tmp = elems->idx2;
-         elems->idx2 = elems->idx1;
-         elems->idx1 = tmp;
-      }
-   }
-}
-
 /** computes the value of a function */
 static
 SCIP_RETCODE evalFunctionValue(
@@ -768,20 +643,6 @@ SCIP_RETCODE evalFunctionValue(
 
       for( ; nlin > 0; --nlin, ++linidxs, ++lincoefs )
          *val += *lincoefs * x[*linidxs];
-   }
-
-   if( cons->nquadelems > 0 )
-   {
-      SCIP_QUADELEM* quadelems;
-      int nquadelems;
-
-      quadelems  = cons->quadelems;
-      nquadelems = cons->nquadelems;
-      assert(quadelems != NULL);
-      assert(x != NULL);
-
-      for( ; nquadelems > 0; --nquadelems, ++quadelems )
-         *val += quadelems->coef * x[quadelems->idx1] * x[quadelems->idx2];
    }
 
    if( cons->exprtree != NULL )
@@ -858,26 +719,6 @@ SCIP_RETCODE evalFunctionGradient(
       }
    }
 
-   if( cons->nquadelems > 0 )
-   {
-      SCIP_Real tmp;
-      SCIP_QUADELEM* quadelems;
-      int nquadelems;
-
-      quadelems  = cons->quadelems;
-      nquadelems = cons->nquadelems;
-      assert(quadelems != NULL);
-      assert(x != NULL);
-
-      for( ; nquadelems > 0; --nquadelems, ++quadelems )
-      {
-         tmp = quadelems->coef * x[quadelems->idx1];
-         *val += tmp * x[quadelems->idx2];
-         grad[quadelems->idx2] += tmp;
-         grad[quadelems->idx1] += quadelems->coef * x[quadelems->idx2];
-      }
-   }
-
    if( cons->exprtree != NULL )
    {
       SCIP_Real* xx;
@@ -935,45 +776,6 @@ SCIP_RETCODE evalFunctionGradient(
 
       BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
       BMSfreeBlockMemoryArray(oracle->blkmem, &g, nvars);
-   }
-
-   return SCIP_OKAY;
-}
-
-/** collects nonzeros entries in colnz and increases the nzcount given indices of quadratic terms */
-static
-SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
-   SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
-   int**                 colnz,              /**< indices of nonzero entries for each column */
-   int*                  collen,             /**< space allocated to store indices of nonzeros for each column */
-   int*                  colnnz,             /**< number of nonzero entries for each column */
-   int*                  nzcount,            /**< counter for total number of nonzeros; should be increased whenever some colnnz is increased */
-   int                   length,             /**< length of quadratic part */
-   SCIP_QUADELEM*        quadelems           /**< quadratic elements */
-   )
-{
-   int pos;
-
-   SCIPdebugMessage("%p hess lag sparsity set nzflag for quad\n", (void*)oracle);
-
-   assert(oracle != NULL);
-   assert(colnz  != NULL);
-   assert(collen != NULL);
-   assert(colnnz != NULL);
-   assert(nzcount != NULL);
-   assert(quadelems != NULL);
-   assert(length >= 0);
-
-   for( ; length > 0; --length, ++quadelems )
-   {
-      assert(quadelems->idx1 <= quadelems->idx2);
-
-      if( colnz[quadelems->idx2] == NULL || !SCIPsortedvecFindInt(colnz[quadelems->idx2], quadelems->idx1, colnnz[quadelems->idx2], &pos) )
-      {
-         SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[quadelems->idx2], &collen[quadelems->idx2], colnnz[quadelems->idx2]+1) );
-         SCIPsortedvecInsertInt(colnz[quadelems->idx2], quadelems->idx1, &colnnz[quadelems->idx2], NULL);
-         ++(*nzcount);
-      }
    }
 
    return SCIP_OKAY;
@@ -1047,41 +849,6 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
 
    BMSfreeBlockMemoryArray(oracle->blkmem, &x, nvars);
    BMSfreeBlockMemoryArray(oracle->blkmem, &hesnz, nn);
-
-   return SCIP_OKAY;
-}
-
-/** adds quadratic part into hessian structure */
-static
-SCIP_RETCODE hessLagAddQuad(
-   SCIP_Real             weight,             /**< weight of quadratic part */
-   int                   length,             /**< number of elements in matrix of quadratic part */
-   SCIP_QUADELEM*        quadelems,          /**< elements in matrix of quadratic part */
-   int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */ 
-   int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
-   SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
-   )
-{
-   int idx;
-
-   SCIPdebugMessage("hess lag add quad\n");
-
-   assert(length >= 0);
-   assert(quadelems != NULL || length == 0);
-   assert(hesoffset != NULL);
-   assert(hescol != NULL);
-   assert(values != NULL);
-
-   for( ; length > 0; --length, ++quadelems )  /*lint !e613*/
-   {
-      assert(quadelems->idx1 <= quadelems->idx2);  /*lint !e613*/
-      if( !SCIPsortedvecFindInt(&hescol[hesoffset[quadelems->idx2]], quadelems->idx1, hesoffset[quadelems->idx2 + 1] - hesoffset[quadelems->idx2], &idx) )  /*lint !e613*/
-      {
-         SCIPerrorMessage("Could not find entry in hessian sparsity\n");
-         return SCIP_ERROR;
-      }
-      values[hesoffset[quadelems->idx2] + idx] += weight * ((quadelems->idx1 == quadelems->idx2) ? 2 * quadelems->coef : quadelems->coef);  /*lint !e613*/
-   }
 
    return SCIP_OKAY;
 }
@@ -1247,16 +1014,6 @@ SCIP_RETCODE printFunction(
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->linidxs[i]] : NULL, cons->linidxs[i], 'x', NULL, longvarnames);
       SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->lincoefs[i], namebuf);
-      if( i % 10 == 9 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "\n");
-   }
-
-   for( i = 0; i < cons->nquadelems; ++i )
-   {
-      printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx1] : NULL, cons->quadelems[i].idx1, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[i].coef, namebuf);
-      printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx2] : NULL, cons->quadelems[i].idx2, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(messagehdlr, file, "*%s", namebuf);
       if( i % 10 == 9 )
          SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
@@ -1537,10 +1294,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   const int*            nquadelems,         /**< number of elements in matrix of quadratic part for each constraint,
-                                              * may be NULL in case of no quadratic part in any constraint */
-   SCIP_QUADELEM* const* quadelems,          /**< quadratic elements specifying quadratic part for each constraint, entry of array may be NULL in case of no quadratic part,
-                                              * may be NULL in case of no quadratic part in any constraint */
    int* const*           exprvaridxs,        /**< NULL if no nonquadratic parts, otherwise epxrvaridxs[.] maps variable indices in expression tree to indices in nlp */
    SCIP_EXPRTREE* const* exprtrees,          /**< NULL if no nonquadratic parts, otherwise exprtrees[.] gives nonquadratic part, 
                                               *   or NULL if no nonquadratic part in this constraint */
@@ -1571,17 +1324,12 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             nlininds != NULL ? nlininds[c] : 0,
             lininds != NULL ? lininds[c] : NULL,
             linvals != NULL ? linvals[c] : NULL,
-            nquadelems != NULL ? nquadelems[c] : 0,
-            quadelems != NULL ? quadelems[c] : NULL,
             exprvaridxs != NULL ? exprvaridxs[c] : NULL,
             exprtrees != NULL ? exprtrees[c] : NULL,
             lhss != NULL ? lhss[c] : -oracle->infinity,
             rhss != NULL ? rhss[c] :  oracle->infinity,
             consnames != NULL ? consnames[c] : NULL
             ) );
-
-      if( cons->nquadelems > 0 )
-         addednlcon = TRUE;
 
       if( cons->exprtree != NULL )
       {
@@ -1613,8 +1361,6 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    int                   nlin,               /**< number of linear variable coefficients */ 
    const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
-   int                   nquadelems,         /**< number of entries in matrix of quadratic part */
-   const SCIP_QUADELEM*  quadelems,          /**< entries in matrix of quadratic part, may be NULL in case of no quadratic part */
    const int*            exprvaridxs,        /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
    const SCIP_EXPRTREE*  exprtree            /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
    )
@@ -1624,14 +1370,14 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 
    SCIPdebugMessage("%p set objective\n", (void*)oracle);
 
-   if( nquadelems > 0 || oracle->objective->quadsize > 0 || exprtree != NULL || oracle->objective->exprtree != NULL )
+   if( exprtree != NULL || oracle->objective->exprtree != NULL )
       invalidateHessianLagSparsity(oracle);
 
    /* clear previous objective */
    freeConstraint(oracle->blkmem, &oracle->objective);
 
    SCIP_CALL( createConstraint(oracle->blkmem, &oracle->objective,
-         nlin, lininds, linvals, nquadelems, quadelems, exprvaridxs, exprtree, constant, constant, NULL) );
+         nlin, lininds, linvals, exprvaridxs, exprtree, constant, constant, NULL) );
 
    if( oracle->objective->exprtree != NULL )
    {
@@ -1739,7 +1485,6 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       /* all variables should be deleted */
       assert(oracle->nconss == 0); /* we could relax this by checking that all constraints are constant */
       assert(oracle->objective->exprtree == NULL || SCIPexprtreeGetNVars(oracle->objective->exprtree) == 0);
-      oracle->objective->nquadelems = 0;
       oracle->objective->nlinidxs = 0;
       for( c = 0; c < oracle->nvars; ++c )
          delstats[c] = -1;
@@ -1802,11 +1547,6 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
       mapIndices(delstats, cons->nlinidxs, cons->linidxs);
       SCIPsortIntReal(cons->linidxs, cons->lincoefs, cons->nlinidxs);
       clearDeletedLinearElements(oracle->blkmem, &cons->linidxs, &cons->lincoefs, &cons->nlinidxs);
-
-      /* update indices in quadratic part, sort elements, and then clear elements that are marked as deleted */
-      mapIndicesQuad(delstats, cons->quadsize, cons->quadelems);
-      SCIPquadelemSort(cons->quadelems, cons->quadsize);
-      clearDeletedQuadElements(oracle->blkmem, &cons->quadelems, &cons->quadsize);
 
       if( cons->exprtree != NULL )
       {
@@ -1993,104 +1733,6 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
       if( oracle->vardegreesuptodate )
          for( i = 0; i < cons->nlinidxs; ++i )
             oracle->vardegrees[varidxs[i]] = MAX(1, oracle->vardegrees[varidxs[i]]);  /*lint !e613*/
-   }
-
-   return SCIP_OKAY;
-}
-
-/** changes (or adds) coefficients in the quadratic part of one constraint or objective */
-SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
-   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
-   int                   nquadelems,         /**< number of entries in quadratic constraint to change */
-   const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
-   )
-{  /*lint --e{715}*/
-   SCIP_NLPIORACLECONS* cons;
-   SCIP_Bool needsort;
-   int       i;
-
-   SCIPdebugMessage("%p chg quad coefs\n", (void*)oracle);
-
-   assert(oracle != NULL);
-   assert(quadelems != NULL || nquadelems == 0);
-   assert(considx >= -1);
-   assert(considx < oracle->nconss);
-
-   if( nquadelems == 0 )
-      return SCIP_OKAY;
-
-   needsort = FALSE;
-
-   cons = considx < 0 ? oracle->objective : oracle->conss[considx];
-
-   if( cons->quadsize == 0 )
-   {
-      /* first time we have quadratic coefficients in this constraint (or objective) */
-      assert(cons->quadelems == NULL);
-
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(oracle->blkmem, &cons->quadelems, quadelems, nquadelems) );
-      cons->quadsize  = nquadelems;
-      cons->nquadelems = nquadelems;
-
-      needsort = TRUE;
-   }
-   else
-   {
-      int pos;
-
-      for( i = 0; i < nquadelems; ++i )
-      {
-         assert(quadelems[i].idx1 >= 0);  /*lint !e613*/
-         assert(quadelems[i].idx2 >= 0);  /*lint !e613*/
-         assert(quadelems[i].idx1 < oracle->nvars);  /*lint !e613*/
-         assert(quadelems[i].idx2 < oracle->nvars);  /*lint !e613*/
-
-         /* if we already have an entry for quadelems[i], then just replace the coefficient, otherwise append new entry */
-         if( SCIPquadelemSortedFind(cons->quadelems, quadelems[i].idx1, quadelems[i].idx2, cons->nquadelems, &pos) )  /*lint !e613*/
-         {
-            SCIPdebugMessage("replace coefficient of var%d*var%d at pos %d by %g\n", quadelems[i].idx1, quadelems[i].idx2, pos, quadelems[i].coef);  /*lint !e613*/
-
-            cons->quadelems[pos].coef = quadelems[i].coef;  /*lint !e613*/
-
-            /* remember that we need to sort/merge/squeeze array if coefficient became zero here */
-            needsort |= (quadelems[i].coef == 0.0);  /*lint !e613 !e514*/
-         }
-         else
-         {
-            /* append new entry */
-            SCIPdebugMessage("add coefficient of var%d*var%d at pos %d, value %g\n", quadelems[i].idx1, quadelems[i].idx2, cons->nquadelems, quadelems[i].coef);  /*lint !e613*/
-
-            SCIP_CALL( ensureConsQuadSize(oracle->blkmem, cons, cons->nquadelems + (nquadelems-i)) );
-            cons->quadelems[cons->nquadelems] = quadelems[i];  /*lint !e613*/
-            ++cons->nquadelems;
-
-            needsort = TRUE;
-         }
-      }
-   }
-
-   if( needsort )
-   {
-      int oldsize;
-
-      invalidateJacobiSparsity(oracle);
-      invalidateHessianLagSparsity(oracle);
-
-      oldsize = cons->nquadelems;
-      SCIPquadelemSort(cons->quadelems, cons->nquadelems);
-      SCIPquadelemSqueeze(cons->quadelems, cons->nquadelems, &cons->nquadelems);
-
-      /* if sorting removed an entry, then the var degrees are not uptodate anymore */
-      oracle->vardegreesuptodate &= (cons->nquadelems == oldsize);  /*lint !e514*/
-
-      /* increase variable degrees of variables to 2 */
-      if( oracle->vardegreesuptodate )
-         for( i = 0; i < cons->nquadelems; ++i )
-         {
-            oracle->vardegrees[cons->quadelems[i].idx1] = MAX(2, oracle->vardegrees[cons->quadelems[i].idx1]);
-            oracle->vardegrees[cons->quadelems[i].idx2] = MAX(2, oracle->vardegrees[cons->quadelems[i].idx2]);
-         }
    }
 
    return SCIP_OKAY;
@@ -2334,9 +1976,6 @@ int SCIPnlpiOracleGetConstraintDegree(
    if( cons->exprtree != NULL )
       return INT_MAX;
 
-   if( cons->nquadelems > 0 )
-      return 2;
-
    if( cons->nlinidxs > 0 )
       return 1;
 
@@ -2563,7 +2202,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       cons = oracle->conss[i];
       assert(cons != NULL);
 
-      if( cons->nquadelems == 0 && cons->exprtree == NULL )
+      if( cons->exprtree == NULL )
       {
          /* for a linear constraint, we can just copy the linear indices from the constraint into the sparsity pattern */
          if( cons->nlinidxs > 0 )
@@ -2574,7 +2213,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          }
          continue;
       }
-      else if( cons->nlinidxs == 0 && cons->nquadelems == 0 )
+      else if( cons->nlinidxs == 0  )
       {
          /* for a constraint with exprtree only, we can just copy the exprvaridxs from the constraint into the sparsity pattern */
          int nvars;
@@ -2600,12 +2239,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
       for( j = 0; j < cons->nlinidxs; ++j )
          nzflag[cons->linidxs[j]] = TRUE;
-
-      for( j = 0; j < cons->nquadelems; ++j )
-      {
-         nzflag[cons->quadelems[j].idx1] = TRUE;
-         nzflag[cons->quadelems[j].idx2] = TRUE;
-      }
 
       if( cons->exprvaridxs != NULL )
       {
@@ -2689,7 +2322,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       cons = oracle->conss[i];
       assert(cons != NULL);
 
-      if( cons->nquadelems == 0 && cons->exprtree == NULL )
+      if( cons->exprtree == NULL )
       {
          /* for a linear constraint, we can just copy the linear coefs from the constraint into the jacobian */
          if( cons->nlinidxs > 0 )
@@ -2702,7 +2335,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
          continue;
       }
 
-      if( cons->nlinidxs == 0 && cons->nquadelems == 0 )
+      if( cons->nlinidxs == 0 )
       {
          /* for a constraint with exprtree only, we can just copy gradient of the exprtree from the constraint into jacobian */
          int nvars;
@@ -2828,11 +2461,6 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    BMSclearMemoryArray(colnnz, oracle->nvars);  /*lint !e644*/
    nnz = 0;
 
-   if( oracle->objective->nquadelems != 0 )
-   {
-      SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->objective->nquadelems, oracle->objective->quadelems) );
-   }
-
    if( oracle->objective->exprtree != NULL )
    {
       SCIP_CALL( hessLagSparsitySetNzFlagForExprtree(oracle, colnz, collen, colnnz, &nnz, oracle->objective->exprvaridxs, oracle->objective->exprtree, oracle->nvars) );
@@ -2840,11 +2468,6 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->conss[i]->nquadelems != 0 )
-      {
-         SCIP_CALL( hessLagSparsitySetNzFlagForQuad(oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems) );
-      }
-
       if( oracle->conss[i]->exprtree != NULL )
       {
          SCIP_CALL( hessLagSparsitySetNzFlagForExprtree(oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->exprvaridxs, oracle->conss[i]->exprtree, oracle->nvars) );
@@ -2915,7 +2538,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    if( objfactor != 0.0 )
    {
-      SCIP_CALL( hessLagAddQuad(objfactor, oracle->objective->nquadelems, oracle->objective->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       SCIP_CALL_QUIET( hessLagAddExprtree(oracle, objfactor, x, isnewx, oracle->objective->exprvaridxs, oracle->objective->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
 
@@ -2924,7 +2546,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 )
          continue;
-      SCIP_CALL( hessLagAddQuad(lambda[i], oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       SCIP_CALL_QUIET( hessLagAddExprtree(oracle, lambda[i], x, isnewx, oracle->conss[i]->exprvaridxs, oracle->conss[i]->exprtree, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
 
@@ -3140,8 +2761,6 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
          SCIPmessageFPrintInfo(messagehdlr, file, " =G= %.20g;\n", lhs);
       }
 
-      if( nllevel <= 0 && oracle->conss[i]->nquadelems > 0 )
-         nllevel = 1;
       if( nllevel <= 1 && oracle->conss[i]->exprtree != NULL )
          nllevel = 2;
       if( nllevel <= 2 && oracle->conss[i]->exprtree != NULL && exprIsNonSmooth(SCIPexprtreeGetRoot(oracle->conss[i]->exprtree)) )

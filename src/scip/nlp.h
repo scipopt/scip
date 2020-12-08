@@ -164,60 +164,6 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    SCIP_Real             coef                /**< new value of coefficient */
    );
 
-/** ensures, that quadratic variables array of nonlinear row can store at least num entries */
-SCIP_RETCODE SCIPnlrowEnsureQuadVarsSize(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   num                 /**< minimum number of entries to store */
-   );
-
-/** adds variable to quadvars array of row */
-SCIP_RETCODE SCIPnlrowAddQuadVar(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR*             var                 /**< variable to search for */
-   );
-
-/** ensures, that quadratic elements array of nonlinear row can store at least num entries */
-SCIP_RETCODE SCIPnlrowEnsureQuadElementsSize(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   num                 /**< minimum number of entries to store */
-   );
-
-/** adds a previously non existing quadratic element to an NLP nonlinear row */
-SCIP_RETCODE SCIPnlrowAddQuadElement(
-   SCIP_NLROW*           nlrow,              /**< NLP nonlinear row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_QUADELEM         elem                /**< quadratic element to add */
-   );
-
-/** deletes quadratic element from nonlinear row */
-SCIP_RETCODE SCIPnlrowDelQuadElement(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row to be changed */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   int                   idx1,               /**< index of first variable in element */
-   int                   idx2                /**< index of second variable in element */
-   );
-
-/** changes or adds a quadratic element to a nonlinear row */
-SCIP_RETCODE SCIPnlrowChgQuadElem(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_NLP*             nlp,                /**< current NLP data */
-   SCIP_QUADELEM         elem                /**< new quadratic element */
-   );
-
 /** replaces or deletes an expression tree in nonlinear row */
 SCIP_RETCODE SCIPnlrowChgExprtree(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */

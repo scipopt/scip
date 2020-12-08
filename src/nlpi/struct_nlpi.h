@@ -51,7 +51,6 @@ struct SCIP_Nlpi
    SCIP_DECL_NLPIDELVARSET         ((*nlpidelvarset));          /**< delete a set of variables from a problem  */
    SCIP_DECL_NLPIDELCONSSET        ((*nlpidelconsset));         /**< delete a set of constraints from a problem */
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs));     /**< change coefficients in linear part of a constraint or objective */
-   SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs));       /**< change coefficients in quadratic part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree));        /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef));      /**< change one parameter in nonlinear expressions of a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant));     /**< change the constant offset in the objective */

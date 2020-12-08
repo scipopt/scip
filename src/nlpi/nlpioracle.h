@@ -98,10 +98,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   const int*            nquadelems,         /**< number of elements in matrix of quadratic part for each constraint,
-                                              * may be NULL in case of no quadratic part in any constraint */
-   SCIP_QUADELEM* const* quadelems,          /**< quadratic elements specifying quadratic part for each constraint, entry of array may be NULL in case of no quadratic part,
-                                              * may be NULL in case of no quadratic part in any constraint */
    int* const*           exprvaridxs,        /**< NULL if no nonquadratic parts, otherwise epxrvaridxs[.] maps variable indices in expression tree to indices in nlp */
    SCIP_EXPRTREE* const* exprtrees,          /**< NULL if no nonquadratic parts, otherwise exprtrees[.] gives nonquadratic part, 
                                               *   or NULL if no nonquadratic part in this constraint */
@@ -119,8 +115,6 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    int                   nlin,               /**< number of linear variable coefficients */ 
    const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
-   int                   nquadelems,         /**< number of entries in matrix of quadratic part */
-   const SCIP_QUADELEM*  quadelems,          /**< entries in matrix of quadratic part, may be NULL in case of no quadratic part */
    const int*            exprvaridxs,        /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
    const SCIP_EXPRTREE*  exprtree            /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
    );
@@ -169,15 +163,6 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    int                   nentries,           /**< number of coefficients to change */
    const int*            varidxs,            /**< array with indices of variables which coefficients should be changed */
    const SCIP_Real*      newcoefs            /**< array with new coefficients of variables */
-   );
-
-/** changes (or adds) coefficients in the quadratic part of one constraint or objective */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
-   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
-   int                   nquadelems,         /**< number of entries in quadratic constraint to change */
-   const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
    );
 
 /** replaces expression tree of one constraint or objective */

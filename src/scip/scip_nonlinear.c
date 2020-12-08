@@ -1178,8 +1178,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
 {
    SCIP_EXPRTREE** exprtrees;
    int** exprvaridxs;
-   SCIP_QUADELEM** quadelems;
-   int* nquadelems;
    SCIP_Real** linvals;
    int** lininds;
    int* nlininds;
@@ -1215,8 +1213,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &exprtrees, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs, nnlrows + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &quadelems, nnlrows + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nquadelems, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows + 1) );
@@ -1268,7 +1264,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    {
       if( nobjinds > 0 )
       {
-         SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, nobjinds, objinds, objvals, 0, NULL, NULL, NULL, 0.0) );
+         SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, nobjinds, objinds, objvals, NULL, NULL, 0.0) );
       }
 
       SCIPfreeBufferArray(scip, &objinds);
@@ -1282,8 +1278,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    lininds[nconss] = NULL;
    linvals[nconss] = NULL;
    nlininds[nconss] = 0;
-   nquadelems[nconss] = 0;
-   quadelems[nconss] = NULL;
    exprtrees[nconss] = NULL;
    exprvaridxs[nconss] = NULL;
 
@@ -1340,8 +1334,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       nlininds[nconss] = 0;
       lininds[nconss] = NULL;
       linvals[nconss] = NULL;
-      nquadelems[nconss] = 0;
-      quadelems[nconss] = NULL;
       exprtrees[nconss] = NULL;
       exprvaridxs[nconss] = NULL;
 
@@ -1404,8 +1396,8 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    assert(nconss > 0);
 
    /* pass all constraint information to nlpi */
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals, nquadelems,
-         quadelems, exprvaridxs, exprtrees, names) );
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals,
+         exprvaridxs, exprtrees, names) );
 
    /* free memory */
    for( i = nconss - 1; i > 0; --i )
@@ -1414,12 +1406,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       {
          assert(exprvaridxs[i] != NULL);
          SCIPfreeBufferArray(scip, &exprvaridxs[i]);
-      }
-
-      if( nquadelems[i] > 0 )
-      {
-         assert(quadelems[i] != NULL);
-         SCIPfreeBufferArray(scip, &quadelems[i]);
       }
 
       if( nlininds[i] > 0 )
@@ -1440,8 +1426,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    SCIPfreeBufferArray(scip, &nlininds);
    SCIPfreeBufferArray(scip, &lininds);
    SCIPfreeBufferArray(scip, &linvals);
-   SCIPfreeBufferArray(scip, &nquadelems);
-   SCIPfreeBufferArray(scip, &quadelems);
    SCIPfreeBufferArray(scip, &exprvaridxs);
    SCIPfreeBufferArray(scip, &exprtrees);
 
@@ -1566,8 +1550,8 @@ SCIP_RETCODE SCIPaddNlpiProbRows(
    }
 
    /* pass all linear rows to the nlpi */
-   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals, NULL,
-         NULL, NULL, NULL, names) );
+   SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nrows, lhss, rhss, nlininds, lininds, linvals,
+         NULL, NULL, names) );
 
    /* free memory */
    for( i = nrows - 1; i >= 0; --i )

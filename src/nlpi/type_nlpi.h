@@ -167,10 +167,6 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *    may be NULL in case of no linear part
  *  - linvals values of linear coefficient for each constraint
  *    may be NULL in case of no linear part
- *  - nquadelems number of quadratic elements for each constraint
- *    may be NULL in case of no quadratic part
- *  - quadelems quadratic elements for each constraint
- *    may be NULL in case of no quadratic part
  *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    entry of array may be NULL in case of no expression tree
  *    may be NULL in case of no expression tree in any constraint
@@ -180,8 +176,8 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - names of constraints, may be NULL or entries may be NULL
  */
 #define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int ncons, const SCIP_Real* lhss, \
-      const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, const int* nquadelems, \
-      SCIP_QUADELEM* const* quadelems, int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
+      const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, \
+      int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
@@ -194,9 +190,6 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *    may be NULL in case of no linear part
  *  - linvals coefficient values
  *    may be NULL in case of no linear part
- *  - nquadelems number of elements in matrix of quadratic part
- *  - quadelems elements of quadratic part
- *    may be NULL in case of no quadratic part
  *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    may be NULL in case of no expression tree
  *  - exprtree expression tree for nonquadratic part of objective function
@@ -204,7 +197,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - constant objective value offset
  */
 #define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nlins, const int* lininds, \
-      const SCIP_Real* linvals, int nquadelems, const SCIP_QUADELEM* quadelems, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, \
+      const SCIP_Real* linvals, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, \
       const SCIP_Real constant)
 
 /** change variable bounds
@@ -271,18 +264,6 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  */
 #define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nvals, \
       const int* varidxs, const SCIP_Real* vals)
-
-/** changes (or adds) coefficients in the quadratic part of a constraint or objective
- * 
- * input:
- *  - nlpi datastructure for solver interface
- *  - problem datastructure for problem instance
- *  - idx index of constraint or -1 for objective
- *  - nquadelems number of entries in quadratic matrix to change
- *  - quadelems new elements in quadratic matrix (replacing already existing ones or adding new ones)
- */
-#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idx, int nquadelems, \
-      const SCIP_QUADELEM* quadelems)
 
 /** replaces the expression tree of a constraint or objective
  *

@@ -122,48 +122,6 @@ SCIP_EXPORT
 SCIP_Real* SCIPnlrowGetLinearCoefs(
    SCIP_NLROW*           nlrow               /**< NLP row */
    );
-
-/** gets number of quadratic variables in quadratic part */
-SCIP_EXPORT
-int SCIPnlrowGetNQuadVars(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gets quadratic variables in quadratic part */
-SCIP_EXPORT
-SCIP_VAR** SCIPnlrowGetQuadVars(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gives position of variable in quadvars array of row, or -1 if not found */
-SCIP_EXPORT
-int SCIPnlrowSearchQuadVar(
-   SCIP_NLROW*           nlrow,              /**< nonlinear row */
-   SCIP_VAR*             var                 /**< variable to search for */
-   );
-
-/** gets number of quadratic elements in quadratic part */
-SCIP_EXPORT
-int SCIPnlrowGetNQuadElems(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gets quadratic elements in quadratic part */
-SCIP_EXPORT
-SCIP_QUADELEM* SCIPnlrowGetQuadElems(
-   SCIP_NLROW*           nlrow               /**< NLP row */
-   );
-
-/** gets array with coefficients in linear part */
-SCIP_EXPORT
-void SCIPnlrowGetQuadData(
-   SCIP_NLROW*           nlrow,              /**< NLP row */
-   int*                  nquadvars,          /**< buffer to store number of variables in quadratic term, or NULL if not of interest */
-   SCIP_VAR***           quadvars,           /**< buffer to store pointer to array of variables in quadratic term, or NULL if not of interest */
-   int*                  nquadelems,         /**< buffer to store number of entries in quadratic term, or NULL if not of interest */
-   SCIP_QUADELEM**       quadelems           /**< buffer to store pointer to array of entries in quadratic term, or NULL if not of interest */
-   );
-
 /** gets expression tree */
 SCIP_EXPORT
 SCIP_EXPRTREE* SCIPnlrowGetExprtree(

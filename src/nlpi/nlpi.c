@@ -57,7 +57,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPIDELVARSET         ((*nlpidelvarset)),          /**< delete a set of constraints */
    SCIP_DECL_NLPIDELCONSSET        ((*nlpidelconsset)),         /**< delete a set of constraints */
    SCIP_DECL_NLPICHGLINEARCOEFS    ((*nlpichglinearcoefs)),     /**< change coefficients in linear part of a constraint or objective */
-   SCIP_DECL_NLPICHGQUADCOEFS      ((*nlpichgquadcoefs)),       /**< change coefficients in quadratic part of a constraint or objective */
    SCIP_DECL_NLPICHGEXPRTREE       ((*nlpichgexprtree)),        /**< change nonlinear expression a constraint or objective */
    SCIP_DECL_NLPICHGNONLINCOEF     ((*nlpichgnonlincoef)),      /**< change one parameter in nonlinear expressions of a constraint or objective */
    SCIP_DECL_NLPICHGOBJCONSTANT    ((*nlpichgobjconstant)),     /**< change the constant offset in the objective */
@@ -97,7 +96,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpichgconssides != NULL);
    assert(nlpidelconsset != NULL);
    assert(nlpichglinearcoefs != NULL);
-   assert(nlpichgquadcoefs != NULL);
    assert(nlpichgexprtree != NULL);
    assert(nlpichgnonlincoef != NULL);
    assert(nlpichgobjconstant != NULL);
@@ -137,7 +135,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpidelvarset = nlpidelvarset;
    (*nlpi)->nlpidelconsset = nlpidelconsset;
    (*nlpi)->nlpichglinearcoefs = nlpichglinearcoefs;
-   (*nlpi)->nlpichgquadcoefs = nlpichgquadcoefs;
    (*nlpi)->nlpichgexprtree = nlpichgexprtree;
    (*nlpi)->nlpichgnonlincoef = nlpichgnonlincoef;
    (*nlpi)->nlpichgobjconstant = nlpichgobjconstant;
@@ -275,10 +272,6 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   const int*            nquadelems,         /**< number of elements in matrix of quadratic part for each constraint,
-                                              * may be NULL in case of no quadratic part in any constraint */
-   SCIP_QUADELEM* const* quadelems,          /**< quadratic elements specifying quadratic part for each constraint, entry of array may be NULL in case of no quadratic part,
-                                              * may be NULL in case of no quadratic part in any constraint */
    int* const*           exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression
                                               * tree to indices in nlp, entry of array may be NULL in case of no expression
                                               * tree, may be NULL in case of no expression tree in any constraint */
@@ -292,7 +285,7 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    assert(problem != NULL);
 
    SCIP_CALL( (*nlpi->nlpiaddconstraints)(nlpi, problem, nconss, lhss, rhss, nlininds, lininds, linvals,
-         nquadelems, quadelems, exprvaridxs, exprtrees, names) );
+         exprvaridxs, exprtrees, names) );
 
    return SCIP_OKAY;
 }
@@ -304,8 +297,6 @@ SCIP_RETCODE SCIPnlpiSetObjective(
    int                   nlins,              /**< number of linear variables */
    const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
    const SCIP_Real*      linvals,            /**< coefficient values, may be NULL in case of no linear part */
-   int                   nquadelems,         /**< number of entries in matrix of quadratic part */
-   const SCIP_QUADELEM*  quadelems,          /**< entries in matrix of quadratic part, may be NULL in case of no quadratic part */
    const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression
                                               * tree to indices in nlp, may be NULL in case of no expression tree */
    const SCIP_EXPRTREE*  exprtree,           /**< expression tree for nonquadratic part of objective function, may be NULL in
@@ -316,7 +307,7 @@ SCIP_RETCODE SCIPnlpiSetObjective(
    assert(nlpi    != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisetobjective)(nlpi, problem, nlins, lininds, linvals, nquadelems, quadelems,
+   SCIP_CALL( (*nlpi->nlpisetobjective)(nlpi, problem, nlins, lininds, linvals,
          exprvaridxs, exprtree, constant) );
 
    return SCIP_OKAY;
@@ -406,23 +397,6 @@ SCIP_RETCODE SCIPnlpiChgLinearCoefs(
    assert(problem != NULL);
 
    SCIP_CALL( (*nlpi->nlpichglinearcoefs)(nlpi, problem, idx, nvals, varidxs, vals) );
-
-   return SCIP_OKAY;
-}
-
-/** changes or adds coefficients in the quadratic part of a constraint or objective */
-SCIP_RETCODE SCIPnlpiChgQuadCoefs(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   idx,                /**< index of constraint or -1 for objective */
-   int                   nquadelems,         /**< number of entries in quadratic constraint to change */
-   const SCIP_QUADELEM*  quadelems           /**< new elements in quadratic matrix (replacing already existing ones or adding new ones) */
-   )
-{
-   assert(nlpi    != NULL);
-   assert(problem != NULL);
-
-   SCIP_CALL( (*nlpi->nlpichgquadcoefs)(nlpi, problem, idx, nquadelems, quadelems) );
 
    return SCIP_OKAY;
 }

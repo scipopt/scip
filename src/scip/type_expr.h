@@ -32,7 +32,6 @@
 
 // FIXME temporarily to ease compilation
 typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
-typedef struct SCIP_QuadElement SCIP_QUADELEM;   /**< element of a quadratic term */
 
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */

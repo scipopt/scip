@@ -225,7 +225,7 @@ SCIP_RETCODE computeInteriorPoint(
    objvarlb = INTERIOROBJVARLB;
    one = 1.0;
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, 1, &objvarlb, NULL, NULL) );
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, 0, NULL, NULL, NULL, 0.0) );
+   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, NULL, NULL, 0.0) );
 
    /* add objective variables to constraints; for this we need to get nlpi oracle to have access to number of
     * constraints and which constraints are nonlinear
