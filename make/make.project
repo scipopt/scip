@@ -78,6 +78,7 @@ OUTPUTDIR       =       results
 CLUSTERNODES    =       all
 SLURMACCOUNT    =       default
 GAMS		=	gams
+PYTHON  =   none
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h

@@ -7513,6 +7513,26 @@
  *
  *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results.
  *
+ *  @section PYTHON Testing using PySCIPOpt
+ *
+ *  To run a python script that uses PySCIPOpt with <code>make test</code> or <code>make testcluster</code>, one has to
+ *  specify the python code to execute with the option <code>EXECUTABLE=/full/path/to/python-script.py</code>.
+ *  Note that <code>python-script.py</code> must be an executable file.
+ *  In addition, one <b>must</b> specify which python it should run with the option <code>PYTHON=my-python</code>.
+ *  The reason for this is that one usually installs PySCIPOpt in a virtual environment, thus only the python of the
+ *  virtual environment will work with the python script.
+ *
+ *  The scripts work in such a way that they pass information to SCIP like the setting files, the instance name, and some other options.
+ *  It is the responsability of the python script <code>python-script.py</code> to parse this information.
+ *  Thus, you need to modify your python script to read the setting files and the other options provided by the testing scripts.
+ *  An example of how to do this is provided in <code>scip/check/scip-runner.py</code>.
+ *  One should either modify <code>scip/check/scip-runner.py</code> or include the <code>build_model()</code> function
+ *  into your script to correctly read the options passed by the scripts.
+ *
+ *  An example of how to run the tests is
+ *  \code
+ *  make test EXECUTABLE=/full/path/to/scip/check/scip-runner.py PYTHON=python
+ *  \endcode
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -139,7 +139,7 @@ test:           $(MAINFILE)
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-		$(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM);
+		$(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
 
 
 OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
@@ -166,7 +166,7 @@ testcluster:	$(MAINFILE)
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
 		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) \
-		$(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+		$(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE) $(PYTHON);
 
 .PHONY: tags
 tags:
