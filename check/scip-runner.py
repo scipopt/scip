@@ -48,7 +48,7 @@ def parse_tmp_file(tmpfile):
          assert p in parammap
          img = parammap[p]
          val = splitstr[-1]
-         # store paramets as triples of the form (name,type,value)
+         # store parameters as triples of the form (name,type,value)
          params.append((img[0], img[1], val))
 
    return {"instance" : instance, "settings" : settings, "outsettings" : outsettings, "params" : params}
