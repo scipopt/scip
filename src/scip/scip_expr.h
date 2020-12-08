@@ -517,6 +517,11 @@ SCIP_RETCODE SCIPevalExprHessianDir(
 /** possibly reevaluates and then returns the activity of the expression
  *
  * Reevaluate activity if currently stored is no longer uptodate (some bound was changed since last evaluation).
+ *
+ * The owner of the expression may overwrite the methods used to evaluate the activity,
+ * including whether the local or global domain of variables is used.
+ * By default (no owner, or owner doesn't overwrite activity evaluation),
+ * the local domain of variables is used.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprActivity(

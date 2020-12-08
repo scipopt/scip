@@ -3501,7 +3501,10 @@ SCIP_Longint SCIPexprGetDiffTag(
    return expr->difftag;
 }
 
-/** returns the activity that is currently stored for an expression */
+/** returns the activity that is currently stored for an expression
+ *
+ * See also SCIPevalActivity().
+ */
 SCIP_INTERVAL SCIPexprGetActivity(
    SCIP_EXPR*            expr                /**< expression */
    )
