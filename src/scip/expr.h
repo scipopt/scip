@@ -553,6 +553,22 @@ int SCIPexprCompare(
    SCIP_EXPR*            expr2               /**< second expression */
    );
 
+/** simplifies an expression
+ *
+ * @see SCIPsimplifyExpr
+ */
+SCIP_RETCODE SCIPexprSimplify(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
+   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
+   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
+
 /**@} */
 
 /**@name Expression Iterator Methods */

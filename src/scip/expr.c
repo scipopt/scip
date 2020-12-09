@@ -2846,6 +2846,100 @@ int SCIPexprCompare(
    return retval == 0 ? 0 : retval < 0 ? -1 : 1;
 }
 
+/** simplifies an expression
+ *
+ * @see SCIPsimplifyExpr
+ */
+SCIP_RETCODE SCIPexprSimplify(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
+   SCIP_EXPR**           simplified,         /**< buffer to store simplified expression */
+   SCIP_Bool*            changed,            /**< buffer to store if rootexpr actually changed */
+   SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
+   SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
+   void*                 ownercreatedata     /**< data to pass to ownercreate */
+   )
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPRITER* it;
+
+   assert(rootexpr != NULL);
+   assert(simplified != NULL);
+   assert(changed != NULL);
+   assert(infeasible != NULL);
+
+   /* simplify bottom up
+    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
+    * after the child was visited, it is replaced with the simplified expr
+    */
+   SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR);
+
+   *changed = FALSE;
+   *infeasible = FALSE;
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      switch( SCIPexpriterGetStageDFS(it) )
+      {
+         case SCIP_EXPRITER_VISITEDCHILD:
+         {
+            SCIP_EXPR* newchild;
+            SCIP_EXPR* child;
+
+            newchild = (SCIP_EXPR*)SCIPexpriterGetChildUserDataDFS(it).ptrval;
+            child = SCIPexpriterGetChildExprDFS(it);
+            assert(newchild != NULL);
+
+            /* if child got simplified, replace it with the new child */
+            if( newchild != child )
+            {
+               SCIP_CALL( SCIPexprReplaceChild(set, stat, blkmem, expr, SCIPexpriterGetChildIdxDFS(it), newchild) );
+            }
+
+            /* we do not need to hold newchild anymore */
+            SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &newchild) );
+
+            break;
+         }
+
+         case SCIP_EXPRITER_LEAVEEXPR:
+         {
+            SCIP_EXPR* refexpr = NULL;
+            SCIP_EXPRITER_USERDATA iterdata;
+
+            /* TODO we should do constant folding (handle that all children are value-expressions) here in a generic way
+             * instead of reimplementing it in every handler
+             */
+
+            /* use simplification of expression handlers */
+            SCIP_CALL( SCIPexprhdlrSimplifyExpr(expr->exprhdlr, set, expr, &refexpr, ownercreate, ownercreatedata) );
+            assert(refexpr != NULL);
+            if( expr != refexpr )
+               *changed = TRUE;
+
+            iterdata.ptrval = (void*) refexpr;
+            SCIPexpriterSetCurrentUserData(it, iterdata);
+
+            break;
+         }
+
+         default:
+            SCIPABORT(); /* we should never be called in this stage */
+            break;
+      }
+   }
+
+   *simplified = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, rootexpr).ptrval;
+   assert(*simplified != NULL);
+
+   SCIPexpriterFree(&it);
+
+   return SCIP_OKAY;
+}
+
 /** checks whether an expression is quadratic
  *
  * An expression is quadratic if it is either a square (of some expression), a product (of two expressions),

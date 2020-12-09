@@ -1694,82 +1694,10 @@ SCIP_RETCODE SCIPsimplifyExpr(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    )
 {
-   SCIP_EXPR* expr;
-   SCIP_EXPRITER* it;
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
-   assert(rootexpr != NULL);
-   assert(simplified != NULL);
-   assert(changed != NULL);
-   assert(infeasible != NULL);
 
-   /* simplify bottom up
-    * when leaving an expression it simplifies it and stores the simplified expr in its iterators expression data
-    * after the child was visited, it is replaced with the simplified expr
-    */
-   SCIP_CALL( SCIPexpriterCreate(scip->stat, scip->mem->probmem, &it) );
-   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );  /* TODO can we set allowrevisited to FALSE?*/
-   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITEDCHILD | SCIP_EXPRITER_LEAVEEXPR);
-
-   *changed = FALSE;
-   *infeasible = FALSE;
-   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*/
-   {
-      switch( SCIPexpriterGetStageDFS(it) )
-      {
-         case SCIP_EXPRITER_VISITEDCHILD:
-         {
-            SCIP_EXPR* newchild;
-            SCIP_EXPR* child;
-
-            newchild = (SCIP_EXPR*)SCIPexpriterGetChildUserDataDFS(it).ptrval;
-            child = SCIPexpriterGetChildExprDFS(it);
-            assert(newchild != NULL);
-
-            /* if child got simplified, replace it with the new child */
-            if( newchild != child )
-            {
-               SCIP_CALL( SCIPreplaceExprChild(scip, expr, SCIPexpriterGetChildIdxDFS(it), newchild) );
-            }
-
-            /* we do not need to hold newchild anymore */
-            SCIP_CALL( SCIPreleaseExpr(scip, &newchild) );
-
-            break;
-         }
-
-         case SCIP_EXPRITER_LEAVEEXPR:
-         {
-            SCIP_EXPR* refexpr = NULL;
-            SCIP_EXPRITER_USERDATA iterdata;
-
-            /* TODO we should do constant folding (handle that all children are value-expressions) here in a generic way
-             * instead of reimplementing it in every handler
-             */
-
-            /* use simplification of expression handlers */
-            SCIP_CALL( SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), scip->set, expr, &refexpr, ownercreate, ownercreatedata) );
-            assert(refexpr != NULL);
-            if( expr != refexpr )
-               *changed = TRUE;
-
-            iterdata.ptrval = (void*) refexpr;
-            SCIPexpriterSetCurrentUserData(it, iterdata);
-
-            break;
-         }
-
-         default:
-            SCIPABORT(); /* we should never be called in this stage */
-            break;
-      }
-   }
-
-   *simplified = (SCIP_EXPR*)SCIPexpriterGetExprUserData(it, rootexpr).ptrval;
-   assert(*simplified != NULL);
-
-   SCIPexpriterFree(&it);
+   SCIP_CALL( SCIPexprSimplify(scip->set, scip->stat, scip->mem->probmem, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata) );
 
    return SCIP_OKAY;
 }

@@ -711,8 +711,7 @@ SCIP_RETCODE nlrowRemoveFixedExprVars(
    if( nlrow->expr == NULL )
       return SCIP_OKAY;
 
-   // FIXME SCIPsimplifyExpr is not accessible on this level
-   SCIP_CALL( SCIPsimplifyExpr(set->scip, nlrow->expr, &simplified, &changed, &infeasible, NULL, NULL) );
+   SCIP_CALL( SCIPexprSimplify(set, stat, blkmem, nlrow->expr, &simplified, &changed, &infeasible, NULL, NULL) );
    assert(!infeasible);
 
    if( !changed )
@@ -1250,8 +1249,7 @@ SCIP_RETCODE SCIPnlrowChgExpr(
          SCIP_Bool changed;
          SCIP_Bool infeasible;
 
-         // FIXME SCIPsimplifyExpr is not accessible on this level
-         SCIP_CALL( SCIPsimplifyExpr(set->scip, nlrow->expr, &simplified, &changed, &infeasible, NULL, NULL) );
+         SCIP_CALL( SCIPexprSimplify(set, stat, blkmem, nlrow->expr, &simplified, &changed, &infeasible, NULL, NULL) );
          assert(!infeasible);
 
          SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
