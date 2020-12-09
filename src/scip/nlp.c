@@ -1890,18 +1890,17 @@ SCIP_RETCODE nlpAddNlRows(
       for( i = 0; i < nlrow->nlinvars; ++i )
          assert(SCIPhashmapExists(nlp->varhash, nlrow->linvars[i]));
 
-#if !1 // FIXME?
-      if( nlrow->expr )
+      if( nlrow->expr != NULL )
       {
-         int n;
+         SCIP_EXPRITER* it;
+         SCIP_EXPR* expr;
 
-         n = SCIPexprtreeGetNVars(nlrow->expr);
-         assert(SCIPexprtreeGetVars(nlrow->expr) != NULL || n == 0);
-
-         for( i = 0; i < n; ++i )
-            assert(SCIPhashmapExists(nlp->varhash, SCIPexprtreeGetVars(nlrow->expr)[i]));
+         SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
+         SCIP_CALL( SCIPexpriterInit(it, nlrow->expr, SCIP_EXPRITER_DFS, TRUE) );
+         for( ; !SCIPexpriterIsEnd(it); SCIPexpriterGetNext(it) )
+            assert(!SCIPexprIsVar(set, expr) || SCIPhashmapExists(nlp->varhash, SCIPgetVarExprVar(expr)));
+         SCIPexpriterFree(&it);
       }
-#endif
 #endif
 
       /* add row to NLP and capture it */
