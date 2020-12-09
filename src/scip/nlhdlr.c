@@ -236,10 +236,36 @@ SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrComp)
    h2 = (SCIP_NLHDLR*)elem2;
 
    if( h1->detectpriority != h2->detectpriority )
-      return (int)(h1->detectpriority - h2->detectpriority);
+      return h1->detectpriority - h2->detectpriority;
 
    return strcmp(h1->name, h2->name);
 }
+
+#ifdef SCIP_DISABLED_CODE
+/** compares nonlinear handler by enforcement priority
+ *
+ * if handlers have same enforcement priority, then compare by detection priority, then by name
+ */
+SCIP_DECL_SORTPTRCOMP(SCIPnlhdlrCompEnfo)
+{
+   SCIP_NLHDLR* h1;
+   SCIP_NLHDLR* h2;
+
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   h1 = (SCIP_NLHDLR*)elem1;
+   h2 = (SCIP_NLHDLR*)elem2;
+
+   if( h1->enfopriority != h2->enfopriority )
+      return h1->enfopriority - h2->enfopriority;
+
+   if( h1->detectpriority != h2->detectpriority )
+      return h1->detectpriority - h2->detectpriority;
+
+   return strcmp(h1->name, h2->name);
+}
+#endif
 
 /* nlhdlr private API functions from pub_nlhdlr.h */
 
