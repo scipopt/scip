@@ -1775,7 +1775,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoPerspective)
          /* make sure that when we adjust the point, we don't divide by something too close to 0.0 */
          indval = MAX(SCIPgetSolVal(scip, solcopy, indicator), 0.1);
 
-         /* create an adjusted point x^adj = x* / z* */
+         /* create an adjusted point x^adj = (x* - x0) / z* + x0 */
          SCIP_CALL( SCIPcreateSol(scip, &soladj, NULL) );
          for( v = 0; v < nlhdlrexprdata->nvars; ++v )
          {
