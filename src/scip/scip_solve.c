@@ -1428,7 +1428,11 @@ SCIP_RETCODE presolve(
       else /* switch status to INFORUNBD */
          scip->stat->status = SCIP_STATUS_INFORUNBD;
    }
-   else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 )
+   /* if no variables and constraints are present and no active pricers could create variables later, we conclude
+    * optimality; note that we consciously ignore the potential presence of constraint handler with needscons flag
+    * FALSE; if such constraint handlers rely on entering the SOLVING stage, then they must add a locked variable during
+    * stage INITPRE */
+   else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0 )
    {
       SCIP_SOL* sol;
       SCIP_Bool stored;
