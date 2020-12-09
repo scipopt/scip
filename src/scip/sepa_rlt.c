@@ -1297,7 +1297,7 @@ SCIP_RETCODE fillRelationTables(
    int                   nrows,              /**< number of rows */
    SCIP_HASHTABLE*       hashtable2,         /**< hashtable to store 2-variable relations */
    SCIP_HASHTABLE*       hashtable3,         /**< hashtable to store implied relations */
-   VARADJACENCE*         vars_in_2rels,      /**< connections between variables that appear in 2-variable relations */
+   SCIP_HASHMAP*         vars_in_2rels,      /**< connections between variables that appear in 2-variable relations */
    int*                  row_list            /**< linked lists of row positions for each 2 or 3 variable set */
    )
 {
@@ -1380,7 +1380,7 @@ SCIP_RETCODE fillRelationTables(
             /* hashdata.vars are two variables participating together in a two variable array, therefore update the
              * variable adjacence data
              */
-            SCIP_CALL( addAdjacentVars(scip, vars_in_2rels, searchhashdata.vars) );
+            SCIP_CALL( addAdjacentVarsH(scip, vars_in_2rels, searchhashdata.vars) );
          }
       }
 
@@ -1466,7 +1466,7 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_Real side1;
    SCIP_Real side2;
    int* row_list;
-   VARADJACENCE* vars_in_2rels;
+   SCIP_HASHMAP* vars_in_2rels;
 
    /* get the (initial) rows */
    SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
@@ -1485,25 +1485,25 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
 
    /* allocate the adjacence data for variables that appear in 2-var relations */
-   SCIP_CALL( SCIPallocCleanBuffer(scip, &vars_in_2rels) );
+   SCIP_CALL( SCIPhashmapCreate(&vars_in_2rels, SCIPblkmem(scip), 10) );
 
    /* fill the data structures that will be used for product detection: hashtables and linked lists allowing to access
     * two and three variable relations by the variables; and the structure for accessing variables participating in two
     * variable relations with each given variable */
    SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
 
-#ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "\nadjacent vars (in two-var relations):");
-   for( i = 0; i < vars_in_2rels->nvars; ++i )
-   {
-      int j;
-
-      SCIPinfoMessage(scip, NULL, "\nfor var <%s>: ", SCIPvarGetName(vars_in_2rels->vars[i]));
-      for( j = 0; j < vars_in_2rels->nadjacentvars[i]; ++j )
-         SCIPinfoMessage(scip, NULL, "<%s>; ", SCIPvarGetName(vars_in_2rels->adjacentvars[i][j]));
-   }
-   SCIPinfoMessage(scip, NULL, "\n");
-#endif
+//#ifdef SCIP_DEBUG
+//   SCIPinfoMessage(scip, NULL, "\nadjacent vars (in two-var relations):");
+//   for( i = 0; i < vars_in_2rels->nvars; ++i )
+//   {
+//      int j;
+//
+//      SCIPinfoMessage(scip, NULL, "\nfor var <%s>: ", SCIPvarGetName(vars_in_2rels->vars[i]));
+//      for( j = 0; j < vars_in_2rels->nadjacentvars[i]; ++j )
+//         SCIPinfoMessage(scip, NULL, "<%s>; ", SCIPvarGetName(vars_in_2rels->adjacentvars[i][j]));
+//   }
+//   SCIPinfoMessage(scip, NULL, "\n");
+//#endif
 
    SCIP_CALL( SCIPcreateClock(scip, &sepadata->cliquetime) );
    SCIP_CALL( SCIPresetClock(scip, sepadata->cliquetime) );
@@ -1772,7 +1772,7 @@ SCIP_RETCODE detectHiddenProducts(
             }
 
             /* use unconditional relations containing w */
-            relatedvars = getAdjacentVars(vars_in_2rels, vars_xwy[1], &nrelatedvars);
+            relatedvars = getAdjacentVarsH(vars_in_2rels, vars_xwy[1], &nrelatedvars);
             if( relatedvars == NULL )
                continue;
 
@@ -1790,8 +1790,8 @@ SCIP_RETCODE detectHiddenProducts(
    SCIPinfoMessage(scip, NULL, "\nTime spent on handling cliques: %10.2f\n", SCIPgetClockTime(scip, sepadata->cliquetime));
    SCIP_CALL( SCIPfreeClock(scip, &sepadata->cliquetime) );
 
-   clearVarAdjacence(scip, vars_in_2rels);
-   SCIPfreeCleanBuffer(scip, &vars_in_2rels);
+   clearVarAdjacenceH(scip, vars_in_2rels);
+   SCIPhashmapFree(&vars_in_2rels);
 
    SCIPdebugMsg(scip, "Unconditional relations table:\n");
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
