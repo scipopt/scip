@@ -38,8 +38,8 @@
 #include "blockmemshell/memory.h"
 #include "nlpi/nlpi.h"
 #include "scip/intervalarith.h"
+#include "scip/scip_expr.h"
 #include "scip/pub_expr.h"
-#include "scip/type_expr.h"
 #include "scip/dbldblarith.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_message.h"
@@ -1177,7 +1177,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    )
 {
    SCIP_EXPR** exprs;
-   int** exprvaridxs;
    SCIP_Real** linvals;
    int** lininds;
    int* nlininds;
@@ -1193,6 +1192,7 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    const char** varnames;
    int nobjinds;
    int nconss;
+   SCIP_EXPRITER* it = NULL;
    int i;
 
    assert(nlpiprob != NULL);
@@ -1212,7 +1212,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    nconss = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &exprs, nnlrows + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nnlrows + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nnlrows + 1) );
@@ -1279,7 +1278,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    linvals[nconss] = NULL;
    nlininds[nconss] = 0;
    exprs[nconss] = NULL;
-   exprvaridxs[nconss] = NULL;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) ); /*lint !e866*/
    SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) ); /*lint !e866*/
@@ -1294,6 +1292,11 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       }
    }
    ++nconss;
+
+   if( nlscore != NULL )
+   {
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   }
 
    /* add convex nonlinear rows to NLPI problem */
    for( i = 0; i < nnlrows; ++i )
@@ -1334,8 +1337,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
       nlininds[nconss] = 0;
       lininds[nconss] = NULL;
       linvals[nconss] = NULL;
-      exprs[nconss] = NULL;
-      exprvaridxs[nconss] = NULL;
 
       /* copy linear part */
       if( SCIPnlrowGetNLinearVars(nlrow) > 0 )
@@ -1359,31 +1360,36 @@ SCIP_RETCODE SCIPcreateNlpiProb(
          }
       }
 
-      /* copy expression */
-      if( SCIPnlrowGetExpr(nlrow) != NULL )
+      /* note that we don't need to copy the expression here since only the mapping between variables in the
+       * expression and the corresponding indices change; this mapping is not created anymore
+       */
+      exprs[nconss] = SCIPnlrowGetExpr(nlrow);
+
+      /* update nlscore */
+      if( nlscore != NULL && exprs[nconss] != NULL )
       {
+         SCIP_EXPR* expr;
          SCIP_VAR* var;
+         int varidx;
 
-         /* note that we don't need to copy the expression here since only the mapping between variables in the
-          * expression and the corresponding indices change; this mapping is stored in the exprvaridxs array
-          */
-         exprs[nconss] = SCIPnlrowGetExpr(nlrow);
-#if !1 // FIXME
-         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprs[nconss])) ); /*lint !e866*/
-
-         for( k = 0; k < SCIPexprtreeGetNVars(exprs[nconss]); ++k )
+         SCIP_CALL( SCIPexpriterInit(it, exprs[nconss], SCIP_EXPRITER_DFS, FALSE) );
+         for( ; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
          {
-            var = SCIPexprtreeGetVars(exprs[nconss])[k];
+            if( !SCIPisExprVar(scip, expr) )
+               continue;
+
+            var = SCIPgetVarExprVar(expr);
             assert(var != NULL);
             assert(SCIPhashmapExists(var2idx, (void*)var));
 
-            exprvaridxs[nconss][k] = SCIPhashmapGetImageInt(var2idx, (void*)var);
+            varidx = SCIPhashmapGetImageInt(var2idx, (void*)var);
+            assert(varidx >= 0);
+            assert(varidx < nvars);
 
             /* update nlscore */
             if( nlscore != NULL )
-               ++nlscore[exprvaridxs[nconss][k]];
+               ++nlscore[varidx];
          }
-#endif
       }
 
       /* if the row to index hash map is provided, we need to store the row index */
@@ -1400,15 +1406,14 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP_CALL( SCIPnlpiAddConstraints(nlpi, nlpiprob, nconss, lhss, rhss, nlininds, lininds, linvals,
          exprs, names) );
 
+   if( it != NULL )
+   {
+      SCIPfreeExpriter(&it);
+   }
+
    /* free memory */
    for( i = nconss - 1; i > 0; --i )
    {
-      if( exprs[i] != NULL )
-      {
-         assert(exprvaridxs[i] != NULL);
-         SCIPfreeBufferArray(scip, &exprvaridxs[i]);
-      }
-
       if( nlininds[i] > 0 )
       {
          assert(linvals[i] != NULL);
@@ -1427,7 +1432,6 @@ SCIP_RETCODE SCIPcreateNlpiProb(
    SCIPfreeBufferArray(scip, &nlininds);
    SCIPfreeBufferArray(scip, &lininds);
    SCIPfreeBufferArray(scip, &linvals);
-   SCIPfreeBufferArray(scip, &exprvaridxs);
    SCIPfreeBufferArray(scip, &exprs);
 
    return SCIP_OKAY;
