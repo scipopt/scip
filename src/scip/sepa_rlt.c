@@ -1668,6 +1668,14 @@ SCIP_RETCODE createSepaData(
 
    assert(sepadata != NULL);
 
+   /* initialize some fields of sepadata */
+   sepadata->varssorted = NULL;
+   sepadata->bilinvardatas = NULL;
+   sepadata->eqlinexpr = NULL;
+   sepadata->bilinvarssize = 0;
+   sepadata->nbilinvars = 0;
+   sepadata->nbilinterms = 0;
+
    /* get total number of bilinear terms */
    nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
@@ -1682,13 +1690,6 @@ SCIP_RETCODE createSepaData(
 
    /* create the empty map for bilinear terms */
    SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), nvars) );
-
-   /* initialize some fields of sepadata */
-   sepadata->varssorted = NULL;
-   sepadata->bilinvardatas = NULL;
-   sepadata->eqlinexpr = NULL;
-   sepadata->bilinvarssize = 0;
-   sepadata->nbilinvars = 0;
 
    /* get all bilinear terms from the expression constraint handler */
    bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
@@ -3208,7 +3209,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( createSepaData(scip, sepadata) );
    }
-   assert(sepadata->iscreated || sepadata->nbilinvars == 0);
+   assert(sepadata->iscreated || (sepadata->nbilinvars == 0 && sepadata->nbilinterms == 0));
    assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
 
    /* no bilinear terms available -> skip */
