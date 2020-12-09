@@ -83,7 +83,6 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
 }
 
-#if !1
 Test(propagation, convexnlp, .init = setup, .fini = teardown,
    .description = "checks the convex NLP relaxation"
    )
@@ -251,4 +250,3 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrows[i]) );
    }
 }
-#endif

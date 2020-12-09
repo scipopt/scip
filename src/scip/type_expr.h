@@ -30,10 +30,6 @@
 #include "scip/type_var.h"
 #include "scip/type_tree.h"
 
-// FIXME temporarily to ease compilation
-typedef struct SCIP_ExprTree    SCIP_EXPRTREE;   /**< expression tree */
-
-
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */
 
