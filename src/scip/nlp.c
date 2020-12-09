@@ -696,7 +696,7 @@ SCIP_RETCODE nlrowRemoveFixedLinearCoefs(
 
 /** removes fixed variables from expression tree of a nonlinear row */
 static
-SCIP_RETCODE nlrowRemoveFixedExprVars(
+SCIP_RETCODE nlrowSimplifyExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -763,7 +763,7 @@ SCIP_RETCODE nlrowRemoveFixedVar(
    /* search for variable in nonlinear part and remove all fixed variables in expression tree if existing */
    if( nlrow->expr != NULL /* && SCIPexprtreeFindVar(nlrow->expr, var) >= 0 */ )  // FIXME?
    {
-      SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, blkmem, set, stat, nlp) );
+      SCIP_CALL( nlrowSimplifyExpr(nlrow, blkmem, set, stat, nlp) );
    }
 
    return SCIP_OKAY;
@@ -1003,7 +1003,7 @@ SCIP_RETCODE SCIPnlrowPrint(
       SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", nlrow->lincoefs[i], SCIPvarGetName(nlrow->linvars[i]));
    }
 
-   /* print non-quadratic part */
+   /* print nonlinear part */
    if( nlrow->expr != NULL )
    {
       SCIPmessageFPrintInfo(messagehdlr, file, " + ");
@@ -1217,7 +1217,7 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    return SCIP_OKAY;
 }
 
-/** replaces an expression tree in nonlinear row */
+/** replaces an expression in nonlinear row */
 SCIP_RETCODE SCIPnlrowChgExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1323,8 +1323,8 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    return SCIP_OKAY;
 }
 
-/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and non-quadratic terms of a nonlinear row */
-SCIP_RETCODE SCIPnlrowRemoveFixedVars(
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear and nonlinear part of a nonlinear row and simplifies its expression */
+SCIP_RETCODE SCIPnlrowSimplify(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1333,7 +1333,7 @@ SCIP_RETCODE SCIPnlrowRemoveFixedVars(
    )
 {
    SCIP_CALL( nlrowRemoveFixedLinearCoefs(nlrow, blkmem, set, stat, nlp) );
-   SCIP_CALL( nlrowRemoveFixedExprVars(nlrow, blkmem, set, stat, nlp) );
+   SCIP_CALL( nlrowSimplifyExpr(nlrow, blkmem, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -1883,7 +1883,7 @@ SCIP_RETCODE nlpAddNlRows(
       assert(nlrow->nlpiindex == -1);
 
       /* make sure there are only active variables in row */
-      SCIP_CALL( SCIPnlrowRemoveFixedVars(nlrow, blkmem, set, stat, nlp) );
+      SCIP_CALL( SCIPnlrowSimplify(nlrow, blkmem, set, stat, nlp) );
 
 #ifndef NDEBUG
       /* assert that variables of row are in NLP */

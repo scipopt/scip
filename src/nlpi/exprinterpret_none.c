@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPexprintCompile(
  * Hessian for an expression is not available because it contains a user expression that does not provide
  * Hessians.
  */
-SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr                /**< expression */
    )

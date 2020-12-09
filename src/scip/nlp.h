@@ -151,7 +151,7 @@ SCIP_RETCODE SCIPnlrowChgLinearCoef(
    SCIP_Real             coef                /**< new value of coefficient */
    );
 
-/** replaces or deletes an expression tree in nonlinear row */
+/** replaces or deletes an expression in nonlinear row */
 SCIP_RETCODE SCIPnlrowChgExpr(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -188,8 +188,8 @@ SCIP_RETCODE SCIPnlrowChgRhs(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
-/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear, quadratic, and nonquadratic terms of a nonlinear row */
-SCIP_RETCODE SCIPnlrowRemoveFixedVars(
+/** removes (or substitutes) all fixed, negated, aggregated, multi-aggregated variables from the linear and nonlinear part of a nonlinear row and simplifies its expression */
+SCIP_RETCODE SCIPnlrowSimplify(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */

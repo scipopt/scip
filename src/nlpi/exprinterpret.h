@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPexprintCompile(
  * Hessians.
  */
 SCIP_EXPORT
-SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr                /**< expression */
    );

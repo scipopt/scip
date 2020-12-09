@@ -381,7 +381,7 @@ SCIP_RETCODE createNlRow(
       SCIPfreeBufferArray(scip, &nlvars);
 
       /* add expression tree in nlrow (this will make a copy) */
-      SCIP_CALL( SCIPsetNlRowExprtree(scip, consdata->nlrow, exprtree) );
+      SCIP_CALL( SCIPsetNlRowExpr(scip, consdata->nlrow, exprtree) );
 
       /* free exprtree */
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
