@@ -622,7 +622,7 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    /* TODO update this for the new data structures */
 
    /* free memory */
-   clearVarAdjacenceH(scip, vars_in_2rels);
+   clearVarAdjacency(scip, vars_in_2rels);
    SCIPhashmapFree(&vars_in_2rels);
 
    SCIPfreeBufferArray(scip, &row_list);
