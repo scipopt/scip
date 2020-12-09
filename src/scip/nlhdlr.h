@@ -27,7 +27,6 @@
 #include "scip/pub_nlhdlr.h"
 
 /** creates a nonlinear handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPnlhdlrCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR**         nlhdlr,             /**< buffer to store pointer to created nonlinear handler */
@@ -41,80 +40,63 @@ SCIP_RETCODE SCIPnlhdlrCreate(
    );
 
 /** frees a nonlinear handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPnlhdlrFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR**         nlhdlr              /**< pointer to nonlinear handler to be freed */
    );
 
 /** call the handler copy callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRCOPYHDLR(SCIPnlhdlrCopyhdlr);
 
 /** call the free expression specific data callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRFREEEXPRDATA(SCIPnlhdlrFreeexprdata);
 
 /** call the initialization callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRINIT(SCIPnlhdlrInit);
 
 /** call the deinitialization callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLREXIT(SCIPnlhdlrExit);
 
 /** call the detect callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRDETECT(SCIPnlhdlrDetect);
 
 /** call the auxiliary evaluation callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLREVALAUX(SCIPnlhdlrEvalaux);
 
 /** calls the interval evaluation callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRINTEVAL(SCIPnlhdlrInteval);
 
 /** calls the reverse propagation callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRREVERSEPROP(SCIPnlhdlrReverseprop);
 
 /** calls the separation initialization callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRINITSEPA(SCIPnlhdlrInitsepa);
 
 /** calls the separation deinitialization callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLREXITSEPA(SCIPnlhdlrExitsepa);
 
 /** calls the enforcement callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo);
 
 /** calls the estimator callback of a nonlinear handler */
-SCIP_EXPORT
 SCIP_DECL_NLHDLRESTIMATE(SCIPnlhdlrEstimate);
 
 /** reset number of detections counter for last round */
-SCIP_EXPORT
 void SCIPnlhdlrResetNDetectionslast(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
 /** increments number of cutoffs in statistics */
-SCIP_EXPORT
 void SCIPnlhdlrIncrementNCutoffs(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
 /** increments number of separations in statistics */
-SCIP_EXPORT
 void SCIPnlhdlrIncrementNSeparated(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
    );
 
 /** print statistics for nonlinear handlers */
-SCIP_EXPORT
 void SCIPnlhdlrPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLR**         nlhdlrs,            /**< nonlinear handlers */

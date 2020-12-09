@@ -35,7 +35,6 @@
 /**@{ */
 
 /** create expression handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
@@ -47,7 +46,6 @@ SCIP_RETCODE SCIPexprhdlrCreate(
    );
 
 /** frees expression handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrFree(
    SCIP_EXPRHDLR**       exprhdlr,           /**< pointer to expression handler to be freed */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -55,14 +53,12 @@ SCIP_RETCODE SCIPexprhdlrFree(
    );
 
 /** copies the given expression handler to a new scip */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrCopyInclude(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             targetset           /**< SCIP_SET of SCIP to copy to */
    );
 
 /** initialization of expression handler (reset statistics) */
-SCIP_EXPORT
 void SCIPexprhdlrInit(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -73,7 +69,6 @@ void SCIPexprhdlrInit(
  * the method prints an expression
  * it is called while iterating over the expression graph at different stages
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrPrintExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -90,7 +85,6 @@ SCIP_RETCODE SCIPexprhdlrPrintExpr(
  * The method parses an expression.
  * It should be called when parsing an expression and an operator with the expr handler name is found.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrParseExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -106,7 +100,6 @@ SCIP_RETCODE SCIPexprhdlrParseExpr(
  *
  * See @ref SCIP_DECL_EXPRCURVATURE for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -120,7 +113,6 @@ SCIP_RETCODE SCIPexprhdlrCurvatureExpr(
  *
  * See @ref SCIP_DECL_EXPRMONOTONICITY for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -133,7 +125,6 @@ SCIP_RETCODE SCIPexprhdlrMonotonicityExpr(
  *
  * See @ref SCIP_DECL_EXPRINTEGRALITY for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -145,7 +136,6 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
  *
  * The method hashes an expression by taking the hashes of its children into account.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrHashExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -161,7 +151,6 @@ SCIP_RETCODE SCIPexprhdlrHashExpr(
  * - 0  if expr1 = expr2
  * - 1  if expr1 > expr2
  */
-SCIP_EXPORT
 int SCIPexprhdlrCompareExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr1,              /**< first expression in comparison */
@@ -174,7 +163,6 @@ int SCIPexprhdlrCompareExpr(
  *
  * Further, allows to evaluate w.r.t. given expression and children values instead of those stored in children expressions.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrEvalExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -195,7 +183,6 @@ SCIP_RETCODE SCIPexprhdlrEvalExpr(
  *
  * Further, allows to differentiate w.r.t. given expression and children values instead of those stored in children expressions.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -211,7 +198,6 @@ SCIP_RETCODE SCIPexprhdlrBwDiffExpr(
  *
  * See @ref SCIP_DECL_EXPRFWDIFF for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -224,7 +210,6 @@ SCIP_RETCODE SCIPexprhdlrFwDiffExpr(
  *
  * See @ref SCIP_DECL_EXPRBWFWDIFF for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -235,7 +220,6 @@ SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
    );
 
 /** calls the interval evaluation callback of an expression handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -249,7 +233,6 @@ SCIP_RETCODE SCIPexprhdlrIntEvalExpr(
  *
  * See @ref SCIP_DECL_EXPRESTIMATE for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrEstimateExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -270,7 +253,6 @@ SCIP_RETCODE SCIPexprhdlrEstimateExpr(
  *
  * See @ref SCIP_DECL_EXPRINITESTIMATES for details.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -286,7 +268,6 @@ SCIP_RETCODE SCIPexprhdlrInitEstimatesExpr(
  *
  * The function receives the expression to be simplified and a pointer to store the simplified expression.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -300,7 +281,6 @@ SCIP_RETCODE SCIPexprhdlrSimplifyExpr(
  *
  * The method propagates given bounds over the children of an expression.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprhdlrReversePropExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -317,7 +297,6 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
 /**@{ */
 
 /** creates and captures an expression with given expression data and children */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -331,7 +310,6 @@ SCIP_RETCODE SCIPexprCreate(
    );
 
 /** appends child to the children list of expr */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprAppendChild(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -343,7 +321,6 @@ SCIP_RETCODE SCIPexprAppendChild(
  *
  * @note the old child is released and the newchild is captured, unless they are the same (=same pointer)
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprReplaceChild(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -357,7 +334,6 @@ SCIP_RETCODE SCIPexprReplaceChild(
  *
  * @attention only use if you really know what you are doing
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprRemoveChildren(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -373,7 +349,6 @@ SCIP_RETCODE SCIPexprRemoveChildren(
  * The mapped expression (including its children) will not be copied in this case and its ownerdata will not be touched.
  * If, however, the mapexpr callback returns NULL for the targetexpr, then the expr will be copied in the usual way.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprCopy(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -390,7 +365,6 @@ SCIP_RETCODE SCIPexprCopy(
    );
 
 /** duplicates the given expression without its children */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprDuplicateShallow(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -401,13 +375,11 @@ SCIP_RETCODE SCIPexprDuplicateShallow(
    );
 
 /** captures an expression (increments usage count) */
-SCIP_EXPORT
 void SCIPexprCapture(
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** releases an expression (decrements usage count and possibly frees expression) */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprRelease(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -416,42 +388,36 @@ SCIP_RETCODE SCIPexprRelease(
    );
 
 /** returns whether an expression is a variable expression */
-SCIP_EXPORT
 SCIP_Bool SCIPexprIsVar(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** returns whether an expression is a value expression */
-SCIP_EXPORT
 SCIP_Bool SCIPexprIsValue(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** returns whether an expression is a sum expression */
-SCIP_EXPORT
 SCIP_Bool SCIPexprIsSum(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** returns whether an expression is a product expression */
-SCIP_EXPORT
 SCIP_Bool SCIPexprIsProduct(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** returns whether an expression is a power expression */
-SCIP_EXPORT
 SCIP_Bool SCIPexprIsPower(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr                /**< expression */
    );
 
 /** print an expression as info-message */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprPrint(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -462,7 +428,6 @@ SCIP_RETCODE SCIPexprPrint(
    );
 
 /** initializes printing of expressions in dot format to a give FILE* pointer */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprPrintDotInit(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -473,7 +438,6 @@ SCIP_RETCODE SCIPexprPrintDotInit(
    );
 
 /** initializes printing of expressions in dot format to a file with given filename */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprPrintDotInit2(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -484,7 +448,6 @@ SCIP_RETCODE SCIPexprPrintDotInit2(
    );
 
 /** main part of printing an expression in dot format */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprPrintDot(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -493,7 +456,6 @@ SCIP_RETCODE SCIPexprPrintDot(
    );
 
 /** finishes printing of expressions in dot format */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprPrintDotFinal(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -502,7 +464,6 @@ SCIP_RETCODE SCIPexprPrintDotFinal(
    );
 
 /** prints structure of an expression a la Maple's dismantle */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprDismantle(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -525,7 +486,6 @@ SCIP_RETCODE SCIPexprDismantle(
  * The tag is stored together with the value and can be received via
  * SCIPexprGetEvalTag().
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprEval(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -542,7 +502,6 @@ SCIP_RETCODE SCIPexprEval(
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprEvalGradient(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -559,7 +518,6 @@ SCIP_RETCODE SCIPexprEvalGradient(
  * If an error (division by zero, ...) occurs, this value will
  * be set to SCIP_INVALID.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprEvalHessianDir(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -578,7 +536,6 @@ SCIP_RETCODE SCIPexprEvalHessianDir(
  * Otherwise, loop over descendants and compare activitytag with stat's domchgcount, i.e.,
  * whether some bound was changed since last evaluation, to check whether exprhdlrs INTEVAL should be called.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprEvalActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -590,7 +547,6 @@ SCIP_RETCODE SCIPexprEvalActivity(
  * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
  */
-SCIP_EXPORT
 int SCIPexprCompare(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr1,              /**< first expression */
@@ -603,7 +559,6 @@ int SCIPexprCompare(
 /**@{ */
 
 /** creates an expression iterator */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexpriterCreate(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -611,7 +566,6 @@ SCIP_RETCODE SCIPexpriterCreate(
    );
 
 /** frees an expression iterator */
-SCIP_EXPORT
 void SCIPexpriterFree(
    SCIP_EXPRITER**       iterator            /**< pointer to the expression iterator */
    );
@@ -629,7 +583,6 @@ void SCIPexpriterFree(
  *
  * Use \ref SCIPexprGetQuadraticData to get data about the representation as quadratic.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprCheckQuadratic(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -642,7 +595,6 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
  * Reverts SCIPexprCheckQuadratic().
  * Before doing changes to an expression, it can be useful to call this function.
  */
-SCIP_EXPORT
 void SCIPexprFreeQuadratic(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPR*            expr                /**< expression */
@@ -658,7 +610,6 @@ void SCIPexprFreeQuadratic(
  * If assumevarfixed is given and some entries of x correspond to variables present in
  * this hashmap, then the corresponding rows and columns are ignored in the matrix Q.
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
