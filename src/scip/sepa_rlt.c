@@ -240,6 +240,136 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValConss)
 
 /* store a pair of adjacent variables */
 static
+SCIP_RETCODE addAdjacentVarsH(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HASHMAP*         adjvarmap,          /**< hashmap mapping variables to their ADJACENTVARDATAs */
+   SCIP_VAR**            vars                /**< variable pair to be stored */
+   )
+{
+   int v1;
+   int v2;
+   SCIP_Bool found;
+   int pos1;
+   int pos2;
+   int i;
+   int newsize;
+   ADJACENTVARDATA* adjacentvardata;
+
+   assert(adjvarmap != NULL);
+
+   /* repeat for each variable of the new pair */
+   for( v1 = 0; v1 < 2; ++v1 )
+   {
+      v2 = 1 - v1;
+
+      /* look for the first variable */
+      adjacentvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(adjvarmap, (void*)(size_t) SCIPvarGetIndex(vars[v1]));
+
+      /* if the first variable has not been added to adjvarmap yet, add it here */
+      if( adjacentvardata == NULL )
+      {
+         SCIP_CALL( SCIPallocClearBlockMemory(scip, &adjacentvardata) );
+         SCIP_CALL( SCIPhashmapInsert(adjvarmap, (void*)(size_t) SCIPvarGetIndex(vars[v1]), adjacentvardata) );
+      }
+
+      assert(adjacentvardata != NULL);
+
+      /* look for second variable in adjacentvars */
+      if( adjacentvardata->adjacentvars == NULL )
+      {
+         found = FALSE;
+         pos2 = 0;
+      }
+      else
+      {
+         found = SCIPsortedvecFindPtr((void**) adjacentvardata->adjacentvars, SCIPvarComp, vars[v2],
+               adjacentvardata->nadjacentvars, &pos2);
+      }
+
+      /* add second var to adjacentvardata->adjacentvars, if not already added */
+      if( !found )
+      {
+         /* ensure size of varadjacence->adjacentvars[pos1] */
+         if( adjacentvardata->sadjacentvars < adjacentvardata->nadjacentvars + 1 )
+         {
+            newsize = SCIPcalcMemGrowSize(scip, adjacentvardata->nadjacentvars + 1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &adjacentvardata->adjacentvars, adjacentvardata->sadjacentvars, newsize) );
+            adjacentvardata->sadjacentvars = newsize;
+         }
+
+         /* insert second var at the correct position */
+         for( i = adjacentvardata->nadjacentvars; i > pos2; --i )
+            adjacentvardata->adjacentvars[i] = adjacentvardata->adjacentvars[i-1];
+         adjacentvardata->adjacentvars[pos2] = vars[v2];
+         ++adjacentvardata->nadjacentvars;
+      }
+
+      /* if this is a self-adjacent var, only need to add the connection once */
+      if( vars[v1] == vars[v2] )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns the array of adjacent variables for a given variable */
+static
+SCIP_VAR** getAdjacentVarsH(
+   SCIP_HASHMAP*         adjvarmap,          /**< data structure to store adjacent pairs */
+   SCIP_VAR*             var,                /**< variable */
+   int*                  nadjacentvars       /**< buffer to store the number of variables in the returned array */
+   )
+{
+   SCIP_VAR** adjacentvars;
+   ADJACENTVARDATA* adjacentvardata;
+   SCIP_Bool found;
+   int pos;
+
+   assert(adjvarmap != NULL);
+
+   *nadjacentvars = 0;
+
+   adjacentvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(adjvarmap, (void*)(size_t) SCIPvarGetIndex(var));
+
+   if( adjacentvardata == NULL )
+      return NULL;
+
+   *nadjacentvars = adjacentvardata->nadjacentvars;
+
+   return adjacentvardata->adjacentvars;
+}
+
+static
+void clearVarAdjacenceH(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HASHMAP*         adjvarmap           /**< data structure to store adjacent pairs */
+   )
+{
+   int i;
+   SCIP_HASHMAPENTRY* entry;
+   ADJACENTVARDATA* adjacentvardata;
+
+   assert(adjvarmap != NULL);
+
+   for( i = 0; i < SCIPhashmapGetNEntries(adjvarmap); ++i )
+   {
+      entry = SCIPhashmapGetEntry(adjvarmap, i);
+
+      if( entry == NULL )
+         continue;
+
+      adjacentvardata = (ADJACENTVARDATA*) SCIPhashmapEntryGetImage(entry);
+
+      /* if adjacentvardata has been added to the hashmap, it can't be empty */
+      assert(adjacentvardata->adjacentvars != NULL);
+
+      SCIPfreeBlockMemoryArray(scip, &adjacentvardata->adjacentvars, adjacentvardata->sadjacentvars);
+      SCIPfreeBlockMemory(scip, &adjacentvardata);
+   }
+}
+
+/* store a pair of adjacent variables */
+static
 SCIP_RETCODE addAdjacentVars(
    SCIP*                 scip,               /**< SCIP data structure */
    VARADJACENCE*         varadjacence,       /**< data structure to store adjacent pairs */
@@ -404,7 +534,6 @@ SCIP_RETCODE freeSepaData(
    )
 {  /*lint --e{715}*/
    int i;
-   ADJACENTVARDATA* bilinvardata;
 
    assert(sepadata->iscreated);
    assert(sepadata->bilinvarsmap != NULL);
@@ -413,20 +542,10 @@ SCIP_RETCODE freeSepaData(
    {
       /* release bilinvars that were captured for rlt and free all related arrays */
 
-      for( i = 0; i < SCIPhashmapGetNEntries(sepadata->bilinvardatamap); ++i )
-      {
-         SCIP_HASHMAPENTRY* entry;
+      /* if there are bilinear vars, some of them must also participate in the same product */
+      assert(sepadata->bilinvardatamap != NULL);
 
-         entry = SCIPhashmapGetEntry(sepadata->bilinvardatamap, i);
-         if( entry == NULL )
-            continue;
-
-         bilinvardata = SCIPhashmapEntryGetImage(entry);
-         assert(bilinvardata != NULL);
-         assert(bilinvardata->adjacentvars != NULL);
-         SCIPfreeBlockMemoryArray(scip, &bilinvardata->adjacentvars, bilinvardata->sadjacentvars);
-         SCIPfreeBlockMemory(scip, &bilinvardata);
-      }
+      clearVarAdjacenceH(scip, sepadata->bilinvardatamap);
 
       for( i = 0; i < sepadata->nbilinvars; ++i )
       {
@@ -644,8 +763,7 @@ SCIP_RETCODE addProductVars(
    int pos;
    int i;
    SCIP_Bool found;
-   ADJACENTVARDATA* xdata;
-   ADJACENTVARDATA* ydata;
+   SCIP_VAR* vars[2];
 
    if( sepadata->bilinvardatamap == NULL )
    {
@@ -664,42 +782,12 @@ SCIP_RETCODE addProductVars(
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
       sepadata->varssorted[sepadata->nbilinvars] = x;
       sepadata->varpriorities[sepadata->nbilinvars] = 0;
-      SCIP_CALL( SCIPallocClearBlockMemory(scip, &xdata) );
-      SCIP_CALL( SCIPhashmapInsert(sepadata->bilinvardatamap, (void*)(size_t) xidx, (void*) xdata) );
       xpos = sepadata->nbilinvars;
       ++sepadata->nbilinvars;
-   }
-   else
-   {
-      xdata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) xidx);
    }
 
    assert(xpos >= 0 && xpos < sepadata->nbilinvars );
    assert(xpos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) xidx)); /*lint !e571 */
-   assert(xdata != NULL);
-
-   /* add y to bilinvardata for x */
-   if( xdata->adjacentvars == NULL )
-   {
-      found = FALSE;
-      pos = 0;
-   }
-   else
-   {
-      found = SCIPsortedvecFindPtr((void**) xdata->adjacentvars, SCIPvarComp, y, xdata->nadjacentvars, &pos);
-   }
-
-   /* if y is not yet in xdata, add it */
-   if( !found )
-   {
-      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &xdata->adjacentvars, &xdata->sadjacentvars, xdata->nadjacentvars + 1) );
-      assert(xdata->adjacentvars != NULL);
-
-      for( i = xdata->nadjacentvars; i > pos; --i )
-         xdata->adjacentvars[i] = xdata->adjacentvars[i - 1];
-      xdata->adjacentvars[pos] = y;
-      ++xdata->nadjacentvars;
-   }
 
    /* add locks to priority of x */
    sepadata->varpriorities[xpos] += nlocks;
@@ -715,45 +803,20 @@ SCIP_RETCODE addProductVars(
          SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
          sepadata->varssorted[sepadata->nbilinvars] = y;
          sepadata->varpriorities[sepadata->nbilinvars] = 0;
-         SCIP_CALL( SCIPallocClearBlockMemory(scip, &ydata) );
-         SCIP_CALL( SCIPhashmapInsert(sepadata->bilinvardatamap, (void*)(size_t) yidx, (void*) ydata) );
          ypos = sepadata->nbilinvars;
          ++sepadata->nbilinvars;
-      }
-      else
-      {
-         ydata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) yidx);
       }
 
       assert(ypos >= 0 && ypos < sepadata->nbilinvars);
       assert(ypos == SCIPhashmapGetImageInt(varmap, (void*)(size_t) yidx)); /*lint !e571 */
-      assert(ydata != NULL);
-
-      /* add x to bilinvardata for y */
-      if( ydata->adjacentvars == NULL )
-      {
-         found = FALSE;
-         pos = 0;
-      }
-      else
-      {
-         found = SCIPsortedvecFindPtr((void**) ydata->adjacentvars, SCIPvarComp, x, ydata->nadjacentvars, &pos);
-      }
-
-      if( !found )
-      {
-         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &ydata->adjacentvars, &ydata->sadjacentvars, ydata->nadjacentvars + 1) );
-         assert(ydata->adjacentvars != NULL);
-
-         for( i = ydata->nadjacentvars; i > pos; --i )
-            ydata->adjacentvars[i] = ydata->adjacentvars[i - 1];
-         ydata->adjacentvars[pos] = x;
-         ++ydata->nadjacentvars;
-      }
 
       /* add locks to priority of y */
       sepadata->varpriorities[ypos] += nlocks;
    }
+
+   vars[0] = x;
+   vars[1] = y;
+   SCIP_CALL( addAdjacentVarsH(scip, sepadata->bilinvardatamap, vars) );
 
    return SCIP_OKAY;
 }
@@ -2680,9 +2743,10 @@ SCIP_RETCODE markRowsXj(
    SCIP_Real* colvals;
    SCIP_ROW** colrows;
    SCIP_CONSEXPR_BILINTERM* terms;
-   ADJACENTVARDATA* bilinvardata;
    SCIP_Bool violatedbelow;
    SCIP_Bool violatedabove;
+   SCIP_VAR** bilinadjvars;
+   int nbilinadjvars;
 
    *nmarked = 0;
 
@@ -2701,12 +2765,13 @@ SCIP_RETCODE markRowsXj(
    }
 
    terms = SCIPgetConsExprBilinTerms(conshdlr);
-   bilinvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(xj));
+   bilinadjvars = getAdjacentVarsH(sepadata->bilinvardatamap, xj, &nbilinadjvars);
+   assert(bilinadjvars != NULL);
 
    /* for each var which appears in a bilinear product together with xj, mark rows */
-   for( i = 0; i < bilinvardata->nadjacentvars; ++i )
+   for( i = 0; i < nbilinadjvars; ++i )
    {
-      xi = bilinvardata->adjacentvars[i];
+      xi = bilinadjvars[i];
 
       if( SCIPvarGetStatus(xi) != SCIP_VARSTATUS_COLUMN )
          continue;
