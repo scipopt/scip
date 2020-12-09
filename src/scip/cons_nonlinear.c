@@ -2980,6 +2980,77 @@ SCIP_RETCODE addLocks(
    return SCIP_OKAY;
 }
 
+/** create a nonlinear row representation of a nonlinear constraint and stores them in consdata */
+static
+SCIP_RETCODE createNlRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< nonlinear constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->expr != NULL);
+
+   if( consdata->nlrow != NULL )
+   {
+      SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
+   }
+
+   /* better curvature info will be set in initSolve() just before nlrow is added to NLP */
+   SCIP_CALL( SCIPcreateNlRow(scip, &consdata->nlrow, SCIPconsGetName(cons), 0.0,
+         0, NULL, NULL, NULL, consdata->lhs, consdata->rhs, SCIP_EXPRCURV_UNKNOWN) );
+
+   if( SCIPisExprSum(scip, consdata->expr) )
+   {
+      /* if root is a sum, then split into linear and nonlinear terms */
+      SCIP_EXPR* nonlinpart;
+      SCIP_EXPR* child;
+      SCIP_Real* coefs;
+      int i;
+
+      coefs = SCIPgetCoefsExprSum(consdata->expr);
+
+      /* constant term of sum */
+      SCIP_CALL( SCIPchgNlRowConstant(scip, consdata->nlrow, SCIPgetConstantExprSum(consdata->expr)) );
+
+      /* a sum-expression that will hold the nonlinear terms and be passed to the nlrow eventually */
+      SCIP_CALL( SCIPcreateExprSum(scip, &nonlinpart, 0, NULL, NULL, 0.0, exprownerCreate, (void*)SCIPconsGetHdlr(cons)) );
+
+      for( i = 0; i < SCIPexprGetNChildren(consdata->expr); ++i )
+      {
+         child = SCIPexprGetChildren(consdata->expr)[i];
+         if( SCIPisExprVar(scip, child) )
+         {
+            /* linear term */
+            SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, SCIPgetVarExprVar(child), coefs[i]) );
+         }
+         else
+         {
+            /* nonlinear term */
+            SCIP_CALL( SCIPappendExprSumExpr(scip, nonlinpart, child, coefs[i]) );
+         }
+      }
+
+      if( SCIPexprGetNChildren(nonlinpart) > 0 )
+      {
+         /* add expression to nlrow (this will make a copy) */
+         SCIP_CALL( SCIPsetNlRowExpr(scip, consdata->nlrow, nonlinpart) );
+      }
+      SCIP_CALL( SCIPreleaseExpr(scip, &nonlinpart) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetNlRowExpr(scip, consdata->nlrow, consdata->expr) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** compares enfodata by enforcement priority of nonlinear handler
  *
  * if handlers have same enforcement priority, then compare by detection priority, then by name
@@ -3369,7 +3440,6 @@ SCIP_RETCODE initSolve(
          /* add nlrow representation to NLP, if NLP had been constructed */
          if( SCIPisNLPConstructed(scip) && SCIPconsIsEnabled(conss[c]) )
          {
-#if !1 //FIXME
             if( consdata->nlrow == NULL )
             {
                SCIP_CALL( createNlRow(scip, conss[c]) );
@@ -3377,7 +3447,6 @@ SCIP_RETCODE initSolve(
             }
             SCIPnlrowSetCurvature(consdata->nlrow, consdata->curv);
             SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
-#endif
          }
       }
    }
@@ -11605,7 +11674,7 @@ SCIP_RETCODE SCIPgetNlRowConsNonlinear(
 
    if( consdata->nlrow == NULL )
    {
-//FIXME      SCIP_CALL( createNlRow(scip, cons) );
+      SCIP_CALL( createNlRow(scip, cons) );
    }
    assert(consdata->nlrow != NULL);
    *nlrow = consdata->nlrow;

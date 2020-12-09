@@ -1897,7 +1897,7 @@ SCIP_RETCODE nlpAddNlRows(
 
          SCIP_CALL( SCIPexpriterCreate(stat, blkmem, &it) );
          SCIP_CALL( SCIPexpriterInit(it, nlrow->expr, SCIP_EXPRITER_DFS, TRUE) );
-         for( ; !SCIPexpriterIsEnd(it); SCIPexpriterGetNext(it) )
+         for( expr = nlrow->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
             assert(!SCIPexprIsVar(set, expr) || SCIPhashmapExists(nlp->varhash, SCIPgetVarExprVar(expr)));
          SCIPexpriterFree(&it);
       }
