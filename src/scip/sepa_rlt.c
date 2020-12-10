@@ -426,7 +426,6 @@ SCIP_RETCODE getInitialRows(
    {
       SCIP_ROW *row;
 
-      /* TODO what to do about the warnings? */
       row = SCIPconsGetRow(scip, conss[i]);
 
       if( row != NULL )
