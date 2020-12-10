@@ -139,9 +139,6 @@ struct SCIP_SepaData
    SCIP_Real             dircutoffdistweight;/**< weight of directed cutoff distance in cut score calculation */
    SCIP_Real             goodmaxparall;      /**< maximum parallelism for good cuts */
    SCIP_Real             maxparall;          /**< maximum parallelism for non-good cuts */
-
-   /* TODO remove this when done with cliques */
-   SCIP_CLOCK*           cliquetime;         /**< time spent on handling cliques in detection */
 };
 
 /* a simplified representation of an LP row */
@@ -429,6 +426,7 @@ SCIP_RETCODE getInitialRows(
    {
       SCIP_ROW *row;
 
+      /* TODO what to do about the warnings? */
       row = SCIPconsGetRow(scip, conss[i]);
 
       if( row != NULL )
@@ -1300,9 +1298,6 @@ SCIP_RETCODE detectHiddenProducts(
 //   SCIPinfoMessage(scip, NULL, "\n");
 //#endif
 
-   SCIP_CALL( SCIPcreateClock(scip, &sepadata->cliquetime) );
-   SCIP_CALL( SCIPresetClock(scip, sepadata->cliquetime) );
-
    /* start actually looking for products */
    /* go through all sets of three variables */
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
@@ -1447,10 +1442,8 @@ SCIP_RETCODE detectHiddenProducts(
                   {
                      /* w is binary - look for cliques containing x and w */
                      SCIPdebugMsg(scip, "Implied relation + cliques with x and w:\n");
-                     SCIP_CALL( SCIPstartClock(scip, sepadata->cliquetime) );
                      SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, sidetype1, 0, 1,
                            varmap, xfixing) );
-                     SCIP_CALL( SCIPstopClock(scip, sepadata->cliquetime) );
                   }
 
                   /* use unconditional relations (i.e. relations of w and y) */
@@ -1472,10 +1465,8 @@ SCIP_RETCODE detectHiddenProducts(
                   /* cliques containing w and y */
                   if( SCIPvarGetType(vars_xwy[1]) == SCIP_VARTYPE_BINARY && SCIPvarGetType(vars_xwy[2]) == SCIP_VARTYPE_BINARY )
                   {
-                     SCIPdebugMsg(scip, "Implied relation + cliques with w and y:\n"); /* TODO this can be more efficient with x in outer loop */
-                     SCIP_CALL( SCIPstartClock(scip, sepadata->cliquetime) );
+                     SCIPdebugMsg(scip, "Implied relation + cliques with w and y:\n");
                      SCIP_CALL( detectProductsClique(scip, sepadata, coefs1, vars_xwy, side1, sidetype1, 1, 2, varmap, xfixing) );
-                     SCIP_CALL( SCIPstopClock(scip, sepadata->cliquetime) );
                   }
 
                   /* inequalities containing w and y */
@@ -1581,9 +1572,6 @@ SCIP_RETCODE detectHiddenProducts(
          }
       }
    }
-
-   SCIPinfoMessage(scip, NULL, "\nTime spent on handling cliques: %10.2f\n", SCIPgetClockTime(scip, sepadata->cliquetime));
-   SCIP_CALL( SCIPfreeClock(scip, &sepadata->cliquetime) );
 
    clearVarAdjacency(scip, vars_in_2rels);
    SCIPhashmapFree(&vars_in_2rels);
@@ -2298,7 +2286,7 @@ SCIP_RETCODE createProjRow(
       val = SCIPgetSolVal(scip, sol, var);
       vlb = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
       vub = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
-      if( SCIPisEQ(scip, vlb, val) || SCIPisEQ(scip, vub, val) )  /* TODO should this be more generous, e.g., SCIPisFeasEQ? or would hardly make a difference for basic solution? should update in markRowsXj, too */
+      if( SCIPisFeasEQ(scip, vlb, val) || SCIPisFeasEQ(scip, vub, val) )
       {
          /* if we are projecting and the var is at bound, add var as a constant to simplerow */
          if( !SCIPisInfinity(scip, -simplerow->lhs) )
@@ -2552,7 +2540,7 @@ SCIP_RETCODE markRowsXj(
    vlb = local ? SCIPvarGetLbLocal(xj) : SCIPvarGetLbGlobal(xj);
    vub = local ? SCIPvarGetUbLocal(xj) : SCIPvarGetUbGlobal(xj);
 
-   if( sepadata->useprojection && (SCIPisEQ(scip, vlb, valj) || SCIPisEQ(scip, vub, valj)) )
+   if( sepadata->useprojection && (SCIPisFeasEQ(scip, vlb, valj) || SCIPisFeasEQ(scip, vub, valj)) )
    {
       /* we don't want to multiply by variables that are at bound */
       SCIPdebugMsg(scip, "Rejected multiplier <%s> in [%g,%g] because it is at bound (current value %g)\n", SCIPvarGetName(xj), vlb, vub, valj);
@@ -2576,7 +2564,7 @@ SCIP_RETCODE markRowsXj(
       vub = local ? SCIPvarGetUbLocal(xi) : SCIPvarGetUbGlobal(xi);
 
       /* if we use projection, we aren't interested in products with variables that are at bound */
-      if( sepadata->useprojection && (SCIPisEQ(scip, vlb, vali) || SCIPisEQ(scip, vub, vali)) )
+      if( sepadata->useprojection && (SCIPisFeasEQ(scip, vlb, vali) || SCIPisFeasEQ(scip, vub, vali)) )
          continue;
 
       /* get the index of the bilinear product */
