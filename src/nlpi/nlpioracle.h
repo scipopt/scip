@@ -21,8 +21,8 @@
  * of the problem storage and function, gradient, and hessian evaluation.
  */
 
-#ifndef __SCIP_NLPI_ORACLE_H__
-#define __SCIP_NLPI_ORACLE_H__
+#ifndef __SCIP_NLPIORACLE_H__
+#define __SCIP_NLPIORACLE_H__
 
 #include "scip/type_message.h"
 #include "nlpi/type_nlpi.h"
@@ -98,9 +98,8 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   int* const*           exprvaridxs,        /**< NULL if no nonquadratic parts, otherwise epxrvaridxs[.] maps variable indices in expression tree to indices in nlp */
-   SCIP_EXPRTREE* const* exprtrees,          /**< NULL if no nonquadratic parts, otherwise exprtrees[.] gives nonquadratic part, 
-                                              *   or NULL if no nonquadratic part in this constraint */
+   SCIP_EXPR* const*     exprs,              /**< NULL if no nonlinear parts, otherwise exprs[.] gives nonlinear part,
+                                              *   or NULL if no nonlinear part in this constraint */
    const char**          consnames           /**< names of new constraints, or NULL if no names should be stored */
    );
 
@@ -115,8 +114,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    int                   nlin,               /**< number of linear variable coefficients */ 
    const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
-   const int*            exprvaridxs,        /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
-   const SCIP_EXPRTREE*  exprtree            /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
+   const SCIP_EXPR*      expr                /**< expression of nonlinear part, or NULL if no nonlinear part */
    );
 
 /** change variable bounds */
@@ -165,23 +163,13 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    const SCIP_Real*      newcoefs            /**< array with new coefficients of variables */
    );
 
-/** replaces expression tree of one constraint or objective */
+/** replaces expression of one constraint or objective */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleChgExprtree(
+SCIP_RETCODE SCIPnlpiOracleChgExpr(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx,            /**< index of constraint where expression tree should be changed, or -1 for objective */
-   const int*            exprvaridxs,        /**< problem indices of variables in expression tree */
-   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL */
-   );
-
-/** changes one parameter of expression tree of one constraint or objective
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiOracleChgExprParam(
-   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   considx,            /**< index of constraint where parameter should be changed in expression tree, or -1 for objective */
-   int                   paramidx,           /**< index of parameter */
-   SCIP_Real             paramval            /**< new value of parameter */
+   int                   considx,            /**< index of constraint where expression should be changed, or -1 for objective */
+   const int*            exprvaridxs,        /**< problem indices of variables in expression */
+   const SCIP_EXPR*      expr                /**< new expression, or NULL */
    );
 
 /** changes the constant value in the objective function
@@ -280,7 +268,7 @@ int SCIPnlpiOracleGetMaxDegree(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** Gives the evaluation capabilities that are shared among all expression trees in the problem. */
+/** Gives the evaluation capabilities that are shared among all expressions in the problem. */
 SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
