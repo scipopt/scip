@@ -271,13 +271,17 @@ SCIP_RETCODE reduceExact(
                                                     .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
 
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
-                          .solnode = solnode, .fixed = offset,
+                          .solnode = solnode, .redsol = NULL,
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
+      SCIP_CALL( reduce_solInit(scip, prunegraph, &(redbase.redsol)) );
 
       SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
+
+      *offset = reduce_solGetOffset(redbase.redsol);
+      reduce_solFree(scip, &(redbase.redsol));
    }
 
    SCIPfreeBufferArray(scip, &path);

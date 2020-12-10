@@ -247,7 +247,7 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
       SCIP_CALL(solpool_addSol(scip, objval, result, pool, &soladded));
 
    /* should we try recombination? */
-   if( useRec && soladded && pool->size >= 2 && LE(objval, *bestobjval) )
+   if( useRec && soladded && pool->size >= 2 && LT(objval, *bestobjval) )
    {
       /* get index of just added solution */
       int solindex = pool->maxindex;
@@ -2392,7 +2392,7 @@ SCIP_RETCODE reduce_da(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
-   REDPRIMAL*            redprimal,          /**< primal bound info or NULL */
+   REDSOLLOCAL*          redsollocal,        /**< primal bound info or NULL */
    SCIP_Real*            offsetp,            /**< pointer to store offset */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
@@ -2424,7 +2424,7 @@ SCIP_RETCODE reduce_da(
    assert(!isRpcmw || !graph->extended);
    assert(!(useExtRed && graph_pc_isMw(graph)));
 
-   if( graph->terms <= 2 )
+   if( graph->terms <= 1 )
       return SCIP_OKAY;
 
 #ifdef STP_RPC_FIXEDPROPER
@@ -2450,10 +2450,10 @@ SCIP_RETCODE reduce_da(
 
    upperbound = FARAWAY;
 
-   if( redprimal )
+   if( redsollocal )
    {
-      reduce_primalSetOffset(*offsetp, redprimal);
-      upperbound = reduce_primalGetUpperBound(redprimal);
+      reduce_sollocalSetOffset(*offsetp, redsollocal);
+      upperbound = reduce_sollocalGetUpperBound(redsollocal);
    }
 
    graph_mark(graph);
@@ -2568,10 +2568,10 @@ SCIP_RETCODE reduce_da(
          *nelims += ndeletions_run;
       } /* root loop */
 
-      if( redprimal )
+      if( redsollocal )
       {
-         reduce_primalSetOffset(*offsetp, redprimal);
-         reduce_primalUpdateUpperBound(upperbound, redprimal);
+         reduce_sollocalSetOffset(*offsetp, redsollocal);
+         reduce_sollocalUpdateUpperBound(upperbound, redsollocal);
       }
 
       /* do pseudo-elimination? */
@@ -3072,7 +3072,7 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    const RPDA*           paramsda,           /**< parameters */
-   REDPRIMAL*            redprimal,          /**< primal bound info or NULL */
+   REDSOLLOCAL*            redprimal,          /**< primal bound info or NULL */
    PATH*                 vnoi,               /**< Voronoi data structure array */
    SCIP_Real*            pathdist,           /**< distance array for shortest path calculations */
    int*                  vbase,              /**< Voronoi base array */
@@ -3175,7 +3175,7 @@ SCIP_RETCODE reduce_daPcMw(
 
    if( redprimal )
    {
-      upperbound = reduce_primalGetUpperBound(redprimal);
+      upperbound = reduce_sollocalGetUpperBound(redprimal);
    }
 
    SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, pathedge, nodearrchar, &havenewsol) );
@@ -3508,7 +3508,7 @@ SCIP_RETCODE reduce_daPcMw(
 
    if( redprimal )
    {
-      reduce_primalUpdateUpperBound(upperbound, redprimal);
+      reduce_sollocalUpdateUpperBound(upperbound, redprimal);
    }
 
    assert(graph_valid(scip, graph));

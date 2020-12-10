@@ -136,6 +136,35 @@ SCIP_RETCODE fixedgevarTo1(
 #endif
 
 
+/** gets cutoff bound */
+static
+SCIP_Real getCutoffbound(
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_Real             lpbound
+   )
+{
+   SCIP_Real cutoffbound;
+   const SCIP_Real cutoffbound_scip = SCIPgetCutoffbound(scip);
+   SCIP_Real cutoffbound_presol = SCIPprobdataGetPresolUpperBound(scip);
+
+   // todo why doesnt that work???
+   /*
+   const SCIP_Bool objIsIntegral = SCIPprobdataObjIsIntegral(scip);
+
+   if( objIsIntegral && LT(lpbound, cutoffbound_presol - 1.0) )
+   {
+      cutoffbound_presol = SCIPprobdataGetPresolCutoffbound(scip);
+   }
+   */
+
+   SCIPdebugMessage("Cutoffbound SCIP vs Presol: %f vs %f \n", cutoffbound_scip, cutoffbound_presol);
+
+   cutoffbound = MIN(cutoffbound_scip, cutoffbound_presol);
+
+   return cutoffbound;
+}
+
+
 /** gets bound changes specific for PC/MW */
 static
 void getBoundchangesPcMW(
@@ -1187,7 +1216,6 @@ SCIP_RETCODE initPropgraph(
 }
 
 
-
 /** initializes */
 static inline
 SCIP_Bool useRedcostdata(
@@ -1196,7 +1224,6 @@ SCIP_Bool useRedcostdata(
 {
    return (graph_typeIsSpgLike(graph) || graph_pc_isPc(graph));
 }
-
 
 
 /** writes reduced costs into given level */
@@ -1212,15 +1239,15 @@ void writeRedcostdata(
    REDCOST* redcostdata = propdata->redcostdata;
    SCIP_Real* const redcost = redcosts_getEdgeCosts(redcostdata, level);
    const SCIP_Real lpobjval = propdata->lpobjval;
-   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
-   const SCIP_Real cutoff = cutoffbound - lpobjval;
+   const SCIP_Real cutoffbound = getCutoffbound(scip, lpobjval);
+   const SCIP_Real cutoffgap = cutoffbound - lpobjval;
 
    assert(GE(lpobjval, 0.0) && LE(lpobjval, cutoffbound));
-   assert(GE(cutoff, 0.0));
+   assert(GE(cutoffgap, 0.0));
 
    redcosts_forLPget(scip, vars, graph, redcost);
    redcosts_setDualBound(lpobjval, level, redcostdata);
-   redcosts_setCutoff(cutoff, level, redcostdata);
+   redcosts_setCutoff(cutoffgap, level, redcostdata);
    redcosts_setRoot(graph->source, level, redcostdata);
 }
 
@@ -1390,21 +1417,31 @@ SCIP_RETCODE fixVarsDualcost(
    SCIP_VAR**            vars,               /**< variables */
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  nfixed,             /**< pointer to number of fixed edges */
-   GRAPH*                graph               /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_Bool*            probisinfeas        /**< is problem infeasible? */
 )
 {
    PATH* vnoi;
    SCIP_Real* redcost;
    SCIP_Real* pathdist;
    const SCIP_Real lpobjval = propdata->lpobjval;
-   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
-   const SCIP_Real minpathcost = cutoffbound - lpobjval;
+   const SCIP_Real cutoffbound = getCutoffbound(scip, lpobjval);
+   const SCIP_Real cutoffgap = cutoffbound - lpobjval;
    int* vbase;
    int* state;
    const int nedges = graph->edges;
    const int nnodes = graph->knots;
 
-   assert(SCIPisGE(scip, minpathcost, 0.0));
+   assert(FALSE == *probisinfeas);
+ //  printf("minpathcost=%f \n", minpathcost);
+
+   if( SCIPisLT(scip, cutoffgap, 0.0) )
+   {
+      SCIPdebugMessage("infeasible sub-problem! \n");
+      *probisinfeas = TRUE;
+      return SCIP_OKAY;
+   }
+
 
    if( propdata->fixingbounds == NULL )
    {
@@ -1441,7 +1478,7 @@ SCIP_RETCODE fixVarsDualcost(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
+      if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, cutoffgap) )
       {
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
@@ -1453,8 +1490,10 @@ SCIP_RETCODE fixVarsDualcost(
       else
       {
          for( int e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-            if( SCIPisGT(scip, pathdist[k] + redcost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+         {
+            if( SCIPisGT(scip, pathdist[k] + redcost[e] + vnoi[graph->head[e]].dist, cutoffgap) )
                SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nfixed) );
+         }
       }
    }
 
@@ -1494,7 +1533,7 @@ SCIP_RETCODE fixVarsExtendedRed(
    const int nedges = propgraph->edges;
    const SCIP_Bool isPcMw = graph_pc_isPcMw(propgraph);
 #ifdef USE_EXTRED_FULL
-   const SCIP_Real cutoffbound = SCIPgetCutoffbound(scip);
+   const SCIP_Real cutoffbound = getCutoffbound(scip);
 #endif
 
    assert(redcostdata);
@@ -1643,11 +1682,16 @@ SCIP_RETCODE fixVarsRedbased(
    }
    else
    {
+      REDSOL* redsol;
+      SCIP_CALL( reduce_solInit(scip, propgraph, &redsol) );
+
       // todo Call two times, and with node-replacing!
       // todo: before make all the node replacements from lurking bounds!
       assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduce_unconnected(scip, propgraph) );
-      SCIP_CALL( reduceStp(scip, propgraph, &offset, 2, FALSE, FALSE, FALSE) );
+      SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, FALSE, FALSE) );
+
+      reduce_solFree(scip, &redsol);
    }
 
    assert(graph_valid(scip, propgraph));
@@ -1717,6 +1761,37 @@ void blockEdgesWithGlobalFixings(
 }
 
 
+/** initializes for first call */
+static
+SCIP_RETCODE initPropAtFirstCall(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph structure to use for the update */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
+)
+{
+   assert(scip && graph && vars && propdata);
+
+   if( graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP) )
+   {
+      /* first call? */
+      if( !propdata->propgraph )
+      {
+         SCIP_CALL( initPropgraph(scip, graph, propdata) );
+
+         if( useRedcostdata(graph) )
+         {
+            SCIP_CALL( initRedcostdata(scip, graph, vars, propdata) );
+         }
+
+         assert(propdata->propgraph);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /**@} */
 
 /**@name Callback methods of propagator
@@ -1769,6 +1844,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    GRAPH* graph;
    int nfixedvars;
    SCIP_Bool callreduce;
+   SCIP_Bool probisinfeas = FALSE;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1818,23 +1894,23 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    propdata->lpobjval = SCIPgetLPObjval(scip);
 
+   SCIP_CALL( initPropAtFirstCall(scip, graph, vars, propdata) );
+
    /* call dual cost based variable fixing */
-   SCIP_CALL( fixVarsDualcost(scip, vars, propdata, &nfixedvars, graph) );
+   SCIP_CALL( fixVarsDualcost(scip, vars, propdata, &nfixedvars, graph, &probisinfeas) );
+
+   if( probisinfeas )
+   {
+      assert(SCIPgetDepth(scip) > 0);
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
 
    callreduce = FALSE;
 
    if( graph_typeIsSpgLike(graph) || (graph_pc_isPcMw(graph) && graph->stp_type != STP_BRMWCSP) )
    {
       const SCIP_Real redratio = ((SCIP_Real) propdata->postrednfixededges ) / (graph->edges);
-
-      /* first call? */
-      if( propdata->propgraph == NULL )
-      {
-         SCIP_CALL( initPropgraph(scip, graph, propdata) );
-
-         if( useRedcostdata(graph) )
-            SCIP_CALL( initRedcostdata(scip, graph, vars, propdata) );
-      }
 
       /* in the tree? */
       if( SCIPgetDepth(scip) > 0 )
@@ -1870,8 +1946,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    if( callreduce )
    {
-      SCIP_Bool probisinfeas = FALSE;
-
+      assert(!probisinfeas);
       SCIPdebugMessage("use reduction techniques \n");
 
       /* call reduced cost based based variable fixing */

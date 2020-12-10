@@ -1464,24 +1464,28 @@ SCIP_RETCODE SCIPStpHeurRecRun(
       /* valid graph built? */
       if( success )
       {
+         REDSOL* redsol;
          IDX** ancestors;
          GRAPH* psolgraph;
          int* soledges = NULL;
          SCIP_Real pobj;
-         SCIP_Real offsetdummy;
 
          SCIPdebugMessage("REC: solution successfully built \n");
          assert(graph_valid(scip, solgraph));
 
+         SCIP_CALL( reduce_solInit(scip, solgraph, &redsol) );
+
          /* reduce new graph */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP )
-            SCIP_CALL( reduce(scip, solgraph, &offsetdummy, 0, 5, FALSE) );
+            SCIP_CALL( reduce(scip, solgraph, redsol, 0, 5, FALSE) );
          else
          {
-            SCIP_CALL( reduce(scip, solgraph, &offsetdummy, 2, 5, FALSE) );
+            SCIP_CALL( reduce(scip, solgraph, redsol, 2, 5, FALSE) );
          }
 
-         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, &offsetdummy, FALSE) );
+         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, reduce_solGetOffsetPointer(redsol), FALSE) );
+
+         reduce_solFree(scip, &redsol);
 
          solgraph = psolgraph;
          ancestors = solgraph->ancestors;
@@ -1580,10 +1584,10 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
    SCIP_Bool*            success             /**< solution improved? */
    )
 {
+   REDSOL* redsol;
    GRAPH* newgraph;
    int* unodemap;
    STP_Bool* solnodes;
-   SCIP_Real dummy;
    int j;
    int nsolterms;
    int nsoledges;
@@ -1711,8 +1715,11 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    newgraph->norgmodelknots = nsolnodes;
 
-   dummy = 0.0;
-   SCIP_CALL( reduce(scip, newgraph, &dummy, 1, 5, FALSE) );
+   SCIP_CALL( reduce_solInit(scip, newgraph, &redsol) );
+
+   SCIP_CALL( reduce(scip, newgraph, redsol, 1, 5, FALSE) );
+
+   reduce_solFree(scip, &redsol);
 
 
    /*** step 3: compute solution on new graph ***/
@@ -1721,7 +1728,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    /* compute Steiner tree to obtain upper bound */
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-      newgraph, NULL, NULL, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, &dummy, NULL, success) );
+      newgraph, NULL, NULL, newresult, MIN(50, nsolterms), newgraph->source, newgraph->cost, newgraph->cost, NULL, NULL, success) );
 
    graph_path_exit(scip, newgraph);
 

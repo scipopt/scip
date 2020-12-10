@@ -1070,35 +1070,22 @@ void decomposeFreeMembers(
 }
 
 
-/** reduces subproblem */
+
+/** helper that marks subgraph */
 static
-SCIP_RETCODE decomposeReduceSub(
-   SCIP*                 scip,               /**< SCIP data structure */
+void decomposeReduceSubMark(
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    int                   compindex,          /**< component index */
-   GRAPH*                g,                  /**< graph data structure */
-   REDBASE*              redbase             /**< reduction stuff */
+   GRAPH*                g                   /**< graph data structure */
    )
 {
-   GRAPH* subgraph;
-   const SUBINOUT* const subinout = bidecomp->subinout;
    int* const gMark = g->mark;
-   const int* const compnodes = bidecomp->nodes;
+   const SUBINOUT* const subinout = bidecomp->subinout;
    const int* const contractionRecord = graph_subinoutGetContractionRecord(subinout);
-   const int nnodes = graph_get_nNodes(g);
+   const int* const compnodes = bidecomp->nodes;
    const int compstart = bidecomp->starts[compindex];
    const int compend = bidecomp->starts[compindex + 1];
-
-   assert(compstart <= compend);
-   assert(redbase && redbase->bidecompparams);
-
-   if( compend - compstart <= 1 )
-   {
-      SCIPdebugMessage("component %d is of size %d, SKIP! \n", compindex, compend - compstart);
-      return SCIP_OKAY;
-   }
-
-   SCIPdebugMessage("(depth %d) reduce component %d: \n", redbase->bidecompparams->depth, compindex);
+   const int nnodes = graph_get_nNodes(g);
 
    for( int i = 0; i < nnodes; i++ )
       gMark[i] = FALSE;
@@ -1127,8 +1114,23 @@ SCIP_RETCODE decomposeReduceSub(
       assert(graph_knot_isInRange(g, realnode));
       gMark[realnode] = TRUE;
    }
+}
 
-   /** extract, reduce, re-insert: */
+
+/** helper that extracts, reduces, re-inserts */
+static
+SCIP_RETCODE decomposeReduceSubDoIt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex,          /**< component index */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   REDSOL* redsol = redbase->redsol;
+   GRAPH* subgraph;
+
+   assert(graph_valid(scip, g));
 
    SCIP_CALL(graph_subgraphExtract(scip, g, bidecomp->subinout, &subgraph));
 #ifdef SCIP_DEBUG
@@ -1137,18 +1139,22 @@ SCIP_RETCODE decomposeReduceSub(
 #endif
 
    {
-      const int reductbound_org = redbase->redparameters->reductbound;
-      redbase->redparameters->reductbound =
-            BIDECOMP_MINRED_MULTIPLIER * reduce_getMinNreductions(subgraph, redbase->redparameters->reductbound_min);
-
+      RPARAMS* redparams = redbase->redparameters;
+      const int reductbound_org = redparams->reductbound;
+      const SCIP_Real offset_org = reduce_solGetOffset(redsol);
+      redparams->reductbound = BIDECOMP_MINRED_MULTIPLIER * reduce_getMinNreductions(subgraph, redparams->reductbound_min);
       SCIPdebugMessage("subgraph: reductbound_min=%d reductbound=%d \n",
-            redbase->redparameters->reductbound_min,redbase->redparameters->reductbound );
+            redparams->reductbound_min,redparams->reductbound );
 
+      reduce_solSetOffset(0.0, redsol);
       redbase->bidecompparams->newLevelStarted = TRUE;
 
       SCIP_CALL(redLoopStp(scip, subgraph, redbase));
 
-      redbase->redparameters->reductbound = reductbound_org;
+      redparams->reductbound = reductbound_org;
+      reduce_solSetOffset(reduce_solGetOffset(redsol) + offset_org, redsol);
+
+      assert(GE(reduce_solGetOffset(redsol), offset_org));
    }
 
 #ifdef SCIP_DEBUG
@@ -1157,12 +1163,63 @@ SCIP_RETCODE decomposeReduceSub(
 #endif
    SCIP_CALL(graph_subgraphReinsert(scip, bidecomp->subinout, g, &subgraph));
 
+   // todo: get org_contractrecord of subinout to adapt solnode array!
+   reduce_solLevelTopMergeUp(redsol);
+   reduce_solLevelTopClean(scip, redsol);
+
    assert(graph_valid(scip, g));
 
    return SCIP_OKAY;
 }
 
 
+/** helper */
+static
+SCIP_Bool decomposeComponentIsTrivial(
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex           /**< component index */
+   )
+{
+   const int compstart = bidecomp->starts[compindex];
+   const int compend = bidecomp->starts[compindex + 1];
+
+   assert(compstart <= compend);
+
+   if( compend - compstart <= 1 )
+   {
+      SCIPdebugMessage("component %d is of size %d, SKIP! \n", compindex, compend - compstart);
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+
+/** reduces subproblem */
+static
+SCIP_RETCODE decomposeReduceSub(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex,          /**< component index */
+   GRAPH*                g,                  /**< graph data structure */
+   REDBASE*              redbase             /**< reduction stuff */
+   )
+{
+   assert(scip && g && bidecomp && redbase);
+   assert(redbase->bidecompparams);
+
+   if( decomposeComponentIsTrivial(bidecomp, compindex) )
+   {
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("(depth %d) reduce component %d: \n", redbase->bidecompparams->depth, compindex);
+
+   decomposeReduceSubMark(bidecomp, compindex, g);
+   SCIP_CALL( decomposeReduceSubDoIt(scip, bidecomp, compindex, g, redbase) );
+
+   return SCIP_OKAY;
+}
 
 
 /** is promising? */
@@ -1210,6 +1267,7 @@ SCIP_RETCODE decomposeExec(
 
    )
 {
+   REDSOL* redsol = redbase->redsol;
    BIDECOMP bidecomp;
 
    /* NOTE: does not work because we do node contractions when reinserting the subgraph,
@@ -1224,6 +1282,7 @@ SCIP_RETCODE decomposeExec(
 
    if( decomposeIsPromising(g, redbase->bidecompparams, &bidecomp) )
    {
+      SCIP_CALL( reduce_solLevelAdd(scip, g, redsol) );
       redbase->bidecompparams->depth++;
 
       /* reduce each biconnected component individually */
@@ -1235,6 +1294,8 @@ SCIP_RETCODE decomposeExec(
       *wasDecomposed = TRUE;
 
       redbase->bidecompparams->depth--;
+      /* NOTE: also removes level */
+      reduce_solLevelTopFinalize(scip, redsol);
    }
 
    decomposeFreeMembers(scip, &bidecomp);
@@ -1282,7 +1343,7 @@ SCIP_RETCODE reduce_bidecomposition(
    {
       int dummy = 0;
       /* get rid of non-required biconnected components (without terminals) */
-      SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, redbase->fixed, &dummy) );
+      SCIP_CALL( cutNodesReduceWithTree(scip, &cutnodes, g, reduce_solGetOffsetPointer(redbase->redsol), &dummy) );
 
       /* decompose and reduce recursively? */
       SCIP_CALL( decomposeExec(scip, &cutnodes, g, redbase, wasDecomposed) );

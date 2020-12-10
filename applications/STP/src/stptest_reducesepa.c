@@ -196,7 +196,7 @@ SCIP_RETCODE testBiconnectedDecomposition(
    GRAPH* graph;
    int nnodes = 8;
    int nedges = 22;
-   SCIP_Real offset = 0.0;
+   SCIP_Real obj = 0.0;
    SCIP_Bool wasDecomposed;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
@@ -230,19 +230,27 @@ SCIP_RETCODE testBiconnectedDecomposition(
    SCIP_CALL( reduce_baseInit(scip, graph, &redbase) );
 
    {
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1, .reductbound_min = 10,
                                         .reductbound = 10, .userec = 1, .fullreduce = 1 };
       redbase->redparameters = &parameters;
-      redbase->fixed = &offset;
+      redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
 
+      SCIP_CALL( reduce_solInit(scip, graph, &(redbase->redsol)) );
+      SCIP_CALL( reduce_solInitLocal(scip, graph, redbase->redsol, NULL));
+
       SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
+
+      reduce_solFinalizeLocal(scip, graph, redbase->redsol);
    }
 
+   obj = reduce_solGetUpperBoundWithOffset(redbase->redsol);
+   reduce_solFree(scip, &(redbase->redsol));
    reduce_baseFree(scip, &redbase);
 
    STPTEST_ASSERT(graph->terms == 1);
-   STPTEST_ASSERT(EQ(offset, 5.0));
+   STPTEST_ASSERT(EQ(obj, 5.0));
    stptest_graphTearDown(scip, graph);
 
    return SCIP_OKAY;
@@ -259,7 +267,7 @@ SCIP_RETCODE testBiconnectedDecomposition2(
    GRAPH* graph;
    int nnodes = 11;
    int nedges = 24;
-   SCIP_Real offset = 0.0;
+   SCIP_Real obj = 0.0;
    SCIP_Bool wasDecomposed;
 
    SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
@@ -290,19 +298,27 @@ SCIP_RETCODE testBiconnectedDecomposition2(
    SCIP_CALL( reduce_baseInit(scip, graph, &redbase) );
 
    {
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1, .reductbound_min = 10,
                                         .reductbound = 10, .userec = 1, .fullreduce = 1 };
       redbase->redparameters = &parameters;
-      redbase->fixed = &offset;
+      redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
 
+      SCIP_CALL( reduce_solInit(scip, graph, &(redbase->redsol)) );
+      SCIP_CALL( reduce_solInitLocal(scip, graph, redbase->redsol, NULL));
+
       SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
+
+      reduce_solFinalizeLocal(scip, graph, redbase->redsol);
    }
 
+   obj = reduce_solGetUpperBoundWithOffset(redbase->redsol);
+   reduce_solFree(scip, &(redbase->redsol));
    reduce_baseFree(scip, &redbase);
 
    STPTEST_ASSERT(graph->terms == 1);
-   STPTEST_ASSERT(EQ(offset, 4.0));
+   STPTEST_ASSERT(EQ(obj, 4.0));
 
    stptest_graphTearDown(scip, graph);
 
@@ -318,7 +334,7 @@ SCIP_RETCODE testBiconnectedDecomposition3(
    GRAPH* graph;
    int nnodes = 7;
    int nedges = 16;
-   SCIP_Real offset = 0.0;
+   SCIP_Real obj = 0.0;
    REDBASE* redbase;
    SCIP_Bool wasDecomposed;
 
@@ -345,19 +361,27 @@ SCIP_RETCODE testBiconnectedDecomposition3(
    SCIP_CALL( reduce_baseInit(scip, graph, &redbase) );
 
    {
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
       RPARAMS parameters = { .dualascent = 1, .boundreduce = 1, .nodereplacing = 1,
                                 .reductbound_min = 10, .reductbound = 10, .userec = 1, .fullreduce = 1 };
       redbase->redparameters = &parameters;
-      redbase->fixed = &offset;
+      redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
 
+      SCIP_CALL( reduce_solInit(scip, graph, &(redbase->redsol)) );
+      SCIP_CALL( reduce_solInitLocal(scip, graph, redbase->redsol, NULL));
+
       SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
+
+      reduce_solFinalizeLocal(scip, graph, redbase->redsol);
    }
 
+   obj = reduce_solGetUpperBoundWithOffset(redbase->redsol);
+   reduce_solFree(scip, &(redbase->redsol));
    reduce_baseFree(scip, &redbase);
 
    STPTEST_ASSERT(graph->terms == 1);
-   STPTEST_ASSERT(EQ(offset, 3.0));
+   STPTEST_ASSERT(EQ(obj, 3.0));
 
    stptest_graphTearDown(scip, graph);
 

@@ -51,8 +51,12 @@ typedef struct special_distance_neighbors SDN;
 /** link-cut tree for bottleneck operations */
 typedef struct bottleneck_link_cut_tree BLCTREE;
 
+/** primal solution data retained during reduction process */
+typedef struct reduction_solution_storage REDSOL;
+
 /** INTERNAL primal solution data retained during reduction loop */
-typedef struct reduction_primal_bound_storage REDPRIMAL;
+typedef struct reduction_local_solution_storage REDSOLLOCAL;
+
 
 enum EXTRED_MODE { extred_none = 0, extred_fast = 1, extred_full = 2 };
 
@@ -87,7 +91,7 @@ typedef struct reduction_base
    RPARAMS*              redparameters;      /**< parameters */
    BIDECPARAMS*          bidecompparams;     /**< bidecomposition parameters or NULL */
    int*                  solnode;            /**< solution nodes array (or NULL) */
-   SCIP_Real*            fixed;              /**< pointer to fixed value */
+   REDSOL*               redsol;             /**< primal solution container */
  /* buffer: */
    PATH* vnoi;
    PATH* path;

@@ -265,13 +265,17 @@ SCIP_RETCODE reduceExact(
                                                     .reductbound = LURKPRUNE_MINREDELIMS, .userec = FALSE, .fullreduce = FALSE };
 
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
-                          .solnode = NULL, .fixed = &(lurkprune->offsetnew),
+                          .solnode = NULL, .redsol = NULL,
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
+      SCIP_CALL( reduce_solInit(scip, prunegraph, &(redbase.redsol)) );
 
       SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
+
+      (lurkprune->offsetnew) = reduce_solGetOffset(redbase.redsol);
+      reduce_solFree(scip, &(redbase.redsol));
    }
 
    SCIPfreeBufferArray(scip, &path);

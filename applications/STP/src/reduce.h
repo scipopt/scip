@@ -37,7 +37,7 @@
 extern int reduce_getMinNreductions(const GRAPH*, int);
 extern SCIP_RETCODE reduce_baseInit(SCIP*, const GRAPH*, REDBASE**);
 extern void reduce_baseFree(SCIP*, REDBASE**);
-extern SCIP_RETCODE reduceStp(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
+extern SCIP_RETCODE reduceStp(SCIP*, GRAPH*, REDSOL*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reducePc(SCIP*, const int*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reduceMw(SCIP*, GRAPH*, SCIP_Real*, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE reduceHc(SCIP*, GRAPH*, SCIP_Real*, int);
@@ -46,18 +46,32 @@ extern SCIP_RETCODE reduceNw(SCIP*, GRAPH*, SCIP_Real*, int);
 extern SCIP_RETCODE redLoopStp(SCIP*, GRAPH*, REDBASE*);
 extern SCIP_RETCODE redLoopPc(SCIP*, const int*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, SCIP_Bool, SCIP_Bool, SCIP_Bool, int, SCIP_Bool, SCIP_Bool);
 extern SCIP_RETCODE redLoopMw(SCIP*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, STP_Bool*, SCIP_Real*, STP_Bool, STP_Bool, STP_Bool, int, SCIP_Bool);
-extern SCIP_RETCODE reduce(SCIP*, GRAPH*, SCIP_Real*, int, int, SCIP_Bool);
+extern SCIP_RETCODE reduce(SCIP*, GRAPH*, REDSOL*, int, int, SCIP_Bool);
 
 /* reduce_sol.c
  */
-extern SCIP_RETCODE reduce_primalInit(SCIP*, const GRAPH*, REDPRIMAL**);
-extern void         reduce_primalFree(SCIP*, REDPRIMAL**);
-extern void reduce_primalSetOffset(SCIP_Real, REDPRIMAL*);
-extern void reduce_primalSetLevel(int, REDPRIMAL*);
-extern void reduce_primalUpdateUpperBound(SCIP_Real, REDPRIMAL*);
-extern SCIP_Real reduce_primalGetUpperBound(const REDPRIMAL*);
-extern SCIP_Real reduce_primalGetOffset(const REDPRIMAL*);
-extern SCIP_Real* reduce_primalGetOffsetPointer(REDPRIMAL*);
+extern SCIP_RETCODE reduce_sollocalInit(SCIP*, const GRAPH*, REDSOLLOCAL**);
+extern void         reduce_sollocalFree(SCIP*, REDSOLLOCAL**);
+extern void reduce_sollocalSetOffset(SCIP_Real, REDSOLLOCAL*);
+extern void reduce_sollocalUpdateUpperBound(SCIP_Real, REDSOLLOCAL*);
+extern SCIP_Real reduce_sollocalGetUpperBound(const REDSOLLOCAL*);
+extern SCIP_Real reduce_sollocalGetUpperBoundWithOffset(const REDSOLLOCAL*);
+extern SCIP_Bool reduce_sollocalHasUpperBound(const REDSOLLOCAL*);
+
+extern SCIP_RETCODE reduce_solInit(SCIP*, const GRAPH*, REDSOL**);
+extern void         reduce_solFree(SCIP*, REDSOL**);
+extern SCIP_RETCODE reduce_solInitLocal(SCIP*, const GRAPH*, REDSOL*, REDSOLLOCAL**);
+extern void         reduce_solFinalizeLocal(SCIP*, const GRAPH*, REDSOL*);
+extern SCIP_RETCODE reduce_solLevelAdd(SCIP*, const GRAPH*, REDSOL*);
+extern void reduce_solLevelTopFinalize(SCIP*, REDSOL*);
+extern void reduce_solLevelTopRemove(SCIP*, REDSOL*);
+extern void reduce_solLevelTopClean(SCIP*, REDSOL*);
+extern void reduce_solLevelTopMergeUp(REDSOL*);
+extern void reduce_solSetOffset(SCIP_Real, REDSOL*);
+extern SCIP_Real reduce_solGetOffset(const REDSOL*);
+extern SCIP_Real reduce_solGetUpperBoundWithOffset(const REDSOL*);
+extern SCIP_Real* reduce_solGetOffsetPointer(REDSOL*);
+
 
 /* reduce_alt.c
  */
@@ -124,10 +138,10 @@ extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_
 
 /* reduce_da.c
  */
-extern SCIP_RETCODE    reduce_da(SCIP*, GRAPH*, const RPDA*, REDPRIMAL*, SCIP_Real*, int*, SCIP_RANDNUMGEN*);
+extern SCIP_RETCODE    reduce_da(SCIP*, GRAPH*, const RPDA*, REDSOLLOCAL*, SCIP_Real*, int*, SCIP_RANDNUMGEN*);
 extern SCIP_RETCODE    reduce_dapaths(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_daSlackPrune(SCIP*, GRAPH*, int, SCIP_Bool, int*, int*, int*, SCIP_Real*, SCIP_Bool*, SCIP_Bool*);
-extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, const RPDA*, REDPRIMAL*, PATH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*, SCIP_Real);
+extern SCIP_RETCODE    reduce_daPcMw(SCIP*, GRAPH*, const RPDA*, REDSOLLOCAL*, PATH*, SCIP_Real*, int*, int*, int*, STP_Bool*, int*, SCIP_RANDNUMGEN*, SCIP_Real);
 
 /* reduce_ext.c
  */

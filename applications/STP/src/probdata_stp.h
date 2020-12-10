@@ -165,6 +165,19 @@ SCIP_Real SCIPprobdataGetOffset(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns upper bound from presolving */
+SCIP_EXPORT
+SCIP_Real SCIPprobdataGetPresolUpperBound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/** returns upper bound from presolving */
+SCIP_EXPORT
+SCIP_Real SCIPprobdataGetPresolUpperBoundWithOffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns the edge variable for a given index */
 SCIP_EXPORT
 SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
@@ -205,6 +218,14 @@ SCIP_EXPORT
 SCIP_Bool SCIPprobdataIsBigt(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+
+/* returns if objective is known to be integral */
+SCIP_EXPORT
+SCIP_Bool SCIPprobdataObjIsIntegral(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 
 /** writes the best solution to the intermediate solution file */
 SCIP_EXPORT

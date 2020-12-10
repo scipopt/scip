@@ -116,6 +116,7 @@ struct SCIP_ProbData
 #if USEOFFSETVAR
    SCIP_VAR*             offsetvar;          /**< variable to model the objective offset */
 #endif
+   SCIP_Real             presolub;           /**< presolve upper bound */
    SCIP_Real             offset;             /**< offset of the problem, computed during the presolving */
    SCIP_Real*            xval;               /**< values of the edge variables */
    SCIP_Longint          lastlpiters;        /**< Branch and Cut */
@@ -136,6 +137,7 @@ struct SCIP_ProbData
    SCIP_Bool             usecyclecons;       /**< use 2-cycle inequalities for (R)PCSPG? */
    SCIP_Bool             usesymcons;         /**< use symmetry inequalities for PCSPG and MWCSP? */
    SCIP_Bool             graphHasVanished;   /**< has the graph vanished? */
+   SCIP_Bool             objIsInt;           /**< is objective always integral? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
    FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
    FILE*                 intlogfile;         /**< logfile printing all intermediate solutions for DIMACS challenge */
@@ -298,6 +300,8 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->nedges = -1;
    (*probdata)->nnodes = -1;
    (*probdata)->nterms = -1;
+   (*probdata)->presolub = FARAWAY;
+   (*probdata)->objIsInt = FALSE;
 
    (*probdata)->ug = FALSE;
    (*probdata)->nSolvers = 0;
@@ -339,6 +343,8 @@ SCIP_RETCODE presolveStp(
    SCIP_Real*            offset              /**< offset from STP reductions */
 )
 {
+   // todo replace offset
+   REDSOL* redsol;
    GRAPH* packedgraph;
    GRAPH* graph = probdata->graph;
    SCIP_Real oldtimelimit;
@@ -364,8 +370,16 @@ SCIP_RETCODE presolveStp(
    SCIP_CALL( stptest_testAll(scip) );
 #endif
 
+   SCIP_CALL( reduce_solInit(scip, graph, &redsol) );
+
    /* the actual presolving */
-   SCIP_CALL( reduce(scip, graph, offset, reduction, probdata->minelims, TRUE) );
+   SCIP_CALL( reduce(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
+
+   probdata->presolub = reduce_solGetUpperBoundWithOffset(redsol);
+   SCIPdebugMessage("presol ub: %f \n", probdata->presolub);
+
+   *offset = reduce_solGetOffset(redsol);
+   reduce_solFree(scip, &redsol);
 
 #ifdef STP_WRITE_RED_STATS
    graph_writeReductionStats(graph,
@@ -1157,6 +1171,7 @@ SCIP_RETCODE createVariables(
    int k2;
    int tail;
    char varname[SCIP_MAXSTRLEN];
+   SCIP_Bool objint = SCIPisIntegral(scip, offset);;
 
    assert(scip != NULL);
    assert(probdata != NULL);
@@ -1173,7 +1188,6 @@ SCIP_RETCODE createVariables(
       int realnterms = probdata->realnterms;
       int root = graph->source;
       int nnodes = graph->knots;
-      SCIP_Bool objint = SCIPisIntegral(scip, offset);
 
       assert(nedges == graph->edges);
       assert(realnterms >= 0);
@@ -1562,6 +1576,8 @@ SCIP_RETCODE createVariables(
       probdata->edgevars = NULL;
       probdata->flowvars = NULL;
    }
+
+   probdata->objIsInt = objint;
 
 #if USEOFFSETVAR
    /* add offset */
@@ -1994,8 +2010,9 @@ SCIP_DECL_PROBCOPY(probcopyStp)
       (*targetdata)->orggraph = orggraphcopy;
    }
 #endif
-
    (*targetdata)->minelims = sourcedata->minelims;
+   (*targetdata)->presolub = sourcedata->presolub;
+   (*targetdata)->objIsInt = sourcedata->objIsInt;
    (*targetdata)->offset = sourcedata->offset;
    (*targetdata)->norgedges = sourcedata->norgedges;
    (*targetdata)->mode = sourcedata->mode;
@@ -2406,6 +2423,8 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->nvars = sourcedata->nvars;
    (*targetdata)->mode = sourcedata->mode;
    (*targetdata)->offset = sourcedata->offset;
+   (*targetdata)->presolub = sourcedata->presolub;
+   (*targetdata)->objIsInt = sourcedata->objIsInt;
    (*targetdata)->norgedges = sourcedata->norgedges;
    (*targetdata)->minelims = sourcedata->minelims;
    (*targetdata)->bigt = sourcedata->bigt;
@@ -2810,6 +2829,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* setting the offset to the fixed value given in the input file plus the fixings
     * given by the reduction techniques */
    probdata->offset = presolinfo.fixed + offset;
+   probdata->presolub += presolinfo.fixed;
 
    SCIP_CALL( createModel(scip, probdata) );
 
@@ -3035,6 +3055,39 @@ SCIP_Real SCIPprobdataGetOffset(
 }
 
 
+/** returns upper bound from presolving
+*   NOTE: Mind to call the method in transformed stage! */
+SCIP_Real SCIPprobdataGetPresolUpperBound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+   const SCIP_Real scale = SCIPgetTransObjscale(scip);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+   assert(GT(scale, 0.0));
+
+   return probdata->presolub / scale - SCIPgetTransObjoffset(scip);
+}
+
+
+/** returns upper bound from presolving */
+SCIP_Real SCIPprobdataGetPresolUpperBoundWithOffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->presolub;
+}
+
+
 /** returns the variable for a given index */
 SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3154,7 +3207,7 @@ SCIP_VAR** SCIPprobdataGetEdgeVars(
    return probdata->edgevars;
 }
 
-/* returns if 'T' model is being used */
+/** returns if 'T' model is being used */
 SCIP_Bool SCIPprobdataIsBigt(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -3168,6 +3221,23 @@ SCIP_Bool SCIPprobdataIsBigt(
 
    return probdata->bigt;
 }
+
+
+/* returns if objective is known to be integral */
+SCIP_Bool SCIPprobdataObjIsIntegral(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->objIsInt;
+}
+
 
 /** print (undirected) graph in GML format */
 SCIP_RETCODE SCIPprobdataPrintGraph(
