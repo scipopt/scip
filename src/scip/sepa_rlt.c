@@ -396,7 +396,7 @@ SCIP_RETCODE freeSepaData(
       SCIPfreeBlockMemoryArray(scip, &sepadata->eqauxexpr, sepadata->nbilinterms);
    }
 
-   /* free the hashmap */ /* TODO is it created only when nbilinvars > 0? */
+   /* free the hashmap */
    SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
@@ -413,20 +413,11 @@ SCIP_RETCODE getInitialRows(
    )
 {
    SCIP_CONS** conss;
-   SCIP_CONSHDLR* linhdlr;
-   SCIP_CONSHDLR* knpsckhdlr;
-   SCIP_CONSHDLR* varbndhdlr;
-   SCIP_CONSHDLR* setppchdlr;
    int nconss;
    int i;
 
    assert(rows != NULL);
    assert(nrows != NULL);
-
-   linhdlr = SCIPfindConshdlr(scip, "linear");
-   knpsckhdlr = SCIPfindConshdlr(scip, "knapsack");
-   varbndhdlr = SCIPfindConshdlr(scip, "varbound");
-   setppchdlr = SCIPfindConshdlr(scip, "setppc");
 
    conss = SCIPgetConss(scip);
    nconss = SCIPgetNConss(scip);
@@ -438,33 +429,7 @@ SCIP_RETCODE getInitialRows(
    {
       SCIP_ROW *row;
 
-      /* TODO use SCIPconsGetRow() from pub_misc_linear.h instead, or is that too slow (strcmp on every cons)?
-       *      was logicor omitted intentionally? */
-
-      if( SCIPconsGetHdlr(conss[i]) == linhdlr )
-      {
-         row = SCIPgetRowLinear(scip, conss[i]);
-         SCIPdebugMsg(scip, "linear constraint found\n");
-      }
-      else if( SCIPconsGetHdlr(conss[i]) == knpsckhdlr )
-      {
-         row = SCIPgetRowKnapsack(scip, conss[i]);
-         SCIPdebugMsg(scip, "knapsack constraint found\n");
-      }
-      else if( SCIPconsGetHdlr(conss[i]) == varbndhdlr )
-      {
-         row = SCIPgetRowVarbound(scip, conss[i]);
-         SCIPdebugMsg(scip, "varbound constraint found\n");
-      }
-      else if( SCIPconsGetHdlr(conss[i]) == setppchdlr )
-      {
-         row = SCIPgetRowSetppc(scip, conss[i]);
-         SCIPdebugMsg(scip, "setppc constraint found\n");
-      }
-      else
-      {
-         continue;
-      }
+      row = SCIPconsGetRow(scip, conss[i]);
 
       if( row != NULL )
       {
