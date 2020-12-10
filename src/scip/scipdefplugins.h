@@ -233,6 +233,7 @@
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
 
+#include "nlpi/expr_varidx.h"
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi_worhp.h"

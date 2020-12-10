@@ -233,6 +233,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
    SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrVaridx(scip) );
    SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
    SCIP_CALL( SCIPincludeNlhdlrConvex(scip) );
    SCIP_CALL( SCIPincludeNlhdlrConcave(scip) );
