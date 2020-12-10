@@ -620,8 +620,8 @@ SCIP_RETCODE extractProducts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_VAR**            vars_xwy,           /**< 3 variables involved in the inequalities in the order x,w,y */
-   SCIP_Real*            coefs1,             /**< coefficients of the first inequality */
-   SCIP_Real*            coefs2,             /**< coefficients of the second inequality */
+   SCIP_Real*            coefs1,             /**< coefficients of the first inequality (always implied, i.e. has x) */
+   SCIP_Real*            coefs2,             /**< coefficients of the second inequality (can be unconditional) */
    SCIP_Real             side1,              /**< side of the first inequality */
    SCIP_Real             side2,              /**< side of the second inequality */
    SCIP_SIDETYPE         sidetype1,          /**< side type (lhs or rls) in the first inequality */
@@ -717,67 +717,44 @@ SCIP_RETCODE extractProducts(
       return SCIP_OKAY;
    }
 
+   /* swap the linear relations so that the relation implied by x == TRUE goes first */
+   if( !f )
+   {
+      SCIPswapReals(&a1, &a2);
+      SCIPswapReals(&b1, &b2);
+      SCIPswapReals(&c1, &c2);
+      SCIPswapReals(&sign1, &sign2);
+      SCIPswapReals(&side1, &side2);
+   }
+
    /* all conditions satisfied, we can extract the product */
    /* given two rows of the form:
     * a1 x + b1 w + c1 y <= d1, a2 x + b2 w + c2 y <= d2 (or same with >=),
-    * where a1*a2 <= 0 and the first inequality is tighter when x = f and the second when x = !f,
+    * where a1*a2 <= 0 and the first implied relation is enabled when x == 1 and the second when x == 0,
     * and b1, b2 > 0, the product relation can be written as:  // TODO more details on how to get there would be very nice
-    * xy >=/<= (1/(b2c1 - c2b1))*(b1b2w + (b1(a2 - d2) + b2d1)x + b2c1y - b2d1) (if f == 0) or
-    * xy >=/<= (1/(b1c2 - c1b2))*(b1b2w + (b2(a1 - d1) + b1d2)x + b1c2y - b1d2) (if f == 1)
+    * xy >=/<= (1/(b1c2 - c1b2))*(b1b2w + (b2(a1 - d1) + b1d2)x + b1c2y - b1d2)
     * (the inequality sign depends on the sign of (b1c2 - c1b2) and the sign in the linear inequalities) */
-   /* TODO can swap coefs for one case and get rid of the else here */
-   if( !f )
-   {
-      mult = 1/(b2*sign2*c1*sign1 - c2*sign2*b1*sign1);
+   mult = 1/(b1*sign1*c2*sign2 - c1*sign1*b2*sign2);
 
-      /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
-      overest = mult < 0.0;
-      if( sidetype1 == SCIP_SIDETYPE_LEFT ) /* only check sidetype1 because sidetype2 is equal to it */
-         overest = !overest;
+   /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
+   overest = mult < 0.0;
+   if( sidetype1 == SCIP_SIDETYPE_LEFT ) /* only check sidetype1 because sidetype2 is equal to it */
+      overest = !overest;
 
-      SCIPdebugMsg(scip, "w coef is %s\n", overest ? "negative" : "positive");
+   SCIPdebugMsg(scip, "w coef is %s\n", overest ? "negative" : "positive");
+   SCIPdebugMsg(scip, "f, found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", sign1*a1,
+      SCIPvarGetName(x), sign1*b1, SCIPvarGetName(w), sign1*c1, SCIPvarGetName(y), side1);
+   SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> <= %g\n", sign2*a2, SCIPvarGetName(x),
+      sign2*b2, SCIPvarGetName(w), sign2*c2, SCIPvarGetName(y), side2);
 
-      SCIPdebugMsg(scip, "!f, found suitable relations (x,w, y): %g<%s> + %g<%s> + %g<%s> >= %g\n", sign1*a1,
-         SCIPvarGetName(x), sign1*b1, SCIPvarGetName(w), sign1*c1, SCIPvarGetName(y), side1);
+   /* compute the coefficients for x, w and y in auxexpr */
+   A = (sign2*b2*sign1*a1 -side1*sign2*b2 + side2*sign1*b1)*mult;
+   B = sign1*b1*sign2*b2*mult;
+   C = sign1*b1*sign2*c2*mult;
+   cst = -sign1*b1*side2*mult;
 
-      SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> >= %g\n", sign2*a2, SCIPvarGetName(x), sign2*b2,
-         SCIPvarGetName(w), sign2*c2, SCIPvarGetName(y), side2);
-
-      /* compute the coefficients for auxexpr */
-      A = (sign1*b1*sign2*a2 -side2*sign1*b1 + side1*sign2*b2)*mult; /* coef of x */
-      B = sign2*b2*sign1*b1*mult; /* coef of w */
-      C = sign2*b2*sign1*c1*mult; /* coef of y */
-      cst = -sign2*b2*side1*mult;
-
-      SCIPdebugMsg(scip, "product: <%s><%s> %s %g<%s> + %g<%s> + %g<%s> + %g\n", SCIPvarGetName(x), SCIPvarGetName(y),
-         overest ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), -b2*side1*mult);
-   }
-   else /* f == TRUE */
-   {
-      mult = 1/(b1*sign1*c2*sign2 - c1*sign1*b2*sign2);
-
-      /* TODO we make sure above that these have the same sign, but one of them might be zero, so we check both here */
-      overest = mult < 0.0;
-      if( sidetype1 == SCIP_SIDETYPE_LEFT ) /* only check sidetype1 because sidetype2 is equal to it */
-         overest = !overest;
-
-      SCIPdebugMsg(scip, "w coef is %s\n", overest ? "negative" : "positive");
-
-      SCIPdebugMsg(scip, "f, found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", sign1*a1,
-         SCIPvarGetName(x), sign1*b1, SCIPvarGetName(w), sign1*c1, SCIPvarGetName(y), side1);
-
-      SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> <= %g\n", sign2*a2, SCIPvarGetName(x),
-         sign2*b2, SCIPvarGetName(w), sign2*c2, SCIPvarGetName(y), side2);
-
-      /* compute the coefficients for auxexpr */
-      A = (sign2*b2*sign1*a1 -side1*sign2*b2 + side2*sign1*b1)*mult; /* coef of x */
-      B = sign1*b1*sign2*b2*mult; /* coef of w */
-      C = sign1*b1*sign2*c2*mult; /* coef of y */
-      cst = -sign1*b1*side2*mult;
-
-      SCIPdebugMsg(scip, "product: <%s><%s> %s %g<%s> + %g<%s> + %g<%s> + %g\n", SCIPvarGetName(x), SCIPvarGetName(y),
-         overest ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), -b1*side2*mult);
-   }
+   SCIPdebugMsg(scip, "product: <%s><%s> %s %g<%s> + %g<%s> + %g<%s> + %g\n", SCIPvarGetName(x), SCIPvarGetName(y),
+      overest ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), -b1*side2*mult);
 
    SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) );
    SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, A, C, B, cst, overest) );
