@@ -502,6 +502,7 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    SCIP_HASHTABLE* hashtable3;
    SCIP_HASHMAP* vars_in_2rels;
    HASHDATA* foundhashdata;
+   ADJACENTVARDATA* adjvardata;
 
    /* create linear relations */
 
@@ -606,20 +607,17 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    }
 
    /* check the data structure storing variables participating together in 2-variable relations */
-//   cr_expect_eq(vars_in_2rels->nvars, 2, "expected 2 vars in vars_in_2rels, got %d", vars_in_2rels->nvars);
-//   cr_expect_eq(vars_in_2rels->vars[0], x1, "expected first var in vars_in_2rels to be x1, got %s",
-//         vars_in_2rels->vars[0]);
-//   cr_expect_eq(vars_in_2rels->vars[1], x2, "expected second var in vars_in_2rels to be x2, got %s",
-//         vars_in_2rels->vars[1]);
-//   cr_expect_eq(vars_in_2rels->nadjacentvars[0], 1, "expected 1 vars adjacent to x1, got %d",
-//         vars_in_2rels->nadjacentvars[0]);
-//   cr_expect_eq(vars_in_2rels->nadjacentvars[1], 1, "expected 1 vars adjacent to x2, got %d",
-//         vars_in_2rels->nadjacentvars[1]);
-//   cr_expect_eq(vars_in_2rels->adjacentvars[0][0], x2, "expected x2 to be adjacent to x1, got %s",
-//         SCIPvarGetName(vars_in_2rels->adjacentvars[0][0]));
-//   cr_expect_eq(vars_in_2rels->adjacentvars[1][0], x1, "expected x1 to be adjacent to x2, got %s",
-//         SCIPvarGetName(vars_in_2rels->adjacentvars[1][0]));
-   /* TODO update this for the new data structures */
+   adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(vars_in_2rels, (void*)(size_t) SCIPvarGetIndex(x1));
+   cr_assert(adjvardata != NULL);
+   cr_expect_eq(adjvardata->nadjacentvars, 1, "expected 1 vars adjacent to x1, got %d", adjvardata->nadjacentvars);
+   cr_expect_eq(adjvardata->adjacentvars[0], x2, "expected x2 to be adjacent to x1, got %s",
+        SCIPvarGetName(adjvardata->adjacentvars[0]));
+
+   adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(vars_in_2rels, (void*)(size_t) SCIPvarGetIndex(x2));
+   cr_assert(adjvardata != NULL);
+   cr_expect_eq(adjvardata->nadjacentvars, 1, "expected 1 vars adjacent to x2, got %d", adjvardata->nadjacentvars);
+   cr_expect_eq(adjvardata->adjacentvars[0], x1, "expected x1 to be adjacent to x2, got %s",
+        SCIPvarGetName(adjvardata->adjacentvars[0]));
 
    /* free memory */
    clearVarAdjacency(scip, vars_in_2rels);
