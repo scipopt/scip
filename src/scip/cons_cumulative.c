@@ -5729,42 +5729,6 @@ struct SCIP_NodeData
 };
 typedef struct SCIP_NodeData SCIP_NODEDATA;
 
-/** creates a node data structure */
-static
-SCIP_RETCODE createNodedata(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODEDATA**       nodedata            /**< pointer to store the create node data */
-   )
-{
-   SCIP_CALL( SCIPallocBuffer(scip, nodedata) );
-   (*nodedata)->var = NULL;
-   (*nodedata)->key = SCIP_INVALID;
-   (*nodedata)->est = INT_MIN;
-   (*nodedata)->lct = INT_MAX;
-   (*nodedata)->duration = 0;
-   (*nodedata)->demand = 0;
-   (*nodedata)->enveloptheta = -1;
-   (*nodedata)->energytheta = 0;
-   (*nodedata)->enveloplambda = -1;
-   (*nodedata)->energylambda = -1;
-   (*nodedata)->idx = -1;
-   (*nodedata)->intheta = TRUE;
-
-   return SCIP_OKAY;
-}
-
-/** frees a  node data structure */
-static
-void freeNodedata(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODEDATA**       nodedata            /**< pointer to store node data which should be freed */
-   )
-{
-   if( *nodedata != NULL )
-   {
-      SCIPfreeBuffer(scip, nodedata);
-   }
-}
 
 /** update node data structure starting from the given node along the path to the root node */
 static
@@ -6001,7 +5965,8 @@ SCIP_RETCODE insertThetanode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BT*              tree,               /**< binary tree */
    SCIP_BTNODE*          node,               /**< node to insert */
-   SCIP_NODEDATA**       nodedatas,          /**< array of node data */
+   SCIP_NODEDATA*        nodedatas,          /**< array of node data */
+   int*                  nodedataidx,        /**< array of indices for node data */
    int*                  nnodedatas          /**< pointer to number of node data */
    )
 {
@@ -6044,16 +6009,28 @@ SCIP_RETCODE insertThetanode(
       assert(leaf != NULL);
       assert(leaf != node);
 
-      /* create node data */
-      SCIP_CALL( createNodedata(scip, &newnodedata) );
+      /* store node data to be able to delete them latter */
+      newnodedata = &nodedatas[*nnodedatas];
+      nodedataidx[*nnodedatas] = *nnodedatas;
+      ++(*nnodedatas);
+
+      /* init node data */
+      newnodedata->var = NULL;
+      newnodedata->key = SCIP_INVALID;
+      newnodedata->est = INT_MIN;
+      newnodedata->lct = INT_MAX;
+      newnodedata->duration = 0;
+      newnodedata->demand = 0;
+      newnodedata->enveloptheta = -1;
+      newnodedata->energytheta = 0;
+      newnodedata->enveloplambda = -1;
+      newnodedata->energylambda = -1;
+      newnodedata->idx = -1;
+      newnodedata->intheta = TRUE;
 
       /* create a new node */
       SCIP_CALL( SCIPbtnodeCreate(tree, &newnode, newnodedata) );
       assert(newnode != NULL);
-
-      /* store node data to be able to delete them latter */
-      nodedatas[*nnodedatas] = newnodedata;
-      (*nnodedatas)++;
 
       parent = SCIPbtnodeGetParent(leaf);
 
@@ -6458,15 +6435,12 @@ SCIP_DECL_SORTPTRCOMP(compNodeEst)
 
 /** comparison method for two node data w.r.t. the latest completion time */
 static
-SCIP_DECL_SORTPTRCOMP(compNodedataLct)
+SCIP_DECL_SORTINDCOMP(compNodedataLct)
 {
-   int lct1;
-   int lct2;
+   SCIP_NODEDATA* nodedatas;
 
-   lct1 = ((SCIP_NODEDATA*)elem1)->lct;
-   lct2 = ((SCIP_NODEDATA*)elem2)->lct;
-
-   return (lct1 - lct2);
+   nodedatas = (SCIP_NODEDATA*) dataptr;
+   return (nodedatas[ind1].lct - nodedatas[ind2].lct);
 }
 
 
@@ -6861,9 +6835,10 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    SCIP_Bool*            cutoff              /**< pointer to store if the constraint is infeasible */
    )
 {
-   SCIP_NODEDATA** nodedatas;
+   SCIP_NODEDATA* nodedatas;
    SCIP_BTNODE** leaves;
    SCIP_BT* tree;
+   int* nodedataidx;
 
    int totalenergy;
    int nnodedatas;
@@ -6871,6 +6846,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    int ncands;
 
    int shift;
+   int idx = -1;
    int j;
 
    assert(scip != NULL);
@@ -6882,6 +6858,7 @@ SCIP_RETCODE checkOverloadViaThetaTree(
    SCIPdebugMsg(scip, "check overload of cumulative condition of constraint <%s> (capacity %d)\n", SCIPconsGetName(cons), capacity);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodedatas, 2*nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodedataidx, 2*nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &leaves, nvars) );
 
    ncands = 0;
@@ -6984,7 +6961,9 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       assert(lct >= 0);
 
       /* create search node data */
-      SCIP_CALL( createNodedata(scip, &nodedata) );
+      nodedata = &nodedatas[ncands];
+      nodedataidx[ncands] = ncands;
+      ++ncands;
 
       /* initialize search node data */
       /* adjust earliest start time to make it unique in case several jobs have the same earliest start time */
@@ -7008,15 +6987,12 @@ SCIP_RETCODE checkOverloadViaThetaTree(
 
       nodedata->idx = j;
       nodedata->intheta = TRUE;
-
-      nodedatas[ncands] = nodedata;
-      ncands++;
    }
 
    nnodedatas = ncands;
 
    /* sort (non-decreasing) the jobs w.r.t. latest completion times */
-   SCIPsortPtr((void**)nodedatas, compNodedataLct, ncands);
+   SCIPsortInd(nodedataidx, compNodedataLct, (void*)nodedatas, ncands);
 
    ninsertcands = 0;
 
@@ -7028,21 +7004,23 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       SCIP_BTNODE* leaf;
       SCIP_NODEDATA* rootdata;
 
+      idx = nodedataidx[j];
+
       /* check if the new job opens a time window which size is so large that it offers more energy than the total
        * energy of all candidate jobs. If so we skip that one.
        */
-      if( ((SCIP_Longint) nodedatas[j]->lct - nodedatas[j]->est) * capacity >= totalenergy )
+      if( ((SCIP_Longint) nodedatas[idx].lct - nodedatas[idx].est) * capacity >= totalenergy )
       {
          /* set the earliest start time to minus one to mark that candidate to be not used */
-         nodedatas[j]->est = -1;
+         nodedatas[idx].est = -1;
          continue;
       }
 
       /* create search node */
-      SCIP_CALL( SCIPbtnodeCreate(tree, &leaf, (void*)nodedatas[j]) );
+      SCIP_CALL( SCIPbtnodeCreate(tree, &leaf, (void*)&nodedatas[idx]) );
 
       /* insert new node into the theta set and updete the envelops */
-      SCIP_CALL( insertThetanode(scip, tree, leaf, nodedatas, &nnodedatas) );
+      SCIP_CALL( insertThetanode(scip, tree, leaf, nodedatas, nodedataidx, &nnodedatas) );
       assert(nnodedatas <= 2*nvars);
 
       /* move the inserted candidates together */
@@ -7054,9 +7032,9 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       assert(rootdata != NULL);
 
       /* check if the theta set envelops exceeds the available capacity */
-      if( rootdata->enveloptheta > (SCIP_Longint) capacity * nodedatas[j]->lct )
+      if( rootdata->enveloptheta > (SCIP_Longint) capacity * nodedatas[idx].lct )
       {
-         SCIPdebugMsg(scip, "detects cutoff due to overload in time window [?,%d) (ncands %d)\n", nodedatas[j]->lct, j);
+         SCIPdebugMsg(scip, "detects cutoff due to overload in time window [?,%d) (ncands %d)\n", nodedatas[idx].lct, j);
          (*cutoff) = TRUE;
 
          /* for the statistic we count the number of times a cutoff was detected due the edge-finder */
@@ -7074,8 +7052,9 @@ SCIP_RETCODE checkOverloadViaThetaTree(
       int lct;
 
       glbenery = 0;
-      est = nodedatas[j]->est;
-      lct = nodedatas[j]->lct;
+      assert( 0 <= idx );
+      est = nodedatas[idx].est;
+      lct = nodedatas[idx].lct;
 
       /* scan the remaining candidates for a global contributions within the time window of the last inserted candidate
        * which led to an overload
@@ -7087,7 +7066,8 @@ SCIP_RETCODE checkOverloadViaThetaTree(
          int glbest;
          int glblct;
 
-         nodedata = nodedatas[j];
+         idx = nodedataidx[j];
+         nodedata = &nodedatas[idx];
          assert(nodedata != NULL);
 
          duration = nodedata->duration - nodedata->leftadjust - nodedata->rightadjust;
@@ -7123,17 +7103,12 @@ SCIP_RETCODE checkOverloadViaThetaTree(
             propest, shift, initialized, explanation, nchgbds, cutoff) );
    }
 
-   /* free the search nodes data */
-   for( j = nnodedatas - 1; j >= 0; --j )
-   {
-      freeNodedata(scip, &nodedatas[j]);
-   }
-
    /* free theta tree */
    SCIPbtFree(&tree);
 
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &leaves);
+   SCIPfreeBufferArray(scip, &nodedataidx);
    SCIPfreeBufferArray(scip, &nodedatas);
 
    return SCIP_OKAY;
