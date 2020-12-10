@@ -28,6 +28,7 @@
 
 #define EXPRHDLR_NAME         "var"
 #define EXPRHDLR_DESC         "variable expression"
+#define EXPRHDLR_PRECEDENCE   0
 #define EXPRHDLR_HASHKEY      SCIPcalcFibHash(22153.0)
 
 /** translate from one value of infinity to another
@@ -220,9 +221,6 @@ SCIP_DECL_EXPREVAL(evalVar)
 static
 SCIP_DECL_EXPRBWDIFF(bwdiffVar)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(SCIPgetVarExprVar(expr) != NULL);
-
    /* this should never happen because variable expressions do not have children */
    return SCIP_INVALIDCALL;
 }
@@ -243,9 +241,6 @@ SCIP_DECL_EXPRFWDIFF(fwdiffVar)
 static
 SCIP_DECL_EXPRBWFWDIFF(bwfwdiffVar)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
-   assert(SCIPexprGetData(expr) != NULL);
-
    /* this should never happen because variable expressions do not have children */
    return SCIP_INVALIDCALL;
 }
@@ -348,7 +343,7 @@ SCIP_RETCODE SCIPincludeExprHdlrVar(
 {
    SCIP_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, 0, evalVar, NULL) );
+   SCIP_CALL( SCIPincludeExprHdlr(scip, &exprhdlr, EXPRHDLR_NAME, EXPRHDLR_DESC, EXPRHDLR_PRECEDENCE, evalVar, NULL) );
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrVar, NULL);

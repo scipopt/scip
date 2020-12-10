@@ -15,13 +15,13 @@
 
 /**@file   expr_xyz.c
  * @brief  handler for xyz expressions
- * @author Benjamin Mueller
+ * @author Jane Doe
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/expr_xyz.h"
-#include "scip/expr.h"
+#include "scip/pub_expr.h"
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "xyz"
@@ -247,7 +247,7 @@ static
 SCIP_DECL_EXPRHASH(hashXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
-   assert(EXPRHDLR_HASHKEY != 0.0);
+   assert(EXPRHDLR_HASHKEY != 0);
 
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -333,7 +333,7 @@ SCIP_RETCODE SCIPincludeExprHdlrXyz(
 }
 
 /** creates a xyz expression */
-SCIP_RETCODE SCIPcreateConsExprExprXyz(
+SCIP_RETCODE SCIPcreateExprXyz(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR**           expr,               /**< pointer where to store expression */
    int                   nchildren,          /**< number of children */
