@@ -630,8 +630,6 @@ SCIP_RETCODE extractProducts(
    SCIP_Bool             f                   /**< the first relation is an implication x == f */
    )
 {
-   SCIP_Real sign1;
-   SCIP_Real sign2;
    SCIP_Real mult;
 
    /* coefficients of the auxexpr */
@@ -646,7 +644,7 @@ SCIP_RETCODE extractProducts(
    SCIP_VAR* y;
 
    /* does auxexpr overestimate the product? */
-   SCIP_Bool overest;
+   SCIP_Bool overestimate;
 
    /* coefficients in given relations: a for x, b for w, c for y; 1 and 2 for 1st and 2nd relation, respectively */
    SCIP_Real a1 = coefs1[0];
@@ -656,12 +654,14 @@ SCIP_RETCODE extractProducts(
    SCIP_Real b2 = coefs2[1];
    SCIP_Real c2 = coefs2[2];
 
-   assert(SCIPvarGetType(vars_xwy[0]) == SCIP_VARTYPE_BINARY);  /* x must be binary */
-   assert(a1 != 0.0); /* the first relation is always conditional */
-
    x = vars_xwy[0];
    w = vars_xwy[1];
    y = vars_xwy[2];
+
+   /* check given linear relations and decide if to continue */
+
+   assert(SCIPvarGetType(x) == SCIP_VARTYPE_BINARY);  /* x must be binary */
+   assert(a1 != 0.0); /* the first relation is always conditional */
 
    SCIPdebugMsg(scip, "Extracting product from two implied relations:\n");
    SCIPdebugMsg(scip, "Relation 1: <%s> == %d => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), f, b1,
@@ -684,20 +684,26 @@ SCIP_RETCODE extractProducts(
 
    SCIPdebugMsg(scip, "binary var = <%s>, product of its coefs: %g\n", SCIPvarGetName(x), a1*a2);
 
-   /* we flip the rows so that coefs of w are positive */
-   sign1 = b1 >= 0 ? 1.0 : -1.0;
-   sign2 = b2 >= 0 ? 1.0 : -1.0;
-   SCIPdebugMsg(scip, "signs: %g, %g\n", sign1, sign2);
+   /* rewrite the linear relations in a standard form:
+    * a1x + b1w + c1y <=/>= d1,
+    * a2x + b2w + c2y <=/>= d2,
+    * where b1 > 0, b2 > 0 and the first implied relation is activated when x == 1
+    */
 
-   /* flip the sides if needed */
-   if( sign1 < 0 )
+   /* if needed, multiply the rows by -1 so that coefs of w are positive */
+   if( b1 < 0 )
    {
+      a1 *= -1.0;
+      b1 *= -1.0;
+      c1 *= -1.0;
       side1 *= -1.0;
       sidetype1 = sidetype1 == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
    }
-
-   if( sign2 < 0 )
+   if( b2 < 0 )
    {
+      a2 *= -1.0;
+      b2 *= -1.0;
+      c2 *= -1.0;
       side2 *= -1.0;
       sidetype2 = sidetype2 == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
    }
@@ -705,13 +711,11 @@ SCIP_RETCODE extractProducts(
    if( sidetype1 != sidetype2 )
       return SCIP_OKAY;
 
-   /* from here on, we consider only the flipped (by multiplying by signi) rows */
-
    /* at least one w coefficient must be nonzero */
    assert(b1 != 0.0 || b2 != 0.0);
 
    /* when b1c2 = b2c1, the linear relations do not imply a product relation */
-   if( SCIPisRelEQ(scip, b2*sign2*c1*sign1, c2*sign2*b1*sign1) )
+   if( SCIPisRelEQ(scip, b2*c1, c2*b1) )
    {
       SCIPdebugMsg(scip, "Ignoring a pair of linear relations because a1c2 = a2c1\n");
       return SCIP_OKAY;
@@ -723,41 +727,41 @@ SCIP_RETCODE extractProducts(
       SCIPswapReals(&a1, &a2);
       SCIPswapReals(&b1, &b2);
       SCIPswapReals(&c1, &c2);
-      SCIPswapReals(&sign1, &sign2);
       SCIPswapReals(&side1, &side2);
    }
 
    /* all conditions satisfied, we can extract the product */
+
    /* given two rows of the form:
     * a1 x + b1 w + c1 y <= d1, a2 x + b2 w + c2 y <= d2 (or same with >=),
     * where a1*a2 <= 0 and the first implied relation is enabled when x == 1 and the second when x == 0,
     * and b1, b2 > 0, the product relation can be written as:  // TODO more details on how to get there would be very nice
     * xy >=/<= (1/(b1c2 - c1b2))*(b1b2w + (b2(a1 - d1) + b1d2)x + b1c2y - b1d2)
     * (the inequality sign depends on the sign of (b1c2 - c1b2) and the sign in the linear inequalities) */
-   mult = 1/(b1*sign1*c2*sign2 - c1*sign1*b2*sign2);
+   mult = 1/(b1*c2 - c1*b2);
 
    /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
-   overest = mult < 0.0;
+   overestimate = mult < 0.0;
    if( sidetype1 == SCIP_SIDETYPE_LEFT ) /* only check sidetype1 because sidetype2 is equal to it */
-      overest = !overest;
+      overestimate = !overestimate;
 
-   SCIPdebugMsg(scip, "w coef is %s\n", overest ? "negative" : "positive");
-   SCIPdebugMsg(scip, "f, found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", sign1*a1,
-      SCIPvarGetName(x), sign1*b1, SCIPvarGetName(w), sign1*c1, SCIPvarGetName(y), side1);
-   SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> <= %g\n", sign2*a2, SCIPvarGetName(x),
-      sign2*b2, SCIPvarGetName(w), sign2*c2, SCIPvarGetName(y), side2);
+   SCIPdebugMsg(scip, "w coef is %s\n", overestimate ? "negative" : "positive");
+   SCIPdebugMsg(scip, "f, found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", a1,
+      SCIPvarGetName(x), b1, SCIPvarGetName(w), c1, SCIPvarGetName(y), side1);
+   SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> <= %g\n", a2, SCIPvarGetName(x),
+      b2, SCIPvarGetName(w), c2, SCIPvarGetName(y), side2);
 
    /* compute the coefficients for x, w and y in auxexpr */
-   A = (sign2*b2*sign1*a1 -side1*sign2*b2 + side2*sign1*b1)*mult;
-   B = sign1*b1*sign2*b2*mult;
-   C = sign1*b1*sign2*c2*mult;
-   cst = -sign1*b1*side2*mult;
+   A = (b2*a1 -side1*b2 + side2*b1)*mult;
+   B = b1*b2*mult;
+   C = b1*c2*mult;
+   cst = -b1*side2*mult;
 
    SCIPdebugMsg(scip, "product: <%s><%s> %s %g<%s> + %g<%s> + %g<%s> + %g\n", SCIPvarGetName(x), SCIPvarGetName(y),
-      overest ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), -b1*side2*mult);
+      overestimate ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), -b1*side2*mult);
 
    SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) );
-   SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, A, C, B, cst, overest) );
+   SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, A, C, B, cst, overestimate) );
 
    return SCIP_OKAY;
 }
