@@ -25,7 +25,6 @@
 /* #define VERIFY_OUT */ /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
 /* #define USEOBJLIM */  /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
-#define SCIP_DEBUG
 #include "scip/def.h"
 
 #ifdef SCIP_WITH_GMP
@@ -2082,9 +2081,6 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    int rval = 0, nrows, ncols;
    register int i;
    mpq_t* primsolgmp, *dualsolgmp, *redcostgmp, *objvalgmp;
-   mpq_t* primsolvec;
-   mpq_t* dualsolvec;
-   mpq_t* redcostvec;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2095,29 +2091,25 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    ncols = mpq_QSget_colcount(lpi->prob);
    SCIP_CALL( ensureRowMem(lpi, nrows) );
 
-   SCIP_ALLOC( BMSallocMemoryArray(&redcostvec, ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&primsolvec, ncols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dualsolvec, ncols) );
-
    if( primsol == NULL )
       primsolgmp = NULL;
    else
    {
-      primsolgmp = primsolvec;
+      SCIP_ALLOC( BMSallocMemoryArray(&primsolgmp, ncols) );
       RatSetGMPArray(primsolgmp, primsol, ncols);
    }
    if( redcost == NULL )
       redcostgmp = NULL;
    else
    {
-      redcostgmp = redcostvec;
+      SCIP_ALLOC( BMSallocMemoryArray(&redcostgmp, ncols) );
       RatSetGMPArray(redcostgmp, redcost, ncols);
    }
    if( dualsol == NULL )
       dualsolgmp = NULL;
    else
    {
-      dualsolgmp = dualsolvec;
+      SCIP_ALLOC( BMSallocMemoryArray(&dualsolgmp, nrows) );
       RatSetGMPArray(dualsolgmp, dualsol, nrows);
    }
    if( objval != NULL )
@@ -2126,27 +2118,28 @@ SCIP_RETCODE SCIPlpiExactGetSol(
       objvalgmp = NULL;
 
    rval = mpq_QSget_solution(lpi->prob, objvalgmp, primsolgmp, dualsolgmp, lpi->irng, redcostgmp);
-   RatCheckInfByValue(objval);
+
+   if( objval != NULL )
+      RatCheckInfByValue(objval);
 
    if( redcost != NULL )
    {
       RatSetArrayGMP(redcost, redcostgmp, ncols);
       RatClearGMPArray(redcostgmp, ncols);
+      BMSfreeMemoryArray(&redcostgmp);
    }
    if( primsol != NULL )
    {
       RatSetArrayGMP(primsol, primsolgmp, ncols);
       RatClearGMPArray(primsolgmp, ncols);
+      BMSfreeMemoryArray(&primsolgmp);
    }
    if( dualsol != NULL )
    {
       RatSetArrayGMP(dualsol, dualsolgmp, nrows);
       RatClearGMPArray(dualsolgmp, nrows);
+      BMSfreeMemoryArray(&dualsolgmp);
    }
-
-   BMSfreeMemoryArray(&redcostvec);
-   BMSfreeMemoryArray(&primsolvec);
-   BMSfreeMemoryArray(&dualsolvec);
 
    QS_CONDRET(rval);
 
@@ -2344,7 +2337,11 @@ SCIP_RETCODE SCIPlpiExactSetBase(
    ncols = mpq_QSget_colcount(lpi->prob);
    nrows = mpq_QSget_rowcount(lpi->prob);
 
-   SCIP_CALL(ensureTabMem(lpi, ncols));
+
+   /* allocate enough memory for storing uncompressed basis information */
+   SCIP_CALL( ensureColMem(lpi, ncols) );
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
+   SCIP_CALL( ensureTabMem(lpi, nrows+ncols) );
 
    icstat = lpi->ibas;
    irstat = lpi->ibas + ncols;
@@ -2361,7 +2358,18 @@ SCIP_RETCODE SCIPlpiExactSetBase(
          irstat[i] = QS_ROW_BSTAT_BASIC; /*lint !e641*/
          break;
       case SCIP_BASESTAT_UPPER:
-         irstat[i] = QS_ROW_BSTAT_UPPER; /*lint !e641*/
+         /* sense of inexact LP row is R (ranged row) since this is the only case where the basis status of the
+          * slack variable is allowed to be UPPER
+          */
+         if( lpi->isen[i] == 'R' )
+            /* sense of LPEX row is R, too */
+            irstat[i] = QS_ROW_BSTAT_UPPER; /*lint !e641*/
+         else
+            /* sense of LPEX row is L, G or E, thus, basis status must be LOWER/BASIC. we use non-basic status LOWER
+             * instead of non-basic status UPPER for slack variable in LPEX. this might happen when the inexact LP
+             * is an FP relaxation of the exact LP
+             */
+            irstat[i] = QS_ROW_BSTAT_LOWER;
          break;
       default:
          SCIPerrorMessage("Unknown row basic status %d", rstat[i]);
