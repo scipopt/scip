@@ -38,13 +38,14 @@ typedef struct SCIP_NlpiOracle SCIP_NLPIORACLE; /**< NLPI oracle data structure 
 /** creates an NLPIORACLE data structure */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE**     oracle              /**< pointer to store NLPIORACLE data structure */
    );
 
 /** frees an NLPIORACLE data structure */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE**     oracle              /**< pointer to NLPIORACLE data structure */
    );
 
@@ -64,6 +65,7 @@ SCIP_Real SCIPnlpiOracleGetInfinity(
 /** sets the problem name (used for printing) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleSetProblemName(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const char*           name                /**< name of problem */
    );
@@ -77,6 +79,7 @@ const char* SCIPnlpiOracleGetProblemName(
 /** adds variables */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleAddVars(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nvars,              /**< number of variables to add */
    const SCIP_Real*      lbs,                /**< array with lower bounds of new variables, or NULL if all -infinity */
@@ -91,6 +94,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleAddConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nconss,             /**< number of constraints to add */
    const SCIP_Real*      lhss,               /**< array with left-hand sides of constraints, or NULL if all -infinity */
@@ -109,6 +113,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleSetObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real       constant,           /**< constant part of objective */
    int                   nlin,               /**< number of linear variable coefficients */ 
@@ -120,6 +125,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 /** change variable bounds */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nvars,              /**< number of variables to change bounds */
    const int*            indices,            /**< array with indices of variables to change bounds */
@@ -130,6 +136,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
 /** change constraint sides */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgConsSides(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nconss,             /**< number of constraints to change sides */
    const int*            indices,            /**< array with indices of constraints to change sides */
@@ -140,6 +147,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsSides(
 /** deletes a set of variables */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleDelVarSet(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int*                  delstats            /**< array with deletion status of vars in input (1 if var should be deleted, 0 if not); 
                                               *   new position of var in output (-1 if var was deleted) */
@@ -148,6 +156,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
 /** deletes a set of constraints */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleDelConsSet(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int*                  delstats            /**< array with deletion status of rows in input (1 if row should be deleted, 0 if not); 
                                               *   new position of row in output (-1 if row was deleted) */
@@ -156,6 +165,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 /** changes (or adds) linear coefficients in one constraint or objective */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where linear coefficients should be changed, or -1 for objective */
    int                   nentries,           /**< number of coefficients to change */
@@ -166,9 +176,9 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 /** replaces expression of one constraint or objective */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where expression should be changed, or -1 for objective */
-   const int*            exprvaridxs,        /**< problem indices of variables in expression */
    const SCIP_EXPR*      expr                /**< new expression, or NULL */
    );
 
@@ -176,6 +186,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleChgObjConstant(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real             objconstant         /**< new value for objective constant */
    );
@@ -277,6 +288,7 @@ SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
 /** evaluates the objective function in a given point */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Real*            objval              /**< pointer to store objective value */  
@@ -285,6 +297,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
 /** evaluates one constraint function in a given point */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint to evaluate */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -294,6 +307,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
 /** evaluates all constraint functions in a given point */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Real*            convals             /**< pointer to store constraint values */  
@@ -305,6 +319,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
@@ -318,6 +333,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int             considx,            /**< index of constraint to compute gradient for */
    const SCIP_Real*      x,                  /**< point where to evaluate */
@@ -333,6 +349,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
    const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, 
@@ -348,6 +365,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
@@ -363,6 +381,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
    const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, 
@@ -379,6 +398,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
@@ -390,8 +410,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 /** prints the problem to a file. */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOraclePrintProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
 
@@ -402,9 +422,9 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to print to, or NULL for standard output */
    );
 
