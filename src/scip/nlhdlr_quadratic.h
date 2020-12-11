@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_quadratic.h
+/**@file   nlhdlr_quadratic.h
  * @brief  nonlinear handler to handle quadratic expressions
  * @author Felipe Serrano
  *
@@ -21,26 +21,24 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_NLHDLR_QUADRATIC_H__
-#define __SCIP_CONS_EXPR_NLHDLR_QUADRATIC_H__
+#ifndef __SCIP_NLHDLR_QUADRATIC_H__
+#define __SCIP_NLHDLR_QUADRATIC_H__
 
 
 #include "scip/scip.h"
-#include "scip/cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** includes quadratic nonlinear handler to consexpr */
+/** includes quadratic nonlinear handler in nonlinear constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprNlhdlrQuadratic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_QUADRATIC_H__ */
+#endif /* __SCIP_NLHDLR_QUADRATIC_H__ */
