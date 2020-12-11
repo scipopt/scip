@@ -141,7 +141,7 @@ SCIP_RETCODE createNLP(
          SCIPgetUpperbound(scip));
    }
 
-   SCIP_CALL( SCIPnlpiCreateProblem(heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
+   SCIP_CALL( SCIPnlpiCreateProblem(scip, heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPcreateNlpiProb(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
          heurdata->nlpiprob, heurdata->var2idx, NULL, NULL, cutoff, TRUE, FALSE) );
@@ -152,6 +152,7 @@ SCIP_RETCODE createNLP(
 /** frees the data structures for the NLP relaxation */
 static
 SCIP_RETCODE freeNLP(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
@@ -165,7 +166,7 @@ SCIP_RETCODE freeNLP(
    assert(heurdata->var2idx != NULL);
 
    SCIPhashmapFree(&heurdata->var2idx);
-   SCIP_CALL( SCIPnlpiFreeProblem(heurdata->nlpi, &heurdata->nlpiprob) );
+   SCIP_CALL( SCIPnlpiFreeProblem(scip, heurdata->nlpi, &heurdata->nlpiprob) );
 
    return SCIP_OKAY;
 }
@@ -221,7 +222,7 @@ SCIP_RETCODE addRegularScholtes(
          quadelems->idx2 = lininds[0];
          quadelems->coef = -1.0;
 
-         SCIP_CALL( SCIPnlpiAddConstraints(heurdata->nlpi, heurdata->nlpiprob, 1, &lhs, &rhs, &nlininds,
+         SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, heurdata->nlpiprob, 1, &lhs, &rhs, &nlininds,
                &lininds, &linvals, &nquadelems, &quadelems, NULL, NULL, NULL) );
       }
 
@@ -248,7 +249,7 @@ SCIP_RETCODE addRegularScholtes(
          indices[i] = startidx + i;
       }
 
-      SCIP_CALL( SCIPnlpiChgConsSides(heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lhss, rhss) );
+      SCIP_CALL( SCIPnlpiChgConsSides(scip, heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lhss, rhss) );
 
       SCIPfreeBufferArray(scip, &indices);
       SCIPfreeBufferArray(scip, &rhss);
@@ -369,14 +370,14 @@ SCIP_RETCODE heurExec(
       initguess[i] = SCIPgetSolVal(scip, NULL, var);
       /* SCIPdebugMsg(scip, "set initial value for %s to %g\n", SCIPvarGetName(var), initguess[i]); */
    }
-   SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
          SCIPfeastol(scip) / 10.0) );
-   SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
          SCIPdualfeastol(scip) / 10.0) );
-   SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 0) );
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 0) );
 
    /* main loop */
    for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
@@ -401,12 +402,12 @@ SCIP_RETCODE heurExec(
          break;
       }
 
-      SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timeleft) );
-      SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, heurdata->maxnlpiter) );
+      SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timeleft) );
+      SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, heurdata->maxnlpiter) );
 
       /* solve NLP */
-      SCIP_CALL( SCIPnlpiSolve(heurdata->nlpi, heurdata->nlpiprob) );
-      solstat = SCIPnlpiGetSolstat(heurdata->nlpi, heurdata->nlpiprob);
+      SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi, heurdata->nlpiprob) );
+      solstat = SCIPnlpiGetSolstat(scip, heurdata->nlpi, heurdata->nlpiprob);
 
       /* give up if an error occurred or no primal values are accessible */
       if( solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
@@ -416,11 +417,11 @@ SCIP_RETCODE heurExec(
       }
 
       /* update nlpcostleft */
-      SCIP_CALL( SCIPnlpiGetStatistics(heurdata->nlpi, heurdata->nlpiprob, nlpstatistics) );
+      SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpiprob, nlpstatistics) );
       nlpcostleft -= SCIPnlpStatisticsGetNIterations(nlpstatistics) * nlpcostperiter * nbinvars;
       SCIPdebugMsg(scip, "nlpcostleft = %e\n", nlpcostleft);
 
-      SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
       assert(primal != NULL);
 
       /* check for binary feasibility */
@@ -505,7 +506,7 @@ SCIP_RETCODE heurExec(
       else if( solstat <= SCIP_NLPSOLSTAT_FEASIBLE && !binaryfeasible )
       {
          BMScopyMemoryArray(initguess, primal, SCIPgetNVars(scip));
-         SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, primal, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, primal, NULL, NULL, NULL) );
          SCIPdebugMsg(scip, "update theta from %g -> %g\n", theta, theta*heurdata->sigma);
 
          if( !reinit )
@@ -526,7 +527,7 @@ SCIP_RETCODE heurExec(
                ubs[j] = 1.0;
                indices[j] = SCIPhashmapGetImageInt(heurdata->var2idx, (void*)binvars[j]);
             }
-            SCIP_CALL( SCIPnlpiChgVarBounds(heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
+            SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
             fixed = FALSE;
          }
       }
@@ -577,7 +578,7 @@ SCIP_RETCODE heurExec(
                }
             }
             SCIPdebugMsg(scip, "fixed %d binary variables\n", nfixedvars);
-            SCIP_CALL( SCIPnlpiChgVarBounds(heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
+            SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
             fixed = TRUE;
          }
          else
@@ -591,7 +592,7 @@ SCIP_RETCODE heurExec(
                initguess[idx] = primal[idx] >= 0.5 ? 0.0 : 1.0;
                /* SCIPdebugMsg(scip, "update init guess for %s to %g\n", SCIPvarGetName(binvars[j]), initguess[idx]); */
             }
-            SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
             reinit = FALSE;
          }
       }
@@ -701,7 +702,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    /* call MPEC method */
    SCIP_CALL( createNLP(scip, heurdata) );
    SCIP_CALL( heurExec(scip, heur, heurdata, result) );
-   SCIP_CALL( freeNLP(heurdata) );
+   SCIP_CALL( freeNLP(scip, heurdata) );
 
    /* update number of unsuccessful calls */
    heurdata->nunsucc = (*result == SCIP_FOUNDSOL) ? 0 : heurdata->nunsucc + 1;

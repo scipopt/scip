@@ -38,7 +38,7 @@ extern "C" {
 /** create solver interface for All solver */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpSolverAll(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
    SCIP_NLPI**           nlpis,              /**< array containing existing nlpis */
    int                   nnlpis              /**< total number of nlpis */

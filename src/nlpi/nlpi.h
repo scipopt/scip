@@ -27,6 +27,7 @@
 
 #include "nlpi/type_nlpi.h"
 #include "scip/type_misc.h"
+#include "blockmemshell/memory.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,322 +79,148 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
-   SCIP_DECL_NLPISETMESSAGEHDLR    ((*nlpisetmessagehdlr)),     /**< set message handler */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    );
 
 /** copies an NLPI */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiCopy(
-   BMS_BLKMEM*           blkmem,             /**< block memory in target SCIP */
-   SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
-   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
-   );
+SCIP_DECL_NLPICOPY(SCIPnlpiCopy);
 
-/** frees NLPI user data */
+/** frees NLPI */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnlpiFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi                /**< pointer to NLPI data structure */
-   );
+);
 
 /** gets pointer for NLP solver
  * @return void pointer to solver
  */
 SCIP_EXPORT
-void* SCIPnlpiGetSolverPointer(
-   SCIP_NLPI*            nlpi                /**< pointer to NLPI datastructure */
-   );
+SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPnlpiGetSolverPointer);
 
 /** creates a problem instance */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiCreateProblem(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM**    problem,            /**< pointer to store problem data */
-   const char*           name                /**< name of problem, can be NULL */
-   );
+SCIP_DECL_NLPICREATEPROBLEM(SCIPnlpiCreateProblem);
 
 /** frees a problem instance */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiFreeProblem(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM**    problem             /**< pointer where problem data is stored */
-   );
+SCIP_DECL_NLPIFREEPROBLEM(SCIPnlpiFreeProblem);
 
 /** gets pointer to solver-internal problem instance
  * @return void pointer to problem instance
  */
 SCIP_EXPORT
-void* SCIPnlpiGetProblemPointer(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer where problem data is stored */
-   );
+SCIP_DECL_NLPIGETPROBLEMPOINTER(SCIPnlpiGetProblemPointer);
 
 /** add variables to nlpi */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiAddVars(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI data structure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nvars,              /**< number of variables */               
-   const SCIP_Real*      lbs,                /**< lower bounds of variables, can be NULL if -infinity */
-   const SCIP_Real*      ubs,                /**< upper bounds of variables, can be NULL if +infinity */
-   const char**          varnames            /**< varnames names of variables, can be NULL */
-   );
+SCIP_DECL_NLPIADDVARS(SCIPnlpiAddVars);
 
 /** add constraints to nlpi */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiAddConstraints(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI data structure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nconss,             /**< number of added constraints */
-   const SCIP_Real*      lhss,               /**< left hand sides of constraints, can be NULL if -infinity */
-   const SCIP_Real*      rhss,               /**< right hand sides of constraints, can be NULL if +infinity */
-   const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
-   int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
-   SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   SCIP_EXPR* const*     exprs,              /**< expressions for nonlinear part of constraints, entry of
-                                              *   array may be NULL in case of no nonlinear part, may be NULL in case of no
-                                              *   nonlinear part in any constraint */
-   const char**          names               /**< names of constraints, may be NULL or entries may be NULL */
-   );
-
+SCIP_DECL_NLPIADDCONSTRAINTS(SCIPnlpiAddConstraints);
 
 /** sets or overwrites objective, a minimization problem is expected */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetObjective(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nlins,              /**< number of linear variables */
-   const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
-   const SCIP_Real*      linvals,            /**< coefficient values, may be NULL in case of no linear part */
-   const SCIP_EXPR*      expr,               /**< expression for nonlinear part of objective function, may be NULL in case of no nonlinear part */
-   const SCIP_Real       constant            /**< objective value offset*/
-   );
+SCIP_DECL_NLPISETOBJECTIVE(SCIPnlpiSetObjective);
 
 /** change variable bounds */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgVarBounds(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nvars,              /**< number of variables to change bounds */
-   const int*            indices,            /**< indices of variables to change bounds */
-   const SCIP_Real*      lbs,                /**< new lower bounds */
-   const SCIP_Real*      ubs                 /**< new upper bounds */
-   );
+SCIP_DECL_NLPICHGVARBOUNDS(SCIPnlpiChgVarBounds);
 
 /** change constraint sides */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgConsSides(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nconss,             /**< number of constraints to change sides */
-   const int*            indices,            /**< indices of constraints to change sides */
-   const SCIP_Real*      lhss,               /**< new left hand sides */
-   const SCIP_Real*      rhss                /**< new right hand sides */
-   );
+SCIP_DECL_NLPICHGCONSSIDES(SCIPnlpiChgConsSides);
 
 /** delete a set of variables */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiDelVarSet(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
-                                              * if var was deleted */
-   int                   dstatssize          /**< size of the dstats array */
-   );
+SCIP_DECL_NLPIDELVARSET(SCIPnlpiDelVarSet);
 
 /** delete a set of constraints */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiDelConsSet(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats,             /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
-                                              * if row was deleted */
-   int                   dstatssize          /**< size of the dstats array */
-   );
+SCIP_DECL_NLPIDELCONSSET(SCIPnlpiDelConsSet);
 
 /** changes or adds linear coefficients in a constraint or objective */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgLinearCoefs(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   const int             idx,                /**< index of constraint or -1 for objective */
-   int                   nvals,              /**< number of values in linear constraint */
-   const int*            varidxs,            /**< indices of variable */
-   const SCIP_Real*      vals                /**< new values for coefficient */
-   );
+SCIP_DECL_NLPICHGLINEARCOEFS(SCIPnlpiChgLinearCoefs);
 
 /** change the expression in the nonlinear part */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgExpr(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   idxcons,            /**< index of constraint or -1 for objective */
-   const SCIP_EXPR*      expr                /**< new expression, or NULL for no nonlinear part */
-   );
-
-/** change the value of one parameter in the nonlinear part */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgNonlinCoef(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   idxcons,            /**< index of constraint or -1 for objective */
-   int                   idxparam,           /**< index of parameter */
-   SCIP_Real             value               /**< new value for nonlinear parameter */
-   );
+SCIP_DECL_NLPICHGEXPR(SCIPnlpiChgExpr);
 
 /** change the constant offset in the objective */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiChgObjConstant(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real             objconstant         /**< new value for objective constant */
-   );
+SCIP_DECL_NLPICHGOBJCONSTANT(SCIPnlpiChgObjConstant);
 
 /** sets initial guess for primal variables */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetInitialGuess(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real*            primalvalues,       /**< initial primal values for variables, or NULL to clear previous values */
-   SCIP_Real*            consdualvalues,     /**< initial dual values for constraints, or NULL to clear previous values */
-   SCIP_Real*            varlbdualvalues,    /**< initial dual values for variable lower bounds, or NULL to clear previous values */
-   SCIP_Real*            varubdualvalues     /**< initial dual values for variable upper bounds, or NULL to clear previous values */
-   );
+SCIP_DECL_NLPISETINITIALGUESS(SCIPnlpiSetInitialGuess);
 
 /** tries to solve NLP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSolve(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-   );
+SCIP_DECL_NLPISOLVE(SCIPnlpiSolve);
    
 /** gives solution status
  * @return solution status */
 SCIP_EXPORT
-SCIP_NLPSOLSTAT SCIPnlpiGetSolstat(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-   );
+SCIP_DECL_NLPIGETSOLSTAT(SCIPnlpiGetSolstat);
 
 /** gives termination reason
  * @return termination status */
 SCIP_EXPORT
-SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-   );
+SCIP_DECL_NLPIGETTERMSTAT(SCIPnlpiGetTermstat);
 
 /** gives primal and dual solution
  * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetSolution(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
-   SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
-   SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real**           varubdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real*            objval              /**< buffer to store the objective value, or NULL if not needed */
-   );
+SCIP_DECL_NLPIGETSOLUTION(SCIPnlpiGetSolution);
 
 /** gives solve statistics */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetStatistics(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
-   );
+SCIP_DECL_NLPIGETSTATISTICS(SCIPnlpiGetStatistics);
 
 /** gives required size of a buffer to store a warmstart object */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetWarmstartSize(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   size_t*               size                /**< pointer to store required size for warmstart buffer */
-   );
+SCIP_DECL_NLPIGETWARMSTARTSIZE(SCIPnlpiGetWarmstartSize);
 
 /** stores warmstart information in buffer */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   void*                 buffer              /**< memory to store warmstart information */
-   );
+SCIP_DECL_NLPIGETWARMSTARTMEMO(SCIPnlpiGetWarmstartMemo);
 
 /** sets warmstart information in solver */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   void*                 buffer              /**< warmstart information */
-   );
+SCIP_DECL_NLPISETWARMSTARTMEMO(SCIPnlpiSetWarmstartMemo);
 
 /**@name Parameter Methods */
 /**@{ */
 
 /** gets integer parameter of NLP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetIntPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   );
+SCIP_DECL_NLPIGETINTPAR(SCIPnlpiGetIntPar);
    
 /** sets integer parameter of NLP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetIntPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   );
+SCIP_DECL_NLPISETINTPAR(SCIPnlpiSetIntPar);
 
 /** gets floating point parameter of NLP
  * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then gets solver-wide value for infinity */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetRealPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure, can be NULL only if type == SCIP_NLPPAR_INFINITY */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   );
+SCIP_DECL_NLPIGETREALPAR(SCIPnlpiGetRealPar);
 
 /** sets floating point parameter of NLP
  * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then sets solver-wide value for infinity */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetRealPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure, can be NULL only if type == SCIP_NLPPAR_INFINITY */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   );
+SCIP_DECL_NLPISETREALPAR(SCIPnlpiSetRealPar);
 
 /** gets string parameter of NLP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiGetStringPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the parameter value, the user must not modify the string */
-   );
+SCIP_DECL_NLPIGETSTRINGPAR(SCIPnlpiGetStringPar);
 
 /** sets string parameter of NLP */
 SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetStringPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   );
-
-/** sets message handler for message output */
-SCIP_EXPORT
-SCIP_RETCODE SCIPnlpiSetMessageHdlr(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< pointer to message handler, or NULL to suppress all output */
-   );
+SCIP_DECL_NLPISETSTRINGPAR(SCIPnlpiSetStringPar);
 
 /** gets data of an NLPI */
 SCIP_EXPORT

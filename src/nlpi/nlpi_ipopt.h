@@ -41,7 +41,7 @@ extern "C" {
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    );
 

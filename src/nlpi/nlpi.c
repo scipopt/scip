@@ -74,7 +74,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_DECL_NLPISETREALPAR        ((*nlpisetrealpar)),         /**< set value of floating point parameter */
    SCIP_DECL_NLPIGETSTRINGPAR      ((*nlpigetstringpar)),       /**< get value of string parameter */
    SCIP_DECL_NLPISETSTRINGPAR      ((*nlpisetstringpar)),       /**< set value of string parameter */
-   SCIP_DECL_NLPISETMESSAGEHDLR    ((*nlpisetmessagehdlr)),     /**< set message handler */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
    )
 {  /*lint --e{715}*/
@@ -111,7 +110,6 @@ SCIP_RETCODE SCIPnlpiCreate(
    assert(nlpisetrealpar != NULL);
    assert(nlpigetstringpar != NULL);
    assert(nlpisetstringpar != NULL);
-   assert(nlpisetmessagehdlr != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nlpi) );
 
@@ -148,37 +146,37 @@ SCIP_RETCODE SCIPnlpiCreate(
    (*nlpi)->nlpisetrealpar = nlpisetrealpar;
    (*nlpi)->nlpigetstringpar = nlpigetstringpar;
    (*nlpi)->nlpisetstringpar = nlpisetstringpar;
-   (*nlpi)->nlpisetmessagehdlr = nlpisetmessagehdlr;
    (*nlpi)->nlpidata = nlpidata;
 
    return SCIP_OKAY;
 }
 
 /** copies an NLPI */
-SCIP_RETCODE SCIPnlpiCopy(
-   BMS_BLKMEM*           blkmem,             /**< block memory in target SCIP */
-   SCIP_NLPI*            sourcenlpi,         /**< pointer to NLPI data structure to copy */
-   SCIP_NLPI**           targetnlpi          /**< buffer to store pointer to copied NLPI data structure */
-   )
+SCIP_DECL_NLPICOPY(SCIPnlpiCopy)
 {
-   assert(blkmem     != NULL);
    assert(sourcenlpi != NULL);
+   assert(sourcenlpi->nlpicopy != NULL);
    assert(targetnlpi != NULL);
 
-   SCIP_CALL( (*sourcenlpi->nlpicopy)(blkmem, sourcenlpi, targetnlpi) );
+   SCIP_CALL( sourcenlpi->nlpicopy(scip, sourcenlpi, targetnlpi) );
 
    return SCIP_OKAY;
 }
 
-/** frees NLPI user data */
+/** frees NLPI */
 SCIP_RETCODE SCIPnlpiFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi                /**< pointer to NLPI data structure */
-   )
+)
 {
    assert(nlpi  != NULL);
    assert(*nlpi != NULL);
 
-   SCIP_CALL( (*(*nlpi)->nlpifree)((*nlpi)) );
+   if( (*nlpi)->nlpifree != NULL )
+   {
+      SCIP_CALL( (*nlpi)->nlpifree(scip, *nlpi, &(*nlpi)->nlpidata) );
+      assert((*nlpi)->nlpidata == NULL);
+   }
    BMSfreeMemoryArray(&(*nlpi)->name);
    BMSfreeMemoryArray(&(*nlpi)->description);
    BMSfreeMemory(nlpi);
@@ -191,367 +189,268 @@ SCIP_RETCODE SCIPnlpiFree(
 /** gets pointer for NLP solver
  * @return void pointer to solver
  */
-void* SCIPnlpiGetSolverPointer(
-   SCIP_NLPI*            nlpi                /**< pointer to NLPI datastructure */
-   )
+SCIP_DECL_NLPIGETSOLVERPOINTER(SCIPnlpiGetSolverPointer)
 {
    assert(nlpi != NULL);
+   assert(nlpi->nlpigetsolverpointer != NULL);
 
-   return (*nlpi->nlpigetsolverpointer)(nlpi);
+   return nlpi->nlpigetsolverpointer(scip, nlpi);
 }
 
 /** creates a problem instance */
-SCIP_RETCODE SCIPnlpiCreateProblem(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM**    problem,            /**< pointer to store problem data */
-   const char*           name                /**< name of problem, can be NULL */
-   )
+SCIP_DECL_NLPICREATEPROBLEM(SCIPnlpiCreateProblem)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpicreateproblem != NULL);
    assert(problem != NULL);
 
-   return (*nlpi->nlpicreateproblem)(nlpi, problem, name);
+   return nlpi->nlpicreateproblem(scip, nlpi, problem, name);
 }
 
 /** frees a problem instance */
-SCIP_RETCODE SCIPnlpiFreeProblem(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM**    problem             /**< pointer where problem data is stored */
-   )
+SCIP_DECL_NLPIFREEPROBLEM(SCIPnlpiFreeProblem)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpifreeproblem != NULL);
    assert(problem != NULL);
 
-   return (*nlpi->nlpifreeproblem)(nlpi, problem);
+   return nlpi->nlpifreeproblem(scip, nlpi, problem);
 }
 
 /** gets pointer to solver-internal problem instance
  * @return void pointer to problem instance
  */
-void* SCIPnlpiGetProblemPointer(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer where problem data is stored */
-   )
+SCIP_DECL_NLPIGETPROBLEMPOINTER(SCIPnlpiGetProblemPointer)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetproblempointer != NULL);
    assert(problem != NULL);
 
-   return (*nlpi->nlpigetproblempointer)(nlpi, problem);
+   return nlpi->nlpigetproblempointer(scip, nlpi, problem);
 }
 
 /** add variables to nlpi */
-SCIP_RETCODE SCIPnlpiAddVars(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI data structure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nvars,              /**< number of variables */               
-   const SCIP_Real*      lbs,                /**< lower bounds of variables, can be NULL if -infinity */
-   const SCIP_Real*      ubs,                /**< ubs upper bounds of variables, can be NULL if +infinity */
-   const char**          varnames            /**< varnames names of variables, can be NULL */
-   )
+SCIP_DECL_NLPIADDVARS(SCIPnlpiAddVars)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpiaddvars != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpiaddvars)(nlpi, problem, nvars, lbs, ubs, varnames) );
+   SCIP_CALL( nlpi->nlpiaddvars(scip, nlpi, problem, nvars, lbs, ubs, varnames) );
 
    return SCIP_OKAY;
 }
 
 /** add constraints to nlpi */
-SCIP_RETCODE SCIPnlpiAddConstraints(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI data structure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nconss,             /**< number of added constraints */
-   const SCIP_Real*      lhss,               /**< left hand sides of constraints */
-   const SCIP_Real*      rhss,               /**< right hand sides of constraints */
-   const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
-   int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
-   SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   SCIP_EXPR* const*     exprs,              /**< expressions for nonlinear part of constraints, entry of
-                                              *   array may be NULL in case of no nonlinear part, may be NULL in case of no
-                                              *   nonlinear part in any constraint */
-   const char**          names               /**< names of constraints, may be NULL or entries may be NULL */
-   )
+SCIP_DECL_NLPIADDCONSTRAINTS(SCIPnlpiAddConstraints)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpiaddconstraints != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpiaddconstraints)(nlpi, problem, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
+   SCIP_CALL( nlpi->nlpiaddconstraints(scip, nlpi, problem, nconss, lhss, rhss, nlininds, lininds, linvals, exprs, names) );
 
    return SCIP_OKAY;
 }
 
 /** sets or overwrites objective, a minimization problem is expected */
-SCIP_RETCODE SCIPnlpiSetObjective(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nlins,              /**< number of linear variables */
-   const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
-   const SCIP_Real*      linvals,            /**< coefficient values, may be NULL in case of no linear part */
-   const SCIP_EXPR*      expr,               /**< expression for nonlinear part of objective function, may be NULL in case of no nonlinear part */
-   const SCIP_Real       constant            /**< objective value offset*/
-   )
+SCIP_DECL_NLPISETOBJECTIVE(SCIPnlpiSetObjective)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisetobjective != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisetobjective)(nlpi, problem, nlins, lininds, linvals, expr, constant) );
+   SCIP_CALL( nlpi->nlpisetobjective(scip, nlpi, problem, nlins, lininds, linvals, expr, constant) );
 
    return SCIP_OKAY;
 }
 
 /** change variable bounds */
-SCIP_RETCODE SCIPnlpiChgVarBounds(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nvars,              /**< number of variables to change bounds */
-   const int*            indices,            /**< indices of variables to change bounds */
-   const SCIP_Real*      lbs,                /**< new lower bounds */
-   const SCIP_Real*      ubs                 /**< new upper bounds */
-   )
+SCIP_DECL_NLPICHGVARBOUNDS(SCIPnlpiChgVarBounds)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpichgvarbounds != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpichgvarbounds)(nlpi, problem, nvars, indices, lbs, ubs) );
+   SCIP_CALL( nlpi->nlpichgvarbounds(scip, nlpi, problem, nvars, indices, lbs, ubs) );
 
    return SCIP_OKAY;
 }
 
 /** change constraint bounds */
-SCIP_RETCODE SCIPnlpiChgConsSides(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   nconss,             /**< number of constraints to change sides */
-   const int*            indices,            /**< indices of constraints to change sides */
-   const SCIP_Real*      lhss,               /**< new left hand sides */
-   const SCIP_Real*      rhss                /**< new right hand sides */
-   )
+SCIP_DECL_NLPICHGCONSSIDES(SCIPnlpiChgConsSides)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpichgconssides != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpichgconssides)(nlpi, problem, nconss, indices, lhss, rhss) );
+   SCIP_CALL( nlpi->nlpichgconssides(scip, nlpi, problem, nconss, indices, lhss, rhss) );
 
    return SCIP_OKAY;
 }
 
 /** delete a set of variables */
-SCIP_RETCODE SCIPnlpiDelVarSet(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
-                                              * if var was deleted */
-   int                   dstatssize          /**< size of the dstats array */
-   )
+SCIP_DECL_NLPIDELVARSET(SCIPnlpiDelVarSet)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpidelvarset != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpidelvarset)(nlpi, problem, dstats, dstatssize) );
+   SCIP_CALL( nlpi->nlpidelvarset(scip, nlpi, problem, dstats, dstatssize) );
 
    return SCIP_OKAY;
 }
 
 /** delete a set of constraints */
-SCIP_RETCODE SCIPnlpiDelConsSet(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats,             /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
-                                              * if row was deleted */
-   int                   dstatssize          /**< size of the dstats array */
-   )
+SCIP_DECL_NLPIDELCONSSET(SCIPnlpiDelConsSet)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpidelconsset != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpidelconsset)(nlpi, problem, dstats, dstatssize) );
+   SCIP_CALL( nlpi->nlpidelconsset(scip, nlpi, problem, dstats, dstatssize) );
 
    return SCIP_OKAY;
 }
 
 /** changes or adds linear coefficients in a constraint or objective */
-SCIP_RETCODE SCIPnlpiChgLinearCoefs(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   const int             idx,                /**< index of constraint or -1 for objective */
-   int                   nvals,              /**< number of values in linear constraint */
-   const int*            varidxs,            /**< indices of variable */
-   const SCIP_Real*      vals                /**< new values for coefficient */
-   )
+SCIP_DECL_NLPICHGLINEARCOEFS(SCIPnlpiChgLinearCoefs)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpichglinearcoefs != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpichglinearcoefs)(nlpi, problem, idx, nvals, varidxs, vals) );
+   SCIP_CALL( nlpi->nlpichglinearcoefs(scip, nlpi, problem, idx, nvals, varidxs, vals) );
 
    return SCIP_OKAY;
 }
 
 /** change the expression in the nonlinear part */
-SCIP_RETCODE SCIPnlpiChgExpr(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int                   idxcons,            /**< index of constraint or -1 for objective */
-   const SCIP_EXPR*      expr                /**< new expression, or NULL for no nonlinear part */
-   )
+SCIP_DECL_NLPICHGEXPR(SCIPnlpiChgExpr)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpichgexpr != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpichgexpr)(nlpi, problem, idxcons, expr) );
+   SCIP_CALL( nlpi->nlpichgexpr(scip, nlpi, problem, idxcons, expr) );
 
    return SCIP_OKAY;
 }
 
 /** change the constant offset in the objective */
-SCIP_RETCODE SCIPnlpiChgObjConstant(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real             objconstant         /**< new value for objective constant */
-   )
+SCIP_DECL_NLPICHGOBJCONSTANT(SCIPnlpiChgObjConstant)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpichgobjconstant != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpichgobjconstant)(nlpi, problem, objconstant) );
+   SCIP_CALL( nlpi->nlpichgobjconstant(scip, nlpi, problem, objconstant) );
 
    return SCIP_OKAY;
 }
 
 /** sets initial guess for primal variables */
-SCIP_RETCODE SCIPnlpiSetInitialGuess(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real*            primalvalues,       /**< initial primal values for variables, or NULL to clear previous values */
-   SCIP_Real*            consdualvalues,     /**< initial dual values for constraints, or NULL to clear previous values */
-   SCIP_Real*            varlbdualvalues,    /**< initial dual values for variable lower bounds, or NULL to clear previous values */
-   SCIP_Real*            varubdualvalues     /**< initial dual values for variable upper bounds, or NULL to clear previous values */
-   )
+SCIP_DECL_NLPISETINITIALGUESS(SCIPnlpiSetInitialGuess)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisetinitialguess != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisetinitialguess)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
+   SCIP_CALL( nlpi->nlpisetinitialguess(scip, nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues) );
 
    return SCIP_OKAY;
 }
 
 /** tries to solve NLP */
-SCIP_RETCODE SCIPnlpiSolve(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-   )
+SCIP_DECL_NLPISOLVE(SCIPnlpiSolve)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisolve != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisolve)(nlpi, problem) );
+   SCIP_CALL( nlpi->nlpisolve(scip, nlpi, problem) );
 
    return SCIP_OKAY;
 }
 
 /** gives solution status, return: Solution Status */
-SCIP_NLPSOLSTAT SCIPnlpiGetSolstat(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-   )
+SCIP_DECL_NLPIGETSOLSTAT(SCIPnlpiGetSolstat)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetsolstat != NULL);
    assert(problem != NULL);
 
-   return (*nlpi->nlpigetsolstat)(nlpi, problem);
+   return nlpi->nlpigetsolstat(scip, nlpi, problem);
 }
 
 /** gives termination reason; return: Termination Status */
-SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
-   )
+SCIP_DECL_NLPIGETTERMSTAT(SCIPnlpiGetTermstat)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigettermstat != NULL);
    assert(problem != NULL);
 
-   return (*nlpi->nlpigettermstat)(nlpi, problem);
+   return nlpi->nlpigettermstat(scip, nlpi, problem);
 }
 
 /** gives primal and dual solution
   * for a ranged constraint, the dual variable is positive if the right hand side is active and negative if the left hand side is active
   */
-SCIP_RETCODE SCIPnlpiGetSolution(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
-   SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
-   SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real**           varubdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real*            objval              /**< buffer to store the objective value, or NULL if not needed */
-   )
+SCIP_DECL_NLPIGETSOLUTION(SCIPnlpiGetSolution)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetsolution != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetsolution)(nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues, objval) );
+   SCIP_CALL( nlpi->nlpigetsolution(scip, nlpi, problem, primalvalues, consdualvalues, varlbdualvalues, varubdualvalues, objval) );
 
    return SCIP_OKAY;
 }
 
 /** gives solve statistics */
-SCIP_RETCODE SCIPnlpiGetStatistics(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
-   )
+SCIP_DECL_NLPIGETSTATISTICS(SCIPnlpiGetStatistics)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetstatistics != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetstatistics)(nlpi, problem, statistics) );
+   SCIP_CALL( nlpi->nlpigetstatistics(scip, nlpi, problem, statistics) );
 
    return SCIP_OKAY;
 }
 
 /** gives required size of a buffer to store a warmstart object */
-SCIP_RETCODE SCIPnlpiGetWarmstartSize(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   size_t*               size                /**< pointer to store required size for warmstart buffer */
-   )
+SCIP_DECL_NLPIGETWARMSTARTSIZE(SCIPnlpiGetWarmstartSize)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetwarmstartsize != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetwarmstartsize)(nlpi, problem, size) );
+   SCIP_CALL( nlpi->nlpigetwarmstartsize(scip, nlpi, problem, size) );
 
    return SCIP_OKAY;
 }
 
 /** stores warmstart information in buffer */
-SCIP_RETCODE SCIPnlpiGetWarmstartMemo(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   void*                 buffer              /**< memory to store warmstart information */
-   )
+SCIP_DECL_NLPIGETWARMSTARTMEMO(SCIPnlpiGetWarmstartMemo)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetwarmstartmemo != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetwarmstartmemo)(nlpi, problem, buffer) );
+   SCIP_CALL( nlpi->nlpigetwarmstartmemo(scip, nlpi, problem, buffer) );
 
    return SCIP_OKAY;
 }
 
 /** sets warmstart information in solver */
-SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   void*                 buffer              /**< warmstart information */
-   )
+SCIP_DECL_NLPISETWARMSTARTMEMO(SCIPnlpiSetWarmstartMemo)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisetwarmstartmemo != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisetwarmstartmemo)(nlpi, problem, buffer) );
+   SCIP_CALL( nlpi->nlpisetwarmstartmemo(scip, nlpi, problem, buffer) );
 
    return SCIP_OKAY;
 }
@@ -560,119 +459,84 @@ SCIP_RETCODE SCIPnlpiSetWarmstartMemo(
 /**@{ */
 
 /** gets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetIntPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int*                  ival                /**< pointer to store the parameter value */
-   )
+SCIP_DECL_NLPIGETINTPAR(SCIPnlpiGetIntPar)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetintpar != NULL);
    assert(problem != NULL);
    assert(ival    != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetintpar)(nlpi, problem, type, ival) );
+   SCIP_CALL( nlpi->nlpigetintpar(scip, nlpi, problem, type, ival) );
 
    return SCIP_OKAY;
 }
 
 /** sets integer parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetIntPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   int                   ival                /**< parameter value */
-   )
+SCIP_DECL_NLPISETINTPAR(SCIPnlpiSetIntPar)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisetintpar != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisetintpar)(nlpi, problem, type, ival) );
+   SCIP_CALL( nlpi->nlpisetintpar(scip, nlpi, problem, type, ival) );
 
    return SCIP_OKAY;
 }
 
 /** gets floating point parameter of NLP
- * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then gets solver-wide value for infinity */
-SCIP_RETCODE SCIPnlpiGetRealPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure, can be NULL only if type == SCIP_NLPPAR_INFINITY */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real*            dval                /**< pointer to store the parameter value */
-   )
+ * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then gets solver-wide value for infinity
+ */
+SCIP_DECL_NLPIGETREALPAR(SCIPnlpiGetRealPar)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetrealpar != NULL);
    assert(problem != NULL || type == SCIP_NLPPAR_INFINITY);
    assert(dval    != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetrealpar)(nlpi, problem, type, dval) );
+   SCIP_CALL( nlpi->nlpigetrealpar(scip, nlpi, problem, type, dval) );
 
    return SCIP_OKAY;
 }
 
 /** sets floating point parameter of NLP
- * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then sets solver-wide value for infinity */
-SCIP_RETCODE SCIPnlpiSetRealPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure, can be NULL only if type == SCIP_NLPPAR_INFINITY */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   SCIP_Real             dval                /**< parameter value */
-   )
+ * if problem is NULL and type == SCIP_NLPPAR_INFINITY, then sets solver-wide value for infinity
+ */
+SCIP_DECL_NLPISETREALPAR(SCIPnlpiSetRealPar)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisetrealpar != NULL);
    assert(problem != NULL || type == SCIP_NLPPAR_INFINITY);
 
-   SCIP_CALL( (*nlpi->nlpisetrealpar)(nlpi, problem, type, dval) );
+   SCIP_CALL( nlpi->nlpisetrealpar(scip, nlpi, problem, type, dval) );
 
    return SCIP_OKAY;
 }
 
 /** gets string parameter of NLP */
-SCIP_RETCODE SCIPnlpiGetStringPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char**          sval                /**< pointer to store the parameter value, the user must not modify the string */
-   )
+SCIP_DECL_NLPIGETSTRINGPAR(SCIPnlpiGetStringPar)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpigetstringpar != NULL);
    assert(problem != NULL);
    assert(sval    != NULL);
 
-   SCIP_CALL( (*nlpi->nlpigetstringpar)(nlpi, problem, type, sval) );
+   SCIP_CALL( nlpi->nlpigetstringpar(scip, nlpi, problem, type, sval) );
 
    return SCIP_OKAY;
 }
 
 /** sets string parameter of NLP */
-SCIP_RETCODE SCIPnlpiSetStringPar(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_NLPPARAM         type,               /**< parameter number */
-   const char*           sval                /**< parameter value */
-   )
+SCIP_DECL_NLPISETSTRINGPAR(SCIPnlpiSetStringPar)
 {
    assert(nlpi    != NULL);
+   assert(nlpi->nlpisetstringpar != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpisetstringpar)(nlpi, problem, type, sval) );
+   SCIP_CALL( nlpi->nlpisetstringpar(scip, nlpi, problem, type, sval) );
 
    return SCIP_OKAY;
 }
 /**@} */
-
-/** sets message handler for message output */
-SCIP_RETCODE SCIPnlpiSetMessageHdlr(
-   SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< pointer to message handler, or NULL to suppress all output */
-   )
-{
-   assert(nlpi != NULL);
-
-   SCIP_CALL( (*nlpi->nlpisetmessagehdlr)(nlpi, messagehdlr) );
-
-   return SCIP_OKAY;
-}
 
 /** gets data of an NLPI */
 SCIP_NLPIDATA* SCIPnlpiGetData(

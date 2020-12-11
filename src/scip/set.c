@@ -1049,7 +1049,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       {
          SCIP_NLPI* nlpicopy;
 
-         SCIP_CALL_FINALLY( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(&nlpicopy) );
+         SCIP_CALL_FINALLY( SCIPnlpiCopy(targetset->scip, sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(targetset->scip, &nlpicopy) );
          SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
       }
    }
@@ -2844,7 +2844,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free NLPIs */
    for( i = 0; i < (*set)->nnlpis; ++i )
    {
-      SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
+      SCIP_CALL( SCIPnlpiFree((*set)->scip, &(*set)->nlpis[i]) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 

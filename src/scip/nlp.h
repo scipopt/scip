@@ -494,6 +494,7 @@ SCIP_RETCODE SCIPnlpRemoveRedundantNlRows(
  *  array initguess must be NULL or have length at least SCIPnlpGetNVars()
  */
 SCIP_RETCODE SCIPnlpSetInitialGuess(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_Real*            initguess           /**< new initial guess, or NULL to clear previous one */
@@ -540,6 +541,7 @@ SCIP_RETCODE SCIPnlpChgVarObjDive(
 
 /** changes bounds of variable in diving NLP */
 SCIP_RETCODE SCIPnlpChgVarBoundsDive(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< current NLP data */
    SCIP_VAR*             var,                /**< variable which bounds to change */
    SCIP_Real             lb,                 /**< new lower bound of variable */
@@ -650,6 +652,7 @@ SCIP_NLPTERMSTAT SCIPnlpGetTermstat(
 
 /** gives statistics (number of iterations, solving time, ...) of last NLP solve */
 SCIP_RETCODE SCIPnlpGetStatistics(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPSTATISTICS*   statistics          /**< pointer to store statistics */
    );
@@ -662,6 +665,7 @@ SCIP_Bool SCIPnlpHasSolution(
 
 /** gets integer parameter of NLP */
 SCIP_RETCODE SCIPnlpGetIntPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int*                  ival                /**< pointer to store the parameter value */
@@ -669,6 +673,7 @@ SCIP_RETCODE SCIPnlpGetIntPar(
 
 /** sets integer parameter of NLP */
 SCIP_RETCODE SCIPnlpSetIntPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    int                   ival                /**< parameter value */
@@ -676,6 +681,7 @@ SCIP_RETCODE SCIPnlpSetIntPar(
 
 /** gets floating point parameter of NLP */
 SCIP_RETCODE SCIPnlpGetRealPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real*            dval                /**< pointer to store the parameter value */
@@ -683,6 +689,7 @@ SCIP_RETCODE SCIPnlpGetRealPar(
 
 /** sets floating point parameter of NLP */
 SCIP_RETCODE SCIPnlpSetRealPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
@@ -690,6 +697,7 @@ SCIP_RETCODE SCIPnlpSetRealPar(
 
 /** gets string parameter of NLP */
 SCIP_RETCODE SCIPnlpGetStringPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char**          sval                /**< pointer to store the parameter value */
@@ -697,6 +705,7 @@ SCIP_RETCODE SCIPnlpGetStringPar(
 
 /** sets string parameter of NLP */
 SCIP_RETCODE SCIPnlpSetStringPar(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NLP*             nlp,                /**< pointer to NLP datastructure */
    SCIP_NLPPARAM         type,               /**< parameter number */
    const char*           sval                /**< parameter value */

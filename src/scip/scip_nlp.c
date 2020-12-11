@@ -96,9 +96,6 @@ SCIP_RETCODE SCIPincludeNlpi(
          NULL, FALSE, SCIPnlpiGetPriority(nlpi), INT_MIN/4, INT_MAX/4,
          paramChgdNlpiPriority, (SCIP_PARAMDATA*)nlpi) ); /*lint !e740*/
 
-   /* pass message handler (may be NULL) */
-   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, scip->messagehdlr) );
-
    return SCIP_OKAY;
 }
 
@@ -549,7 +546,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuess(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), initialguess) );
+   SCIP_CALL( SCIPnlpSetInitialGuess(scip->set, scip->nlp, SCIPblkmem(scip), initialguess) );
 
    return SCIP_OKAY;
 }
@@ -580,7 +577,7 @@ SCIP_RETCODE SCIPsetNLPInitialGuessSol(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPnlpGetNVars(scip->nlp)) );
    SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPnlpGetNVars(scip->nlp), SCIPnlpGetVars(scip->nlp), vals) );
-   SCIP_CALL( SCIPnlpSetInitialGuess(scip->nlp, SCIPblkmem(scip), vals) );
+   SCIP_CALL( SCIPnlpSetInitialGuess(scip->set, scip->nlp, SCIPblkmem(scip), vals) );
    SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
@@ -678,7 +675,7 @@ SCIP_RETCODE SCIPgetNLPStatistics(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetStatistics(scip->nlp, statistics) );
+   SCIP_CALL( SCIPnlpGetStatistics(scip->set, scip->nlp, statistics) );
 
    return SCIP_OKAY;
 }
@@ -783,7 +780,7 @@ SCIP_RETCODE SCIPgetNLPIntPar(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetIntPar(scip->nlp, type, ival) );
+   SCIP_CALL( SCIPnlpGetIntPar(scip->set, scip->nlp, type, ival) );
 
    return SCIP_OKAY;
 }
@@ -811,7 +808,7 @@ SCIP_RETCODE SCIPsetNLPIntPar(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSetIntPar(scip->nlp, type, ival) );
+   SCIP_CALL( SCIPnlpSetIntPar(scip->set, scip->nlp, type, ival) );
 
    return SCIP_OKAY;
 }
@@ -839,7 +836,7 @@ SCIP_RETCODE SCIPgetNLPRealPar(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetRealPar(scip->nlp, type, dval) );
+   SCIP_CALL( SCIPnlpGetRealPar(scip->set, scip->nlp, type, dval) );
 
    return SCIP_OKAY;
 }
@@ -867,7 +864,7 @@ SCIP_RETCODE SCIPsetNLPRealPar(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSetRealPar(scip->nlp, type, dval) );
+   SCIP_CALL( SCIPnlpSetRealPar(scip->set, scip->nlp, type, dval) );
 
    return SCIP_OKAY;
 }
@@ -895,7 +892,7 @@ SCIP_RETCODE SCIPgetNLPStringPar(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpGetStringPar(scip->nlp, type, sval) );
+   SCIP_CALL( SCIPnlpGetStringPar(scip->set, scip->nlp, type, sval) );
 
    return SCIP_OKAY;
 }
@@ -923,7 +920,7 @@ SCIP_RETCODE SCIPsetNLPStringPar(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpSetStringPar(scip->nlp, type, sval) );
+   SCIP_CALL( SCIPnlpSetStringPar(scip->set, scip->nlp, type, sval) );
 
    return SCIP_OKAY;
 }
@@ -1115,7 +1112,7 @@ SCIP_RETCODE SCIPchgVarBoundsDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpChgVarBoundsDive(scip->nlp, var, lb, ub) );
+   SCIP_CALL( SCIPnlpChgVarBoundsDive(scip->set, scip->nlp, var, lb, ub) );
 
    return SCIP_OKAY;
 }

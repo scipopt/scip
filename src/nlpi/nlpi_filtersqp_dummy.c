@@ -26,7 +26,7 @@
 
 /** create solver interface for filterSQP solver */ /*lint -e715*/
 SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    )
 {

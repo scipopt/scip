@@ -42,9 +42,7 @@
 struct SCIP_NlpiData
 {
    SCIP_NLPI**           nlpis;              /**< array containing all nlpis */
-   BMS_BLKMEM*           blkmem;             /**< block memory */
    int                   nnlpis;             /**< total number of nlpis */
-   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler */
 };
 
 struct SCIP_NlpiProblem
@@ -1173,7 +1171,7 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrAll )
 
 /** create solver interface for All solver */
 SCIP_RETCODE SCIPcreateNlpSolverAll(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
    SCIP_NLPI**           nlpis,              /**< array containing existing nlpis */
    int                   nnlpis              /**< total number of nlpis */
@@ -1182,7 +1180,7 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
    SCIP_NLPIDATA* nlpidata;
    int i;
 
-   assert(blkmem != NULL);
+   assert(scip != NULL);
    assert(nlpi != NULL);
    assert(nlpis != NULL || nnlpis == 0);
 
@@ -1195,16 +1193,15 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
    assert(nlpis != NULL);
 
    /* create all solver interface data */
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
    BMSclearMemory(nlpidata);
-   nlpidata->blkmem = blkmem;
 
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &nlpidata->nlpis, nnlpis) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlpidata->nlpis, nnlpis) );
 
    /* copy nlpis */
    for( i = 0; i < nnlpis; ++i )
    {
-      SCIP_CALL( SCIPnlpiCopy(blkmem, nlpis[i], &nlpidata->nlpis[i]) );
+      SCIP_CALL( SCIPnlpiCopy(scip, nlpis[i], &nlpidata->nlpis[i]) );
    }
    nlpidata->nnlpis = nnlpis;
 
@@ -1215,12 +1212,11 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
          nlpiCreateProblemAll, nlpiFreeProblemAll, nlpiGetProblemPointerAll,
          nlpiAddVarsAll, nlpiAddConstraintsAll, nlpiSetObjectiveAll,
          nlpiChgVarBoundsAll, nlpiChgConsSidesAll, nlpiDelVarSetAll, nlpiDelConstraintSetAll,
-         nlpiChgLinearCoefsAll, nlpiChgQuadraticCoefsAll, nlpiChgExprtreeAll, nlpiChgNonlinCoefAll,
+         nlpiChgLinearCoefsAll, nlpiChgExprAll,
          nlpiChgObjConstantAll, nlpiSetInitialGuessAll, nlpiSolveAll, nlpiGetSolstatAll, nlpiGetTermstatAll,
          nlpiGetSolutionAll, nlpiGetStatisticsAll,
          nlpiGetWarmstartSizeAll, nlpiGetWarmstartMemoAll, nlpiSetWarmstartMemoAll,
          nlpiGetIntParAll, nlpiSetIntParAll, nlpiGetRealParAll, nlpiSetRealParAll, nlpiGetStringParAll, nlpiSetStringParAll,
-         nlpiSetMessageHdlrAll,
          nlpidata) );
 
    return SCIP_OKAY;

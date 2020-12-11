@@ -23,7 +23,7 @@
 
 /** create solver interface for Worhp solver */ /*lint -e715*/
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
