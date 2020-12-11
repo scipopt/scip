@@ -2386,7 +2386,7 @@ SCIP_RETCODE SCIPpresolve(
 {
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
-   SCIP_Bool solved;
+   SCIP_Bool vanished;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpresolve", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -2413,10 +2413,10 @@ SCIP_RETCODE SCIPpresolve(
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
       /* presolve problem */
-      SCIP_CALL( presolve(scip, &unbounded, &infeasible, &solved) );
+      SCIP_CALL( presolve(scip, &unbounded, &infeasible, &vanished) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-      if( infeasible || unbounded || solved )
+      if( infeasible || unbounded || vanished )
       {
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
