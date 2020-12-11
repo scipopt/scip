@@ -2365,25 +2365,23 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrWorhp )
  * NLP solver interface specific interface methods
  */
 
-/** create solver interface for Worhp solver */
-SCIP_RETCODE SCIPcreateNlpSolverWorhp(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
+/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
+SCIP_RETCODE SCIPincludeNlpSolverWorhp(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
 {
+   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
    char name[SCIP_MAXSTRLEN];
    int priority;
 
-   assert(blkmem != NULL);
    assert(nlpi   != NULL);
 
    /* create Worhp solver interface data */
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
-   BMSclearMemory(nlpidata);
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlpidata) );
 
-   nlpidata->blkmem = blkmem;
+   nlpidata->blkmem = SCIPblkmem(scip);
    nlpidata->useip = useip;
 
    /* initialize parameter */
@@ -2412,19 +2410,24 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
       priority = NLPI_PRIORITY_SQP;
    }
 
-   SCIP_CALL( SCIPnlpiCreate(nlpi,
+   SCIP_CALL( SCIPnlpiCreate(&nlpi,
          name, NLPI_DESC, priority,
          nlpiCopyWorhp, nlpiFreeWorhp, nlpiGetSolverPointerWorhp,
          nlpiCreateProblemWorhp, nlpiFreeProblemWorhp, nlpiGetProblemPointerWorhp,
          nlpiAddVarsWorhp, nlpiAddConstraintsWorhp, nlpiSetObjectiveWorhp,
          nlpiChgVarBoundsWorhp, nlpiChgConsSidesWorhp, nlpiDelVarSetWorhp, nlpiDelConstraintSetWorhp,
-         nlpiChgLinearCoefsWorhp, nlpiChgQuadraticCoefsWorhp, nlpiChgExprtreeWorhp, nlpiChgNonlinCoefWorhp,
+         nlpiChgLinearCoefsWorhp, nlpiChgExprWorhp,
          nlpiChgObjConstantWorhp, nlpiSetInitialGuessWorhp, nlpiSolveWorhp, nlpiGetSolstatWorhp, nlpiGetTermstatWorhp,
          nlpiGetSolutionWorhp, nlpiGetStatisticsWorhp,
          nlpiGetWarmstartSizeWorhp, nlpiGetWarmstartMemoWorhp, nlpiSetWarmstartMemoWorhp,
          nlpiGetIntParWorhp, nlpiSetIntParWorhp, nlpiGetRealParWorhp, nlpiSetRealParWorhp, nlpiGetStringParWorhp, nlpiSetStringParWorhp,
-         nlpiSetMessageHdlrWorhp,
          nlpidata) );
+   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+
+   if( useip )  /* TODO lookup whether Worhp info has already been included instead of assuming that worhp-up will be included */
+   {
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
+   }
 
    return SCIP_OKAY;
 }

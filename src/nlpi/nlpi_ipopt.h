@@ -36,13 +36,10 @@ extern "C" {
  * @{
  */
 
-/** create solver interface for Ipopt solver
- * sets *nlpi to NULL if Ipopt is not available
- */
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateNlpSolverIpopt(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+SCIP_RETCODE SCIPincludeNlpSolverIpopt(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets string that identifies Ipopt (version number) */

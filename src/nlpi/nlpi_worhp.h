@@ -36,11 +36,10 @@ extern "C" {
  * @{
  */
 
-/** create solver interface for Worhp solver */
+/** create solver interface for Worhp solver and includes it into SCIP, if Worhp is available */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateNlpSolverWorhp(
+SCIP_RETCODE SCIPincludeNlpSolverWorhp(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
    SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    );
 

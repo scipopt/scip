@@ -2850,39 +2850,38 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrFilterSQP )
  * NLP solver interface specific interface methods
  */
 
-/** create solver interface for FilterSQP solver */
-SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+/** create solver interface for filterSQP solver and include it into SCIP, if filterSQP is available */
+SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
 
-   assert(blkmem != NULL);
-   assert(nlpi   != NULL);
-
    /* create filterSQP solver interface data */
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &nlpidata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
 
-   nlpidata->blkmem = blkmem;
+   nlpidata->blkmem = SCIPblkmem(scip);
    nlpidata->messagehdlr = NULL;
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
    nlpidata->randnumgen = NULL;
 
    /* create solver interface */
-   SCIP_CALL( SCIPnlpiCreate(nlpi,
+   SCIP_CALL( SCIPnlpiCreate(&nlpi,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
          nlpiCopyFilterSQP, nlpiFreeFilterSQP, nlpiGetSolverPointerFilterSQP,
          nlpiCreateProblemFilterSQP, nlpiFreeProblemFilterSQP, nlpiGetProblemPointerFilterSQP,
          nlpiAddVarsFilterSQP, nlpiAddConstraintsFilterSQP, nlpiSetObjectiveFilterSQP,
          nlpiChgVarBoundsFilterSQP, nlpiChgConsSidesFilterSQP, nlpiDelVarSetFilterSQP, nlpiDelConstraintSetFilterSQP,
-         nlpiChgLinearCoefsFilterSQP, nlpiChgQuadraticCoefsFilterSQP, nlpiChgExprtreeFilterSQP, nlpiChgNonlinCoefFilterSQP,
+         nlpiChgLinearCoefsFilterSQP, nlpiChgExprFilterSQP,
          nlpiChgObjConstantFilterSQP, nlpiSetInitialGuessFilterSQP, nlpiSolveFilterSQP, nlpiGetSolstatFilterSQP, nlpiGetTermstatFilterSQP,
          nlpiGetSolutionFilterSQP, nlpiGetStatisticsFilterSQP,
          nlpiGetWarmstartSizeFilterSQP, nlpiGetWarmstartMemoFilterSQP, nlpiSetWarmstartMemoFilterSQP,
          nlpiGetIntParFilterSQP, nlpiSetIntParFilterSQP, nlpiGetRealParFilterSQP, nlpiSetRealParFilterSQP, nlpiGetStringParFilterSQP, nlpiSetStringParFilterSQP,
-         nlpiSetMessageHdlrFilterSQP,
          nlpidata) );
+   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
 
    return SCIP_OKAY;
 }

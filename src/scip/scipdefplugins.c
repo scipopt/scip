@@ -29,8 +29,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NLPI* nlpi;
-
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
@@ -238,39 +236,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlhdlrConvex(scip) );
    SCIP_CALL( SCIPincludeNlhdlrConcave(scip) );
    SCIP_CALL( SCIPincludeNlhdlrBilinear(scip) );
-
-   /* include NLPI's, if available */
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(scip, &nlpi) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
-   }
-   SCIP_CALL( SCIPcreateNlpSolverFilterSQP(scip, &nlpi) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
-   }
-
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(scip, &nlpi, TRUE) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
-   }
-
-   SCIP_CALL( SCIPcreateNlpSolverWorhp(scip, &nlpi, FALSE) );
-   if( nlpi != NULL )
-   {
-      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-   }
-
-//   SCIP_CALL( SCIPcreateNlpSolverAll(SCIPblkmem(scip), &nlpi, SCIPgetNlpis(scip), SCIPgetNNlpis(scip)) );
-//   if( nlpi != NULL )
-//   {
-//      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
-//   }
+   SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
+   SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
+   SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
+//   SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
 
 #ifdef TPI_TNYC
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );

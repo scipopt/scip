@@ -2041,32 +2041,34 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrIpopt )
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
-/** create solver interface for Ipopt solver */
-SCIP_RETCODE SCIPcreateNlpSolverIpopt(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+/** create solver interface for Ipopt solver and includes it into SCIP, if Ipopt is available */
+SCIP_RETCODE SCIPincludeNlpSolverIpopt(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
 
-   assert(blkmem != NULL);
-   assert(nlpi   != NULL);
+   assert(scip != NULL);
 
-   SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA(blkmem) );
+   SCIP_ALLOC( nlpidata = new SCIP_NLPIDATA(SCIPblkmem(scip)) );
 
-   SCIP_CALL( SCIPnlpiCreate(nlpi,
+   SCIP_CALL( SCIPnlpiCreate(&nlpi,
          NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
          nlpiCopyIpopt, nlpiFreeIpopt, nlpiGetSolverPointerIpopt,
          nlpiCreateProblemIpopt, nlpiFreeProblemIpopt, nlpiGetProblemPointerIpopt,
          nlpiAddVarsIpopt, nlpiAddConstraintsIpopt, nlpiSetObjectiveIpopt,
          nlpiChgVarBoundsIpopt, nlpiChgConsSidesIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
-         nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt, nlpiChgExprtreeIpopt, nlpiChgNonlinCoefIpopt,
+         nlpiChgLinearCoefsIpopt, nlpiChgExprIpopt,
          nlpiChgObjConstantIpopt, nlpiSetInitialGuessIpopt, nlpiSolveIpopt, nlpiGetSolstatIpopt, nlpiGetTermstatIpopt,
          nlpiGetSolutionIpopt, nlpiGetStatisticsIpopt,
          nlpiGetWarmstartSizeIpopt, nlpiGetWarmstartMemoIpopt, nlpiSetWarmstartMemoIpopt,
          nlpiGetIntParIpopt, nlpiSetIntParIpopt, nlpiGetRealParIpopt, nlpiSetRealParIpopt,
-         nlpiGetStringParIpopt, nlpiSetStringParIpopt, nlpiSetMessageHdlrIpopt,
+         nlpiGetStringParIpopt, nlpiSetStringParIpopt,
          nlpidata) );
+   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
 
    return SCIP_OKAY;
 }

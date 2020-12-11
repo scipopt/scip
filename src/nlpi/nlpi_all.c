@@ -1169,41 +1169,35 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrAll )
  * NLP solver interface specific interface methods
  */
 
-/** create solver interface for All solver */
-SCIP_RETCODE SCIPcreateNlpSolverAll(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
-   SCIP_NLPI**           nlpis,              /**< array containing existing nlpis */
-   int                   nnlpis              /**< total number of nlpis */
+/** create solver interface for All solver and includes it into SCIP, if at least 2 NLPIs have already been included
+ *
+ * this should be called after all other NLP solver interfaces have been included
+ */
+SCIP_RETCODE SCIPincludeNlpSolverAll(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_NLPI* nlpi;
    SCIP_NLPIDATA* nlpidata;
    int i;
 
    assert(scip != NULL);
-   assert(nlpi != NULL);
-   assert(nlpis != NULL || nnlpis == 0);
 
-   /* the number of nlpis must be >= 2 */
-   if( nnlpis < 2 )
-   {
-      *nlpi = NULL;
+   /* the number of NLPIs so far must be >= 2 */
+   if( SCIPgetNNlpis(scip) < 2 )
       return SCIP_OKAY;
-   }
-   assert(nlpis != NULL);
 
    /* create all solver interface data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
-   BMSclearMemory(nlpidata);
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlpidata) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlpidata->nlpis, nnlpis) );
+   nlpidata->nnlpis = SCIPgetNNlpis(scip);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlpidata->nlpis, nlpidata->nnlpis) );
 
-   /* copy nlpis */
-   for( i = 0; i < nnlpis; ++i )
+   /* copy nlpis TODO why???? */
+   for( i = 0; i < nlpidata->nnlpis; ++i )
    {
-      SCIP_CALL( SCIPnlpiCopy(scip, nlpis[i], &nlpidata->nlpis[i]) );
+      SCIP_CALL( SCIPnlpiCopy(scip, nlpidata->nnlpis[i], &nlpidata->nlpis[i]) );
    }
-   nlpidata->nnlpis = nnlpis;
 
    /* create solver interface */
    SCIP_CALL( SCIPnlpiCreate(nlpi,
@@ -1218,6 +1212,7 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
          nlpiGetWarmstartSizeAll, nlpiGetWarmstartMemoAll, nlpiSetWarmstartMemoAll,
          nlpiGetIntParAll, nlpiSetIntParAll, nlpiGetRealParAll, nlpiSetRealParAll, nlpiGetStringParAll, nlpiSetStringParAll,
          nlpidata) );
+   SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
 
    return SCIP_OKAY;
 }

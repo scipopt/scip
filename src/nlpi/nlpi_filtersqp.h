@@ -30,19 +30,22 @@
 extern "C" {
 #endif
 
-/** create solver interface for filterSQP solver */
-SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+/** create solver interface for filterSQP solver and include it into SCIP, if filterSQP is available */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeNlpSolverFilterSQP(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets string that identifies filterSQP */
+SCIP_EXPORT
 const char* SCIPgetSolverNameFilterSQP(void);
 
 /** gets string that describes filterSQP */
+SCIP_EXPORT
 const char* SCIPgetSolverDescFilterSQP(void);
 
 /** returns whether filterSQP is available, i.e., whether it has been linked in */
+SCIP_EXPORT
 SCIP_Bool SCIPisFilterSQPAvailableFilterSQP(void);
 
 #ifdef __cplusplus
