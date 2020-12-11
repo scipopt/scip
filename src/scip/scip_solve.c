@@ -1249,7 +1249,7 @@ SCIP_RETCODE presolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            unbounded,          /**< pointer to store whether presolving detected unboundedness */
    SCIP_Bool*            infeasible,         /**< pointer to store whether presolving detected infeasibility */
-   SCIP_Bool*            solved              /**< pointer to store whether the problem was solved in presolving */
+   SCIP_Bool*            vanished            /**< pointer to store whether the problem vanished in presolving */
    )
 {
    SCIP_PRESOLTIMING presoltiming;
@@ -1275,7 +1275,7 @@ SCIP_RETCODE presolve(
    assert(infeasible != NULL);
 
    *unbounded = FALSE;
-   *solved = FALSE;
+   *vanished = FALSE;
 
    /* GCG wants to perform presolving during the reading process of a file reader;
     * hence the number of used buffers does not need to be zero, however, it should
@@ -1441,11 +1441,11 @@ SCIP_RETCODE presolve(
       SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
       scip->stat->status = SCIP_STATUS_OPTIMAL;
 
-      *solved = TRUE;
+      *vanished = TRUE;
    }
 
    /* deinitialize presolving */
-   if( finished && (!stopped || *unbounded || *infeasible) )
+   if( finished && (!stopped || *unbounded || *infeasible || *vanished) )
    {
       SCIP_Real maxnonzeros;
       SCIP_Longint nchecknonzeros;
@@ -1454,13 +1454,13 @@ SCIP_RETCODE presolve(
       SCIP_Bool approxactivenonzeros;
       SCIP_Bool infeas;
 
-      SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, &infeas) );
+      SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible || *vanished, &infeas) );
       *infeasible = *infeasible || infeas;
 
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       /* resort variables if we are not already done */
-      if( !(*infeasible) && !(*unbounded) )
+      if( !(*infeasible) && !(*unbounded) && !(*vanished) )
       {
          /* (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after
           * presolve with respect to their original index (within their categories). Adjust the problem index afterwards
