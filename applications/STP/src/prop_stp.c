@@ -65,8 +65,8 @@
  */
 
 #define DEFAULT_MAXNWAITINGROUNDS        2     /**< maximum number of rounds to wait until propagating again */
-#define REDUCTION_WAIT_RATIO             0.02  /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
-
+#define REDUCTION_WAIT_RATIO_INITIAL             0.01  /**< ratio of edges to be newly fixed before performing reductions for additional fixing */
+#define REDUCTION_WAIT_FACTOR                     2.0
 /**@} */
 
 /*
@@ -91,6 +91,7 @@ struct SCIP_PropData
    SCIP_Longint          propgraphnodenumber;/**< B&B node number at which propgraph was updated */
    SCIP_Real             lpobjval;           /**< value of current LP */
    SCIP_Real             lpobjval_last;      /**< value of last LP */
+   SCIP_Real             redwaitratio;       /**< ratio */
    int                   redcostnupdates;    /**< number of reduced costs updates */
    int                   nfixededges_bicurr; /**< number of arcs fixed by 'fixedgevar' method of this propagator in current run */
    int                   nfixededges_curr;   /**< number of arcs fixed by 'fixedgevar' method of this propagator in current run */
@@ -1437,6 +1438,18 @@ SCIP_RETCODE fixVarsDualcostLurking(
          deg2bounded[i] = TRUE;
    }
 
+#ifdef SCIP_DEBUG
+   {
+      int d2bounded = 0;
+      for( int i = 0; i < nnodes; i++ )
+         if( deg2bounded[i] )
+            d2bounded++;
+
+      printf("deg2bounded=%d \n", d2bounded);
+
+   }
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -1562,7 +1575,7 @@ SCIP_RETCODE fixVarsExtendedRed(
    const int nedges = propgraph->edges;
    const SCIP_Bool isPcMw = graph_pc_isPcMw(propgraph);
 #ifdef USE_EXTRED_FULL
-   const SCIP_Real cutoffbound = getCutoffbound(scip);
+   const SCIP_Real cutoffbound = getCutoffbound(scip, propdata->lpobjval);
 #endif
 
    assert(redcostdata);
@@ -1710,6 +1723,56 @@ SCIP_RETCODE fixVarsRedbased(
    }
    else
    {
+
+#ifdef SCIP_DISABLED
+      {
+      DISTDATA* distdata;
+      EXTPERMA* extpermanent;
+      REDCOST* redcostdata = propdata->redcostdata;
+      const SCIP_Real cutoffbound = getCutoffbound(scip, propdata->lpobjval);
+
+      int ndeleted;
+
+
+      for( int i = 0; i < redcosts_getNlevels(redcostdata); i++ )
+      {
+         redcosts_setCutoffFromBound(cutoffbound, i, redcostdata);
+
+//         redcosts_increaseOnDeletedArcs(propgraph, arcdeleted, i, redcostdata);
+
+         redcosts_unifyBlockedEdgeCosts(propgraph, i, redcostdata);
+
+         SCIP_CALL( redcosts_initializeDistances(scip, i, propgraph, redcostdata) );
+
+         SCIPdebugMessage("cutoff for level %d: %f \n", i, redcosts_getCutoff(redcostdata, i));
+      }
+
+      SCIP_CALL( graph_init_dcsr(scip, propgraph) );
+      SCIP_CALL( extreduce_distDataInit(scip, propgraph, 40, TRUE, FALSE, &distdata) );
+      SCIP_CALL( extreduce_extPermaInit(scip, extred_fast, propgraph, NULL, &extpermanent) );
+
+      assert(!extpermanent->distdata_default);
+
+      extpermanent->distdata_default = distdata;
+      extpermanent->redcostdata = propdata->redcostdata;
+      extpermanent->redcostEqualAllow = FALSE;
+
+      SCIP_CALL( extreduce_pseudoDeleteNodes(scip, propdata->deg2bounded, extpermanent, propgraph, NULL, &ndeleted) );
+
+      /* clean up */
+      extreduce_distDataFree(scip, propgraph, &distdata);
+
+      if( extpermanent->distdata_biased )
+         extreduce_distDataFree(scip, propgraph, &(extpermanent->distdata_biased));
+
+      extreduce_extPermaFree(scip, &extpermanent);
+
+      printf("ndeleted=%d \n", ndeleted);
+
+     graph_free_dcsr(scip, propgraph);
+      }
+#endif
+
       REDSOL* redsol;
       SCIP_CALL( reduce_solInit(scip, propgraph, &redsol) );
 
@@ -1718,6 +1781,8 @@ SCIP_RETCODE fixVarsRedbased(
       assert(graph_typeIsSpgLike(propgraph));
       SCIP_CALL( reduce_unconnected(scip, propgraph) );
       SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, FALSE, FALSE) );
+
+    //  SCIP_CALL( reduceStp(scip, propgraph, redsol, 2, FALSE, TRUE, FALSE) );
 
       reduce_solFree(scip, &redsol);
    }
@@ -1783,13 +1848,18 @@ SCIP_Bool fixVarsRedbasedIsPromising(
       /* at root (== 0 is necessary, could be -1) */
       else if( SCIPgetDepth(scip) == 0 )
       {
-         const SCIP_Real redratio = ((SCIP_Real) propdata->nfixededges_bipost ) / (graph->edges);
+         const SCIP_Real redratio = (2.0 * (SCIP_Real) propdata->nfixededges_bipost) / ((SCIP_Real) graph->edges);
+
+         assert(GE(propdata->redwaitratio, REDUCTION_WAIT_RATIO_INITIAL));
 
          if( useRedcostdata(graph) )
             updateRedcostdata(scip, graph, vars, propdata);
 
-         if( SCIPisGT(scip, redratio, REDUCTION_WAIT_RATIO) || propdata->redcostnupdates == PROP_STP_REDCOST_LEVELS )
+         if( SCIPisGT(scip, redratio, propdata->redwaitratio) || propdata->redcostnupdates == PROP_STP_REDCOST_LEVELS )
+         {
             callreduce = TRUE;
+            propdata->redwaitratio *= REDUCTION_WAIT_FACTOR;
+         }
       }
 
 #ifdef WITH_UG
@@ -2032,6 +2102,7 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata->nlastnlpiter = 0;
    propdata->lastnodenumber = -1;
    propdata->nfixededges_all = 0;
+   propdata->redwaitratio = REDUCTION_WAIT_RATIO_INITIAL;
    propdata->nfixededges_curr = 0;
    propdata->nfixededges_bicurr = 0;
    propdata->nfixededges_bipost = 0;
