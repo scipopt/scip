@@ -28,6 +28,7 @@
 //#define SCIP_DEBUG
 
 #include "solpool.h"
+#include "probdata_stp.h"
 
 
 /** is given solution in pool? */
@@ -142,6 +143,39 @@ void solpool_free(
 
    SCIPfreeMemoryArray(scip, &(dpool->sols));
    SCIPfreeBlockMemory(scip, pool);
+}
+
+
+/** tries to add sol to SCIP */
+SCIP_RETCODE solpool_addSolToScip(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure or NULL */
+   const GRAPH*          g,
+   const int*            result,             /**< edge array of solution to be added */
+   SCIP_Bool*            success             /**< has solution been added? */
+   )
+{
+   const int nedges = graph_get_nEdges(g);
+   const int nvars = SCIPprobdataGetNVars(scip);
+   SCIP_Real* nval;
+   SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
+
+   assert(result && success);
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( result[e] == CONNECT )
+         nval[e] = 1.0;
+      else
+         nval[e] = 0.0;
+   }
+
+   SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, success) );
+   SCIPdebugMessage("Ascend-and-prune added solution \n");
+
+   SCIPfreeBufferArray(scip, &nval);
+
+   return SCIP_OKAY;
 }
 
 

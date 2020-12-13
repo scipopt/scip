@@ -32,6 +32,7 @@
 #include "misc_stp.h"
 #include "graphdefs.h"
 #include "redcosts.h"
+#include "reducedefs.h"
 #include "portab.h"
 
 
@@ -179,7 +180,7 @@ extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern SCIP_RETCODE   graph_copy(SCIP*, const GRAPH*, GRAPH**);
 extern SCIP_RETCODE   graph_copyPseudoAncestors(SCIP*, const GRAPH*, GRAPH*);
 extern SCIP_RETCODE   graph_copyData(SCIP*, const GRAPH*, GRAPH*);
-extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Real*, SCIP_Bool);
+extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, REDSOL*, SCIP_Bool);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_RETCODE   graph_initHistory(SCIP*, GRAPH*);
 extern SCIP_Bool      graph_isMarked(const GRAPH*);

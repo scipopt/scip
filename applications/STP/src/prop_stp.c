@@ -1774,7 +1774,7 @@ SCIP_RETCODE fixVarsRedbased(
 #endif
 
       REDSOL* redsol;
-      SCIP_CALL( reduce_solInit(scip, propgraph, &redsol) );
+      SCIP_CALL( reduce_solInit(scip, propgraph, TRUE, &redsol) );
 
       // todo Call two times, and with node-replacing!
       // todo: before make all the node replacements from lurking bounds!
@@ -2061,7 +2061,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    if( probisinfeas )
    {
-      assert(SCIPgetDepth(scip) > 0);
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }

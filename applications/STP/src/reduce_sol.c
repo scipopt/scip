@@ -32,18 +32,24 @@
 #include <assert.h>
 #include "graph.h"
 #include "reduce.h"
+#include "heur_tm.h"
+#include "solstp.h"
 #include "scip/scip.h"
 #include "portab.h"
 #include "stpvector.h"
 
 
+#define REDSOLVAL_UNSET (-FARAWAY)
 
 struct reduction_local_solution_storage
 {
+   int*                  nodesol;
+   SCIP_Real             nodesol_ub;
    SCIP_Real             offset;             /**< offset NOTE: offset is only used within this structure! */
    SCIP_Real             primalbound;        /**< best sollocal bound */
-   int                   decomplevel;        /**< decomposition level */
+   int                   nnodes;
    SCIP_Bool             isPcMw;
+   SCIP_Bool             nodesol_use;
 };
 
 
@@ -51,11 +57,12 @@ struct reduction_local_solution_storage
 typedef struct reduction_solution_level
 {
    REDSOLLOCAL*          redsollocal;        /**< local storage */
-   SCIP_Bool*            solnodes;           /**< solution nodes marker */
-   SCIP_Bool*            solnodes_incomplete;/**< incomplete solution nodes marker (to be filled during decomposition) */
+   int*                  nodesol;            /**< solution nodes marker */
    SCIP_Real             solval_postred;     /**< value after reduction loop */
    SCIP_Real             solval_incomplete;  /**< incomplete value (to be summed up during decomposition ) */
    int                   nnodes;
+   SCIP_Real             nodesol_ub;
+   SCIP_Bool             nodesol_use;
 } REDSOLLEVEL;
 
 
@@ -64,6 +71,7 @@ struct reduction_solution_storage
    STP_Vectype(REDSOLLEVEL*) levels;          /**< levels */
    SCIP_Real             offset;              /**< offset  */
    SCIP_Bool             isPcMw;
+   SCIP_Bool             nodesol_use;
 };
 
 
@@ -71,6 +79,56 @@ struct reduction_solution_storage
 /*
  * Local methods
  */
+
+
+/** updates node solution */
+static
+SCIP_RETCODE nodesolUpdate(
+   SCIP*                scip,               /**< SCIP data structure */
+   GRAPH*               g,
+   SCIP_Real*           solval,             /**< FARAWAY if no valid solution build */
+   PATH*                solpath,
+   int*                 nodesol             /**< solution array to be filled */
+   )
+{
+   assert(graph_typeIsSpgLike(g));
+
+   /*
+         if( pcmw )
+         SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
+      else
+         SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode);
+
+    */
+
+   SCIPStpHeurTMBuildTree(scip, g, solpath, g->cost, solval, nodesol);
+
+   return SCIP_OKAY;
+}
+
+
+/** gets edge solution after nodesolUpdate call */
+static
+void nodesolGetEdgeSol(
+   const GRAPH*         graph,            /**< graph */
+   const PATH*          solpath,          /**< stores solution */
+   int*                 edgesol           /**< solution array to be filled */
+   )
+{
+   const int nnodes = graph_get_nNodes(graph);
+   const int nedges = graph_get_nEdges(graph);
+
+   for( int e = 0; e < nedges; e++ )
+      edgesol[e] = UNKNOWN;
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      const int e = solpath[k].edge;
+
+      if( e >= 0 )
+         edgesol[e] = CONNECT;
+   }
+}
 
 
 /** initializes */
@@ -89,13 +147,14 @@ SCIP_RETCODE redlevelInit(
    SCIP_CALL( SCIPallocMemory(scip, redlevel) );
    rl = *redlevel;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(rl->solnodes), nnodes) );
-
    rl->redsollocal = NULL;
-   rl->solnodes_incomplete = NULL;
-   rl->solval_postred = -FARAWAY;
+   rl->solval_postred = REDSOLVAL_UNSET;
    rl->solval_incomplete = 0.0;
    rl->nnodes = nnodes;
+   rl->nodesol_use = TRUE;
+   rl->nodesol_ub = REDSOLVAL_UNSET;
+   /* NOTE: will later be moved from sollocal*/
+   rl->nodesol = NULL;
 
    return SCIP_OKAY;
 }
@@ -118,8 +177,7 @@ void redlevelFree(
    if( rl->redsollocal )
       reduce_sollocalFree(scip, &(rl->redsollocal));
 
-   SCIPfreeMemoryArrayNull(scip, &(rl->solnodes_incomplete));
-   SCIPfreeMemoryArray(scip, &(rl->solnodes));
+   SCIPfreeMemoryArrayNull(scip, &(rl->nodesol));
 
    SCIPfreeMemory(scip, redlevel);
 }
@@ -135,7 +193,7 @@ void redlevelClean(
    assert(scip && redlevel);
    assert(!redlevel->redsollocal);
 
-   redlevel->solval_postred = -FARAWAY;
+   redlevel->solval_postred = REDSOLVAL_UNSET;
    redlevel->solval_incomplete = 0.0;
 }
 
@@ -149,15 +207,12 @@ SCIP_RETCODE redlevelInitIncomplete(
    )
 {
    assert(scip && redlevel);
-   assert(!redlevel->solnodes_incomplete);
    assert(redlevel->nnodes > 0);
    assert(EQ(redlevel->solval_incomplete, 0.0));
 
    redlevel->solval_incomplete = redsol->offset;
 
    SCIPdebugMessage("setting initial solval_incomplete=%f  \n", redsol->offset);
-
-   //SCIP_CALL( SCIPallocMemoryArray(scip, &(redlevel->solnodes_incomplete), redlevel->nnodes) );
 
    return SCIP_OKAY;
 }
@@ -178,8 +233,15 @@ SCIP_RETCODE redlevelAddLocal(
 
    SCIP_CALL( reduce_sollocalInit(scip, g, &(redlevel->redsollocal)) );
 
+   if( redlevel->nodesol_use )
+   {
+      SCIP_CALL( reduce_sollocalInitNodesol(scip, redlevel->redsollocal) );
+   }
+
    if( redsollocal_out )
+   {
       *redsollocal_out = redlevel->redsollocal;
+   }
 
    return SCIP_OKAY;
 }
@@ -236,7 +298,10 @@ SCIP_RETCODE reduce_sollocalInit(
 
    rp->offset = 0.0;
    rp->primalbound = FARAWAY;
-   rp->decomplevel = 0;
+   rp->nnodes = graph_get_nNodes(g);
+   rp->nodesol = NULL;
+   rp->nodesol_use = FALSE;
+   rp->nodesol_ub = REDSOLVAL_UNSET;
    rp->isPcMw = graph_pc_isPcMw(g);
 
    return SCIP_OKAY;
@@ -252,9 +317,37 @@ void reduce_sollocalFree(
    assert(scip && sollocal);
    assert(*sollocal);
 
-
+   SCIPfreeMemoryArrayNull(scip, &((*sollocal)->nodesol));
    SCIPfreeMemory(scip, sollocal);
 }
+
+
+/** initializes node solution */
+SCIP_RETCODE reduce_sollocalInitNodesol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   REDSOLLOCAL*          sollocal            /**< solution */
+   )
+{
+   int nnodes;
+   assert(sollocal);
+   assert(!sollocal->nodesol);
+   assert(sollocal->nnodes > 0);
+   assert(!sollocal->nodesol_use);
+
+   nnodes = sollocal->nnodes;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(sollocal->nodesol), nnodes) );
+   sollocal->nodesol_use = TRUE;
+   sollocal->nodesol_ub = REDSOLVAL_UNSET;
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      sollocal->nodesol[i] = UNKNOWN;
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** sets offset
  *  NOTE: offset is only used within this structure! */
@@ -272,6 +365,62 @@ void reduce_sollocalSetOffset(
    }
 
    sollocal->offset = offsetnew;
+}
+
+
+/** updates */
+SCIP_Bool reduce_sollocalUsesNodesol(
+   const REDSOLLOCAL*          sollocal      /**< sollocal */
+   )
+{
+   assert(sollocal);
+
+   return sollocal->nodesol_use;
+}
+
+
+/** updates */
+SCIP_RETCODE reduce_sollocalUpdateNodesol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const int*            edgesol,            /**< incoming solution */
+   GRAPH*                g,                  /**< graph data structure */
+   REDSOLLOCAL*          sollocal            /**< sollocal */
+   )
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && edgesol && sollocal);
+   assert(reduce_sollocalUsesNodesol(sollocal));
+   assert(nnodes == sollocal->nnodes);
+   assert(solstp_isValid(scip, g, edgesol));
+
+
+ //  printf("updating nodesol... \n");
+
+   {
+      PATH* solpath;
+      const SCIP_Real solval_new = solstp_getObj(g, edgesol, 0.0);
+      SCIP_Real solval_old = FARAWAY;
+
+      if( !EQ(sollocal->nodesol_ub, REDSOLVAL_UNSET) )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &solpath, nnodes) );
+         SCIP_CALL( nodesolUpdate(scip, g, &solval_old, solpath, sollocal->nodesol) );
+         SCIPfreeBufferArray(scip, &solpath);
+      }
+
+   //   printf("old vs new: %f vs %f  \n", solval_old, solval_new);
+
+      if( LT(solval_new, solval_old) )
+      {
+       //  printf("updating! \n");
+
+         solstp_setVertexFromEdgeConn(g, edgesol, sollocal->nodesol);
+         sollocal->nodesol_ub = solval_new;
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 
@@ -316,6 +465,19 @@ SCIP_Real reduce_sollocalGetUpperBound(
 
 
 
+/** gets array */
+int* reduce_sollocalGetSolnode(
+   REDSOLLOCAL*         sollocal            /**< sollocal */
+   )
+{
+   assert(sollocal);
+   assert(reduce_sollocalUsesNodesol(sollocal));
+
+   return sollocal->nodesol;
+}
+
+
+
 /** gets upper bound; including (last set) offset */
 SCIP_Real reduce_sollocalGetUpperBoundWithOffset(
    const REDSOLLOCAL*    sollocal            /**< sollocal */
@@ -343,6 +505,7 @@ SCIP_Bool reduce_sollocalHasUpperBound(
 SCIP_RETCODE reduce_solInit(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Bool             useNodeSol,         /**< should solution be used? (additionally to solution value) */
    REDSOL**              redsol              /**< to be initialized */
    )
 {
@@ -356,9 +519,11 @@ SCIP_RETCODE reduce_solInit(
    rs->offset = 0.0;
    rs->isPcMw = graph_pc_isPcMw(g);
    rs->levels = NULL;
+   rs->nodesol_use = useNodeSol;
 
    SCIP_CALL( redlevelInit(scip, g->knots, &redlevel) );
    StpVecPushBack(scip, rs->levels, redlevel);
+   redlevel->nodesol_use = useNodeSol;
 
    assert(redsolGetNlevels(rs) == 1);
 
@@ -404,12 +569,21 @@ void reduce_solFinalizeLocal(
       // todo also set trivial node solution
    }
 
-   assert(EQ(toplevel->solval_postred, -FARAWAY));
+   assert(EQ(toplevel->solval_postred, REDSOLVAL_UNSET));
 
    if( reduce_sollocalHasUpperBound(redsollocal) )
       toplevel->solval_postred = reduce_sollocalGetUpperBoundWithOffset(redsollocal);
    else
       toplevel->solval_postred = FARAWAY;
+
+   assert(!toplevel->nodesol);
+
+   if( redsol->nodesol_use )
+   {
+      toplevel->nodesol_ub = redsollocal->nodesol_ub;
+      toplevel->nodesol = redsollocal->nodesol;
+      redsollocal->nodesol = NULL;
+   }
 
    reduce_sollocalFree(scip, &(toplevel->redsollocal));
 }
@@ -443,6 +617,48 @@ void reduce_solFree(
 }
 
 
+/** packs solution */
+void reduce_solPack(
+   const GRAPH*          g,                /**< graph data structure */
+   const int*            nodes_old2packed, /**< map */
+   int                   nnodes_packed,
+   REDSOL*               redsol            /**< sollocal */
+   )
+{
+   REDSOLLEVEL* redlevel;
+   int* nodesol;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(g && redsol && nodes_old2packed);
+
+   redlevel = redsol->levels[0];
+   assert(redlevel);
+   assert(nnodes == redlevel->nnodes);
+   assert(1 <= nnodes_packed && nnodes_packed <= nnodes);
+
+   redlevel->nnodes = nnodes_packed;
+
+   if( !redsol->nodesol_use )
+      return;
+
+   nodesol = redlevel->nodesol;
+   assert(nodesol);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      const int node_packed = nodes_old2packed[i];
+
+      if( node_packed >= 0 )
+      {
+         assert(node_packed <= i);
+         assert(node_packed < nnodes_packed);
+
+         nodesol[node_packed] = nodesol[i] ;
+      }
+   }
+}
+
+
 /** adds level */
 SCIP_RETCODE reduce_solLevelAdd(
    SCIP*                 scip,             /**< SCIP data structure */
@@ -452,6 +668,11 @@ SCIP_RETCODE reduce_solLevelAdd(
 {
    REDSOLLEVEL* redlevel_new;
    REDSOLLEVEL* redlevel_top = redsolGetTopLevel(redsol);
+   int todo;
+
+   redsol->nodesol_use = FALSE; // todo remove
+   //printf("SETTING SOL FALSE (nodes=%d) \n", g->knots);
+
 
    SCIPdebugMessage("adding level %d \n", redsolGetNlevels(redsol));
 
@@ -462,6 +683,7 @@ SCIP_RETCODE reduce_solLevelAdd(
 
    SCIP_CALL( redlevelInit(scip, g->knots, &redlevel_new) );
    StpVecPushBack(scip, redsol->levels, redlevel_new);
+   redlevel_new->nodesol_use = redsol->nodesol_use;
 
    return SCIP_OKAY;
 }
@@ -576,6 +798,73 @@ SCIP_Real reduce_solGetOffset(
 }
 
 
+
+/** adds (and possibly overwrites) nodesol */
+
+#ifdef XXXXX
+SCIP_RETCODE reduce_solAddNodesol(
+   const int*           nodesol,          /**< incoming solution */
+   REDSOL*              redsol            /**< solution */
+   )
+{
+   assert(redsol);
+
+
+   return SCIP_OKAY;
+}
+#endif
+
+
+/** initializes */
+SCIP_RETCODE reduce_solGetEdgesol(
+   SCIP*                scip,             /**< SCIP data structure */
+   GRAPH*               g,                /**< graph data structure */
+   REDSOL*              redsol,           /**< solution */
+   SCIP_Real*           solval,           /**< FARAWAY if no solution available */
+   int*                 edgesol           /**< solution array to be filled */
+   )
+{
+   REDSOLLEVEL* level;
+
+   assert(scip && g && redsol && solval && edgesol);
+
+   *solval = FARAWAY;
+   level = redsol->levels[0];
+   assert(level);
+
+   if( !redsol->nodesol_use )
+      return SCIP_OKAY;
+
+   if( !EQ(level->nodesol_ub, REDSOLVAL_UNSET) && LT(level->nodesol_ub, FARAWAY) )
+   {
+      PATH* solpath;
+      const int nnodes = graph_get_nNodes(g);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &solpath, nnodes) );
+      SCIP_CALL( nodesolUpdate(scip, g, solval, solpath, level->nodesol) );
+
+      if( LT(*solval, FARAWAY) )
+         nodesolGetEdgeSol(g, solpath, edgesol);
+
+      SCIPfreeBufferArray(scip, &solpath);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** is node solution in use? */
+SCIP_Bool reduce_solUsesNodesol(
+   const REDSOL*         redsol            /**< solution */
+   )
+{
+
+   assert(redsol);
+
+   return (redsol->nodesol_use);
+}
+
+
 /** gets */
 SCIP_Real reduce_solGetUpperBoundWithOffset(
    const REDSOL*         redsol            /**< solution */
@@ -591,7 +880,7 @@ SCIP_Real reduce_solGetUpperBoundWithOffset(
    level = redsol->levels[0];
    ub = level->solval_postred;
 
-   if( EQ(ub, -FARAWAY) )
+   if( EQ(ub, REDSOLVAL_UNSET) )
       return FARAWAY;
 
    return (ub);

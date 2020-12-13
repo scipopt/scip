@@ -516,7 +516,7 @@ SCIP_RETCODE SCIPStpHeurPruneUpdateSols(
       if( pcmw )
          SCIP_CALL( SCIPStpHeurTMBuildTreePcMw(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
       else
-         SCIP_CALL( SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode) );
+         SCIPStpHeurTMBuildTree(scip, prunegraph, path, prunegraph->cost, &objold, solnode);
 
       SCIPdebugMessage("objold %f objnew %f \n", objold, objnew);
 
@@ -753,7 +753,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                                   .nodearrreal = nodearrreal,
                                   .state = state, .vbase = vbase, .nodearrint = nodearrint,
                                   .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
-         SCIP_CALL( reduce_solInit(scip, prunegraph, &(redbase.redsol)) );
+         SCIP_CALL( reduce_solInit(scip, prunegraph, FALSE, &(redbase.redsol)) );
 
          SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
 
@@ -866,7 +866,7 @@ SCIP_RETCODE SCIPStpHeurPruneRun(
                                 .nodearrreal = nodearrreal,
                                 .state = state, .vbase = vbase, .nodearrint = nodearrint,
                                 .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
-            SCIP_CALL( reduce_solInit(scip, prunegraph, &(redbase.redsol)) );
+            SCIP_CALL( reduce_solInit(scip, prunegraph, FALSE, &(redbase.redsol)) );
 
             SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
 

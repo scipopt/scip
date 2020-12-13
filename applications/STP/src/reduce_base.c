@@ -415,6 +415,32 @@ SCIP_Real* redbaseGetOffsetPointer(
    return reduce_solGetOffsetPointer(redbase->redsol);
 }
 
+
+/** returns pointer
+ *  todo: remove once redsol is properly tested */
+static
+int* redbaseGetSolnode(
+   REDSOLLOCAL*          redsollocal,
+   REDBASE*              redbase             /**< base */
+   )
+{
+   REDSOL* redsol;
+   assert(redbase && redsollocal);
+
+   redsol = redbase->redsol;
+   assert(redsol);
+
+   if( reduce_solUsesNodesol(redsol) )
+   {
+      assert(!redbase->solnode);
+      assert(reduce_sollocalUsesNodesol(redsollocal));
+
+      return reduce_sollocalGetSolnode(redsollocal);
+   }
+
+   return redbase->solnode;
+}
+
 /** inner STP reduction loop */
 static
 SCIP_RETCODE redLoopInnerStp(
@@ -501,7 +527,7 @@ SCIP_RETCODE redLoopInnerStp(
       }
 
       if( sd && !skiptests )
-         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &degtnelims, NULL));
+         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));
 
       if( sdstar && !skiptests )
       {
@@ -530,7 +556,7 @@ SCIP_RETCODE redLoopInnerStp(
       }
 
       if( (sdc || sdstar) && !skiptests )
-         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &degtnelims, NULL));
+         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));
 
       if( bdk && !skiptests )
       {
@@ -539,7 +565,7 @@ SCIP_RETCODE redLoopInnerStp(
          if( bdknelims <= STP_RED_EXPENSIVEFACTOR * reductbound && !extensive )
             bdk = FALSE;
          else
-            SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &degtnelims, NULL));
+            SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));
 
          reduceStatsPrint(fullreduce, "bdk", bdknelims);
 
@@ -550,7 +576,7 @@ SCIP_RETCODE redLoopInnerStp(
       if( sdbiased && !skiptests )
       {
          SCIP_CALL( reduce_impliedProfitBased(scip, getWorkLimitsStp(g, inner_rounds, fullreduce, stp_sdstarbot), g,
-               redbase->solnode, redbaseGetOffsetPointer(redbase), &sdbiasnelims) );
+               redbaseGetSolnode(redsollocal, redbase), redbaseGetOffsetPointer(redbase), &sdbiasnelims) );
 
          if( sdbiasnelims <= reductbound && !extensive  )
             sdbiased = FALSE;
@@ -566,7 +592,8 @@ SCIP_RETCODE redLoopInnerStp(
          SCIP_CALL( execNvSl(scip, NULL, g, redbase->vnoi,
                redbase->nodearrreal, redbaseGetOffsetPointer(redbase), redbase->edgearrint,
                redbase->state, redbase->vbase, redbase->nodearrint, NULL,
-               redbase->solnode, redbase->nodearrchar, &nvslnelims, reductbound));
+               redbaseGetSolnode(redsollocal, redbase),
+               redbase->nodearrchar, &nvslnelims, reductbound));
 
          if( nvslnelims <= reductbound && !extensive )
             nvsl = FALSE;
@@ -624,7 +651,7 @@ SCIP_RETCODE redLoopInnerStp(
 
 
       SCIP_CALL(reduce_unconnected(scip, g));
-      SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &degtnelims, NULL));
+      SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &degtnelims, NULL));
 
       /* too few eliminations? */
       if( (sdbiasnelims + danelims + sdnelims + bdknelims + nvslnelims +
@@ -1871,7 +1898,7 @@ SCIP_RETCODE redLoopStp(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    SCIP_CALL( reduce_contract0Edges(scip, g, TRUE) );
-   SCIP_CALL( reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &dummy, NULL) );
+   SCIP_CALL( reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL) );
 
    /* reduction loop */
    do
@@ -1883,7 +1910,7 @@ SCIP_RETCODE redLoopStp(
 
       if( wasDecomposed )
       {
-         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &dummy, NULL));
+         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &dummy, NULL));
          break;
       }
 
@@ -1905,7 +1932,7 @@ SCIP_RETCODE redLoopStp(
 
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
-         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbase->solnode, &extendedelims, NULL));
+         SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &extendedelims, NULL));
 
          if( nodereplacing )
          {

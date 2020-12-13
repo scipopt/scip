@@ -2418,6 +2418,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Bool useExtRed = (paramsda->extredMode != extred_none);
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
+   SCIP_Bool havebestsol = FALSE;
 
    assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
@@ -2473,7 +2474,7 @@ SCIP_RETCODE reduce_da(
       REDCOST* redcostdata;
 	   const int nruns = daGetNruns(paramsda, nFixedTerms);
       SCIP_Real cutoffbound = -1.0;
-      SCIP_Bool havebestsol = FALSE;
+      havebestsol = FALSE;
 
       SCIP_CALL( daRedcostsInit(scip, graph, paramsda, nruns, &redcostdata) );
 
@@ -2572,6 +2573,17 @@ SCIP_RETCODE reduce_da(
       {
          reduce_sollocalSetOffset(*offsetp, redsollocal);
          reduce_sollocalUpdateUpperBound(upperbound, redsollocal);
+
+         if( reduce_sollocalUsesNodesol(redsollocal) && havebestsol )
+         {
+            SCIP_Bool isinfeas;
+            SCIP_CALL(solstp_rerootInfeas(scip, graph, bestresult, graph->source, &isinfeas));
+
+            if( !isinfeas )
+            {
+               SCIP_CALL( reduce_sollocalUpdateNodesol(scip, bestresult, graph, redsollocal) );
+            }
+         }
       }
 
       /* do pseudo-elimination? */

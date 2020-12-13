@@ -40,6 +40,7 @@
 #include "reduce.h"
 #include "heur_tm.h"
 #include "solstp.h"
+#include "solpool.h"
 #include "redcosts.h"
 #include "cons_stp.h"
 #include "probdata_stp.h"
@@ -766,23 +767,8 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 
    if( addsol )
    {
-      const int nedges = graph_get_nEdges(g);
-      const int nvars = SCIPprobdataGetNVars(scip);
-      SCIP_Real* nval;
-      SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
-
-      for( int e = 0; e < nedges; e++ )
-      {
-         if( result[e] == CONNECT )
-            nval[e] = 1.0;
-         else
-            nval[e] = 0.0;
-      }
-
-      SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, heur, solfound) );
-      SCIPdebugMessage("Ascend-and-prune added solution \n");
-
-      SCIPfreeBufferArray(scip, &nval);
+      SCIP_CALL( solpool_addSolToScip(scip, heur, g, result, solfound) );
+      SCIPdebugMessage("Ascend-and-prune adding solution....succes=%d \n", *solfound);
    }
 
    for( int k = 0; k < g->knots; k++ )

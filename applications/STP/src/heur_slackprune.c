@@ -276,7 +276,7 @@ SCIP_RETCODE reduceExact(
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
-      SCIP_CALL( reduce_solInit(scip, prunegraph, &(redbase.redsol)) );
+      SCIP_CALL( reduce_solInit(scip, prunegraph, FALSE, &(redbase.redsol)) );
 
       SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
 

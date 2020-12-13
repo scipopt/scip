@@ -375,7 +375,6 @@ void graph_path_exec(
    int* RESTRICT heap = g->path_heap;
    int* RESTRICT state = g->path_state;
 
-   assert(scip != NULL);
    assert(g != NULL);
    assert(start >= 0);
    assert(start < g->knots);

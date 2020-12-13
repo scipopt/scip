@@ -105,9 +105,9 @@ SCIP_RETCODE SCIPStpHeurTMBuildTreePcMw(
 
 /** build Steiner tree in such a way that all leaves are terminals */
 SCIP_EXPORT
-SCIP_RETCODE SCIPStpHeurTMBuildTree(
+void SCIPStpHeurTMBuildTree(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
+   GRAPH*                g,                  /**< graph structure */
    PATH*                 mst,                /**< path data structure array */
    const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            objresult,          /**< pointer to store objective value of result */

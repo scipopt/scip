@@ -1473,7 +1473,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIPdebugMessage("REC: solution successfully built \n");
          assert(graph_valid(scip, solgraph));
 
-         SCIP_CALL( reduce_solInit(scip, solgraph, &redsol) );
+         SCIP_CALL( reduce_solInit(scip, solgraph, TRUE, &redsol) );
 
          /* reduce new graph */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP )
@@ -1483,7 +1483,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
             SCIP_CALL( reduce(scip, solgraph, redsol, 2, 5, FALSE) );
          }
 
-         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, reduce_solGetOffsetPointer(redsol), FALSE) );
+         SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, redsol, FALSE) );
 
          reduce_solFree(scip, &redsol);
 
@@ -1715,7 +1715,7 @@ SCIP_RETCODE SCIPStpHeurRecExclude(
 
    newgraph->norgmodelknots = nsolnodes;
 
-   SCIP_CALL( reduce_solInit(scip, newgraph, &redsol) );
+   SCIP_CALL( reduce_solInit(scip, newgraph, FALSE, &redsol) );
 
    SCIP_CALL( reduce(scip, newgraph, redsol, 1, 5, FALSE) );
 

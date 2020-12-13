@@ -36,6 +36,163 @@
 #include "mst.h"
 #include "shortestpath.h"
 
+
+
+/** changes solution according to given root */
+static
+SCIP_RETCODE reroot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int*                  result,             /**< solution array (CONNECT/UNKNOWN) */
+   int                   newroot,            /**< the new root */
+   SCIP_Bool*            isInfeasible        /**< infeasible? */
+   )
+{
+   int* queue;
+   int* gmark;
+   int size;
+   const int nnodes = graph_get_nNodes(g);
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(g);
+
+   assert(newroot >= 0 && newroot < nnodes);
+   assert(Is_term(g->term[newroot]));
+
+   *isInfeasible = FALSE;
+
+   if( g->grad[newroot] == 0 )
+   {
+      if( g->terms > 1 )
+      {
+         *isInfeasible = TRUE;
+      }
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes) );
+
+   for( int k = 0; k < nnodes; k++ )
+      gmark[k] = FALSE;
+
+   gmark[newroot] = TRUE;
+   size = 0;
+   queue[size++] = newroot;
+
+   /* BFS loop */
+   while( size )
+   {
+      const int node = queue[--size];
+
+      /* traverse outgoing arcs */
+      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
+      {
+         const int head = g->head[a];
+
+         if( !gmark[head] && (result[a] == CONNECT || result[flipedge(a)] == CONNECT ) )
+         {
+            if( result[flipedge(a)] == CONNECT  )
+            {
+               result[a] = CONNECT;
+               result[flipedge(a)] = UNKNOWN;
+            }
+            gmark[head] = TRUE;
+            queue[size++] = head;
+         }
+      }
+   }
+
+   /* adjust solution */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      assert(*isInfeasible == FALSE);
+
+      if( !gmark[k] )
+      {
+         if( isPcMw )
+         {
+            for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+            {
+               result[a] = UNKNOWN;
+               result[flipedge(a)] = UNKNOWN;
+            }
+         }
+
+         /* not yet connected terminal? */
+         if( Is_term(g->term[k]) )
+         {
+            int a;
+
+            if( !isPcMw )
+            {
+               *isInfeasible = TRUE;
+               break;
+            }
+
+            if( graph_pc_knotIsFixedTerm(g, k) )
+            {
+               *isInfeasible = TRUE;
+                break;
+            }
+
+            for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
+            {
+               const int node = g->tail[a];
+               if( gmark[node] && node != newroot )
+               {
+                  result[a] = CONNECT;
+                  break;
+               }
+            }
+            if( a == EAT_LAST )
+            {
+               for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
+               {
+                  const int node = g->tail[a];
+                  if( node == newroot )
+                  {
+                     result[a] = CONNECT;
+                     break;
+                  }
+               }
+            }
+            else
+            {
+               gmark[k] = TRUE;
+            }
+         }
+      }
+   }
+
+
+#ifndef NDEBUG
+   if( *isInfeasible == FALSE )
+   {
+      const int realroot = g->source;
+      g->source = newroot;
+      assert(solstp_isValid(scip, g, result));
+      g->source = realroot;
+
+      for( int k = 0; k < nnodes; k++ )
+      {
+         if( !gmark[k] )
+         {
+            for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
+            {
+               assert(result[a] == UNKNOWN);
+               assert(result[flipedge(a)] == UNKNOWN);
+            }
+         }
+      }
+   }
+#endif
+
+   SCIPfreeBufferArray(scip, &queue);
+   SCIPfreeBufferArray(scip, &gmark);
+
+   return SCIP_OKAY;
+}
+
+
 /** Deletes subtree from given node, marked by dfspos.
  *  NOTE: recursive method. */
 static
@@ -1375,108 +1532,31 @@ SCIP_RETCODE solstp_reroot(
    int                   newroot             /**< the new root */
    )
 {
-   int* queue;
-   int* gmark;
-   int size;
-   const int nnodes = graph_get_nNodes(g);
+   SCIP_Bool isInfeasible;
+   assert(scip && g && result);
 
-   assert(scip != NULL);
-   assert(g != NULL);
-   assert(result != NULL);
-   assert(newroot >= 0 && newroot < nnodes);
-   assert(Is_term(g->term[newroot]));
+   SCIP_CALL( reroot(scip, g, result, newroot, &isInfeasible) );
 
-   if( g->grad[newroot] == 0 )
-      return SCIP_OKAY;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &gmark, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nnodes) );
+   assert(!isInfeasible);
 
-   for( int k = 0; k < nnodes; k++ )
-      gmark[k] = FALSE;
+   return SCIP_OKAY;
+}
 
-   gmark[newroot] = TRUE;
-   size = 0;
-   queue[size++] = newroot;
 
-   /* BFS loop */
-   while( size )
-   {
-      const int node = queue[--size];
 
-      /* traverse outgoing arcs */
-      for( int a = g->outbeg[node]; a != EAT_LAST; a = g->oeat[a] )
-      {
-         const int head = g->head[a];
+/** changes solution according to given root; also checks for infeasibility */
+SCIP_RETCODE solstp_rerootInfeas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< the graph */
+   int*                  result,             /**< solution array (CONNECT/UNKNOWN) */
+   int                   newroot,            /**< the new root */
+   SCIP_Bool*            isInfeasible        /**< infeasible? */
+   )
+{
+   assert(scip && g && result && isInfeasible);
 
-         if( !gmark[head] && (result[a] == CONNECT || result[flipedge(a)] == CONNECT ) )
-         {
-            if( result[flipedge(a)] == CONNECT  )
-            {
-               result[a] = CONNECT;
-               result[flipedge(a)] = UNKNOWN;
-            }
-            gmark[head] = TRUE;
-            queue[size++] = head;
-         }
-      }
-   }
-
-   /* adjust solution if infeasible */
-   for( int k = 0; k < nnodes; k++ )
-   {
-      if( !gmark[k] )
-      {
-         for( int a = g->outbeg[k]; a != EAT_LAST; a = g->oeat[a] )
-         {
-            result[a] = UNKNOWN;
-            result[flipedge(a)] = UNKNOWN;
-         }
-
-         /* not yet connected terminal? */
-         if( Is_term(g->term[k]) )
-         {
-            int a;
-            assert(g->stp_type != STP_SPG);
-
-            for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
-            {
-               const int node = g->tail[a];
-               if( gmark[node] && node != newroot )
-               {
-                  result[a] = CONNECT;
-                  break;
-               }
-            }
-            if( a == EAT_LAST )
-            {
-               for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
-               {
-                  const int node = g->tail[a];
-                  if( node == newroot )
-                  {
-                     result[a] = CONNECT;
-                     break;
-                  }
-               }
-            }
-            else
-               gmark[k] = TRUE;
-         }
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &queue);
-   SCIPfreeBufferArray(scip, &gmark);
-
-#ifndef NDEBUG
-   {
-      const int realroot = g->source;
-      g->source = newroot;
-      assert(solstp_isValid(scip, g, result));
-      g->source = realroot;
-   }
-#endif
+   SCIP_CALL( reroot(scip, g, result, newroot, isInfeasible) );
 
    return SCIP_OKAY;
 }
@@ -1959,6 +2039,42 @@ void solstp_setVertexFromEdge(
    for( int e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
          assert(solnode[g->head[e]] && solnode[g->tail[e]]);
+#endif
+}
+
+
+
+/** marks vertices for given edge-solution array (both CONNECT/UNKNOWN) */
+void solstp_setVertexFromEdgeConn(
+   const GRAPH*          g,                  /**< the graph */
+   const int*            soledge,            /**< solution array (CONNECT/UNKNOWN) */
+   int*                  solnode             /**< marks whether node is in solution */
+)
+{
+   const int nedges = g->edges;
+   const int nnodes = g->knots;
+
+   assert(g && soledge && solnode);
+
+   for( int i = 0; i < nnodes; i++ )
+      solnode[i] = UNKNOWN;
+
+   solnode[g->source] = CONNECT;
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( soledge[e] == CONNECT )
+      {
+         assert(g->oeat[e] != EAT_FREE);
+
+         solnode[g->head[e]] = CONNECT;
+      }
+   }
+
+#ifndef NDEBUG
+   for( int e = 0; e < nedges; e++ )
+      if( soledge[e] == CONNECT )
+         assert(solnode[g->head[e]] == CONNECT && solnode[g->tail[e]] == CONNECT);
 #endif
 }
 

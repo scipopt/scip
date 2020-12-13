@@ -52,16 +52,20 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH*, REDSOL*, int, int, SCIP_Bool);
  */
 extern SCIP_RETCODE reduce_sollocalInit(SCIP*, const GRAPH*, REDSOLLOCAL**);
 extern void         reduce_sollocalFree(SCIP*, REDSOLLOCAL**);
+extern int*         reduce_sollocalGetSolnode(REDSOLLOCAL*);
+extern SCIP_RETCODE reduce_sollocalInitNodesol(SCIP*, REDSOLLOCAL*);
 extern void reduce_sollocalSetOffset(SCIP_Real, REDSOLLOCAL*);
 extern void reduce_sollocalUpdateUpperBound(SCIP_Real, REDSOLLOCAL*);
+extern SCIP_RETCODE reduce_sollocalUpdateNodesol(SCIP*, const int*, GRAPH*, REDSOLLOCAL*);
 extern SCIP_Real reduce_sollocalGetUpperBound(const REDSOLLOCAL*);
 extern SCIP_Real reduce_sollocalGetUpperBoundWithOffset(const REDSOLLOCAL*);
 extern SCIP_Bool reduce_sollocalHasUpperBound(const REDSOLLOCAL*);
-
-extern SCIP_RETCODE reduce_solInit(SCIP*, const GRAPH*, REDSOL**);
+extern SCIP_Bool reduce_sollocalUsesNodesol(const REDSOLLOCAL*);
+extern SCIP_RETCODE reduce_solInit(SCIP*, const GRAPH*, SCIP_Bool, REDSOL**);
 extern void         reduce_solFree(SCIP*, REDSOL**);
 extern SCIP_RETCODE reduce_solInitLocal(SCIP*, const GRAPH*, REDSOL*, REDSOLLOCAL**);
 extern void         reduce_solFinalizeLocal(SCIP*, const GRAPH*, REDSOL*);
+extern void         reduce_solPack(const GRAPH*, const int*, int, REDSOL*);
 extern SCIP_RETCODE reduce_solLevelAdd(SCIP*, const GRAPH*, REDSOL*);
 extern void reduce_solLevelTopFinalize(SCIP*, REDSOL*);
 extern void reduce_solLevelTopRemove(SCIP*, REDSOL*);
@@ -70,7 +74,9 @@ extern void reduce_solLevelTopMergeUp(REDSOL*);
 extern void reduce_solSetOffset(SCIP_Real, REDSOL*);
 extern SCIP_Real reduce_solGetOffset(const REDSOL*);
 extern SCIP_Real reduce_solGetUpperBoundWithOffset(const REDSOL*);
+extern SCIP_Bool reduce_solUsesNodesol(const REDSOL*);
 extern SCIP_Real* reduce_solGetOffsetPointer(REDSOL*);
+extern SCIP_RETCODE         reduce_solGetEdgesol(SCIP*, GRAPH*, REDSOL*, SCIP_Real*, int*);
 
 
 /* reduce_alt.c

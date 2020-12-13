@@ -39,6 +39,7 @@
 #include "portab.h"
 #include "misc_stp.h"
 #include "graph.h"
+#include "reduce.h"
 #include "stpvector.h"
 #include "heur_tm.h"
 
@@ -1280,7 +1281,7 @@ SCIP_RETCODE graph_pack(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
    GRAPH**               newgraph,           /**< the new graph */
-   SCIP_Real*            offset,             /**< pointer to add offset from non-leaf terminals to (only PC) */
+   REDSOL*               redsol,             /**< reduce solution or NULL */
    SCIP_Bool             verbose             /**< verbose? */
    )
 {
@@ -1389,6 +1390,11 @@ SCIP_RETCODE graph_pack(
       SCIP_CALL( packPcMwInit(scip, nnodes, g_old, g_new) );
    }
 
+   if( redsol  )
+   {
+      reduce_solPack(g_old, old2newNode, nnodes, redsol);
+   }
+
    /* add nodes (of positive degree) to new graph */
    packNodes(scip, g_old, g_new);
 
@@ -1406,7 +1412,7 @@ SCIP_RETCODE graph_pack(
 
    if( graph_pc_isPc(g_new) )
    {
-      assert(offset);
+      SCIP_Real* offset = reduce_solGetOffsetPointer(redsol);
       *offset += graph_pc_getNonLeafTermOffset(scip, g_new);
    }
 

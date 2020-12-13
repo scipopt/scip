@@ -47,6 +47,7 @@
 #include "reduce.h"
 #include "stptest.h"
 #include "solstp.h"
+#include "solpool.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
@@ -335,16 +336,58 @@ SCIP_RETCODE setStpSolvingMode(
 }
 
 
+/** adds solution obtained during reduction...if existent */
+static
+SCIP_RETCODE addRedsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata,           /**< pointer to problem data */
+   REDSOL*               redsol              /**< solution storage for r */
+)
+{
+   GRAPH* graph = probdata->graph;
+   assert(graph && redsol);
+
+   if( graph->terms == 1 )
+   {
+      return SCIP_OKAY;
+   }
+
+   if( !graph_typeIsSpgLike(graph) && !graph_pc_isPcMw(graph) )
+   {
+      return SCIP_OKAY;
+   }
+   else
+   {
+      int* result;
+      SCIP_Real solval;
+      SCIP_Bool success;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &result, graph->edges));
+
+      SCIP_CALL( reduce_solGetEdgesol(scip, graph, redsol, &solval, result));
+
+      if( LT(solval, FARAWAY ) )
+      {
+         assert(solstp_isValid(scip, graph, result));
+         SCIP_CALL( solpool_addSolToScip(scip, NULL, graph, result, &success) );
+         SCIPdebugMessage("try to add reduction solution with obj=%f, success=%d \n", solval + probdata->offset, success);
+      }
+
+      SCIPfreeBufferArray(scip, &result);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** presolves STP */
 static
 SCIP_RETCODE presolveStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< pointer to problem data */
-   SCIP_Real*            offset              /**< offset from STP reductions */
+   REDSOL*               redsol              /**< solution storage for r */
 )
 {
-   // todo replace offset
-   REDSOL* redsol;
    GRAPH* packedgraph;
    GRAPH* graph = probdata->graph;
    SCIP_Real oldtimelimit;
@@ -370,16 +413,11 @@ SCIP_RETCODE presolveStp(
    SCIP_CALL( stptest_testAll(scip) );
 #endif
 
-   SCIP_CALL( reduce_solInit(scip, graph, &redsol) );
-
    /* the actual presolving */
    SCIP_CALL( reduce(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
 
    probdata->presolub = reduce_solGetUpperBoundWithOffset(redsol);
    SCIPdebugMessage("presol ub: %f \n", probdata->presolub);
-
-   *offset = reduce_solGetOffset(redsol);
-   reduce_solFree(scip, &redsol);
 
 #ifdef STP_WRITE_RED_STATS
    graph_writeReductionStats(graph,
@@ -388,9 +426,9 @@ SCIP_RETCODE presolveStp(
 #endif
 
 #ifdef WITH_UG
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, offset, FALSE) );
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, redsol, FALSE) );
 #else
-   SCIP_CALL( graph_pack(scip, graph, &packedgraph, offset, TRUE) );
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, redsol, TRUE) );
 #endif
 
    graph = packedgraph;
@@ -398,7 +436,6 @@ SCIP_RETCODE presolveStp(
 
    probdata->stp_type = graph->stp_type;
    probdata->graph = graph;
-
 
 #if 0
    int c = 0;
@@ -2728,8 +2765,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    const char*           filename            /**< file name */
    )
 {
+   REDSOL* redsol;
    SCIP_PROBDATA* probdata;
-   SCIP_Real offset = 0.0;
    PRESOL presolinfo;
    GRAPH* graph;
    SCIP_Bool printGraph;
@@ -2795,9 +2832,10 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    probdata->graph = graph;
+   SCIP_CALL( reduce_solInit(scip, graph, TRUE, &redsol) );
 
    /* reduce the graph (and do some house-holding) */
-   SCIP_CALL( presolveStp(scip, probdata, &offset) );
+   SCIP_CALL( presolveStp(scip, probdata, redsol) );
 
    graph = probdata->graph;
 
@@ -2828,7 +2866,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* setting the offset to the fixed value given in the input file plus the fixings
     * given by the reduction techniques */
-   probdata->offset = presolinfo.fixed + offset;
+   probdata->offset = presolinfo.fixed + reduce_solGetOffset(redsol);
    probdata->presolub += presolinfo.fixed;
 
    SCIP_CALL( createModel(scip, probdata) );
@@ -2847,6 +2885,9 @@ SCIP_RETCODE SCIPprobdataCreate(
 
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
+
+   SCIP_CALL( addRedsol(scip, probdata, redsol) );
+   reduce_solFree(scip, &redsol);
 
    return SCIP_OKAY;
 }

@@ -237,7 +237,7 @@ SCIP_RETCODE testBiconnectedDecomposition(
       redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
 
-      SCIP_CALL( reduce_solInit(scip, graph, &(redbase->redsol)) );
+      SCIP_CALL( reduce_solInit(scip, graph, TRUE, &(redbase->redsol)) );
       SCIP_CALL( reduce_solInitLocal(scip, graph, redbase->redsol, NULL));
 
       SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
@@ -305,7 +305,7 @@ SCIP_RETCODE testBiconnectedDecomposition2(
       redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
 
-      SCIP_CALL( reduce_solInit(scip, graph, &(redbase->redsol)) );
+      SCIP_CALL( reduce_solInit(scip, graph, TRUE, &(redbase->redsol)) );
       SCIP_CALL( reduce_solInitLocal(scip, graph, redbase->redsol, NULL));
 
       SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
@@ -368,7 +368,7 @@ SCIP_RETCODE testBiconnectedDecomposition3(
       redbase->bidecompparams = &decparameters;
       graph->stp_type = STP_SPG;
 
-      SCIP_CALL( reduce_solInit(scip, graph, &(redbase->redsol)) );
+      SCIP_CALL( reduce_solInit(scip, graph, TRUE, &(redbase->redsol)) );
       SCIP_CALL( reduce_solInitLocal(scip, graph, redbase->redsol, NULL));
 
       SCIP_CALL( reduce_bidecomposition(scip, graph, redbase, &wasDecomposed) );
