@@ -3194,11 +3194,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
       SCIPfreeBufferArray(scip, &rows);
       return SCIP_OKAY;
    }
-   else /* suitable rows have been found */
-   {
-      /* TODO this is just to free a bit of memory at the cost of having to copy the array? then we should just skip this */
-      SCIP_CALL( SCIPreallocBufferArray(scip, &rows, nrows) );
-   }
 
    /* create the projected problem */
    if( sepadata->useprojection )
