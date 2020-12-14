@@ -2345,72 +2345,6 @@ SCIP_RETCODE SCIPexprintEval(
    return SCIP_OKAY;
 }
 
-/** evaluates an expression tree on intervals */
-SCIP_RETCODE SCIPexprintEvalInt(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< interval values of variables */
-   SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
-   )
-{
-   SCIP_EXPRINTDATA* data;
-
-   assert(exprint != NULL);
-   assert(tree    != NULL);
-   assert(varvals != NULL);
-   assert(val     != NULL);
-
-   data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-   assert(SCIPexprtreeGetNVars(tree) == (int)data->int_X.size());
-   assert(SCIPexprtreeGetRoot(tree)  != NULL);
-
-   int n = SCIPexprtreeGetNVars(tree);
-
-   if( n == 0 )
-   {
-      SCIP_CALL( SCIPexprtreeEvalInt(tree, infinity, NULL, val) );
-      return SCIP_OKAY;
-   }
-
-   SCIPInterval::infinity = infinity;
-
-   if( data->int_need_retape || data->need_retape_always )
-   {
-      for( int i = 0; i < n; ++i )
-      {
-         data->int_X[i] = varvals[i];
-         data->int_x[i] = varvals[i];
-      }
-
-      CppAD::Independent(data->int_X);
-
-      if( data->root != NULL )
-         SCIP_CALL( eval(data->root, data->int_X, SCIPexprtreeGetParamVals(tree), data->int_Y[0]) );
-      else
-         data->int_Y[0] = 0.0;
-
-      data->int_f.Dependent(data->int_X, data->int_Y);
-
-      data->int_val = Value(data->int_Y[0]);
-
-      data->int_need_retape = false;
-   }
-   else
-   {
-      assert((int)data->int_x.size() >= n);
-      for( int i = 0; i < n; ++i )
-         data->int_x[i] = varvals[i];
-
-      data->int_val = data->int_f.Forward(0, data->int_x)[0];  /*lint !e1793*/
-   }
-
-   *val = data->int_val;
-
-   return SCIP_OKAY;
-}
-
 /** computes value and gradient of an expression tree */
 SCIP_RETCODE SCIPexprintGrad(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -2452,52 +2386,6 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIPdebugMessage("Grad for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
    SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
    SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
-#endif
-*/
-
-   return SCIP_OKAY;
-}
-
-/** computes interval value and interval gradient of an expression tree */
-SCIP_RETCODE SCIPexprintGradInt(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< interval values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
-   SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
-   SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
-   )
-{
-   assert(exprint  != NULL);
-   assert(tree     != NULL);
-   assert(varvals  != NULL || new_varvals == FALSE);
-   assert(val      != NULL);
-   assert(gradient != NULL);
-
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-
-   if (new_varvals)
-      SCIP_CALL( SCIPexprintEvalInt(exprint, tree, infinity, varvals, val) );
-   else
-      *val = data->int_val;
-
-   int n = SCIPexprtreeGetNVars(tree);
-
-   if( n == 0 )
-      return SCIP_OKAY;
-
-   vector<SCIPInterval> jac(data->int_f.Jacobian(data->int_x));
-
-   for (int i = 0; i < n; ++i)
-      gradient[i] = jac[i];
-
-/* disable debug output since we have no message handler here
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("GradInt for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
-   SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(data->int_x[i]), SCIPintervalGetSup(data->int_x[i])); printf("\n");
-   SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t [%g,%g]", SCIPintervalGetInf(gradient[i]), SCIPintervalGetSup(gradient[i])); printf("\n");
 #endif
 */
 

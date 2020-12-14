@@ -120,19 +120,6 @@ SCIP_RETCODE SCIPexprintEval(
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
-/** evaluates an expression on intervals */
-SCIP_RETCODE SCIPexprintEvalInt(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< interval values of variables */
-   SCIP_INTERVAL*        val                 /**< buffer to store interval value of expression */
-   )
-{
-   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
-   return SCIP_PLUGINNOTFOUND;
-}  /*lint !e715*/
-
 /** computes value and gradient of an expression */
 SCIP_RETCODE SCIPexprintGrad(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
@@ -141,21 +128,6 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
    SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPgetExprNVars(expr) */
-   )
-{
-   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
-   return SCIP_PLUGINNOTFOUND;
-}  /*lint !e715*/
-
-/** computes interval value and interval gradient of an expression */
-SCIP_RETCODE SCIPexprintGradInt(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Real             infinity,           /**< value for infinity */
-   SCIP_INTERVAL*        varvals,            /**< interval values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable interval values changed since last call to an interval evaluation routine? */
-   SCIP_INTERVAL*        val,                /**< buffer to store expression interval value */
-   SCIP_INTERVAL*        gradient            /**< buffer to store expression interval gradient, need to have length at least SCIPgetExprNVars(expr) */
    )
 {
    SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
