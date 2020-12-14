@@ -1428,20 +1428,26 @@ SCIP_RETCODE presolve(
       else /* switch status to INFORUNBD */
          scip->stat->status = SCIP_STATUS_INFORUNBD;
    }
-   /* if no variables and constraints are present and no active pricers could create variables later, we conclude
-    * optimality; note that we consciously ignore the potential presence of constraint handler with needscons flag
-    * FALSE; if such constraint handlers rely on entering the SOLVING stage, then they must add a locked variable during
-    * stage INITPRE */
-   else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0 )
+   /* if no variables and constraints are present, we try to add the empty solution (constraint handlers with needscons
+    * flag FALSE could theoretically reject it); if no active pricers could create variables later, we conclude
+    * optimality or infeasibility */
+   else if( scip->transprob->nvars == 0 && scip->transprob->nconss == 0 )
    {
       SCIP_SOL* sol;
       SCIP_Bool stored;
 
       SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-      SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
-      scip->stat->status = SCIP_STATUS_OPTIMAL;
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, FALSE, &stored) );
 
-      *vanished = TRUE;
+      if( scip->set->nactivepricers == 0 )
+      {
+         if( scip->primal->nlimsolsfound > 0 )
+            scip->stat->status = SCIP_STATUS_OPTIMAL;
+         else
+            scip->stat->status = SCIP_STATUS_INFEASIBLE;
+
+         *vanished = TRUE;
+      }
    }
 
    /* deinitialize presolving */
