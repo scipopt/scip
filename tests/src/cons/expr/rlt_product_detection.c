@@ -562,7 +562,7 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    cr_expect_eq(row_list[4], 0);
 
    /* check the hashtable for 3-variable relations */
-   cr_expect_eq(SCIPhashtableGetNElements(hashtable3), 1, "expected 1 var triple, got %d",
+   cr_expect_eq(SCIPhashtableGetNElements(hashtable3), 1, "expected 1 var triple, got %lld",
          SCIPhashtableGetNElements(hashtable3));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
@@ -583,7 +583,7 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    }
 
    /* check the hashtable for 2-variable relations */
-   cr_expect_eq(SCIPhashtableGetNElements(hashtable2), 1, "expected 1 var pair, got %d",
+   cr_expect_eq(SCIPhashtableGetNElements(hashtable2), 1, "expected 1 var pair, got %lld",
          SCIPhashtableGetNElements(hashtable2));
 
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable2); ++i )
