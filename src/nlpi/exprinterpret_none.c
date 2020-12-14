@@ -173,6 +173,46 @@ SCIP_RETCODE SCIPexprintGradInt(
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
 
+/** gives sparsity pattern of lower-triangular part of hessian
+ *
+ * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ *
+ * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
+ */
+SCIP_RETCODE SCIPexprintHessianSparsity(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            varvals,            /**< values of variables */
+   int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
+   int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
+   int*                  nnz                 /**< buffer to return length of arrays */
+   )
+{
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
+   return SCIP_PLUGINNOTFOUND;
+}  /*lint !e715*/
+
+/** computes value and hessian of an expression
+ *
+ * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
+ * Returned array hessianvals will contain the corresponding Hessian elements.
+ */
+SCIP_RETCODE SCIPexprintHessian(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
+   SCIP_Real*            val,                /**< buffer to store function value */
+   int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
+   int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
+   SCIP_Real**           hessianvals,        /**< buffer to return array with Hessian elements */
+   int*                  nnz                 /**< buffer to return length of arrays */
+   )
+{
+   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
+   return SCIP_PLUGINNOTFOUND;
+}  /*lint !e715*/
+
 /** gives sparsity pattern of hessian
  * NOTE: this function might be replaced later by something nicer 
  * Since the AD code might need to do a forward sweep, you should pass variable values in here.

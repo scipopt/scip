@@ -713,15 +713,14 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
    int                   dim                 /**< dimension of matrix */
    )
 {
-   SCIP_Real*  x;
-   SCIP_Bool*  hesnz;
-   int         i;
-   int         j;
-   int         nvars;
-   int         nn;
-   int         row;
-   int         col;
-   int         pos;
+   SCIP_Real* x;
+   int* rowidxs;
+   int* colidxs;
+   int nnz;
+   int row;
+   int col;
+   int pos;
+   int i;
 
    assert(oracle != NULL);
    assert(colnz  != NULL);
@@ -732,41 +731,31 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
    assert(dim >= 0);
 
    SCIPdebugMessage("%p hess lag sparsity set nzflag for expr\n", (void*)oracle);
-#if !1 // FIXME
-   nvars = SCIPexprtreeGetNVars(expr);
-   nn = nvars * nvars;
 
-   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &x,     nvars) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &hesnz, nn) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &x, oracle->nvars) );
+   for( i = 0; i < oracle->nvars; ++i )
+      x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
 
-   for( i = 0; i < nvars; ++i )
-      x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */  /*lint !e644*/
+   SCIP_CALL( SCIPexprintHessianSparsity(oracle->exprinterpreter, expr, x, &rowidxs, &colidxs, &nnz) );
 
-   SCIP_CALL( SCIPexprintHessianSparsityDense(oracle->exprinterpreter, expr, x, hesnz) );  /*lint !e644*/
+   for( i = 0; i < nnz; ++i )
+   {
+      row = rowidxs[i];
+      col = colidxs[i];
 
-   for( i = 0; i < nvars; ++i ) /* rows */
-      for( j = 0; j <= i; ++j ) /* cols */
+      assert(row < oracle->nvars);
+      assert(col <= row);
+
+      if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
       {
-         if( !hesnz[i*nvars + j] )
-            continue;
-
-         row = MAX(exprvaridx[i], exprvaridx[j]);
-         col = MIN(exprvaridx[i], exprvaridx[j]);
-
-         assert(row <  dim);
-         assert(col <= row);
-
-         if( colnz[row] == NULL || !SCIPsortedvecFindInt(colnz[row], col, colnnz[row], &pos) )
-         {
-            SCIP_CALL( ensureIntArraySize(oracle->blkmem, &colnz[row], &collen[row], colnnz[row]+1) );
-            SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row], NULL);
-            ++(*nzcount);
-         }
+         SCIP_CALL( ensureIntArraySize(scip, &colnz[row], &collen[row], colnnz[row]+1) );
+         SCIPsortedvecInsertInt(colnz[row], col, &colnnz[row], NULL);
+         ++*nzcount;
       }
+   }
 
-   BMSfreeBlockMemoryArray(oracle->blkmem, &x, nvars);
-   BMSfreeBlockMemoryArray(oracle->blkmem, &hesnz, nn);
-#endif
+   SCIPfreeBufferArray(scip, &x);
+
    return SCIP_OKAY;
 }
 
@@ -784,92 +773,55 @@ SCIP_RETCODE hessLagAddExpr(
    SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
    )
 {
-   SCIP_Real* xx;
+   SCIP_Real val;
    SCIP_Real* h;
-   SCIP_Real* hh;
-   int        i;
-   int        j;
-   int        nvars;
-   int        nn;
-   int        row;
-   int        col;
-   int        idx;
-   SCIP_Real  val;
+   int* rowidxs;
+   int* colidxs;
+   int nnz;
+   int row;
+   int col;
+   int pos;
+   int i;
 
    SCIPdebugMessage("%p hess lag add expr\n", (void*)oracle);
 
    assert(oracle != NULL);
    assert(x != NULL || new_x == FALSE);
-#if !1  // FIXME
-   nvars = expr != NULL ? SCIPexprtreeGetNVars(expr) : 0;
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
    assert(expr != NULL);
-   assert(exprvaridx != NULL);
    assert(hesoffset != NULL);
    assert(hescol != NULL);
    assert(values != NULL);
 
-   nn = nvars * nvars;
-
-   xx = NULL;
-   SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &h, nn) );
-
-   if( new_x )
-   {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, nvars) );
-      for( i = 0; i < nvars; ++i )
-      {
-         assert(exprvaridx[i] >= 0);
-         xx[i] = x[exprvaridx[i]];  /*lint !e613*/
-      }
-   }
-
-   SCIP_CALL( SCIPexprintHessianDense(oracle->exprinterpreter, expr, xx, new_x, &val, h) );  /*lint !e644*/
-   if( val != val )  /*lint !e777*/
+   SCIP_CALL( SCIPexprintHessian(oracle->exprinterpreter, expr, (SCIP_Real*)x, new_x, &val, &rowidxs, &colidxs, &h, &nnz) );
+   if( !SCIPisFinite(val) )
    {
       SCIPdebugMessage("hessian evaluation yield invalid function value %g\n", val);
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-      BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
       return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
    }
 
-   hh = h;
-   for( i = 0; i < nvars; ++i ) /* rows */
+   for( i = 0; i < nnz; ++i )
    {
-      for( j = 0; j <= i; ++j, ++hh ) /* cols */
+      if( !SCIPisFinite(h[i]) )
       {
-         if( !*hh )
-            continue;
-
-         if( !SCIPisFinite(*hh) )  /*lint !e777*/
-         {
-            SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
-            BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-            BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
-            return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-         }
-
-         row = MAX(exprvaridx[i], exprvaridx[j]);
-         col = MIN(exprvaridx[i], exprvaridx[j]);
-
-         if( !SCIPsortedvecFindInt(&hescol[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &idx) )
-         {
-            SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
-            BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-            BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
-            return SCIP_ERROR;
-         }
-
-         values[hesoffset[row] + idx] += weight * *hh;
+         SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *h);
+         return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
       }
-      hh += nvars - j; /*lint !e679*/
+
+      if( h[i] == 0.0 )
+         continue;
+
+      row = rowidxs[i];
+      col = colidxs[i];
+
+      if( !SCIPsortedvecFindInt(&hescol[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &pos) )
+      {
+         SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
+         return SCIP_ERROR;
+      }
+
+      values[hesoffset[row] + pos] += weight * *h;
    }
 
-   BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-   BMSfreeBlockMemoryArray(oracle->blkmem, &h, nn);
-#endif
    return SCIP_OKAY;
 }
 
