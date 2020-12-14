@@ -97,15 +97,6 @@ SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
    );
 
-/** notify expression interpreter that a new parameterization is used
- * this probably causes retaping by AD algorithms
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintNewParametrization(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr                /**< expression */
-   );
-
 /** evaluates an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintEval(

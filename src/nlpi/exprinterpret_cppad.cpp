@@ -23,7 +23,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "nlpi/pub_expr.h"
+#include "scip/pub_expr.h"
 #include "nlpi/exprinterpret.h"
 
 #include <cmath>
@@ -2273,28 +2273,6 @@ SCIP_RETCODE SCIPexprintFreeData(
 
    delete *interpreterdata;
    *interpreterdata = NULL; 
-
-   return SCIP_OKAY;
-}
-
-/** notify expression interpreter that a new parameterization is used
- *
- *  This probably causes retaping by AD algorithms.
- */
-SCIP_RETCODE SCIPexprintNewParametrization(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree                /**< expression tree */
-   )
-{
-   assert(exprint != NULL);
-   assert(tree    != NULL);
-
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   if( data != NULL )
-   {
-      data->need_retape     = true;
-      data->int_need_retape = true;
-   }
 
    return SCIP_OKAY;
 }

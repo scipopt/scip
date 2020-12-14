@@ -108,17 +108,6 @@ SCIP_RETCODE SCIPexprintFreeData(
    return SCIP_OKAY;
 }  /*lint !e715*/
 
-/** notify expression interpreter that a new parameterization is used
- * this probably causes retaping by AD algorithms
- */
-SCIP_RETCODE SCIPexprintNewParametrization(
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr                /**< expression */
-   )
-{
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
 /** evaluates an expression */
 SCIP_RETCODE SCIPexprintEval(
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
