@@ -829,8 +829,6 @@ SCIP_RETCODE detectProductsImplbnd(
    )
 {
    SCIP_Real coefs2[3] = { 0., 0., 0. };
-   SCIP_Bool foundlb;
-   SCIP_Bool foundub;
    SCIP_Real impllb;
    SCIP_Real implub;
    SCIP_VAR* binvar;
@@ -855,9 +853,9 @@ SCIP_RETCODE detectProductsImplbnd(
    for( i = 0; i < (binvarpos == 0 ? 1 : 2); ++i )
    {
       /* get implications binvar == binval  =>  implvar <=/>= implbnd */
-      SCIPvarGetImplicVarBounds(binvar, binvals[i], implvar, &impllb, &implub, &foundlb, &foundub);
+      SCIPvarGetImplicVarBounds(binvar, binvals[i], implvar, &impllb, &implub);
 
-      if( foundlb )
+      if( impllb != SCIP_INVALID ) /*lint !e777*/
       {
          /* write the implied bound as a big-M constraint */
          implBndToBigM(scip, vars_xwy, binvarpos, implvarpos, SCIP_BOUNDTYPE_LOWER, binvals[i], impllb, coefs2, &side2);
@@ -866,7 +864,7 @@ SCIP_RETCODE detectProductsImplbnd(
                SCIP_SIDETYPE_LEFT, varmap, f) );
       }
 
-      if( foundub )
+      if( implub != SCIP_INVALID ) /*lint !e777*/
       {
          /* write the implied bound as a big-M constraint */
          implBndToBigM(scip, vars_xwy, binvarpos, implvarpos, SCIP_BOUNDTYPE_UPPER, binvals[i], implub, coefs2, &side2);
