@@ -464,7 +464,8 @@ void freeVariables(
 
 /** increases variable degrees in oracle w.r.t. variables occurring in a single constraint */
 static
-void updateVariableDegreesCons(
+SCIP_RETCODE updateVariableDegreesCons(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< oracle data structure */
    SCIP_NLPIORACLECONS*  cons                /**< oracle constraint */
    )
@@ -479,18 +480,30 @@ void updateVariableDegreesCons(
       if( oracle->vardegrees[cons->linidxs[j]] < 1 )
          oracle->vardegrees[cons->linidxs[j]] = 1;
 
-#if !1 //FIXME
    /* we could get actual degree of a variable in expr,
     * but so far no solver could make use of this information */
    if( cons->expr != NULL )
-      for( j = SCIPexprtreeGetNVars(cons->exprtree)-1; j >= 0; --j )
-         oracle->vardegrees[cons->exprvaridxs[j]] = INT_MAX;
-#endif
+   {
+      SCIP_EXPRITER* it;
+      SCIP_EXPR* expr;
+
+      SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+      SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE);
+
+      for( expr = cons->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         if( SCIPisExprVaridx(scip, expr) )
+            oracle->vardegrees[SCIPgetIndexExprVaridx(expr)] = INT_MAX;
+
+      SCIPfreeExpriter(&it);
+   }
+
+   return SCIP_OKAY;
 }
 
 /** Updates the degrees of all variables. */
 static
-void updateVariableDegrees(
+SCIP_RETCODE updateVariableDegrees(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle              /**< pointer to store NLPIORACLE data structure */
    )
 {
@@ -503,16 +516,18 @@ void updateVariableDegrees(
    SCIPdebugMessage("%p update variable degrees\n", (void*)oracle);
 
    if( oracle->vardegreesuptodate || oracle->nvars == 0 )
-      return;
+      return SCIP_OKAY;
 
    /* assume all variables do not appear in NLP */
    BMSclearMemoryArray(oracle->vardegrees, oracle->nvars);
 
-   updateVariableDegreesCons(oracle, oracle->objective);
+   SCIP_CALL( updateVariableDegreesCons(scip, oracle, oracle->objective) );
    for( c = 0; c < oracle->nconss; ++c )
-      updateVariableDegreesCons(oracle, oracle->conss[c]);
+      SCIP_CALL( updateVariableDegreesCons(scip, oracle, oracle->conss[c]) );
 
    oracle->vardegreesuptodate = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** applies a mapping of indices to one array of indices */
@@ -1229,7 +1244,9 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
       /* keep variable degrees updated */
       if( oracle->vardegreesuptodate )
-         updateVariableDegreesCons(oracle, cons);
+      {
+         SCIP_CALL( updateVariableDegreesCons(scip, oracle, cons) );
+      }
 
       oracle->conss[oracle->nconss+c] = cons;
    }
@@ -1644,7 +1661,6 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    )
 {
    SCIP_NLPIORACLECONS* cons;
-   int j;
 
    SCIPdebugMessage("%p chg expr\n", (void*)oracle);
 
@@ -1675,18 +1691,11 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    SCIPcaptureExpr(cons->expr);
    SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, cons->expr) );
 
-#if !1 //FIXME
-   /* increase variable degree to keep them up to date
-    * could get more accurate degree via getMaxDegree function in expr, but no solver would use this information so far
-    */
+   /* keep variable degrees up to date */
    if( oracle->vardegreesuptodate )
-      for( j = 0; j < SCIPexprtreeGetNVars(cons->expr); ++j )
-      {
-         assert(cons->exprvaridxs[j] >= 0);
-         assert(cons->exprvaridxs[j] <  oracle->nvars);
-         oracle->vardegrees[cons->exprvaridxs[j]] = INT_MAX;
-      }
-#endif
+   {
+      SCIP_CALL( updateVariableDegreesCons(scip, oracle, cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1759,35 +1768,49 @@ char** SCIPnlpiOracleGetVarNames(
    return oracle->varnames;
 }
 
-/** Gives maximum degree of a variable w.r.t. objective and all constraints.
- *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
+/** Gives indicator whether variable appears in NLP and whether that is only linear or nonlinear.
+ *
+ * Degree is 0 if variable does not appear in objective or any constraint.
+ * Degree is 1 if variable appears only linearly.
+ * Degree is INT_MAX if variable appears nonlinear.
  */ 
-int SCIPnlpiOracleGetVarDegree(
+SCIP_RETCODE SCIPnlpiOracleGetVarDegree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   varidx              /**< index of variable which degree should be returned */
+   int                   varidx,             /**< the variable for which the degree is returned */
+   int*                  vardegree           /**< buffer to store variable degree */
    )
 {
    assert(oracle != NULL);
    assert(varidx >= 0);
    assert(varidx < oracle->nvars);
+   assert(vardegree != NULL);
 
-   updateVariableDegrees(oracle);
+   SCIP_CALL( updateVariableDegrees(scip, oracle) );
 
-   return oracle->vardegrees[varidx];
+   *vardegree = oracle->vardegrees[varidx];
+
+   return SCIP_OKAY;
 }
 
-/** Gives maximum degree of all variables w.r.t. objective and all constraints.
- *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
- */ 
-int* SCIPnlpiOracleGetVarDegrees(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+/** Gives indicator which variables appears in NLP and whether that is only linear or nonlinear.
+ *
+ * See @ref SCIPnlpiOracleGetVarDegree.
+ */
+SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int**                 vardegrees          /**< buffer to return pointer to array of variable degrees */
    )
 {
    assert(oracle != NULL);
+   assert(vardegrees != NULL);
 
-   updateVariableDegrees(oracle);
+   SCIP_CALL( updateVariableDegrees(scip, oracle) );
 
-   return oracle->vardegrees;
+   *vardegrees = oracle->vardegrees;
+
+   return SCIP_OKAY;
 }
 
 /** gives left-hand side of a constraint */
@@ -1853,37 +1876,6 @@ int SCIPnlpiOracleGetConstraintDegree(
       return 1;
 
    return 0;
-}
-
-/** Gives maximum degree over all constraints and the objective (or over all variables, resp.).
- * Thus, if this function returns 0, then the objective and all constraints are constant.
- * If it returns 1, then the problem in linear.
- * If it returns 2, then its a QP, QCP, or QCQP.
- * And if it returns > 2, then it is an NLP.
- */
-int SCIPnlpiOracleGetMaxDegree(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-   )
-{
-   int i;
-   int maxdegree;
-
-   assert(oracle != NULL);
-
-   SCIPdebugMessage("%p get max degree\n", (void*)oracle);
-
-   updateVariableDegrees(oracle);
-
-   maxdegree = 0;
-   for( i = 0; i < oracle->nvars; ++i )
-      if( oracle->vardegrees[i] > maxdegree )
-      {
-         maxdegree = oracle->vardegrees[i];
-         if( maxdegree == INT_MAX )
-            break;
-      }
-
-   return maxdegree;
 }
 
 /** gives the evaluation capabilities that are shared among all expressions in the problem */

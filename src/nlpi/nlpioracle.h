@@ -221,21 +221,29 @@ char** SCIPnlpiOracleGetVarNames(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
-/** Gives maximum degree of a variable w.r.t. objective and all constraints.
- *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
+/** Gives indicator whether variable appears in NLP and whether that is only linear or nonlinear.
+ *
+ * Degree is 0 if variable does not appear in objective or any constraint.
+ * Degree is 1 if variable appears only linearly.
+ * Degree is INT_MAX if variable appears nonlinear.
  */ 
 SCIP_EXPORT
-int SCIPnlpiOracleGetVarDegree(
+SCIP_RETCODE SCIPnlpiOracleGetVarDegree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   varidx              /**< the variable for which the degree is returned */
+   int                   varidx,             /**< the variable for which the degree is returned */
+   int*                  vardegree           /**< buffer to store variable degree */
    );
 
-/** Gives maximum degree of all variables w.r.t. objective and all constraints.
- *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
+/** Gives indicator which variables appears in NLP and whether that is only linear or nonlinear.
+ *
+ * See @ref SCIPnlpiOracleGetVarDegree.
  */ 
 SCIP_EXPORT
-int* SCIPnlpiOracleGetVarDegrees(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+SCIP_RETCODE SCIPnlpiOracleGetVarDegrees(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
+   int**                 vardegrees          /**< buffer to return pointer to array of variable degrees */
    );
 
 /** gives left-hand side of a constraint */
@@ -266,17 +274,6 @@ SCIP_EXPORT
 int SCIPnlpiOracleGetConstraintDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx             /**< index of constraint for which the degree is requested, or -1 for objective */
-   );
-
-/** Gives maximum degree over all constraints and the objective (or over all variables, resp.).
- * Thus, if this function returns 0, then the objective and all constraints are constant.
- * If it returns 1, then the problem in linear.
- * If it returns 2, then its a QP, QCP, or QCQP.
- * And if it returns > 2, then it is an NLP.
- */
-SCIP_EXPORT
-int SCIPnlpiOracleGetMaxDegree(
-   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 
 /** Gives the evaluation capabilities that are shared among all expressions in the problem. */
