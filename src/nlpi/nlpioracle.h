@@ -279,6 +279,7 @@ int SCIPnlpiOracleGetConstraintDegree(
 /** Gives the evaluation capabilities that are shared among all expressions in the problem. */
 SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 

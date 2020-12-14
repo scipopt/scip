@@ -23,7 +23,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "nlpi/exprinterpret.h"
+#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 #include "nlpi/nlpi.h"
 #include "scip/benderscut_feasalt.h"

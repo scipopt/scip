@@ -50,7 +50,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
 
 /** creates an expression interpreter object */
 SCIP_RETCODE SCIPexprintCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
    )
 {
@@ -64,6 +64,7 @@ SCIP_RETCODE SCIPexprintCreate(
 
 /** frees an expression interpreter object */
 SCIP_RETCODE SCIPexprintFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    )
 {
@@ -74,13 +75,29 @@ SCIP_RETCODE SCIPexprintFree(
 
 /** compiles an expression and stores compiled data in expression */
 SCIP_RETCODE SCIPexprintCompile(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   maxvaridx,          /**< an upper bound on the maximal variable index (+1) appearing in the expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
    )
 {
    return SCIP_OKAY;
 }  /*lint !e715*/
 
+/** frees interpreter data */
+SCIP_RETCODE SCIPexprintFreeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< pointer to pointer to compiled data to be freed */
+   )
+{
+   assert(exprintdata  != NULL);
+   assert(*exprintdata == NULL);
+
+   return SCIP_OKAY;
+}  /*lint !e715*/
 
 /** gives the capability to evaluate an expression by the expression interpreter
  *
@@ -90,30 +107,23 @@ SCIP_RETCODE SCIPexprintCompile(
  * Hessians.
  */
 SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata         /**< interpreter-specific data for expression */
    )
 {
    return SCIP_EXPRINTCAPABILITY_NONE;
 } /*lint !e715*/
 
-/** frees interpreter data */
-SCIP_RETCODE SCIPexprintFreeData(
-   SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
-   )
-{
-   assert(interpreterdata  != NULL);
-   assert(*interpreterdata == NULL);
-
-   return SCIP_OKAY;
-}  /*lint !e715*/
-
 /** evaluates an expression */
 SCIP_RETCODE SCIPexprintEval(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
-   SCIP_Real*            val                 /**< buffer to store value */
+   SCIP_Real*            val                 /**< buffer to store value of expression */
    )
 {
    SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
@@ -122,8 +132,10 @@ SCIP_RETCODE SCIPexprintEval(
 
 /** computes value and gradient of an expression */
 SCIP_RETCODE SCIPexprintGrad(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
@@ -141,8 +153,10 @@ SCIP_RETCODE SCIPexprintGrad(
  * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
  */
 SCIP_RETCODE SCIPexprintHessianSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
    int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
@@ -159,8 +173,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
  * Returned array hessianvals will contain the corresponding Hessian elements.
  */
 SCIP_RETCODE SCIPexprintHessian(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
@@ -179,8 +195,10 @@ SCIP_RETCODE SCIPexprintHessian(
  * Since the AD code might need to do a forward sweep, you should pass variable values in here.
  */
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
    )
@@ -193,8 +211,10 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
  * the full hessian is computed (lower left and upper right triangle)
  */
 SCIP_RETCODE SCIPexprintHessianDense(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */

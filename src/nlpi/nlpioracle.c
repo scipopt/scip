@@ -45,6 +45,7 @@ struct SCIP_NlpiOracleCons
    SCIP_Real*            lincoefs;           /**< variable coefficients in linear part, of NULL if none */
 
    SCIP_EXPR*            expr;               /**< expression for nonlinear part, or NULL if none */
+   SCIP_EXPRINTDATA*     exprintdata;        /**< expression interpret data for expression, or NULL if no expr or not compiled yet */
 
    char*                 name;               /**< name of constraint */
 };
@@ -74,7 +75,6 @@ struct SCIP_NlpiOracle
 
    int*                  heslagoffsets;      /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in heslagcol */
    int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
-
 
    SCIP_EXPRINT*         exprinterpreter;    /**< interpreter for expressions: evaluation and derivatives */
 };
@@ -334,9 +334,11 @@ SCIP_RETCODE createConstraint(
 static
 SCIP_RETCODE freeConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_NLPIORACLECONS** cons                /**< pointer to constraint that should be freed */
    )
 {
+   assert(oracle != NULL);
    assert(cons   != NULL);
    assert(*cons  != NULL);
 
@@ -347,6 +349,7 @@ SCIP_RETCODE freeConstraint(
 
    if( (*cons)->expr != NULL )
    {
+      SCIP_CALL( SCIPexprintFreeData(scip, oracle->exprinterpreter, (*cons)->expr, &(*cons)->exprintdata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &(*cons)->expr) );
    }
 
@@ -365,7 +368,7 @@ SCIP_RETCODE freeConstraint(
 static
 void freeConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLPIORACLE*      oracle              /**< pointer to store NLPIORACLE data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    )
 {
    int i;
@@ -376,7 +379,7 @@ void freeConstraints(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
-      freeConstraint(scip, &oracle->conss[i]);
+      freeConstraint(scip, oracle, &oracle->conss[i]);
       assert(oracle->conss[i] == NULL);
    }
    oracle->nconss = 0;
@@ -628,7 +631,7 @@ SCIP_RETCODE evalFunctionValue(
    {
       SCIP_Real  nlval;
 
-      SCIP_CALL( SCIPexprintEval(oracle->exprinterpreter, cons->expr, (SCIP_Real*)x, &nlval) );
+      SCIP_CALL( SCIPexprintEval(scip, oracle->exprinterpreter, cons->expr, cons->exprintdata, (SCIP_Real*)x, &nlval) );
       if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
          *val  = nlval;
       else
@@ -671,7 +674,7 @@ SCIP_RETCODE evalFunctionGradient(
       SCIPdebugMsg(scip, "eval gradient of ");
       SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < oracle->nvars; ++i) printf(" %g", x[i]); printf("\n");} )
 
-      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->expr, (SCIP_Real*)x, isnewx, &nlval, grad) );
+      SCIP_CALL( SCIPexprintGrad(scip, oracle->exprinterpreter, cons->expr, cons->exprintdata, (SCIP_Real*)x, isnewx, &nlval, grad) );
 
       SCIPdebug( printf("g ="); for( i = 0; i < oracle->nvars; ++i) printf(" %g", grad[i]); printf("\n"); )
 
@@ -725,6 +728,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
    int*                  colnnz,             /**< number of nonzero entries for each column */
    int*                  nzcount,            /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< expression interpreter data for expression */
    int                   dim                 /**< dimension of matrix */
    )
 {
@@ -751,7 +755,7 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExpr(
    for( i = 0; i < oracle->nvars; ++i )
       x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
 
-   SCIP_CALL( SCIPexprintHessianSparsity(oracle->exprinterpreter, expr, x, &rowidxs, &colidxs, &nnz) );
+   SCIP_CALL( SCIPexprintHessianSparsity(scip, oracle->exprinterpreter, expr, exprintdata, x, &rowidxs, &colidxs, &nnz) );
 
    for( i = 0; i < nnz; ++i )
    {
@@ -783,6 +787,7 @@ SCIP_RETCODE hessLagAddExpr(
    const SCIP_Real*      x,                  /**< point for which hessian should be returned */
    SCIP_Bool             new_x,              /**< whether point has been evaluated before */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< expression interpreter data for expression */
    int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */
    int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
    SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
@@ -807,7 +812,7 @@ SCIP_RETCODE hessLagAddExpr(
    assert(hescol != NULL);
    assert(values != NULL);
 
-   SCIP_CALL( SCIPexprintHessian(oracle->exprinterpreter, expr, (SCIP_Real*)x, new_x, &val, &rowidxs, &colidxs, &h, &nnz) );
+   SCIP_CALL( SCIPexprintHessian(scip, oracle->exprinterpreter, expr, exprintdata, (SCIP_Real*)x, new_x, &val, &rowidxs, &colidxs, &h, &nnz) );
    if( !SCIPisFinite(val) )
    {
       SCIPdebugMessage("hessian evaluation yield invalid function value %g\n", val);
@@ -1004,7 +1009,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    (*oracle)->vardegreesuptodate = TRUE;
 
    SCIPdebugMessage("Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
-   SCIP_CALL( SCIPexprintCreate(SCIPblkmem(scip), &(*oracle)->exprinterpreter) );
+   SCIP_CALL( SCIPexprintCreate(scip, &(*oracle)->exprinterpreter) );
 
    /* create zero objective function */
    SCIP_CALL( createConstraint(scip, &(*oracle)->objective, 0, NULL, NULL, NULL, 0.0, 0.0, NULL) );
@@ -1026,11 +1031,11 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    invalidateJacobiSparsity(scip, *oracle);
    invalidateHessianLagSparsity(scip, *oracle);
 
-   freeConstraint(scip, &(*oracle)->objective);
+   freeConstraint(scip, *oracle, &(*oracle)->objective);
    freeConstraints(scip, *oracle);
    freeVariables(scip, *oracle);
 
-   SCIP_CALL( SCIPexprintFree(&(*oracle)->exprinterpreter) );
+   SCIP_CALL( SCIPexprintFree(scip, &(*oracle)->exprinterpreter) );
 
    if( (*oracle)->name != NULL )
    {
@@ -1239,7 +1244,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       if( cons->expr != NULL )
       {
          addednlcon = TRUE;
-         SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, cons->expr) );
+         SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, oracle->nvars, &cons->exprintdata) );
       }
 
       /* keep variable degrees updated */
@@ -1281,14 +1286,14 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       invalidateHessianLagSparsity(scip, oracle);
 
    /* clear previous objective */
-   freeConstraint(scip, &oracle->objective);
+   freeConstraint(scip, oracle, &oracle->objective);
 
    SCIP_CALL( createConstraint(scip, &oracle->objective,
          nlin, lininds, linvals, expr, constant, constant, NULL) );
 
    if( oracle->objective->expr != NULL )
    {
-      SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, oracle->objective->expr) );
+      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->objective->expr, oracle->nvars, &oracle->objective->exprintdata) );
    }
 
    oracle->vardegreesuptodate = FALSE;
@@ -1493,6 +1498,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
          }
          if( !keptvar )
          {
+            SCIP_CALL( SCIPexprintFreeData(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
             SCIP_CALL( SCIPreleaseExpr(scip, &cons->expr) );
          }
       }
@@ -1539,7 +1545,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    /* delete constraints at the end */
    for( c = oracle->nconss - 1; c > lastgood; --c )
    {
-      freeConstraint(scip, &oracle->conss[c]);
+      freeConstraint(scip, oracle, &oracle->conss[c]);
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
    }
@@ -1557,7 +1563,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       }
       assert(delstats[c] == 1); /* constraint should be deleted */
 
-      freeConstraint(scip, &oracle->conss[c]);
+      freeConstraint(scip, oracle, &oracle->conss[c]);
       assert(oracle->conss[c] == NULL);
       delstats[c] = -1;
 
@@ -1571,7 +1577,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
       /* move lastgood forward, delete constraints on the way */
       while( lastgood > c && delstats[lastgood] == 1)
       {
-         freeConstraint(scip, &oracle->conss[lastgood]);
+         freeConstraint(scip, oracle, &oracle->conss[lastgood]);
          assert(oracle->conss[lastgood] == NULL);
          delstats[lastgood] = -1;
          --lastgood;
@@ -1706,6 +1712,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    /* free previous expression */
    if( cons->expr != NULL )
    {
+      SCIP_CALL( SCIPexprintFreeData(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
       SCIP_CALL( SCIPreleaseExpr(scip, &cons->expr) );
       oracle->vardegreesuptodate = FALSE;
    }
@@ -1719,7 +1726,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    /* install new expression */
    cons->expr = expr;
    SCIPcaptureExpr(cons->expr);
-   SCIP_CALL( SCIPexprintCompile(oracle->exprinterpreter, cons->expr) );
+   SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, oracle->nvars, &cons->exprintdata) );
 
    /* keep variable degrees up to date */
    if( oracle->vardegreesuptodate )
@@ -1910,6 +1917,7 @@ int SCIPnlpiOracleGetConstraintDegree(
 
 /** gives the evaluation capabilities that are shared among all expressions in the problem */
 SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    )
 {
@@ -1919,13 +1927,13 @@ SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
    assert(oracle != NULL);
 
    if( oracle->objective->expr != NULL )
-      evalcapability = SCIPexprintGetExprCapability(oracle->exprinterpreter, oracle->objective->expr);
+      evalcapability = SCIPexprintGetExprCapability(scip, oracle->exprinterpreter, oracle->objective->expr, oracle->objective->exprintdata);
    else
       evalcapability = SCIP_EXPRINTCAPABILITY_ALL;
 
    for( c = 0; c < oracle->nconss; ++c )
       if( oracle->conss[c]->expr != NULL )
-         evalcapability &= SCIPexprintGetExprCapability(oracle->exprinterpreter, oracle->conss[c]->expr);
+         evalcapability &= SCIPexprintGetExprCapability(scip, oracle->exprinterpreter, oracle->conss[c]->expr, oracle->conss[c]->exprintdata);
 
    return evalcapability;
 }
@@ -2234,7 +2242,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       SCIPdebugMsg(scip, "eval gradient of ");
       SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < oracle->nvars; ++l) printf(" %g", x[l]); printf("\n");} )
 
-      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->expr, (SCIP_Real*)x, isnewx, &nlval, grad) );
+      SCIP_CALL( SCIPexprintGrad(scip, oracle->exprinterpreter, cons->expr, cons->exprintdata, (SCIP_Real*)x, isnewx, &nlval, grad) );
 
       SCIPdebug( printf("g ="); for( l = oracle->jacoffsets[i]; l < oracle->jacoffsets[i+1]; ++l) printf(" %g", grad[oracle->jaccols[l]]); printf("\n"); )
 
@@ -2338,14 +2346,14 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 
    if( oracle->objective->expr != NULL )
    {
-      SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, colnz, collen, colnnz, &nnz, oracle->objective->expr, oracle->nvars) );
+      SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, colnz, collen, colnnz, &nnz, oracle->objective->expr, oracle->objective->exprintdata, oracle->nvars) );
    }
 
    for( i = 0; i < oracle->nconss; ++i )
    {
       if( oracle->conss[i]->expr != NULL )
       {
-         SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->expr, oracle->nvars) );
+         SCIP_CALL( hessLagSparsitySetNzFlagForExpr(scip, oracle, colnz, collen, colnnz, &nnz, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->nvars) );
       }
    }
 
@@ -2414,7 +2422,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    if( objfactor != 0.0 )
    {
-      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, objfactor, x, isnewx, oracle->objective->expr, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, objfactor, x, isnewx, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
 
    for( i = 0; i < oracle->nconss; ++i )
@@ -2422,7 +2430,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 )
          continue;
-      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, lambda[i], x, isnewx, oracle->conss[i]->expr, oracle->heslagoffsets, oracle->heslagcols, hessian) );
+      SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, lambda[i], x, isnewx, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
 
    return SCIP_OKAY;

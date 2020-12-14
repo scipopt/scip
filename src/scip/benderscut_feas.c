@@ -21,7 +21,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "nlpi/exprinterpret.h"
+#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 #include "scip/benderscut_feas.h"
 #include "scip/benderscut_opt.h"
@@ -226,7 +226,6 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    SCIP_Bool*            success             /**< was the cut generation successful? */
    )
 {
-   SCIP_EXPRINT* exprinterpreter;
    SCIP_VAR** subvars;
    int nrows;
    int nsubvars;
@@ -249,6 +248,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    *lhs = 0.0;
    dirderiv = 0.0;
 
+#if !1
    SCIP_CALL( SCIPexprintCreate(SCIPblkmem(subproblem), &exprinterpreter) );
 
    /* looping over all NLP rows and setting the corresponding coefficients of the cut */
@@ -284,6 +284,7 @@ SCIP_RETCODE computeStandardNLPFeasibilityCut(
    }
 
    SCIP_CALL( SCIPexprintFree(&exprinterpreter) );
+#endif
 
    /* looping over all variable bounds and updating the corresponding coefficients of the cut; compute checkobj */
    for( i = 0; i < nsubvars; i++ )

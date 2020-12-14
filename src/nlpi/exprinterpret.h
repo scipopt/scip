@@ -33,10 +33,9 @@
 #define __SCIP_EXPRINTERPRET_H__
 
 #include "scip/def.h"
-#include "blockmemshell/memory.h"
-#include "scip/type_expr.h"
 #include "nlpi/type_exprinterpret.h"
-#include "scip/intervalarith.h"
+#include "scip/type_scip.h"
+#include "scip/type_expr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,21 +60,37 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(void);
 /** creates an expression interpreter object */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
    );
 
 /** frees an expression interpreter object */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    );
 
-/** compiles an expression and stores compiled data in expression */
+/** compiles an expression and returns interpreter-specific data for expression
+ *
+ * @attention the expression is assumed to use varidx expressions but no var expressions
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintCompile(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr                /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
+   int                   maxvaridx,          /**< an upper bound on the maximal variable index (+1) appearing in the expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
+   );
+
+/** frees interpreter data for expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexprintFreeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< pointer to pointer to compiled data to be freed */
    );
 
 /** gives the capability to evaluate an expression by the expression interpreter
@@ -87,21 +102,19 @@ SCIP_RETCODE SCIPexprintCompile(
  */
 SCIP_EXPORT
 SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr                /**< expression */
-   );
-
-/** frees interpreter data */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintFreeData(
-   SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata         /**< interpreter-specific data for expression */
    );
 
 /** evaluates an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintEval(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Real*            val                 /**< buffer to store value of expression */
    );
@@ -109,8 +122,10 @@ SCIP_RETCODE SCIPexprintEval(
 /** computes value and gradient of an expression */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintGrad(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
@@ -125,8 +140,10 @@ SCIP_RETCODE SCIPexprintGrad(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessianSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
    int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
@@ -140,8 +157,10 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessian(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
@@ -151,6 +170,7 @@ SCIP_RETCODE SCIPexprintHessian(
    int*                  nnz                 /**< buffer to return length of arrays */
    );
 
+/* TODO remove? */
 /** gives sparsity pattern of hessian
  *
  * NOTE: this function might be replaced later by something nicer.
@@ -158,20 +178,25 @@ SCIP_RETCODE SCIPexprintHessian(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
    );
 
+/* TODO remove? */
 /** computes value and dense hessian of an expression
  *
  *  The full hessian is computed (lower left and upper right triangle).
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexprintHessianDense(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
