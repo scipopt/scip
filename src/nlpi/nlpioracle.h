@@ -102,7 +102,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
    int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
    SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
-   SCIP_EXPR* const*     exprs,              /**< NULL if no nonlinear parts, otherwise exprs[.] gives nonlinear part,
+   SCIP_EXPR**           exprs,              /**< NULL if no nonlinear parts, otherwise exprs[.] gives nonlinear part,
                                               *   or NULL if no nonlinear part in this constraint */
    const char**          consnames           /**< names of new constraints, or NULL if no names should be stored */
    );
@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    int                   nlin,               /**< number of linear variable coefficients */ 
    const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
    const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
-   const SCIP_EXPR*      expr                /**< expression of nonlinear part, or NULL if no nonlinear part */
+   SCIP_EXPR*            expr                /**< expression of nonlinear part, or NULL if no nonlinear part */
    );
 
 /** change variable bounds */
@@ -179,7 +179,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where expression should be changed, or -1 for objective */
-   const SCIP_EXPR*      expr                /**< new expression, or NULL */
+   SCIP_EXPR*            expr                /**< new expression, or NULL */
    );
 
 /** changes the constant value in the objective function
