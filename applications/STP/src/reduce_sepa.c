@@ -911,6 +911,28 @@ SCIP_RETCODE cutNodesReduceWithTree(
 }
 
 
+/** todo remove once bigger graphs can be handled */
+static
+SCIP_Bool decomposeIsPossible(
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   int nnodes_real = 0;
+   const int nnodes = graph_get_nNodes(g);
+   const int* const isMarked = g->mark;
+
+   assert(graph_isMarked(g));
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( isMarked[i] )
+         nnodes_real++;
+   }
+
+   return (nnodes_real < 100000);
+}
+
+
 /** builds CSR like arrays for biconnected components */
 static
 void decomposeBuildCsr(
@@ -1340,6 +1362,12 @@ SCIP_RETCODE reduce_bidecomposition(
 
    graph_mark(g);
 
+   if( !decomposeIsPossible(g) )
+   {
+      SCIPdebugMessage("graph is too large...don't decompose \n");
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
    cutNodesCompute(g, &cutnodes);
 
@@ -1377,6 +1405,12 @@ SCIP_RETCODE reduce_articulations(
    graph_mark(g);
 
    *nelims = 0;
+
+   if( !decomposeIsPossible(g) )
+   {
+      SCIPdebugMessage("graph is too large...don't decompose \n");
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( cutNodesInit(scip, g, &cutnodes) );
    cutNodesCompute(g, &cutnodes);
