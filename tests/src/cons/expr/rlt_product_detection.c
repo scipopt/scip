@@ -494,9 +494,7 @@ Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .descrip
    SCIP_Bool cutoff;
    int nrows;
    int i;
-   int r;
    SCIP_ROW** prob_rows;
-   SCIP_ROW* row1;
    int* row_list;
    SCIP_HASHTABLE* hashtable2;
    SCIP_HASHTABLE* hashtable3;
