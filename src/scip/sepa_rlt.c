@@ -234,7 +234,6 @@ SCIP_RETCODE addAdjacentVars(
    int v1;
    int v2;
    SCIP_Bool found;
-   int pos1;
    int pos2;
    int i;
    int newsize;
@@ -305,10 +304,7 @@ SCIP_VAR** getAdjacentVars(
    int*                  nadjacentvars       /**< buffer to store the number of variables in the returned array */
    )
 {
-   SCIP_VAR** adjacentvars;
    ADJACENTVARDATA* adjacentvardata;
-   SCIP_Bool found;
-   int pos;
 
    assert(adjvarmap != NULL);
 
@@ -552,9 +548,6 @@ SCIP_RETCODE addProductVars(
    int ypos;
    int xidx;
    int yidx;
-   int pos;
-   int i;
-   SCIP_Bool found;
    SCIP_VAR* vars[2];
 
    if( sepadata->bilinvardatamap == NULL )
@@ -1073,15 +1066,9 @@ SCIP_RETCODE fillRelationTables(
    )
 {
    int r;
-   int v1;
-   int v2;
-   int i;
-   int varpos1;
-   int varpos2;
    SCIP_COL** cols;
    HASHDATA searchhashdata;
    HASHDATA* elementhashdata;
-   SCIP_Bool found;
 
    assert(prob_rows != NULL);
    assert(nrows > 0);
@@ -1227,10 +1214,8 @@ SCIP_RETCODE detectHiddenProducts(
    int ypos;
    int wpos;
    int f; /* value of the binary variable */
-   int varpos;
    SCIP_VAR** relatedvars;
    int nrelatedvars;
-   SCIP_Bool found;
    SCIP_Bool xfixing;
    SCIP_SIDETYPE sidetype1;
    SCIP_SIDETYPE sidetype2;
