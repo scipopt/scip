@@ -309,6 +309,58 @@ SCIP_Real getValueScore(
 }
 
 
+/** TODO: selects all variables with the best weighted score */
+static
+SCIP_RETCODE selectBestCands(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            cands,              /**< candidate array */
+   int                   ncands,             /**< number of candidates */
+   SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
+   SCIP_Real             inferenceweight,    /**< weight in score calculations for inference score */
+   SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
+   SCIP_Real             reliablescore,      /**< score which is seen to be reliable for a branching decision */
+   SCIP_VAR**            bestcands,          /**< buffer array to return selected candidates */
+   int*                  nbestcands          /**< buffer to return number of selected candidates */
+   )
+{
+#if SCIP_DISABLED_CODE /* only as a reminder of the previous code */
+   int c;
+
+   bestaggrcand = cands[0];
+   assert(cands[0] != NULL);
+
+   bestval = candsols[0];
+
+   /* get aggregated score for the first candidate */
+   bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
+
+   for( c = 1; c < ncands; ++c )
+   {
+      SCIP_VAR* cand;
+      SCIP_Real val;
+      SCIP_Real aggrscore;
+      SCIP_Real branchpoint;
+      SCIP_BRANCHDIR branchdir;
+
+      cand = cands[c];
+      assert(cand != NULL);
+
+      val = candsols[c];
+
+      /* get aggregated score for the candidate */
+      aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
+
+      /*lint -e777*/
+      SCIPdebugMsg(scip, " -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
+         val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
+
+      /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
+      evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval);
+   }
+#endif
+}
+
+
 /** selects a variable out of the given candidate array and performs the branching */
 static
 SCIP_RETCODE performBranchingSol(
@@ -340,39 +392,60 @@ SCIP_RETCODE performBranchingSol(
    /* check if the weighted sum between the average inferences and conflict score should be used */
    if( useweightedsum )
    {
-      int c;
+      SCIP_VAR** bestcands;
+      int nbestcands;
 
-      bestaggrcand = cands[0];
-      assert(cands[0] != NULL);
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &bestcands, ncands) );
+      nbestcands = 0;
 
-      bestval = candsols[0];
-
-      /* get aggregated score for the first candidate */
-      bestaggrscore = getAggrScore(scip, cands[0], conflictweight, inferenceweight, cutoffweight, reliablescore);
-
-      for( c = 1; c < ncands; ++c )
+      if( conflictprio > cutoffprio )
       {
-         SCIP_VAR* cand;
-         SCIP_Real val;
-         SCIP_Real aggrscore;
-         SCIP_Real branchpoint;
-         SCIP_BRANCHDIR branchdir;
+         /* select the best candidates w.r.t. the first criterion */
+         SCIP_CALL( selectBestCands(scip, cands, ncands, conflictweight, 0.0, 0.0, reliablescore,
+               bestcands, &nbestcands) );
 
-         cand = cands[c];
-         assert(cand != NULL);
-
-         val = candsols[c];
-
-         /* get aggregated score for the candidate */
-         aggrscore = getAggrScore(scip, cand, conflictweight, inferenceweight, cutoffweight, reliablescore);
-
-         /*lint -e777*/
-         SCIPdebugMsg(scip, " -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cand), SCIPvarGetBranchPriority(cand),
-            val == SCIP_UNKNOWN ? SCIPgetVarSol(scip, cand) : val, aggrscore);
-
-         /* evaluate the candidate against the currently best candidate w.r.t. aggregated score */
-         evaluateAggrCand(cand, aggrscore, val, &bestaggrcand, &bestaggrscore, &bestval);
+         if( nbestcands > 1 )
+         {
+            /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
+             * output, so the method must make sure to overwrite the last argument only at the very end */
+            SCIP_CALL( selectBestCands(scip, bestcands, nbestcands, 0.0, inferenceweight, cutoffweight, reliablescore,
+                  bestcands, &nbestcands) );
+         }
       }
+      else if( conflictprio == cutoffprio )
+      {
+         /* select the best candidates w.r.t. weighted sum of both criterion */
+         SCIP_CALL( selectBestCands(scip, cands, ncands, conflictweight, inferenceweight, cutoffweight, reliablescore,
+               bestcands, &nbestcands) );
+      }
+      else /* conflictprio < cutoffprio */
+      {
+         /* select the best candidates w.r.t. the first criterion */
+         SCIP_CALL( selectBestCands(scip, bestcands, nbestcands, 0.0, inferenceweight, cutoffweight, reliablescore,
+               bestcands, &nbestcands) );
+
+         if( nbestcands > 1 )
+         {
+            /* select the best candidates w.r.t. the second criterion; we use bestcands and nbestcands as input and
+             * output, so the method must make sure to overwrite the last argument only at the very end */
+            SCIP_CALL( selectBestCands(scip, cands, ncands, conflictweight, 0.0, 0.0, reliablescore,
+                  bestcands, &nbestcands) );
+         }
+      }
+      assert(nbestcands > 0);
+
+      if( nbestcands > 1 )
+      {
+         /* TODO: perform final tie breaking using objective coefficients and variable index */
+      }
+      assert(nbestcands == 1);
+
+      bestaggrcand = bestcands[0];
+      /* TODO: loop over cands, find bestcands[0], and store corresponding candsols value in bestval */
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &bestcands);
    }
    else
    {
