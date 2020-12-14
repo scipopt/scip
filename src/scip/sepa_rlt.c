@@ -2653,6 +2653,10 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_Real refpointy;
    SCIP_INTERVAL bndx;
    SCIP_INTERVAL bndy;
+#ifndef NDEBUG
+   SCIP_Real productval;
+   SCIP_Real auxval;
+#endif
 
    assert(sepadata->nbilinterms == SCIPgetConsExprNBilinTerms(sepadata->conshdlr));
    assert(bestunderestimators != NULL && bestoverestimators != NULL);
@@ -2692,9 +2696,6 @@ SCIP_RETCODE separateMcCormickImplicit(
 
 #ifndef NDEBUG
          /* make sure that the term is violated */
-         SCIP_Real productval;
-         SCIP_Real auxval;
-
          productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
 
