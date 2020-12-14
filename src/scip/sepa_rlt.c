@@ -2416,7 +2416,7 @@ void addRowMark(
    int                   ridx,               /**< row index */
    SCIP_Real             a,                  /**< coefficient of x in the row */
    SCIP_Bool             violatedbelow,      /**< whether the relation auxexpr <= xy is violated */
-   SCIP_Real             violatedabove,      /**< whether the relation xy <= auxexpr is violated */
+   SCIP_Bool             violatedabove,      /**< whether the relation xy <= auxexpr is violated */
    int*                  row_idcs,           /**< sparse array with indices of marked rows */
    unsigned int*         row_marks,          /**< sparse array to store the marks */
    int*                  nmarked             /**< number of marked rows */
