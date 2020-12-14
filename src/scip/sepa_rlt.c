@@ -1583,6 +1583,7 @@ SCIP_RETCODE createSepaData(
    sepadata->bilinvardatamap = NULL;
    sepadata->eqauxexpr = NULL;
    sepadata->nbilinvars = 0;
+   sepadata->sbilinvars = 0;
    sepadata->nbilinterms = 0;
 
    /* get total number of bilinear terms */
