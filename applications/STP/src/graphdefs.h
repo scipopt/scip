@@ -176,6 +176,7 @@ typedef struct
 {
    /* Nodes */
    int                   norgmodelknots;     /**< Number of nodes in the original model               */
+   int                   norgmodelterms;     /**< Number of terminals in the original model           */
    int                   ksize;              /**< Count of allocated knot slots                       */
    int                   knots;              /**< Count of nodes in graph                             */
    int                   orgknots;           /**< Count of nodes prior to graph reduction             */

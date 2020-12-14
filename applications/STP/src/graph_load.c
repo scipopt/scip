@@ -1579,14 +1579,17 @@ SCIP_RETCODE graph_load(
 
    if( ret == SUCCESS )
    {
+      const int nnodes = graph_get_nNodes(g);
+
       assert(g != NULL);
 
       if( g->source == UNKNOWN )
       {
-         for( i = 0; i < g->knots; i++ )
-            if ((g->term[i] == 0)
-               && ((g->source < 0) || (g->grad[i] > g->grad[g->source])))
+         for( i = 0; i < nnodes; i++ )
+         {
+            if ((g->term[i] == 0) && ((g->source < 0) || (g->grad[i] > g->grad[g->source])))
                g->source = i;
+         }
       }
 
       if( g->stp_type == UNKNOWN )
@@ -1595,6 +1598,12 @@ SCIP_RETCODE graph_load(
             g->stp_type = stp_type;
          else
             g->stp_type = STP_SPG;
+      }
+
+      if( stp_type == STP_GSTP )
+      {
+         g->norgmodelknots = nnodes - g->terms;
+         g->norgmodelterms = g->terms;
       }
 
 #ifndef WITH_UG
@@ -1614,6 +1623,7 @@ SCIP_RETCODE graph_load(
             SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
          SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
       }
+
       return SCIP_READERROR;
    }
 

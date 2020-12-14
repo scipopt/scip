@@ -3519,9 +3519,11 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 #endif
       if( graph->stp_type == STP_GSTP )
       {
-         norgnodes -= graph->terms;
-         nsolnodes -= graph->terms;
-         nsoledges -= graph->terms;
+         assert(graph->norgmodelterms > 0);
+
+         norgnodes -= graph->norgmodelterms;
+         nsolnodes -= graph->norgmodelterms;
+         nsoledges -= graph->norgmodelterms;
          assert(nsolnodes >= 0);
          assert(nsoledges >= 1);
       }
@@ -3544,8 +3546,17 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       {
          for( e = 0; e < norgedges; e += 2 )
          {
-            if( graph->stp_type == STP_GSTP && (Is_term(graph->term[graph->orgtail[e]]) || Is_term(graph->term[graph->orghead[e]])) )
-               continue;
+            if( graph->stp_type == STP_GSTP )
+            {
+               assert(graph->norgmodelknots > 0);
+
+               if( graph->orgtail[e] >= graph->norgmodelknots )
+                  continue;
+
+               if( graph->orghead[e] >= graph->norgmodelknots )
+                  continue;
+            }
+
             if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
                SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
          }

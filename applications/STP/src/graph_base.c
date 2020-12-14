@@ -599,6 +599,7 @@ SCIP_RETCODE graph_init(
    p->orgtail = NULL;
    p->orghead = NULL;
    p->rootedgeprevs = NULL;
+   p->norgmodelterms = 0;
    p->norgmodelknots = 0;
    p->norgmodeledges = 0;
    p->ksize  = ksize;
@@ -945,6 +946,7 @@ SCIP_RETCODE graph_copyData(
 
    g_copy->norgmodeledges = g_org->norgmodeledges;
    g_copy->norgmodelknots = g_org->norgmodelknots;
+   g_copy->norgmodelterms = g_org->norgmodelterms;
    g_copy->knots = g_org->knots;
    g_copy->terms = g_org->terms;
    g_copy->edges = g_org->edges;
@@ -1346,6 +1348,7 @@ SCIP_RETCODE graph_pack(
    SCIP_CALL( graph_init(scip, newgraph, nnodes, nedges, g_old->layers) );
    g_new = *newgraph;
    g_new->norgmodelknots = g_old->norgmodelknots;
+   g_new->norgmodelterms = g_old->norgmodelterms;
    g_new->norgmodeledges = g_old->norgmodeledges;
    g_new->orgsource = g_old->orgsource;
    g_new->orgtail = g_old->orgtail;
