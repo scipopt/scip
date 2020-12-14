@@ -519,7 +519,7 @@ SCIP_RETCODE SCIPflushNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpFlush(scip->nlp, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPnlpFlush(scip->nlp, scip->mem->probmem, scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }
@@ -1023,7 +1023,7 @@ SCIP_RETCODE SCIPstartDiveNLP(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPnlpStartDive(scip->nlp, SCIPblkmem(scip), scip->set) );
+   SCIP_CALL( SCIPnlpStartDive(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat) );
 
    return SCIP_OKAY;
 }

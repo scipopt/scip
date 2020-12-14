@@ -34,6 +34,7 @@
 #include "nlpi/nlpi.h"
 #include "scip/pub_expr.h"
 #include "scip/expr.h"
+#include "nlpi/expr_varidx.h"
 #include "scip/clock.h"
 #include "scip/event.h"
 #include "scip/intervalarith.h"
@@ -49,7 +50,7 @@
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/struct_nlp.h"
-/* to get nlp, set, ... in event handling */
+/* to get nlp, set, ... in event handling and mapvar2varidx */
 #include "scip/struct_scip.h"
 /* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
 #include "scip/struct_set.h"
@@ -150,10 +151,49 @@ SCIP_RETCODE nlrowLinearCoefChanged(
    return SCIP_OKAY;
 }
 
+/** create varidx expression for var expression
+ *
+ * called when expr is duplicated for addition to NLPI
+ */
+static
+SCIP_DECL_EXPR_MAPEXPR(mapvar2varidx)
+{
+   SCIP_NLP* nlp;
+   int nlpidx;
+
+   assert(sourcescip != NULL);
+   assert(sourcescip == targetscip);
+   assert(sourceexpr != NULL);
+   assert(targetexpr != NULL);
+   assert(mapexprdata != NULL);
+
+   nlp = (SCIP_NLP*)mapexprdata;
+
+   /* do not provide map if not variable */
+   if( !SCIPexprIsVar(sourcescip->set, sourceexpr) )
+   {
+      *targetexpr = NULL;
+      return SCIP_OKAY;
+   }
+
+   assert(SCIPvarIsActive(SCIPgetVarExprVar(sourceexpr)));  /* because we simplified exprs */
+
+   assert(SCIPhashmapExists(nlp->varhash, SCIPgetVarExprVar(sourceexpr)));
+   nlpidx = SCIPhashmapGetImageInt(nlp->varhash, SCIPgetVarExprVar(sourceexpr));
+   assert(nlpidx < nlp->nvars);
+
+   assert(nlp->varmap_nlp2nlpi[nlpidx] >= 0);
+   assert(nlp->varmap_nlp2nlpi[nlpidx] < nlp->nvars_solver);
+   SCIP_CALL( SCIPcreateExprVaridx(targetscip, targetexpr, nlp->varmap_nlp2nlpi[nlpidx], ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
 /** announces, that an expression tree changed */
 static
 SCIP_RETCODE nlrowExprChanged(
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_NLP*             nlp                 /**< current NLP data */
@@ -179,7 +219,11 @@ SCIP_RETCODE nlrowExprChanged(
       if( nlrow->nlpiindex >= 0 )
       {
          /* change expression tree in NLPI problem */
-         SCIP_CALL( SCIPnlpiChgExpr(set->scip, nlp->solver, nlp->problem, nlrow->nlpiindex, nlrow->expr) );
+         SCIP_EXPR* nlpiexpr;
+
+         SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, nlrow->expr, &nlpiexpr, mapvar2varidx, (void*)nlp, NULL, NULL) );
+         SCIP_CALL( SCIPnlpiChgExpr(set->scip, nlp->solver, nlp->problem, nlrow->nlpiindex, nlpiexpr) );
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlpiexpr) );
       }
    }
 
@@ -723,8 +767,6 @@ SCIP_RETCODE nlrowSimplifyExpr(
    SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
    nlrow->expr = simplified;
 
-   SCIP_CALL( nlrowExprChanged(nlrow, set, stat, nlp) );
-
    if( SCIPexprIsValue(set, nlrow->expr) )
    {
       /* if expression tree is constant, remove it */
@@ -732,6 +774,8 @@ SCIP_RETCODE nlrowSimplifyExpr(
 
       SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &nlrow->expr) );
    }
+
+   SCIP_CALL( nlrowExprChanged(nlrow, blkmem, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -1258,7 +1302,7 @@ SCIP_RETCODE SCIPnlrowChgExpr(
    }
 
    /* notify row about the change */
-   SCIP_CALL( nlrowExprChanged(nlrow, set, stat, nlp) );
+   SCIP_CALL( nlrowExprChanged(nlrow, blkmem, set, stat, nlp) );
 
    return SCIP_OKAY;
 }
@@ -2658,7 +2702,8 @@ static
 SCIP_RETCODE nlpFlushNlRowAdditions(
    SCIP_NLP*             nlp,                /**< NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    )
 {
    int c, i;
@@ -2719,7 +2764,7 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
 
       /* get indices in NLPI */
       SCIP_CALL( nlpSetupNlpiIndices(nlp, set, nlrow, &linidxs[c]) );
-      assert(linidxs[c]   != NULL || nlrow->nlinvars == 0);
+      assert(linidxs[c] != NULL || nlrow->nlinvars == 0);
 
       nlp->nlrowmap_nlpi2nlp[nlp->nnlrows_solver+c] = i;
       nlrow->nlpiindex = nlp->nnlrows_solver+c;
@@ -2742,7 +2787,13 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
       nlinvars[c] = nlrow->nlinvars;
       lincoefs[c] = nlrow->lincoefs;
 
-      exprs[c]  = nlrow->expr;
+      if( nlrow->expr != NULL )
+      {
+         /* create copy of expr that uses varidx expressions corresponding to variables indices in NLPI */
+         SCIP_CALL( SCIPexprCopy(set, stat, blkmem, set, stat, blkmem, nlrow->expr, &exprs[c], mapvar2varidx, (void*)nlp, NULL, NULL) );
+      }
+      else
+         exprs[c] = NULL;
 
 #if ADDNAMESTONLPI
       names[c]      = nlrow->name;
@@ -2769,6 +2820,11 @@ SCIP_RETCODE nlpFlushNlRowAdditions(
    {
       if( linidxs[c] != NULL )
          SCIPsetFreeBufferArray(set, &linidxs[c]);
+      if( exprs[c] != NULL )
+      {
+         SCIP_CALL( SCIPexprRelease(set, stat, blkmem, &exprs[c]) );
+      }
+
    }
 
 #if ADDNAMESTONLPI
@@ -3560,7 +3616,7 @@ SCIP_RETCODE SCIPnlpReset(
       SCIP_CALL( nlpDelVarPos(nlp, blkmem, set, eventqueue, lp, i) );
    }
 
-   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
+   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
 
    return SCIP_OKAY;
 }
@@ -3811,7 +3867,8 @@ SCIP_RETCODE SCIPnlpDelNlRow(
 SCIP_RETCODE SCIPnlpFlush(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    )
 {
    assert(nlp    != NULL);
@@ -3833,7 +3890,7 @@ SCIP_RETCODE SCIPnlpFlush(
    /* flush addition of variables, objective, and addition of rows */
    SCIP_CALL( nlpFlushVarAdditions(nlp, blkmem, set) );
    SCIP_CALL( nlpFlushObjective(nlp, blkmem, set) );
-   SCIP_CALL( nlpFlushNlRowAdditions(nlp, blkmem, set) );
+   SCIP_CALL( nlpFlushNlRowAdditions(nlp, blkmem, set, stat) );
    assert(nlp->nunflushedvaradd == 0);
    assert(nlp->objflushed == TRUE);
    assert(nlp->nunflushednlrowadd == 0);
@@ -3866,7 +3923,7 @@ SCIP_RETCODE SCIPnlpSolve(
       return SCIP_ERROR;
    }
 
-   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
+   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
 
    SCIP_CALL( nlpSolve(nlp, blkmem, set, messagehdlr, stat, primal, tree) );
 
@@ -4430,7 +4487,8 @@ SCIP_RETCODE SCIPnlpSetStringPar(
 SCIP_RETCODE SCIPnlpStartDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    )
 {
    assert(nlp != NULL);
@@ -4449,7 +4507,7 @@ SCIP_RETCODE SCIPnlpStartDive(
       return SCIP_ERROR;
    }
 
-   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set) );
+   SCIP_CALL( SCIPnlpFlush(nlp, blkmem, set, stat) );
 
    nlp->indiving = TRUE;
 

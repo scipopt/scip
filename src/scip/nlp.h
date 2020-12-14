@@ -435,7 +435,8 @@ SCIP_RETCODE SCIPnlpDelNlRow(
 SCIP_RETCODE SCIPnlpFlush(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** solves the NLP */
@@ -518,7 +519,8 @@ SCIP_RETCODE SCIPnlpWrite(
 SCIP_RETCODE SCIPnlpStartDive(
    SCIP_NLP*             nlp,                /**< current NLP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** resets the bound and objective changes made during diving and disables diving mode */

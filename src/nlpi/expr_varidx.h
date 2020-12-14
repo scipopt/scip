@@ -24,7 +24,7 @@
 #define __SCIP_EXPR_VARIDX_H__
 
 
-#include "scip/scip.h"
+#include "scip/type_scip.h"
 #include "scip/type_expr.h"
 
 #ifdef __cplusplus
