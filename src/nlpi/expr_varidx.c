@@ -257,3 +257,18 @@ int SCIPgetIndexExprVaridx(
 
    return (int)(size_t)SCIPexprGetData(expr);
 }
+
+/** indicates whether expression is varidx expression */
+SCIP_Bool SCIPisExprVaridx(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   /* quick inconclusive check first */
+   if( SCIPexprGetNChildren(expr) > 0 )
+      return FALSE;
+
+   return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
+}

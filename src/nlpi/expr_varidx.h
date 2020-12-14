@@ -53,6 +53,14 @@ int SCIPgetIndexExprVaridx(
    SCIP_EXPR*            expr                /**< varindex expression */
    );
 
+/** indicates whether expression is varidx expression */
+SCIP_EXPORT
+SCIP_Bool SCIPisExprVaridx(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+
 #ifdef __cplusplus
 }
 #endif

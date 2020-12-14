@@ -27,6 +27,7 @@
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/expr_pow.h"
+#include "nlpi/expr_varidx.h"
 
 #include <string.h> /* for strlen */
 
@@ -461,7 +462,7 @@ void freeVariables(
    oracle->varssize = 0;
 }
 
-/** increases variable degrees in oracle w.r.t. variables occuring in a single constraint */
+/** increases variable degrees in oracle w.r.t. variables occurring in a single constraint */
 static
 void updateVariableDegreesCons(
    SCIP_NLPIORACLE*      oracle,             /**< oracle data structure */
@@ -612,8 +613,8 @@ SCIP_RETCODE evalFunctionValue(
    {
       SCIP_Real  nlval;
 
-      SCIP_CALL( SCIPexprintEval(oracle->exprinterpreter, cons->expr, x, &nlval) );
-      if( nlval != nlval || ABS(nlval) >= oracle->infinity )  /*lint !e777*/
+      SCIP_CALL( SCIPexprintEval(oracle->exprinterpreter, cons->expr, (SCIP_Real*)x, &nlval) );
+      if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
          *val  = nlval;
       else
          *val += nlval;
@@ -647,6 +648,34 @@ SCIP_RETCODE evalFunctionGradient(
    *val = 0.0;
    BMSclearMemoryArray(grad, oracle->nvars);
 
+   if( cons->expr != NULL )
+   {
+      SCIP_Real nlval;
+      int       i;
+
+      SCIPdebugMsg(scip, "eval gradient of ");
+      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < oracle->nvars; ++i) printf(" %g", x[i]); printf("\n");} )
+
+      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->expr, (SCIP_Real*)x, isnewx, &nlval, grad) );
+
+      SCIPdebug( printf("g ="); for( i = 0; i < oracle->nvars; ++i) printf(" %g", grad[i]); printf("\n"); )
+
+      /* check for eval error */
+      if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
+      {
+         SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
+         return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+      }
+      for( i = 0; i < oracle->nvars; ++i )
+         if( !SCIPisFinite(grad[i]) )
+         {
+            SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", grad[i]);
+            return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+         }
+
+      *val += nlval;
+   }
+
    if( cons->nlinidxs > 0 )
    {
       int*       linidxs;
@@ -663,70 +692,8 @@ SCIP_RETCODE evalFunctionGradient(
       for( ; nlin > 0; --nlin, ++linidxs, ++lincoefs )
       {
          *val += *lincoefs * x[*linidxs];
-         assert(grad[*linidxs] == 0.0);   /* we do not like duplicate indices */
-         grad[*linidxs] = *lincoefs;
+         grad[*linidxs] += *lincoefs;
       }
-   }
-
-   if( cons->expr != NULL )
-   {
-#if !1 // FIXME
-      SCIP_Real* xx;
-      SCIP_Real* g;
-      int        i;
-      SCIP_Real  nlval;
-      int        nvars;
-
-      xx = NULL;
-      nvars = SCIPexprtreeGetNVars(cons->exprtree);
-
-      SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &g, nvars) );
-
-      if( isnewx )
-      {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, nvars) );
-         for( i = 0; i < nvars; ++i )
-         {
-            assert(cons->exprvaridxs[i] >= 0);
-            assert(cons->exprvaridxs[i] < oracle->nvars);
-            xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613*/
-         }
-      }
-
-      SCIPdebugMessage("eval gradient of ");
-      SCIPdebug( if( isnewx ) {printf("\nx ="); for( i = 0; i < nvars; ++i) printf(" %g", xx[i]); /*lint !e613*/ printf("\n");} )
-
-      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->expr, xx, isnewx, &nlval, g) );  /*lint !e644*/
-
-      SCIPdebug( printf("g ="); for( i = 0; i < nvars; ++i) printf(" %g", g[i]); printf("\n"); )
-
-      if( nlval != nlval || ABS(nlval) >= oracle->infinity )  /*lint !e777*/
-      {
-         BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-         BMSfreeBlockMemoryArray(oracle->blkmem, &g, nvars);
-         SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
-         return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-      }
-      else
-      {
-         *val += nlval;
-         for( i = 0; i < nvars; ++i )
-            if( !SCIPisFinite(g[i]) )  /*lint !e777*/
-            {
-               SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", g[i]);
-               BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-               BMSfreeBlockMemoryArray(oracle->blkmem, &g, nvars);
-               return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-            }
-            else
-            {
-               grad[cons->exprvaridxs[i]] += g[i];
-            }
-      }
-
-      BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
-      BMSfreeBlockMemoryArray(oracle->blkmem, &g, nvars);
-#endif
    }
 
    return SCIP_OKAY;
@@ -2116,6 +2083,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    )
 {
    SCIP_NLPIORACLECONS* cons;
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
    SCIP_Bool* nzflag;
    int nnz;
    int maxnnz;
@@ -2155,6 +2124,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nzflag, oracle->nvars) );
 
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIPexpriterInit(it, NULL, SCIP_EXPRITER_DFS, FALSE);
+
    for( i = 0; i < oracle->nconss; ++i )
    {
       oracle->jacoffsets[i] = nnz;
@@ -2173,26 +2145,6 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          }
          continue;
       }
-      else if( cons->nlinidxs == 0  )
-      {
-#if !1 //FIXME
-         /* for a constraint with expr only, we can just copy the exprvaridxs from the constraint into the sparsity pattern */
-         int nvars;
-
-         assert(cons->exprtree != NULL); /* this had been the first case */
-
-         nvars = SCIPexprtreeGetNVars(cons->exprtree);
-         assert(cons->exprvaridxs != NULL || nvars == 0);
-
-         if( nvars > 0 )
-         {
-            SCIP_CALL( ensureIntArraySize(oracle->blkmem, &oracle->jaccols, &maxnnz, nnz + nvars) );
-            BMScopyMemoryArray(&oracle->jaccols[nnz], cons->exprvaridxs, nvars);  /*lint !e866*/
-            nnz += nvars;
-         }
-#endif
-         continue;
-      }
 
       /* check which variables appear in constraint i
        * @todo this could be done faster for very sparse constraint by assembling all appearing variables, sorting, and removing duplicates
@@ -2202,14 +2154,12 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       for( j = 0; j < cons->nlinidxs; ++j )
          nzflag[cons->linidxs[j]] = TRUE;
 
-#if !1 //FIXME
-      if( cons->exprvaridxs != NULL )
-      {
-         assert(cons->exprtree != NULL);
-         for( j = SCIPexprtreeGetNVars(cons->exprtree)-1; j >= 0; --j )
-            nzflag[cons->exprvaridxs[j]] = TRUE;
-      }
-#endif
+      for( expr = SCIPexpriterRestartDFS(it, cons->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         if( SCIPisExprVaridx(scip, expr) )
+         {
+            assert(SCIPgetIndexExprVaridx(expr) < oracle->nvars);
+            nzflag[SCIPgetIndexExprVaridx(expr)] = TRUE;
+         }
 
       /* store variables indices in jaccols */
       for( j = 0; j < oracle->nvars; ++j )
@@ -2222,6 +2172,8 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          ++nnz;
       }
    }
+
+   SCIPfreeExpriter(&it);
 
    oracle->jacoffsets[oracle->nconss] = nnz;
 
@@ -2260,7 +2212,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP_NLPIORACLECONS* cons;
    SCIP_RETCODE retcode;
    SCIP_Real* grad;
-   SCIP_Real* xx;
    SCIP_Real nlval;
    int i;
    int j;
@@ -2275,12 +2226,11 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    assert(oracle->jacoffsets != NULL);
    assert(oracle->jaccols    != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &grad, oracle->nvars) );
-   xx = NULL;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &grad, oracle->nvars) );
 
    retcode = SCIP_OKAY;
 
-   j = oracle->jacoffsets[0];
+   j = oracle->jacoffsets[0];  /* TODO isn't oracle->jacoffsets[0] == 0 and thus always j == k ? */
    k = 0;
    for( i = 0; i < oracle->nconss; ++i )
    {
@@ -2289,97 +2239,80 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 
       if( cons->expr == NULL )
       {
+         if( convals != NULL )
+            convals[i] = 0.0;
+
          /* for a linear constraint, we can just copy the linear coefs from the constraint into the jacobian */
          if( cons->nlinidxs > 0 )
          {
             BMScopyMemoryArray(&jacobi[k], cons->lincoefs, cons->nlinidxs);
             j += cons->nlinidxs;
             k += cons->nlinidxs;
+            if( convals != NULL )
+               for( l = 0; l < cons->nlinidxs; ++l )
+                  convals[i] += cons->lincoefs[l] * x[cons->linidxs[l]];
          }
          assert(j == oracle->jacoffsets[i+1]);
          continue;
       }
 
-      if( cons->nlinidxs == 0 )
+      /* eval grad for nonlinear and add to jacobi */
+      SCIPdebugMsg(scip, "eval gradient of ");
+      SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < oracle->nvars; ++l) printf(" %g", x[l]); printf("\n");} )
+
+      SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->expr, (SCIP_Real*)x, isnewx, &nlval, grad) );
+
+      SCIPdebug( printf("g ="); for( l = oracle->jacoffsets[i]; l < oracle->jacoffsets[i+1]; ++l) printf(" %g", grad[oracle->jaccols[l]]); printf("\n"); )
+
+      if( !SCIPisFinite(nlval) || ABS(nlval) >= oracle->infinity )
       {
-#if !1 //FIXME
-         /* for a constraint with expr only, we can just copy gradient of the expr from the constraint into jacobian */
-         int nvars;
+         SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
+         retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+         goto TERMINATE;
+      }
+      if( convals != NULL )
+         convals[i] = nlval;
 
-         assert(cons->expr != NULL); /* this had been the first case */
-
-         nvars = SCIPexprtreeGetNVars(cons->exprtree);
-         assert(nvars <= oracle->nvars);
-         assert(cons->exprvaridxs != NULL || nvars == 0);
-
-         if( nvars > 0 )
-         {
-            if( isnewx )
-            {
-               if( xx == NULL )
-               {
-                  /* if no xx yet, alloc it; make it large enough in case we need it again */
-                  SCIP_ALLOC( BMSallocBlockMemoryArray(oracle->blkmem, &xx, oracle->nvars) );
-               }
-               for( l = 0; l < nvars; ++l )
-                  xx[l] = x[cons->exprvaridxs[l]];  /*lint !e613*/
-            }
-
-            SCIPdebugMessage("eval gradient of ");
-            SCIPdebug( if( isnewx ) {printf("\nx ="); for( l = 0; l < nvars; ++l) printf(" %g", xx[l]); /*lint !e613*/ printf("\n");} )
-
-            SCIP_CALL( SCIPexprintGrad(oracle->exprinterpreter, cons->exprtree, xx, isnewx, &nlval, grad) );  /*lint !e644*/
-
-            SCIPdebug( printf("g ="); for( l = 0; l < nvars; ++l) printf(" %g", grad[l]); printf("\n"); )
-
-            if( nlval != nlval || ABS(nlval) >= oracle->infinity )  /*lint !e777*/
-            {
-               SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
-               retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-               break;
-            }
-            else
-            {
-               if( convals != NULL )
-                  convals[i] = nlval;
-               for( l = 0; l < nvars; ++l )
-               {
-                  assert(oracle->jaccols[j+l] == cons->exprvaridxs[l]);
-                  if( !SCIPisFinite(grad[l]) )  /*lint !e777*/
-                  {
-                     SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", grad[l]);
-                     retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-                     break;
-                  }
-                  else
-                     jacobi[k++] = grad[l];
-               }
-               if( l < nvars )
-                  break;
-               j += nvars;
-            }
-         }
-         else if( convals != NULL )
-         {
-            SCIPdebugMessage("eval value of constant ");
-
-            SCIP_CALL( SCIPexprintEval(oracle->exprinterpreter, cons->exprtree, NULL, &convals[i]) );
-         }
-#endif
-         continue;
+      /* add linear part to grad */
+      for( l = 0; l < cons->nlinidxs; ++l )
+      {
+         if( convals != NULL )
+            convals[i] += cons->lincoefs[l] * x[cons->linidxs[l]];
+         /* if grad[cons->linidxs[l]] is not finite, then adding a finite value doesn't change that, so don't check that here */
+         grad[cons->linidxs[l]] += cons->lincoefs[l];
       }
 
-      /* do dense eval @todo could do it sparse */
-      retcode = SCIPnlpiOracleEvalConstraintGradient(scip, oracle, i, x, isnewx, (convals ? &convals[i] : &nlval), grad);
-      if( retcode != SCIP_OKAY )
-         break;
+      /* store complete gradient (linear + nonlinear) in jacobi
+       * use the already evaluated sparsity pattern to pick only elements from grad that could have been set
+       */
+      assert(j == oracle->jacoffsets[i]);
+      for( ; j < oracle->jacoffsets[i+1]; ++j )
+      {
+         if( !SCIPisFinite(grad[oracle->jaccols[j]]) )
+         {
+            SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", grad[l]);
+            retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+            goto TERMINATE;
+         }
+         jacobi[k++] = grad[oracle->jaccols[j]];
+         /* reset to 0 for next constraint */
+         grad[oracle->jaccols[j]] = 0.0;
+      }
 
-      while( j < oracle->jacoffsets[i+1] )
-         jacobi[k++] = grad[oracle->jaccols[j++]];
+#ifndef NDEBUG
+      /* check that exprint really wrote only into expected elements of grad
+       * TODO remove after some testing for better performance of debug runs */
+      for( l = 0; l < oracle->nvars; ++l )
+         assert(grad[l] == 0.0);
+#endif
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &xx, oracle->nvars);
-   SCIPfreeBlockMemoryArray(scip, &grad, oracle->nvars);
+TERMINATE:
+   /* if there was an eval error, then we may have interrupted before cleaning up the grad buffer */
+   if( retcode == SCIP_INVALIDDATA )
+      BMSclearMemoryArray(grad, oracle->nvars);
+
+   SCIPfreeCleanBufferArray(scip, &grad);
 
    return retcode;
 }
