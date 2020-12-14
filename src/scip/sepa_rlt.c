@@ -1083,12 +1083,6 @@ SCIP_RETCODE fillRelationTables(
 
       cols = SCIProwGetCols(prob_rows[r]);
       assert(cols != NULL);
-      SCIPdebugMsg(scip, "row <%s>:", SCIProwGetName(prob_rows[r]));
-#ifdef SCIP_DEBUG
-      for( v1 = 0; v1 < SCIProwGetNNonz(prob_rows[r]); ++v1 )
-         SCIPdebugMsgPrint(scip, " <%s>(%d)", SCIPvarGetName(SCIPcolGetVar(cols[v1])), SCIPcolGetIndex(cols[v1]));
-#endif
-      SCIPdebugMsgPrint(scip, "\n");
 
       /* initialise with the "end of list" value */
       row_list[r] = -1;
@@ -2641,7 +2635,7 @@ SCIP_RETCODE separateMcCormickImplicit(
    SCIP_CONSEXPR_BILINTERM* terms;
    SCIP_ROW* cut;
    char name[SCIP_MAXSTRLEN];
-   SCIP_Bool underestimate;
+   SCIP_Bool overestimator;
    SCIP_Real xcoef;
    SCIP_Real ycoef;
    SCIP_Real auxcoef;
@@ -2685,28 +2679,34 @@ SCIP_RETCODE separateMcCormickImplicit(
       /* one iteration for underestimation and one for overestimation */
       for( j = 0; j < 2; ++j )
       {
-         /* if underestimate, separate xy <= auxexpr; if !underestimate, separate xy >= auxexpr */
-         underestimate = j == 0;
-         if( underestimate && bestoverestimators[i] != -1 )
+         /* if overestimator, separate xy <= auxexpr; if !overestimator, separate xy >= auxexpr;
+          * the cuts will be:
+          * if overestimator: McCormick_under(xy) - auxexpr <= 0,
+          * if !overestimator: McCormick_over(xy) - auxexpr >= 0
+          */
+         overestimator = j == 0;
+         if( overestimator && bestoverestimators[i] != -1 )
             auxexpr = terms[i].aux.exprs[bestoverestimators[i]];
-         else if( !underestimate && bestunderestimators[i] != -1 )
+         else if( !overestimator && bestunderestimators[i] != -1 )
             auxexpr = terms[i].aux.exprs[bestunderestimators[i]];
          else
             continue;
+         assert(auxexpr->overestimate >= overestimator);
+         assert(auxexpr->underestimate >= !overestimator);
 
 #ifndef NDEBUG
          /* make sure that the term is violated */
          productval = SCIPgetSolVal(scip, sol, terms[i].x) * SCIPgetSolVal(scip, sol, terms[i].y);
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[i].x, terms[i].y, auxexpr, sol);
 
-         /* if underestimate, then xy <= aux must be violated; otherwise aux <= xy must be violated */
-         assert((underestimate && SCIPisFeasLT(scip, auxval, productval)) ||
-               (!underestimate && SCIPisFeasLT(scip, productval, auxval)));
+         /* if overestimator, then xy <= aux must be violated; otherwise aux <= xy must be violated */
+         assert((overestimator && SCIPisFeasLT(scip, auxval, productval)) ||
+               (!overestimator && SCIPisFeasLT(scip, productval, auxval)));
 #endif
 
          /* create an empty row */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%d",
-                             underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
+                             overestimator ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
                              SCIPgetNLPs(scip));
 
          SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
@@ -2722,7 +2722,7 @@ SCIP_RETCODE separateMcCormickImplicit(
          addAuxexprCoefs(terms[i].x, terms[i].y, auxexpr, -1.0, &auxcoef, &xcoef, &ycoef, &constant);
 
          /* add McCormick terms: ask for an underestimator if relation is xy <= auxexpr, and vice versa */
-         SCIPaddBilinMcCormick(scip, 1.0, bndx.inf, bndx.sup, refpointx, bndy.inf, bndy.sup, refpointy, underestimate,
+         SCIPaddBilinMcCormick(scip, 1.0, bndx.inf, bndx.sup, refpointx, bndy.inf, bndy.sup, refpointy, !overestimator,
                &xcoef, &ycoef, &constant, &success);
 
          if( REALABS(constant) > MAXVARBOUND )
@@ -2739,7 +2739,7 @@ SCIP_RETCODE separateMcCormickImplicit(
             SCIP_CALL( SCIPaddVarToRow(scip, cut, auxexpr->auxvar, auxcoef) );
 
             /* set side */
-            if( underestimate )
+            if( overestimator )
                SCIP_CALL( SCIPchgRowRhs(scip, cut, -constant) );
             else
                SCIP_CALL( SCIPchgRowLhs(scip, cut, -constant) );
