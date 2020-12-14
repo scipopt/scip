@@ -1123,16 +1123,21 @@ SCIP_RETCODE decomposeReduceSubDoIt(
    SCIP*                 scip,               /**< SCIP data structure */
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    int                   compindex,          /**< component index */
-   GRAPH*                g,                  /**< graph data structure */
+   GRAPH*                graph,              /**< graph data structure */
    REDBASE*              redbase             /**< reduction stuff */
    )
 {
    REDSOL* redsol = redbase->redsol;
+   SUBINOUT* subinout = bidecomp->subinout;
    GRAPH* subgraph;
 
-   assert(graph_valid(scip, g));
+   assert(graph_valid(scip, graph));
 
-   SCIP_CALL(graph_subgraphExtract(scip, g, bidecomp->subinout, &subgraph));
+   SCIP_CALL( graph_subgraphExtract(scip, graph, subinout, &subgraph) );
+
+   SCIP_CALL( reduce_solLevelTopUpdate(scip, subgraph, redsol) );
+   SCIP_CALL( reduce_solLevelTopTransferSolTo(graph_subinoutGetOrgToSubNodeMap(subinout), redsol) );
+
 #ifdef SCIP_DEBUG
    SCIPdebugMessage("subgraph before reduction: ");
    graph_printInfoReduced(subgraph);
@@ -1161,13 +1166,12 @@ SCIP_RETCODE decomposeReduceSubDoIt(
    SCIPdebugMessage("subgraph after reduction: ");
    graph_printInfoReduced(subgraph);
 #endif
-   SCIP_CALL(graph_subgraphReinsert(scip, bidecomp->subinout, g, &subgraph));
+   SCIP_CALL(graph_subgraphReinsert(scip, subinout, graph, &subgraph));
 
-   // todo: get org_contractrecord of subinout to adapt solnode array!
-   reduce_solLevelTopMergeUp(redsol);
+   reduce_solLevelTopTransferSolBack(graph_subinoutGetSubToOrgNodeMap(subinout), redsol);
    reduce_solLevelTopClean(scip, redsol);
 
-   assert(graph_valid(scip, g));
+   assert(graph_valid(scip, graph));
 
    return SCIP_OKAY;
 }
