@@ -21,7 +21,11 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "nlpi/expr_varidx.h"
-#include "scip/expr.h"
+#include "scip/intervalarith.h"
+#include "scip/pub_expr.h"
+#include "scip/scip_expr.h"
+#include "scip/scip_message.h"
+#include "scip/pub_misc.h"
 
 /* fundamental expression handler properties */
 #define EXPRHDLR_NAME         "varidx"
