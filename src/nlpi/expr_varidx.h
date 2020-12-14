@@ -47,12 +47,6 @@ SCIP_RETCODE SCIPcreateExprVaridx(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
-/** gives the index stored in a varidx expression */
-SCIP_EXPORT
-int SCIPgetIndexExprVaridx(
-   SCIP_EXPR*            expr                /**< varindex expression */
-   );
-
 /** indicates whether expression is varidx expression */
 SCIP_EXPORT
 SCIP_Bool SCIPisExprVaridx(
@@ -60,6 +54,18 @@ SCIP_Bool SCIPisExprVaridx(
    SCIP_EXPR*            expr                /**< expression */
    );
 
+/** gives the index stored in a varidx expression */
+SCIP_EXPORT
+int SCIPgetIndexExprVaridx(
+   SCIP_EXPR*            expr                /**< varindex expression */
+   );
+
+/** sets the index stored in a varidx expression */
+SCIP_EXPORT
+void SCIPsetIndexExprVaridx(
+   SCIP_EXPR*            expr,               /**< varindex expression */
+   int                   newindex            /**< new index */
+   );
 
 #ifdef __cplusplus
 }

@@ -266,12 +266,11 @@ SCIP_EXPRDATA* SCIPexprGetData(
    SCIP_EXPR*            expr                /**< expression */
    );
 
-/* TODO do we really need this function? */
 /** sets the expression data of an expression
  *
  * The pointer to possible old data is overwritten and the
  * freedata-callback is not called before.
- * This function is intended to be used by expression handler.
+ * This function is intended to be used by expression handler only.
  */
 SCIP_EXPORT
 void SCIPexprSetData(

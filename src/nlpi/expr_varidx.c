@@ -247,17 +247,6 @@ SCIP_RETCODE SCIPcreateExprVaridx(
    return SCIP_OKAY;
 }
 
-/** gives the index stored in a varidx expression */
-int SCIPgetIndexExprVaridx(
-   SCIP_EXPR*            expr                /**< varindex expression */
-   )
-{
-   assert(expr != NULL);
-   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
-
-   return (int)(size_t)SCIPexprGetData(expr);
-}
-
 /** indicates whether expression is varidx expression */
 SCIP_Bool SCIPisExprVaridx(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -271,4 +260,28 @@ SCIP_Bool SCIPisExprVaridx(
       return FALSE;
 
    return strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0;
+}
+
+/** gives the index stored in a varidx expression */
+int SCIPgetIndexExprVaridx(
+   SCIP_EXPR*            expr                /**< varindex expression */
+   )
+{
+   assert(expr != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+
+   return (int)(size_t)SCIPexprGetData(expr);
+}
+
+/** sets the index stored in a varidx expression */
+void SCIPsetIndexExprVaridx(
+   SCIP_EXPR*            expr,               /**< varindex expression */
+   int                   newindex            /**< new index */
+   )
+{
+   assert(expr != NULL);
+   assert(strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), EXPRHDLR_NAME) == 0);
+   assert(newindex >= 0);
+
+   SCIPexprSetData(expr, (void*)(size_t)newindex);
 }

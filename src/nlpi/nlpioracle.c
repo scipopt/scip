@@ -1379,6 +1379,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    int c;
    int lastgood; /* index of the last variable that should be kept */
    SCIP_NLPIORACLECONS* cons;
+   SCIP_EXPRITER* it;
 
    assert(oracle != NULL);
 
@@ -1394,7 +1395,6 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    {
       /* all variables should be deleted */
       assert(oracle->nconss == 0); /* we could relax this by checking that all constraints are constant */
-      // FIXME? assert(oracle->objective->expr == NULL || SCIPexprtreeGetNVars(oracle->objective->expr) == 0);
       oracle->objective->nlinidxs = 0;
       for( c = 0; c < oracle->nvars; ++c )
          delstats[c] = -1;
@@ -1448,6 +1448,8 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    }
    assert(c == lastgood);
 
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+
    for( c = -1; c < oracle->nconss; ++c )
    {
       cons = c < 0 ? oracle->objective : oracle->conss[c];
@@ -1460,15 +1462,43 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
 
       if( cons->expr != NULL )
       {
-#if !1
-         mapIndices(delstats, SCIPexprtreeGetNVars(cons->expr), cons->exprvaridxs);
-         /* assert that all variables from this expression have been deleted */
-         assert(SCIPexprtreeGetNVars(cons->expr) == 0 || cons->exprvaridxs[SCIPexprtreeGetNVars(cons->expr)-1] == -1);
-         BMSfreeBlockMemoryArrayNull(oracle->blkmem, &cons->exprvaridxs, SCIPexprtreeGetNVars(cons->expr));
-         SCIP_CALL( SCIPexprtreeFree(&cons->expr) );
-#endif
+         /* update variable indices in varidx expressions */
+         SCIP_EXPR* expr;
+         SCIP_Bool keptvar = FALSE;  /* whether any of the variables in expr was not deleted */
+         SCIP_Bool delvar = FALSE; /* whether any of the variables in expr was deleted */
+
+         SCIP_CALL( SCIPexpriterInit(it, cons->expr, SCIP_EXPRITER_DFS, FALSE) );
+         for( expr = cons->expr; !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         {
+            if( !SCIPisExprVaridx(scip, expr) )
+               continue;
+
+            if( delstats[SCIPgetIndexExprVaridx(expr)] >= 0 )
+            {
+               /* if variable is not deleted, then set its new index */
+               keptvar = TRUE;
+               SCIPsetIndexExprVaridx(expr, delstats[SCIPgetIndexExprVaridx(expr)]);
+
+               /* if variable is kept, then there must not have been any variable that was deleted */
+               assert(!delvar);
+            }
+            else
+            {
+               delvar = TRUE;
+               /* if variable is deleted, then there must not have been any variable that was kept
+                * (either all variables are deleted, which removes the expr, or none)
+                */
+               assert(!keptvar);
+            }
+         }
+         if( !keptvar )
+         {
+            SCIP_CALL( SCIPreleaseExpr(scip, &cons->expr) );
+         }
       }
    }
+
+   SCIPfreeExpriter(&it);
 
    oracle->nvars = lastgood+1;
 
