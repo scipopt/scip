@@ -1410,20 +1410,20 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   if( *infeasible || *unbounded )
+   /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
+   if( *infeasible )
    {
-      /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
-      if( *infeasible )
+      /* switch status to OPTIMAL */
+      if( scip->primal->nlimsolsfound > 0 )
       {
-         /* switch status to OPTIMAL */
-         if( scip->primal->nlimsolsfound > 0 )
-         {
-            scip->stat->status = SCIP_STATUS_OPTIMAL;
-         }
-         else /* switch status to INFEASIBLE */
-            scip->stat->status = SCIP_STATUS_INFEASIBLE;
+         scip->stat->status = SCIP_STATUS_OPTIMAL;
       }
-      else if( scip->primal->nsols >= 1 ) /* switch status to UNBOUNDED */
+      else /* switch status to INFEASIBLE */
+         scip->stat->status = SCIP_STATUS_INFEASIBLE;
+   }
+   else if( *unbounded )
+   {
+      if( scip->primal->nsols >= 1 ) /* switch status to UNBOUNDED */
          scip->stat->status = SCIP_STATUS_UNBOUNDED;
       else /* switch status to INFORUNBD */
          scip->stat->status = SCIP_STATUS_INFORUNBD;
