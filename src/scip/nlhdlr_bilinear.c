@@ -1033,7 +1033,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectBilinear)
    if( *participating )
    {
       SCIPdebugMsg(scip, "detected expr ");
-      SCIPprintExpr(scip, conshdlr, expr, NULL);
+      SCIPprintExpr(scip, expr, NULL);
       SCIPinfoMessage(scip, NULL, " participating: %d\n", *participating);
    }
 #endif

@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -13,7 +14,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_soc.c
+/**@file   nlhdlr_soc.c
  * @brief  nonlinear handler for second order cone constraints
 
  * @author Benjamin Mueller
@@ -35,14 +36,14 @@
 
 #include <string.h>
 
-#include "scip/cons_expr_nlhdlr_soc.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_pow.h"
-#include "scip/cons_expr_sum.h"
-#include "scip/cons_expr_var.h"
+#include "scip/nlhdlr_soc.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_var.h"
 #include "scip/debug.h"
+#include "scip/pub_nlhdlr.h"
 #include "nlpi/nlpi_ipopt.h"
-#include "scip/cons_expr_rowprep.h"
 
 
 /* fundamental nonlinear handler properties */
@@ -98,9 +99,9 @@
  * SOC, e.g., 1 + x^2 - y*z, i.e., when detected by detectSocQuadraticSimple. In that case, the constant is third to
  * last term.
  */
-struct SCIP_ConsExpr_NlhdlrExprData
+struct SCIP_NlhdlrExprData
 {
-   SCIP_CONSEXPR_EXPR**  vars;               /**< expressions which (aux)variables appear on both sides (x) */
+   SCIP_EXPR**           vars;               /**< expressions which (aux)variables appear on both sides (x) */
    SCIP_Real*            offsets;            /**< offsets of both sides (beta_i) */
    SCIP_Real*            transcoefs;         /**< non-zeros of linear transformation vectors (v_i) */
    int*                  transcoefsidx;      /**< mapping of transformation coefficients to variable indices in vars */
@@ -113,7 +114,7 @@ struct SCIP_ConsExpr_NlhdlrExprData
    SCIP_ROW*             disrow;             /**< disaggregation row */
 };
 
-struct SCIP_ConsExpr_NlhdlrData
+struct SCIP_NlhdlrData
 {
    SCIP_Real             mincutefficacy;     /**< minimum efficacy a cut need to be added */
    SCIP_Bool             compeigenvalues;    /**< whether Eigenvalue computations should be done to detect complex cases */
@@ -128,7 +129,7 @@ struct SCIP_ConsExpr_NlhdlrData
 static
 void printNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< pointer to store nonlinear handler expression data */
    )
 {
    int nterms;
@@ -161,8 +162,11 @@ void printNlhdlrExprData(
       {
          if( nlhdlrexprdata->transcoefs[j] != 1.0 )
             SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
-         if( SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
-            SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
+         if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
+         {
+            SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
+            SCIPinfoMessage(scip, NULL, "(%p)", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
+         }
          else
             SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
 
@@ -184,8 +188,8 @@ void printNlhdlrExprData(
    {
       if( nlhdlrexprdata->transcoefs[j] != 1.0 )
          SCIPinfoMessage(scip, NULL, "%f*", nlhdlrexprdata->transcoefs[j]);
-      if( SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
-         SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
+      if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
+         SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
       else
          SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
 
@@ -203,8 +207,8 @@ void printNlhdlrExprData(
 static
 SCIP_RETCODE createDisaggrVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< nonlinear handler expression data */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -237,7 +241,7 @@ SCIP_RETCODE createDisaggrVars(
 static
 SCIP_RETCODE freeDisaggrVars(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< nonlinear handler expression data */
    )
 {
    int ndisvars;
@@ -271,9 +275,9 @@ SCIP_RETCODE freeDisaggrVars(
 static
 SCIP_RETCODE createDisaggrRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata  /**< nonlinear handler expression data */
+   SCIP_CONSHDLR*        conshdlr,           /**< nonlinear constraint handler */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< nonlinear handler expression data */
    )
 {
    SCIP_Real beta;
@@ -309,7 +313,7 @@ SCIP_RETCODE createDisaggrRow(
       SCIP_VAR* var;
       SCIP_Real coef;
 
-      var = SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
+      var = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
       assert(var != NULL);
 
       coef = -nlhdlrexprdata->transcoefs[i];
@@ -324,14 +328,14 @@ SCIP_RETCODE createDisaggrRow(
 static
 SCIP_RETCODE createNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR**  vars,               /**< expressions which variables appear on both sides (x) */
+   SCIP_EXPR**           vars,               /**< expressions which variables appear on both sides (x) */
    SCIP_Real*            offsets,            /**< offsets of bot sides (beta_i) */
    SCIP_Real*            transcoefs,         /**< non-zeroes of linear transformation vectors (v_i) */
    int*                  transcoefsidx,      /**< mapping of transformation coefficients to variable indices in vars */
    int*                  termbegins,         /**< starting indices of transcoefs for each term */
    int                   nvars,              /**< total number of variables appearing */
    int                   nterms,             /**< number of summands in the SQRT +1 for RHS */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to store nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata      /**< pointer to store nonlinear handler expression data */
    )
 {
    int ntranscoefs;
@@ -360,6 +364,7 @@ SCIP_RETCODE createNlhdlrExprData(
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "created nlhdlr data for the following soc expression:\n");
    printNlhdlrExprData(scip, *nlhdlrexprdata);
+   printf("x is %p\n", (void *)vars[0]);
 #endif
 
    return SCIP_OKAY;
@@ -369,7 +374,7 @@ SCIP_RETCODE createNlhdlrExprData(
 static
 SCIP_RETCODE freeNlhdlrExprData(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata /**< pointer to free nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata      /**< pointer to free nonlinear handler expression data */
    )
 {
    int ntranscoefs;
@@ -396,7 +401,7 @@ SCIP_RETCODE freeNlhdlrExprData(
 static
 SCIP_Real evalSingleTerm(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata,      /**< nonlinear handler expression data */
    SCIP_SOL*             sol,                /**< solution */
    int                   k                   /**< term to be evaluated */
    )
@@ -412,7 +417,7 @@ SCIP_Real evalSingleTerm(
 
    for( i = nlhdlrexprdata->termbegins[k]; i < nlhdlrexprdata->termbegins[k + 1]; ++i )
    {
-      SCIP_Real varval = SCIPgetSolVal(scip, sol, SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]));
+      SCIP_Real varval = SCIPgetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]));
       result += nlhdlrexprdata->transcoefs[i] * varval;
    }
 
@@ -440,10 +445,10 @@ SCIP_Real evalSingleTerm(
 static
 SCIP_RETCODE generateCutSolSOC(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
    SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
    SCIP_Real             rhsval,             /**< value of last term at sol */
    SCIP_ROW**            cut                 /**< pointer to store a cut */
@@ -455,7 +460,7 @@ SCIP_RETCODE generateCutSolSOC(
    SCIP_Real fvalue;
    SCIP_Real valterms[2] = {0.0, 0.0}; /* for lint */
    SCIP_Real cutrhs;
-   SCIP_CONSEXPR_EXPR** vars;
+   SCIP_EXPR** vars;
    SCIP_VAR* cutvar;
    int* transcoefsidx;
    int* termbegins;
@@ -513,7 +518,7 @@ SCIP_RETCODE generateCutSolSOC(
    {
       for( i = termbegins[j]; i < termbegins[j + 1]; ++i )
       {
-         cutvar = SCIPgetConsExprExprAuxVar(vars[transcoefsidx[i]]);
+         cutvar = SCIPgetExprAuxVarNonlinear(vars[transcoefsidx[i]]);
 
          /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
          cutcoef = transcoefs[i] * valterms[j] / fvalue;
@@ -527,18 +532,18 @@ SCIP_RETCODE generateCutSolSOC(
    /* add terms for v_n */
    for( i = termbegins[nterms - 1]; i < termbegins[nterms]; ++i )
    {
-      cutvar = SCIPgetConsExprExprAuxVar(vars[transcoefsidx[i]]);
+      cutvar = SCIPgetExprAuxVarNonlinear(vars[transcoefsidx[i]]);
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, cutvar, -transcoefs[i]) );
    }
 
    /* add side */
-   SCIPaddRowprepSide(rowprep, cutrhs);
+   SCIProwprepAddSide(rowprep, cutrhs);
 
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
+      //(void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else
@@ -579,17 +584,17 @@ SCIP_RETCODE generateCutSolSOC(
 static
 SCIP_RETCODE generateCutSolDisagg(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_CONS*            cons,               /**< the constraint that expr is part of */
    SCIP_SOL*             sol,                /**< solution to separate or NULL for the LP solution */
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    int                   disaggidx,          /**< index of disaggregation to separate */
    SCIP_Real             mincutviolation,    /**< minimal required cut violation */
    SCIP_Real             rhsval,             /**< value of the rhs term */
    SCIP_ROW**            cut                 /**< pointer to store a cut */
    )
 {
-   SCIP_CONSEXPR_EXPR** vars;
+   SCIP_EXPR** vars;
    SCIP_VAR** disvars;
    SCIP_Real* transcoefs;
    int* transcoefsidx;
@@ -661,7 +666,7 @@ SCIP_RETCODE generateCutSolDisagg(
    /* add terms for v_disaggidx */
    for( i = termbegins[disaggidx]; i < termbegins[disaggidx + 1]; ++i )
    {
-      cutvar = SCIPgetConsExprExprAuxVar(vars[transcoefsidx[i]]);
+      cutvar = SCIPgetExprAuxVarNonlinear(vars[transcoefsidx[i]]);
       assert(cutvar != NULL);
 
       /* cutcoef is (the first part of) the partial derivative w.r.t cutvar */
@@ -675,7 +680,7 @@ SCIP_RETCODE generateCutSolDisagg(
    /* add terms for v_n */
    for( i = termbegins[nterms - 1]; i < termbegins[nterms]; ++i )
    {
-      cutvar = SCIPgetConsExprExprAuxVar(vars[transcoefsidx[i]]);
+      cutvar = SCIPgetExprAuxVarNonlinear(vars[transcoefsidx[i]]);
       assert(cutvar != NULL);
 
       /* cutcoef is the (second part of) the partial derivative w.r.t cutvar */
@@ -695,13 +700,13 @@ SCIP_RETCODE generateCutSolDisagg(
    constant += cutcoef * SCIPgetSolVal(scip, sol, cutvar);
 
    /* add side */
-   SCIPaddRowprepSide(rowprep, constant - fvalue);
+   SCIProwprepAddSide(rowprep, constant - fvalue);
 
-   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSEXPR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
+   SCIP_CALL( SCIPcleanupRowprep2(scip, rowprep, sol, SCIP_CONSNONLINEAR_CUTMAXRANGE, SCIPinfinity(scip), NULL) );
 
    if( SCIPgetRowprepViolation(scip, rowprep, sol, NULL) >= mincutviolation )
    {
-      (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
+      //(void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
       SCIP_CALL( SCIPgetRowprepRowCons(scip, cut, rowprep, cons) );
    }
    else
@@ -727,20 +732,18 @@ SCIP_RETCODE generateCutSolDisagg(
 static
 SCIP_RETCODE checkAndCollectQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   quadexpr,           /**< candidate for a quadratic expression */
+   SCIP_EXPR*            quadexpr,           /**< candidate for a quadratic expression */
    SCIP_HASHMAP*         expr2idx,           /**< hashmap to store expressions */
-   SCIP_CONSEXPR_EXPR**  occurringexprs,     /**< array to store expressions */
+   SCIP_EXPR**           occurringexprs,     /**< array to store expressions */
    int*                  nexprs,             /**< buffer to store number of expressions */
    SCIP_Bool*            success             /**< buffer to store whether the check was successful */
    )
 {
-   SCIP_CONSEXPR_EXPR** children;
+   SCIP_EXPR** children;
    int nchildren;
    int i;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(quadexpr != NULL);
    assert(expr2idx != NULL);
    assert(occurringexprs != NULL);
@@ -749,23 +752,23 @@ SCIP_RETCODE checkAndCollectQuadratic(
 
    *nexprs = 0;
    *success = FALSE;
-   children = SCIPgetConsExprExprChildren(quadexpr);
-   nchildren = SCIPgetConsExprExprNChildren(quadexpr);
+   children = SCIPexprGetChildren(quadexpr);
+   nchildren = SCIPexprGetNChildren(quadexpr);
 
    /* iterate in reverse order to ensure that quadratic terms are found before linear terms */
    for( i = nchildren - 1; i >= 0; --i )
    {
-      SCIP_CONSEXPR_EXPR* child;
+      SCIP_EXPR* child;
 
       child = children[i];
-      if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrPower(conshdlr) )
+      if( SCIPisExprPower(scip, child) )
       {
-         SCIP_CONSEXPR_EXPR* childarg;
+         SCIP_EXPR* childarg;
 
-         if( SCIPgetConsExprExprPowExponent(child) != 2.0 )
+         if( SCIPgetExponentExprPow(child) != 2.0 )
             return SCIP_OKAY;
 
-         childarg = SCIPgetConsExprExprChildren(child)[0];
+         childarg = SCIPexprGetChildren(child)[0];
 
          if( !SCIPhashmapExists(expr2idx, (void*) childarg) )
          {
@@ -779,7 +782,7 @@ SCIP_RETCODE checkAndCollectQuadratic(
          }
 
       }
-      else if( SCIPisConsExprExprVar(child) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(child)) )
+      else if( SCIPisExprVar(scip, child) && SCIPvarIsBinary(SCIPgetVarExprVar(child)) )
       {
          if( !SCIPhashmapExists(expr2idx, (void*) child) )
          {
@@ -792,16 +795,16 @@ SCIP_RETCODE checkAndCollectQuadratic(
             ++(*nexprs);
          }
       }
-      else if( SCIPgetConsExprExprHdlr(child) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      else if( SCIPisExprProduct(scip, child) )
       {
-         SCIP_CONSEXPR_EXPR* childarg1;
-         SCIP_CONSEXPR_EXPR* childarg2;
+         SCIP_EXPR* childarg1;
+         SCIP_EXPR* childarg2;
 
-         if( SCIPgetConsExprExprNChildren(child) != 2 )
+         if( SCIPexprGetNChildren(child) != 2 )
             return SCIP_OKAY;
 
-         childarg1 = SCIPgetConsExprExprChildren(child)[0];
-         childarg2 = SCIPgetConsExprExprChildren(child)[1];
+         childarg1 = SCIPexprGetChildren(child)[0];
+         childarg2 = SCIPexprGetChildren(child)[1];
 
          if( !SCIPhashmapExists(expr2idx, (void*) childarg1) )
          {
@@ -845,47 +848,44 @@ SCIP_RETCODE checkAndCollectQuadratic(
 static
 void buildQuadExprMatrix(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   quadexpr,           /**< the quadratic expression */
+   SCIP_EXPR*            quadexpr,           /**< the quadratic expression */
    SCIP_HASHMAP*         expr2idx,           /**< hashmap mapping the occurring expressions to their index */
    int                   nexprs,             /**< number of occurring expressions */
    SCIP_Real*            quadmatrix,         /**< pointer to store (the lower-left triangle of) the quadratic matrix */
    SCIP_Real*            linvector           /**< pointer to store the linear vector */
    )
 {
-   SCIP_CONSEXPR_EXPR** children;
+   SCIP_EXPR** children;
    SCIP_Real* childcoefs;
    int nchildren;
    int i;
 
    assert(scip != NULL);
-   assert(conshdlr != NULL);
    assert(quadexpr != NULL);
    assert(expr2idx != NULL);
    assert(quadmatrix != NULL);
    assert(linvector != NULL);
-   assert(SCIPgetConsExprExprHdlrSum(conshdlr) == SCIPgetConsExprExprHdlr(quadexpr));
 
-   children = SCIPgetConsExprExprChildren(quadexpr);
-   nchildren = SCIPgetConsExprExprNChildren(quadexpr);
-   childcoefs = SCIPgetConsExprExprSumCoefs(quadexpr);
+   children = SCIPexprGetChildren(quadexpr);
+   nchildren = SCIPexprGetNChildren(quadexpr);
+   childcoefs = SCIPgetCoefsExprSum(quadexpr);
 
    /* iterate over children to build the constraint defining matrix and vector */
    for( i = 0; i < nchildren; ++i )
    {
       int varpos;
 
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) )
+      if( SCIPisExprPower(scip, children[i]) )
       {
-         assert(SCIPgetConsExprExprPowExponent(children[i]) == 2.0);
-         assert(SCIPhashmapExists(expr2idx, (void*) SCIPgetConsExprExprChildren(children[i])[0]));
+         assert(SCIPgetExponentExprPow(children[i]) == 2.0);
+         assert(SCIPhashmapExists(expr2idx, (void*) SCIPexprGetChildren(children[i])[0]));
 
-         varpos = SCIPhashmapGetImageInt(expr2idx, (void*) SCIPgetConsExprExprChildren(children[i])[0]);
+         varpos = SCIPhashmapGetImageInt(expr2idx, (void*) SCIPexprGetChildren(children[i])[0]);
          assert(0 <= varpos && varpos < nexprs);
 
          quadmatrix[varpos * nexprs + varpos] = childcoefs[i];
       }
-      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      else if( SCIPisExprVar(scip, children[i]) && SCIPvarIsBinary(SCIPgetVarExprVar(children[i])) )
       {
          assert(SCIPhashmapExists(expr2idx, (void*) children[i]));
 
@@ -894,18 +894,18 @@ void buildQuadExprMatrix(
 
          quadmatrix[varpos * nexprs + varpos] = childcoefs[i];
       }
-      else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+      else if( SCIPisExprProduct(scip, children[i]) )
       {
          int varpos2;
 
-         assert(SCIPgetConsExprExprNChildren(children[i]) == 2);
-         assert(SCIPhashmapExists(expr2idx, (void*) SCIPgetConsExprExprChildren(children[i])[0]));
-         assert(SCIPhashmapExists(expr2idx, (void*) SCIPgetConsExprExprChildren(children[i])[1]));
+         assert(SCIPexprGetNChildren(children[i]) == 2);
+         assert(SCIPhashmapExists(expr2idx, (void*) SCIPexprGetChildren(children[i])[0]));
+         assert(SCIPhashmapExists(expr2idx, (void*) SCIPexprGetChildren(children[i])[1]));
 
-         varpos = SCIPhashmapGetImageInt(expr2idx, (void*) SCIPgetConsExprExprChildren(children[i])[0]);
+         varpos = SCIPhashmapGetImageInt(expr2idx, (void*) SCIPexprGetChildren(children[i])[0]);
          assert(0 <= varpos && varpos < nexprs);
 
-         varpos2 = SCIPhashmapGetImageInt(expr2idx, (void*) SCIPgetConsExprExprChildren(children[i])[1]);
+         varpos2 = SCIPhashmapGetImageInt(expr2idx, (void*) SCIPexprGetChildren(children[i])[1]);
          assert(0 <= varpos2 && varpos2 < nexprs);
          assert(varpos != varpos2);
 
@@ -928,8 +928,7 @@ void buildQuadExprMatrix(
 static
 SCIP_RETCODE tryFillNlhdlrExprDataQuad(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expr constraint handler */
-   SCIP_CONSEXPR_EXPR**  occurringexprs,     /**< array of all occurring expressions (nvars many) */
+   SCIP_EXPR**           occurringexprs,     /**< array of all occurring expressions (nvars many) */
    SCIP_Real*            eigvecmatrix,       /**< array containing the Eigenvectors */
    SCIP_Real*            eigvals,            /**< array containing the Eigenvalues */
    SCIP_Real*            bp,                 /**< product of linear vector b * P (eigvecmatrix^t) */
@@ -1047,7 +1046,8 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
          if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
             continue;
 
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE) );
+         SCIP_CALL( SCIPevalExprActivity(scip, occurringexprs[j]) );
+         activity = SCIPexprGetActivity(occurringexprs[j]);
 
          if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
          {
@@ -1078,7 +1078,8 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
          if( SCIPisZero(scip, eigvecmatrix[specialtermidx * nvars + j]) )
             continue;
 
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, occurringexprs[j], &activity, TRUE) );
+         SCIP_CALL( SCIPevalExprActivity(scip, occurringexprs[j]) );
+         activity = SCIPexprGetActivity(occurringexprs[j]);
 
          if( eigvecmatrix[specialtermidx * nvars + j] > 0.0 )
          {
@@ -1153,15 +1154,14 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
 static
 SCIP_RETCODE detectSocNorm(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_CONSEXPR_EXPR** children;
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_CONSEXPR_EXPR** vars;
+   SCIP_EXPR** children;
+   SCIP_EXPR* child;
+   SCIP_EXPR** vars;
    SCIP_HASHMAP* expr2idx;
    SCIP_HASHSET* linexprs;
    SCIP_Real* childcoefs;
@@ -1177,7 +1177,6 @@ SCIP_RETCODE detectSocNorm(
    int nextentry;
    int i;
 
-   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(success != NULL);
 
@@ -1185,20 +1184,20 @@ SCIP_RETCODE detectSocNorm(
    issoc = TRUE;
 
    /* relation is not "<=" -> skip */
-   if( SCIPgetConsExprExprNLocksPos(expr) == 0 )
+   if( SCIPgetExprNLocksPosNonlinear(expr) == 0 )
       return SCIP_OKAY;
 
-   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+   assert(SCIPexprGetNChildren(expr) > 0);
 
-   child = SCIPgetConsExprExprChildren(expr)[0];
+   child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
    /* check whether expression is a SQRT and has a sum as child with at least 2 children and a non-negative constant */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrPower(conshdlr)
-      || SCIPgetConsExprExprPowExponent(expr) != 0.5
-      || SCIPgetConsExprExprHdlr(child) != SCIPgetConsExprExprHdlrSum(conshdlr)
-      || SCIPgetConsExprExprNChildren(child) < 2
-      || SCIPgetConsExprExprSumConstant(child) < 0.0)
+   if( ! SCIPisExprPower(scip, expr)
+      || SCIPgetExponentExprPow(expr) != 0.5
+      || !SCIPisExprSum(scip, child)
+      || SCIPexprGetNChildren(child) < 2
+      || SCIPgetConstantExprSum(child) < 0.0)
    {
       return SCIP_OKAY;
    }
@@ -1206,9 +1205,9 @@ SCIP_RETCODE detectSocNorm(
    /* assert(SCIPvarGetLbLocal(auxvar) >= 0.0); */
 
    /* get children of the sum */
-   children = SCIPgetConsExprExprChildren(child);
-   nchildren = SCIPgetConsExprExprNChildren(child);
-   childcoefs = SCIPgetConsExprExprSumCoefs(child);
+   children = SCIPexprGetChildren(child);
+   nchildren = SCIPexprGetNChildren(child);
+   childcoefs = SCIPgetCoefsExprSum(child);
 
    /* TODO: should we initialize the hashmap with size SCIPgetNVars() so that it never has to be resized? */
    SCIP_CALL( SCIPhashmapCreate(&expr2idx, SCIPblkmem(scip), nchildren) );
@@ -1230,14 +1229,10 @@ SCIP_RETCODE detectSocNorm(
     */
    for( i = 0; i < nchildren; ++i )
    {
-      SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-
-      exprhdlr = SCIPgetConsExprExprHdlr(children[i]);
-
       /* handle quadratic expressions children */
-      if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      if( SCIPisExprPower(scip, children[i]) && SCIPgetExponentExprPow(children[i]) == 2.0 )
       {
-         SCIP_CONSEXPR_EXPR* squarearg = SCIPgetConsExprExprChildren(children[i])[0];
+         SCIP_EXPR* squarearg = SCIPexprGetChildren(children[i])[0];
 
          if( !SCIPhashmapExists(expr2idx, (void*) squarearg) )
          {
@@ -1255,7 +1250,7 @@ SCIP_RETCODE detectSocNorm(
          ++nterms;
       }
       /* handle binary variable children */
-      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      else if( SCIPisExprVar(scip, children[i]) && SCIPvarIsBinary(SCIPgetVarExprVar(children[i])) )
       {
          assert(!SCIPhashmapExists(expr2idx, (void*) children[i]));
          assert(!SCIPhashsetExists(linexprs, (void*) children[i]));
@@ -1292,13 +1287,12 @@ SCIP_RETCODE detectSocNorm(
    /* add one to terms counter for auxvar */
    ++nterms;
 
-   constant = SCIPgetConsExprExprSumConstant(child);
+   constant = SCIPgetConstantExprSum(child);
 
    /* compute constant of possible soc expression to check its sign */
    for( i = 0; i < nchildren; ++i )
    {
-      if( SCIPgetConsExprExprHdlr(children[i]) != SCIPgetConsExprExprHdlrPower(conshdlr)
-         || SCIPgetConsExprExprPowExponent(children[i]) != 2.0 )
+      if( ! SCIPisExprPower(scip, children[i]) || SCIPgetExponentExprPow(children[i]) != 2.0 )
       {
          int auxvarpos;
 
@@ -1377,20 +1371,19 @@ SCIP_RETCODE detectSocNorm(
    nextentry = 0;
    for( i = 0; i < nchildren; ++i )
    {
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr)
-         && SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      if( SCIPisExprPower(scip, children[i]) && SCIPgetExponentExprPow(children[i]) == 2.0 )
       {
-         SCIP_CONSEXPR_EXPR* squarearg;
+         SCIP_EXPR* squarearg;
 
-         squarearg = SCIPgetConsExprExprChildren(children[i])[0];
+         squarearg = SCIPexprGetChildren(children[i])[0];
          assert(SCIPhashmapGetImageInt(expr2idx, (void*) squarearg) == nextentry);
 
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, squarearg, TRUE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, squarearg, TRUE, FALSE, FALSE, FALSE) );
 
          vars[nextentry] = squarearg;
          ++nextentry;
       }
-      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      else if( SCIPisExprVar(scip, children[i]) && SCIPvarIsBinary(SCIPgetVarExprVar(children[i])) )
       {
          /* handle binary variable children: no need to request auxvar */
          assert(SCIPhashmapGetImageInt(expr2idx, (void*) children[i]) == nextentry);
@@ -1404,7 +1397,7 @@ SCIP_RETCODE detectSocNorm(
          assert(SCIPhashmapExists(expr2idx, (void*) children[i]));
          auxvarpos = SCIPhashmapGetImageInt(expr2idx, (void*) children[i]);
 
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, children[i], TRUE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, children[i], TRUE, FALSE, FALSE, FALSE) );
 
          offsets[auxvarpos] = 0.5 * childcoefs[i] / transcoefs[auxvarpos];
       }
@@ -1413,7 +1406,7 @@ SCIP_RETCODE detectSocNorm(
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n", (void*)expr);
-   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPprintExpr(scip, expr, NULL);
    SCIPinfoMessage(scip, NULL, " <= auxvar\n");
 #endif
 
@@ -1445,18 +1438,17 @@ SCIP_RETCODE detectSocNorm(
 static
 SCIP_RETCODE detectSocQuadraticSimple(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
                                                valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_CONSEXPR_EXPR** children;
-   SCIP_CONSEXPR_EXPR** vars = NULL;
+   SCIP_EXPR** children;
+   SCIP_EXPR** vars = NULL;
    SCIP_Real* childcoefs;
    SCIP_Real* offsets = NULL;
    SCIP_Real* transcoefs = NULL;
@@ -1484,23 +1476,22 @@ SCIP_RETCODE detectSocQuadraticSimple(
    int i;
    SCIP_Bool ishyperbolic;
 
-   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(success != NULL);
 
    *success = FALSE;
 
    /* check whether expression is a sum with at least 2 children */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
+   if( ! SCIPisExprSum(scip, expr) || SCIPexprGetNChildren(expr) < 2 )
       return SCIP_OKAY;
 
    /* get children of the sum */
-   children = SCIPgetConsExprExprChildren(expr);
-   nchildren = SCIPgetConsExprExprNChildren(expr);
-   constant = SCIPgetConsExprExprSumConstant(expr);
+   children = SCIPexprGetChildren(expr);
+   nchildren = SCIPexprGetNChildren(expr);
+   constant = SCIPgetConstantExprSum(expr);
 
    /* we duplicate the child coefficients since we have to manipulate them */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetConsExprExprSumCoefs(expr), nchildren) ); /*lint !e666*/
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetCoefsExprSum(expr), nchildren) ); /*lint !e666*/
 
    /* initialize data */
    lhsidx = -1;
@@ -1513,8 +1504,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    /* check if all children are quadratic or binary linear and count number of positive and negative terms */
    for( i = 0; i < nchildren; ++i )
    {
-      if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr) &&
-            SCIPgetConsExprExprPowExponent(children[i]) == 2.0 )
+      if( SCIPisExprPower(scip, children[i]) && SCIPgetExponentExprPow(children[i]) == 2.0 )
       {
          if( childcoefs[i] > 0.0 )
          {
@@ -1527,7 +1517,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
             rhsidx = i;
          }
       }
-      else if( SCIPisConsExprExprVar(children[i]) && SCIPvarIsBinary(SCIPgetConsExprExprVarVar(children[i])) )
+      else if( SCIPisExprVar(scip, children[i]) && SCIPvarIsBinary(SCIPgetVarExprVar(children[i])) )
       {
          if( childcoefs[i] > 0.0 )
          {
@@ -1540,8 +1530,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
             rhsidx = i;
          }
       }
-      else if( SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrProduct(conshdlr) &&
-            SCIPgetConsExprExprNChildren(children[i]) == 2 )
+      else if( SCIPisExprProduct(scip, children[i]) && SCIPexprGetNChildren(children[i]) == 2 )
       {
          if( childcoefs[i] > 0.0 )
          {
@@ -1589,7 +1578,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID )  /*lint !e777*/
    {
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE) );
+      SCIP_CALL( SCIPevalExprActivity(scip, expr) );
+      expractivity = SCIPexprGetActivity(expr);
+
       lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
       rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
    }
@@ -1643,10 +1634,13 @@ SCIP_RETCODE detectSocQuadraticSimple(
       SCIP_INTERVAL yactivity;
       SCIP_INTERVAL zactivity;
 
-      assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 2);
+      assert(SCIPexprGetNChildren(children[specialtermidx]) == 2);
 
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &yactivity, FALSE) );
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], &zactivity, FALSE) );
+      SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(children[specialtermidx])[0]) );
+      yactivity = SCIPexprGetActivity(SCIPexprGetChildren(children[specialtermidx])[0]);
+
+      SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(children[specialtermidx])[1]) );
+      zactivity = SCIPexprGetActivity(SCIPexprGetChildren(children[specialtermidx])[1]);
 
       if( SCIPisNegative(scip, yactivity.inf + zactivity.inf) )
       {
@@ -1661,7 +1655,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       lhsconstant *= 4.0 / -childcoefs[specialtermidx];
    }
-   else if( SCIPisConsExprExprVar(children[specialtermidx]) )
+   else if( SCIPisExprVar(scip, children[specialtermidx]) )
    {
       /* children[specialtermidx] can be a variable, in which case we treat it as if it is squared */
       rhssign = 1.0;
@@ -1670,8 +1664,9 @@ SCIP_RETCODE detectSocQuadraticSimple(
    {
       SCIP_INTERVAL rhsactivity;
 
-      assert(SCIPgetConsExprExprNChildren(children[specialtermidx]) == 1);
-      SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], &rhsactivity, FALSE) );
+      assert(SCIPexprGetNChildren(children[specialtermidx]) == 1);
+      SCIP_CALL( SCIPevalExprActivity(scip, SCIPexprGetChildren(children[specialtermidx])[0]) );
+      rhsactivity = SCIPexprGetActivity(SCIPexprGetChildren(children[specialtermidx])[0]);
 
       if( rhsactivity.inf < 0.0 )
       {
@@ -1732,19 +1727,19 @@ SCIP_RETCODE detectSocQuadraticSimple(
          continue;
 
       /* extract (unique) variable appearing in term */
-      if( SCIPisConsExprExprVar(children[i]) )
+      if( SCIPisExprVar(scip, children[i]) )
       {
          vars[nextentry] = children[i];
 
-         assert(SCIPvarIsBinary(SCIPgetConsExprExprVarVar(vars[nextentry])));
+         assert(SCIPvarIsBinary(SCIPgetVarExprVar(vars[nextentry])));
       }
       else
       {
-         assert(SCIPgetConsExprExprHdlr(children[i]) == SCIPgetConsExprExprHdlrPower(conshdlr));
+         assert(SCIPisExprPower(scip, children[i]));
 
          /* notify that we will require auxiliary variable */
-         SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[i])[0], TRUE, FALSE, FALSE, FALSE) );
-         vars[nextentry] = SCIPgetConsExprExprChildren(children[i])[0];
+         SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, SCIPexprGetChildren(children[i])[0], TRUE, FALSE, FALSE, FALSE) );
+         vars[nextentry] = SCIPexprGetChildren(children[i])[0];
       }
       assert(vars[nextentry] != NULL);
 
@@ -1786,8 +1781,8 @@ SCIP_RETCODE detectSocQuadraticSimple(
    if( !ishyperbolic )
    {
       /* store rhs term */
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
-      vars[nvars - 1] = SCIPgetConsExprExprChildren(children[specialtermidx])[0];
+      SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, SCIPexprGetChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
+      vars[nvars - 1] = SCIPexprGetChildren(children[specialtermidx])[0];
 
       assert(childcoefs[specialtermidx] < 0.0);
 
@@ -1805,11 +1800,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
    else
    {
       /* store last lhs term and rhs term coming from the bilinear term */
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
-      vars[nvars - 2] = SCIPgetConsExprExprChildren(children[specialtermidx])[0];
+      SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, SCIPexprGetChildren(children[specialtermidx])[0], TRUE, FALSE, FALSE, FALSE) );
+      vars[nvars - 2] = SCIPexprGetChildren(children[specialtermidx])[0];
 
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, SCIPgetConsExprExprChildren(children[specialtermidx])[1], TRUE, FALSE, FALSE, FALSE) );
-      vars[nvars - 1] = SCIPgetConsExprExprChildren(children[specialtermidx])[1];
+      SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, SCIPexprGetChildren(children[specialtermidx])[1], TRUE, FALSE, FALSE, FALSE) );
+      vars[nvars - 1] = SCIPexprGetChildren(children[specialtermidx])[1];
 
       /* at this point, vars[nvars - 2] = expr_k and vars[nvars - 1] = expr_l;
        * on the lhs we have the term (expr_k - expr_l)^2
@@ -1855,7 +1850,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
-   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPprintExpr(scip, expr, NULL);
    SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
 #endif
 
@@ -1894,24 +1889,23 @@ CLEANUP:
  * that a - b >= 0 and b -c >= 0, but this implies that a >= c and assuming the constraint is not trivially infeasible,
  * a <= b. Thus, a = b = c and the constraint is x^2 == y^2.
  *
- * @todo: Since consexpr multiplies as many terms out as possible during presolving, some soc-representable
+ * @todo: Since cons nonlinear multiplies as many terms out as possible during presolving, some soc-representable
  * structures cannot be detected, (see e.g. instances bearing or wager). There is currently no obvious way
  * to handle this.
  */
 static
 SCIP_RETCODE detectSocQuadraticComplex(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
                                                valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_CONSEXPR_EXPR** occurringexprs;
+   SCIP_EXPR** occurringexprs;
    SCIP_HASHMAP* expr2idx;
    SCIP_Real* offsets;
    SCIP_Real* transcoefs;
@@ -1938,21 +1932,20 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_Bool lhsissoc;
    SCIP_Bool isquadratic;
 
-   assert(conshdlr != NULL);
    assert(expr != NULL);
    assert(success != NULL);
 
    *success = FALSE;
 
    /* check whether expression is a sum with at least 2 children */
-   if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(conshdlr) || SCIPgetConsExprExprNChildren(expr) < 2 )
+   if( ! SCIPisExprSum(scip, expr) || SCIPexprGetNChildren(expr) < 2 )
    {
       return SCIP_OKAY;
    }
 
    /* get children of the sum */
-   nchildren = SCIPgetConsExprExprNChildren(expr);
-   constant = SCIPgetConsExprExprSumConstant(expr);
+   nchildren = SCIPexprGetNChildren(expr);
+   constant = SCIPgetConstantExprSum(expr);
 
    /* initialize data */
    offsets = NULL;
@@ -1965,7 +1958,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocBufferArray(scip, &occurringexprs, 2 * nchildren) );
 
    /* check if the expression is quadratic and collect all occurring expressions */
-   SCIP_CALL( checkAndCollectQuadratic(scip, conshdlr, expr, expr2idx, occurringexprs, &nvars, &isquadratic) );
+   SCIP_CALL( checkAndCollectQuadratic(scip, expr, expr2idx, occurringexprs, &nvars, &isquadratic) );
 
    if( !isquadratic )
    {
@@ -1974,7 +1967,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       return SCIP_OKAY;
    }
 
-   /* check that nvars*nvars doesn't get too large, see also SCIPgetConsExprQuadraticCurvature() */
+   /* check that nvars*nvars doesn't get too large, see also SCIPcomputeExprQuadraticCurvature() */
    if( nvars > 7000 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "nlhdlr_soc - number of quadratic variables is too large (%d) to check the curvature\n", nvars);
@@ -1988,7 +1981,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nvars) );
 
    /* build constraint defining matrix (stored in eigvecmatrix) and vector (stored in lincoefs) */
-   buildQuadExprMatrix(scip, conshdlr, expr, expr2idx, nvars, eigvecmatrix, lincoefs);
+   buildQuadExprMatrix(scip, expr, expr2idx, nvars, eigvecmatrix, lincoefs);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nvars) );
 
@@ -2000,7 +1993,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
       SCIPdebugMsg(scip, "Failed to compute eigenvalues and eigenvectors for expression:\n");
 
 #ifdef SCIP_DEBUG
-      SCIPdismantleConsExprExpr(scip, NULL, expr);
+      SCIPdismantleExpr(scip, NULL, expr);
 #endif
 
       goto CLEANUP;
@@ -2044,14 +2037,15 @@ SCIP_RETCODE detectSocQuadraticComplex(
       goto CLEANUP;
 
    /* determine whether rhs or lhs of cons is potentially SOC, if any */
-   rhsissoc = (nneg == 1 && SCIPgetConsExprExprNLocksPos(expr) > 0);
-   lhsissoc = (npos == 1 && SCIPgetConsExprExprNLocksNeg(expr) > 0);
+   rhsissoc = (nneg == 1 && SCIPgetExprNLocksPosNonlinear(expr) > 0);
+   lhsissoc = (npos == 1 && SCIPgetExprNLocksNegNonlinear(expr) > 0);
 
    if( rhsissoc || lhsissoc )
    {
       if( conslhs == SCIP_INVALID || consrhs == SCIP_INVALID ) /*lint !e777*/
       {
-         SCIP_CALL( SCIPevalConsExprExprActivity(scip, conshdlr, expr, &expractivity, FALSE) );
+         SCIP_CALL( SCIPevalExprActivity(scip, expr) );
+         expractivity = SCIPexprGetActivity(expr);
          lhs = (conslhs == SCIP_INVALID ? expractivity.inf : conslhs); /*lint !e777*/
          rhs = (consrhs == SCIP_INVALID ? expractivity.sup : consrhs); /*lint !e777*/
       }
@@ -2095,7 +2089,7 @@ SCIP_RETCODE detectSocQuadraticComplex(
    SCIP_CALL( SCIPallocBufferArray(scip, &termbegins, npos + nneg + 1) );
 
    /* try to fill the nlhdlrexprdata (at this point, it can still fail) */
-   SCIP_CALL( tryFillNlhdlrExprDataQuad(scip, conshdlr, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,
+   SCIP_CALL( tryFillNlhdlrExprDataQuad(scip, occurringexprs, eigvecmatrix, eigvals, bp, nvars, termbegins, transcoefs,
          transcoefsidx, offsets, &lhsconstant, &nterms, success) );
 
    if( !(*success) )
@@ -2111,12 +2105,12 @@ SCIP_RETCODE detectSocQuadraticComplex(
    /* register all requests for auxiliary variables */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, occurringexprs[i], TRUE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, occurringexprs[i], TRUE, FALSE, FALSE, FALSE) );
    }
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "found SOC structure for expression %p\n%f <= ", (void*)expr, lhs);
-   SCIPprintConsExprExpr(scip, conshdlr, expr, NULL);
+   SCIPprintExpr(scip, expr, NULL);
    SCIPinfoMessage(scip, NULL, "<= %f\n", rhs);
 #endif
 
@@ -2164,25 +2158,23 @@ CLEANUP:
 static
 SCIP_RETCODE detectSOC(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_NLHDLR* nlhdlr,             /**< nonlinear handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
+   SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
+   SCIP_EXPR*            expr,               /**< expression */
    SCIP_Real             conslhs,            /**< lhs of the constraint that the expression defines (or SCIP_INVALID) */
    SCIP_Real             consrhs,            /**< rhs of the constraint that the expression defines (or SCIP_INVALID) */
-   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata, /**< pointer to store nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata,     /**< pointer to store nonlinear handler expression data */
    SCIP_Bool*            enforcebelow,       /**< pointer to store whether we enforce <= (TRUE) or >= (FALSE); only
                                                valid when success is TRUE */
    SCIP_Bool*            success             /**< pointer to store whether SOC structure has been detected */
    )
 {
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLRDATA* nlhdlrdata;
 
    assert(expr != NULL);
    assert(nlhdlrexprdata != NULL);
    assert(success != NULL);
-   assert(conshdlr != NULL);
 
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    *success = FALSE;
@@ -2193,22 +2185,20 @@ SCIP_RETCODE detectSOC(
     */
    if( conslhs == SCIP_INVALID && consrhs == SCIP_INVALID ) /*lint !e777*/
    {
-      SCIP_CALL( detectSocNorm(scip, conshdlr, expr, nlhdlrexprdata, success) );
+      SCIP_CALL( detectSocNorm(scip, expr, nlhdlrexprdata, success) );
       *enforcebelow = *success;
    }
 
    if( !(*success) )
    {
       /* check whether expression is a simple soc-respresentable quadratic expression as described in case 2 above */
-      SCIP_CALL( detectSocQuadraticSimple(scip, conshdlr, expr, conslhs, consrhs, nlhdlrexprdata, enforcebelow,
-               success) );
+      SCIP_CALL( detectSocQuadraticSimple(scip, expr, conslhs, consrhs, nlhdlrexprdata, enforcebelow, success) );
    }
 
    if( !(*success) && nlhdlrdata->compeigenvalues )
    {
       /* check whether expression is a more complex soc-respresentable quadratic expression as described in case 3 */
-      SCIP_CALL( detectSocQuadraticComplex(scip, conshdlr, expr, conslhs, consrhs, nlhdlrexprdata,
-               enforcebelow, success) );
+      SCIP_CALL( detectSocQuadraticComplex(scip, expr, conslhs, consrhs, nlhdlrexprdata, enforcebelow, success) );
    }
 
    return SCIP_OKAY;
@@ -2220,21 +2210,20 @@ SCIP_RETCODE detectSOC(
 
 /** nonlinear handler copy callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrSoc)
+SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrSoc)
 { /*lint --e{715}*/
    assert(targetscip != NULL);
-   assert(targetconsexprhdlr != NULL);
    assert(sourcenlhdlr != NULL);
-   assert(strcmp(SCIPgetConsExprNlhdlrName(sourcenlhdlr), NLHDLR_NAME) == 0);
+   assert(strcmp(SCIPnlhdlrGetName(sourcenlhdlr), NLHDLR_NAME) == 0);
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrSoc(targetscip, targetconsexprhdlr) );
+   SCIP_CALL( SCIPincludeNlhdlrSoc(targetscip) );
 
    return SCIP_OKAY;
 }
 
 /** callback to free data of handler */
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataSoc)
+SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataSoc)
 { /*lint --e{715}*/
    assert(nlhdlrdata != NULL);
 
@@ -2246,7 +2235,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataSoc)
 
 /** callback to free expression specific data */
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
+SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
 {  /*lint --e{715}*/
    assert(*nlhdlrexprdata != NULL);
 
@@ -2259,7 +2248,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
 /** callback to be called in initialization */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitSoc)
+SCIP_DECL_NLHDLRINIT(nlhdlrInitSoc)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -2274,7 +2263,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitSoc)
 /** callback to be called in deinitialization */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitSoc)
+SCIP_DECL_NLHDLREXIT(nlhdlrExitSoc)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -2288,7 +2277,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitSoc)
 
 /** callback to detect structure in expression tree */
 static
-SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
+SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
 { /*lint --e{715}*/
    SCIP_Real conslhs;
    SCIP_Real consrhs;
@@ -2300,21 +2289,21 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
    /* don't try if no sepa is required
     * TODO implement some bound strengthening
     */
-   if( (*enforcing & SCIP_CONSEXPR_EXPRENFO_SEPABOTH) == SCIP_CONSEXPR_EXPRENFO_SEPABOTH )
+   if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABOTH) == SCIP_NLHDLR_METHOD_SEPABOTH )
       return SCIP_OKAY;
 
-   assert(SCIPgetConsExprExprNAuxvarUses(expr) > 0);  /* since some sepa is required, there should have been demand for it */
+   assert(SCIPgetExprNAuxvarUsesNonlinear(expr) > 0);  /* since some sepa is required, there should have been demand for it */
 
-   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsExpr(scip, cons));
-   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsExpr(scip, cons));
+   conslhs = (cons == NULL ? SCIP_INVALID : SCIPgetLhsConsNonlinear(cons));
+   consrhs = (cons == NULL ? SCIP_INVALID : SCIPgetRhsConsNonlinear(cons));
 
-   SCIP_CALL( detectSOC(scip, conshdlr, nlhdlr, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
+   SCIP_CALL( detectSOC(scip, nlhdlr, expr, conslhs, consrhs, nlhdlrexprdata, &enforcebelow, &success) );
 
    if( !success )
       return SCIP_OKAY;
 
    /* inform what we can do */
-   *participating = enforcebelow ? SCIP_CONSEXPR_EXPRENFO_SEPABELOW : SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
+   *participating = enforcebelow ? SCIP_NLHDLR_METHOD_SEPABELOW : SCIP_NLHDLR_METHOD_SEPAABOVE;
    *enforcing |= *participating;
 
    return SCIP_OKAY;
@@ -2325,9 +2314,8 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectSoc)
  * @todo: remember if we are in the original variables and avoid reevaluating
  */
 static
-SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
+SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 { /*lint --e{715}*/
-   SCIP_CONSHDLR* conshdlr;
    int i;
 
    assert(nlhdlrexprdata != NULL);
@@ -2336,13 +2324,10 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    assert(nlhdlrexprdata->transcoefsidx != NULL);
    assert(nlhdlrexprdata->nterms > 1);
 
-   conshdlr = SCIPfindConshdlr(scip, "expr");
-   assert(conshdlr != NULL);
-
    /* if the original expression is a norm, evaluate w.r.t. the auxiliary variables */
-   if( SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrPower(conshdlr) )
+   if( SCIPisExprPower(scip, expr) )
    {
-      assert(SCIPgetConsExprExprPowExponent(expr) == 0.5);
+      assert(SCIPgetExponentExprPow(expr) == 0.5);
 
       /* compute sum_i coef_i expr_i^2 */
       *auxvalue = 0.0;
@@ -2362,45 +2347,42 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
    /* otherwise, evaluate the original quadratic expression w.r.t. the created auxvars of the children */
    else
    {
-      SCIP_CONSEXPR_EXPR** children;
+      SCIP_EXPR** children;
       SCIP_Real* childcoefs;
       int nchildren;
 
-      assert(SCIPgetConsExprExprHdlr(expr) == SCIPgetConsExprExprHdlrSum(conshdlr));
+      assert(SCIPisExprSum(scip, expr));
 
-      children = SCIPgetConsExprExprChildren(expr);
-      childcoefs = SCIPgetConsExprExprSumCoefs(expr);
-      nchildren = SCIPgetConsExprExprNChildren(expr);
+      children = SCIPexprGetChildren(expr);
+      childcoefs = SCIPgetCoefsExprSum(expr);
+      nchildren = SCIPexprGetNChildren(expr);
 
-      *auxvalue = SCIPgetConsExprExprSumConstant(expr);
+      *auxvalue = SCIPgetConstantExprSum(expr);
 
       for( i = 0; i < nchildren; ++i )
       {
-         SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-
-         exprhdlr = SCIPgetConsExprExprHdlr(children[i]);
-         if( exprhdlr == SCIPgetConsExprExprHdlrPower(conshdlr) )
+         if( SCIPisExprPower(scip, children[i]) )
          {
             SCIP_VAR* argauxvar;
             SCIP_Real solval;
 
-            assert(SCIPgetConsExprExprPowExponent(children[i]) == 2.0);
+            assert(SCIPgetExponentExprPow(children[i]) == 2.0);
 
-            argauxvar = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
+            argauxvar = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(children[i])[0]);
             assert(argauxvar != NULL);
 
             solval = SCIPgetSolVal(scip, sol, argauxvar);
             *auxvalue += childcoefs[i] * SQR( solval );
          }
-         else if( exprhdlr == SCIPgetConsExprExprHdlrProduct(conshdlr) )
+         else if( SCIPisExprProduct(scip, children[i]) )
          {
             SCIP_VAR* argauxvar1;
             SCIP_VAR* argauxvar2;
 
-            assert(SCIPgetConsExprExprNChildren(children[i]) == 2);
+            assert(SCIPexprGetNChildren(children[i]) == 2);
 
-            argauxvar1 = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[0]);
-            argauxvar2 = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(children[i])[1]);
+            argauxvar1 = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(children[i])[0]);
+            argauxvar2 = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(children[i])[1]);
             assert(argauxvar1 != NULL);
             assert(argauxvar2 != NULL);
 
@@ -2410,7 +2392,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
          {
             SCIP_VAR* argauxvar;
 
-            argauxvar = SCIPgetConsExprExprAuxVar(children[i]);
+            argauxvar = SCIPgetExprAuxVarNonlinear(children[i]);
             assert(argauxvar != NULL);
 
             *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar);
@@ -2424,7 +2406,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 
 /** separation deinitialization method of a nonlinear handler (called during CONSINITLP) */
 static
-SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
+SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 { /*lint --e{715}*/
    assert(conshdlr != NULL);
    assert(expr != NULL);
@@ -2462,7 +2444,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
             SCIP_VAR* var;
             SCIP_Real varval;
 
-            var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
+            var = SCIPgetVarExprVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
 
             SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
             rhsval += nlhdlrexprdata->transcoefs[i] * varval;
@@ -2490,7 +2472,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
                   SCIP_VAR* var;
                   SCIP_Real varval;
 
-                  var = SCIPgetConsExprExprVarVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
+                  var = SCIPgetVarExprVar(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[i]]);
 
                   SCIP_CALL( SCIPdebugGetSolVal(scip, var, &varval) );
                   lhsval += nlhdlrexprdata->transcoefs[i] * varval;
@@ -2514,7 +2496,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaSoc)
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
 static
-SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
+SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 { /*lint --e{715}*/
    assert(nlhdlrexprdata != NULL);
 
@@ -2530,9 +2512,9 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaSoc)
 
 /** nonlinear handler separation callback */
 static
-SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
+SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 { /*lint --e{715}*/
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLRDATA* nlhdlrdata;
    SCIP_Real rhsval;
    int ndisaggrs;
    int k;
@@ -2544,7 +2526,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
 
    *result = SCIP_DIDNOTFIND;
 
-   nlhdlrdata = SCIPgetConsExprNlhdlrData(nlhdlr);
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
    rhsval = evalSingleTerm(scip, nlhdlrexprdata, sol, nlhdlrexprdata->nterms - 1);
@@ -2572,7 +2554,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
-#ifdef SCIP_CONSEXPR_ROWNOTREMOVABLE
+#ifdef SCIP_CONSNONLINEAR_ROWNOTREMOVABLE
             /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
             if( addbranchscores )
                SCIPmarkRowNotRemovableLocal(scip, row);
@@ -2635,7 +2617,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
          {
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
 
-#ifdef SCIP_CONSEXPR_ROWNOTREMOVABLE
+#ifdef SCIP_CONSNONLINEAR_ROWNOTREMOVABLE
             /* mark row as not removable from LP for current node, if in enforcement (==addbranchscores) (this can prevent some cycling) */
             if( addbranchscores )
                SCIPmarkRowNotRemovableLocal(scip, row);
@@ -2659,36 +2641,34 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoSoc)
  * nonlinear handler specific interface methods
  */
 
-/** includes SOC nonlinear handler to consexpr */
-SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+/** includes SOC nonlinear handler in nonlinear constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrSoc(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLR* nlhdlr;
 
    assert(scip != NULL);
-   assert(consexprhdlr != NULL);
 
    /* create nonlinear handler data */
    SCIP_CALL( SCIPallocClearBlockMemory(scip, &nlhdlrdata) );
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectSoc, nlhdlrEvalauxSoc, nlhdlrdata) );
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY, NLHDLR_ENFOPRIORITY, nlhdlrDetectSoc, nlhdlrEvalauxSoc, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
-   SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrSoc);
-   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataSoc);
-   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataSoc);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
+   SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrSoc);
+   SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataSoc);
+   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataSoc);
+   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
+   SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
 
    /* add soc nlhdlr parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/mincutefficacy",
+   SCIP_CALL( SCIPaddRealParam(scip, "nlhdlr/" NLHDLR_NAME "/mincutefficacy",
          "Minimum efficacy which a cut needs in order to be added.",
          &nlhdlrdata->mincutefficacy, FALSE, DEFAULT_MINCUTEFFICACY, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/expr/nlhdlr/" NLHDLR_NAME "/compeigenvalues",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/compeigenvalues",
          "Should Eigenvalue computations be done to detect complex cases in quadratic constraints?",
          &nlhdlrdata->compeigenvalues, FALSE, DEFAULT_COMPEIGENVALUES, NULL, NULL) );
 

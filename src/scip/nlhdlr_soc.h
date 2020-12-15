@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_soc.h
+/**@file   nlhdlr_soc.h
  * @brief  soc nonlinear handler
  *
  * @author Benjamin Mueller
@@ -22,8 +22,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_NLHDLR_SOC_H__
-#define __SCIP_CONS_EXPR_NLHDLR_SOC_H__
+#ifndef __SCIP_NLHDLR_SOC_H__
+#define __SCIP_NLHDLR_SOC_H__
 
 #include "scip/scip.h"
 
@@ -31,15 +31,14 @@
 extern "C" {
 #endif
 
-/** includes SOC nonlinear handler to consexpr */
+/** includes SOC nonlinear handler in nonlinear constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprNlhdlrSoc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrSoc(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_SOC_H__ */
+#endif /* __SCIP_NLHDLR_SOC_H__ */

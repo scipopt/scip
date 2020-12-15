@@ -633,6 +633,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/nlhdlr_convex.o \
 			scip/nlhdlr_default.o \
 			scip/nlhdlr_quadratic.o \
+			scip/nlhdlr_soc.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_breadthfirst.o \
 			scip/nodesel_dfs.o \

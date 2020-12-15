@@ -25,8 +25,15 @@
 
 #include <string.h>
 
-#include "scip/cons_expr.c"
-#include "scip/cons_expr_nlhdlr_soc.c"
+#include "scip/nlhdlr_default.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/expr_sum.h"
+#include "scip/expr_sin.h"
+#include "scip/expr_cos.h"
+#include "scip/cons_nonlinear.c"
+#include "scip/nlhdlr_soc.c"
 
 
 /*
@@ -42,13 +49,13 @@ static SCIP_VAR* w;
 static SCIP_VAR* z;
 static SCIP_VAR* u;
 
-static SCIP_CONSEXPR_EXPR* xexpr;
-static SCIP_CONSEXPR_EXPR* yexpr;
-static SCIP_CONSEXPR_EXPR* wexpr;
-static SCIP_CONSEXPR_EXPR* zexpr;
-static SCIP_CONSEXPR_EXPR* uexpr;
+static SCIP_EXPR* xexpr;
+static SCIP_EXPR* yexpr;
+static SCIP_EXPR* wexpr;
+static SCIP_EXPR* zexpr;
+static SCIP_EXPR* uexpr;
 
-static SCIP_CONSEXPR_NLHDLR* nlhdlr;
+static SCIP_NLHDLR* nlhdlr;
 static SCIP_CONSHDLR* conshdlr;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
@@ -60,21 +67,31 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include cons_expr: this adds the operator handlers and nonlinear handlers; get quadratic handler and conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
 
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   /* include some expr handlers */
+   SCIP_CALL( SCIPincludeExprHdlrExp(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrVar(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrValue(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrSum(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrPow(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrProduct(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrSin(scip) );
+   SCIP_CALL( SCIPincludeExprHdlrCos(scip) );
+
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
-   nlhdlr = SCIPfindConsExprNlhdlr(conshdlr, "soc");
+   SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
+
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "soc");
    cr_assert_not_null(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
-
-   /* the hacky way how conss are processed here give an assert in nlhdlrbilinearexit (because exitsepa is not called, I guess) */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/expr/nlhdlr/bilinear/enabled", FALSE) );
 
    /* go to SOLVING stage */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
@@ -91,11 +108,11 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, z) );
    SCIP_CALL( SCIPaddVar(scip, u) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &uexpr, u) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &uexpr, u, NULL, NULL) );
 }
 
 /* releases variables, frees scip */
@@ -104,11 +121,11 @@ void teardown(void)
 {
    SCIP_CALL( SCIPclearCuts(scip) );
 
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &uexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &uexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
 
    SCIP_CALL( SCIPreleaseVar(scip, &u) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
@@ -127,8 +144,8 @@ TestSuite(nlhdlrsoc, .init = setup, .fini = teardown);
 
 static
 void checkData(
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata,
-   SCIP_CONSEXPR_EXPR**  vars,
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,
+   SCIP_EXPR**           vars,
    SCIP_Real*            offsets,
    SCIP_Real*            transcoefs,
    int*                  transcoefsidx,
@@ -151,23 +168,31 @@ void checkData(
 
    for( i = 0; i < nvars; ++i )
    {
-      if( SCIPisConsExprExprVar(vars[i]) )
+
+      if( SCIPisExprVar(scip, vars[i]) )
       {
+         SCIPprintExpr(scip, vars[i], NULL);
+         SCIPinfoMessage(scip, NULL, " <- is var %d expr before %p\n", i, (void *)vars[i]);
          /* if varexpr, then it may be a variable expression not used in the conshdlr for which we check here
           * so to be sure map var-expression from vars to the one used in conshdlr
-          * (it's called create, but usually the hashmap lookup succeeds first)
+          * (the function is called create, but it first checks the hashmap for the varexpr so it doesn't really create it)
           */
-         SCIP_CALL( createExprVar(scip, conshdlr, &vars[i], SCIPgetConsExprExprVarVar(vars[i])) );
+         SCIP_CALL( createExprVar(scip, conshdlr, &vars[i], SCIPgetVarExprVar(vars[i])) );
+         SCIPprintExpr(scip, vars[i], NULL);
+         SCIPinfoMessage(scip, NULL, " <- is var %d expr after  %p\n", i, (void *)vars[i]);
       }
 
       cr_assert_not_null(nlhdlrexprdata->vars[i]);
-      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected expr %d to be %p, but got %p\n",
-         i + 1, vars[i], nlhdlrexprdata->vars[i]);
 
-      if( SCIPisConsExprExprVar(vars[i]) )
+      SCIPprintExpr(scip, nlhdlrexprdata->vars[i], NULL);
+      SCIPinfoMessage(scip, NULL, " <- is var %d in nlhdlr   %p\n", i, (void *)nlhdlrexprdata->vars[i]);
+      cr_expect_eq(nlhdlrexprdata->vars[i], vars[i], "expected expr %d to be %p, but got %p\n",
+         i + 1, (void *)vars[i], (void *)nlhdlrexprdata->vars[i]);
+
+      if( SCIPisExprVar(scip, vars[i]) )
       {
          /* release, since create will have captured */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &vars[i]));
+         SCIP_CALL( SCIPreleaseExpr(scip, &vars[i]));
       }
    }
 
@@ -235,41 +260,65 @@ void checkCut(
    }
 }
 
+/* gets the nlhdlrdata of the soc nlhdlr; note that it returns null if the soc nlhdlr cannot handle expr */
+static
+void getSocNlhdlrData(
+   SCIP_EXPR*            expr,
+   SCIP_NLHDLREXPRDATA** nlhdlrexprdata
+   )
+{
+   *nlhdlrexprdata = NULL;
+
+   /* find the nlhdlr expr data */
+   for( int i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
+   {
+      SCIP_NLHDLR* enfonlhdlr;
+
+      SCIPgetExprEnfoDataNonlinear(expr, i, &enfonlhdlr, nlhdlrexprdata, NULL, NULL, NULL, NULL);
+      if( enfonlhdlr == nlhdlr )
+         break;
+      else
+         *nlhdlrexprdata = NULL;
+   }
+}
+
+static
+SCIP_RETCODE createAddConsAndConstructLP(
+   SCIP_CONS** cons,
+   char*       input
+   )
+{
+   SCIP_Bool success;
+   SCIP_Bool infeasible;
+
+   SCIP_CALL( SCIPparseCons(scip, cons, (char*) input, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
+            &success) );
+   cr_assert(success);
+
+   /* since we are in solving, this will run consactive which will: simplify and run detect */
+   SCIP_CALL( SCIPaddCons(scip, *cons) );
+
+   /* this will run initsepa which should create the auxvars and call the initsepa of the nlhdlr */
+   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+   cr_assert_not(infeasible);
+
+   return SCIP_OKAY;
+}
+
 /* norm <= constant shouldn't be handled by soc */
 Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_Bool success;
-   int i;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 <= 1",
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 <= 1") );
 
-   /* add locks */
-   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
-
-   expr = SCIPgetExprConsExpr(scip, cons);
-
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr didn't detect */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_null(nlhdlrexprdata);
-
-   /* remove locks */
-   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-
-   /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -279,36 +328,21 @@ Test(nlhdlrsoc, detectandfree1, .description = "detects simple norm expression")
 Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* normexpr;
-   SCIP_Bool success;
-   int i;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* normexpr;
 
-   /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 - <w> <= 0",
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: (<x>^2 + <y>^2 + <z>^2)^0.5 - <w> <= 0") );
 
-   /* add locks */
-   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+   expr = SCIPgetExprConsNonlinear(cons);
+   normexpr = SCIPexprGetChildren(expr)[1];
 
-   /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
-
-   expr = SCIPgetExprConsExpr(scip, cons);
-   normexpr = SCIPgetConsExprExprChildren(expr)[0];
-
-   /* find the nlhdlr expr data */
-   for( i = 0; i < normexpr->nenfos; ++i )
-   {
-      if( normexpr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(normexpr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[4] = {xexpr, yexpr, zexpr, normexpr};
+   SCIP_EXPR* vars[4] = {xexpr, yexpr, zexpr, normexpr};
    SCIP_Real offsets[4] = {0.0, 0.0, 0.0, 0.0};
    SCIP_Real transcoefs[4] = {1.0, 1.0, 1.0, 1.0};
    int transcoefsidx[4] = {0, 1, 2, 3};
@@ -316,12 +350,6 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, vars, offsets, transcoefs, transcoefsidx, nnonzeroes, 4, 4, 4);
-
-   /* remove locks */
-   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-
-   /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -331,15 +359,14 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
 Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* normexpr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* normexpr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (8 + 2*(<x> + 1)^2 + 4*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (8 + 2*(<x> + 1)^2 + 4*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -352,19 +379,15 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
-   normexpr = SCIPgetConsExprExprChildren(expr)[1];
+   expr = SCIPgetExprConsNonlinear(cons);
+   normexpr = SCIPexprGetChildren(expr)[1];
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < normexpr->nenfos; ++i )
-   {
-      if( normexpr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(normexpr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[3] = {xexpr, normexpr->children[0]->children[2], normexpr};
+   SCIP_EXPR* vars[3] = {xexpr, SCIPexprGetChildren(SCIPexprGetChildren(normexpr)[0])[2], normexpr};
    int nterms = 4;
    SCIP_Real offsets[4] = {SQRT(2.0), -4.0, SQRT(8.0) /* constant */, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
@@ -378,7 +401,7 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -388,14 +411,13 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
 Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 2*<x>^2 - 9*<y>^2 + sin(<z>)^2  <= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 2*<x>^2 - 9*<y>^2 + sin(<z>)^2  <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -408,18 +430,17 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
+   SCIPprintExpr(scip, expr, NULL);
+   SCIPinfoMessage(scip, NULL, " \n");
+
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[3] = {xexpr, expr->children[2]->children[0], yexpr};
+   SCIP_EXPR* vars[3] = {xexpr, SCIPexprGetChildren(SCIPexprGetChildren(expr)[2])[0], yexpr};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
    SCIP_Real transcoefs[3] = {SQRT(2.0), 1.0, 3.0};
    int transcoefsidx[3] = {0, 1, 2};
@@ -432,7 +453,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -442,14 +463,13 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
 Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadratic expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 5 - 9*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 5 - 9*cos(<x>)^2 + <y>^2 + 2*sin(<z>)^2 <= 4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -462,18 +482,15 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[3] = {yexpr, expr->children[2]->children[0], expr->children[1]->children[0]};
+
+   SCIP_EXPR* vars[3] = {yexpr, SCIPexprGetChildren(SCIPexprGetChildren(expr)[2])[0], SCIPexprGetChildren(SCIPexprGetChildren(expr)[1])[0]};
    int nterms = 4;
    SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
@@ -487,7 +504,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -497,14 +514,13 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
 Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression that is not soc")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: - 7*cos(<x>)^2 + <y>^2 - 2*sin(<z>)^2  <= 5",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: - 7*cos(<x>)^2 + <y>^2 - 2*sin(<z>)^2  <= 5",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -517,21 +533,17 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr didn't detect */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_null(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -541,14 +553,13 @@ Test(nlhdlrsoc, detectandfree6, .description = "detects quadratic expression tha
 Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 1 + 8*<x>^2 - 2*<y>*<u> + 2*<z>^2 <= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 1 + 8*<x>^2 - 2*<y>*<u> + 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -561,18 +572,14 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
+   SCIP_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
    int nterms = 5;
    SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0}; /* hyperbolic, constant is second to last of lhs */
    SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
@@ -586,7 +593,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -596,14 +603,13 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
 Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic expression that is not soc")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: 7*<x>^2 - 2*<y>*<u> - 2*<z>^2 <= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: 7*<x>^2 - 2*<y>*<u> - 2*<z>^2 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -616,21 +622,17 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr didn't detect */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_null(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -640,14 +642,13 @@ Test(nlhdlrsoc, detectandfree8, .description = "detects hyperbolic quadratic exp
 Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: -5 + 9*cos(<x>)^2 - <y>^2 - 2*sin(<z>)^2 >= -4",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: -5 + 9*cos(<x>)^2 - <y>^2 - 2*sin(<z>)^2 >= -4",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -660,18 +661,14 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[3] = {yexpr, expr->children[2]->children[0], expr->children[1]->children[0]};
+   SCIP_EXPR* vars[3] = {yexpr, SCIPexprGetChildren(SCIPexprGetChildren(expr)[2])[0], SCIPexprGetChildren(SCIPexprGetChildren(expr)[1])[0]};
    int nterms = 4;
    SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
@@ -685,7 +682,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -695,14 +692,13 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
 Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quadratic expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: -1 - 8*<x>^2 + 2*<y>*<u> - 2*<z>^2 >= 0",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: -1 - 8*<x>^2 + 2*<y>*<u> - 2*<z>^2 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -715,18 +711,14 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
+   SCIP_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
    int nterms = 5;
    SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0};
    int nnonzeroes[5] = {1, 1, 0, 2, 2};
@@ -740,25 +732,25 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* detects x^2 + 5xy + 5xz + 2y^2 + 2yz + 3z^2 + 8 <= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic constraint")
+//TODO reenable test when i can test with ipopt
+Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic constraint", .disabled = 1)
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
-         (char*) "[expr] <test>: <x>^2 + 2*<y>^2 + 3*<z>^2 + 5*<x>*<y> + 5*<x>*<z> + 2*<y>*<z> + 10*<x> + 8 <= 0",
+         (char*) "[nonlinear] <test>: <x>^2 + 2*<y>^2 + 3*<z>^2 + 5*<x>*<y> + 5*<x>*<z> + 2*<y>*<z> + 10*<x> + 8 <= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -771,18 +763,14 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[3] = {zexpr, yexpr, xexpr};
+   SCIP_EXPR* vars[3] = {zexpr, yexpr, xexpr};
    int nterms = 4;
    SCIP_Real offsets[4] = {-0.5321193159399078, -1.1644355645349063, SQRT(17.0909090909091), 3.275663328435811};
    int nnonzeroes[4] = {3, 3, 0, 3};
@@ -798,25 +786,25 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* detects -x^2 - 5xy - 5xz - 2y^2 - 2yz - 3z^2 - 8 >= 0 as soc expression */
-Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic constraint")
+//TODO reenable test when i can test with ipopt
+Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic constraint", .disabled = 1)
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
-         (char*) "[expr] <test>: -<x>^2 - 2*<y>^2 - 3*<z>^2 - 5*<x>*<y> - 5*<x>*<z> - 2*<y>*<z> - 10*<x> - 8 >= 0",
+         (char*) "[nonlinear] <test>: -<x>^2 - 2*<y>^2 - 3*<z>^2 - 5*<x>*<y> - 5*<x>*<z> - 2*<y>*<z> - 10*<x> - 8 >= 0",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -829,18 +817,14 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* setup expected data */
-   SCIP_CONSEXPR_EXPR* vars[3] = {zexpr, yexpr, xexpr};
+   SCIP_EXPR* vars[3] = {zexpr, yexpr, xexpr};
    int nterms = 4;
    int nnonzeroes[4] = {3, 3, 0, 3};
    SCIP_Real offsets[4] = {-1.1644355645349063, 0.5321193159399078, SQRT(17.0909090909091), 3.275663328435811};
@@ -856,7 +840,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -866,15 +850,14 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
 Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic constraint")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
-         (char*) "[expr] <test>: (<x>^2 - 4*<x> + 1)^0.5 <= 1",
+         (char*) "[nonlinear] <test>: (<x>^2 - 4*<x> + 1)^0.5 <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -887,21 +870,17 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr didn't detect */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_null(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -911,15 +890,14 @@ Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic const
 Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic constraint")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
    SCIP_CALL( SCIPparseCons(scip, &cons,
-         (char*) "[expr] <test>: <x>^2 + <y>^2 - <z> * <u> <= -2",
+         (char*) "[nonlinear] <test>: <x>^2 + <y>^2 - <z> * <u> <= -2",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -932,21 +910,17 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -957,15 +931,14 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
 Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPR* normexpr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_EXPR* normexpr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
-   int i;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0", TRUE, TRUE,
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (8 + 2*(<x> + 1)^2 + 3*(sin(<y>) - 2)^2)^0.5 + 2*(<w> - 1) <= 0", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -981,15 +954,11 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    /* call the separation initialization -> this creates auxvars and creates disaggregation variables and row */
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
-   normexpr = SCIPgetConsExprExprChildren(expr)[1];
+   expr = SCIPgetExprConsNonlinear(cons);
+   normexpr = SCIPexprGetChildren(expr)[1];
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < normexpr->nenfos; ++i )
-   {
-      if( normexpr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = normexpr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(normexpr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* check disvars */
@@ -1007,7 +976,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0]), nlhdlrexprdata->disvars[0], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[0]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[0])));
    cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1]), nlhdlrexprdata->disvars[1], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[1]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[1])));
    cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2]), nlhdlrexprdata->disvars[2], "expected <%s>, but got <%s>\n", SCIPvarGetName(nlhdlrexprdata->disvars[2]), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[2])));
-   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]), SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[2]), "expected <%s>, but got <%s>\n", SCIPvarGetName(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->vars[2])), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3])));
+   cr_expect_eq(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3]), SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[2]), "expected <%s>, but got <%s>\n", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[2])), SCIPvarGetName(SCIPcolGetVar(SCIProwGetCols(nlhdlrexprdata->disrow)[3])));
 
    cr_expect_eq(SCIProwGetLhs(nlhdlrexprdata->disrow), -SCIPinfinity(scip));
    cr_expect_eq(SCIProwGetRhs(nlhdlrexprdata->disrow), 0.0, "expected 0 got %g\n", SCIProwGetRhs(nlhdlrexprdata->disrow));
@@ -1022,7 +991,7 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1034,46 +1003,26 @@ Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the r
 Test(nlhdlrsoc, separation1, .description = "test separation for simple norm expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* rootexpr;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* rootexpr;
+   SCIP_EXPR* expr;
    SCIP_SOL* sol;
    SCIP_ROW* cut;
    SCIP_VAR* cutvars[3];
    SCIP_VAR* auxvar;
    SCIP_Real cutvals[3];
-   SCIP_Bool infeasible;
    SCIP_Real rhs;
-   int i;
 
-   /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "exp((<x>^2 + <y>^2 + <z>^2)^0.5)", NULL, &rootexpr) );
+   SCIP_CALL( createAddConsAndConstructLP(&cons, (char*)"[nonlinear] <test>: exp((<x>^2 + <y>^2 + <z>^2)^0.5) <= 2") );
 
-   /* create constraint */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", rootexpr, -SCIPinfinity(scip), 2.0) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
-   rootexpr = SCIPgetExprConsExpr(scip, cons);
+   rootexpr = SCIPgetExprConsNonlinear(cons);
+   expr = SCIPexprGetChildren(rootexpr)[0];
 
-   /* add locks */
-   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-
-   /* call detection method -> this registers the nlhdlr */
-   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
-
-   /* call the separation initialization -> this creates auxvars and creates disaggregation variables and row */
-   SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
-
-   expr = rootexpr->children[0];
-
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
+   cr_assert_not_null(nlhdlrexprdata->disvars);
 
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   auxvar = SCIPgetExprAuxVarNonlinear(expr);
 
    /* create solution */
    SCIPcreateSol(scip, &sol, NULL);
@@ -1130,12 +1079,6 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    /* free expr and cons */
    SCIPfreeSol(scip, &sol);
 
-   /* remove locks */
-   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-
-   /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
-
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
@@ -1143,9 +1086,9 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
 Test(nlhdlrsoc, separation2, .description = "test separation for simple norm expression without disagg")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* rootexpr;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* rootexpr;
+   SCIP_EXPR* expr;
    SCIP_SOL* sol;
    SCIP_ROW* cut;
    SCIP_VAR* cutvars[3];
@@ -1154,17 +1097,16 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_Bool infeasible;
    SCIP_Bool changed;
    SCIP_Real rhs;
-   int i;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "exp( ((<x> + 0.5)^2 + <y>^2)^0.5 )", NULL, &rootexpr) );
+   SCIP_CALL( SCIPparseExpr(scip, &rootexpr, (char*) "exp( ((<x> + 0.5)^2 + <y>^2)^0.5 )", NULL, NULL, NULL) );
 
-   SCIPsimplifyConsExprExpr(scip, conshdlr, rootexpr, &expr, &changed, &infeasible);
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+   SCIPsimplifyExpr(scip, rootexpr, &expr, &changed, &infeasible, NULL, NULL);
+   SCIP_CALL( SCIPreleaseExpr(scip, &rootexpr) );
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 2.0) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "soc", expr, -SCIPinfinity(scip), 2.0) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -1176,17 +1118,13 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( initSepa(scip, conshdlr, &cons, 1, &infeasible) );
 
    /* get norm expression */
-   expr = SCIPgetExprConsExpr(scip, cons)->children[0];
+   expr = SCIPexprGetChildren(SCIPgetExprConsNonlinear(cons))[0];
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
-   auxvar = SCIPgetConsExprExprAuxVar(expr);
+   auxvar = SCIPgetExprAuxVarNonlinear(expr);
 
    /* create solution */
    SCIPcreateSol(scip, &sol, NULL);
@@ -1215,7 +1153,7 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -1224,24 +1162,23 @@ Test(nlhdlrsoc, separation2, .description = "test separation for simple norm exp
 Test(nlhdlrsoc, separation3, .description = "test separation for simple expression without disagg")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_SOL* sol;
    SCIP_ROW* cut;
    SCIP_VAR* cutvars[3];
    SCIP_Real cutvals[3];
    SCIP_Real rhs;
-   int i;
 
    SCIP_CALL( SCIPchgVarLbGlobal(scip, z, 0.0) );
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*) "<x> ^2 - <y> * <z>", NULL, &expr) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*) "<x> ^2 - <y> * <z>", NULL, NULL, NULL) );
 
    /* create constraint */
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = SCIPgetExprConsExpr(scip, cons);
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "soc", expr, -SCIPinfinity(scip), 0.0) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
 
    /* add locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
@@ -1249,12 +1186,8 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
-   {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
-   }
+   /* check that soc nlhdlr detected */
+   getSocNlhdlrData(expr, &nlhdlrexprdata);
    cr_assert_not_null(nlhdlrexprdata);
 
    /* create solution */
@@ -1284,7 +1217,7 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
