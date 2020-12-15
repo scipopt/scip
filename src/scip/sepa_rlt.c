@@ -2691,8 +2691,8 @@ SCIP_RETCODE separateMcCormickImplicit(
             auxexpr = terms[i].aux.exprs[bestunderestimators[i]];
          else
             continue;
-         assert(auxexpr->overestimate >= overestimator);
-         assert(auxexpr->underestimate >= !overestimator);
+         assert(!overestimator || auxexpr->overestimate);
+         assert(overestimator || auxexpr->underestimate);
 
 #ifndef NDEBUG
          /* make sure that the term is violated */
