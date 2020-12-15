@@ -9907,12 +9907,6 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* store variable expressions */
-   if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
-   {
-      SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
-   }
-
    /* simplify root expression if the constraint has been added after presolving */
    if( SCIPgetStage(scip) > SCIP_STAGE_EXITPRESOLVE )
    {
@@ -9928,6 +9922,44 @@ SCIP_DECL_CONSACTIVE(consActiveNonlinear)
          consdata->expr = simplified;
          consdata->issimplified = TRUE;
       }
+
+      /* ensure that varexprs in consdata->expr are the one from var2expr hashmap */
+      {
+         SCIP_CONSHDLRDATA* conshdlrdata;
+         SCIP_EXPRITER* it;
+         SCIP_EXPR* expr;
+
+         conshdlrdata = SCIPconshdlrGetData(conshdlr);
+         assert(conshdlrdata != NULL);
+
+         SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+         SCIP_CALL( SCIPexpriterInit(it, consdata->expr, SCIP_EXPRITER_DFS, FALSE) );
+         SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_VISITINGCHILD);
+         for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+         {
+            SCIP_EXPR* child;
+            SCIP_EXPR* hashmapexpr;
+
+            child = SCIPexpriterGetChildExprDFS(it);
+            if( !SCIPisExprVar(scip, child) )
+               continue;
+
+            /* check which expression is stored in the hashmap for the var of child */
+            hashmapexpr = SCIPhashmapGetImage(conshdlrdata->var2expr, SCIPgetVarExprVar(child));
+            /* if a varexpr exists already in the hashmap, but it is child, then replace child by the one in the hashmap */
+            if( hashmapexpr != NULL && hashmapexpr != child )
+            {
+               SCIP_CALL( SCIPreplaceExprChild(scip, expr, SCIPexpriterGetChildIdxDFS(it), hashmapexpr) );
+            }
+         }
+         SCIPfreeExpriter(&it);
+      }
+   }
+
+   /* store variable expressions */
+   if( SCIPgetStage(scip) > SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CALL( storeVarExprs(scip, conshdlr, consdata) );
    }
 
    /* add manually locks to constraints that are not checked for feasibility */
