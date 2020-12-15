@@ -164,12 +164,12 @@ public:
    ~SCIP_ExprIntData()
    { }/*lint --e{1540}*/
 
-   vector< SCIP_EXPR* >  varexprs;           /**< varidx expressions in expression */
-   vector< AD<double> >  X;                  /**< vector of dependent variables */
-   vector< AD<double> >  Y;                  /**< result vector */ 
+   vector< int >         varidxs;            /**< variable indices used in expression (unique and sorted) */
+   vector< AD<double> >  X;                  /**< vector of dependent variables (same size as varidxs) */
+   vector< AD<double> >  Y;                  /**< result vector (size 1) */
    CppAD::ADFun<double>  f;                  /**< the function to evaluate as CppAD object */
 
-   vector<double>        x;                  /**< current values of dependent variables */
+   vector<double>        x;                  /**< current values of dependent variables (same size as varidxs) */
    double                val;                /**< current function value */
    bool                  need_retape;        /**< will retaping be required for the next point evaluation? */
 
@@ -1777,17 +1777,17 @@ SCIP_RETCODE SCIPexprintCompile(
       (*exprintdata)->need_retape = true;
    }
 
-
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
    SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, FALSE) );
 
+   std::set<int> varidxs;
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       /* cannot handle var-expressions in exprint so far, should be varidx expressions */
       assert(!SCIPisExprVar(scip, expr));
 
       if( SCIPisExprVaridx(scip, expr) )
-         (*exprintdata)->varexprs.push_back(expr);
+         varidxs.insert(SCIPgetIndexExprVaridx(expr));
 
       if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") == 0
          || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
@@ -1803,7 +1803,10 @@ SCIP_RETCODE SCIPexprintCompile(
 
    SCIPfreeExpriter(&it);
 
-   size_t n = (*exprintdata)->varexprs.size();
+   (*exprintdata)->varidxs.reserve(varidxs.size());
+   (*exprintdata)->varidxs.insert((*exprintdata)->varidxs.begin(), varidxs.begin(), varidxs.end());
+
+   size_t n = (*exprintdata)->varidxs.size();
    (*exprintdata)->X.resize(n);
    (*exprintdata)->x.resize(n);
    (*exprintdata)->Y.resize(1);
@@ -1863,7 +1866,7 @@ SCIP_RETCODE SCIPexprintEval(
    assert(varvals != NULL);
    assert(val     != NULL);
 
-   size_t n = exprintdata->varexprs.size();
+   size_t n = exprintdata->varidxs.size();
 
 // FIXME?
 //   if( n == 0 )
@@ -1874,9 +1877,9 @@ SCIP_RETCODE SCIPexprintEval(
 
    if( exprintdata->need_retape_always || exprintdata->need_retape )
    {
-      for( size_t i = 0; i < exprintdata->varexprs.size(); ++i )
+      for( size_t i = 0; i < n; ++i )
       {
-         int idx = SCIPgetIndexExprVaridx(exprintdata->varexprs[i]);
+         int idx = exprintdata->varidxs[i];
          exprintdata->X[i] = varvals[idx];
          exprintdata->x[i] = varvals[idx];
       }
@@ -1899,10 +1902,7 @@ SCIP_RETCODE SCIPexprintEval(
    {
       assert(exprintdata->x.size() >= n);
       for( size_t i = 0; i < n; ++i )
-      {
-         int idx = SCIPgetIndexExprVaridx(exprintdata->varexprs[i]);
-         exprintdata->x[i] = varvals[idx];
-      }
+         exprintdata->x[i] = varvals[exprintdata->varidxs[i]];
 
       exprintdata->val = exprintdata->f.Forward(0, exprintdata->x)[0];
       SCIPdebugMessage("Eval used forward sweep to compute value %g\n", exprintdata->val);
@@ -1939,7 +1939,7 @@ SCIP_RETCODE SCIPexprintGrad(
    else
       *val = exprintdata->val;
 
-   size_t n = exprintdata->varexprs.size();
+   size_t n = exprintdata->varidxs.size();
 
    if( n == 0 )
       return SCIP_OKAY;
@@ -1947,12 +1947,7 @@ SCIP_RETCODE SCIPexprintGrad(
    vector<double> jac(exprintdata->f.Jacobian(exprintdata->x));
 
    for( size_t i = 0; i < n; ++i )
-   {
-      int idx = SCIPgetIndexExprVaridx(exprintdata->varexprs[i]);
-      // NOTE that we are adding here because different varexprs may point to the same variable
-      // the way how SCIPexprintGrad is used in nlpioracle, gradient is set to all-zero before calling this function
-      gradient[idx] += jac[i];
-   }
+      gradient[exprintdata->varidxs[i]] = jac[i];
 
 #ifdef SCIP_DEBUG
    SCIPdebugMsg(scip, "Grad for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
@@ -2027,7 +2022,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    assert(varvals  != NULL);
    assert(sparsity != NULL);
 
-   size_t n = exprintdata->varexprs.size();
+   size_t n = exprintdata->varidxs.size();
    if( n == 0 )
       return SCIP_OKAY;
 
@@ -2110,7 +2105,7 @@ SCIP_RETCODE SCIPexprintHessianDense(
    else
       *val = exprintdata->val;
 
-   size_t n = exprintdata->varexprs.size();
+   size_t n = exprintdata->varidxs.size();
 
    if( n == 0 )
       return SCIP_OKAY;
