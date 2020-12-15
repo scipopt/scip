@@ -1721,8 +1721,8 @@ void getBestEstimators(
 
    for( j = 0; j < SCIPgetConsExprNBilinTerms(sepadata->conshdlr); ++j )
    {
-      viol_below = SCIPfeastol(scip);
-      viol_above = SCIPfeastol(scip);
+      viol_below = 0.0;
+      viol_above = 0.0;
 
       /* evaluate the product expression */
       prodval = SCIPgetSolVal(scip, sol, terms[j].x) * SCIPgetSolVal(scip, sol, terms[j].y);
@@ -1736,12 +1736,12 @@ void getBestEstimators(
          auxval = SCIPevalConsExprBilinAuxExpr(scip, terms[j].x, terms[j].y, terms[j].aux.exprs[i], sol);
          prodviol = auxval - prodval;
 
-         if( terms[j].aux.exprs[i]->underestimate && prodviol > viol_below )
+         if( terms[j].aux.exprs[i]->underestimate && SCIPisFeasGT(scip, auxval, prodval) && prodviol > viol_below )
          {
             viol_below = prodviol;
             bestunderestimators[j] = i;
          }
-         if( terms[j].aux.exprs[i]->overestimate && -prodviol > viol_above )
+         if( terms[j].aux.exprs[i]->overestimate && SCIPisFeasGT(scip, prodval, auxval) && -prodviol > viol_above )
          {
             viol_above = -prodviol;
             bestoverestimators[j] = i;
