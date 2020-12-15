@@ -509,6 +509,8 @@ SCIP_RETCODE computeReducedProbSolution(
    SCIP_CALL( computeReducedProbSolutionBiased(scip, heurdata, graph, solgraph, edgeweight,
          edgeancestor, vars, usestppool, soledges) );
 
+ //  printf("solval_bias=%f \n", solstp_getObj(solgraph, soledges, 0.0));
+
    if( !pcmw )
    {
       SCIP_Real solval_red;
@@ -516,7 +518,7 @@ SCIP_RETCODE computeReducedProbSolution(
       SCIP_CALL(SCIPallocBufferArray(scip, &soledges_red, solgraph->edges));
       SCIP_CALL(reduce_solGetEdgesol(scip, solgraph, redsol, &solval_red, soledges_red));
 
-    //  printf("solval_red=%f \n", solval_red);
+   //   printf("solval_red=%f \n", solval_red);
 
       if( LT(solval_red, FARAWAY) )
       {
@@ -527,8 +529,14 @@ SCIP_RETCODE computeReducedProbSolution(
          if( LT(solval_red, solval_bias) )
          {
             BMScopyMemoryArray(soledges, soledges_red, solgraph->edges);
-       //     printf("updating %f->%f \n", solval_bias, solval_red);
+        //    printf("updating %f->%f \n", solval_bias, solval_red);
          }
+      }
+      else
+      {
+       //  graph_printInfo(solgraph);
+       //  assert(0);
+
       }
 
       SCIPfreeBufferArray(scip, &soledges_red);
@@ -1524,14 +1532,13 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
          SCIP_CALL( reduce_solInit(scip, solgraph, TRUE, &redsol) );
 
+
          /* reduce new graph */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP )
             SCIP_CALL( reduce(scip, solgraph, redsol, 0, 5, FALSE) );
          else
          {
             SCIP_CALL( reduce(scip, solgraph, redsol, 2, 5, FALSE) );
-
-
          }
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, redsol, FALSE) );
@@ -1546,8 +1553,6 @@ SCIP_RETCODE SCIPStpHeurRecRun(
 
             SCIP_CALL( computeReducedProbSolution(scip, heurdata, graph, solgraph, redsol, edgeweight,
                   edgeancestor, vars, usestppool, soledges) );
-
-           // printf("solval2=%f \n", solstp_getObj(solgraph, soledges, 0.0));
          }
 
          reduce_solFree(scip, &redsol);

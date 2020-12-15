@@ -67,7 +67,7 @@ extern void         reduce_solFinalizeLocal(SCIP*, const GRAPH*, REDSOL*);
 extern void         reduce_solPack(const GRAPH*, const int*, int, REDSOL*);
 extern SCIP_RETCODE reduce_solLevelAdd(SCIP*, const GRAPH*, REDSOL*);
 extern SCIP_RETCODE reduce_solLevelTopUpdate(SCIP*, const GRAPH*, REDSOL*);
-extern void reduce_solLevelTopFinalize(SCIP*, REDSOL*);
+extern void reduce_solLevelTopFinalize(SCIP*, GRAPH*, REDSOL*);
 extern void reduce_solLevelTopRemove(SCIP*, REDSOL*);
 extern void reduce_solLevelTopClean(SCIP*, REDSOL*);
 extern void reduce_solLevelTopTransferSolBack(const int*, REDSOL*);

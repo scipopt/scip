@@ -709,7 +709,10 @@ void reduce_solFinalizeLocal(
       assert(redsol->nodesol_use == redsollocal->nodesol_use);
 
       if( redsol->nodesol_use )
+      {
          nodesolSetTrivial(g, redsollocal->nodesol);
+         redsollocal->nodesol_ub = 0.0;
+      }
    }
 
    assert(EQ(toplevel->solval_postred, REDSOLVAL_UNSET));
@@ -728,13 +731,15 @@ void reduce_solFinalizeLocal(
       redsollocal->nodesol = NULL;
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMessage("have solution in finalize... \n");
+      printf("level=%d have solution in finalize... \n", redsolGetNlevels(redsol) - 1);
       SCIP_CALL_ABORT( nodesolPrintStatus(scip, (GRAPH*) g, toplevel->nodesol) );
 #endif
    }
    else
    {
-      SCIPdebugMessage("have NO solution in finalize \n");
+#ifdef SCIP_DEBUG
+      printf("level=%d  have NO solution in finalize \n", redsolGetNlevels(redsol) - 1);
+#endif
    }
 
    reduce_sollocalFree(scip, &(toplevel->redsollocal));
@@ -873,6 +878,7 @@ void reduce_solLevelTopRemove(
 /** finalizes top level; also removes the level! */
 void reduce_solLevelTopFinalize(
    SCIP*                 scip,             /**< SCIP data structure */
+   GRAPH*                g,
    REDSOL*               redsol            /**< sollocal */
    )
 {
@@ -891,11 +897,23 @@ void reduce_solLevelTopFinalize(
    reduce_sollocalSetOffset(0.0, redsollocal_top);
    reduce_sollocalUpdateUpperBound(redlevel_top->solval_incomplete, redsollocal_top);
 
-   SCIPdebugMessage("finalizing top level %d; solval=%f offset=%f \n", nlevels - 1, redlevel_top->solval_incomplete, redsol->offset);
+   SCIPdebugMessage("FINALIZING top level %d; solval=%f offset=%f \n", nlevels - 1, redlevel_top->solval_incomplete, redsol->offset);
 
+/*
+   int* solnode = redsollocal_top->nodesol;
+
+   if( solnode )
+   {
+nodesolPrintStatus(scip, g, solnode);
+   }
+   else
+   {
+      printf("no solnode \n");
+
+   }
+*/
    assert(redsolGetNlevels(redsol) == nlevels - 1);
 }
-
 
 
 /** removes level */
@@ -951,6 +969,21 @@ void reduce_solLevelTopTransferSolBack(
 
          nodesol_parent[node_parent] = nodesol_top[i];
       }
+
+      assert(levelParent->redsollocal);
+
+
+      if( EQ(levelParent->redsollocal->nodesol_ub, REDSOLVAL_UNSET) )
+      {
+         levelParent->redsollocal->nodesol_ub = levelTop->nodesol_ub;
+      }
+      else
+      {
+        // assert(GE(levelTop->nodesol_ub, 0.0));
+
+         levelParent->redsollocal->nodesol_ub += levelTop->nodesol_ub;
+      }
+
    }
 }
 

@@ -1321,7 +1321,7 @@ SCIP_RETCODE decomposeExec(
 
       redbase->bidecompparams->depth--;
       /* NOTE: also removes level */
-      reduce_solLevelTopFinalize(scip, redsol);
+      reduce_solLevelTopFinalize(scip, g, redsol);
    }
 
    decomposeFreeMembers(scip, &bidecomp);
