@@ -375,7 +375,7 @@ ifeq ($(EXPRINT),none)
 NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
 endif
 ifeq ($(EXPRINT),cppad)
-#NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
+NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
 endif
 
 ifeq ($(IPOPT),true)

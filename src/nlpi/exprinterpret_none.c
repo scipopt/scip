@@ -78,7 +78,6 @@ SCIP_RETCODE SCIPexprintCompile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
-   int                   maxvaridx,          /**< an upper bound on the maximal variable index (+1) appearing in the expression */
    SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
    )
 {
@@ -139,7 +138,7 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
-   SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPgetExprNVars(expr) */
+   SCIP_Real*            gradient            /**< buffer to store expression gradient */
    )
 {
    SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");

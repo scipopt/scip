@@ -80,7 +80,6 @@ SCIP_RETCODE SCIPexprintCompile(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
    SCIP_EXPR*            expr,               /**< expression */
-   int                   maxvaridx,          /**< an upper bound on the maximal variable index (+1) appearing in the expression */
    SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
    );
 
@@ -129,7 +128,7 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
-   SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPgetExprNVars(expr) */
+   SCIP_Real*            gradient            /**< buffer to store expression gradient */
    );
 
 /** gives sparsity pattern of lower-triangular part of hessian
@@ -170,7 +169,7 @@ SCIP_RETCODE SCIPexprintHessian(
    int*                  nnz                 /**< buffer to return length of arrays */
    );
 
-/* TODO remove? */
+/* TODO remove */
 /** gives sparsity pattern of hessian
  *
  * NOTE: this function might be replaced later by something nicer.
@@ -186,7 +185,7 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
    );
 
-/* TODO remove? */
+/* TODO remove */
 /** computes value and dense hessian of an expression
  *
  *  The full hessian is computed (lower left and upper right triangle).

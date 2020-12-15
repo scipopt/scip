@@ -1244,7 +1244,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       if( cons->expr != NULL )
       {
          addednlcon = TRUE;
-         SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, oracle->nvars, &cons->exprintdata) );
+         SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
       }
 
       /* keep variable degrees updated */
@@ -1293,7 +1293,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 
    if( oracle->objective->expr != NULL )
    {
-      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->objective->expr, oracle->nvars, &oracle->objective->exprintdata) );
+      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->objective->expr, &oracle->objective->exprintdata) );
    }
 
    oracle->vardegreesuptodate = FALSE;
@@ -1726,7 +1726,7 @@ SCIP_RETCODE SCIPnlpiOracleChgExpr(
    /* install new expression */
    cons->expr = expr;
    SCIPcaptureExpr(cons->expr);
-   SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, oracle->nvars, &cons->exprintdata) );
+   SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, cons->expr, &cons->exprintdata) );
 
    /* keep variable degrees up to date */
    if( oracle->vardegreesuptodate )

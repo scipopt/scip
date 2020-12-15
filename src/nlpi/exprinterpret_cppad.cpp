@@ -22,12 +22,15 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/def.h"
-#include "blockmemshell/memory.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
+#include "scip/scip_expr.h"
+#include "scip/expr_pow.h"
 #include "nlpi/exprinterpret.h"
+#include "nlpi/expr_varidx.h"
 
 #include <cmath>
+#include <cstring>
 #include <vector>
 using std::vector;
 
@@ -148,25 +151,20 @@ static char init_parallel_return = SCIPexprintCppADInitParallel();
 
 using CppAD::AD;
 
-/** expression interpreter */
-struct SCIP_ExprInt
-{
-   BMS_BLKMEM*           blkmem;             /**< block memory data structure */
-};
-
 /** expression specific interpreter data */
 struct SCIP_ExprIntData
 {
 public:
    /** constructor */
    SCIP_ExprIntData()
-      : val(0.0), need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL), blkmem(NULL), root(NULL)
+      : val(0.0), need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL)
    { }
 
    /** destructor */
    ~SCIP_ExprIntData()
    { }/*lint --e{1540}*/
 
+   vector< SCIP_EXPR* >  varexprs;           /**< varidx expressions in expression */
    vector< AD<double> >  X;                  /**< vector of dependent variables */
    vector< AD<double> >  Y;                  /**< result vector */ 
    CppAD::ADFun<double>  f;                  /**< the function to evaluate as CppAD object */
@@ -177,9 +175,6 @@ public:
 
    bool                  need_retape_always; /**< will retaping be always required? */
    SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
-
-   BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
-   SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
 };
 
 #ifndef NO_CPPAD_USER_ATOMIC
@@ -549,7 +544,7 @@ private:
     */
    virtual void set_old(size_t id)
    {
-      exponent = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
+      exponent = SCIPgetExponentExprPow((SCIP_EXPR*)(void*)id);
    }
 
    /** forward sweep of signpower
@@ -819,7 +814,7 @@ void evalSignPower(
 
 #endif
 
-
+#if !1  // FIXME?
 #ifndef NO_CPPAD_USER_ATOMIC
 
 template<class Type>
@@ -1235,7 +1230,9 @@ void evalUser(
 }
 
 #endif
+#endif
 
+#if SCIP_DISABLED_CODE
 /** template for evaluation for minimum operator
  *
  *  Only implemented for real numbers, thus gives error by default.
@@ -1295,6 +1292,7 @@ void evalMax(
 {
    resultant = MAX(arg1, arg2);
 }
+#endif
 
 /** template for evaluation for square-root operator
  *
@@ -1368,6 +1366,7 @@ void evalIntPower(
    resultant = Type(1.0)/arg;
 }
 
+#if !1 // FIXME
 /** CppAD compatible evaluation of an expression for given arguments and parameters */
 template<class Type>
 static
@@ -1680,42 +1679,7 @@ SCIP_RETCODE eval(
 
    return SCIP_OKAY;
 }
-
-/** analysis an expression tree whether it requires retaping on every evaluation
- *
- *  This may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...).
- */
-static
-void analyzeTree(
-   SCIP_EXPRINTDATA* data,
-   SCIP_EXPR*        expr
-   )
-{
-   assert(expr != NULL);
-   assert(SCIPexprGetChildren(expr) != NULL || SCIPexprGetNChildren(expr) == 0);
-
-   for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
-      analyzeTree(data, SCIPexprGetChildren(expr)[i]);
-
-   switch( SCIPexprGetOperator(expr) )
-   {
-   case SCIP_EXPR_MIN:
-   case SCIP_EXPR_MAX:
-   case SCIP_EXPR_ABS:
-#ifdef NO_CPPAD_USER_ATOMIC
-   case SCIP_EXPR_SIGNPOWER:
 #endif
-      data->need_retape_always = true;
-      break;
-
-   case SCIP_EXPR_USER:
-      data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
-      break;
-
-   default: ;
-   } /*lint !e788*/
-
-}
 
 /** replacement for CppAD's default error handler
  *
@@ -1761,77 +1725,108 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
 
 /** creates an expression interpreter object */
 SCIP_RETCODE SCIPexprintCreate(
-   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< buffer to store pointer to expression interpreter */
    )
 {
-   assert(blkmem  != NULL);
    assert(exprint != NULL);
 
-   if( BMSallocBlockMemory(blkmem, exprint) == NULL )
-      return SCIP_NOMEMORY;
-
-   (*exprint)->blkmem = blkmem;
+   *exprint = (SCIP_EXPRINT*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
 }
 
 /** frees an expression interpreter object */
 SCIP_RETCODE SCIPexprintFree(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    )
 {
    assert( exprint != NULL);
    assert(*exprint != NULL);
 
-   BMSfreeBlockMemory((*exprint)->blkmem, exprint);
+   *exprint = NULL;
 
    return SCIP_OKAY;
 }
 
-/** compiles an expression tree and stores compiled data in expression tree */
+/** compiles an expression and returns interpreter-specific data for expression
+ *
+ * @attention the expression is assumed to use varidx expressions but no var expressions
+ */
 SCIP_RETCODE SCIPexprintCompile(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree                /**< expression tree */
+   SCIP_EXPR*            rootexpr,           /**< expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< buffer to store pointer to compiled data */
    )
-{ /*lint --e{429} */
-   assert(tree    != NULL);
+{
+   SCIP_EXPRITER* it;
+   SCIP_EXPR* expr;
 
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   if (!data)
+   assert(rootexpr != NULL);
+   assert(exprintdata != NULL);
+
+   if( *exprintdata == NULL )
    {
-      data = new SCIP_EXPRINTDATA();
-      assert( data != NULL );
-      SCIPexprtreeSetInterpreterData(tree, data);
-      SCIPdebugMessage("set interpreter data in tree %p to %p\n", (void*)tree, (void*)data);
+      *exprintdata = new SCIP_EXPRINTDATA();
+      assert(*exprintdata != NULL);
    }
    else
    {
-      data->need_retape     = true;
+      (*exprintdata)->need_retape = true;
    }
 
-   int n = SCIPexprtreeGetNVars(tree);
 
-   data->X.resize(n);
-   data->x.resize(n);
-   data->Y.resize(1);
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, FALSE) );
 
-   if( data->root != NULL )
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
-      SCIPexprFreeDeep(exprint->blkmem, &data->root);
+      /* cannot handle var-expressions in exprint so far, should be varidx expressions */
+      assert(!SCIPisExprVar(scip, expr));
+
+      if( SCIPisExprVaridx(scip, expr) )
+         (*exprintdata)->varexprs.push_back(expr);
+
+      if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") == 0
+         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
+         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "max") == 0
+#ifdef NO_CPPAD_USER_ATOMIC
+         || SCIPisExprSignpower(scip, expr)
+#endif
+         )
+         (*exprintdata)->need_retape_always = true;
+
+//FIXME         data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
    }
 
-   SCIP_EXPR* root = SCIPexprtreeGetRoot(tree);
+   SCIPfreeExpriter(&it);
 
-   SCIP_CALL( SCIPexprCopyDeep(exprint->blkmem, &data->root, root) );
-
-   data->blkmem = exprint->blkmem;
-
-   analyzeTree(data, data->root);
+   size_t n = (*exprintdata)->varexprs.size();
+   (*exprintdata)->X.resize(n);
+   (*exprintdata)->x.resize(n);
+   (*exprintdata)->Y.resize(1);
 
    return SCIP_OKAY;
 }
 
+/** frees interpreter data for expression */
+SCIP_RETCODE SCIPexprintFreeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA**    exprintdata         /**< pointer to pointer to compiled data to be freed */
+   )
+{
+   assert( exprintdata != NULL);
+   assert(*exprintdata != NULL);
+
+   delete *exprintdata;
+   *exprintdata = NULL;
+
+   return SCIP_OKAY;
+}
 
 /** gives the capability to evaluate an expression by the expression interpreter
  *
@@ -1840,149 +1835,176 @@ SCIP_RETCODE SCIPexprintCompile(
  * Hessian for an expression is not available because it contains a user expression that does not provide
  * Hessians.
  */
-SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprCapability(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree                /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata         /**< interpreter-specific data for expression */
    )
 {
-   assert(tree != NULL);
+   assert(exprintdata != NULL);
 
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-
-   return data->userevalcapability;
+   return exprintdata->userevalcapability;
 }/*lint !e715*/
-
-/** frees interpreter data */
-SCIP_RETCODE SCIPexprintFreeData(
-   SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */
-   )
-{
-   assert( interpreterdata != NULL);
-   assert(*interpreterdata != NULL);
-
-   if( (*interpreterdata)->root != NULL )
-      SCIPexprFreeDeep((*interpreterdata)->blkmem, &(*interpreterdata)->root);   
-
-   delete *interpreterdata;
-   *interpreterdata = NULL; 
-
-   return SCIP_OKAY;
-}
 
 /** evaluates an expression tree */
 SCIP_RETCODE SCIPexprintEval(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
-   SCIP_Real*            val                 /**< buffer to store value */
+   SCIP_Real*            val                 /**< buffer to store value of expression */
    )
 {
-   SCIP_EXPRINTDATA* data;
-
    assert(exprint != NULL);
-   assert(tree    != NULL);
+   assert(expr    != NULL);
+   assert(exprintdata != NULL);
    assert(varvals != NULL);
    assert(val     != NULL);
 
-   data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-   assert(SCIPexprtreeGetNVars(tree) == (int)data->X.size());
-   assert(SCIPexprtreeGetRoot(tree)  != NULL);
+   size_t n = exprintdata->varexprs.size();
 
-   int n = SCIPexprtreeGetNVars(tree);
+// FIXME?
+//   if( n == 0 )
+//   {
+//      SCIP_CALL( SCIPexprtreeEval(tree, NULL, val) );
+//      return SCIP_OKAY;
+//   }
 
-   if( n == 0 )
+   if( exprintdata->need_retape_always || exprintdata->need_retape )
    {
-      SCIP_CALL( SCIPexprtreeEval(tree, NULL, val) );
-      return SCIP_OKAY;
-   }
-
-   if( data->need_retape_always || data->need_retape )
-   {
-      for( int i = 0; i < n; ++i )
+      for( size_t i = 0; i < exprintdata->varexprs.size(); ++i )
       {
-         data->X[i] = varvals[i];
-         data->x[i] = varvals[i];
+         int idx = SCIPgetIndexExprVaridx(exprintdata->varexprs[i]);
+         exprintdata->X[i] = varvals[idx];
+         exprintdata->x[i] = varvals[idx];
       }
 
-      CppAD::Independent(data->X);
+      CppAD::Independent(exprintdata->X);
 
-      if( data->root != NULL )
-         SCIP_CALL( eval(data->root, data->X, SCIPexprtreeGetParamVals(tree), data->Y[0]) );
-      else
-         data->Y[0] = 0.0;
+//FIXME      SCIP_CALL( eval(expr, exprintdata->X, exprintdata->Y[0]) );
 
-      data->f.Dependent(data->X, data->Y);
+      exprintdata->f.Dependent(exprintdata->X, exprintdata->Y);
 
-      data->val = Value(data->Y[0]);
-      SCIPdebugMessage("Eval retaped and computed value %g\n", data->val);
+      exprintdata->val = Value(exprintdata->Y[0]);
+      SCIPdebugMessage("Eval retaped and computed value %g\n", exprintdata->val);
 
       // the following is required if the gradient shall be computed by a reverse sweep later
-      // data->val = data->f.Forward(0, data->x)[0];
+      // exprintdata->val = exprintdata->f.Forward(0, exprintdata->x)[0];
 
-      data->need_retape = false;
+      exprintdata->need_retape = false;
    }
    else
    {
-      assert((int)data->x.size() >= n);
-      for( int i = 0; i < n; ++i )
-         data->x[i] = varvals[i];
+      assert(exprintdata->x.size() >= n);
+      for( size_t i = 0; i < n; ++i )
+      {
+         int idx = SCIPgetIndexExprVaridx(exprintdata->varexprs[i]);
+         exprintdata->x[i] = varvals[idx];
+      }
 
-      data->val = data->f.Forward(0, data->x)[0];  /*lint !e1793*/
-      SCIPdebugMessage("Eval used forward sweep to compute value %g\n", data->val);
+      exprintdata->val = exprintdata->f.Forward(0, exprintdata->x)[0];
+      SCIPdebugMessage("Eval used forward sweep to compute value %g\n", exprintdata->val);
    }
 
-   *val = data->val;
+   *val = exprintdata->val;
 
    return SCIP_OKAY;
 }
 
 /** computes value and gradient of an expression tree */
 SCIP_RETCODE SCIPexprintGrad(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to a point evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store expression value */
-   SCIP_Real*            gradient            /**< buffer to store expression gradient, need to have length at least SCIPexprtreeGetNVars(tree) */
+   SCIP_Real*            gradient            /**< buffer to store expression gradient */
    )
 {
    assert(exprint  != NULL);
-   assert(tree     != NULL);
+   assert(expr     != NULL);
+   assert(exprintdata != NULL);
    assert(varvals  != NULL || new_varvals == FALSE);
    assert(val      != NULL);
    assert(gradient != NULL);
 
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-
    if( new_varvals )
    {
-      SCIP_CALL( SCIPexprintEval(exprint, tree, varvals, val) );
+      SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, varvals, val) );
    }
    else
-      *val = data->val;
+      *val = exprintdata->val;
 
-   int n = SCIPexprtreeGetNVars(tree);
+   size_t n = exprintdata->varexprs.size();
 
    if( n == 0 )
       return SCIP_OKAY;
 
-   vector<double> jac(data->f.Jacobian(data->x));
+   vector<double> jac(exprintdata->f.Jacobian(exprintdata->x));
 
-   for( int i = 0; i < n; ++i )
-      gradient[i] = jac[i];
+   for( size_t i = 0; i < n; ++i )
+   {
+      int idx = SCIPgetIndexExprVaridx(exprintdata->varexprs[i]);
+      // NOTE that we are adding here because different varexprs may point to the same variable
+      // the way how SCIPexprintGrad is used in nlpioracle, gradient is set to all-zero before calling this function
+      gradient[idx] += jac[i];
+   }
 
-/* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
-   SCIPdebugMessage("Grad for "); SCIPexprtreePrint(tree, NULL, NULL, NULL); printf("\n");
-   SCIPdebugMessage("x    ="); for (int i = 0; i < n; ++i) printf("\t %g", data->x[i]); printf("\n");
-   SCIPdebugMessage("grad ="); for (int i = 0; i < n; ++i) printf("\t %g", gradient[i]); printf("\n");
+   SCIPdebugMsg(scip, "Grad for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
+   SCIPdebugMsg(scip, "x =");    for (int i = 0; i < n; ++i) printf("\t %g", exprintdata->x[i]); printf("\n");
+   SCIPdebugMsg(scip, "grad ="); for (int i = 0; i < n; ++i) printf("\t %g", jac[i]); printf("\n");
 #endif
-*/
 
    return SCIP_OKAY;
+}
+
+/** gives sparsity pattern of lower-triangular part of hessian
+ *
+ * Since the AD code might need to do a forward sweep, you should pass variable values in here.
+ *
+ * Result will have (*colidxs)[i] <= (*rowidixs)[i] for i=0..*nnz.
+ */
+SCIP_RETCODE SCIPexprintHessianSparsity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
+   SCIP_Real*            varvals,            /**< values of variables */
+   int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
+   int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
+   int*                  nnz                 /**< buffer to return length of arrays */
+   )
+{
+   //FIXME
+   return SCIP_ERROR;
+}
+
+/** computes value and hessian of an expression
+ *
+ * Returned arrays rowidxs and colidxs and number of elements nnz are the same as given by SCIPexprintHessianSparsity().
+ * Returned array hessianvals will contain the corresponding Hessian elements.
+ */
+SCIP_RETCODE SCIPexprintHessian(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
+   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
+   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
+   SCIP_Real*            val,                /**< buffer to store function value */
+   int**                 rowidxs,            /**< buffer to return array with row indices of Hessian elements */
+   int**                 colidxs,            /**< buffer to return array with column indices of Hessian elements */
+   SCIP_Real**           hessianvals,        /**< buffer to return array with Hessian elements */
+   int*                  nnz                 /**< buffer to return length of arrays */
+   )
+{
+   //FIXME
+   return SCIP_ERROR;
 }
 
 /** gives sparsity pattern of hessian
@@ -1991,31 +2013,31 @@ SCIP_RETCODE SCIPexprintGrad(
  *  Since the AD code might need to do a forward sweep, you should pass variable values in here.
  */
 SCIP_RETCODE SCIPexprintHessianSparsityDense(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables */
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
    )
 {
    assert(exprint  != NULL);
-   assert(tree     != NULL);
+   assert(expr     != NULL);
+   assert(exprintdata != NULL);
    assert(varvals  != NULL);
    assert(sparsity != NULL);
 
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-
-   int n = SCIPexprtreeGetNVars(tree);
+   size_t n = exprintdata->varexprs.size();
    if( n == 0 )
       return SCIP_OKAY;
 
-   int nn = n*n;
+   size_t nn = n*n;
 
-   if( data->need_retape_always )
+   if( exprintdata->need_retape_always )
    {
       // @todo can we do something better here, e.g., by looking at the expression tree by ourself?
 
-      for( int i = 0; i < nn; ++i )
+      for( size_t i = 0; i < nn; ++i )
          sparsity[i] = TRUE;
 
 /* disable debug output since we have no message handler here
@@ -2028,25 +2050,25 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
       return SCIP_OKAY;
    }
 
-   if( data->need_retape )
+   if( exprintdata->need_retape )
    {
       SCIP_Real val;
-      SCIP_CALL( SCIPexprintEval(exprint, tree, varvals, &val) );
+      SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, varvals, &val) );
    }  /*lint !e438*/
 
    SCIPdebugMessage("calling ForSparseJac\n");
 
    vector<bool> r(nn, false);
-   for (int i = 0; i < n; ++i)
-      r[i*n+i] = true;  /*lint !e647 !e1793*/
-   (void) data->f.ForSparseJac(n, r); // need to compute sparsity for Jacobian first
+   for( size_t i = 0; i < n; ++i )
+      r[i*n+i] = true;
+   (void) exprintdata->f.ForSparseJac(n, r); // need to compute sparsity for Jacobian first
 
    SCIPdebugMessage("calling RevSparseHes\n");
 
    vector<bool> s(1, true);
-   vector<bool> sparsehes(data->f.RevSparseHes(n, s));
+   vector<bool> sparsehes(exprintdata->f.RevSparseHes(n, s));
 
-   for( int i = 0; i < nn; ++i )
+   for( size_t i = 0; i < nn; ++i )
       sparsity[i] = (SCIP_Bool)sparsehes[i];
 
 /* disable debug output since we have no message handler here
@@ -2064,8 +2086,10 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
  *  The full hessian is computed (lower left and upper right triangle).
  */
 SCIP_RETCODE SCIPexprintHessianDense(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPRTREE*        tree,               /**< expression tree */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
    SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
    SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
    SCIP_Real*            val,                /**< buffer to store function value */
@@ -2073,44 +2097,30 @@ SCIP_RETCODE SCIPexprintHessianDense(
    )
 {
    assert(exprint != NULL);
-   assert(tree    != NULL);
+   assert(expr    != NULL);
+   assert(exprintdata != NULL);
    assert(varvals != NULL || new_varvals == FALSE);
    assert(val     != NULL);
    assert(hessian != NULL);
 
-   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
-   assert(data != NULL);
-
    if( new_varvals )
    {
-      SCIP_CALL( SCIPexprintEval(exprint, tree, varvals, val) );
+      SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, varvals, val) );
    }
    else
-      *val = data->val;
+      *val = exprintdata->val;
 
-   int n = SCIPexprtreeGetNVars(tree);
+   size_t n = exprintdata->varexprs.size();
 
    if( n == 0 )
       return SCIP_OKAY;
 
-#if 1
    /* this one uses reverse mode */
-   vector<double> hess(data->f.Hessian(data->x, 0));
+   vector<double> hess(exprintdata->f.Hessian(exprintdata->x, 0));
 
    int nn = n*n;
-   for (int i = 0; i < nn; ++i)
+   for( int i = 0; i < nn; ++i )
       hessian[i] = hess[i];
-
-#else
-   /* this one uses forward mode */
-   for( int i = 0; i < n; ++i )
-      for( int j = 0; j < n; ++j )
-      {
-         vector<int> ii(1,i);
-         vector<int> jj(1,j);
-         hessian[i*n+j] = data->f.ForTwo(data->x, ii, jj)[0];
-      }
-#endif
 
 /* disable debug output since we have no message handler here
 #ifdef SCIP_DEBUG
