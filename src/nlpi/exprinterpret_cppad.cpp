@@ -157,7 +157,13 @@ struct SCIP_ExprIntData
 public:
    /** constructor */
    SCIP_ExprIntData()
-      : val(0.0), need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL)
+      : val(0.0),
+        need_retape(true),
+        need_retape_always(false),
+        userevalcapability(SCIP_EXPRINTCAPABILITY_ALL),
+        hesrowidxs(NULL),
+        hescolidxs(NULL),
+        hesvalues(NULL)
    { }
 
    /** destructor */
@@ -172,9 +178,13 @@ public:
    vector<double>        x;                  /**< current values of dependent variables (same size as varidxs) */
    double                val;                /**< current function value */
    bool                  need_retape;        /**< will retaping be required for the next point evaluation? */
-
    bool                  need_retape_always; /**< will retaping be always required? */
    SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
+
+   int*                  hesrowidxs;         /**< row indices of Hessian sparsity */
+   int*                  hescolidxs;         /**< column indices of Hessian sparsity */
+   SCIP_Real*            hesvalues;          /**< values of Hessian */
+   int                   hesnnz;             /**< number of nonzeros in Hessian */
 };
 
 #ifndef NO_CPPAD_USER_ATOMIC
@@ -1742,8 +1752,7 @@ SCIP_RETCODE SCIPexprintFree(
    SCIP_EXPRINT**        exprint             /**< expression interpreter that should be freed */
    )
 {
-   assert( exprint != NULL);
-   assert(*exprint != NULL);
+   assert(exprint != NULL);
 
    *exprint = NULL;
 
@@ -1825,6 +1834,10 @@ SCIP_RETCODE SCIPexprintFreeData(
    assert( exprintdata != NULL);
    assert(*exprintdata != NULL);
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hesrowidxs, (*exprintdata)->hesnnz);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hescolidxs, (*exprintdata)->hesnnz);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*exprintdata)->hesvalues, (*exprintdata)->hesnnz);
+
    delete *exprintdata;
    *exprintdata = NULL;
 
@@ -1860,7 +1873,6 @@ SCIP_RETCODE SCIPexprintEval(
    SCIP_Real*            val                 /**< buffer to store value of expression */
    )
 {
-   assert(exprint != NULL);
    assert(expr    != NULL);
    assert(exprintdata != NULL);
    assert(varvals != NULL);
@@ -1925,7 +1937,6 @@ SCIP_RETCODE SCIPexprintGrad(
    SCIP_Real*            gradient            /**< buffer to store expression gradient */
    )
 {
-   assert(exprint  != NULL);
    assert(expr     != NULL);
    assert(exprintdata != NULL);
    assert(varvals  != NULL || new_varvals == FALSE);
@@ -1975,8 +1986,112 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
    int*                  nnz                 /**< buffer to return length of arrays */
    )
 {
-   //FIXME
-   return SCIP_ERROR;
+   assert(expr != NULL);
+   assert(exprintdata != NULL);
+   assert(varvals != NULL);
+   assert(rowidxs != NULL);
+   assert(colidxs != NULL);
+   assert(nnz != NULL);
+
+   if( exprintdata->hesrowidxs == NULL )
+   {
+      assert(exprintdata->hescolidxs == NULL);
+      assert(exprintdata->hesvalues == NULL);
+      assert(exprintdata->hesnnz == 0);
+
+      size_t n = exprintdata->varidxs.size();
+      if( n == 0 )
+      {
+         *nnz = 0;
+         return SCIP_OKAY;
+      }
+
+      size_t nn = n*n;
+
+      if( exprintdata->need_retape_always )
+      {
+         // pretend dense
+         // @todo can we do something better here, e.g., by looking at the expression tree by ourself?
+
+         exprintdata->hesnnz = (n * (n+1))/2;
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, exprintdata->hesnnz) );
+
+         int k = 0;
+         for( size_t i = 0; i < n; ++i )
+            for( size_t j = 0; j <= i; ++j )
+            {
+               exprintdata->hesrowidxs[k] = i;
+               exprintdata->hescolidxs[k] = j;
+               k++;
+            }
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMsg(scip, "HessianSparsity for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
+         SCIPdebugMsg(scip, "sparsity = all elements, due to discontinuouities\n");
+#endif
+
+         return SCIP_OKAY;
+      }
+
+      if( exprintdata->need_retape )
+      {
+         SCIP_Real val;
+         SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, varvals, &val) );
+      }  /*lint !e438*/
+
+      SCIPdebugMessage("calling ForSparseJac\n");
+
+      vector<bool> r(nn, false);
+      for( size_t i = 0; i < n; ++i )
+         r[i*n+i] = true;
+      (void) exprintdata->f.ForSparseJac(n, r); // need to compute sparsity for Jacobian first
+
+      SCIPdebugMessage("calling RevSparseHes\n");
+
+      // TODO check whether CppADs sparse hessian can be useful
+      vector<bool> s(1, true);
+      vector<bool> sparsehes(exprintdata->f.RevSparseHes(n, s));
+
+      for( size_t i = 0; i < nn; ++i )
+         if( sparsehes[i] )
+         {
+            size_t row = i / n;
+            size_t col = i % n;
+            if( row > col )
+               continue;
+            ++exprintdata->hesnnz;
+         }
+
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesrowidxs, exprintdata->hesnnz) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hescolidxs, exprintdata->hesnnz) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &exprintdata->hesvalues, exprintdata->hesnnz) );
+
+      int j = 0;
+      for( size_t i = 0; i < nn; ++i )
+         if( sparsehes[i] )
+         {
+            size_t row = i / n;
+            size_t col = i % n;
+            if( row > col )
+               continue;
+            exprintdata->hesrowidxs[j] = row;
+            exprintdata->hescolidxs[j] = col;
+            ++j;
+         }
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMsg(scip, "HessianSparsity for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
+      SCIPdebugMsg(scip, "sparsity ="); for (size_t i = 0; i < exprintdata->hesnnz; ++i) SCIPdebugPrintf(" (%d,%d)", exprintdata->hesrowidxs[i], exprintdata->hescolidxs[i]); SCIPdebugPrintf("\n");
+#endif
+   }
+
+   *rowidxs = exprintdata->hesrowidxs;
+   *colidxs = exprintdata->hescolidxs;
+   *nnz = exprintdata->hesnnz;
+
+   return SCIP_OKAY;
 }
 
 /** computes value and hessian of an expression
@@ -1998,8 +2113,44 @@ SCIP_RETCODE SCIPexprintHessian(
    int*                  nnz                 /**< buffer to return length of arrays */
    )
 {
-   //FIXME
-   return SCIP_ERROR;
+   assert(expr != NULL);
+   assert(exprintdata != NULL);
+
+   if( exprintdata->hesrowidxs == NULL )
+   {
+      /* setup sparsity if not done yet */
+      int dummy1;
+      int* dummy2;
+
+      assert(exprintdata->hescolidxs == NULL);
+      assert(exprintdata->hesvalues == NULL);
+      assert(exprintdata->hesnnz == 0);
+
+      SCIP_CALL( SCIPexprintHessianSparsity(scip, exprint, expr, exprintdata, varvals, &dummy2, &dummy2, &dummy1) );
+
+      new_varvals = FALSE;
+   }
+
+   if( new_varvals )
+   {
+      SCIP_CALL( SCIPexprintEval(scip, exprint, expr, exprintdata, varvals, val) );
+   }
+   else
+      *val = exprintdata->val;
+
+   size_t n = exprintdata->varidxs.size();
+
+   if( n == 0 )
+      return SCIP_OKAY;
+
+   // TODO check whether CppADs sparse hessian can be useful
+   /* this one uses reverse mode */
+   vector<double> hess(exprintdata->f.Hessian(exprintdata->x, 0));
+
+   for( int i = 0; i < exprintdata->hesnnz; ++i )
+      exprintdata->hesvalues[i] = hess[exprintdata->hesrowidxs[i] * n + exprintdata->hescolidxs[i]];
+
+   return SCIP_OKAY;
 }
 
 /** gives sparsity pattern of hessian
@@ -2016,7 +2167,6 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
    )
 {
-   assert(exprint  != NULL);
    assert(expr     != NULL);
    assert(exprintdata != NULL);
    assert(varvals  != NULL);
@@ -2091,7 +2241,6 @@ SCIP_RETCODE SCIPexprintHessianDense(
    SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
    )
 {
-   assert(exprint != NULL);
    assert(expr    != NULL);
    assert(exprintdata != NULL);
    assert(varvals != NULL || new_varvals == FALSE);
