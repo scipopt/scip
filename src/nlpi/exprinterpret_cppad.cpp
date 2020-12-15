@@ -21,12 +21,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include "nlpi/exprinterpret.h"
 #include "scip/def.h"
 #include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 #include "scip/scip_expr.h"
 #include "scip/expr_pow.h"
-#include "nlpi/exprinterpret.h"
+#include "scip/expr_exp.h"
+#include "scip/expr_log.h"
 #include "nlpi/expr_varidx.h"
 
 #include <cmath>
@@ -812,7 +814,7 @@ void evalSignPower(
 {
    SCIP_Real exponent;
 
-   exponent = SCIPexprGetSignPowerExponent(expr);
+   exponent = SCIPgetExponentExprPow(expr);
 
    if( arg == 0.0 )
       resultant = 0.0;
@@ -824,7 +826,7 @@ void evalSignPower(
 
 #endif
 
-#if !1  // FIXME?
+#if !1  // FIXME
 #ifndef NO_CPPAD_USER_ATOMIC
 
 template<class Type>
@@ -1304,31 +1306,6 @@ void evalMax(
 }
 #endif
 
-/** template for evaluation for square-root operator
- *
- *  Default is to use the standard sqrt-function.
- */
-template<class Type>
-static
-void evalSqrt(
-   Type&                 resultant,          /**< resultant */
-   const Type&           arg                 /**< operand */
-   )
-{
-   resultant = sqrt(arg);
-}
-
-/** template for evaluation for absolute value operator */
-template<class Type>
-static
-void evalAbs(
-   Type&                 resultant,          /**< resultant */
-   const Type&           arg                 /**< operand */
-   )
-{
-   resultant = abs(arg);
-}
-
 /** integer power operation for arbitrary integer exponents */
 template<class Type>
 static
@@ -1376,14 +1353,13 @@ void evalIntPower(
    resultant = Type(1.0)/arg;
 }
 
-#if !1 // FIXME
 /** CppAD compatible evaluation of an expression for given arguments and parameters */
 template<class Type>
 static
 SCIP_RETCODE eval(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
    const vector<Type>&   x,                  /**< values of variables */
-   SCIP_Real*            param,              /**< values of parameters */
    Type&                 val                 /**< buffer to store expression value */
    )
 {
@@ -1391,305 +1367,99 @@ SCIP_RETCODE eval(
 
    assert(expr != NULL);
 
-   /* todo use SCIP_MAXCHILD_ESTIMATE as in expression.c */
+   // TODO this should iterate instead of using recursion
+   //   but the iterdata wouldn't work to hold Type at the moment
+   //   they could hold Type*, but then we need to alloc small portions all the time
+   //   or we have a big Type-array outside and point to it in iterdata
 
-   if( SCIPexprGetNChildren(expr) )
+   if( SCIPexprGetNChildren(expr) > 0 )
    {
-      if( BMSallocMemoryArray(&buf, SCIPexprGetNChildren(expr)) == NULL )  /*lint !e666*/
-         return SCIP_NOMEMORY;
+      SCIP_CALL( SCIPallocBufferArray(scip, &buf, SCIPexprGetNChildren(expr)) );
 
       for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
       {
-         SCIP_CALL( eval(SCIPexprGetChildren(expr)[i], x, param, buf[i]) );
+         SCIP_CALL( eval(scip, SCIPexprGetChildren(expr)[i], x, buf[i]) );
       }
    }
 
-   switch(SCIPexprGetOperator(expr))
+   if( SCIPisExprVaridx(scip, expr) )
    {
-   case SCIP_EXPR_VARIDX:
-      assert(SCIPexprGetOpIndex(expr) < (int)x.size());
-      val = x[SCIPexprGetOpIndex(expr)];
-      break;
-
-   case SCIP_EXPR_CONST:
-      val = SCIPexprGetOpReal(expr);
-      break;
-
-   case SCIP_EXPR_PARAM:
-      assert(param != NULL);
-      val = param[SCIPexprGetOpIndex(expr)];
-      break;
-
-   case SCIP_EXPR_PLUS:
-      assert( buf != 0 );
-      val = buf[0] + buf[1];
-      break;
-
-   case SCIP_EXPR_MINUS:
-      assert( buf != 0 );
-      val = buf[0] - buf[1];
-      break;
-
-   case SCIP_EXPR_MUL:
-      assert( buf != 0 );
-      val = buf[0] * buf[1];
-      break;
-
-   case SCIP_EXPR_DIV:
-      assert( buf != 0 );
-      val = buf[0] / buf[1];
-      break;
-
-   case SCIP_EXPR_SQUARE:
-      assert( buf != 0 );
-      evalIntPower(val, buf[0], 2);
-      break;
-
-   case SCIP_EXPR_SQRT:
-      assert( buf != 0 );
-      evalSqrt(val, buf[0]);
-      break;
-
-   case SCIP_EXPR_REALPOWER:
-      assert( buf != 0 );
-      val = CppAD::pow(buf[0], SCIPexprGetRealPowerExponent(expr));
-      break;
-
-   case SCIP_EXPR_INTPOWER:
-      assert( buf != 0 );
-      evalIntPower(val, buf[0], SCIPexprGetIntPowerExponent(expr));
-      break;
-
-   case SCIP_EXPR_SIGNPOWER:
-      assert( buf != 0 );
-      evalSignPower(val, buf[0], expr);
-      break;
-
-   case SCIP_EXPR_EXP:
-      assert( buf != 0 );
-      val = exp(buf[0]);
-      break;
-
-   case SCIP_EXPR_LOG:
-      assert( buf != 0 );
-      val = log(buf[0]);
-      break;
-
-   case SCIP_EXPR_SIN:
-      assert( buf != 0 );
-      val = sin(buf[0]);
-      break;
-
-   case SCIP_EXPR_COS:
-      assert( buf != 0 );
-      val = cos(buf[0]);
-      break;
-
-   case SCIP_EXPR_TAN:
-      assert( buf != 0 );
-      val = tan(buf[0]);
-      break;
-#ifdef SCIP_DISABLED_CODE /* these operators are currently disabled */
-   case SCIP_EXPR_ERF:
-      assert( buf != 0 );
-      val = erf(buf[0]);
-      break;
-
-   case SCIP_EXPR_ERFI:
-      return SCIP_ERROR;
-#endif
-   case SCIP_EXPR_MIN:
-      assert( buf != 0 );
-      evalMin(val, buf[0], buf[1]);
-      break;
-
-   case SCIP_EXPR_MAX:
-      assert( buf != 0 );
-      evalMax(val, buf[0], buf[1]);
-      break;
-
-   case SCIP_EXPR_ABS:
-      assert( buf != 0 );
-      evalAbs(val, buf[0]);
-      break;
-
-   case SCIP_EXPR_SIGN:
-      assert( buf != 0 );
-      val = sign(buf[0]);
-      break;
-
-   case SCIP_EXPR_SUM:
-      assert( buf != 0 );
-      val = 0.0;
-      for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-         val += buf[i];
-      break;
-
-   case SCIP_EXPR_PRODUCT:
-      assert( buf != 0 );
-      val = 1.0;
-      for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
+      assert(SCIPgetIndexExprVaridx(expr) < (int)x.size());
+      val = x[SCIPgetIndexExprVaridx(expr)];
+   }
+   else if( SCIPisExprValue(scip, expr) )
+   {
+      val = SCIPgetValueExprValue(expr);
+   }
+   else if( SCIPisExprSum(scip, expr) )
+   {
+      val = SCIPgetConstantExprSum(expr);
+      for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
+         val += SCIPgetCoefsExprSum(expr)[i] * buf[i];
+   }
+   else if( SCIPisExprProduct(scip, expr) )
+   {
+      val = SCIPgetCoefExprProduct(expr);
+      for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
          val *= buf[i];
-      break;
-
-   case SCIP_EXPR_LINEAR:
-   {
-      SCIP_Real* coefs;
-
-      coefs = SCIPexprGetLinearCoefs(expr);
-      assert(coefs != NULL || SCIPexprGetNChildren(expr) == 0);
-
-      assert( buf != 0 );
-      val = SCIPexprGetLinearConstant(expr);
-      for (int i = 0; i < SCIPexprGetNChildren(expr); ++i)
-         val += coefs[i] * buf[i]; /*lint !e613*/
-      break;
    }
-
-   case SCIP_EXPR_QUADRATIC:
+   else if( SCIPisExprPower(scip, expr) )
    {
-      SCIP_Real* lincoefs;
-      SCIP_QUADELEM* quadelems;
-      int nquadelems;
-      SCIP_Real sqrcoef;
-      Type lincoef;
-      vector<Type> in(1);
-      vector<Type> out(1);
-
-      assert( buf != 0 );
-
-      lincoefs   = SCIPexprGetQuadLinearCoefs(expr);
-      nquadelems = SCIPexprGetNQuadElements(expr);
-      quadelems  = SCIPexprGetQuadElements(expr);
-      assert(quadelems != NULL || nquadelems == 0);
-
-      SCIPexprSortQuadElems(expr);
-
-      val = SCIPexprGetQuadConstant(expr);
-
-      /* for each argument, we collect it's linear index from lincoefs, it's square coefficients and all factors from bilinear terms
-       * then we compute the interval sqrcoef*x^2 + lincoef*x and add it to result */
-      int i = 0;
-      for( int argidx = 0; argidx < SCIPexprGetNChildren(expr); ++argidx )
-      {
-         if( i == nquadelems || quadelems[i].idx1 > argidx ) /*lint !e613*/
-         {
-            /* there are no quadratic terms with argidx in its first argument, that should be easy to handle */
-            if( lincoefs != NULL )
-               val += lincoefs[argidx] * buf[argidx];
-            continue;
-         }
-
-         sqrcoef = 0.0;
-         lincoef = lincoefs != NULL ? lincoefs[argidx] : 0.0;
-
-         assert(i < nquadelems && quadelems[i].idx1 == argidx); /*lint !e613*/
-         do
-         {
-            if( quadelems[i].idx2 == argidx )  /*lint !e613*/
-               sqrcoef += quadelems[i].coef; /*lint !e613*/
-            else
-               lincoef += quadelems[i].coef * buf[quadelems[i].idx2]; /*lint !e613*/
-            ++i;
-         } while( i < nquadelems && quadelems[i].idx1 == argidx ); /*lint !e613*/
-         assert(i == nquadelems || quadelems[i].idx1 > argidx);  /*lint !e613*/
-
-         /* this is not as good as what we can get from SCIPintervalQuad, but easy to implement */
-         if( sqrcoef != 0.0 )
-         {
-            in[0] = buf[argidx];
-            posintpower(in, out, 2);
-            val += sqrcoef * out[0];
-         }
-
-         val += lincoef * buf[argidx];
-      }
-      assert(i == nquadelems);
-
-      break;
+      if( EPSISINT(SCIPgetExponentExprPow(expr), 0.0) )
+         evalIntPower(val, buf[0], (int)SCIPgetExponentExprPow(expr));
+      else if( SCIPgetExponentExprPow(expr) == 0.5 )
+         val = sqrt(buf[0]);
+      else
+         val = CppAD::pow(buf[0], SCIPgetExponentExprPow(expr));
    }
-
-   case SCIP_EXPR_POLYNOMIAL:
+   else if( SCIPisExprSignpower(scip, expr) )
    {
-      SCIP_EXPRDATA_MONOMIAL** monomials;
-      Type childval;
-      Type monomialval;
-      SCIP_Real exponent;
-      int nmonomials;
-      int nfactors;
-      int* childidxs;
-      SCIP_Real* exponents;
-      int i;
-      int j;
-
-      assert( buf != 0 );
-
-      val = SCIPexprGetPolynomialConstant(expr);
-
-      nmonomials = SCIPexprGetNMonomials(expr);
-      monomials  = SCIPexprGetMonomials(expr);
-
-      for( i = 0; i < nmonomials; ++i )
-      {
-         nfactors  = SCIPexprGetMonomialNFactors(monomials[i]);
-         childidxs = SCIPexprGetMonomialChildIndices(monomials[i]);
-         exponents = SCIPexprGetMonomialExponents(monomials[i]);
-         monomialval  = SCIPexprGetMonomialCoef(monomials[i]);
-
-         for( j = 0; j < nfactors; ++j )
-         {
-            assert(childidxs[j] >= 0);
-            assert(childidxs[j] <  SCIPexprGetNChildren(expr));
-
-            childval = buf[childidxs[j]];
-            exponent = exponents[j];
-
-            /* cover some special exponents separately to avoid calling expensive pow function */
-            if( exponent == 0.0 )
-               continue;
-            if( exponent == 1.0 )
-            {
-               monomialval *= childval;
-               continue;
-            }
-            if( (int)exponent == exponent )
-            {
-               Type tmp;
-               evalIntPower(tmp, childval, (int)exponent);
-               monomialval *= tmp;
-               continue;
-            }
-            if( exponent == 0.5 )
-            {
-               Type tmp;
-               evalSqrt(tmp, childval);
-               monomialval *= tmp;
-               continue;
-            }
-            monomialval *= pow(childval, exponent);
-         }
-
-         val += monomialval;
-      }
-
-      break;
+      evalSignPower(val, buf[0], expr);
    }
-
-   case SCIP_EXPR_USER:
-      evalUser(val, buf, expr);
-      break;
-
-   case SCIP_EXPR_LAST:
-   default:
-      BMSfreeMemoryArrayNull(&buf);
+   else if( SCIPisExprExp(scip, expr) )
+   {
+      val = exp(buf[0]);
+   }
+   else if( SCIPisExprLog(scip, expr) )
+   {
+      val = log(buf[0]);
+   }
+   else if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "sin") == 0 )
+   {
+      val = sin(buf[0]);
+   }
+   else if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "cos") == 0 )
+   {
+      val = cos(buf[0]);
+   }
+   else if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "erf") == 0 )
+   {
+      val = erf(buf[0]);
+   }
+   else if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") == 0 )
+   {
+      val = abs(buf[0]);
+   }
+   else if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "entropy") == 0 )
+   {
+      // TODO atomic entropy or use of exprhdlr implementation (exprEvaluser)
+      if( buf[0] == 0.0 )
+         val = 0.0;
+      else
+         val = -buf[0] * log(buf[0]);
+   }
+   else
+   {
+      // FIXME evalUser(val, buf, expr);
+      SCIPerrorMessage("exprint using expr derivative callbacks not yet implemented, (hdlr %s)\n", SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)));
+      SCIPfreeBufferArrayNull(scip, &buf);
       return SCIP_ERROR;
    }
 
-   BMSfreeMemoryArrayNull(&buf);
+   SCIPfreeBufferArrayNull(scip, &buf);
 
    return SCIP_OKAY;
 }
-#endif
 
 /** replacement for CppAD's default error handler
  *
@@ -1799,6 +1569,7 @@ SCIP_RETCODE SCIPexprintCompile(
          varidxs.insert(SCIPgetIndexExprVaridx(expr));
 
       if( strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "abs") == 0
+         || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "entropy") == 0
          || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "min") == 0
          || strcmp(SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), "max") == 0
 #ifdef NO_CPPAD_USER_ATOMIC
@@ -1807,7 +1578,7 @@ SCIP_RETCODE SCIPexprintCompile(
          )
          (*exprintdata)->need_retape_always = true;
 
-//FIXME         data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
+         // FIXME data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
    }
 
    SCIPfreeExpriter(&it);
@@ -1880,12 +1651,12 @@ SCIP_RETCODE SCIPexprintEval(
 
    size_t n = exprintdata->varidxs.size();
 
-// FIXME?
-//   if( n == 0 )
-//   {
-//      SCIP_CALL( SCIPexprtreeEval(tree, NULL, val) );
-//      return SCIP_OKAY;
-//   }
+   if( n == 0 )
+   {
+      SCIP_CALL( SCIPevalExpr(scip, expr, NULL, 0) );
+      *val = SCIPexprGetEvalValue(expr);
+      return SCIP_OKAY;
+   }
 
    if( exprintdata->need_retape_always || exprintdata->need_retape )
    {
@@ -1898,7 +1669,7 @@ SCIP_RETCODE SCIPexprintEval(
 
       CppAD::Independent(exprintdata->X);
 
-//FIXME      SCIP_CALL( eval(expr, exprintdata->X, exprintdata->Y[0]) );
+      SCIP_CALL( eval(scip, expr, exprintdata->X, exprintdata->Y[0]) );
 
       exprintdata->f.Dependent(exprintdata->X, exprintdata->Y);
 
