@@ -976,13 +976,11 @@ void reduce_solLevelTopTransferSolBack(
 
       if( EQ(redsollocalParent->nodesol_ub, REDSOLVAL_UNSET) )
       {
-         redsollocalParent->nodesol_ub = (levelTop->nodesol_ub);
+         redsollocalParent->nodesol_ub = MAX(levelTop->nodesol_ub, 0.0);
       }
       else
       {
-         assert(GE(levelTop->nodesol_ub, 0.0));
-
-         redsollocalParent->nodesol_ub += levelTop->nodesol_ub;
+         redsollocalParent->nodesol_ub += MAX(levelTop->nodesol_ub, 0.0);
       }
    }
 }
@@ -1089,6 +1087,7 @@ SCIP_RETCODE reduce_solAddNodesol(
    assert(!level->nodesol_transfer);
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(level->nodesol_transfer), g->knots) );
+   level->nodesol_ub = 0.0;
 
    BMScopyMemoryArray(level->nodesol_transfer, nodesol, g->knots);
 
@@ -1138,7 +1137,7 @@ SCIP_RETCODE reduce_solGetEdgesol(
    if( !redsol->nodesol_use )
       return SCIP_OKAY;
 
-   if( !EQ(level->nodesol_ub, REDSOLVAL_UNSET) && LT(level->nodesol_ub, FARAWAY) )
+   if( LT(level->nodesol_ub, FARAWAY) )
    {
       PATH* solpath;
       const int nnodes = graph_get_nNodes(g);

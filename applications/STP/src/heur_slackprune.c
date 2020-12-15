@@ -25,6 +25,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -269,19 +270,25 @@ SCIP_RETCODE reduceExact(
    {
       RPARAMS parameters = { .dualascent = FALSE, .boundreduce = FALSE, .nodereplacing = TRUE, .reductbound_min = SLACKPRUNE_MINREDELIMS,
                                                     .reductbound = reductbound, .userec = FALSE, .fullreduce = fullreduce };
-
-      REDBASE redbase = { .redparameters = &parameters, .bidecompparams = NULL,
-                          .solnode = solnode, .redsol = NULL,
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
+      REDSOL* redsol;
+      REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
+                          .solnode = NULL, .redsol = NULL,
                           .vnoi = vnoi, .path = path, .heap = heap,
                           .nodearrreal = nodearrreal,
                           .state = state, .vbase = vbase, .nodearrint = nodearrint,
                           .edgearrint = edgearrint, .nodearrint2 = nodearrint2, .nodearrchar = nodearrchar };
-      SCIP_CALL( reduce_solInit(scip, prunegraph, FALSE, &(redbase.redsol)) );
 
+      SCIP_CALL( reduce_solInit(scip, prunegraph, TRUE, &(redbase.redsol)) );
+      redsol = redbase.redsol;
+
+      SCIP_CALL( reduce_solAddNodesol(prunegraph, solnode, redsol) );
       SCIP_CALL( redLoopStp(scip, prunegraph, &redbase) );
 
-      *offset = reduce_solGetOffset(redbase.redsol);
-      reduce_solFree(scip, &(redbase.redsol));
+      reduce_solGetNodesol(prunegraph, redsol, solnode);
+
+      *offset = reduce_solGetOffset(redsol);
+      reduce_solFree(scip, &(redsol));
    }
 
    SCIPfreeBufferArray(scip, &path);
