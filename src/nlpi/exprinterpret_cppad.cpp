@@ -23,6 +23,7 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
+#include "scip/intervalarith.h"
 #include "scip/pub_expr.h"
 #include "nlpi/exprinterpret.h"
 
@@ -37,13 +38,7 @@ using std::vector;
  * vector<*>::operator[] only. */
 /*lint --e{747,732}*/
 
-/* Turn off lint info "1702 operator '...' is both an ordinary function 'CppAD::operator...' and a member function 'CppAD::SCIPInterval::operator...'.
- * However, the functions have different signatures (the CppAD working on double, the SCIPInterval member
- * function working on SCIPInterval's.
- */
-/*lint --e{1702}*/
-
-/* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivaties of power operators
+/* defining NO_CPPAD_USER_ATOMIC disables the use of our own implementation of derivatives of power operators
  * via CppAD's user-atomic function feature
  * our customized implementation should give better results (tighter intervals) for the interval data type
  */
@@ -59,17 +54,6 @@ using std::vector;
  * 0.0 has sign +1
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
-
-/* in order to use intervals as operands in CppAD,
- * we need to include the intervalarithext.h very early and require the interval operations to be in the CppAD namespace */
-#define SCIPInterval_NAMESPACE CppAD
-#include "nlpi/intervalarithext.h"
-
-namespace CppAD
-{
-   SCIP_Real SCIPInterval::infinity = SCIP_DEFAULT_INFINITY;
-}
-using CppAD::SCIPInterval;
 
 /* CppAD needs to know a fixed upper bound on the number of threads at compile time.
  * It is wise to set it to a power of 2, so that if the tape id overflows, it is likely to start at 0 again, which avoids difficult to debug errors.
@@ -148,7 +132,6 @@ char SCIPexprintCppADInitParallel(void)
 {
    CppAD::thread_alloc::parallel_setup(CPPAD_MAX_NUM_THREADS, in_parallel, thread_num);
    CppAD::parallel_ad<double>();
-   CppAD::parallel_ad<SCIPInterval>();
 
    return 0;
 }
@@ -162,153 +145,6 @@ static char init_parallel_return = SCIPexprintCppADInitParallel();
 #endif
 
 #endif // SCIP_THREADSAFE
-
-/** definition of CondExpOp for SCIPInterval (required by CppAD) */ /*lint -e715*/
-inline
-SCIPInterval CondExpOp(
-   enum CppAD::CompareOp cop,
-   const SCIPInterval&   left,
-   const SCIPInterval&   right,
-   const SCIPInterval&   trueCase,
-   const SCIPInterval&   falseCase)
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "SCIPInterval CondExpOp(...)",
-      "Error: cannot use CondExp with an interval type"
-      );
-
-   return SCIPInterval();
-}
-
-/** another function required by CppAD */ /*lint -e715*/
-inline
-bool IdenticalPar(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{  /*lint --e{715}*/
-   return true;
-}
-
-/** returns whether the interval equals [0,0] */
-inline
-bool IdenticalZero(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{
-   return (x == 0.0);
-}
-
-/** returns whether the interval equals [1,1] */
-inline
-bool IdenticalOne(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{
-   return (x == 1.0);
-}
-
-/** yet another function that checks whether two intervals are equal */
-inline
-bool IdenticalEqualPar(
-   const SCIPInterval&   x,                  /**< first operand */
-   const SCIPInterval&   y                   /**< second operand */
-   )
-{
-   return (x == y);
-}
-
-/** greater than zero not defined for intervals */ /*lint -e715*/
-inline
-bool GreaterThanZero(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "GreaterThanZero(x)",
-      "Error: cannot use GreaterThanZero with interval"
-      );
-
-   return false;
-}
-
-/** greater than or equal zero not defined for intervals */ /*lint -e715*/
-inline
-bool GreaterThanOrZero(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__ ,
-      "GreaterThanOrZero(x)",
-      "Error: cannot use GreaterThanOrZero with interval"
-      );
-
-   return false;
-}
-
-/** less than not defined for intervals */ /*lint -e715*/
-inline
-bool LessThanZero(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "LessThanZero(x)",
-      "Error: cannot use LessThanZero with interval"
-      );
-
-   return false;
-}
-
-/** less than or equal not defined for intervals */ /*lint -e715*/
-inline
-bool LessThanOrZero(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "LessThanOrZero(x)",
-      "Error: cannot use LessThanOrZero with interval"
-      );
-
-   return false;
-}
-
-/** conversion to integers not defined for intervals */ /*lint -e715*/
-inline
-int Integer(
-   const SCIPInterval&   x                   /**< operand */
-   )
-{  /*lint --e{715}*/
-   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
-      "Integer(x)",
-      "Error: cannot use Integer with interval"
-      );
-
-   return 0;
-}
-
-/** absolute zero multiplication
- *
- * @return [0,0] if first argument is [0,0] independent of whether the second argument is an empty interval or not
- */
-inline
-SCIPInterval azmul(
-   const SCIPInterval&   x,                  /**< first operand */
-   const SCIPInterval&   y                   /**< second operand */
-   )
-{
-   if( x.inf == 0.0 && x.sup == 0.0 )
-      return SCIPInterval(0.0, 0.0);
-   return x * y;
-}
-
-/** printing of an interval (required by CppAD) */
-inline
-std::ostream& operator<<(std::ostream& out, const SCIP_INTERVAL& x)
-{
-   out << '[' << x.inf << ',' << x.sup << ']';
-   return out;
-}
 
 using CppAD::AD;
 
@@ -324,7 +160,7 @@ struct SCIP_ExprIntData
 public:
    /** constructor */
    SCIP_ExprIntData()
-      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL), blkmem(NULL), root(NULL)
+      : val(0.0), need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL), blkmem(NULL), root(NULL)
    { }
 
    /** destructor */
@@ -338,14 +174,6 @@ public:
    vector<double>        x;                  /**< current values of dependent variables */
    double                val;                /**< current function value */
    bool                  need_retape;        /**< will retaping be required for the next point evaluation? */
-
-   vector< AD<SCIPInterval> > int_X;         /**< interval vector of dependent variables */
-   vector< AD<SCIPInterval> > int_Y;         /**< interval result vector */
-   CppAD::ADFun<SCIPInterval> int_f;         /**< the function to evaluate on intervals as CppAD object */
-
-   vector<SCIPInterval>  int_x;              /**< current interval values of dependent variables */
-   SCIPInterval          int_val;            /**< current interval function value */
-   bool                  int_need_retape;    /**< will retaping be required for the next interval evaluation? */
 
    bool                  need_retape_always; /**< will retaping be always required? */
    SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
@@ -930,204 +758,6 @@ private:
 
 };
 
-/** Specialization of atomic_signpower template for intervals */
-template<>
-class atomic_signpower<SCIPInterval> : public CppAD::atomic_base<SCIPInterval>
-{
-public:
-   atomic_signpower<SCIPInterval>()
-   : CppAD::atomic_base<SCIPInterval>("signpowerint"),
-     exponent(0.0)
-   {
-      /* indicate that we want to use bool-based sparsity pattern */
-      this->option(CppAD::atomic_base<SCIPInterval>::bool_sparsity_enum);
-   }
-
-private:
-   /** exponent for use in next call to forward or reverse */
-   SCIP_Real exponent;
-
-   /** stores exponent corresponding to next call to forward or reverse
-    *
-    * How is this supposed to be threadsafe? (we use only one global instantiation of this class)
-    * TODO according to the CppAD 2018 docu, using this function is deprecated; what is the modern way to do this?
-    */
-   virtual void set_old(size_t id)
-   {
-      exponent = SCIPexprGetSignPowerExponent((SCIP_EXPR*)(void*)id);
-   }
-
-   /** specialization of atomic_signpower::forward template for SCIPinterval
-    *
-    *  @todo try to compute tighter resultants
-    */
-   bool forward(
-      size_t                             q,  /**< lowest order Taylor coefficient that we are evaluating */
-      size_t                             p,  /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<bool>&         vx, /**< indicates whether argument is a variable, or empty vector */
-      CppAD::vector<bool>&               vy, /**< vector to store which function values depend on variables, or empty vector */
-      const CppAD::vector<SCIPInterval>& tx, /**< values for taylor coefficients of x */
-      CppAD::vector<SCIPInterval>&       ty  /**< vector to store taylor coefficients of y */
-      )
-   {
-      assert(exponent > 0.0);
-      assert(tx.size() >= p+1);
-      assert(ty.size() >= p+1);
-      assert(q <= p);
-
-      if( vx.size() > 0 )
-      {
-         assert(vx.size() == 1);
-         assert(vy.size() == 1);
-         assert(p == 0);
-
-         vy[0] = vx[0];
-      }
-
-      if( q == 0 /* q <= 0 && 0 <= p */ )
-      {
-         ty[0] = CppAD::signpow(tx[0], exponent);
-      }
-
-      if( q <= 1 && 1 <= p )
-      {
-         ty[1] = CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0) * tx[1];
-         ty[1] *= p;
-      }
-
-      if( q <= 2 && 2 <= p )
-      {
-         if( exponent != 2.0 )
-         {
-            ty[2]  = CppAD::signpow(tx[0], exponent - 2.0) * CppAD::square(tx[1]);
-            ty[2] *= (exponent - 1.0) / 2.0;
-            ty[2] += CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0) * tx[2];
-            ty[2] *= exponent;
-         }
-         else
-         {
-            // y'' = 2 (1/2 * sign(x) * x'^2 + |x|*x'') = sign(tx[0]) * tx[1]^2 + 2 * abs(tx[0]) * tx[2]
-            ty[2]  = CppAD::sign(tx[0]) * CppAD::square(tx[1]);
-            ty[2] += 2.0 * CppAD::abs(tx[0]) * tx[2];
-         }
-      }
-
-      /* higher order derivatives not implemented */
-      if( p > 2 )
-         return false;
-
-      return true;
-   }
-
-   /** specialization of atomic_signpower::reverse template for SCIPinterval
-    *
-    *  @todo try to compute tighter resultants
-    */
-   bool reverse(
-      size_t                             p,  /**< highest order Taylor coefficient that we are evaluating */
-      const CppAD::vector<SCIPInterval>& tx, /**< values for taylor coefficients of x */
-      const CppAD::vector<SCIPInterval>& ty, /**< values for taylor coefficients of y */
-      CppAD::vector<SCIPInterval>&       px, /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
-      const CppAD::vector<SCIPInterval>& py  /**< values for partial derivatives of g(x) w.r.t. y */
-      )
-   { /*lint --e{715} */
-      assert(exponent > 1);
-      assert(px.size() >= p+1);
-      assert(py.size() >= p+1);
-      assert(tx.size() >= p+1);
-
-      switch( p )
-      {
-      case 0:
-         // px[0] = py[0] * p * pow(abs(tx[0]), p-1);
-         px[0]  = py[0] * CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0);
-         px[0] *= exponent;
-         break;
-
-      case 1:
-         if( exponent != 2.0 )
-         {
-            // px[0] = py[0] * p * abs(tx[0])^(p-1) + py[1] * p * (p-1) * abs(tx[0])^(p-2) * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * CppAD::signpow(tx[0], exponent - 2.0);
-            px[0] *= exponent - 1.0;
-            px[0] += py[0] * CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0);
-            px[0] *= exponent;
-            // px[1] = py[1] * p * abs(tx[0])^(p-1)
-            px[1]  = py[1] * CppAD::pow(CppAD::abs(tx[0]), exponent - 1.0);
-            px[1] *= exponent;
-         }
-         else
-         {
-            // px[0] = py[0] * 2.0 * abs(tx[0]) + py[1] * 2.0 * sign(tx[0]) * tx[1]
-            px[0]  = py[1] * tx[1] * CppAD::sign(tx[0]);
-            px[0] += py[0] * CppAD::abs(tx[0]);
-            px[0] *= 2.0;
-            // px[1] = py[1] * 2.0 * abs(tx[0])
-            px[1]  = py[1] * CppAD::abs(tx[0]);
-            px[1] *= 2.0;
-         }
-         break;
-
-      default:
-         return false;
-      }
-
-      return true;
-   }
-
-   using CppAD::atomic_base<SCIPInterval>::for_sparse_jac;
-
-   /** computes sparsity of jacobian during a forward sweep
-    *
-    * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
-    * Since f'(x) is dense, the sparsity of S will be the sparsity of R.
-    */
-   bool for_sparse_jac(
-      size_t                     q,          /**< number of columns in R */
-      const CppAD::vector<bool>& r,          /**< sparsity of R, columnwise */
-      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, columnwise */
-      )
-   {
-      return univariate_for_sparse_jac(q, r, s);
-   }
-
-   using CppAD::atomic_base<SCIPInterval>::rev_sparse_jac;
-
-   /** computes sparsity of jacobian during a reverse sweep
-    *
-    *  For a q x 1 matrix R, we have to return the sparsity pattern of the q x 1 matrix S(x) = R * f'(x).
-    *  Since f'(x) is dense, the sparsity of S will be the sparsity of R.
-    */
-   bool rev_sparse_jac(
-      size_t                     q,          /**< number of rows in R */
-      const CppAD::vector<bool>& r,          /**< sparsity of R, rowwise */
-      CppAD::vector<bool>&       s           /**< vector to store sparsity of S, rowwise */
-      )
-   {
-      return univariate_rev_sparse_jac(q, r, s);
-   }
-
-   using CppAD::atomic_base<SCIPInterval>::rev_sparse_hes;
-
-   /** computes sparsity of hessian during a reverse sweep
-    *
-    * Assume V(x) = (g(f(x)))'' R  with f(x) = sign(x)abs(x)^p for a function g:R->R and a matrix R.
-    * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
-    */
-   bool rev_sparse_hes(
-      const CppAD::vector<bool>& vx,         /**< indicates whether argument is a variable, or empty vector */
-      const CppAD::vector<bool>& s,          /**< sparsity pattern of S = g'(y) */
-      CppAD::vector<bool>&       t,          /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
-      size_t                     q,          /**< number of columns in S and R */
-      const CppAD::vector<bool>& r,          /**< sparsity pattern of R */
-      const CppAD::vector<bool>& u,          /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
-      CppAD::vector<bool>&       v           /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
-      )
-   {
-      return univariate_rev_sparse_hes(vx, s, t, q, r, u, v);
-   }
-};
-
 /** template for evaluation for signpower operator */
 template<class Type>
 static
@@ -1202,18 +832,6 @@ SCIP_RETCODE exprEvalUser(
    )
 {
    return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian); /*lint !e429*/
-}
-
-template<>
-SCIP_RETCODE exprEvalUser(
-   SCIP_EXPR* expr,
-   SCIPInterval* x,
-   SCIPInterval& funcval,
-   SCIPInterval* gradient,
-   SCIPInterval* hessian
-   )
-{
-   return SCIPexprEvalIntUser(expr, SCIPInterval::infinity, x, &funcval, gradient, hessian);
 }
 
 /** Automatic differentiation of user expression as CppAD user-atomic function.
@@ -1703,24 +1321,6 @@ void evalAbs(
    resultant = abs(arg);
 }
 
-/** specialization of absolute value evaluation for intervals
- *
- *  Use sqrt(x^2) for now @todo implement own userad function.
- */
-template<>
-void evalAbs(
-   CppAD::AD<SCIPInterval>& resultant,       /**< resultant */
-   const CppAD::AD<SCIPInterval>& arg        /**< operand */
-   )
-{
-   vector<CppAD::AD<SCIPInterval> > in(1, arg);
-   vector<CppAD::AD<SCIPInterval> > out(1);
-
-   posintpower(in, out, 2);
-
-   resultant = sqrt(out[0]);
-}
-
 /** integer power operation for arbitrary integer exponents */
 template<class Type>
 static
@@ -2156,9 +1756,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetCapability(
    void
    )
 {
-   return SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE |
-      SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT |
-      SCIP_EXPRINTCAPABILITY_HESSIAN;
+   return SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN;
 }
 
 /** creates an expression interpreter object */
@@ -2210,7 +1808,6 @@ SCIP_RETCODE SCIPexprintCompile(
    else
    {
       data->need_retape     = true;
-      data->int_need_retape = true;
    }
 
    int n = SCIPexprtreeGetNVars(tree);
@@ -2218,10 +1815,6 @@ SCIP_RETCODE SCIPexprintCompile(
    data->X.resize(n);
    data->x.resize(n);
    data->Y.resize(1);
-
-   data->int_X.resize(n);
-   data->int_x.resize(n);
-   data->int_Y.resize(1);
 
    if( data->root != NULL )
    {

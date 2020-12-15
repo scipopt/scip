@@ -34,12 +34,9 @@ typedef unsigned int            SCIP_EXPRINTCAPABILITY; /**< type of expression 
 
 #define SCIP_EXPRINTCAPABILITY_NONE         0x00000000  /**< the expression interpreter is capable of nothing */
 #define SCIP_EXPRINTCAPABILITY_FUNCVALUE    0x00000001  /**< the expression interpreter is able to compute a function value in a point */
-#define SCIP_EXPRINTCAPABILITY_INTFUNCVALUE 0x00000002  /**< the expression interpreter is able to compute an interval function value */
 #define SCIP_EXPRINTCAPABILITY_GRADIENT     0x00000010  /**< the expression interpreter is able to compute a gradient in a point */
-#define SCIP_EXPRINTCAPABILITY_INTGRADIENT  0x00000020  /**< the expression interpreter is able to compute an interval gradient */
 #define SCIP_EXPRINTCAPABILITY_HESSIAN      0x00000100  /**< the expression interpreter is able to compute a full hessian in a point */
-#define SCIP_EXPRINTCAPABILITY_INTHESSIAN   0x00000200  /**< the expression interpreter is able to compute an interval hessian */
-#define SCIP_EXPRINTCAPABILITY_ALL          (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN | SCIP_EXPRINTCAPABILITY_INTHESSIAN)
+#define SCIP_EXPRINTCAPABILITY_ALL          (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
 
 #ifdef __cplusplus
 }
