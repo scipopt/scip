@@ -133,22 +133,35 @@ SCIP_RETCODE nodesolUpdate(
    return SCIP_OKAY;
 }
 
-#ifdef XXXXX
-
-/** updates node solution */
+#ifdef SCIP_DEBUG
+/** print node solution */
 static
-SCIP_Bool nodesolIsValid(
+SCIP_RETCODE nodesolPrintStatus(
    SCIP*                scip,               /**< SCIP data structure */
    GRAPH*               g,
    const int*           nodesol             /**< solution array to be filled */
    )
 {
+   int* nodesol_copy;
    PATH* solpath;
    SCIP_Real solval;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(scip && nodesol);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &solpath, nnodes) );
-   SCIP_CALL( nodesolUpdate(scip, g, &solval_old, solpath, nodesol) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodesol_copy, nnodes) );
+   BMScopyMemoryArray(nodesol_copy, nodesol, nnodes);
+
+   SCIP_CALL( nodesolUpdate(scip, g, &solval, solpath, nodesol_copy) );
+
+   graph_printInfoReduced(g);
+   printf("nodesol value=%f \n", solval);
+
+   SCIPfreeBufferArray(scip, &nodesol_copy);
    SCIPfreeBufferArray(scip, &solpath);
+
+   return SCIP_OKAY;
 }
 #endif
 
@@ -713,6 +726,15 @@ void reduce_solFinalizeLocal(
       toplevel->nodesol_ub = redsollocal->nodesol_ub;
       toplevel->nodesol = redsollocal->nodesol;
       redsollocal->nodesol = NULL;
+
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("have solution in finalize... \n");
+      SCIP_CALL_ABORT( nodesolPrintStatus(scip, (GRAPH*) g, toplevel->nodesol) );
+#endif
+   }
+   else
+   {
+      SCIPdebugMessage("have NO solution in finalize \n");
    }
 
    reduce_sollocalFree(scip, &(toplevel->redsollocal));
