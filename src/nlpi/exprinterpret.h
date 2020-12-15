@@ -169,39 +169,6 @@ SCIP_RETCODE SCIPexprintHessian(
    int*                  nnz                 /**< buffer to return length of arrays */
    );
 
-/* TODO remove */
-/** gives sparsity pattern of hessian
- *
- * NOTE: this function might be replaced later by something nicer.
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintHessianSparsityDense(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
-   SCIP_Real*            varvals,            /**< values of variables */
-   SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
-   );
-
-/* TODO remove */
-/** computes value and dense hessian of an expression
- *
- *  The full hessian is computed (lower left and upper right triangle).
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPexprintHessianDense(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
-   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
-   SCIP_Real*            val,                /**< buffer to store function value */
-   SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
-   );
-
 /** @} */
 
 #ifdef __cplusplus

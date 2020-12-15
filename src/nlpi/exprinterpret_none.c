@@ -188,38 +188,3 @@ SCIP_RETCODE SCIPexprintHessian(
    SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
    return SCIP_PLUGINNOTFOUND;
 }  /*lint !e715*/
-
-/** gives sparsity pattern of hessian
- * NOTE: this function might be replaced later by something nicer 
- * Since the AD code might need to do a forward sweep, you should pass variable values in here.
- */
-SCIP_RETCODE SCIPexprintHessianSparsityDense(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
-   SCIP_Real*            varvals,            /**< values of variables */
-   SCIP_Bool*            sparsity            /**< buffer to store sparsity pattern of Hessian, sparsity[i+n*j] indicates whether entry (i,j) is nonzero in the hessian */
-   )
-{
-   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
-   return SCIP_PLUGINNOTFOUND;
-}  /*lint !e715*/
-
-/** computes value and dense hessian of an expression
- * the full hessian is computed (lower left and upper right triangle)
- */
-SCIP_RETCODE SCIPexprintHessianDense(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
-   SCIP_EXPR*            expr,               /**< expression */
-   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter-specific data for expression */
-   SCIP_Real*            varvals,            /**< values of variables, can be NULL if new_varvals is FALSE */
-   SCIP_Bool             new_varvals,        /**< have variable values changed since last call to an evaluation routine? */
-   SCIP_Real*            val,                /**< buffer to store function value */
-   SCIP_Real*            hessian             /**< buffer to store hessian values, need to have size at least n*n */
-   )
-{
-   SCIPerrorMessage("No expression interpreter linked to SCIP, try recompiling with EXPRINT=cppad.\n");
-   return SCIP_PLUGINNOTFOUND;
-}  /*lint !e715*/
