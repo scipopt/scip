@@ -935,6 +935,7 @@ void reduce_solLevelTopTransferSolBack(
    REDSOL*               redsol            /**< sollocal */
    )
 {
+   REDSOLLOCAL* redsollocalParent;
    REDSOLLEVEL* const levelTop = redsolGetTopLevel(redsol);
    REDSOLLEVEL* const levelParent = redsolGetTopParentLevel(redsol);
 
@@ -971,19 +972,18 @@ void reduce_solLevelTopTransferSolBack(
       }
 
       assert(levelParent->redsollocal);
+      redsollocalParent = levelParent->redsollocal;
 
-
-      if( EQ(levelParent->redsollocal->nodesol_ub, REDSOLVAL_UNSET) )
+      if( EQ(redsollocalParent->nodesol_ub, REDSOLVAL_UNSET) )
       {
-         levelParent->redsollocal->nodesol_ub = levelTop->nodesol_ub;
+         redsollocalParent->nodesol_ub = (levelTop->nodesol_ub);
       }
       else
       {
          assert(GE(levelTop->nodesol_ub, 0.0));
 
-         levelParent->redsollocal->nodesol_ub += levelTop->nodesol_ub;
+         redsollocalParent->nodesol_ub += levelTop->nodesol_ub;
       }
-
    }
 }
 
@@ -1072,22 +1072,52 @@ SCIP_Real reduce_solGetOffset(
 
 
 /** adds (and possibly overwrites) nodesol */
-
-#ifdef XXXXX
 SCIP_RETCODE reduce_solAddNodesol(
+   const GRAPH*         g,                /**< graph data structure */
    const int*           nodesol,          /**< incoming solution */
    REDSOL*              redsol            /**< solution */
    )
 {
-   assert(redsol);
+   REDSOLLEVEL* level;
 
+   assert(redsol && nodesol && g);
+   assert(redsolGetNlevels(redsol) == 1);
+   assert(redsol->nodesol_use);
+
+   level = redsol->levels[0];
+   assert(g->knots == level->nnodes);
+   assert(!level->nodesol_transfer);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(level->nodesol_transfer), g->knots) );
+
+   BMScopyMemoryArray(level->nodesol_transfer, nodesol, g->knots);
 
    return SCIP_OKAY;
 }
-#endif
 
 
-/** initializes */
+/** gets */
+void reduce_solGetNodesol(
+   const GRAPH*         g,                /**< graph data structure */
+   REDSOL*              redsol,           /**< solution */
+   int*                 nodesol           /**< solution array to be filled */
+   )
+{
+   REDSOLLEVEL* level;
+
+   assert(redsol && nodesol && g);
+   assert(redsolGetNlevels(redsol) == 1);
+   assert(redsol->nodesol_use);
+
+   level = redsol->levels[0];
+   assert(g->knots == level->nnodes);
+   assert(level->nodesol);
+
+   BMScopyMemoryArray(nodesol, level->nodesol, g->knots);
+}
+
+
+/** gets edge solution, if available, and solution value */
 SCIP_RETCODE reduce_solGetEdgesol(
    SCIP*                scip,             /**< SCIP data structure */
    GRAPH*               g,                /**< graph data structure */
@@ -1139,7 +1169,7 @@ SCIP_Bool reduce_solUsesNodesol(
 
 
 /** gets */
-const int* reduce_solGetNodesol(
+const int* reduce_solGetNodesolPointer(
    const REDSOL*         redsol            /**< solution */
    )
 {

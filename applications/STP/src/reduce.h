@@ -75,10 +75,12 @@ extern SCIP_RETCODE reduce_solLevelTopTransferSolTo(const int*, REDSOL*);
 extern void reduce_solSetOffset(SCIP_Real, REDSOL*);
 extern SCIP_Real reduce_solGetOffset(const REDSOL*);
 extern SCIP_Real reduce_solGetUpperBoundWithOffset(const REDSOL*);
-extern const int* reduce_solGetNodesol(const REDSOL*);
+extern const int* reduce_solGetNodesolPointer(const REDSOL*);
 extern SCIP_Bool reduce_solUsesNodesol(const REDSOL*);
 extern SCIP_Real* reduce_solGetOffsetPointer(REDSOL*);
 extern SCIP_RETCODE         reduce_solGetEdgesol(SCIP*, GRAPH*, REDSOL*, SCIP_Real*, int*);
+extern SCIP_RETCODE         reduce_solAddNodesol(const GRAPH*, const int*, REDSOL*);
+extern void         reduce_solGetNodesol(const GRAPH*, REDSOL*, int*);
 
 
 /* reduce_alt.c
