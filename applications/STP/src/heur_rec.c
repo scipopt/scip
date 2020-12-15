@@ -348,12 +348,11 @@ SCIP_RETCODE retransformReducedProbSolution(
 
 /** compute (heuristic) solution on reduced (and merged) problem */
 static
-SCIP_RETCODE computeReducedProbSolution(
+SCIP_RETCODE computeReducedProbSolutionBiased(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    const GRAPH*          graph,              /**< graph data */
    GRAPH*                solgraph,           /**< graph data */
-   IDX**                 ancestors,          /**< ancestors */
    const int*            edgeweight,         /**< for each edge: number of solution that contain this edge */
    const int*            edgeancestor,       /**< ancestor to edge edge */
    SCIP_VAR**            vars,               /**< variables or NULL */
@@ -369,11 +368,7 @@ SCIP_RETCODE computeReducedProbSolution(
    const int nsoledges = solgraph->edges;
    const int probtype = graph->stp_type;
    const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
-
-   assert(soledges != NULL);
-   assert(graph_valid(scip, solgraph));
-
-   SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n", solgraph->knots, nsoledges, solgraph->terms);
+   IDX** ancestors = solgraph->ancestors;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsoledges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsoledges) );
@@ -457,9 +452,6 @@ SCIP_RETCODE computeReducedProbSolution(
       soledges[e] = UNKNOWN;
    }
 
-   SCIP_CALL( graph_path_init(scip, solgraph) );
-
-   // todo: run prune heuristic with changed weights!
    {
       SCIP_Bool success;
       SCIP_Real hopfactor = 0.1;
@@ -481,11 +473,68 @@ SCIP_RETCODE computeReducedProbSolution(
       assert(solstp_isValid(scip, solgraph, soledges));
    }
 
-   graph_path_exit(scip, solgraph);
-
    SCIPfreeBufferArray(scip, &nodepriority);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
+
+   return SCIP_OKAY;
+}
+
+
+/** compute (heuristic) solution on reduced (and merged) problem */
+static
+SCIP_RETCODE computeReducedProbSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   const GRAPH*          graph,              /**< graph data */
+   GRAPH*                solgraph,           /**< graph data */
+   REDSOL*               redsol,             /**< reduction solution */
+   const int*            edgeweight,         /**< for each edge: number of solution that contain this edge */
+   const int*            edgeancestor,       /**< ancestor to edge edge */
+   SCIP_VAR**            vars,               /**< variables or NULL */
+   SCIP_Bool             usestppool,         /**< using STP pool? */
+   int*                  soledges            /**< solution edges */
+)
+{
+   const SCIP_Bool pcmw = graph_pc_isPcMw(graph);
+
+   assert(soledges != NULL);
+   assert(graph_valid(scip, solgraph));
+
+   SCIPdebugMessage("REC: graph not completely reduced, nodes: %d, edges: %d, terminals: %d \n",
+         solgraph->knots, solgraph->edges, solgraph->terms);
+
+   SCIP_CALL( graph_path_init(scip, solgraph) );
+
+   SCIP_CALL( computeReducedProbSolutionBiased(scip, heurdata, graph, solgraph, edgeweight,
+         edgeancestor, vars, usestppool, soledges) );
+
+   if( !pcmw )
+   {
+      SCIP_Real solval_red;
+      int* soledges_red;
+      SCIP_CALL(SCIPallocBufferArray(scip, &soledges_red, solgraph->edges));
+      SCIP_CALL(reduce_solGetEdgesol(scip, solgraph, redsol, &solval_red, soledges_red));
+
+    //  printf("solval_red=%f \n", solval_red);
+
+      if( LT(solval_red, FARAWAY) )
+      {
+         const SCIP_Real solval_bias = solstp_getObj(solgraph, soledges, 0.0);
+         assert(solstp_isValid(scip, solgraph, soledges_red));
+         assert(EQ(solval_red, solstp_getObj(solgraph, soledges_red, 0.0)));
+
+         if( LT(solval_red, solval_bias) )
+         {
+            BMScopyMemoryArray(soledges, soledges_red, solgraph->edges);
+       //     printf("updating %f->%f \n", solval_bias, solval_red);
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &soledges_red);
+   }
+
+   graph_path_exit(scip, solgraph);
 
    return SCIP_OKAY;
 }
@@ -1481,11 +1530,11 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          else
          {
             SCIP_CALL( reduce(scip, solgraph, redsol, 2, 5, FALSE) );
+
+
          }
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, redsol, FALSE) );
-
-         reduce_solFree(scip, &redsol);
 
          solgraph = psolgraph;
          ancestors = solgraph->ancestors;
@@ -1495,9 +1544,13 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          {
             SCIP_CALL( SCIPallocBufferArray(scip, &soledges, solgraph->edges) );
 
-            SCIP_CALL( computeReducedProbSolution(scip, heurdata, graph, solgraph, ancestors, edgeweight,
+            SCIP_CALL( computeReducedProbSolution(scip, heurdata, graph, solgraph, redsol, edgeweight,
                   edgeancestor, vars, usestppool, soledges) );
+
+           // printf("solval2=%f \n", solstp_getObj(solgraph, soledges, 0.0));
          }
+
+         reduce_solFree(scip, &redsol);
 
          /*  retransform solution (soledges or single vertex) found above */
          SCIP_CALL( retransformReducedProbSolution(scip, graph, solgraph, ancestors, edgeancestor, soledges, newsoledges, stnodes) );

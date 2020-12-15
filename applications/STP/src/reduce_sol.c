@@ -1048,6 +1048,7 @@ SCIP_RETCODE reduce_solGetEdgesol(
    *solval = FARAWAY;
    level = redsol->levels[0];
    assert(level);
+   assert(g->knots > 1);
 
    if( !redsol->nodesol_use )
       return SCIP_OKAY;
