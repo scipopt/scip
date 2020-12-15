@@ -314,9 +314,9 @@ void redlevelClean(
 {
    assert(redlevel);
    assert(!redlevel->redsollocal);
-   assert(redlevel->nodesol);
+   assert(redlevel->nodesol || !redlevel->nodesol_use);
 
-   SCIPfreeMemoryArray(scip, &(redlevel->nodesol));
+   SCIPfreeMemoryArrayNull(scip, &(redlevel->nodesol));
 
    redlevel->solval_postred = REDSOLVAL_UNSET;
    redlevel->solval_incomplete = 0.0;
@@ -979,7 +979,7 @@ void reduce_solLevelTopTransferSolBack(
       }
       else
       {
-        // assert(GE(levelTop->nodesol_ub, 0.0));
+         assert(GE(levelTop->nodesol_ub, 0.0));
 
          levelParent->redsollocal->nodesol_ub += levelTop->nodesol_ub;
       }
