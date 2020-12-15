@@ -720,8 +720,7 @@ SCIP_RETCODE createVars(
 }
 
 /* define test suite */
-// FIXME reenable when it doesn't take so long anymore
-TestSuite(glbconss, .init = setup, .fini = teardown, .disabled = 1);
+TestSuite(glbconss, .init = setup, .fini = teardown);
 
 /*
  * define tests
