@@ -5845,7 +5845,7 @@ SCIP_RETCODE initSepa(
       {
          SCIP_EXPR_OWNERDATA* ownerdata;
 
-         ownerdata = SCIPexprGetOwnerData(consdata->expr);
+         ownerdata = SCIPexprGetOwnerData(expr);
          assert(ownerdata != NULL);
 
          if( ownerdata->nauxvaruses == 0 )
