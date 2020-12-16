@@ -193,26 +193,30 @@ void checkQuadTerm(
 Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_CONS* cons;
    SCIP_EXPR* expr;
-   SCIP_EXPR* simplified;
    SCIP_NLHDLR_METHOD enforcing;
    SCIP_NLHDLR_METHOD participating;
    SCIP_NLHDLR_METHOD participatingexpected;
    SCIP_NLHDLR_METHOD enforcingexpected;
-   SCIP_Bool changed = FALSE;
    SCIP_Bool infeasible;
+   SCIP_Bool success;
 
    /* skip when no ipopt */
    if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
    /* create expression and simplify it: note it fails if not simplified, the order matters! */
-   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x>^2 + <x>", NULL, NULL, NULL) );
-   SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
-   cr_expect(changed);
-   cr_expect_not(infeasible);
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = simplified;
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <x>^2 + <x> <= 1", TRUE, TRUE,
+            TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   success = FALSE;
+   SCIP_CALL( canonicalizeConstraints(scip, conshdlr, &cons, 1, SCIP_PRESOLTIMING_ALWAYS, &infeasible, NULL, NULL, NULL) );
+   cr_assert(!infeasible);
+
+   /* get expr and work with it */
+   expr = SCIPgetExprConsNonlinear(cons);
 
    /* detect */
    enforcing = SCIP_NLHDLR_METHOD_NONE;
@@ -230,10 +234,13 @@ Test(nlhdlrquadratic, detectandfree1, .init = setup, .fini = teardown)
    enforcingexpected = SCIP_NLHDLR_METHOD_ACTIVITY;
    cr_expect_eq(enforcing, enforcingexpected, "enforcing expecting %d got %d\n", enforcingexpected, enforcing);
 
+   nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
+
    checkNQuad(expr, 0, 1, 0);
    checkQuadTerm(expr, 0, NULL, x, 1.0, 1.0);
 
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
 /* detects x^2 + 2*x cos(y x^2) + cos(y x^2)^2 <= 1 as convex quadratic expression:
@@ -258,7 +265,7 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
 
    /* create expression, simplify it and find common subexpressions*/
    success = FALSE;
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <x>^2 + 2 * <x> * cos(<y> * <x>^2) + cos(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[nonlinear] <test>: <x>^2 + 2 * <x> * cos(<y> * <x>^2) + cos(<y> * <x>^2)^2 <= 1", TRUE, TRUE,
             TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -285,6 +292,8 @@ Test(nlhdlrquadratic, detectandfree2, .init = setup, .fini = teardown)
    enforcingexpected = SCIP_NLHDLR_METHOD_ACTIVITY;
    cr_expect_eq(participating, participatingexpected, "part expecting %d got %d\n", participatingexpected, participating);
    cr_expect_eq(enforcing, enforcingexpected, "enfo expecting %d got %d\n", enforcingexpected, enforcing);
+
+   nlhdlrfreeExprDataQuadratic(scip, nlhdlr, expr, &nlhdlrexprdata);
 
    checkNQuad(expr, 0, 2, 1);
 
