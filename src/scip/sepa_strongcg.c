@@ -371,9 +371,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
          /* create the cut */
          if( c >= 0 )
-            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_x%d", SCIPgetNLPs(scip), c);
          else
-            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
+            (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%" SCIP_LONGINT_FORMAT "_s%d", SCIPgetNLPs(scip), -c-1);
 
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE, sepadata->dynamiccuts) );
 

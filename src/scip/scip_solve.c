@@ -2044,9 +2044,9 @@ SCIP_RETCODE freeTransform(
    scip->set->stage = SCIP_STAGE_FREETRANS;
 
    /* reset solving specific paramters */
-   if( scip->set->reopt_enable )
+   assert(!scip->set->reopt_enable || scip->reopt != NULL);
+   if( scip->set->reopt_enable && scip->reopt != NULL )
    {
-      assert(scip->reopt != NULL);
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 

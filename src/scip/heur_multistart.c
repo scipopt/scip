@@ -447,7 +447,13 @@ SCIP_RETCODE improvePoint(
          for( j = 0; j < nvars; ++j )
             updatevec[j] += scale * grad[j];
       }
-      assert(nviolnlrows > 0);
+
+      /* if there are no violated rows, stop since start point is feasible */
+      if( nviolnlrows == 0 )
+      {
+         assert(updatevec[i] == 0.0);
+         return SCIP_OKAY;
+      }
 
       for( i = 0; i < nvars; ++i )
       {
@@ -559,10 +565,12 @@ SCIP_Real getRelDistance(
 
    assert(x != NULL);
    assert(y != NULL);
-   assert(SCIPgetNVars(scip) > 0);
 
    vars = SCIPgetVars(scip);
    distance = 0.0;
+
+   if( SCIPgetNVars(scip) == 0 )
+      return 0.0;
 
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
