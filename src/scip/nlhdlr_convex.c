@@ -1199,7 +1199,7 @@ SCIP_RETCODE collectLeafs(
 
       leaf = (SCIP_EXPR*) SCIPhashmapEntryGetOrigin(entry);
       assert(leaf != NULL);
-      assert(SCIPgetExprAuxVarNonlinear(leaf) != NULL);
+      assert(SCIPisExprVar(scip, leaf));
 
       idx = SCIPhashmapEntryGetImageInt(entry);
       assert(idx >= 0);
@@ -1207,7 +1207,7 @@ SCIP_RETCODE collectLeafs(
 
       nlhdlrexprdata->leafexprs[idx] = leaf;
 
-      SCIPdebugMsg(scip, "leaf %d: <%s>\n", idx, SCIPvarGetName(SCIPgetExprAuxVarNonlinear(leaf)));
+      SCIPdebugMsg(scip, "leaf %d: <%s>\n", idx, SCIPvarGetName(SCIPgetVarExprVar(leaf)));
    }
 
    SCIPhashmapFree(&leaf2index);
@@ -1502,7 +1502,7 @@ SCIP_RETCODE estimateGradient(
          return SCIP_OKAY;
       }
 
-      var = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->leafexprs[i]);
+      var = SCIPgetVarExprVar(nlhdlrexprdata->leafexprs[i]);
       assert(var != NULL);
 
       varval = SCIPgetSolVal(scip, sol, var);
@@ -1841,7 +1841,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaConvex)
       {
          SCIP_VAR* var;
 
-         var = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->leafexprs[i]);
+         var = SCIPgetVarExprVar(nlhdlrexprdata->leafexprs[i]);
 
          lb = SCIPvarGetLbGlobal(var);
          ub = SCIPvarGetUbGlobal(var);
