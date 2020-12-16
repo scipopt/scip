@@ -31,6 +31,7 @@
 #include "reader_stp.h"
 #include "reader_gr.h"
 #include "cons_stp.h"
+#include "cons_stpcomponents.h"
 #include "heur_tm.h"
 #include "heur_local.h"
 #include "heur_prune.h"
@@ -77,6 +78,8 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeDialogStp(scip) );
 
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
+
+  // SCIP_CALL( SCIPincludeConshdlrStpcomponents(scip) );
 
    SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
 

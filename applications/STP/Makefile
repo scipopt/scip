@@ -63,6 +63,7 @@ MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
 			completegraph.o \
 			cons_stp.o \
+			cons_stpcomponents.o \
 			dualascent.o \
 			enumeration.o \
 			extreduce_base.o \
@@ -128,6 +129,7 @@ CMAINOBJ	=	cmain.o \
 			reduce_util.o \
 			sepaspecial.o \
 			shortestpath.o \
+			solhistory.o \
 			solpool.o \
 			solstp.o \
 			stptest_base.o \

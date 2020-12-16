@@ -48,6 +48,7 @@
 #include "stptest.h"
 #include "solstp.h"
 #include "solpool.h"
+#include "solhistory.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
@@ -154,50 +155,6 @@ struct SCIP_ProbData
  *
  * @{
  */
-
-
-static
-void updateorgsol(
-   GRAPH*                graph,              /**< graph data structure */
-   IDX*                  curr,               /**< head of solution edge list */
-   STP_Bool*             orgnodes,           /**< array to mark whether a node is part of the original solution */
-   STP_Bool*             orgedges,           /**< array to mark whether an edge is part of the original solution */
-   int*                  nsolnodes,          /**< pointer to store the number of nodes in the original solution */
-   int*                  nsoledges           /**< pointer to store the number of edges in the original solution */
-)
-{
-   int i;
-   int e = 0;
-   int k = 0;
-
-   while( curr != NULL )
-   {
-      i = curr->index;
-
-      if( orgedges[i] == FALSE )
-      {
-         orgedges[i] = TRUE;
-         e++;
-      }
-
-      if( !(orgnodes[graph->orgtail[i]]) )
-      {
-         k++;
-         orgnodes[graph->orgtail[i]] = TRUE;;
-      }
-
-      if( !(orgnodes[graph->orghead[i]]) )
-      {
-         k++;
-         orgnodes[graph->orghead[i]] = TRUE;
-      }
-
-      curr = curr->parent;
-   }
-
-   (*nsolnodes) += k;
-   (*nsoledges) += e;
-}
 
 static
 void writeCommentSection(
@@ -3347,13 +3304,10 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    )
 {
    SCIP_SOL* sol;
-   SCIP_VAR** edgevars;
-   GRAPH* graph;
-   IDX** ancestors;
-   IDX* curr;
-   SCIP_PROBDATA* probdata;
    int  e;
    int  k;
+   GRAPH* graph;
+   SCIP_PROBDATA* probdata = SCIPgetProbData(scip);
    int  norgedges;
    int  norgnodes;
    int  nsolnodes;
@@ -3361,18 +3315,13 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    STP_Bool* orgedges;
    STP_Bool* orgnodes;
 
-   assert(scip != NULL);
-
 #ifdef WITH_UG
    if( getUgRank() != 0 )
       return SCIP_OKAY;
 #endif
 
-   probdata = SCIPgetProbData(scip);
-
    assert(probdata != NULL);
 
-   edgevars = probdata->edgevars;
 #ifdef WITH_UG
    graph = probdata->orggraph;
 #else
@@ -3380,159 +3329,31 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 #endif
 
    assert(graph != NULL);
-
    sol = SCIPgetBestSol(scip);
-
-   nsolnodes = 0;
-   nsoledges = 0;
-   norgedges = graph->orgedges;
-   norgnodes = graph->orgknots;
-
-   assert(norgedges >= 0);
-   assert(norgnodes >= 1);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &orgedges, norgedges) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orgnodes, norgnodes) );
-
-   for( e = 0; e < norgedges; e++ )
-      orgedges[e] = FALSE;
-   for( k = 0; k < norgnodes; k++ )
-      orgnodes[k] = FALSE;
-
-   ancestors = graph->ancestors;
+   assert(sol);
 
    if( graph->stp_type == STP_SPG || graph->stp_type == STP_SAP ||graph->stp_type == STP_DCSTP
       || graph->stp_type == STP_NWSPG || graph->stp_type == STP_DHCSTP || graph->stp_type == STP_GSTP
       || graph->stp_type == STP_RSMT || graph->stp_type == STP_NWPTSPG  )
    {
-      GRAPH* solgraph;
-      SCIP_QUEUE* queue;
-      int* nodechild;
-      int* edgeancestor;
-      int* pnode;
-      int tail;
-      int head;
+      SOLHISTORY* solhistory;
+      SCIP_CALL( solhistory_init(scip, graph, &solhistory) );
+      SCIP_CALL( solhistory_computeHistory(scip, sol, graph, solhistory) );
 
-      /* iterate through the list of fixed edges */
-      updateorgsol(graph, graph_get_fixedges(graph), orgnodes, orgedges, &nsolnodes, &nsoledges);
-
-      for( e = 0; e < graph->edges; e++ )
-         if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
-            /* iterate through the list of ancestors */
-            updateorgsol(graph, ancestors[e], orgnodes, orgedges, &nsolnodes, &nsoledges);
-
-#if 1
-      SCIP_CALL( SCIPallocBufferArray(scip, &nodechild, norgnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nsoledges) );
-
-      /* initialize new graph */
-      SCIP_CALL( graph_init(scip, &solgraph, nsolnodes, 2 * nsoledges, 1) );
-
-      /* add vertices to new graph */
-      for( k = 0; k < norgnodes; k++ )
-      {
-         if( orgnodes[k] )
-         {
-            nodechild[k] = solgraph->knots;
-            graph_knot_add(solgraph, -1);
-         }
-         else
-         {
-            nodechild[k] = -1;
-         }
-      }
-
-      assert(nsolnodes == solgraph->knots);
-      assert(nodechild[graph->orgsource] >= 0);
-
-      /* set root of new graph */
-      solgraph->source = nodechild[graph->orgsource];
-
-      /* add edges to new graph */
-      for( e = 0; e < norgedges; e++ )
-      {
-         if( !orgedges[e] )
-            continue;
-
-         tail = nodechild[graph->orgtail[e]];
-         head = nodechild[graph->orghead[e]];
-
-         assert(tail >= 0);
-         assert(head >= 0);
-
-         edgeancestor[solgraph->edges] = e;
-         edgeancestor[solgraph->edges + 1] = flipedge(e);
-         graph_edge_add(scip, solgraph, tail, head, 1.0, 1.0);
-      }
-
-      for( e = 0; e < norgedges; e++ )
-         orgedges[e] = FALSE;
-
-      for( k = 0; k < norgnodes; k++ )
-         orgnodes[k] = FALSE;
-
-      SCIP_CALL( SCIPqueueCreate(&queue, nsolnodes, 1.1) );
-      SCIP_CALL( SCIPqueueInsert(queue, &(solgraph->source)) );
-      solgraph->mark[solgraph->source] = FALSE;
-
-      nsolnodes = 1;
-
-      /* BFS from root */
-      while( !SCIPqueueIsEmpty(queue) )
-      {
-         pnode = (SCIPqueueRemove(queue));
-         k = *pnode;
-
-         /* traverse outgoing arcs */
-         for( e = solgraph->outbeg[k]; e != EAT_LAST; e = solgraph->oeat[e] )
-         {
-            head = solgraph->head[e];
-
-            /* vertex not labeled yet? */
-            if( solgraph->mark[head] )
-            {
-               orgedges[edgeancestor[e]] = TRUE;
-               solgraph->mark[head] = FALSE;
-               nsolnodes++;
-               SCIP_CALL(SCIPqueueInsert(queue, &(solgraph->head[e])));
-            }
-         }
-      }
-
-      nsoledges = nsolnodes - 1;
-
-      SCIPqueueFree(&queue);
-
-      graph_free(scip, &solgraph, TRUE);
-
-      for( e = 0; e < norgedges; e++ )
-      {
-         if( orgedges[e] )
-         {
-            orgnodes[graph->orgtail[e]] = TRUE;
-            orgnodes[graph->orghead[e]] = TRUE;
-         }
-      }
-
-      SCIPfreeBufferArray(scip, &edgeancestor);
-      SCIPfreeBufferArray(scip, &nodechild);
-#endif
-      if( graph->stp_type == STP_GSTP )
-      {
-         assert(graph->norgmodelterms > 0);
-
-         norgnodes -= graph->norgmodelterms;
-         nsolnodes -= graph->norgmodelterms;
-         nsoledges -= graph->norgmodelterms;
-         assert(nsolnodes >= 0);
-         assert(nsoledges >= 1);
-      }
+      norgnodes = solhistory->norgnodes;
+      norgedges = solhistory->norgedges;
+      nsolnodes = solhistory->nsolnodes;
+      nsoledges = solhistory->nsoledges;
+      orgnodes = solhistory->orgnodes_isInSol;
+      orgedges = solhistory->orgedges_isInSol;
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
       for( k = 0; k < norgnodes; k++ )
+      {
          if( orgnodes[k] == TRUE )
             SCIPinfoMessage(scip, file, "V %d\n", k + 1);
+      }
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
 
@@ -3561,9 +3382,12 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
          }
       }
+
+      solhistory_free(scip, &solhistory);
    }
    else if( graph->stp_type == STP_RSMT )
    {
+      SCIP_VAR** edgevars;
       int**  coords;
       int*  ncoords;
       int*  nodecoords;
@@ -3572,6 +3396,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       int nodecount;
       int grid_dim;
       char strdim[256];
+
+      edgevars = probdata->edgevars;
       coords = graph->grid_coordinates;
       assert(coords != NULL);
       ncoords = graph->grid_ncoords;
@@ -3585,6 +3411,22 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          strcat(strdim, "P");
 
       assert(ncoords != NULL);
+
+      nsolnodes = 0;
+      nsoledges = 0;
+      norgedges = graph->orgedges;
+      norgnodes = graph->orgknots;
+
+      assert(norgedges >= 0);
+      assert(norgnodes >= 1);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &orgedges, norgedges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &orgnodes, norgnodes) );
+
+      for( e = 0; e < norgedges; e++ )
+         orgedges[e] = FALSE;
+      for( k = 0; k < norgnodes; k++ )
+         orgnodes[k] = FALSE;
 
       /* mark solution nodes and edges */
       for( e = 0; e < norgedges; e++ )
@@ -3630,96 +3472,42 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
             SCIPinfoMessage(scip, file, "E %d %d\n", nodenumber[graph->orgtail[e]] + 1, nodenumber[graph->orghead[e]] + 1);
       }
+
       SCIPfreeBufferArray(scip, &nodenumber);
+      SCIPfreeBufferArray(scip, &orgnodes);
+      SCIPfreeBufferArray(scip, &orgedges);
    }
    else if( graph_pc_isPcMw(graph))
    {
-      int* solnodequeue;
-      assert(graph->source >= 0 && nsolnodes == 0);
+      SOLHISTORY* solhistory;
+      SCIP_CALL( solhistory_init(scip, graph, &solhistory) );
+      SCIP_CALL( solhistory_computeHistory(scip, sol, graph, solhistory) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &solnodequeue, norgnodes) );
-
-      /* cover RPCSPG/RMWCSP with single node solution */
-      if( graph_pc_isRootedPcMw(graph) && graph->orgsource != -1 )
-      {
-         SCIPdebugMessage("graph->orgsource %d \n", graph->orgsource);
-         solnodequeue[nsolnodes++] = graph->orgsource;
-         orgnodes[graph->orgsource] = TRUE;
-      }
-
-      for( e = 0; e <= graph->edges; e++ )
-      {
-         if( e == graph->edges || !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
-         {
-            /* iterate through the list of ancestors/fixed edges */
-            if( e < graph->edges )
-               curr = ancestors[e];
-            else
-               curr = graph_get_fixedges(graph);
-
-            while (curr != NULL)
-            {
-               const int ancestoredge = curr->index;
-               if( e < graph->edges && (graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_BRMWCSP) )
-               {
-                  if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[flipedge(e)])) )
-                  {
-                     curr = curr->parent;
-                     continue;
-                  }
-               }
-
-               if( ancestoredge < graph->norgmodeledges )
-               {
-                  if( !orgedges[ancestoredge] )
-                  {
-                     orgedges[ancestoredge] = TRUE;
-                     nsoledges++;
-                  }
-                  if( !orgnodes[graph->orgtail[ancestoredge]] )
-                  {
-                     orgnodes[graph->orgtail[ancestoredge]] = TRUE;
-                     solnodequeue[nsolnodes++] = graph->orgtail[ancestoredge];
-                  }
-                  if( !orgnodes[graph->orghead[ancestoredge]] )
-                  {
-                     orgnodes[graph->orghead[ancestoredge]] = TRUE;
-                     solnodequeue[nsolnodes++] = graph->orghead[ancestoredge];
-                  }
-               }
-               else if( graph->orghead[ancestoredge] < graph->norgmodelknots )
-               {
-                  if( !orgnodes[graph->orghead[ancestoredge]])
-                  {
-                     orgnodes[graph->orghead[ancestoredge]] = TRUE;
-                     solnodequeue[nsolnodes++] = graph->orghead[ancestoredge];
-                  }
-               }
-               curr = curr->parent;
-            }
-         }
-      }
-
-      SCIP_CALL( solstp_markPcancestors(scip, graph->pcancestors, graph->orgtail, graph->orghead, norgnodes,
-            orgnodes, orgedges, solnodequeue, &nsolnodes, &nsoledges ) );
+      norgnodes = solhistory->norgnodes;
+      norgedges = solhistory->norgedges;
+      nsolnodes = solhistory->nsolnodes;
+      nsoledges = solhistory->nsoledges;
+      orgnodes = solhistory->orgnodes_isInSol;
+      orgedges = solhistory->orgedges_isInSol;
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
       for( k = 0; k < norgnodes; k++ )
+      {
          if( orgnodes[k] == TRUE )
             SCIPinfoMessage(scip, file, "V %d\n", k + 1);
+      }
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
 
       for( e = 0; e < norgedges; e += 2 )
+      {
          if( orgedges[e] == TRUE || orgedges[e + 1] == TRUE )
             SCIPinfoMessage(scip, file, "E %d %d\n", graph->orgtail[e] + 1, graph->orghead[e] + 1);
+      }
 
-      SCIPfreeBufferArray(scip, &solnodequeue);
+      solhistory_free(scip, &solhistory);
    }
-
-   SCIPfreeBufferArray(scip, &orgnodes);
-   SCIPfreeBufferArray(scip, &orgedges);
 
    return SCIP_OKAY;
 }

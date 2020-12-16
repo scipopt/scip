@@ -11,6 +11,7 @@ add_executable(scipstp
     src/branch_stp.c
     src/completegraph.c
     src/cons_stp.c
+    src/cons_stpcomponents.c
     src/dialog_stp.c
     src/dualascent.c
     src/enumeration.c
@@ -90,6 +91,7 @@ add_executable(scipstp
     src/stptest_reducesd.c
     src/stptest_reducesepa.c
     src/stptest_reduceutils.c
+    src/solhistory.c
     src/solpool.c
     src/solstp.c
     src/validate.c
