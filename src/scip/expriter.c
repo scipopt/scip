@@ -19,6 +19,11 @@
  * @author Stefan Vigerske
  */
 
+/* enable this to record where active iterators were initialized
+ * (not thread-safe; problematic when using several SCIP instances concurrently)
+ */
+/* #define SCIP_DEBUG_EXPRITER */
+
 #include <assert.h>
 
 #include "scip/expr.h"
@@ -29,9 +34,98 @@
 #define MINDFSSIZE  16 /**< minimum stack size for DFS*/
 #define MINBFSSIZE  16 /**< minimum queue size for BFS */
 
+#ifdef SCIP_DEBUG_EXPRITER
+#include <execinfo.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAXSUBSCIPDEPTH   10   /**< minimal subscip-depth to no longer store backtrace */
+#define MAXBACKTRACE      20   /**< maximal length of backtrace to store */
+
+/** backtrace when iterator was initialized
+ * - store per subscip-depth (easier than storing per SCIP instance)
+ * - store per iterator position that can be active concurrently
+ * - one string for each entry in backtrace
+ * - each entry up to 200 characters
+ */
+char iterinitbacktrace[MAXSUBSCIPDEPTH][SCIP_EXPRITER_MAXNACTIVE][MAXBACKTRACE][200];
+#endif
+
 /*
  * local functions
  */
+
+#ifdef SCIP_DEBUG_EXPRITER
+/** obtain current backtrace and store it in iterinitbacktrace */
+static
+void storeBacktrace(
+   int                   subscipdepth,       /**< current subscip depth */
+   int                   iterpos             /**< iterator position where to store backtrace */
+   )
+{
+   void* array[MAXBACKTRACE];
+   char** strings;
+   int size;
+   int i;
+
+   assert(subscipdepth >= 0);
+   assert(iterpos >= 0);
+   assert(iterpos < SCIP_EXPRITER_MAXNACTIVE);
+
+   if( subscipdepth > MAXSUBSCIPDEPTH )
+      return;
+
+   size = backtrace(array, MAXBACKTRACE);
+   strings = backtrace_symbols(array, size);
+   if( strings == NULL )
+      size = 0;
+
+   for( i = 0; i < size; i++ )
+      strncpy(iterinitbacktrace[subscipdepth][iterpos][i], strings[i], sizeof(iterinitbacktrace[0][0][0]));
+
+   /* '\0' for remining backtrace entries */
+   while( size < MAXBACKTRACE )
+      iterinitbacktrace[subscipdepth][iterpos][size++][0] = '\0';
+
+   free(strings);
+}
+
+static
+void printBacktraces(
+   int                   subscipdepth        /**< current subscip depth */
+   )
+{
+   int i, j;
+
+   assert(subscipdepth >= 0);
+   if( subscipdepth >= MAXSUBSCIPDEPTH )
+   {
+      SCIPerrorMessage("subscip depth %d too high to report active iterators", subscipdepth);
+      return;
+   }
+
+   for( i = 0; i < SCIP_EXPRITER_MAXNACTIVE-1; ++i )
+   {
+      SCIPerrorMessage("Active iterator %d created at:\n", i);
+      for( j = 0; j < MAXBACKTRACE; ++j )
+      {
+         if( iterinitbacktrace[subscipdepth][i][j][0] == '\0' )
+            break;
+         SCIPerrorMessage("  %s\n", iterinitbacktrace[subscipdepth][i][j]);
+      }
+   }
+}
+#else
+#define storeBacktrace(subscipdepth,iterpos)
+
+static
+void printBacktraces(
+   int                   subscipdepth        /**< current subscip depth */
+   )
+{
+   SCIPerrorMessage("Rebuild with SCIP_DEBUG_EXPRITER defined in src/scip/expriter.c to see where currently active iterators were initialized.\n");
+}
+#endif
 
 static
 void deinit(
@@ -473,11 +567,14 @@ SCIP_RETCODE SCIPexpriterInit(
    {
       if( iterator->stat->nactiveexpriter + 1 >= SCIP_EXPRITER_MAXNACTIVE )
       {
-         SCIPerrorMessage("Maximal number of active expression iterators reached.\n");
+         SCIPerrorMessage("Maximal number of active expression iterators reached at subscip-depth %d.\n", iterator->stat->subscipdepth);
+         printBacktraces(iterator->stat->subscipdepth);
          return SCIP_MAXDEPTHLEVEL;
       }
 
       iterator->iterindex = iterator->stat->nactiveexpriter++;
+
+      storeBacktrace(iterator->stat->subscipdepth, iterator->iterindex);
    }
    else
    {
