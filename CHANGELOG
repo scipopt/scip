@@ -153,6 +153,64 @@ Known bugs
 
 @page RN70 Release notes for SCIP 7.0
 
+@section RN703 SCIP 7.0.3
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Fixed bugs
+----------
+
+- Fixed numerical bug by creating and checking the empty solution when problem vanishes in presolving.
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
 @section RN000 SCIP 7.0.2
 *************************
 
