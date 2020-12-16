@@ -513,6 +513,7 @@ SCIP_DECL_HEUREXEC(heurExecSlackPrune)
    if( xval == NULL )
       return SCIP_OKAY;
 
+   *result = SCIP_DIDNOTFIND;
    heurdata->nexecuted++;
    heurdata->lastnfixededges = SCIPStpNfixedEdges(scip);
 

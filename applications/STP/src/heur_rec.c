@@ -2054,6 +2054,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    assert(vars != NULL);
    assert(vars[0] != NULL);
 
+   *result = SCIP_DIDNOTFIND;
    heurdata->ncalls++;
 
    restrictheur = (graph->terms > BOUND_MAXNTERMINALS && graph->edges > BOUND_MAXNEDGES);
