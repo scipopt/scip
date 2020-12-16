@@ -279,6 +279,7 @@ SCIP_RETCODE computeHistoryPcMw(
    int nsolnodes = 0;
    int nsoledges = 0;
    int norgnodes = solhistory->norgnodes;
+   const int norgedges = solhistory->norgedges;
 
    assert(ancestors || graph->edges == 0);
    assert(edgevars || graph->edges == 0);
@@ -354,6 +355,11 @@ SCIP_RETCODE computeHistoryPcMw(
          orgnodes, orgedges, solnodequeue, &nsolnodes, &nsoledges ) );
 
    SCIPfreeBufferArray(scip, &solnodequeue);
+
+   solhistory->nsolnodes = nsolnodes;
+   solhistory->nsoledges = nsoledges;
+   solhistory->norgnodes = norgnodes;
+   solhistory->norgedges = norgedges;
 
    return SCIP_OKAY;
 }

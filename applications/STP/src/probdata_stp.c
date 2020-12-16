@@ -2727,6 +2727,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    PRESOL presolinfo;
    GRAPH* graph;
    SCIP_Bool printGraph;
+   SCIP_Bool useNodeSol;
    int symcons;
    int cyclecons;
    int usedacuts;
@@ -2789,7 +2790,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    }
 
    probdata->graph = graph;
-   SCIP_CALL( reduce_solInit(scip, graph, TRUE, &redsol) );
+   // todo
+   useNodeSol = graph_typeIsSpgLike(graph);
+   SCIP_CALL( reduce_solInit(scip, graph, useNodeSol, &redsol) );
 
    /* reduce the graph (and do some house-holding) */
    SCIP_CALL( presolveStp(scip, probdata, redsol) );
@@ -2843,7 +2846,9 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
 
-   SCIP_CALL( addRedsol(scip, probdata, redsol) );
+   if( useNodeSol )
+      SCIP_CALL( addRedsol(scip, probdata, redsol) );
+
    reduce_solFree(scip, &redsol);
 
    return SCIP_OKAY;
