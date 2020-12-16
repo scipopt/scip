@@ -4253,7 +4253,9 @@ SCIP_RETCODE SCIPnlpHasContinuousNonlinearity(
       }
    }
 
-   return FALSE;
+   SCIPexpriterFree(&it);
+
+   return SCIP_OKAY;
 }
 
 /** gives dual solution values associated with lower bounds of NLP variables */

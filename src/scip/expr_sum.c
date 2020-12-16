@@ -1040,6 +1040,7 @@ SCIP_RETCODE SCIPappendExprSumExpr(
    int nchildren;
 
    assert(expr != NULL);
+   assert(SCIPisExprSum(scip, expr));
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);

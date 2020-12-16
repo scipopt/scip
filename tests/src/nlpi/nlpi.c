@@ -37,6 +37,9 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
+   /* need a problem to have stat created, which is used by expr iterators */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "dummy") );
+
    ipopt = SCIPfindNlpi(scip, "ipopt");
    worhpip = SCIPfindNlpi(scip, "worhp-ip");
    worhpsqp = SCIPfindNlpi(scip, "worhp-sqp");
@@ -116,8 +119,8 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPcreateExprVaridx(scip, &varexprs[3], 3, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprPow(scip, &x0sqr, varexprs[0], 2.0, NULL, NULL) );
    SCIP_CALL( SCIPcreateExprPow(scip, &x1sqr, varexprs[1], 2.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &x2sqr, varexprs[1], 2.0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprProduct(scip, &x0x2, 1, &varexprs[0], 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &x2sqr, varexprs[2], 2.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprProduct(scip, &x0x2, 1, &varexprs[0], 1.0, NULL, NULL) );
    SCIP_CALL( SCIPappendExprChild(scip, x0x2, varexprs[2]) );
 
    /* set objective */
@@ -128,7 +131,7 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
 
    /* constraints */
    SCIP_CALL( SCIPcreateExprSum(scip, &expr, 1, &x0sqr, NULL, 0.0, NULL, NULL) );
-   SCIP_CALL( SCIPappendExprSumExpr(scip, expr, x2sqr, 2.0) );
+   SCIP_CALL( SCIPappendExprSumExpr(scip, expr, x2sqr, 1.0) );
    SCIP_CALL( SCIPappendExprSumExpr(scip, expr, x0x2, 1.0) );
    SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nlpiprob, 1, &lhss[0], &rhss[0], NULL, NULL, NULL, &expr, &consnames[0]) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
@@ -146,6 +149,10 @@ SCIP_RETCODE testNlpi(SCIP_NLPI* nlpi)
    lininds[1] = 3;
    linvals[1] = 1;
    SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nlpiprob, 1, &lhss[2], &rhss[2], &nlinds, &lininds, &linvals, NULL, &consnames[2]) );
+
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
 
    /* solve NLP */
    SCIP_CALL( SCIPnlpiSetRealPar(scip, nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
@@ -318,7 +325,6 @@ SCIP_RETCODE solveQP(
       int j;
       for( j = 0; j <= i; ++j )
       {
-         //SCIP_EXPR* children[2] = { varexprs[j], varexprs[i] };
          SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, (SCIP_EXPR*[2]){ varexprs[j], varexprs[i] }, 1.0, NULL, NULL) );
          SCIP_CALL( SCIPappendExprSumExpr(scip, sumexpr, prodexpr, (j < i) ? 2.0 * vals[i] * vals[j] : vals[i] * vals[j]) );
          SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
@@ -362,8 +368,9 @@ SCIP_RETCODE solveQP(
    {
       SCIP_CALL( SCIPreleaseExpr(scip, &varexprs[i]) );
    }
-   SCIPfreeBufferArray(scip, &inds);
+   SCIPfreeBufferArray(scip, &varexprs);
    SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
    SCIPfreeRandom(scip, &randnumgen);
@@ -382,6 +389,9 @@ Test(nlpi, interface, .init = setup, .fini = teardown,
       SCIP_CALL( testNlpi(SCIPgetNlpis(scip)[i]) );
    }
 }
+
+// TODO this was 100 originally, but that seems pretty slow (maybe CppAD on large quadratics...)
+#define DIM 10
 
 Test(nlpi, solveQP, .init = setup, .fini = teardown,
    .description = "solves convex QP with different NLPIs"
@@ -403,21 +413,21 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
       /* solve QP with Ipopt */
       if( ipopt != NULL )
       {
-         SCIP_CALL( solveQP(ipopt, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &ipoptval,
+         SCIP_CALL( solveQP(ipopt, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &ipoptval,
                &ipoptsolstat, &ipopttermstat) );
       }
 
       /* solve QP with WORHP-IP */
       if( worhpip != NULL )
       {
-         SCIP_CALL( solveQP(worhpip, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpipval,
+         SCIP_CALL( solveQP(worhpip, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpipval,
                &worhpipsolstat, &worhpiptermstat) );
       }
 
       /* solve QP with WORHP-SQP */
       if( worhpsqp != NULL )
       {
-         SCIP_CALL( solveQP(worhpsqp, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpsqpval,
+         SCIP_CALL( solveQP(worhpsqp, i+1, DIM, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpsqpval,
                &worhpsqpsolstat, &worhpsqptermstat) );
       }
 

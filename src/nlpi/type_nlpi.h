@@ -85,11 +85,10 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
  * input:
- *  - scip target SCIP
+ *  - scip target SCIP where to include copy of NLPI
  *  - sourcenlpi the NLP interface to copy
- *  - targetnlpi buffer to store pointer to copy of NLP interface
  */
-#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* sourcenlpi, SCIP_NLPI** targetnlpi)
+#define SCIP_DECL_NLPICOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* sourcenlpi)
 
 /** destructor of NLP interface to free nlpi data
  * 
@@ -181,7 +180,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  */
 #define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nconss, const SCIP_Real* lhss, \
       const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, \
-      SCIP_EXPR* const* exprs, const char** names)
+      SCIP_EXPR** exprs, const char** names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
@@ -200,7 +199,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - constant objective value offset
  */
 #define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int nlins, const int* lininds, \
-      const SCIP_Real* linvals, const SCIP_EXPR* expr, \
+      const SCIP_Real* linvals, SCIP_EXPR* expr, \
       const SCIP_Real constant)
 
 /** change variable bounds
@@ -282,7 +281,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - idxcons index of constraint or -1 for objective
  *  - expr new expression for constraint or objective, or NULL to only remove previous tree
  */
-#define SCIP_DECL_NLPICHGEXPR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, const SCIP_EXPR* expr)
+#define SCIP_DECL_NLPICHGEXPR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, int idxcons, SCIP_EXPR* expr)
 
 /** change the constant offset in the objective
  *

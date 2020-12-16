@@ -839,7 +839,7 @@ SCIP_RETCODE hessLagAddExpr(
          return SCIP_ERROR;
       }
 
-      values[hesoffset[row] + pos] += weight * *h;
+      values[hesoffset[row] + pos] += weight * h[i];
    }
 
    return SCIP_OKAY;
@@ -2208,7 +2208,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    assert(oracle->jacoffsets != NULL);
    assert(oracle->jaccols    != NULL);
 
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &grad, oracle->nvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &grad, oracle->nvars) );
 
    retcode = SCIP_OKAY;
 
@@ -2417,10 +2417,9 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    SCIPdebugMessage("%p eval hessian lag\n", (void*)oracle);
 
-   for( i = oracle->heslagoffsets[oracle->nvars] - 1; i >= 0; --i )
-      hessian[i] = 0.0;
+   BMSclearMemoryArray(hessian, oracle->heslagoffsets[oracle->nvars]);
 
-   if( objfactor != 0.0 )
+   if( objfactor != 0.0 && oracle->objective->expr != NULL )
    {
       SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, objfactor, x, isnewx, oracle->objective->expr, oracle->objective->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }
@@ -2428,7 +2427,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    for( i = 0; i < oracle->nconss; ++i )
    {
       assert( lambda != NULL ); /* for lint */
-      if( lambda[i] == 0.0 )
+      if( lambda[i] == 0.0 || oracle->conss[i]->expr == NULL )
          continue;
       SCIP_CALL_QUIET( hessLagAddExpr(scip, oracle, lambda[i], x, isnewx, oracle->conss[i]->expr, oracle->conss[i]->exprintdata, oracle->heslagoffsets, oracle->heslagcols, hessian) );
    }

@@ -1047,10 +1047,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->nnlpis - 1; p >= 0; --p )
       {
-         SCIP_NLPI* nlpicopy;
-
-         SCIP_CALL_FINALLY( SCIPnlpiCopy(targetset->scip, sourceset->nlpis[p], &nlpicopy), (void)SCIPnlpiFree(targetset->scip, &nlpicopy) );
-         SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
+         SCIP_CALL( SCIPnlpiCopy(targetset->scip, sourceset->nlpis[p]) );
       }
    }
 

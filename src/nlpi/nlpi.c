@@ -156,9 +156,8 @@ SCIP_DECL_NLPICOPY(SCIPnlpiCopy)
 {
    assert(sourcenlpi != NULL);
    assert(sourcenlpi->nlpicopy != NULL);
-   assert(targetnlpi != NULL);
 
-   SCIP_CALL( sourcenlpi->nlpicopy(scip, sourcenlpi, targetnlpi) );
+   SCIP_CALL( sourcenlpi->nlpicopy(scip, sourcenlpi) );
 
    return SCIP_OKAY;
 }

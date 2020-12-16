@@ -99,6 +99,17 @@ SCIP_DECL_EXPRCOPYDATA(copydataVaridx)
    return SCIP_OKAY;
 }
 
+/** expression data free callback */
+static
+SCIP_DECL_EXPRFREEDATA(freedataVaridx)
+{  /*lint --e{715}*/
+   assert(expr != NULL);
+
+   SCIPexprSetData(expr, NULL);
+
+   return SCIP_OKAY;
+}
+
 /** expression print callback */
 static
 SCIP_DECL_EXPRPRINT(printVaridx)
@@ -208,7 +219,7 @@ SCIP_RETCODE SCIPincludeExprHdlrVaridx(
    assert(exprhdlr != NULL);
 
    SCIPexprhdlrSetCopyFreeHdlr(exprhdlr, copyhdlrVaridx, NULL);
-   SCIPexprhdlrSetCopyFreeData(exprhdlr, copydataVaridx, NULL);
+   SCIPexprhdlrSetCopyFreeData(exprhdlr, copydataVaridx, freedataVaridx);
    SCIPexprhdlrSetCompare(exprhdlr, compareVaridx);
    SCIPexprhdlrSetPrint(exprhdlr, printVaridx);
    SCIPexprhdlrSetHash(exprhdlr, hashVaridx);
@@ -235,7 +246,7 @@ SCIP_RETCODE SCIPcreateExprVaridx(
 
    exprhdlr = SCIPfindExprHdlr(scip, EXPRHDLR_NAME);
 
-   if( exprhdlr != NULL )
+   if( exprhdlr == NULL )
    {
       SCIPerrorMessage("could not find %s expression handler -> abort\n", EXPRHDLR_NAME);
       SCIPABORT();

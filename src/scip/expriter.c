@@ -318,8 +318,9 @@ SCIP_RETCODE SCIPexpriterCreate(
    SCIP_EXPRITER**       iterator            /**< buffer to store expression iterator */
    )
 {
-   assert(iterator != NULL);
+   assert(stat != NULL);
    assert(blkmem  != NULL);
+   assert(iterator != NULL);
 
    SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, iterator) );
 

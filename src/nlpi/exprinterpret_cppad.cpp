@@ -33,6 +33,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <algorithm>
 #include <vector>
 using std::vector;
 
@@ -165,12 +166,23 @@ public:
         userevalcapability(SCIP_EXPRINTCAPABILITY_ALL),
         hesrowidxs(NULL),
         hescolidxs(NULL),
-        hesvalues(NULL)
+        hesvalues(NULL),
+        hesnnz(0)
    { }
 
    /** destructor */
    ~SCIP_ExprIntData()
    { }/*lint --e{1540}*/
+
+   /** gives position of index in varidxs vector */
+   int getVarPos(
+      int                varidx              /**< variable index to look for */
+      ) const
+   {
+      // varidxs is sorted, so can use binary search functions
+      assert(std::binary_search(varidxs.begin(), varidxs.end(), varidx));
+      return std::lower_bound(varidxs.begin(), varidxs.end(), varidx) - varidxs.begin();
+   }
 
    vector< int >         varidxs;            /**< variable indices used in expression (unique and sorted) */
    vector< AD<double> >  X;                  /**< vector of dependent variables (same size as varidxs) */
@@ -1359,6 +1371,7 @@ static
 SCIP_RETCODE eval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            expr,               /**< expression */
+   SCIP_EXPRINTDATA*     exprintdata,        /**< interpreter data for root expression */
    const vector<Type>&   x,                  /**< values of variables */
    Type&                 val                 /**< buffer to store expression value */
    )
@@ -1378,14 +1391,13 @@ SCIP_RETCODE eval(
 
       for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
       {
-         SCIP_CALL( eval(scip, SCIPexprGetChildren(expr)[i], x, buf[i]) );
+         SCIP_CALL( eval(scip, SCIPexprGetChildren(expr)[i], exprintdata, x, buf[i]) );
       }
    }
 
    if( SCIPisExprVaridx(scip, expr) )
    {
-      assert(SCIPgetIndexExprVaridx(expr) < (int)x.size());
-      val = x[SCIPgetIndexExprVaridx(expr)];
+      val = x[exprintdata->getVarPos(SCIPgetIndexExprVaridx(expr))];
    }
    else if( SCIPisExprValue(scip, expr) )
    {
@@ -1664,12 +1676,12 @@ SCIP_RETCODE SCIPexprintEval(
       {
          int idx = exprintdata->varidxs[i];
          exprintdata->X[i] = varvals[idx];
-         exprintdata->x[i] = varvals[idx];
+         // exprintdata->x[i] = varvals[idx];
       }
 
       CppAD::Independent(exprintdata->X);
 
-      SCIP_CALL( eval(scip, expr, exprintdata->X, exprintdata->Y[0]) );
+      SCIP_CALL( eval(scip, expr, exprintdata, exprintdata->X, exprintdata->Y[0]) );
 
       exprintdata->f.Dependent(exprintdata->X, exprintdata->Y);
 
@@ -1732,9 +1744,19 @@ SCIP_RETCODE SCIPexprintGrad(
       gradient[exprintdata->varidxs[i]] = jac[i];
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "Grad for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
-   SCIPdebugMsg(scip, "x =");    for (int i = 0; i < n; ++i) printf("\t %g", exprintdata->x[i]); printf("\n");
-   SCIPdebugMsg(scip, "grad ="); for (int i = 0; i < n; ++i) printf("\t %g", jac[i]); printf("\n");
+   SCIPinfoMessage(scip, NULL, "Grad for ");
+   SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+   SCIPinfoMessage(scip, NULL, "\nx    = ");
+   for( size_t i = 0; i < n; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\t %g", exprintdata->x[i]);
+   }
+   SCIPinfoMessage(scip, NULL, "\ngrad = ");
+   for( size_t i = 0; i < n; ++i )
+   {
+      SCIPinfoMessage(scip, NULL, "\t %g", jac[i]);
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
    return SCIP_OKAY;
@@ -1793,14 +1815,15 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          for( size_t i = 0; i < n; ++i )
             for( size_t j = 0; j <= i; ++j )
             {
-               exprintdata->hesrowidxs[k] = i;
-               exprintdata->hescolidxs[k] = j;
+               exprintdata->hesrowidxs[k] = exprintdata->varidxs[i];
+               exprintdata->hescolidxs[k] = exprintdata->varidxs[j];
                k++;
             }
 
 #ifdef SCIP_DEBUG
-         SCIPdebugMsg(scip, "HessianSparsity for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
-         SCIPdebugMsg(scip, "sparsity = all elements, due to discontinuouities\n");
+         SCIPinfoMessage(scip, NULL, "HessianSparsity for ");
+         SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+         SCIPinfoMessage(scip, NULL, ": all elements, due to discontinuities\n");
 #endif
 
          return SCIP_OKAY;
@@ -1830,7 +1853,7 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          {
             size_t row = i / n;
             size_t col = i % n;
-            if( row > col )
+            if( col > row )
                continue;
             ++exprintdata->hesnnz;
          }
@@ -1845,16 +1868,22 @@ SCIP_RETCODE SCIPexprintHessianSparsity(
          {
             size_t row = i / n;
             size_t col = i % n;
-            if( row > col )
+            if( col > row )
                continue;
-            exprintdata->hesrowidxs[j] = row;
-            exprintdata->hescolidxs[j] = col;
+            exprintdata->hesrowidxs[j] = exprintdata->varidxs[row];
+            exprintdata->hescolidxs[j] = exprintdata->varidxs[col];
             ++j;
          }
 
 #ifdef SCIP_DEBUG
-      SCIPdebugMsg(scip, "HessianSparsity for "); SCIPprintExpr(scip, expr, NULL); SCIPdebugPrintf("\n");
-      SCIPdebugMsg(scip, "sparsity ="); for (size_t i = 0; i < exprintdata->hesnnz; ++i) SCIPdebugPrintf(" (%d,%d)", exprintdata->hesrowidxs[i], exprintdata->hescolidxs[i]); SCIPdebugPrintf("\n");
+      SCIPinfoMessage(scip, NULL, "HessianSparsity for ");
+      SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, ":");
+      for( int i = 0; i < exprintdata->hesnnz; ++i )
+      {
+         SCIPinfoMessage(scip, NULL, " (%d,%d)", exprintdata->hesrowidxs[i], exprintdata->hescolidxs[i]);
+      }
+      SCIPinfoMessage(scip, NULL, "\n");
 #endif
    }
 
@@ -1911,15 +1940,38 @@ SCIP_RETCODE SCIPexprintHessian(
 
    size_t n = exprintdata->varidxs.size();
 
-   if( n == 0 )
-      return SCIP_OKAY;
+   if( n > 0 )
+   {
+      // TODO check whether CppADs sparse hessian can be useful
+      /* this one uses reverse mode */
+      vector<double> hess(exprintdata->f.Hessian(exprintdata->x, 0));
 
-   // TODO check whether CppADs sparse hessian can be useful
-   /* this one uses reverse mode */
-   vector<double> hess(exprintdata->f.Hessian(exprintdata->x, 0));
+      for( int i = 0; i < exprintdata->hesnnz; ++i )
+      {
+         exprintdata->hesvalues[i] = hess[exprintdata->getVarPos(exprintdata->hesrowidxs[i]) * n + exprintdata->getVarPos(exprintdata->hescolidxs[i])];
+      }
+   }
 
-   for( int i = 0; i < exprintdata->hesnnz; ++i )
-      exprintdata->hesvalues[i] = hess[exprintdata->hesrowidxs[i] * n + exprintdata->hescolidxs[i]];
+#ifdef SCIP_DEBUG
+      SCIPinfoMessage(scip, NULL, "Hessian for ");
+      SCIP_CALL( SCIPprintExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\nat x = ");
+      for( size_t i = 0; i < n; ++i )
+      {
+         SCIPinfoMessage(scip, NULL, "\t %g", exprintdata->x[i]);
+      }
+      SCIPinfoMessage(scip, NULL, "\nis ");
+      for( int i = 0; i < exprintdata->hesnnz; ++i )
+      {
+         SCIPinfoMessage(scip, NULL, " (%d,%d)=%g", exprintdata->hesrowidxs[i], exprintdata->hescolidxs[i], exprintdata->hesvalues[i]);
+      }
+      SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+   *rowidxs = exprintdata->hesrowidxs;
+   *colidxs = exprintdata->hescolidxs;
+   *hessianvals = exprintdata->hesvalues;
+   *nnz = exprintdata->hesnnz;
 
    return SCIP_OKAY;
 }
