@@ -2595,6 +2595,7 @@ SCIP_RETCODE propConss(
          {
             /* check whether bounds of any auxvar used in constraint provides a tightening
              *   (for the root expression, bounds of auxvar are initially set to constraint sides)
+             * but skip exprs that have an auxvar, but do not participate in propagation
              */
             SCIP_EXPR* expr;
 
@@ -2606,6 +2607,9 @@ SCIP_RETCODE propConss(
                assert(ownerdata != NULL);
 
                if( ownerdata->auxvar == NULL )
+                  continue;
+
+               if( ownerdata->nactivityusesprop == 0 && ownerdata->nactivityusessepa == 0 )
                   continue;
 
                conssides = intEvalVarBoundTightening(scip, ownerdata->auxvar, (void*)conshdlrdata);
@@ -5655,20 +5659,24 @@ SCIP_RETCODE createAuxVar(
    /* type of auxiliary variable depends on integrality information of the expression */
    vartype = SCIPexprIsIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
 
-   /* get activity of expression to initialize variable bounds */
-   SCIP_CALL( SCIPevalExprActivity(scip, expr) );
-   activity = SCIPexprGetActivity(expr);
-   /* we cannot handle a domain error here at the moment, but it seems unlikely that it could occur
-    * if it appear, then we could change code to handle this properly, but for now we just ensure that we continue correctly
-    * and abort in debug mode only
-    */
-   if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+   /* get activity of expression to initialize variable bounds, if something valid is available (evalActivity was called in initSepa) */
+   if( SCIPexprGetActivityTag(expr) >= conshdlrdata->lastboundrelax )
    {
-      SCIPABORT();
-      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
+      activity = SCIPexprGetActivity(expr);
+      /* we cannot handle a domain error here at the moment, but it seems unlikely that it could occur
+       * if it appear, then we could change code to handle this properly, but for now we just ensure that we continue correctly
+       * and abort in debug mode only
+       */
+      if( SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, activity) )
+      {
+         SCIPABORT();
+         SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
+      }
    }
+   else
+      SCIPintervalSetEntire(SCIP_INTERVAL_INFINITY, &activity);
 
-   /* if root node, then activity is globall valid, so use it to initialize the global bounds of the auxvar
+   /* if root node, then activity is globally valid, so use it to initialize the global bounds of the auxvar
     * otherwise, we create var without bounds here and use activity to set local bounds below (needs to be after adding var)
     */
    if( SCIPgetDepth(scip) == 0 )
