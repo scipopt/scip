@@ -177,7 +177,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nphinonneg);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->nstrengthenings > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings : 0.0);
    SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
