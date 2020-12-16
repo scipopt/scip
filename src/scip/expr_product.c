@@ -1850,6 +1850,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesProduct)
       SCIP_INTERVAL bndx = bounds[0];
       SCIP_INTERVAL bndy = bounds[1];
 
+      constant[0] = 0.0;
       coefs[0][0] = 0.0;
       coefs[0][1] = 0.0;
 
