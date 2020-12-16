@@ -140,10 +140,8 @@ SCIP_RETCODE subScipSetupParameters(
    SCIP*                 subscip             /**< sub-SCIP data structure */
    )
 {
-
    /* set hard-coded default parameters */
    SCIP_CALL( SCIPprobdataSetDefaultParams(subscip) );
-
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -157,8 +155,11 @@ SCIP_RETCODE subScipSetupParameters(
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   /* disable expensive resolving */
+   // SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+
+   /* disable STP presolving */
+   SCIP_CALL( SCIPsetIntParam(subscip, "stp/reduction", 0) );
 
    // todo!
   // SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", solvelimits->timelimit) );

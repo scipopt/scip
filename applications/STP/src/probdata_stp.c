@@ -2722,16 +2722,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    const char*           filename            /**< file name */
    )
 {
-   REDSOL* redsol;
-   SCIP_PROBDATA* probdata;
    PRESOL presolinfo;
+   SCIP_PROBDATA* probdata;
    GRAPH* graph;
-   SCIP_Bool printGraph;
-   SCIP_Bool useNodeSol;
-   int symcons;
-   int cyclecons;
-   int usedacuts;
-   int compcentral;
    char* intlogfilename;
    char* logfilename;
    char* probname;
@@ -2739,13 +2732,58 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    assert(scip != NULL);
 
-   presolinfo.fixed = 0;
+   presolinfo.fixed = 0.0;
 
    /* read graph from file */
    SCIP_CALL( graph_load(scip, &graph, filename, &presolinfo) );
 
    SCIPdebugMessage("load type :: %d \n\n", graph->stp_type);
    SCIPdebugMessage("fixed: %f \n\n", presolinfo.fixed );
+
+   SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
+   SCIP_CALL( SCIPgetStringParam(scip, "stp/intlogfile", &intlogfilename) );
+
+   /* copy filename */
+   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
+   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
+
+   /* NOTE: graph will be moved! */
+   SCIP_CALL( SCIPprobdataCreateFromGraph(scip, presolinfo.fixed, probname, graph) );
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata && probdata->graph);
+
+   SCIP_CALL( createLogfile(scip, probdata, intlogfilename, logfilename, filename, probname) );
+   writeCommentSection(scip, probdata->graph, filename);
+
+#ifdef PRINT_PRESOL
+   (void)SCIPsnprintf(presolvefilename, SCIP_MAXSTRLEN, "presol/%s-presolve.stp", probname);
+   SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** sets up the problem data, given a graph */
+SCIP_RETCODE SCIPprobdataCreateFromGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             offset,             /**< offset */
+   char*                 probname,           /**< problem name */
+   GRAPH*                graph_move          /**< graph; will be moved to probdata and pointer invalidated! */
+   )
+{
+   REDSOL* redsol;
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph = graph_move;
+   SCIP_Bool printGraph;
+   SCIP_Bool useNodeSol;
+   int symcons;
+   int cyclecons;
+   int usedacuts;
+   int compcentral;
+
+   assert(scip && probname && graph);
 
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
@@ -2759,14 +2797,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/emitgraph", &(probdata->emitgraph)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/bigt", &(probdata->bigt)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/printGraph", &printGraph) );
-   SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
-   SCIP_CALL( SCIPgetStringParam(scip, "stp/intlogfile", &intlogfilename) );
-
-   /* copy filename */
-   (void) SCIPsnprintf(tmpfilename, SCIP_MAXSTRLEN, "%s", filename);
-   SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
-
-   SCIP_CALL( createLogfile(scip, probdata, intlogfilename, logfilename, filename, probname) );
 
    /* create a problem in SCIP and add non-NULL callbacks via setter functions */
    SCIP_CALL( SCIPcreateProbBasic(scip, probname) );
@@ -2799,8 +2829,6 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    graph = probdata->graph;
 
-   writeCommentSection(scip, graph, filename);
-
    if( printGraph )
    {
       SCIP_CALL( graph_writeGml(graph, "ReducedGraph.gml", NULL) );
@@ -2826,15 +2854,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* setting the offset to the fixed value given in the input file plus the fixings
     * given by the reduction techniques */
-   probdata->offset = presolinfo.fixed + reduce_solGetOffset(redsol);
-   probdata->presolub += presolinfo.fixed;
+   probdata->offset = offset + reduce_solGetOffset(redsol);
+   probdata->presolub += offset;
 
    SCIP_CALL( createModel(scip, probdata) );
-
-#ifdef PRINT_PRESOL
-   (void)SCIPsnprintf(presolvefilename, SCIP_MAXSTRLEN, "presol/%s-presolve.stp", probname);
-   SCIP_CALL( SCIPwriteOrigProblem(scip, presolvefilename, NULL, FALSE) );
-#endif
 
    /* todo test */
    assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
@@ -2853,6 +2876,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    return SCIP_OKAY;
 }
+
 
 /** sets the probdata graph */
 void SCIPprobdataSetGraph(
