@@ -2024,7 +2024,7 @@ SCIP_RETCODE propagateVbounds(
       }
 
       /* propagate vbounds */
-      if( propdata->usevbounds )
+      if( propdata->usevbounds && ! SCIPisInfinity(scip, REALABS(startbound)) )
       {
          SCIP_VAR* boundedvar;
          SCIP_Real newbound;
