@@ -8,6 +8,7 @@ include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(scipstp
     src/cmain.c
+    src/bidecomposition.c
     src/branch_stp.c
     src/completegraph.c
     src/cons_stp.c

@@ -61,6 +61,7 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
+			bidecomposition.o \
 			completegraph.o \
 			cons_stp.o \
 			cons_stpcomponents.o \

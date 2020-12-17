@@ -503,7 +503,6 @@ static
 SCIP_DECL_CONSPROP(consPropStpcomponents)
 {  /*lint --e{715}*/
    SCIP* subscip;
-   SCIP_PROBDATA* probdata;
    GRAPH* graph;
 
    graph = SCIPprobdataGetGraph2(scip);
@@ -569,9 +568,6 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
 
    SCIP_CALL( SCIPfree(&subscip) );
 
-
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
 
 //assert(0);
 
