@@ -634,6 +634,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/nlhdlr_default.o \
 			scip/nlhdlr_perspective.o \
 			scip/nlhdlr_quadratic.o \
+			scip/nlhdlr_quotient.o \
 			scip/nlhdlr_soc.o \
 			scip/nodesel_bfs.o \
 			scip/nodesel_breadthfirst.o \

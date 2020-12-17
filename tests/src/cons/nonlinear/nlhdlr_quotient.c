@@ -22,8 +22,9 @@
 
 #include <string.h>
 
-#include "scip/cons_expr.c"
-#include "scip/cons_expr_nlhdlr_quotient.c"
+#include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.c"
+#include "scip/nlhdlr_quotient.c"
 
 
 /*
@@ -37,30 +38,31 @@ static SCIP_VAR* x;
 static SCIP_VAR* y;
 static SCIP_VAR* z;
 static SCIP_VAR* w;
-static SCIP_CONSEXPR_NLHDLR* nlhdlr;
+static SCIP_NLHDLR* nlhdlr;
 static SCIP_CONSHDLR* conshdlr;
 
-/* creates scip, problem, includes expression constraint handler, creates and adds variables */
+/* creates scip, problem, includes nonlinear constraint handler, creates and adds variables */
 static
 void setup(void)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include cons_expr: this adds the operator handlers and nonlinear handlers; get quadratic handler and conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
-   nlhdlr = SCIPfindConsExprNlhdlr(conshdlr, "quotient");
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "quotient");
    cr_assert_not_null(nlhdlr);
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* go to SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
@@ -96,7 +98,7 @@ TestSuite(nlhdlrquotient, .init = setup, .fini = teardown);
 /** checks whether the values in nlhdlrexprdata are as expected */
 static
 void checkData(
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata, /**< the nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< the nlhdlr expression data */
    SCIP_VAR*             numvar,             /**< expected auxiliary variable of numerator expression */
    SCIP_Real             numcoef,            /**< expected numerator coefficient */
    SCIP_Real             numconst,           /**< expected numerator constant */
@@ -108,8 +110,8 @@ void checkData(
 {
    cr_expect_not_null(nlhdlrexprdata->numexpr);
    cr_expect_not_null(nlhdlrexprdata->denomexpr);
-   cr_expect(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->numexpr) == numvar);
-   cr_expect(SCIPgetConsExprExprAuxVar(nlhdlrexprdata->denomexpr) == denomvar);
+   cr_expect(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->numexpr) == numvar);
+   cr_expect(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->denomexpr) == denomvar);
    cr_expect(SCIPisEQ(scip, numcoef, nlhdlrexprdata->numcoef));
    cr_expect(SCIPisEQ(scip, numconst, nlhdlrexprdata->numconst));
    cr_expect(SCIPisEQ(scip, denomcoef, nlhdlrexprdata->denomcoef));
@@ -121,13 +123,14 @@ void checkData(
 Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool success;
    int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: <x> / <y> <= 1",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: <x> / <y> <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -137,13 +140,14 @@ Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
    {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -158,13 +162,14 @@ Test(nlhdlrquotient, detectandfree1, .description = "detects simple quotient exp
 Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool success;
    int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (4*<x> + 1) / (-3*<x> - 3) <= 1",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (4*<x> + 1) / (-3*<x> - 3) <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -174,13 +179,14 @@ Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
    {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -195,13 +201,14 @@ Test(nlhdlrquotient, detectandfree2, .description = "detects simple quotient exp
 Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool success;
    int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: log((4*<x> + 3) / (<x> + 1)) <= 1",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: log((4*<x> + 3) / (<x> + 1)) <= 1",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -211,13 +218,14 @@ Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons)->children[0];
+   expr = SCIPexprGetChildren(SCIPgetExprConsNonlinear(cons))[0];
+   ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
    {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -232,13 +240,14 @@ Test(nlhdlrquotient, detectandfree3, .description = "detects simple quotient exp
 Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool success;
    int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: (4*<x> + 2*<y> + 3) / (<x> + 1) <= 10",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: (4*<x> + 2*<y> + 3) / (<x> + 1) <= 10",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -248,13 +257,14 @@ Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
    {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_null(nlhdlrexprdata);
 
@@ -266,15 +276,16 @@ Test(nlhdlrquotient, detectandfree4, .description = "detects simple quotient exp
 Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_VAR* auxvarabs;
    SCIP_VAR* auxvarlog;
    SCIP_Bool success;
    int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: log(<x>) / abs(<y>) <= 10",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: log(<x>) / abs(<y>) <= 10",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -284,18 +295,19 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
    {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
 
-   auxvarabs = SCIPgetConsExprExprAuxVar(expr->children[0]->children[0]);
-   auxvarlog = SCIPgetConsExprExprAuxVar(expr->children[1]);
+   auxvarabs = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(SCIPexprGetChildren(expr)[0])[0]);
+   auxvarlog = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
 
    /* check nlhdlrexprdata*/
    checkData(nlhdlrexprdata, auxvarlog, 1.0, 0.0, auxvarabs, 1.0, 0.0, 0.0);
@@ -308,14 +320,15 @@ Test(nlhdlrquotient, detectandfree5, .description = "detects simple quotient exp
 Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient expression")
 {
    SCIP_CONS* cons;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
    SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[expr] <test>: ((4*<x> + 1) / (-3*<x> - 3) + 2) <= 3",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: ((4*<x> + 1) / (-3*<x> - 3) + 2) <= 3",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -328,13 +341,14 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    /* call detection method -> this registers the nlhdlr */
    SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
 
-   expr = SCIPgetExprConsExpr(scip, cons);
+   expr = SCIPgetExprConsNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
 
    /* find the nlhdlr expr data */
-   for( i = 0; i < expr->nenfos; ++i )
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
    {
-      if( expr->enfos[i]->nlhdlr == nlhdlr )
-         nlhdlrexprdata = expr->enfos[i]->nlhdlrexprdata;
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
    }
    cr_assert_not_null(nlhdlrexprdata);
 
@@ -345,7 +359,8 @@ Test(nlhdlrquotient, detectandfree6, .description = "detects simple quotient exp
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
    /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableExpr(scip, conshdlr, cons) );
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

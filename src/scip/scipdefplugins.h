@@ -150,6 +150,7 @@
 #include "scip/nlhdlr_default.h"
 #include "scip/nlhdlr_perspective.h"
 #include "scip/nlhdlr_quadratic.h"
+#include "scip/nlhdlr_quotient.h"
 #include "scip/nlhdlr_soc.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_breadthfirst.h"
