@@ -148,6 +148,7 @@
 #include "scip/nlhdlr_bilinear.h"
 #include "scip/nlhdlr_convex.h"
 #include "scip/nlhdlr_default.h"
+#include "scip/nlhdlr_perspective.h"
 #include "scip/nlhdlr_quadratic.h"
 #include "scip/nlhdlr_soc.h"
 #include "scip/nodesel_bfs.h"

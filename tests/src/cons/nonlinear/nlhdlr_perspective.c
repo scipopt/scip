@@ -21,9 +21,10 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-#include "scip/cons_expr.c"
-#include "scip/cons_expr_nlhdlr_perspective.c"
-#include "scip/cons_expr_nlhdlr_convex.h"
+#include "scip/scipdefplugins.h"
+#include "scip/cons_nonlinear.c"
+#include "scip/nlhdlr_perspective.c"
+#include "scip/nlhdlr_convex.h"
 
 
 /*
@@ -44,45 +45,35 @@ static SCIP_VAR* z_2;
 static SCIP_VAR* z_3;
 
 static SCIP_CONSHDLR* conshdlr;
-static SCIP_CONSEXPR_NLHDLR* nlhdlr = NULL;
-static SCIP_CONSEXPR_NLHDLR* nlhdlr_conv = NULL;
+static SCIP_NLHDLR* nlhdlr = NULL;
+static SCIP_NLHDLR* nlhdlr_conv = NULL;
 
 /* creates scip, problem, includes expression constraint handler, creates and adds variables */
 static
 void setup(void)
 {
-   int h;
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* include cons_expr: this adds the operator handlers and nonlinear handlers; get perspective handler and conshdlr */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
-
-   conshdlr = SCIPfindConshdlr(scip, "expr");
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    cr_assert_not_null(conshdlrdata);
 
    /* get perspective and convex nlhdlrs */
-   for( h = 0; h < conshdlrdata->nnlhdlrs; ++h )
-   {
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "perspective") == 0 )
-         nlhdlr = conshdlrdata->nlhdlrs[h];
-
-      if( strcmp(SCIPgetConsExprNlhdlrName(conshdlrdata->nlhdlrs[h]), "convex") == 0 )
-         nlhdlr_conv = conshdlrdata->nlhdlrs[h];
-
-      if( nlhdlr != NULL && nlhdlr_conv != NULL )
-         break;
-   }
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, NLHDLR_NAME);
+   nlhdlr_conv = SCIPfindNlhdlrNonlinear(conshdlr, "convex");
 
    cr_assert_not_null(nlhdlr);
    cr_assert_not_null(nlhdlr_conv);
 
-
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
 
    /* go to SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
@@ -218,19 +209,22 @@ Test(nlhdlrperspective, varissc, .init = setup, .fini = teardown)
 /* detects x1^2 + x1y1 + x2^2 as an on/off expression with 2 indicator variables */
 Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
    SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1>*<y1> + <x2>^2", NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x1>^2 + <x1>*<y1> + <x2>^2", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
+   SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
    /* add implied variable bounds */
    /* -3z1 + 3 <= x1 <= 3*z1 + 3 */
@@ -255,20 +249,21 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs) );
 
    /* for a sum, detect wants another (non default) nlhdlr to have detected; pretend that convex has detected */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
-   expr->nenfos = 2;
-   expr->enfos[0]->nlhdlr = nlhdlr_conv;
-   expr->enfos[0]->nlhdlrparticipation = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-   expr->enfos[1]->nlhdlr = nlhdlr;
+   ownerdata = SCIPexprGetOwnerData(expr);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ownerdata->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[1]) );
+   ownerdata->nenfos = 2;
+   ownerdata->enfos[0]->nlhdlr = nlhdlr_conv;
+   ownerdata->enfos[0]->nlhdlrparticipation = SCIP_NLHDLR_METHOD_SEPABELOW;
+   ownerdata->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect */
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcing = SCIP_NLHDLR_METHOD_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
-   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
+   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
@@ -284,31 +279,33 @@ Test(nlhdlrperspective, detectandfree1, .init = setup, .fini = teardown)
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
-   SCIPfreeBlockMemory(scip, &expr->enfos[1]);
-   SCIPfreeBlockMemory(scip, &expr->enfos[0]);
-   SCIPfreeBlockMemoryArray(scip, &expr->enfos, 2);
-   expr->nenfos = 0;
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[1]);
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[0]);
+   SCIPfreeBlockMemoryArray(scip, &ownerdata->enfos, 2);
+   ownerdata->nenfos = 0;
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* detects x1^2 as an on/off expression */
 Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
    SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2", NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x1>^2", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
+   SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
    /* z1 <= x1 <= 3*z1 */
    SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
@@ -318,20 +315,22 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddVarVub(scip, x_1, z_2, 3.0, 0.0, &infeas, &nbndchgs) );
 
    /* detect wants another nlhdlr to have detected; pretend that convex has detected */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
-   expr->nenfos = 2;
-   expr->enfos[0]->nlhdlr = nlhdlr_conv;
-   expr->enfos[0]->nlhdlrparticipation = SCIP_CONSEXPR_EXPRENFO_SEPABELOW;
-   expr->enfos[1]->nlhdlr = nlhdlr;
+   ownerdata = SCIPexprGetOwnerData(expr);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ownerdata->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[1]) );
+   ownerdata->nenfos = 2;
+   ownerdata->enfos[0]->nlhdlr = nlhdlr_conv;
+   ownerdata->enfos[0]->nlhdlrparticipation = SCIP_NLHDLR_METHOD_SEPABELOW;
+   ownerdata->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect */
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcing = SCIP_NLHDLR_METHOD_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
-   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting participating = sepabelow, got %d\n",
+         participating);
+   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
@@ -339,31 +338,33 @@ Test(nlhdlrperspective, detectandfree2, .init = setup, .fini = teardown)
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
-   SCIPfreeBlockMemory(scip, &expr->enfos[1]);
-   SCIPfreeBlockMemory(scip, &expr->enfos[0]);
-   SCIPfreeBlockMemoryArray(scip, &expr->enfos, 2);
-   expr->nenfos = 0;
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[1]);
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[0]);
+   SCIPfreeBlockMemoryArray(scip, &ownerdata->enfos, 2);
+   ownerdata->nenfos = 0;
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* detects log(x1+x2+1) as an on/off expression */
 Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
    SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"log(<x1>+<x2>+1.0)", NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"log(<x1>+<x2>+1.0)", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
+   SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
    /* z1 <= x1 <= 3*z1 */
    SCIP_CALL( SCIPaddVarVlb(scip, x_1, z_1, 1.0, 0.0, &infeas, &nbndchgs) );
@@ -382,20 +383,21 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddVarVub(scip, x_2, z_3, 3.0, 0.0, &infeas, &nbndchgs) );
 
    /* detect wants another nlhdlr to have detected; pretend that convex has detected */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
-   expr->nenfos = 2;
-   expr->enfos[0]->nlhdlr = nlhdlr_conv;
-   expr->enfos[0]->nlhdlrparticipation = SCIP_CONSEXPR_EXPRENFO_SEPAABOVE;
-   expr->enfos[1]->nlhdlr = nlhdlr;
+   ownerdata = SCIPexprGetOwnerData(expr);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ownerdata->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[1]) );
+   ownerdata->nenfos = 2;
+   ownerdata->enfos[0]->nlhdlr = nlhdlr_conv;
+   ownerdata->enfos[0]->nlhdlrparticipation = SCIP_NLHDLR_METHOD_SEPAABOVE;
+   ownerdata->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect */
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   enforcing = SCIP_NLHDLR_METHOD_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPAABOVE, "expecting sepaabove, got %d\n", participating);
-   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_NONE);
+   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPAABOVE, "expecting sepaabove, got %d\n", participating);
+   cr_assert_eq(enforcing, SCIP_NLHDLR_METHOD_NONE);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator vars, got %d\n", nlhdlrexprdata->nindicators);
@@ -403,23 +405,24 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) );
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
 
-   SCIPfreeBlockMemory(scip, &expr->enfos[1]);
-   SCIPfreeBlockMemory(scip, &expr->enfos[0]);
-   SCIPfreeBlockMemoryArray(scip, &expr->enfos, 2);
-   expr->nenfos = 0;
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[1]);
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[0]);
+   SCIPfreeBlockMemoryArray(scip, &ownerdata->enfos, 2);
+   ownerdata->nenfos = 0;
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 }
 
 /* separates x1^2 + x1y1 + x2^2 for 2 indicator variables */
 Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
 {
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
-   SCIP_CONSEXPR_NLHDLREXPRDATA* nlhdlrexprdata_conv = NULL;
-   SCIP_CONSEXPR_EXPR* expr;
-   SCIP_CONSEXPR_EXPRENFO_METHOD enforcing;
-   SCIP_CONSEXPR_EXPRENFO_METHOD participating;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata_conv = NULL;
+   SCIP_EXPR* expr;
+   SCIP_NLHDLR_METHOD enforcing;
+   SCIP_NLHDLR_METHOD participating;
+   SCIP_NLHDLR_METHOD enforcing_conv;
+   SCIP_NLHDLR_METHOD participating_conv;
    SCIP_Bool infeas;
    SCIP_CONS* cons;
    int nbndchgs;
@@ -429,19 +432,20 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_VAR* auxvar;
    SCIP_PTRARRAY* rowpreps;
    SCIP_RESULT result;
+   SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* skip when no ipopt */
    if( ! SCIPisIpoptAvailableIpopt() )
       return;
 
    /* create expression and constraint */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x1>^2 + <x1>*<x2> + <x2>^2", NULL, &expr) );
-   SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-   expr = SCIPgetExprConsExpr(scip, cons);
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x1>^2 + <x1>*<x2> + <x2>^2", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, (char*)"nlin", expr, -SCIPinfinity(scip), 0)  );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprConsNonlinear(cons);
    SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
-   SCIP_CALL( SCIPcomputeConsExprExprCurvature(scip, expr) );
-   SCIP_CALL( SCIPregisterConsExprExprUsage(scip, conshdlr, expr, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcomputeExprCurvature(scip, expr) );
+   SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, expr, TRUE, FALSE, FALSE, FALSE) );
 
    /* add implied variable bounds */
    /* -3z1 + 3 <= x1 <= 3*z1 + 3 */
@@ -460,26 +464,30 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPaddVarVub(scip, x_2, z_2, 5.0, 0.0, &infeas, &nbndchgs) );
 
    /* detect by convex handler */
-   enforcing = SCIP_CONSEXPR_EXPRENFO_NONE;
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
-   SCIP_CALL( nlhdlr_conv->detect(scip, conshdlr, nlhdlr_conv, expr, cons, &enforcing, &participating, &nlhdlrexprdata_conv) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
-   cr_assert_eq(enforcing, SCIP_CONSEXPR_EXPRENFO_SEPABELOW);
+   enforcing_conv = SCIP_NLHDLR_METHOD_NONE;
+   participating_conv = SCIP_NLHDLR_METHOD_NONE;
+   SCIP_CALL( SCIPnlhdlrDetect(scip, conshdlr, nlhdlr_conv, expr, cons, &enforcing_conv, &participating_conv,
+         &nlhdlrexprdata_conv) );
+   cr_expect_eq(participating_conv, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting participating_conv = sepabelow, got %d\n",
+         participating);
+   cr_assert_eq(enforcing_conv, SCIP_NLHDLR_METHOD_SEPABELOW);
    cr_assert_not_null(nlhdlrexprdata_conv);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &expr->enfos, 2) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[0]) );
-   SCIP_CALL( SCIPallocBlockMemory(scip, &expr->enfos[1]) );
-   expr->nenfos = 2;
-   expr->enfos[0]->nlhdlr = nlhdlr_conv;
-   expr->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_conv;
-   expr->enfos[0]->nlhdlrparticipation = participating;
-   expr->enfos[1]->nlhdlr = nlhdlr;
+   /* although convex has already detected, it doesn't fill the ownerdata, so we do it here */
+   ownerdata = SCIPexprGetOwnerData(expr);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &ownerdata->enfos, 2) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[0]) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &ownerdata->enfos[1]) );
+   ownerdata->nenfos = 2;
+   ownerdata->enfos[0]->nlhdlr = nlhdlr_conv;
+   ownerdata->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_conv;
+   ownerdata->enfos[0]->nlhdlrparticipation = participating;
+   ownerdata->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect by perspective handler */
-   participating = SCIP_CONSEXPR_EXPRENFO_NONE;
+   participating = SCIP_NLHDLR_METHOD_NONE;
    SCIP_CALL( nlhdlrDetectPerspective(scip, conshdlr, nlhdlr, expr, cons, &enforcing, &participating, &nlhdlrexprdata) );
-   cr_expect_eq(participating, SCIP_CONSEXPR_EXPRENFO_SEPABELOW, "expecting sepabelow, got %d\n", participating);
+   cr_expect_eq(participating, SCIP_NLHDLR_METHOD_SEPABELOW, "expecting sepabelow, got %d\n", participating);
    cr_assert_not_null(nlhdlrexprdata);
 
    cr_expect_eq(nlhdlrexprdata->nindicators, 2, "Expecting 2 indicator variables, got %d\n", nlhdlrexprdata->nindicators);
@@ -492,12 +500,12 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    cr_assert_eq(nlhdlrexprdata->indicators[1], z_2, "Expecting the second indicator to be z_2, got %s\n", SCIPvarGetName(nlhdlrexprdata->indicators[1]));
    cr_assert_eq(nlhdlrexprdata->exprvals0[1], 0.0, "Expecting off value = 0.0, got %f\n", nlhdlrexprdata->exprvals0[1]);
 
-   /* make sure there is an auxvar; since expr is not part of a constraint, we cannot lean on cons_expr to do that for us */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, "auxvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   auxvar = expr->auxvar;
+   /* make sure there is an auxvar; since expr is not part of a constraint, we cannot lean on cons_expr to do that for us TODO but it is part of a constraint? */
+   SCIP_CALL( createAuxVar(scip, expr) );
+   auxvar = SCIPgetExprAuxVarNonlinear(expr);
 
    /* initsepa of nlhdlr convex, so its estimate can be called later */
-   SCIP_CALL( nlhdlr_conv->initsepa(scip, conshdlr, cons, nlhdlr_conv, expr, nlhdlrexprdata_conv, FALSE, TRUE, &infeas) );
+   SCIP_CALL( SCIPnlhdlrInitsepa(scip, conshdlr, cons, nlhdlr_conv, expr, nlhdlrexprdata_conv, FALSE, TRUE, &infeas) );
    /* clear cuts from initsepa, so we can do a cutcount later */
    SCIP_CALL( SCIPclearCuts(scip) );
 
@@ -509,14 +517,14 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPsetSolVal(scip, sol, z_2, 0.5) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 10) );
 
-   SCIP_CALL( SCIPevalauxConsExprNlhdlr(scip, nlhdlr, expr, nlhdlrexprdata, &(expr->enfos[1]->auxvalue), sol) );
-   cr_expect_eq(expr->enfos[1]->auxvalue, 16.0);
+   SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr, expr, nlhdlrexprdata, &(ownerdata->enfos[1]->auxvalue), sol) );
+   cr_expect_eq(ownerdata->enfos[1]->auxvalue, 16.0);
 
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
-   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, expr->enfos[1]->auxvalue,
+   SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, ownerdata->enfos[1]->auxvalue,
          FALSE, FALSE, FALSE, FALSE, &result) );
-   cr_expect_eq(result, SCIP_SEPARATED, "Expected result = %d, got %d", SCIP_SEPARATED, result);
+   cr_expect_eq(result, SCIP_SEPARATED, "Expected enfo result = %d, got %d", SCIP_SEPARATED, result);
    cr_assert(SCIPgetNCuts(scip) == 2);
 
    /* check the cuts */
@@ -533,9 +541,14 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
+   SCIP_CALL( freeAuxVar(scip, expr) );
    SCIP_CALL( freeNlhdlrExprData(scip, nlhdlrexprdata) ); /* convex nlhdlr is freed when expr is released */
    SCIPfreeBlockMemory(scip, &nlhdlrexprdata);
-   SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
+
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[1]);
+   SCIPfreeBlockMemory(scip, &ownerdata->enfos[0]);
+   SCIPfreeBlockMemoryArray(scip, &ownerdata->enfos, 2);
+   ownerdata->nenfos = 0;
 
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
