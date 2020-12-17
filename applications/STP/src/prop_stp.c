@@ -2150,19 +2150,48 @@ SCIP_DECL_PROPEXITSOL(propExitsolStp)
  */
 
 
-/** fix a variable (corresponding to an edge) to zero */
-SCIP_RETCODE SCIPStpFixEdgeVar(
+/** fix a variable (corresponding to an edge) to 0 */
+SCIP_RETCODE SCIPStpFixEdgeVarTo0(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             edgevar,            /**< the variable to be fixed */
-   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
+   SCIP_Bool*            success             /**< could variable be fixed? */
    )
 {
-   assert(scip != NULL);
+   assert(scip && edgevar && success);
 
+   /* not fixed yet? */
    if( SCIPvarGetLbLocal(edgevar) < 0.5 && SCIPvarGetUbLocal(edgevar) > 0.5 )
    {
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
-      (*nfixed)++;
+      *success = TRUE;
+   }
+   else
+   {
+      *success = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** fix a variable (corresponding to an edge) to 1 */
+SCIP_RETCODE SCIPStpFixEdgeVarTo1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
+   SCIP_Bool*            success             /**< could variable be fixed? */
+   )
+{
+   assert(scip && edgevar && success);
+
+   /* not fixed yet? */
+   if( SCIPvarGetLbLocal(edgevar) < 0.5 && SCIPvarGetUbLocal(edgevar) > 0.5 )
+   {
+      SCIP_CALL( SCIPchgVarLb(scip, edgevar, 1.0) );
+      *success = TRUE;
+   }
+   else
+   {
+      *success = FALSE;
    }
 
    return SCIP_OKAY;

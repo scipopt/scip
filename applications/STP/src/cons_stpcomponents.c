@@ -45,7 +45,9 @@
 #include "dialog_stp.h"
 #include "prop_stp.h"
 #include "branch_stp.h"
+#include "solhistory.h"
 #include "graph.h"
+#include "solstp.h"
 
 /**@name Constraint handler properties
  *
@@ -89,10 +91,204 @@ struct SCIP_ConshdlrData
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
 };
 
+
+/** representation of a biconnected component */
+typedef struct sub_component
+{
+   int*                  subedgesToOrg;      /**< map */
+   int*                  subedgesSol;        /**< solution: UNKNOWN/CONNECT */
+   int                   subroot;            /**< root for orientation of solution */
+   int                   nsubedges;          /**< number of edges */
+   int                   nsubnodes;          /**< number of nodes */
+} SUBCOMP;
+
+
 /*
  * Local methods
  */
 
+
+
+/** gets optimal sub-problem solution
+ *  We mark the subedgesSol array, but for each with both orientations */
+static
+SCIP_RETCODE subsolGetNonOriented(
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBCOMP*              subcomp             /**< component */
+   )
+{
+
+   SOLHISTORY* solhistory;
+   SCIP_SOL* subsol = SCIPgetBestSol(subscip);
+   GRAPH* subgraph = SCIPprobdataGetGraph2(subscip);
+   const STP_Bool* edges_isInSol;
+   int* subedgesSol = subcomp->subedgesSol;
+   const int subroot = subcomp->subroot;
+   const int nsubedges = subcomp->nsubedges;
+
+   assert(subgraph && subsol);
+
+   SCIP_CALL( solhistory_init(subscip, subgraph, &solhistory) );
+   SCIP_CALL( solhistory_computeHistory(subscip, subsol, subgraph, solhistory) );
+
+   assert(nsubedges == solhistory->norgedges);
+   edges_isInSol = solhistory->orgedges_isInSol;
+
+   for( int i = 0; i < nsubedges; i++ )
+   {
+      if( edges_isInSol[i] )
+      {
+         subedgesSol[i] = CONNECT;
+      }
+      else
+      {
+         subedgesSol[i] = UNKNOWN;
+      }
+   }
+
+   // maybe not necessary??? DFS
+
+   // mark solution...
+
+
+   solhistory_free(subscip, &solhistory);
+
+
+   return SCIP_OKAY;
+}
+
+
+
+/** orients sub-problem solution */
+static
+SCIP_RETCODE subsolOrient(
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBCOMP*              subcomp             /**< component */
+   )
+{
+   // DFS
+
+   return SCIP_OKAY;
+}
+
+
+/** fixes original edges */
+static
+SCIP_RETCODE subsolFixOrgEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBCOMP*              subcomp             /**< component */
+   )
+{
+   SCIP_VAR** orgvars = SCIPprobdataGetVars(scip);
+   GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+   GRAPH* subgraph = SCIPprobdataGetGraph2(subscip);
+   const int* const subedgesSol = subcomp->subedgesSol;
+   const int* const subedgesToOrg = subcomp->subedgesToOrg;
+   const int nsubedges = subcomp->nsubedges;
+   SCIP_Bool success;
+
+   assert(orggraph && subgraph);
+   assert(orgvars);
+   assert(subedgesSol && subedgesToOrg);
+   assert(nsubedges > 0);
+   // todo
+   assert(nsubedges == orggraph->edges);
+   assert(solstp_isValid(scip, orggraph, subedgesSol));
+
+   for( int i = 0; i < nsubedges; i++ )
+   {
+      const int orgedge = subedgesToOrg[i];
+      assert(graph_edge_isInRange(orggraph, orgedge));
+
+      if( subedgesSol[i] == CONNECT )
+      {
+         SCIP_CALL( SCIPStpFixEdgeVarTo1(scip, orgvars[orgedge], &success) );
+      }
+      else
+      {
+         assert(subedgesSol[i] == UNKNOWN);
+         SCIP_CALL( SCIPStpFixEdgeVarTo0(scip, orgvars[orgedge], &success) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes */
+static
+SCIP_RETCODE subcompInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBCOMP**             subcomponent        /**< to initialize */
+   )
+{
+   SUBCOMP* subcomp;
+   const GRAPH* const subgraph = SCIPprobdataGetGraph2(subscip);
+   const int nsubnodes = graph_get_nNodes(subgraph);
+   const int nsubedges = graph_get_nEdges(subgraph);
+
+   assert(scip && subscip);
+   assert(nsubnodes > 0);
+   assert(nsubedges > 0);
+
+   SCIP_CALL( SCIPallocMemory(subscip, subcomponent) );
+   subcomp = *subcomponent;
+
+   SCIP_CALL( SCIPallocMemoryArray(subscip, &(subcomp->subedgesToOrg), nsubedges) );
+   SCIP_CALL( SCIPallocMemoryArray(subscip, &(subcomp->subedgesSol), nsubedges) );
+
+   subcomp->nsubnodes = nsubnodes;
+   subcomp->nsubedges = nsubedges;
+
+   // todo
+   subcomp->subroot = subgraph->source;
+
+   // todo
+   for( int i = 0; i < nsubedges; i++ )
+      subcomp->subedgesToOrg[i] = i;
+
+   return SCIP_OKAY;
+}
+
+
+/** fixes original edges with sub-solution */
+static
+SCIP_RETCODE subcompFixOrgEdges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBCOMP*              subcomp             /**< component */
+   )
+{
+   assert(scip && subscip && subcomp);
+
+   SCIP_CALL( subsolGetNonOriented(subscip, subcomp) );
+   SCIP_CALL( subsolOrient(subscip, subcomp) );
+   SCIP_CALL( subsolFixOrgEdges(scip, subscip, subcomp) );
+
+   return SCIP_OKAY;
+}
+
+
+/** exits */
+static
+void subcompFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< sub-SCIP data structure */
+   SUBCOMP**             subcomponent        /**< to initialize */
+   )
+{
+   SUBCOMP* subcomp;
+
+   assert(scip && subcomponent);
+   subcomp = *subcomponent;
+   assert(subcomp);
+
+   SCIPfreeMemoryArray(subscip, &(subcomp->subedgesSol));
+   SCIPfreeMemoryArray(subscip, &(subcomp->subedgesToOrg));
+   SCIPfreeMemory(subscip, subcomponent);
+}
 
 
 /** helper */
@@ -181,6 +377,8 @@ SCIP_RETCODE subScipSetup(
 
    return SCIP_OKAY;
 }
+
+
 
 
 /*
@@ -308,11 +506,17 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
    SCIP_PROBDATA* probdata;
    GRAPH* graph;
 
+   graph = SCIPprobdataGetGraph2(scip);
+   assert(graph);
+
    printf("PROPAGATE \n");
 
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   if( graph->terms == 1 )
       return SCIP_OKAY;
 
    // get current graph, with fixings etc! get from prop_stp!
@@ -322,26 +526,45 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
    // if promising:
 
    // like decompse in reduce_sepa!
-
-   SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( subScipSetup(scip, subscip) );
-   SCIP_CALL( SCIPprobdataCreate(subscip, "x.stp") ); // todo create with graph!
-   SCIP_CALL( SCIPsolve(subscip) );
-
-   if( SCIPgetNSols(subscip) > 0 )
    {
-      SCIP_SOL*  bestsol = SCIPgetBestSol(subscip);
-      printf("number of sub-problem solutions=%d \n", SCIPgetNSols(subscip));
+      SUBCOMP* subcomp;
+      GRAPH* orggraph;
+      GRAPH* subgraph;
+
+      orggraph = SCIPprobdataGetGraph2(scip);
+      SCIP_CALL( graph_copy(scip, orggraph, &subgraph) );
+      subgraph->is_packed = FALSE;
+
+      SCIP_CALL( SCIPcreate(&subscip) );
+      SCIP_CALL( subScipSetup(scip, subscip) );
+      SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", subgraph) );
+      SCIP_CALL( subcompInit(scip, subscip, &subcomp) );
+      SCIP_CALL( SCIPsolve(subscip) );
+
+      // check solving status!
+
+      if( 1 )
+      {
+         // fix the arcs of the solution!
+
+         // DFS from terminal...then transform back with ancestor mapping
+         SCIP_CALL( subcompFixOrgEdges(scip, subscip, subcomp) );
+
+      }
+
+      if( SCIPgetNSols(subscip) > 0 )
+      {
+         SCIP_SOL*  bestsol = SCIPgetBestSol(subscip);
+         printf("number of sub-problem solutions=%d \n", SCIPgetNSols(subscip));
+         printf("best obj=%f \n",   SCIPgetSolOrigObj(subscip, bestsol) + SCIPprobdataGetOffset(scip));
 
 
+      }
+      *result = SCIP_REDUCEDDOM;
 
-      printf("best obj=%f \n",   SCIPgetSolOrigObj(subscip, bestsol));
 
-
-     // *result = SCIP_REDUCEDDOM;
+      subcompFree(scip, subscip, &subcomp);
    }
-
-assert(0);
 
 
    SCIP_CALL( SCIPfree(&subscip) );
@@ -350,8 +573,6 @@ assert(0);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   graph = SCIPprobdataGetGraph(probdata);
-   assert(graph != NULL);
 //assert(0);
 
    *result = SCIP_DIDNOTFIND;

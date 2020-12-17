@@ -43,13 +43,24 @@ SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** fix a variable (corresponding to an edge) to zero */
+
+/** fix a variable (corresponding to an edge) to 0 */
 SCIP_EXPORT
-SCIP_RETCODE SCIPStpFixEdgeVar(
+SCIP_RETCODE SCIPStpFixEdgeVarTo0(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             edgevar,            /**< the variable to be fixed */
-   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
+   SCIP_Bool*            success             /**< could variable be fixed? */
    );
+
+
+/** fix a variable (corresponding to an edge) to 1 */
+SCIP_EXPORT
+SCIP_RETCODE SCIPStpFixEdgeVarTo1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
+   SCIP_Bool*            success             /**< could variable be fixed? */
+   );
+
 
 /** return total number of arcs fixed by 'fixedgevar' method of this propagator */
 SCIP_EXPORT

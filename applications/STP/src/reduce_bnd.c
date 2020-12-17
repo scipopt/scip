@@ -1769,12 +1769,17 @@ SCIP_RETCODE reduce_boundHopRc(
             etemp = graph->oeat[e];
             if( fix )
             {
+               SCIP_Bool wasFixed;
                assert(vars != NULL);
                /* try to fix edge */
-               SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nelims) );
+               SCIP_CALL( SCIPStpFixEdgeVarTo0(scip, vars[e], &wasFixed) );
+               if( wasFixed )
+                 (*nelims)++;
 
                /* try to fix reversed edge */
-               SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[flipedge(e)], nelims) );
+               SCIP_CALL( SCIPStpFixEdgeVarTo0(scip, vars[flipedge(e)], &wasFixed) );
+               if( wasFixed )
+                 (*nelims)++;
             }
             else
             {
@@ -1799,10 +1804,13 @@ SCIP_RETCODE reduce_boundHopRc(
             {
                if( fix )
                {
+                  SCIP_Bool wasFixed;
                   assert(vars != NULL);
 
                   /* try to fix edge */
-                  SCIP_CALL( SCIPStpFixEdgeVar(scip, vars[e], nelims) );
+                  SCIP_CALL( SCIPStpFixEdgeVarTo0(scip, vars[e], &wasFixed) );
+                  if( wasFixed )
+                    (*nelims)++;
                }
                else
                {

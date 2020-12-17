@@ -63,7 +63,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             offset,             /**< offset */
-   char*                 probname,           /**< problem name */
+   const char*           probname,           /**< problem name */
    GRAPH*                graph_move          /**< graph; will be moved and pointer invalidated! */
    );
 

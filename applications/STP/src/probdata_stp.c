@@ -2769,7 +2769,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             offset,             /**< offset */
-   char*                 probname,           /**< problem name */
+   const char*           probname,           /**< problem name */
    GRAPH*                graph_move          /**< graph; will be moved to probdata and pointer invalidated! */
    )
 {
@@ -2820,9 +2820,15 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    }
 
    probdata->graph = graph;
+
    // todo
-   useNodeSol = graph_typeIsSpgLike(graph);
-   SCIP_CALL( reduce_solInit(scip, graph, useNodeSol, &redsol) );
+   {
+      int reduction;
+      SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
+
+      useNodeSol = graph_typeIsSpgLike(graph) && (reduction != STP_REDUCTION_NONE);
+      SCIP_CALL( reduce_solInit(scip, graph, useNodeSol, &redsol) );
+   }
 
    /* reduce the graph (and do some house-holding) */
    SCIP_CALL( presolveStp(scip, probdata, redsol) );
