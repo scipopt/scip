@@ -13,31 +13,31 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_xyz.h
+/**@file   nlhdlr_xyz.h
  * @brief  xyz nonlinear handler
  * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_NLHDLR_XYZ_H__
-#define __SCIP_CONS_EXPR_NLHDLR_XYZ_H__
+#ifndef __SCIP_NLHDLR_XYZ_H__
+#define __SCIP_NLHDLR_XYZ_H__
 
 #include "scip/scip.h"
+#include "scip/pub_nlhdlr.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** includes xyz nonlinear handler to consexpr */
+/** includes xyz nonlinear handler to nonlinear constraint handler */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrXyz(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_NLHDLR_XZY_H__ */
+#endif /* __SCIP_NLHDLR_XZY_H__ */

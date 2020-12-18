@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_nlhdlr_xyz.h
+/**@file   nlhdlr_xyz.h
  * @brief  xyz nonlinear handler
  * @author Benjamin Mueller
  */
 
 #include <string.h>
 
-#include "scip/cons_expr_nlhdlr_xyz.h"
-#include "scip/cons_expr.h"
-#include "scip/cons_expr_rowprep.h"
+#include "scip/nlhdlr_xyz.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/pub_misc_rowprep.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME               "xyz"
@@ -37,12 +37,12 @@
 /* TODO: fill in the necessary nonlinear handler data */
 
 /** nonlinear handler expression data */
-struct SCIP_ConsExpr_NlhdlrExprData
+struct SCIP_NlhdlrExprData
 {
 };
 
 /** nonlinear handler data */
-struct SCIP_ConsExpr_NlhdlrData
+struct SCIP_NlhdlrData
 {
 };
 
@@ -59,7 +59,7 @@ struct SCIP_ConsExpr_NlhdlrData
 /** nonlinear handler copy callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrXyz)
+SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -73,7 +73,7 @@ SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(nlhdlrCopyhdlrXyz)
 /** callback to free data of handler */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataXyz)
+SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -88,7 +88,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataXyz)
 /** callback to free expression specific data */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataXyz)
+SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -103,7 +103,7 @@ SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataXyz)
 /** callback to be called in initialization */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitXyz)
+SCIP_DECL_NLHDLRINIT(nlhdlrInitXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -118,7 +118,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINIT(nlhdlrInitXyz)
 /** callback to be called in deinitialization */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitXyz)
+SCIP_DECL_NLHDLREXIT(nlhdlrExitXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -132,7 +132,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXIT(nlhdlrExitXyz)
 
 /** callback to detect structure in expression tree */
 static
-SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectXyz)
+SCIP_DECL_NLHDLRDETECT(nlhdlrDetectXyz)
 { /*lint --e{715}*/
 
    return SCIP_OKAY;
@@ -141,7 +141,7 @@ SCIP_DECL_CONSEXPR_NLHDLRDETECT(nlhdlrDetectXyz)
 
 /** auxiliary evaluation callback of nonlinear handler */
 static
-SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxXyz)
+SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -153,7 +153,7 @@ SCIP_DECL_CONSEXPR_NLHDLREVALAUX(nlhdlrEvalauxXyz)
 /** separation deinitialization method of a nonlinear handler (called during CONSINITLP) */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaXyz)
+SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -168,7 +168,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINITSEPA(nlhdlrInitSepaXyz)
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
+SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -183,7 +183,7 @@ SCIP_DECL_CONSEXPR_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
 /** nonlinear handler enforcement callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoXyz)
+SCIP_DECL_NLHDLRENFO(nlhdlrEnfoXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -198,7 +198,7 @@ SCIP_DECL_CONSEXPR_NLHDLRENFO(nlhdlrEnfoXyz)
 /** nonlinear handler under/overestimation callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateXyz)
+SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -213,7 +213,7 @@ SCIP_DECL_CONSEXPR_NLHDLRESTIMATE(nlhdlrEstimateXyz)
 /** nonlinear handler interval evaluation callback */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalXyz)
+SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -228,7 +228,7 @@ SCIP_DECL_CONSEXPR_NLHDLRINTEVAL(nlhdlrIntevalXyz)
 /** nonlinear handler callback for reverse propagation */
 #if 0
 static
-SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
+SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
 { /*lint --e{715}*/
    SCIPerrorMessage("method of xyz nonlinear handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -245,32 +245,30 @@ SCIP_DECL_CONSEXPR_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
  */
 
 /** includes Xyz nonlinear handler to consexpr */
-SCIP_RETCODE SCIPincludeConsExprNlhdlrXyz(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+SCIP_RETCODE SCIPincludeNlhdlrXyz(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSEXPR_NLHDLRDATA* nlhdlrdata;
-   SCIP_CONSEXPR_NLHDLR* nlhdlr;
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_NLHDLR* nlhdlr;
 
    assert(scip != NULL);
-   assert(consexprhdlr != NULL);
 
    /* create nonlinear handler data */
    nlhdlrdata = NULL;
 
    /* TODO: create and store nonlinear handler specific data here */
 
-   SCIP_CALL( SCIPincludeConsExprNlhdlrBasic(scip, consexprhdlr, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
+   SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
       NLHDLR_ENFOPRIORITY, nlhdlrDetectXyz, nlhdlrEvalauxXyz, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
-   SCIPsetConsExprNlhdlrCopyHdlr(scip, nlhdlr, nlhdlrCopyhdlrXyz);
-   SCIPsetConsExprNlhdlrFreeHdlrData(scip, nlhdlr, nlhdlrFreehdlrdataXyz);
-   SCIPsetConsExprNlhdlrFreeExprData(scip, nlhdlr, nlhdlrFreeExprDataXyz);
-   SCIPsetConsExprNlhdlrInitExit(scip, nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
-   SCIPsetConsExprNlhdlrSepa(scip, nlhdlr, nlhdlrInitSepaXyz, nlhdlrEnfoXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
-   SCIPsetConsExprNlhdlrProp(scip, nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
+   SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrXyz);
+   SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataXyz);
+   SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataXyz);
+   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitXyz, nlhdlrExitXyz);
+   SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaXyz, nlhdlrEnfoXyz, nlhdlrEstimateXyz, nlhdlrExitSepaXyz);
+   SCIPnlhdlrSetProp(nlhdlr, nlhdlrIntevalXyz, nlhdlrReversepropXyz);
 
    return SCIP_OKAY;
 }
