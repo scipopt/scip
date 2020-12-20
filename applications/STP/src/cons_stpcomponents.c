@@ -152,20 +152,6 @@ SCIP_RETCODE subsolGet(
 }
 
 
-
-/** orients sub-problem solution */
-static
-SCIP_RETCODE subsolOrient(
-   SCIP*                 subscip,            /**< sub-SCIP data structure */
-   SUBCOMP*              subcomp             /**< component */
-   )
-{
-   // DFS
-
-   return SCIP_OKAY;
-}
-
-
 /** fixes original edges */
 static
 SCIP_RETCODE subsolFixOrgEdges(
@@ -258,7 +244,6 @@ SCIP_RETCODE subcompFixOrgEdges(
    assert(scip && subscip && subcomp);
 
    SCIP_CALL( subsolGet(subscip, subcomp) );
-   SCIP_CALL( subsolOrient(subscip, subcomp) );
    SCIP_CALL( subsolFixOrgEdges(scip, subinout, subscip, subcomp) );
 
    return SCIP_OKAY;
