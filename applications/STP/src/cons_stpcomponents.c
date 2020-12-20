@@ -24,14 +24,16 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
+//#define SCIP_DEBUG
 #include <assert.h>
 #include <string.h>
 
 #include "cons_stpcomponents.h"
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+#include "bidecomposition.h"
 #include "cons_stp.h"
+#include "reduce.h"
 #include "heur_tm.h"
 #include "reader_stp.h"
 #include "heur_local.h"
@@ -69,7 +71,7 @@
 
 
 #define CONSHDLR_PROP_TIMING   SCIP_PROPTIMING_BEFORELP // SCIP_PROPTIMING_DURINGLPLOOP //  SCIP_PROPTIMING_BEFORELP
-
+#define DAQ_MINCOMPRATIO 0.9
 
 
 /**@} */
@@ -88,14 +90,13 @@ struct SCIP_ConsData
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
-   int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
+   SCIP_Bool             probWasDecomposed;  /**< already decomposed? */
 };
 
 
 /** representation of a biconnected component */
 typedef struct sub_component
 {
-   int*                  subedgesToOrg;      /**< map */
    int*                  subedgesSol;        /**< solution: UNKNOWN/CONNECT */
    int                   subroot;            /**< root for orientation of solution */
    int                   nsubedges;          /**< number of edges */
@@ -109,10 +110,9 @@ typedef struct sub_component
 
 
 
-/** gets optimal sub-problem solution
- *  We mark the subedgesSol array, but for each with both orientations */
+/** gets optimal sub-problem solution */
 static
-SCIP_RETCODE subsolGetNonOriented(
+SCIP_RETCODE subsolGet(
    SCIP*                 subscip,            /**< sub-SCIP data structure */
    SUBCOMP*              subcomp             /**< component */
    )
@@ -123,10 +123,10 @@ SCIP_RETCODE subsolGetNonOriented(
    GRAPH* subgraph = SCIPprobdataGetGraph2(subscip);
    const STP_Bool* edges_isInSol;
    int* subedgesSol = subcomp->subedgesSol;
-   const int subroot = subcomp->subroot;
    const int nsubedges = subcomp->nsubedges;
 
    assert(subgraph && subsol);
+   assert(nsubedges > 0);
 
    SCIP_CALL( solhistory_init(subscip, subgraph, &solhistory) );
    SCIP_CALL( solhistory_computeHistory(subscip, subsol, subgraph, solhistory) );
@@ -146,13 +146,7 @@ SCIP_RETCODE subsolGetNonOriented(
       }
    }
 
-   // maybe not necessary??? DFS
-
-   // mark solution...
-
-
    solhistory_free(subscip, &solhistory);
-
 
    return SCIP_OKAY;
 }
@@ -176,25 +170,23 @@ SCIP_RETCODE subsolOrient(
 static
 SCIP_RETCODE subsolFixOrgEdges(
    SCIP*                 scip,               /**< SCIP data structure */
+   const SUBINOUT*       subinout,
    SCIP*                 subscip,            /**< sub-SCIP data structure */
    SUBCOMP*              subcomp             /**< component */
    )
 {
    SCIP_VAR** orgvars = SCIPprobdataGetVars(scip);
-   GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
-   GRAPH* subgraph = SCIPprobdataGetGraph2(subscip);
    const int* const subedgesSol = subcomp->subedgesSol;
-   const int* const subedgesToOrg = subcomp->subedgesToOrg;
+   const int* const subedgesToOrg = graph_subinoutGetSubToOrgEdgeMap(subinout);
    const int nsubedges = subcomp->nsubedges;
    SCIP_Bool success;
-
-   assert(orggraph && subgraph);
+#ifndef NDEBUG
+   GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+#endif
+   assert(orggraph);
    assert(orgvars);
    assert(subedgesSol && subedgesToOrg);
    assert(nsubedges > 0);
-   // todo
-   assert(nsubedges == orggraph->edges);
-   assert(solstp_isValid(scip, orggraph, subedgesSol));
 
    for( int i = 0; i < nsubedges; i++ )
    {
@@ -203,10 +195,18 @@ SCIP_RETCODE subsolFixOrgEdges(
 
       if( subedgesSol[i] == CONNECT )
       {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("fix to 1: ");
+         graph_edge_printInfo(SCIPprobdataGetGraph2(scip), orgedge);
+#endif
          SCIP_CALL( SCIPStpFixEdgeVarTo1(scip, orgvars[orgedge], &success) );
       }
       else
       {
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("fix to 0: ");
+         graph_edge_printInfo(SCIPprobdataGetGraph2(scip), orgedge);
+#endif
          assert(subedgesSol[i] == UNKNOWN);
          SCIP_CALL( SCIPStpFixEdgeVarTo0(scip, orgvars[orgedge], &success) );
       }
@@ -236,18 +236,11 @@ SCIP_RETCODE subcompInit(
    SCIP_CALL( SCIPallocMemory(subscip, subcomponent) );
    subcomp = *subcomponent;
 
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &(subcomp->subedgesToOrg), nsubedges) );
    SCIP_CALL( SCIPallocMemoryArray(subscip, &(subcomp->subedgesSol), nsubedges) );
 
    subcomp->nsubnodes = nsubnodes;
    subcomp->nsubedges = nsubedges;
-
-   // todo
    subcomp->subroot = subgraph->source;
-
-   // todo
-   for( int i = 0; i < nsubedges; i++ )
-      subcomp->subedgesToOrg[i] = i;
 
    return SCIP_OKAY;
 }
@@ -257,15 +250,16 @@ SCIP_RETCODE subcompInit(
 static
 SCIP_RETCODE subcompFixOrgEdges(
    SCIP*                 scip,               /**< SCIP data structure */
+   const SUBINOUT*       subinout,
    SCIP*                 subscip,            /**< sub-SCIP data structure */
    SUBCOMP*              subcomp             /**< component */
    )
 {
    assert(scip && subscip && subcomp);
 
-   SCIP_CALL( subsolGetNonOriented(subscip, subcomp) );
+   SCIP_CALL( subsolGet(subscip, subcomp) );
    SCIP_CALL( subsolOrient(subscip, subcomp) );
-   SCIP_CALL( subsolFixOrgEdges(scip, subscip, subcomp) );
+   SCIP_CALL( subsolFixOrgEdges(scip, subinout, subscip, subcomp) );
 
    return SCIP_OKAY;
 }
@@ -286,7 +280,6 @@ void subcompFree(
    assert(subcomp);
 
    SCIPfreeMemoryArray(subscip, &(subcomp->subedgesSol));
-   SCIPfreeMemoryArray(subscip, &(subcomp->subedgesToOrg));
    SCIPfreeMemory(subscip, subcomponent);
 }
 
@@ -379,6 +372,202 @@ SCIP_RETCODE subScipSetup(
 }
 
 
+/** is promising? */
+static
+SCIP_Bool decomposeIsPromising(
+   const GRAPH*          g,                  /**< graph data structure */
+   const BIDECOMP*       bidecomp
+   )
+{
+   const SCIP_Real mincompratio = DAQ_MINCOMPRATIO;
+   const SCIP_Real maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
+
+   assert(GT(maxratio, 0.0));
+
+   return (maxratio < mincompratio);
+}
+
+
+/** gets subgraph */
+static
+SCIP_RETCODE decomposeGetSubgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex,          /**< component index */
+   GRAPH*                orggraph,           /**< graph data structure */
+   GRAPH**               subgraph
+   )
+{
+/*
+   SCIP_CALL( graph_copy(scip, orggraph, subgraph) );
+   (*subgraph)->is_packed = FALSE;
+   return SCIP_OKAY;
+*/
+   int subroot;
+   GRAPH* subg;
+   SUBINOUT* subinout = bidecomp->subinout;
+   assert(graph_valid(scip, orggraph));
+
+   bidecomposition_markSub(bidecomp, compindex, orggraph);
+   SCIP_CALL( graph_subgraphExtract(scip, orggraph, subinout, subgraph) );
+   subg = *subgraph;
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("original nodes of connected components: \n");
+
+   for( int i = 0; i < orggraph->knots; i++ )
+   {
+      if( orggraph->mark[i] )
+         graph_knot_printInfo(orggraph, i);
+   }
+#endif
+
+   SCIP_CALL( bidecomposition_getMarkedSubRoot(scip, bidecomp, orggraph, subg, &subroot) );
+   assert(graph_knot_isInRange(subg, subroot));
+   assert(Is_term(subg->term[subroot]));
+   subg->source = subroot;
+
+   return SCIP_OKAY;
+}
+
+
+/** solves subproblem */
+static
+SCIP_RETCODE decomposeSolveSub(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex,          /**< component index */
+   GRAPH*                orggraph           /**< graph data structure */
+   )
+{
+   SCIP* subscip;
+   SUBCOMP* subcomp;
+   GRAPH* subgraph;
+
+   assert(scip && orggraph && bidecomp);
+
+   if( bidecomposition_componentIsTrivial(bidecomp, compindex) )
+   {
+      SCIPdebugMessage("trivial component, skip! \n");
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMessage("building subproblem... \n");
+
+   SCIP_CALL( decomposeGetSubgraph(scip, bidecomp, compindex, orggraph, &subgraph) );
+
+   SCIP_CALL( SCIPcreate(&subscip) );
+   SCIP_CALL( subScipSetup(scip, subscip) );
+   SCIP_CALL( graph_subinoutCompleteNewHistory(subscip, orggraph, bidecomp->subinout, subgraph) );
+   /* NOTE: subgraph will be moved into subscip probdata! */
+   SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", subgraph) );
+   SCIP_CALL( subcompInit(scip, subscip, &subcomp) );
+   SCIP_CALL( SCIPsolve(subscip) );
+
+   SCIPdebugMessage("subproblem has been solved \n");
+
+   if( SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+   {
+      /* here we basically solve the entire problem */
+      SCIP_CALL( subcompFixOrgEdges(scip, bidecomp->subinout, subscip, subcomp) );
+   }
+   else
+   {
+      SCIPerrorMessage("Wrong solution status from subscip: %d  \n", SCIPgetStatus(subscip));
+      return SCIP_ERROR;
+   }
+
+   graph_subinoutClean(scip, bidecomp->subinout);
+   subcompFree(scip, subscip, &subcomp);
+   SCIP_CALL( SCIPfree(&subscip) );
+
+   return SCIP_OKAY;
+}
+
+
+/** tries to decompose and solve */
+static
+SCIP_RETCODE decomposeExec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CUTNODES*             cutnodes,
+   GRAPH*                orggraph,           /**< graph to decompose */
+   SCIP_Bool*            success             /**< decomposed? */
+   )
+{
+   BIDECOMP* bidecomp;
+
+   assert(graph_valid(scip, orggraph));
+   assert(*success == FALSE);
+
+   SCIP_CALL( bidecomposition_init(scip, cutnodes, orggraph, &bidecomp) );
+
+   if( decomposeIsPromising(orggraph, bidecomp) )
+   {
+      SCIP_CALL( bidecomposition_initSubInOut(scip, orggraph, bidecomp) );
+      SCIP_CALL( graph_subinoutActivateEdgeMap(orggraph, bidecomp->subinout) );
+      graph_subinoutActivateNewHistory(bidecomp->subinout);
+
+      printf("solving problem by decomposition (%d components) \n",  bidecomp->nbicomps);
+
+      /* solve each biconnected component individually */
+      for( int i = 0; i < bidecomp->nbicomps; i++ )
+      {
+         SCIP_CALL( decomposeSolveSub(scip, bidecomp, i, orggraph) );
+      }
+
+      *success = TRUE;
+   }
+
+   bidecomposition_free(scip, &bidecomp);
+
+   return SCIP_OKAY;
+}
+
+
+/** decomposes and solves */
+static
+SCIP_RETCODE divideAndConquer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            success             /**< decomposed? */
+   )
+{
+   GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+   CUTNODES* cutnodes;
+
+   assert(success);
+   assert(orggraph->terms > 1);
+   assert(graph_typeIsSpgLike(orggraph) && "only SPG decomposition supported yet");
+
+   *success = FALSE;
+   graph_mark(orggraph);
+
+   if( !bidecomposition_isPossible(orggraph) )
+   {
+      SCIPdebugMessage("graph is too large...don't decompose \n");
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( bidecomposition_cutnodesInit(scip, orggraph, &cutnodes) );
+   bidecomposition_cutnodesCompute(orggraph, cutnodes);
+
+   if( cutnodes->biconn_ncomps > 0 )
+   {
+      SCIP_Real fixed = 0.0;
+      int nelims = 0;
+
+      // todo this method changes the graph! probably only good for propgraph, otherwise gets into troubles!
+      SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, orggraph, &fixed, &nelims) );
+
+      SCIPdebugMessage("simple reductions: %d \n", nelims);
+
+      /* try to decompose and reduce recursively */
+      SCIP_CALL( decomposeExec(scip, cutnodes, orggraph, success) );
+   }
+
+   bidecomposition_cutnodesFree(scip, &cutnodes);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -434,10 +623,7 @@ SCIP_DECL_CONSINITSOL(consInitsolStpcomponents)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolStpcomponents)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -492,8 +678,6 @@ static
 SCIP_DECL_CONSINITLP(consInitlpStpcomponents)
 {  /*lint --e{715}*/
 
-   printf("INIT LP \n");
-
 
    return SCIP_OKAY;
 }
@@ -502,10 +686,11 @@ SCIP_DECL_CONSINITLP(consInitlpStpcomponents)
 static
 SCIP_DECL_CONSPROP(consPropStpcomponents)
 {  /*lint --e{715}*/
-   SCIP* subscip;
-   GRAPH* graph;
+   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   GRAPH* graph = SCIPprobdataGetGraph2(scip);
+   SCIP_Bool success;
 
-   graph = SCIPprobdataGetGraph2(scip);
+   assert(conshdlrdata);
    assert(graph);
 
    printf("PROPAGATE \n");
@@ -518,63 +703,27 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
    if( graph->terms == 1 )
       return SCIP_OKAY;
 
-   // get current graph, with fixings etc! get from prop_stp!
+   if( !graph_typeIsSpgLike(graph) )
+      return SCIP_OKAY;
 
-   // check for biconnected components
-
-   // if promising:
-
-   // like decompse in reduce_sepa!
-   {
-      SUBCOMP* subcomp;
-      GRAPH* orggraph;
-      GRAPH* subgraph;
-
-      orggraph = SCIPprobdataGetGraph2(scip);
-      SCIP_CALL( graph_copy(scip, orggraph, &subgraph) );
-      subgraph->is_packed = FALSE;
-
-      SCIP_CALL( SCIPcreate(&subscip) );
-      SCIP_CALL( subScipSetup(scip, subscip) );
-      SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", subgraph) );
-      SCIP_CALL( subcompInit(scip, subscip, &subcomp) );
-      SCIP_CALL( SCIPsolve(subscip) );
-
-      // check solving status!
-
-      if( 1 )
-      {
-         // fix the arcs of the solution!
-
-         // DFS from terminal...then transform back with ancestor mapping
-         SCIP_CALL( subcompFixOrgEdges(scip, subscip, subcomp) );
-
-      }
-
-      if( SCIPgetNSols(subscip) > 0 )
-      {
-         SCIP_SOL*  bestsol = SCIPgetBestSol(subscip);
-         printf("number of sub-problem solutions=%d \n", SCIPgetNSols(subscip));
-         printf("best obj=%f \n",   SCIPgetSolOrigObj(subscip, bestsol) + SCIPprobdataGetOffset(scip));
-
-
-      }
-      *result = SCIP_REDUCEDDOM;
-
-
-      subcompFree(scip, subscip, &subcomp);
-   }
-
-
-   SCIP_CALL( SCIPfree(&subscip) );
-
-
-//assert(0);
+   assert(!conshdlrdata->probWasDecomposed);
 
    *result = SCIP_DIDNOTFIND;
 
+   // call update propgraph from prop_stp
+   // get the graph from prop_stp
+
+   SCIP_CALL( divideAndConquer(scip, &success) );
+
+   if( success )
+   {
+      printf("problem solved by decomposition \n");
+      conshdlrdata->probWasDecomposed = TRUE;
+   }
+
    return SCIP_OKAY;
 }
+
 
 /** variable rounding lock method of constraint handler */
 static
@@ -602,6 +751,7 @@ SCIP_RETCODE SCIPincludeConshdlrStpcomponents(
 
    /* create stp constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   conshdlrdata->probWasDecomposed = FALSE;
 
    conshdlr = NULL;
    /* include constraint handler */

@@ -1545,6 +1545,30 @@ void graph_free_fixed(
 }
 
 
+/** frees fixed edges */
+void graph_free_fixedEdgesOnly(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< the graph */
+   )
+{
+   IDX* curr;
+   FIXED* fixedcomponents = g->fixedcomponents;
+
+   assert(scip && g);
+   assert(fixedcomponents != NULL);
+   assert(fixedcomponents->nfixnodes >= 0);
+
+   curr = fixedcomponents->fixedges;
+   while( curr != NULL )
+   {
+      fixedcomponents->fixedges = curr->parent;
+      SCIPfreeBlockMemory(scip, &(curr));
+
+      curr = fixedcomponents->fixedges;
+   }
+}
+
+
 /** adds new fixed components */
 SCIP_RETCODE graph_fixed_add(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1749,6 +1773,7 @@ SCIP_RETCODE graph_copyFixed(
    fixed_org = g->fixedcomponents;
 
    fixed_copy->fixedges = NULL;
+
    if( fixed_org->fixedges != NULL  )
    {
       SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(fixed_copy->fixedges), fixed_org->fixedges, &conflict) );

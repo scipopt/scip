@@ -236,6 +236,20 @@ SCIP_Bool SCIPprobdataObjIsIntegral(
    );
 
 
+/** returns if in subproblem */
+SCIP_EXPORT
+SCIP_Bool SCIPprobdataIsSubproblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/** sets subproblem */
+SCIP_EXPORT
+void SCIPprobdataMarkAsSubproblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
 /** writes the best solution to the intermediate solution file */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprobdataWriteIntermediateSolution(

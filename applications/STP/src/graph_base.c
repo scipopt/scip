@@ -663,35 +663,30 @@ SCIP_RETCODE graph_initHistory(
 {
    IDX** ancestors;          /* ancestor lists array (over all edges) */
    IDX** pcancestors;        /* ancestor lists array (over all nodes) */
-   int* tail;                /* tail of all edges  */
-   int* head;                /* head of all edges  */
-   int* orgtail;             /* (original) tail of all original edges  */
-   int* orghead;             /* (original) head of all original edges  */
-   const int nedges = graph->edges;
-   SCIP_Bool pcmw;
+   const int nedges = graph_get_nEdges(graph);
+   const int* tail = graph->tail;
+   const int* head = graph->head;
+   int* orgtail;
+   int* orghead;
+   const SCIP_Bool isPcMw = graph_pc_isPcMw(graph);
 
-   assert(scip != NULL);
-   assert(graph != NULL);
-
-   pcmw = graph_pc_isPcMw(graph);
+   assert(scip);
+   assert(!graph->orgtail && !graph->orghead);
+   assert(!graph->ancestors);
+   assert(nedges > 0);
 
    SCIP_CALL( graph_initPseudoAncestors(scip, graph) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orgtail), nedges) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orghead), nedges) );
 
-   tail = graph->tail;
-   head = graph->head;
    orgtail = graph->orgtail;
    orghead = graph->orghead;
 
-   for( int e = 0; e < nedges; e++ )
-   {
-      orgtail[e] = tail[e];
-      orghead[e] = head[e];
-   }
+   BMScopyMemoryArray(orgtail, tail, nedges);
+   BMScopyMemoryArray(orghead, head, nedges);
 
-   if( pcmw )
+   if( isPcMw )
    {
       const int nnodes = graph->knots;
 
@@ -1204,6 +1199,18 @@ SCIP_Bool graph_isMarked(
    return TRUE;
 }
 
+
+
+/** is the current graph already set up? (with history and path) */
+SCIP_Bool graph_isSetUp(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   assert(g);
+   assert((g->orgtail == NULL) == (g->ancestors == NULL));
+
+   return (g->ancestors != NULL);
+}
 
 
 void graph_show(

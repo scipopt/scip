@@ -31,6 +31,7 @@
 #include <string.h>
 #include <assert.h>
 #include "bidecomposition.h"
+#include "stpvector.h"
 #include "portab.h"
 
 /*
@@ -364,6 +365,73 @@ void decomposeBuildCsr(
 }
 
 
+/** gets first marked component */
+static
+SCIP_RETCODE decomposeGetFirstMarked(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< graph data structure */
+   int*                  subroot             /**< the new root (out) */
+   )
+{
+   const int* const gMark = orggraph->mark;
+   STP_Bool* nodes_isVisited;
+   STP_Vectype(int) stack = NULL;
+   const int nnodes = graph_get_nNodes(orggraph);
+   const int root = orggraph->source;
+   SCIP_Bool markedIsFound = FALSE;
+
+   if( gMark[root] )
+   {
+      *subroot = root;
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isVisited, nnodes) );
+
+    for( int i = 0; i < nnodes; i++ )
+       nodes_isVisited[i] = FALSE;
+
+   nodes_isVisited[root] = TRUE;
+   StpVecPushBack(scip, stack, root);
+
+   /* DFS loop */
+   while( !StpVecIsEmpty(stack) && !markedIsFound )
+   {
+      const int node = stack[StpVecGetSize(stack) - 1];
+      assert(StpVecGetSize(stack) >= 1);
+      StpVecPopBack(stack);
+
+      assert(graph_knot_isInRange(orggraph, node));
+
+      for( int a = orggraph->outbeg[node]; a != EAT_LAST; a = orggraph->oeat[a] )
+      {
+         const int head = orggraph->head[a];
+
+         if( !nodes_isVisited[head] )
+         {
+            if( gMark[head] )
+            {
+               assert(!markedIsFound);
+
+               markedIsFound = TRUE;
+               *subroot = head;
+               break;
+            }
+            StpVecPushBack(scip, stack, head);
+            nodes_isVisited[head] = TRUE;
+         }
+      }
+   }
+
+   assert(markedIsFound);
+
+   StpVecFree(scip, stack);
+   SCIPfreeBufferArray(scip, &nodes_isVisited);
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Interface methods
  */
@@ -495,7 +563,7 @@ void bidecomposition_cutnodesCompute(
    }
 }
 
-/** initalizes */
+/** initializes */
 SCIP_RETCODE bidecomposition_init(
    SCIP*                 scip,               /**< SCIP data structure */
    const CUTNODES*       cutnodes,           /**< cut nodes */
@@ -517,13 +585,28 @@ SCIP_RETCODE bidecomposition_init(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &nodes, nnodes + ncomps) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &starts, ncomps + 1) );
-   SCIP_CALL( graph_subinoutInit(scip, g, &(bidecomp->subinout)) );
-
+   bidecomp->subinout = NULL;
    bidecomp->nodes = nodes;
    bidecomp->starts = starts;
    bidecomp->nbicomps = ncomps;
 
    decomposeBuildCsr(cutnodes, g, bidecomp);
+
+   return SCIP_OKAY;
+}
+
+
+/** initializes */
+SCIP_RETCODE bidecomposition_initSubInOut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   BIDECOMP*             bidecomposition
+   )
+{
+   assert(scip && g && bidecomposition);
+   assert(!bidecomposition->subinout);
+
+   SCIP_CALL( graph_subinoutInit(scip, g, &(bidecomposition->subinout)) );
 
    return SCIP_OKAY;
 }
@@ -542,7 +625,9 @@ void bidecomposition_free(
    bidecomp = *bidecomposition;
    assert(bidecomp);
 
-   graph_subinoutFree(scip, &(bidecomp->subinout));
+   if( bidecomp->subinout )
+      graph_subinoutFree(scip, &(bidecomp->subinout));
+
    SCIPfreeMemoryArray(scip, &(bidecomp->starts));
    SCIPfreeMemoryArray(scip, &(bidecomp->nodes));
 
@@ -567,6 +652,8 @@ void bidecomposition_markSub(
 
    for( int i = 0; i < nnodes; i++ )
       gMark[i] = FALSE;
+
+   SCIPdebugMessage("marking subgraph: \n");
 
    for( int i = compstart; i != compend; i++ )
    {
@@ -595,8 +682,86 @@ void bidecomposition_markSub(
 }
 
 
+/** gets root of marked sub-component
+ *  bidecomposition_markSub needs to be called before! */
+SCIP_RETCODE bidecomposition_getMarkedSubRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   const GRAPH*          orggraph,           /**< graph data structure */
+   const GRAPH*          subgraph,           /**< graph data structure */
+   int*                  subroot             /**< the new root (out) */
+   )
+{
+   const int* nodemap_OrgToSub;
+
+   assert(bidecomp && orggraph && subroot);
+   assert(bidecomp->subinout);
+
+   *subroot = -1;
+
+   SCIP_CALL( decomposeGetFirstMarked(scip, orggraph, subroot) );
+
+   assert(graph_knot_isInRange(orggraph, *subroot));
+   assert(Is_term(orggraph->term[*subroot]));
+
+   nodemap_OrgToSub = graph_subinoutGetOrgToSubNodeMap(bidecomp->subinout);
+   *subroot = nodemap_OrgToSub[*subroot];
+
+   assert(graph_knot_isInRange(subgraph, *subroot));
+   assert(Is_term(subgraph->term[*subroot]));
+
+   return SCIP_OKAY;
+}
+
+
+/** component consisting of at most one node? */
+SCIP_Bool bidecomposition_componentIsTrivial(
+   const BIDECOMP*       bidecomp,           /**< all-components storage */
+   int                   compindex           /**< component index */
+   )
+{
+   assert(bidecomp);
+   assert(0 <= compindex && compindex < bidecomp->nbicomps);
+
+   {
+      const int compstart = bidecomp->starts[compindex];
+      const int compend = bidecomp->starts[compindex + 1];
+
+      assert(compstart <= compend);
+
+      if( compend - compstart <= 1 )
+      {
+         SCIPdebugMessage("component %d is of size %d, SKIP! \n", compindex, compend - compstart);
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+
+/** todo remove once bigger graphs can be handled */
+SCIP_Bool bidecomposition_isPossible(
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   int nnodes_real = 0;
+   const int nnodes = graph_get_nNodes(g);
+   const int* const isMarked = g->mark;
+
+   assert(graph_isMarked(g));
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( isMarked[i] )
+         nnodes_real++;
+   }
+
+   return (nnodes_real < 100000);
+}
+
 /** returns ratio of nodes of maximum component and the remaining graph */
-SCIP_Real bidecompositon_getMaxcompNodeRatio(
+SCIP_Real bidecomposition_getMaxcompNodeRatio(
    const BIDECOMP*       bidecomp
    )
 {

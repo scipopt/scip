@@ -145,6 +145,21 @@ SCIP_RETCODE computeHistory(
          updateorgsol(graph, ancestors[e], orgnodes, orgedges, &nsolnodes, &nsoledges);
    }
 
+   if( nsolnodes == 0 )
+   {
+      assert(graph->terms == 1);
+
+      solhistory->nsolnodes = 1;
+      solhistory->nsoledges = 0;
+      solhistory->norgnodes = norgnodes;
+      solhistory->norgedges = norgedges;
+
+      return SCIP_OKAY;
+   }
+
+
+   assert(nsolnodes > 0);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &nodechild, norgnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &edgeancestor, 2 * nsoledges) );
 

@@ -93,6 +93,7 @@ extern SCIP_Bool      graph_valid_pseudoAncestors(SCIP*, const GRAPH*);
 /* Fixed components */
 extern SCIP_RETCODE   graph_init_fixed(SCIP*, GRAPH*);
 extern void           graph_free_fixed(SCIP*, GRAPH*);
+extern void           graph_free_fixedEdgesOnly(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_add(SCIP*, IDX*, const int*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addEdge(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addNodePc(SCIP*, int, GRAPH*);
@@ -184,6 +185,7 @@ extern SCIP_RETCODE   graph_pack(SCIP*, GRAPH*, GRAPH**, REDSOL*, SCIP_Bool);
 extern SCIP_RETCODE   graph_init(SCIP*, GRAPH**, int, int, int);
 extern SCIP_RETCODE   graph_initHistory(SCIP*, GRAPH*);
 extern SCIP_Bool      graph_isMarked(const GRAPH*);
+extern SCIP_Bool      graph_isSetUp(const GRAPH*);
 extern SCIP_RETCODE   graph_buildCompleteGraph(SCIP*, GRAPH**, int);
 extern SCIP_Bool graph_valid(SCIP*, const GRAPH*);
 extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
@@ -193,12 +195,16 @@ extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
 extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, const GRAPH*, SUBINOUT*, GRAPH**);
 extern SCIP_RETCODE   graph_subinoutInit(SCIP*, const GRAPH*, SUBINOUT**);
 extern void           graph_subinoutFree(SCIP*, SUBINOUT**);
+extern void           graph_subinoutClean(SCIP*, SUBINOUT*);
+extern SCIP_RETCODE   graph_subinoutActivateEdgeMap(const GRAPH*, SUBINOUT*);
+extern void           graph_subinoutActivateNewHistory(SUBINOUT*);
+const int*            graph_subinoutGetSubToOrgEdgeMap(const SUBINOUT*);
 const int*            graph_subinoutGetSubToOrgNodeMap(const SUBINOUT*);
 const int*            graph_subinoutGetOrgToSubNodeMap(const SUBINOUT*);
 const int*            graph_subinoutGetContractionRecord(const SUBINOUT*);
 int                   graph_knot_getContractionRecordAncestor(int, const SUBINOUT*);
 extern SCIP_RETCODE   graph_subgraphReinsert(SCIP*, SUBINOUT*, GRAPH*, GRAPH**);
-extern SCIP_RETCODE   graph_subgraphFree(SCIP*, GRAPH**);
+extern void           graph_subgraphFree(SCIP*, GRAPH**);
 
 /* graph_grid.c
  */
@@ -361,6 +367,8 @@ extern void   graph_path_st_pcmw_extendOut(SCIP*, const GRAPH*, int, STP_Bool*, 
 extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
+extern SCIP_Bool      graph_path_exists(const GRAPH*);
+extern SCIP_RETCODE    graph_subinoutCompleteNewHistory(SCIP*, const GRAPH*, const SUBINOUT*, GRAPH*);
 extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 
 /* graph_tpath.c

@@ -27,6 +27,7 @@
 
 #include "scip/scip.h"
 #include "graph.h"
+#include "bidecomposition.h"
 #include "stpvector.h"
 #include "redcosts.h"
 #include "reducedefs.h"
@@ -179,6 +180,7 @@ extern SCIP_RETCODE reduce_unconnectedInfeas(SCIP*, GRAPH*, SCIP_Bool*);
  */
 extern SCIP_RETCODE    reduce_articulations(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE    reduce_bidecomposition(SCIP*, GRAPH*, REDBASE*, SCIP_Bool*);
+extern SCIP_RETCODE    reduce_nonTerminalComponents(SCIP*, const CUTNODES*, GRAPH*, SCIP_Real*, int*);
 
 
 

@@ -1974,9 +1974,10 @@ SCIP_RETCODE reduce(
    )
 {
    int stp_type;
+   const SCIP_Bool graphIsSetUp = graph_isSetUp(graph);
    SCIP_Real* offset = reduce_solGetOffsetPointer(redsol);
 
-   assert(scip && graph && offset);
+   assert(scip && offset);
    assert(graph_get_fixedges(graph) == NULL);
    assert(reductionlevel == STP_REDUCTION_NONE || reductionlevel == STP_REDUCTION_BASIC || reductionlevel == STP_REDUCTION_ADVANCED );
    assert(minelims >= 0);
@@ -1984,8 +1985,12 @@ SCIP_RETCODE reduce(
 
    show = FALSE;
    stp_type = graph->stp_type;
-   SCIP_CALL( graph_initHistory(scip, graph) );
-   SCIP_CALL( graph_path_init(scip, graph) );
+
+   if( !graphIsSetUp )
+   {
+      SCIP_CALL( graph_initHistory(scip, graph) );
+      SCIP_CALL( graph_path_init(scip, graph) );
+   }
 
    /* start with trivial preprocessing step */
    SCIP_CALL( reduce_unconnected(scip, graph) );
@@ -2062,7 +2067,8 @@ SCIP_RETCODE reduce(
 
    assert(graph_valid(scip, graph));
 
-   graph_path_exit(scip, graph);
+   if( !graphIsSetUp )
+      graph_path_exit(scip, graph);
 
    return SCIP_OKAY;
 }

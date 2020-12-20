@@ -330,6 +330,19 @@ SCIP_RETCODE graph_path_init(
    return SCIP_OKAY;
 }
 
+
+/** existing? */
+SCIP_Bool graph_path_exists(
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   assert(g);
+   assert((g->path_heap != NULL) == (g->path_state != NULL));
+
+   return (g->path_heap != NULL) ;
+}
+
+
 /*---------------------------------------------------------------------------*/
 /*--- Name     : EXIT shortest PATH algorithm                             ---*/
 /*--- Function : Gibt den bei der initialisierung angeforderten Speicher  ---*/

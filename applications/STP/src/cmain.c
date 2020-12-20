@@ -79,7 +79,7 @@ SCIP_RETCODE runShell(
 
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
 
-  // SCIP_CALL( SCIPincludeConshdlrStpcomponents(scip) );
+   SCIP_CALL( SCIPincludeConshdlrStpcomponents(scip) );
 
    SCIP_CALL( SCIPStpIncludeHeurTM(scip) );
 

@@ -56,11 +56,15 @@ struct subgraph_extraction_insertion
    STP_Vectype(int)      org_bordernodes;
    STP_Vectype(int)      org_spareedges;
    int*                  org_contractRecord;
+   int*                  edgemap_subToOrg;    /**< edges map */
    int*                  nodemap_subToOrg;    /**< node map */
    int*                  nodemap_orgToSub;    /**< node map */
    int                   org_nnodes;
    int                   sub_nnodes;
+   int                   sub_nedges;
    SCIP_Bool             rootIsTransfered;
+   SCIP_Bool             useEdgeMap;
+   SCIP_Bool             useNewHistory;
 };
 
 
@@ -74,12 +78,11 @@ struct subgraph_extraction_insertion
 static
 void extractSubgraphGetSizeAndMap(
    const GRAPH*          orggraph,           /**< original graph */
-   int*                  orgToSub,           /**< node map to be filled */
-   int*                  subToOrg,           /**< node map to be filled */
-   int*                  sub_nnodes,         /**< number of nodes */
-   int*                  sub_nedges         /**< number of edges */
+   SUBINOUT*             subinout
    )
 {
+   int* RESTRICT nodemap_orgToSub = subinout->nodemap_orgToSub;
+   int* RESTRICT nodemap_subToOrg = subinout->nodemap_subToOrg;
    const int nnodes = graph_get_nNodes(orggraph);
    const int* const isMarked = orggraph->mark;
    int sub_n = 0;
@@ -92,12 +95,12 @@ void extractSubgraphGetSizeAndMap(
    {
       if( !isMarked[i] )
       {
-         orgToSub[i] = -1;
+         nodemap_orgToSub[i] = -1;
          continue;
       }
 
-      subToOrg[sub_n] = i;
-      orgToSub[i] = sub_n;
+      nodemap_subToOrg[sub_n] = i;
+      nodemap_orgToSub[i] = sub_n;
 
       sub_n++;
 
@@ -110,14 +113,16 @@ void extractSubgraphGetSizeAndMap(
       {
          const int head = orggraph->head[e];
          if( isMarked[head] )
+         {
             sub_m++;
+         }
       }
    }
 
    assert(sub_m % 2 == 0);
 
-   *sub_nnodes = sub_n;
-   *sub_nedges = sub_m;
+   subinout->sub_nnodes = sub_n;
+   subinout->sub_nedges = sub_m;
 
 #ifdef SCIP_DEBUG
    printf("subgraph: nodes=%d, edges=%d, terms=%d \n", sub_n, sub_m, sub_t);
@@ -194,43 +199,47 @@ SCIP_RETCODE extractSubgraphInitHistory(
 static
 SCIP_RETCODE extractSubgraphAddEdge(
    SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Bool             useNewHistory,
    const GRAPH*          source_graph,        /**< source graph */
    const EDGETRANS*      edgetrans,
    GRAPH*                target_graph         /**< graph to fill */
    )
 {
    IDX** organcestors = source_graph->ancestors;
-   IDX** ancestors = target_graph->ancestors;
    const int source_edge = edgetrans->source_edge;
    const int target_edge = edgetrans->target_edge;
    const int target_tail = edgetrans->target_tail;
    const int target_head = edgetrans->target_head;
    const int target_edgeRev = flipedge(target_edge);
-   const int npseudoancestors = graph_edge_nPseudoAncestors(source_graph, source_edge);
-   SCIP_Bool conflict = FALSE;
 
    assert(graph_edge_isInRange(source_graph, source_edge));
    assert(graph_knot_isInRange(target_graph, target_tail));
    assert(graph_knot_isInRange(target_graph, target_head));
 
-   if( npseudoancestors != 0 )
+   if( !useNewHistory )
    {
-      const int* const pseudoancestors = graph_edge_getPseudoAncestors(source_graph, source_edge);
-      assert(pseudoancestors);
+      IDX** ancestors = target_graph->ancestors;
+      const int npseudoancestors = graph_edge_nPseudoAncestors(source_graph, source_edge);
+      SCIP_Bool conflict = FALSE;
 
-      SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, target_edge, pseudoancestors, npseudoancestors, target_graph, &conflict));
+      if( npseudoancestors != 0 )
+      {
+         const int* const pseudoancestors = graph_edge_getPseudoAncestors(source_graph, source_edge);
+         assert(pseudoancestors);
+
+         SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, target_edge, pseudoancestors, npseudoancestors, target_graph, &conflict));
+         assert(!conflict);
+      }
+      assert(graph_edge_nPseudoAncestors(target_graph, target_edge) == npseudoancestors);
+      assert(graph_edge_nPseudoAncestors(target_graph, target_edgeRev) == npseudoancestors);
+
+      ancestors[target_edge] = NULL;
+      ancestors[target_edgeRev] = NULL;
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edge]), organcestors[source_edge], &conflict) );
+      assert(!conflict);
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edgeRev]), organcestors[flipedge(source_edge)], &conflict) );
       assert(!conflict);
    }
-   assert(graph_edge_nPseudoAncestors(target_graph, target_edge) == npseudoancestors);
-   assert(graph_edge_nPseudoAncestors(target_graph, target_edgeRev) == npseudoancestors);
-
-   ancestors[target_edge] = NULL;
-   ancestors[target_edgeRev] = NULL;
-
-   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edge]), organcestors[source_edge], &conflict) );
-   assert(!conflict);
-   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[target_edgeRev]), organcestors[flipedge(source_edge)], &conflict) );
-   assert(!conflict);
 
    assert(EQ(source_graph->cost[source_edge], source_graph->cost[flipedge(source_edge)]));
 
@@ -311,11 +320,11 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
    )
 {
    const int* const isMarked = orggraph->mark;
-   const int subnnodes = graph_get_nNodes(subgraph);
+   int* RESTRICT edgemap_subToOrg = subinout->edgemap_subToOrg;
    const int* const nodemap_subToOrg = subinout->nodemap_subToOrg;
    const int* const nodemap_orgToSub = subinout->nodemap_orgToSub;
-
-   assert(subgraph->ancestors);
+   const int subnnodes = graph_get_nNodes(subgraph);
+   const SCIP_Bool useEdgeMap = subinout->useEdgeMap;
 
    for( int i = 0; i < subnnodes; i++ )
    {
@@ -338,7 +347,14 @@ SCIP_RETCODE extractSubgraphAddEdgesWithHistory(
             assert(graph_knot_isInRange(subgraph, subhead));
             assert(nodemap_orgToSub[orgtail] == i);
 
-            SCIP_CALL( extractSubgraphAddEdge(scip, orggraph, &edgetransfer, subgraph) );
+            if( useEdgeMap )
+            {
+               assert(edgemap_subToOrg);
+               edgemap_subToOrg[subgraph->edges] = e;
+               edgemap_subToOrg[subgraph->edges + 1] = flipedge(e);
+            }
+
+            SCIP_CALL( extractSubgraphAddEdge(scip, subinout->useNewHistory, orggraph, &edgetransfer, subgraph) );
          }
       }
    }
@@ -458,23 +474,22 @@ SCIP_RETCODE extractSubgraphBuild(
    )
 {
    GRAPH* subg;
-   int sub_nnodes;
-   int sub_nedges;
-   int* nodemap_subToOrg = subinout->nodemap_subToOrg;
-   int* nodemap_orgToSub = subinout->nodemap_orgToSub;
 
-   extractSubgraphGetSizeAndMap(orggraph, nodemap_orgToSub, nodemap_subToOrg, &sub_nnodes, &sub_nedges);
+   extractSubgraphGetSizeAndMap(orggraph, subinout);
 
-   SCIP_CALL( graph_init(scip, subgraph, sub_nnodes, sub_nedges, 1) );
+   SCIP_CALL( graph_init(scip, subgraph, subinout->sub_nnodes, subinout->sub_nedges, 1) );
    subg = *subgraph;
-   assert(subg->ksize == sub_nnodes);
-   subinout->sub_nnodes = sub_nnodes;
+   assert(subg->ksize == subinout->sub_nnodes);
+   assert(subg->esize == subinout->sub_nedges);
 
    if( graph_typeIsSpgLike(orggraph) )
       subg->stp_type = STP_SPG;
 
    extractSubgraphAddNodes(orggraph, subinout, subg);
-   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subg) );
+   if( !subinout->useNewHistory )
+   {
+      SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subg) );
+   }
    SCIP_CALL( extractSubgraphAddEdgesWithHistory(scip, orggraph, subinout, subg) );
 
    SCIP_CALL( graph_path_init(scip, subg) );
@@ -544,7 +559,7 @@ SCIP_RETCODE reinsertSubgraphTransferEdges(
          assert(graph_knot_isInRange(orggraph, orghead));
          assert(graph_edge_isDeleted(orggraph, spareedges[sparecount]));
 
-         SCIP_CALL( extractSubgraphAddEdge(scip, subgraph, &edgetransfer, orggraph) );
+         SCIP_CALL( extractSubgraphAddEdge(scip, FALSE, subgraph, &edgetransfer, orggraph) );
          StpVecPopBack(spareedges);
          sparecount--;
       }
@@ -713,13 +728,17 @@ SCIP_RETCODE graph_subinoutInit(
 
    sub->org_nnodes = nnodes;
    sub->sub_nnodes = -1;
+   sub->sub_nedges = -1;
    sub->rootIsTransfered = FALSE;
+   sub->useNewHistory = FALSE;
 
+   sub->edgemap_subToOrg = NULL;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->org_contractRecord), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->nodemap_subToOrg), nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(sub->nodemap_orgToSub), nnodes) );
    sub->org_spareedges = NULL;
    sub->org_bordernodes = NULL;
+   sub->useEdgeMap = FALSE;
 
    for( int i = 0; i < nnodes; i++ )
       sub->org_contractRecord[i] = -1;
@@ -727,6 +746,36 @@ SCIP_RETCODE graph_subinoutInit(
    return SCIP_OKAY;
 }
 
+
+/** activates */
+SCIP_RETCODE graph_subinoutActivateEdgeMap(
+  const GRAPH*          orggraph,           /**< original graph */
+  SUBINOUT*             subinout
+  )
+{
+   const int nedges = graph_get_nEdges(orggraph);
+
+   assert(subinout);
+   assert(!subinout->useEdgeMap);
+   assert(!subinout->edgemap_subToOrg);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subinout->edgemap_subToOrg), nedges) );
+   subinout->useEdgeMap = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** activates */
+void graph_subinoutActivateNewHistory(
+  SUBINOUT*             subinout
+  )
+{
+   assert(subinout);
+   assert(!subinout->useNewHistory);
+
+   subinout->useNewHistory = TRUE;
+}
 
 /** gets nodes map */
 const int* graph_subinoutGetSubToOrgNodeMap(
@@ -738,6 +787,90 @@ const int* graph_subinoutGetSubToOrgNodeMap(
 
 
    return subinout->nodemap_subToOrg;
+}
+
+
+/** completes history
+ *  NOTE: necessary to allocate block memory on subscip */
+SCIP_RETCODE graph_subinoutCompleteNewHistory(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          orggraph,           /**< original graph */
+   const SUBINOUT*       subinout,           /**< helper */
+   GRAPH*                subgraph            /**< graph to fill */
+   )
+{
+   const int nedges = graph_get_nEdges(subgraph);
+   IDX** ancestors;
+   const int* edgemap_subToOrg = subinout->edgemap_subToOrg;
+   const int* tail = subgraph->tail;
+   const int* head = subgraph->head;
+   int* orgtail;
+   int* orghead;
+
+   assert(scip);
+   assert(!subgraph->orgtail && !subgraph->orghead);
+   assert(!subgraph->pseudoancestors);
+   assert(subgraph->edges >= 2);
+   assert(nedges > 0);
+   assert(subinout->useNewHistory);
+   assert(edgemap_subToOrg);
+
+   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subgraph) );
+   /* NOTE we want to have only the fixed pseudo-ancestor, or we get into trouble with the retransformation */
+   graph_free_fixedEdgesOnly(scip, subgraph);
+
+   ancestors = subgraph->ancestors;
+   assert(ancestors);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->orgtail), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(subgraph->orghead), nedges) );
+
+   orgtail = subgraph->orgtail;
+   orghead = subgraph->orghead;
+
+   BMScopyMemoryArray(orgtail, tail, nedges);
+   BMScopyMemoryArray(orghead, head, nedges);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      const int orgedge = edgemap_subToOrg[e];
+      const int npseudoancestors = graph_edge_nPseudoAncestors(orggraph, orgedge);
+
+      assert(EQ(orggraph->cost[orgedge], subgraph->cost[e]));
+
+      if( npseudoancestors != 0 )
+      {
+         const int* const pseudoancestors = graph_edge_getPseudoAncestors(orggraph, orgedge);
+         SCIP_Bool conflict = FALSE;
+         assert(pseudoancestors);
+         assert(graph_edge_nPseudoAncestors(subgraph, e) == 0);
+
+         SCIP_CALL( graph_pseudoAncestors_appendCopyArrayToEdge(scip, e, pseudoancestors, npseudoancestors, subgraph, &conflict));
+         assert(!conflict);
+      }
+   }
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      SCIP_CALL( SCIPallocBlockMemory(scip, &(ancestors[e])) ); /*lint !e866*/
+      ancestors[e]->index = e;
+      ancestors[e]->parent = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** gets edge map */
+const int* graph_subinoutGetSubToOrgEdgeMap(
+  const SUBINOUT*       subinout
+  )
+{
+   assert(subinout);
+   assert(subinout->useEdgeMap);
+   assert(subinout->edgemap_subToOrg);
+
+   return subinout->edgemap_subToOrg;
 }
 
 
@@ -804,11 +937,25 @@ void graph_subinoutFree(
 
    StpVecFree(scip, sub->org_bordernodes);
    StpVecFree(scip, sub->org_spareedges);
+   SCIPfreeMemoryArrayNull(scip, &(sub->edgemap_subToOrg));
    SCIPfreeMemoryArray(scip, &(sub->nodemap_orgToSub));
    SCIPfreeMemoryArray(scip, &(sub->nodemap_subToOrg));
    SCIPfreeMemoryArray(scip, &(sub->org_contractRecord));
 
    SCIPfreeMemory(scip, subinout);
+}
+
+
+/** cleans */
+void graph_subinoutClean(
+  SCIP*                 scip,               /**< SCIP data structure */
+  SUBINOUT*             subinout
+  )
+{
+   assert(scip && subinout);
+
+   if( subinout->org_bordernodes )
+      StpVecClear(subinout->org_bordernodes);
 }
 
 
@@ -821,14 +968,25 @@ SCIP_RETCODE graph_subgraphReinsert(
    GRAPH**               subgraph            /**< graph to be reinserted (and freed) */
    )
 {
+   GRAPH* subg;
    assert(scip && subinout && orggraph && subgraph);
    assert(*subgraph);
    assert(!graph_pc_isPcMw(orggraph) && "not yet supported");
    assert(graph_valid(scip, orggraph));
 
-   SCIP_CALL( reinsertSubgraph(scip, *subgraph, subinout, orggraph) );
+   subg = *subgraph;
+   SCIP_CALL( reinsertSubgraph(scip, subg, subinout, orggraph) );
 
-   graph_path_exit(scip, *subgraph);
+   graph_path_exit(scip, subg);
+
+   if( subg->orgtail != NULL )
+   {
+      assert(subinout->useNewHistory);
+      assert(subg->orghead != NULL);
+
+      SCIPfreeMemoryArray(scip, &(subg->orghead));
+      SCIPfreeMemoryArray(scip, &(subg->orgtail));
+   }
 
    /* NOTE: fixed components are not deleted */
    graph_free(scip, subgraph, FALSE);
@@ -839,8 +997,9 @@ SCIP_RETCODE graph_subgraphReinsert(
 }
 
 
-/** frees extracted subgraph */
-SCIP_RETCODE graph_subgraphFree(
+/** frees extracted subgraph.
+ *  NOTE: fixed history components are not deleted */
+void graph_subgraphFree(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               subgraph            /**< graph to be freed */
    )
@@ -848,7 +1007,5 @@ SCIP_RETCODE graph_subgraphFree(
    assert(scip && subgraph);
 
    graph_path_exit(scip, *subgraph);
-   graph_free(scip, subgraph, TRUE);
-
-   return SCIP_OKAY;
+   graph_free(scip, subgraph, FALSE);
 }

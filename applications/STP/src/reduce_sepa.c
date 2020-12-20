@@ -538,64 +538,6 @@ void cutNodesTreeExit(
 }
 
 
-/** removes non-necessary bi-connected components and creates new terminals from cut-nodes */
-static
-SCIP_RETCODE cutNodesReduceWithTree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CUTNODES*             cutnodes,           /**< cut nodes */
-   GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            fixedp,             /**< pointer to offset value */
-   int*                  nelims              /**< pointer to number of reductions */
-   )
-{
-   CUTTREE cuttree = { NULL, NULL, NULL, FALSE };
-
-   SCIP_CALL( cutNodesTreeInit(scip, g, cutnodes, &cuttree) );
-   cutNodesTreeBuildSteinerTree(scip, g, cutnodes, &cuttree);
-
-#ifdef CUTTREE_PRINT_STATISTICS
-   printf("\n STATS:  \n");
-
-   for( int i = 0; i < StpVecGetSize(cutnodes->artpoints); i++ )
-   {
-      const int cutnode = cutnodes->artpoints[i];
-      SCIP_CALL( cutNodesTraverseFromCutNode(scip, g, cutnode, cutnodes) );
-   }
-#endif
-
-   cutNodesTreeDeleteComponents(scip, cutnodes, &cuttree, g, fixedp, nelims);
-
-   if( !graph_pc_isPcMw(g) )
-      cutNodesTreeMakeTerms(scip, cutnodes, &cuttree, g);
-
-   cutNodesTreeExit(scip, &cuttree);
-
-   return SCIP_OKAY;
-}
-
-
-/** todo remove once bigger graphs can be handled */
-static
-SCIP_Bool decomposeIsPossible(
-   const GRAPH*          g                   /**< graph data structure */
-   )
-{
-   int nnodes_real = 0;
-   const int nnodes = graph_get_nNodes(g);
-   const int* const isMarked = g->mark;
-
-   assert(graph_isMarked(g));
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( isMarked[i] )
-         nnodes_real++;
-   }
-
-   return (nnodes_real < 100000);
-}
-
-
 /** helper that extracts, reduces, re-inserts */
 static
 SCIP_RETCODE decomposeReduceSubDoIt(
@@ -656,28 +598,6 @@ SCIP_RETCODE decomposeReduceSubDoIt(
 }
 
 
-/** helper */
-static
-SCIP_Bool decomposeComponentIsTrivial(
-   const BIDECOMP*       bidecomp,           /**< all-components storage */
-   int                   compindex           /**< component index */
-   )
-{
-   const int compstart = bidecomp->starts[compindex];
-   const int compend = bidecomp->starts[compindex + 1];
-
-   assert(compstart <= compend);
-
-   if( compend - compstart <= 1 )
-   {
-      SCIPdebugMessage("component %d is of size %d, SKIP! \n", compindex, compend - compstart);
-      return TRUE;
-   }
-
-   return FALSE;
-}
-
-
 /** reduces subproblem */
 static
 SCIP_RETCODE decomposeReduceSub(
@@ -691,7 +611,7 @@ SCIP_RETCODE decomposeReduceSub(
    assert(scip && g && bidecomp && redbase);
    assert(redbase->bidecompparams);
 
-   if( decomposeComponentIsTrivial(bidecomp, compindex) )
+   if( bidecomposition_componentIsTrivial(bidecomp, compindex) )
    {
       return SCIP_OKAY;
    }
@@ -714,7 +634,7 @@ SCIP_Bool decomposeIsPromising(
    )
 {
    const SCIP_Real mincompratio = bidecompparams->depth == 0 ? BIDECOMP_MINCOMPRATIO_FIRST : BIDECOMP_MINCOMPRATIO;
-   const SCIP_Real maxratio = bidecompositon_getMaxcompNodeRatio(bidecomp);
+   const SCIP_Real maxratio = bidecomposition_getMaxcompNodeRatio(bidecomp);
 
    assert(GT(maxratio, 0.0));
 
@@ -748,6 +668,7 @@ SCIP_RETCODE decomposeExec(
 
    if( decomposeIsPromising(g, redbase->bidecompparams, bidecomp) )
    {
+      SCIP_CALL( bidecomposition_initSubInOut(scip, g, bidecomp) );
       SCIP_CALL( reduce_solLevelAdd(scip, g, redsol) );
       redbase->bidecompparams->depth++;
 
@@ -777,6 +698,40 @@ SCIP_RETCODE decomposeExec(
  */
 
 
+/** removes non-necessary bi-connected components and creates new terminals from cut-nodes */
+SCIP_RETCODE reduce_nonTerminalComponents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const CUTNODES*       cutnodes,           /**< cut nodes */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixedp,             /**< pointer to offset value */
+   int*                  nelims              /**< pointer to number of reductions */
+   )
+{
+   CUTTREE cuttree = { NULL, NULL, NULL, FALSE };
+
+   SCIP_CALL( cutNodesTreeInit(scip, g, cutnodes, &cuttree) );
+   cutNodesTreeBuildSteinerTree(scip, g, cutnodes, &cuttree);
+
+#ifdef CUTTREE_PRINT_STATISTICS
+   printf("\n STATS:  \n");
+
+   for( int i = 0; i < StpVecGetSize(cutnodes->artpoints); i++ )
+   {
+      const int cutnode = cutnodes->artpoints[i];
+      SCIP_CALL( cutNodesTraverseFromCutNode(scip, g, cutnode, cutnodes) );
+   }
+#endif
+
+   cutNodesTreeDeleteComponents(scip, cutnodes, &cuttree, g, fixedp, nelims);
+
+   if( !graph_pc_isPcMw(g) )
+      cutNodesTreeMakeTerms(scip, cutnodes, &cuttree, g);
+
+   cutNodesTreeExit(scip, &cuttree);
+
+   return SCIP_OKAY;
+}
+
 
 /** decomposition into biconnected components and recursive reduction */
 SCIP_RETCODE reduce_bidecomposition(
@@ -798,7 +753,7 @@ SCIP_RETCODE reduce_bidecomposition(
 
    graph_mark(g);
 
-   if( !decomposeIsPossible(g) )
+   if( !bidecomposition_isPossible(g) )
    {
       SCIPdebugMessage("graph is too large...don't decompose \n");
       return SCIP_OKAY;
@@ -811,7 +766,7 @@ SCIP_RETCODE reduce_bidecomposition(
    {
       int dummy = 0;
       /* get rid of non-required biconnected components (without terminals) */
-      SCIP_CALL( cutNodesReduceWithTree(scip, cutnodes, g, reduce_solGetOffsetPointer(redbase->redsol), &dummy) );
+      SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, g, reduce_solGetOffsetPointer(redbase->redsol), &dummy) );
 
       /* decompose and reduce recursively? */
       SCIP_CALL( decomposeExec(scip, cutnodes, g, redbase, wasDecomposed) );
@@ -838,7 +793,7 @@ SCIP_RETCODE reduce_articulations(
 
    *nelims = 0;
 
-   if( !decomposeIsPossible(g) )
+   if( !bidecomposition_isPossible(g) )
    {
       SCIPdebugMessage("graph is too large...don't decompose \n");
       return SCIP_OKAY;
@@ -849,7 +804,7 @@ SCIP_RETCODE reduce_articulations(
 
    if( cutnodes->biconn_ncomps > 0 )
    {
-      SCIP_CALL( cutNodesReduceWithTree(scip, cutnodes, g, fixedp, nelims) );
+      SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, g, fixedp, nelims) );
    }
 
    bidecomposition_cutnodesFree(scip, &cutnodes);

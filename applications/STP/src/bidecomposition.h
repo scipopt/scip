@@ -67,9 +67,13 @@ extern void         bidecomposition_cutnodesFree(SCIP*, CUTNODES**);
 extern void         bidecomposition_cutnodesCompute(const GRAPH*, CUTNODES*);
 
 extern SCIP_RETCODE bidecomposition_init(SCIP*, const CUTNODES*, const GRAPH*, BIDECOMP**);
+extern SCIP_RETCODE bidecomposition_initSubInOut(SCIP*, const GRAPH*, BIDECOMP*);
 extern void         bidecomposition_free(SCIP*, BIDECOMP**);
 extern void         bidecomposition_markSub(const BIDECOMP*, int, GRAPH*);
-extern SCIP_Real    bidecompositon_getMaxcompNodeRatio(const BIDECOMP*);
+extern SCIP_Bool    bidecomposition_componentIsTrivial(const BIDECOMP*, int);
+extern SCIP_Bool    bidecomposition_isPossible(const GRAPH*);
+extern SCIP_RETCODE bidecomposition_getMarkedSubRoot(SCIP*, const BIDECOMP*, const GRAPH*, const GRAPH*, int*);
+extern SCIP_Real    bidecomposition_getMaxcompNodeRatio(const BIDECOMP*);
 
 
 #endif /* APPLICATIONS_STP_SRC_BIDECOMPOSITION_H_ */

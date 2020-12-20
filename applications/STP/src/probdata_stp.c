@@ -140,6 +140,7 @@ struct SCIP_ProbData
    SCIP_Bool             usesymcons;         /**< use symmetry inequalities for PCSPG and MWCSP? */
    SCIP_Bool             graphHasVanished;   /**< has the graph vanished? */
    SCIP_Bool             objIsInt;           /**< is objective always integral? */
+   SCIP_Bool             isSubProb;          /**< are we in a subproblem? */
    FILE*                 logfile;            /**< logfile for DIMACS challenge */
    FILE**                origlogfile;        /**< pointer to original problem data logfile pointer */
    FILE*                 intlogfile;         /**< logfile printing all intermediate solutions for DIMACS challenge */
@@ -260,6 +261,8 @@ SCIP_RETCODE probdataCreate(
    (*probdata)->nterms = -1;
    (*probdata)->presolub = FARAWAY;
    (*probdata)->objIsInt = FALSE;
+   (*probdata)->isSubProb = FALSE;
+
 
    (*probdata)->ug = FALSE;
    (*probdata)->nSolvers = 0;
@@ -352,6 +355,7 @@ SCIP_RETCODE presolveStp(
    int reduction;
 
    assert(graph);
+   assert(redsol);
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
@@ -1854,6 +1858,7 @@ SCIP_Real getEdgeReductionRatio(
 /** helper */
 static
 SCIP_Bool setParamsSepaIsBad(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
@@ -1867,9 +1872,19 @@ SCIP_Bool setParamsSepaIsBad(
 	{
 	   const SCIP_Real redratio = getEdgeReductionRatio(probdata, graph);
 
+
+
 	   if( redratio < CUT_MINREDUCTION_RATIO )
 	   {
 	      return TRUE;
+	   }
+	   else
+	   {
+	      int reduction;
+	      // todo do differently...
+	      SCIP_CALL_ABORT( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
+	      if( reduction == STP_REDUCTION_NONE )
+	         return TRUE;
 	   }
 	}
 
@@ -1908,12 +1923,12 @@ SCIP_RETCODE setParams(
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
 
-   if( setParamsSepaIsBad(probdata) )
+   if( setParamsSepaIsBad(scip, probdata) )
    {
       const int zerhalf_nrounds = sepaBadGetZeroHalfMaxrounds(graph);
       SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 0));
-	  SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 0));
-	  SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 0));
+	   SCIP_CALL(SCIPsetIntParam(scip, "separating/strongcg/maxroundsroot", 0));
+	   SCIP_CALL(SCIPsetIntParam(scip, "separating/gomory/maxroundsroot", 0));
       SCIP_CALL(SCIPsetIntParam(scip, "separating/zerohalf/maxroundsroot", zerhalf_nrounds));
    }
 
@@ -2007,6 +2022,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
    (*targetdata)->minelims = sourcedata->minelims;
    (*targetdata)->presolub = sourcedata->presolub;
    (*targetdata)->objIsInt = sourcedata->objIsInt;
+   (*targetdata)->isSubProb = sourcedata->isSubProb;
    (*targetdata)->offset = sourcedata->offset;
    (*targetdata)->norgedges = sourcedata->norgedges;
    (*targetdata)->mode = sourcedata->mode;
@@ -2419,6 +2435,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->offset = sourcedata->offset;
    (*targetdata)->presolub = sourcedata->presolub;
    (*targetdata)->objIsInt = sourcedata->objIsInt;
+   (*targetdata)->isSubProb = sourcedata->isSubProb;
    (*targetdata)->norgedges = sourcedata->norgedges;
    (*targetdata)->minelims = sourcedata->minelims;
    (*targetdata)->bigt = sourcedata->bigt;
@@ -3271,6 +3288,37 @@ SCIP_Bool SCIPprobdataObjIsIntegral(
    return probdata->objIsInt;
 }
 
+
+/* returns if in subproblem */
+SCIP_Bool SCIPprobdataIsSubproblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   return probdata->isSubProb;
+}
+
+
+/* returns if in subproblem */
+void SCIPprobdataMarkAsSubproblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_PROBDATA* probdata;
+
+   assert(scip != NULL);
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   probdata->isSubProb = TRUE;
+}
 
 /** print (undirected) graph in GML format */
 SCIP_RETCODE SCIPprobdataPrintGraph(
