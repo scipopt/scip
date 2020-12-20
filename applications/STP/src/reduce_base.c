@@ -1998,6 +1998,7 @@ SCIP_RETCODE reduce(
    /* if no reduction methods available for given problem, return */
    if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
    {
+      int todo; // what about STP_RMWCSP??? try it!
       graph_path_exit(scip, graph);
       return SCIP_OKAY;
    }
@@ -2060,9 +2061,17 @@ SCIP_RETCODE reduce(
          SCIP_CALL( reduceStp(scip, graph, redsol, minelims, TRUE, TRUE, userec) );
       }
    }
-   SCIPdebugMessage("offset : %f \n", *offset);
 
    SCIP_CALL( reduce_unconnected(scip, graph) );
+
+   /* NOTE: ugly, but necessary to allow for clean execution of decomposition routine during solving process  */
+   if( graph_typeIsSpgLike(graph) && userec )
+   {
+      int nartelims = 0;
+      SCIP_CALL( reduce_articulations(scip, graph, offset, &nartelims) );
+   }
+
+   SCIPdebugMessage("offset : %f \n", *offset);
    show = FALSE;
 
    assert(graph_valid(scip, graph));

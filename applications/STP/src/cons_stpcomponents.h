@@ -33,7 +33,23 @@ extern "C" {
 
 
 /** creates the handler for element constraints and includes it in SCIP */
+extern
 SCIP_RETCODE SCIPincludeConshdlrStpcomponents(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/** sets the data for decomposition up  */
+extern
+SCIP_RETCODE SCIPStpcomponentsSetUp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< graph data */
+   );
+
+
+/** is a promising decomposition available? */
+extern
+SCIP_Bool SCIPStpcomponentsAllowsDecomposition(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

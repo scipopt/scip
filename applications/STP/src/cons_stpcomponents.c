@@ -58,12 +58,12 @@
 
 #define CONSHDLR_NAME          "stpcomponents"
 #define CONSHDLR_DESC          "steiner tree components constraint handler"
-#define CONSHDLR_SEPAPRIORITY   9999999 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY  9999999 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             1 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAPRIORITY        -1 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY       -1 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             0 /**< frequency for propagating domains; zero means only preprocessing propagation */
-#define CONSHDLR_EAGERFREQ            1 /**< frequency for using all instead of only the useful constraints in separation,
+#define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -90,6 +90,9 @@ struct SCIP_ConsData
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
+   CUTNODES*             cutnodes;
+   BIDECOMP*             bidecomposition;
+   SCIP_Bool             probDecompIsReady;  /**< decomposition available?*/
    SCIP_Bool             probWasDecomposed;  /**< already decomposed? */
 };
 
@@ -482,62 +485,65 @@ SCIP_RETCODE decomposeSolveSub(
 static
 SCIP_RETCODE decomposeExec(
    SCIP*                 scip,               /**< SCIP data structure */
+   BIDECOMP*             bidecomp,
    CUTNODES*             cutnodes,
    GRAPH*                orggraph,           /**< graph to decompose */
    SCIP_Bool*            success             /**< decomposed? */
    )
 {
-   BIDECOMP* bidecomp;
-
+   assert(bidecomp && cutnodes && success);
    assert(graph_valid(scip, orggraph));
    assert(*success == FALSE);
 
-   SCIP_CALL( bidecomposition_init(scip, cutnodes, orggraph, &bidecomp) );
+   SCIP_CALL( bidecomposition_initSubInOut(scip, orggraph, bidecomp) );
+   SCIP_CALL( graph_subinoutActivateEdgeMap(orggraph, bidecomp->subinout) );
+   graph_subinoutActivateNewHistory(bidecomp->subinout);
 
-   if( decomposeIsPromising(orggraph, bidecomp) )
+   printf("solving problem by decomposition (%d components) \n",  bidecomp->nbicomps);
+
+   *success = TRUE;
+
+   /* solve each biconnected component individually */
+   for( int i = 0; i < bidecomp->nbicomps; i++ )
    {
-      SCIP_CALL( bidecomposition_initSubInOut(scip, orggraph, bidecomp) );
-      SCIP_CALL( graph_subinoutActivateEdgeMap(orggraph, bidecomp->subinout) );
-      graph_subinoutActivateNewHistory(bidecomp->subinout);
+      SCIP_CALL( decomposeSolveSub(scip, bidecomp, i, orggraph, success) );
 
-      printf("solving problem by decomposition (%d components) \n",  bidecomp->nbicomps);
-
-      *success = TRUE;
-
-      /* solve each biconnected component individually */
-      for( int i = 0; i < bidecomp->nbicomps; i++ )
+      if( *success == FALSE )
       {
-         SCIP_CALL( decomposeSolveSub(scip, bidecomp, i, orggraph, success) );
-
-         if( *success == FALSE )
-         {
-            printf("could not solve component %d; aborting decomposition now \n", i);
-            break;
-         }
+         printf("could not solve component %d; aborting decomposition now \n", i);
+         break;
       }
    }
-
-   bidecomposition_free(scip, &bidecomp);
 
    return SCIP_OKAY;
 }
 
 
-/** decomposes and solves */
+/** initializes for conshdlrdata */
 static
-SCIP_RETCODE divideAndConquer(
+SCIP_RETCODE initDecompose(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            success             /**< decomposed? */
+   SCIP_CONSHDLRDATA*    conshdlrdata,
+   GRAPH*                orggraph,           /**< graph to decompose */
+   SCIP_Bool*            isPromsing          /**< promising decomposition? */
    )
 {
-   GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+   BIDECOMP* bidecomp;
    CUTNODES* cutnodes;
 
-   assert(success);
-   assert(orggraph->terms > 1);
+   assert(scip && conshdlrdata && orggraph && isPromsing);
+   assert(!conshdlrdata->cutnodes);
+   assert(!conshdlrdata->bidecomposition);
    assert(graph_typeIsSpgLike(orggraph) && "only SPG decomposition supported yet");
 
-   *success = FALSE;
+   *isPromsing = FALSE;
+
+   if( orggraph->terms == 1 )
+   {
+      SCIPdebugMessage("only one terminal...don't decompose \n");
+      return SCIP_OKAY;
+   }
+
    graph_mark(orggraph);
 
    if( !bidecomposition_isPossible(orggraph) )
@@ -547,23 +553,74 @@ SCIP_RETCODE divideAndConquer(
    }
 
    SCIP_CALL( bidecomposition_cutnodesInit(scip, orggraph, &cutnodes) );
+   conshdlrdata->cutnodes = cutnodes;
    bidecomposition_cutnodesCompute(orggraph, cutnodes);
 
    if( cutnodes->biconn_ncomps > 0 )
    {
+      int todo;
       SCIP_Real fixed = 0.0;
       int nelims = 0;
-
-      // todo this method changes the graph! probably only good for propgraph, otherwise gets into troubles!
+      // todo: delete if it runs through!
       SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, orggraph, &fixed, &nelims) );
+      if( nelims > 0 )
+      {
+         return SCIP_ERROR;
+      }
 
-      SCIPdebugMessage("simple reductions: %d \n", nelims);
 
-      /* try to decompose and reduce recursively */
-      SCIP_CALL( decomposeExec(scip, cutnodes, orggraph, success) );
+      SCIP_CALL( bidecomposition_init(scip, cutnodes, orggraph, &bidecomp) );
+      conshdlrdata->bidecomposition = bidecomp;
+
+      *isPromsing = decomposeIsPromising(orggraph, bidecomp);
    }
 
-   bidecomposition_cutnodesFree(scip, &cutnodes);
+   return SCIP_OKAY;
+}
+
+
+
+/** tries to decompose and solve */
+static
+void freeDecompose(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata
+   )
+{
+   assert(scip && conshdlrdata);
+
+   if( conshdlrdata->cutnodes )
+   {
+      bidecomposition_cutnodesFree(scip, &(conshdlrdata->cutnodes));
+   }
+
+   if( conshdlrdata->bidecomposition )
+   {
+      bidecomposition_free(scip, &(conshdlrdata->bidecomposition));
+   }
+}
+
+/** decomposes and solves */
+static
+SCIP_RETCODE divideAndConquer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,
+   SCIP_Bool*            success             /**< decomposed? */
+   )
+{
+   GRAPH* orggraph = SCIPprobdataGetGraph2(scip);
+
+   assert(conshdlrdata && success);
+   assert(conshdlrdata->bidecomposition && conshdlrdata->cutnodes);
+   assert(orggraph->terms > 1);
+   assert(decomposeIsPromising(orggraph, conshdlrdata->bidecomposition));
+   assert(graph_typeIsSpgLike(orggraph) && "only SPG bidecomposition supported yet");
+   assert(conshdlrdata->cutnodes->biconn_ncomps > 0);
+
+   *success = FALSE;
+   graph_mark(orggraph);
+
+   SCIP_CALL( decomposeExec(scip, conshdlrdata->bidecomposition, conshdlrdata->cutnodes, orggraph, success) );
 
    return SCIP_OKAY;
 }
@@ -622,7 +679,12 @@ SCIP_DECL_CONSINITSOL(consInitsolStpcomponents)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolStpcomponents)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata);
+
+   freeDecompose(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -703,18 +765,18 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
    if( !graph_typeIsSpgLike(graph) )
       return SCIP_OKAY;
 
+   if( !conshdlrdata->probDecompIsReady )
+      return SCIP_OKAY;
+
    assert(!conshdlrdata->probWasDecomposed);
 
    *result = SCIP_DIDNOTFIND;
 
-   // todo call update propgraph from prop_stp
-   // todo ... get the graph from prop_stp
-
-   SCIP_CALL( divideAndConquer(scip, &success) );
+   SCIP_CALL( divideAndConquer(scip, conshdlrdata, &success) );
 
    if( success )
    {
-      printf("problem solved by decomposition \n");
+      printf("problem solved by bidecomposition \n");
       conshdlrdata->probWasDecomposed = TRUE;
    }
 
@@ -738,6 +800,53 @@ SCIP_DECL_CONSLOCK(consLockStpcomponents)
  * Interface methods
  */
 
+
+/** sets the data for bidecomposition up  */
+SCIP_RETCODE SCIPStpcomponentsSetUp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph               /**< graph data */
+   )
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool isPromising = FALSE;
+
+   assert(scip && graph);
+
+   conshdlr = SCIPfindConshdlr(scip, "stpcomponents");
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata);
+
+   SCIP_CALL( initDecompose(scip, conshdlrdata, graph, &isPromising) );
+
+   conshdlrdata->probDecompIsReady = isPromising;
+
+   if( !isPromising )
+   {
+      freeDecompose(scip, conshdlrdata);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** is a promising bidecomposition available? */
+SCIP_Bool SCIPStpcomponentsAllowsDecomposition(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLR* conshdlr = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip);
+
+   conshdlr = SCIPfindConshdlr(scip, "stpcomponents");
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata);
+
+   return conshdlrdata->probDecompIsReady;
+}
+
 /** creates the handler for stp constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrStpcomponents(
    SCIP*                 scip                /**< SCIP data structure */
@@ -748,7 +857,10 @@ SCIP_RETCODE SCIPincludeConshdlrStpcomponents(
 
    /* create stp constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   conshdlrdata->cutnodes = NULL;
+   conshdlrdata->bidecomposition = NULL;
    conshdlrdata->probWasDecomposed = FALSE;
+   conshdlrdata->probDecompIsReady = FALSE;
 
    conshdlr = NULL;
    /* include constraint handler */

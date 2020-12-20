@@ -49,6 +49,7 @@
 #include "solstp.h"
 #include "solpool.h"
 #include "solhistory.h"
+#include "cons_stpcomponents.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/misc.h"
@@ -374,7 +375,7 @@ SCIP_RETCODE presolveStp(
    SCIP_CALL( stptest_testAll(scip) );
 #endif
 
-   /* the actual presolving */
+   /* the actual presolving; NOTE: we always want to have userec=TRUE */
    SCIP_CALL( reduce(scip, graph, redsol, reduction, probdata->minelims, TRUE) );
 
    probdata->presolub = reduce_solGetUpperBoundWithOffset(redsol);
@@ -2791,7 +2792,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP_PROBDATA* probdata;
    GRAPH* graph = graph_move;
    SCIP_Bool printGraph;
-   SCIP_Bool useNodeSol;
+   SCIP_Bool useNodeSol = FALSE;
    int symcons;
    int cyclecons;
    int usedacuts;
@@ -2837,17 +2838,16 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    probdata->graph = graph;
 
    // todo extra method and adapt for PCMW!
+   if( probdata->mode == STP_MODE_CUT )
    {
       int reduction;
       SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
-
       useNodeSol = graph_typeIsSpgLike(graph) && (reduction != STP_REDUCTION_NONE);
       SCIP_CALL( reduce_solInit(scip, graph, useNodeSol, &redsol) );
    }
 
    /* reduce the graph (and do some house-holding) */
    SCIP_CALL( presolveStp(scip, probdata, redsol) );
-
    graph = probdata->graph;
 
    if( printGraph )
@@ -2883,10 +2883,21 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    /* todo test */
    assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
 
+#ifndef WITH_UG
+   if( probdata->mode == STP_MODE_CUT && !isSubProb )
+   {
+      /* NOTE: for performance reasons we already set the decomposition data up...to be able to skip
+       * cut generation if possible */
+      SCIP_CALL( SCIPStpcomponentsSetUp(scip, graph) );
+
+      if( SCIPStpcomponentsAllowsDecomposition(scip) )
+         usedacuts = STP_CONS_NEVER;
+   }
+#endif
+
    if( probdata->mode == STP_MODE_CUT && usedacuts != STP_CONS_NEVER )
    {
       assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
-
       SCIP_CALL( createInitialCuts(scip, probdata) );
    }
 

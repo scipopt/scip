@@ -42,11 +42,13 @@ extern "C" {
 
 
 /** creates the handler for element constraints and includes it in SCIP */
+extern
 SCIP_RETCODE SCIPincludeConshdlrStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a stp constraint */
+extern
 SCIP_RETCODE SCIPcreateConsStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -55,6 +57,7 @@ SCIP_RETCODE SCIPcreateConsStp(
    );
 
 /** sets graph */
+extern
 void SCIPStpConshdlrSetGraph(
    SCIP*                 scip                /**< SCIP data structure */
    );
@@ -75,6 +78,7 @@ const int* SCIPStpGetPcImplStarts(
    );
 
 /** returns number implications starts */
+extern
 int SCIPStpGetPcImplNstarts(
    SCIP*                 scip                /**< SCIP data structure */
    );

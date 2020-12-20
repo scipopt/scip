@@ -335,6 +335,7 @@ void cutNodesTreeDeleteComponents(
          graph_knot_printInfo(g, i);
 #endif
          assert(!cuttree->nodes_isTree[i]);
+         assert(g->grad[i] > 0);
 
          if( Is_term(g->term[i]) )
          {
