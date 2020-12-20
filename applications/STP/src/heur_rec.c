@@ -1530,14 +1530,17 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          SCIPdebugMessage("REC: solution successfully built \n");
          assert(graph_valid(scip, solgraph));
 
-         SCIP_CALL( reduce_solInit(scip, solgraph, TRUE, &redsol) );
-
 
          /* reduce new graph */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP )
+         {
+            SCIP_CALL( reduce_solInit(scip, solgraph, FALSE, &redsol) );
             SCIP_CALL( reduce(scip, solgraph, redsol, 0, 5, FALSE) );
+         }
          else
          {
+            int todo; // rmw remove!
+            SCIP_CALL( reduce_solInit(scip, solgraph, probtype != STP_RMWCSP, &redsol) );
             SCIP_CALL( reduce(scip, solgraph, redsol, 2, 5, FALSE) );
          }
 

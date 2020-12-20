@@ -2884,7 +2884,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    assert(usedacuts == STP_CONS_ALWAYS || usedacuts == STP_CONS_AUTOMATIC);
 
 #ifndef WITH_UG
-   if( probdata->mode == STP_MODE_CUT && !isSubProb )
+   if( probdata->mode == STP_MODE_CUT && !isSubProb && graph_typeIsSpgLike(graph) )
    {
       /* NOTE: for performance reasons we already set the decomposition data up...to be able to skip
        * cut generation if possible */
