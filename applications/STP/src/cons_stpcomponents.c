@@ -329,20 +329,21 @@ SCIP_RETCODE subScipSetupParameters(
    SCIP*                 subscip             /**< sub-SCIP data structure */
    )
 {
-   /* set hard-coded default parameters */
-   SCIP_CALL( SCIPprobdataSetDefaultParams(subscip) );
+   SCIP_Real timelimit;
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   timelimit -= SCIPgetSolvingTime(scip);
+
+   assert(GT(timelimit, 0.0));
+
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
    /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   //SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
-   /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
    /* disable expensive resolving */
    // SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
@@ -350,8 +351,10 @@ SCIP_RETCODE subScipSetupParameters(
    /* disable STP presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "stp/reduction", 0) );
 
-   // todo!
-  // SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", solvelimits->timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+
+   /* set hard-coded default parameters */
+   SCIP_CALL( SCIPprobdataSetDefaultParams(subscip) );
 
    return SCIP_OKAY;
 }
@@ -437,14 +440,17 @@ SCIP_RETCODE decomposeSolveSub(
    SCIP*                 scip,               /**< SCIP data structure */
    const BIDECOMP*       bidecomp,           /**< all-components storage */
    int                   compindex,          /**< component index */
-   GRAPH*                orggraph           /**< graph data structure */
+   GRAPH*                orggraph,           /**< graph data structure */
+   SCIP_Bool*            success             /**< solved? */
    )
 {
    SCIP* subscip;
    SUBCOMP* subcomp;
    GRAPH* subgraph;
 
-   assert(scip && orggraph && bidecomp);
+   assert(scip && orggraph && bidecomp && success);
+
+   *success = TRUE;
 
    if( bidecomposition_componentIsTrivial(bidecomp, compindex) )
    {
@@ -473,8 +479,10 @@ SCIP_RETCODE decomposeSolveSub(
    }
    else
    {
-      SCIPerrorMessage("Wrong solution status from subscip: %d  \n", SCIPgetStatus(subscip));
-      return SCIP_ERROR;
+      *success = FALSE;
+
+      printf("solving of sub-problem interrupted (status=%d, time=%.2f)\n",
+          SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
    }
 
    graph_subinoutClean(scip, bidecomp->subinout);
@@ -509,13 +517,19 @@ SCIP_RETCODE decomposeExec(
 
       printf("solving problem by decomposition (%d components) \n",  bidecomp->nbicomps);
 
+      *success = TRUE;
+
       /* solve each biconnected component individually */
       for( int i = 0; i < bidecomp->nbicomps; i++ )
       {
-         SCIP_CALL( decomposeSolveSub(scip, bidecomp, i, orggraph) );
-      }
+         SCIP_CALL( decomposeSolveSub(scip, bidecomp, i, orggraph, success) );
 
-      *success = TRUE;
+         if( *success == FALSE )
+         {
+            printf("could not solve component %d; aborting decomposition now \n", i);
+            break;
+         }
+      }
    }
 
    bidecomposition_free(scip, &bidecomp);
@@ -693,8 +707,6 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
    assert(conshdlrdata);
    assert(graph);
 
-   printf("PROPAGATE \n");
-
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPisStopped(scip) )
@@ -710,8 +722,8 @@ SCIP_DECL_CONSPROP(consPropStpcomponents)
 
    *result = SCIP_DIDNOTFIND;
 
-   // call update propgraph from prop_stp
-   // get the graph from prop_stp
+   // todo call update propgraph from prop_stp
+   // todo ... get the graph from prop_stp
 
    SCIP_CALL( divideAndConquer(scip, &success) );
 
