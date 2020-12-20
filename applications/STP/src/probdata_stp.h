@@ -64,6 +64,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             offset,             /**< offset */
    const char*           probname,           /**< problem name */
+   SCIP_Bool             isSubProb,          /**< is this a subproblem? */
    GRAPH*                graph_move          /**< graph; will be moved and pointer invalidated! */
    );
 
@@ -241,14 +242,6 @@ SCIP_EXPORT
 SCIP_Bool SCIPprobdataIsSubproblem(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-
-/** sets subproblem */
-SCIP_EXPORT
-void SCIPprobdataMarkAsSubproblem(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 
 /** writes the best solution to the intermediate solution file */
 SCIP_EXPORT

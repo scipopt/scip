@@ -1858,7 +1858,6 @@ SCIP_Real getEdgeReductionRatio(
 /** helper */
 static
 SCIP_Bool setParamsSepaIsBad(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
@@ -1872,19 +1871,16 @@ SCIP_Bool setParamsSepaIsBad(
 	{
 	   const SCIP_Real redratio = getEdgeReductionRatio(probdata, graph);
 
-
-
 	   if( redratio < CUT_MINREDUCTION_RATIO )
 	   {
 	      return TRUE;
 	   }
 	   else
 	   {
-	      int reduction;
-	      // todo do differently...
-	      SCIP_CALL_ABORT( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
-	      if( reduction == STP_REDUCTION_NONE )
+	      if( probdata->isSubProb )
+	      {
 	         return TRUE;
+	      }
 	   }
 	}
 
@@ -1923,7 +1919,7 @@ SCIP_RETCODE setParams(
    const SCIP_Bool mw = (graph->stp_type == STP_MWCSP);
    const SCIP_Bool pc = (graph->stp_type == STP_PCSPG);
 
-   if( setParamsSepaIsBad(scip, probdata) )
+   if( setParamsSepaIsBad(probdata) )
    {
       const int zerhalf_nrounds = sepaBadGetZeroHalfMaxrounds(graph);
       SCIP_CALL(SCIPsetIntParam(scip, "separating/aggregation/maxroundsroot", 0));
@@ -2765,7 +2761,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIPsplitFilename(tmpfilename, NULL, &probname, NULL, NULL);
 
    /* NOTE: graph will be moved! */
-   SCIP_CALL( SCIPprobdataCreateFromGraph(scip, presolinfo.fixed, probname, graph) );
+   SCIP_CALL( SCIPprobdataCreateFromGraph(scip, presolinfo.fixed, probname, FALSE, graph) );
 
    probdata = SCIPgetProbData(scip);
    assert(probdata && probdata->graph);
@@ -2787,6 +2783,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             offset,             /**< offset */
    const char*           probname,           /**< problem name */
+   SCIP_Bool             isSubProb,          /**< is this a subproblem? */
    GRAPH*                graph_move          /**< graph; will be moved to probdata and pointer invalidated! */
    )
 {
@@ -2804,6 +2801,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
 
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
+   probdata->isSubProb = isSubProb;
 
    /* get parameters */
    SCIP_CALL( SCIPgetIntParam(scip, "stp/compcentral", &compcentral) );
@@ -2838,7 +2836,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
 
    probdata->graph = graph;
 
-   // todo
+   // todo extra method and adapt for PCMW!
    {
       int reduction;
       SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
@@ -3304,21 +3302,6 @@ SCIP_Bool SCIPprobdataIsSubproblem(
    return probdata->isSubProb;
 }
 
-
-/* returns if in subproblem */
-void SCIPprobdataMarkAsSubproblem(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_PROBDATA* probdata;
-
-   assert(scip != NULL);
-
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
-
-   probdata->isSubProb = TRUE;
-}
 
 /** print (undirected) graph in GML format */
 SCIP_RETCODE SCIPprobdataPrintGraph(
