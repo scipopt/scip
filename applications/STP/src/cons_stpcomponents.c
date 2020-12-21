@@ -558,17 +558,6 @@ SCIP_RETCODE initDecompose(
 
    if( cutnodes->biconn_ncomps > 0 )
    {
-      int todo;
-      SCIP_Real fixed = 0.0;
-      int nelims = 0;
-      // todo: delete if it runs through!
-      SCIP_CALL( reduce_nonTerminalComponents(scip, cutnodes, orggraph, &fixed, &nelims) );
-      if( nelims > 0 )
-      {
-         return SCIP_ERROR;
-      }
-
-
       SCIP_CALL( bidecomposition_init(scip, cutnodes, orggraph, &bidecomp) );
       conshdlrdata->bidecomposition = bidecomp;
 
