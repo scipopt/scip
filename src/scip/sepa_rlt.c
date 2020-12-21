@@ -606,7 +606,40 @@ SCIP_RETCODE addProductVars(
    return SCIP_OKAY;
 }
 
-/** extract a bilinear product from two linear relations, if possible */
+/** extract a bilinear product from two linear relations, if possible
+ *
+ * First, the two given rows are brought to the form:
+ * \f[
+ *   a_1x + b_1w + c_1y \leq/\geq d_1,\\
+ *   a_2x + b_2w + c_2y \leq/\geq d_2,
+ * \f]
+ * where \f$ a_1a_2 \leq 0 \f$ and the first implied relation is enabled when \f$ x == 1 \f$
+ * and the second when \f$ x == 0 \f$, and \f$ b_1, b_2 > 0 \f$, the product relation can be written as:
+ * \f[
+ *   \fraq{1}{b_1c_2 - c_1b_2}(b_1b_2w + (b_2(a_1 - d_1) + b_1d_2)x + b_1c_2y - b_1d_2) \leq/\geq xy.
+ * \f]
+ * The inequality sign in the product relation is similar to that in the given linear relations if
+ * \f$ b1c2 - c1b2 > 0 \f$ and opposite if \f$ b1c2 - c1b2 > 0 \f$.
+ *
+ * To obtain this formula, the given relations are first multiplied by scaling factors \f$ \alpha \f$
+ * and \f$ \beta \f$, which is necessary in order for the solution to always exist, and written as
+ * implications:
+ * \f[
+ *   x == 1 ~\Rightarrow~ \alpha b_1w + \alpha c_1y \leq/\geq \alpha(d_1 - a_1), \\
+ *   x == 0 ~\Rightarrow~ \beta b_2w + \beta c_2y \leq/\geq \beta d_2,
+ * \f]
+ * Then a linear system is solved which ensures that the coefficients of the two implications of the product
+ * relation are equal to the corresponding coefficients in the linear relations.
+ * If the product relation is written as:
+ * \f[
+ *   Ax + Bw + Cy + D \leq/\geq xy,
+ * \f]
+ * then the system is
+ * \f[
+ *   B = \alpha b_1, ~C - 1 = \alpha c_1, ~D+A = \alpha(a_1-d_1),\\
+ *   B = \beta b_2, ~C = \beta c_2, ~D = -\beta d_2.
+ * \f]
+ */
 static
 SCIP_RETCODE extractProducts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -614,8 +647,8 @@ SCIP_RETCODE extractProducts(
    SCIP_VAR**            vars_xwy,           /**< 3 variables involved in the inequalities in the order x,w,y */
    SCIP_Real*            coefs1,             /**< coefficients of the first inequality (always implied, i.e. has x) */
    SCIP_Real*            coefs2,             /**< coefficients of the second inequality (can be unconditional) */
-   SCIP_Real             side1,              /**< side of the first inequality */
-   SCIP_Real             side2,              /**< side of the second inequality */
+   SCIP_Real             d1,                 /**< side of the first inequality */
+   SCIP_Real             d2,                 /**< side of the second inequality */
    SCIP_SIDETYPE         sidetype1,          /**< side type (lhs or rls) in the first inequality */
    SCIP_SIDETYPE         sidetype2,          /**< side type (lhs or rhs) in the second inequality */
    SCIP_HASHMAP*         varmap,             /**< variable map */
@@ -628,7 +661,7 @@ SCIP_RETCODE extractProducts(
    SCIP_Real A; /* coefficient of x */
    SCIP_Real B; /* coefficient of w */
    SCIP_Real C; /* coefficient of y */
-   SCIP_Real cst; /* constant */
+   SCIP_Real D; /* constant */
 
    /* variables */
    SCIP_VAR* w;
@@ -658,10 +691,10 @@ SCIP_RETCODE extractProducts(
    SCIPdebugMsg(scip, "Extracting product from two implied relations:\n");
    SCIPdebugMsg(scip, "Relation 1: <%s> == %d => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), f, b1,
       SCIPvarGetName(w), c1, SCIPvarGetName(y), sidetype1 == SCIP_SIDETYPE_LEFT ? ">=" : "<=",
-      f ? side1 - a1 : side1);
+      f ? d1 - a1 : d1);
    SCIPdebugMsg(scip, "Relation 2: <%s> == %d => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), !f, b2,
       SCIPvarGetName(w), c2, SCIPvarGetName(y), sidetype2 == SCIP_SIDETYPE_LEFT ? ">=" : "<=",
-      f ? side2 : side2 - a2);
+      f ? d2 : d2 - a2);
 
    /* cannot use a global bound on x to detect a product */
    if( (b1 == 0.0 && c1 == 0.0) || (b2 == 0.0 && c2 == 0.0) )
@@ -688,7 +721,7 @@ SCIP_RETCODE extractProducts(
       a1 *= -1.0;
       b1 *= -1.0;
       c1 *= -1.0;
-      side1 *= -1.0;
+      d1 *= -1.0;
       sidetype1 = sidetype1 == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
    }
    if( b2 < 0 )
@@ -696,7 +729,7 @@ SCIP_RETCODE extractProducts(
       a2 *= -1.0;
       b2 *= -1.0;
       c2 *= -1.0;
-      side2 *= -1.0;
+      d2 *= -1.0;
       sidetype2 = sidetype2 == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
    }
 
@@ -719,41 +752,38 @@ SCIP_RETCODE extractProducts(
       SCIPswapReals(&a1, &a2);
       SCIPswapReals(&b1, &b2);
       SCIPswapReals(&c1, &c2);
-      SCIPswapReals(&side1, &side2);
+      SCIPswapReals(&d1, &d2);
    }
 
-   /* all conditions satisfied, we can extract the product */
+   /* all conditions satisfied, we can extract the product and write it as:
+    * (1/(b1c2 - c1b2))*(b1b2w + (b2(a1 - d1) + b1d2)x + b1c2y - b1d2) >=/<= xy,
+    * where the inequality sign in the product relation is similar to that in the given linear relations
+    * if b1c2 - c1b2 > 0 and opposite if b1c2 - c1b2 > 0
+    */
 
-   /* given two rows of the form:
-    * a1 x + b1 w + c1 y <= d1, a2 x + b2 w + c2 y <= d2 (or same with >=),
-    * where a1*a2 <= 0 and the first implied relation is enabled when x == 1 and the second when x == 0,
-    * and b1, b2 > 0, the product relation can be written as:  // TODO more details on how to get there would be very nice
-    * xy >=/<= (1/(b1c2 - c1b2))*(b1b2w + (b2(a1 - d1) + b1d2)x + b1c2y - b1d2)
-    * (the inequality sign depends on the sign of (b1c2 - c1b2) and the sign in the linear inequalities) */
+   /* compute the multiplier */
    mult = 1/(b1*c2 - c1*b2);
 
-   /* we make sure above that these have the same sign, but one of them might be zero, so we check both here */
-   overestimate = mult < 0.0;
-   if( sidetype1 == SCIP_SIDETYPE_LEFT ) /* only check sidetype1 because sidetype2 is equal to it */
-      overestimate = !overestimate;
+   /* determine the inequality sign; only check sidetype1 because sidetype2 is equal to it */
+   overestimate = (sidetype1 == SCIP_SIDETYPE_LEFT && mult > 0.0) || (sidetype1 == SCIP_SIDETYPE_RIGHT && mult < 0.0);
 
    SCIPdebugMsg(scip, "w coef is %s\n", overestimate ? "negative" : "positive");
    SCIPdebugMsg(scip, "f, found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", a1,
-      SCIPvarGetName(x), b1, SCIPvarGetName(w), c1, SCIPvarGetName(y), side1);
+      SCIPvarGetName(x), b1, SCIPvarGetName(w), c1, SCIPvarGetName(y), d1);
    SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> <= %g\n", a2, SCIPvarGetName(x),
-      b2, SCIPvarGetName(w), c2, SCIPvarGetName(y), side2);
+      b2, SCIPvarGetName(w), c2, SCIPvarGetName(y), d2);
 
-   /* compute the coefficients for x, w and y in auxexpr */
-   A = (b2*a1 -side1*b2 + side2*b1)*mult;
+   /* compute the coefficients for x, w and y and the constant in auxexpr */
+   A = (b2*a1 - d1*b2 + d2*b1)*mult;
    B = b1*b2*mult;
    C = b1*c2*mult;
-   cst = -b1*side2*mult;
+   D = -b1*d2*mult;
 
    SCIPdebugMsg(scip, "product: <%s><%s> %s %g<%s> + %g<%s> + %g<%s> + %g\n", SCIPvarGetName(x), SCIPvarGetName(y),
-      overestimate ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), -b1*side2*mult);
+      overestimate ? "<=" : ">=", A, SCIPvarGetName(x), B, SCIPvarGetName(w), C, SCIPvarGetName(y), D);
 
    SCIP_CALL( addProductVars(scip, sepadata, x, y, varmap, 1) );
-   SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, A, C, B, cst, overestimate) );
+   SCIP_CALL( SCIPinsertBilinearTermImplicit(scip, sepadata->conshdlr, x, y, w, A, C, B, D, overestimate) );
 
    return SCIP_OKAY;
 }
