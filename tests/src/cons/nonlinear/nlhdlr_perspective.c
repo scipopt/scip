@@ -414,7 +414,7 @@ Test(nlhdlrperspective, detectandfree3, .init = setup, .fini = teardown)
 }
 
 /* separates x1^2 + x1y1 + x2^2 for 2 indicator variables */
-Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
+Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
 {
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata_conv = NULL;
@@ -481,7 +481,7 @@ Test(nlhdlrperspective, sepa1, .init = setup, .fini = teardown)
    ownerdata->nenfos = 2;
    ownerdata->enfos[0]->nlhdlr = nlhdlr_conv;
    ownerdata->enfos[0]->nlhdlrexprdata = nlhdlrexprdata_conv;
-   ownerdata->enfos[0]->nlhdlrparticipation = participating;
+   ownerdata->enfos[0]->nlhdlrparticipation = participating_conv;
    ownerdata->enfos[1]->nlhdlr = nlhdlr;
 
    /* detect by perspective handler */
