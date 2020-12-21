@@ -1322,7 +1322,7 @@ SCIP_RETCODE reduceSap(
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
    STP_Bool da = dualascent;
-   STP_Bool sd = !TRUE;
+   STP_Bool sd = TRUE;
    STP_Bool rpt = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
 
@@ -1351,7 +1351,7 @@ SCIP_RETCODE reduceSap(
 
    SCIP_CALL( reduce_simple_sap(scip, g, fixed, &degtnelims) );
 
-   /* main loop todo: why not sd??? */
+   /* main loop */
    while( (sd || rpt || da) && !SCIPisStopped(scip) )
    {
       int danelims = 0;
@@ -1364,6 +1364,7 @@ SCIP_RETCODE reduceSap(
       if( sd )
       {
          SCIP_CALL( reduce_sdspSap(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdnelims, 300) );
+
          if( sdnelims <= redbound )
             sd = FALSE;
       }
@@ -1371,6 +1372,7 @@ SCIP_RETCODE reduceSap(
       if( rpt )
       {
          SCIP_CALL( reduce_rpt(scip, g, fixed, &rptnelims) );
+
          if( rptnelims <= redbound )
             rpt = FALSE;
       }
@@ -1380,7 +1382,6 @@ SCIP_RETCODE reduceSap(
       if( da )
       {
          const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
-
          SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
 
          if( danelims <= 2 * redbound )

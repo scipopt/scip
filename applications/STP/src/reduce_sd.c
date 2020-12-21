@@ -3223,7 +3223,6 @@ SCIP_RETCODE reduce_sdspSap(
       e = g->outbeg[i];
       while( e != EAT_LAST )
       {
-
          enext = g->oeat[e];
          i2 = g->head[e];
 
@@ -3276,7 +3275,7 @@ SCIP_RETCODE reduce_sdspSap(
             pathhead[l].edge = UNKNOWN;
          }
 
-#if 1
+#ifdef SCIP_DISABLED
          for( k = 0; k < nnodes; k++ )
          {
             assert(statetail[k]     == UNKNOWN);
@@ -3291,14 +3290,31 @@ SCIP_RETCODE reduce_sdspSap(
          if( SCIPisGE(scip, g->cost[e], sdist) )
          {
             if( SCIPisGE(scip, costrev[e], FARAWAY) )
+            {
                graph_edge_del(scip, g, e, TRUE);
+               (*nelims)++;
+            }
             else
+            {
+               if( SCIPisLT(scip, g->cost[e], FARAWAY) )
+                  (*nelims)++;
+
                g->cost[e] = FARAWAY;
-            (*nelims)++;
+            }
          }
 
          e = enext;
       }
+   }
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      assert(statetail[k]     == UNKNOWN);
+      assert(pathtail[k].dist == FARAWAY);
+      assert(pathtail[k].edge == UNKNOWN);
+      assert(statehead[k]     == UNKNOWN);
+      assert(pathhead[k].dist == FARAWAY);
+      assert(pathhead[k].edge == UNKNOWN);
    }
 
    SCIPfreeBufferArray(scip, &costrev);

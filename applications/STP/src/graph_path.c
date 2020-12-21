@@ -521,7 +521,7 @@ void graph_pathInLimitedExec(
 void graph_sdPaths(
    const GRAPH*          g,                  /**< graph data structure */
    PATH*                 path,               /**< shortest paths data structure */
-   SCIP_Real*            cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real             distlimit,          /**< distance limit of the search */
    int*                  heap,               /**< array representing a heap */
    int*                  state,              /**< array to indicate whether a node has been scanned during SP calculation */
@@ -535,6 +535,7 @@ void graph_sdPaths(
    int count;
    int nchecks;
    const int limit1 = limit / 2;
+   const SCIP_Bool isDirected = !graph_typeIsUndirected(g);
 
    assert(g      != NULL);
    assert(heap   != NULL);
@@ -567,6 +568,9 @@ void graph_sdPaths(
 
       if( g->mark[m] && (GE(distlimit, cost[e])) )
       {
+         if( isDirected && GE(cost[e], FARAWAY) )
+            continue;
+
          assert(GT(path[m].dist, path[tail].dist + cost[e]));
 
          /* m labelled the first time */
@@ -592,16 +596,18 @@ void graph_sdPaths(
       if( GT(path[k].dist, distlimit) )
          break;
 
-      /* stop at terminals */
-      if( Is_term(g->term[k]) || k == head )
-         continue;
+      if( !isDirected )
+      {
+         if( Is_term(g->term[k]) || k == head )
+            continue;
+      }
 
       /* correct incident nodes */
       for( int e = g->outbeg[k]; e >= 0; e = g->oeat[e] )
       {
          const int m = g->head[e];
 
-         if( state[m] && g->mark[m] && GE(distlimit, cost[e]) && (path[m].dist > path[k].dist + cost[e]) )
+         if( state[m] && g->mark[m] && GE(distlimit, cost[e]) && (GT(path[m].dist, path[k].dist + cost[e])) )
          {
             /* m labelled for the first time? */
             if( state[m] == UNKNOWN )

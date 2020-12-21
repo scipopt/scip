@@ -369,7 +369,7 @@ extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Rea
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_Bool      graph_path_exists(const GRAPH*);
 extern SCIP_RETCODE    graph_subinoutCompleteNewHistory(SCIP*, const GRAPH*, const SUBINOUT*, GRAPH*);
-extern void   graph_sdPaths(const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
+extern void   graph_sdPaths(const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 
 /* graph_tpath.c
  */
