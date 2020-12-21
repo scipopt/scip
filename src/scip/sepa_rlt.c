@@ -236,7 +236,6 @@ SCIP_RETCODE addAdjacentVars(
    SCIP_Bool found;
    int pos2;
    int i;
-   int newsize;
    ADJACENTVARDATA* adjacentvardata;
 
    assert(adjvarmap != NULL);
@@ -274,12 +273,8 @@ SCIP_RETCODE addAdjacentVars(
       if( !found )
       {
          /* ensure size of adjacentvardata->adjacentvars */
-         if( adjacentvardata->sadjacentvars < adjacentvardata->nadjacentvars + 1 )
-         {
-            newsize = SCIPcalcMemGrowSize(scip, adjacentvardata->nadjacentvars + 1);
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &adjacentvardata->adjacentvars, adjacentvardata->sadjacentvars, newsize) );
-            adjacentvardata->sadjacentvars = newsize;
-         }
+         SCIP_CALL( SCIPensureBlockMemoryArray(scip, &adjacentvardata->adjacentvars, &adjacentvardata->sadjacentvars,
+               adjacentvardata->nadjacentvars + 1) );
 
          /* insert second var at the correct position */
          for( i = adjacentvardata->nadjacentvars; i > pos2; --i )
