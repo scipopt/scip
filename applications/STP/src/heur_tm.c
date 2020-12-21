@@ -476,6 +476,18 @@ SCIP_Real getTmEdgeCostZeroOffset(
 }
 
 
+
+/** returns whether TM SP type */
+static
+SCIP_Bool isTMSpType(
+   const GRAPH*          graph               /**< graph data structure */
+)
+{
+   const int type = graph->stp_type;
+
+   return (type == STP_DHCSTP || type == STP_DCSTP  || type == STP_SAP);
+}
+
 /** returns mode */
 static
 int getTmMode(
@@ -491,15 +503,7 @@ int getTmMode(
    {
       mode = TM_DIJKSTRA;
    }
-   else if( graph->stp_type == STP_DHCSTP )
-   {
-      mode = TM_SP;
-   }
-   else if( graph->stp_type == STP_DCSTP )
-   {
-      mode = TM_SP;
-   }
-   else if( graph->stp_type == STP_SAP )
+   else if( isTMSpType(graph) )
    {
       mode = TM_SP;
    }
@@ -525,43 +529,53 @@ void updateBestSol(
    SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
 )
 {
-#ifdef TM_USE_CSR
-   const int* const result_csr = tmbase->result;
-   STP_Bool* const connected = tmbase->connected;
+   SCIP_Bool useCsr = !isTMSpType(graph);
 
-   /* compute objective value w.r.t. original costs! */
-   const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, result_csr, connected);
+#ifndef TM_USE_CSR
+   useCsr = FALSE;
+#endif
 
-   if( LT(obj, tmbase->best_obj) )
+   if( useCsr )
    {
-      SCIPdebugMessage("\n improved obj=%f ", obj);
+      const int* const result_csr = tmbase->result;
+      STP_Bool* const connected = tmbase->connected;
 
-      tmbase->best_obj = obj;
-      tmbase->best_start = startnode;
-      solstp_convertCsrToGraph(scip, graph, tmbase->csr_orgcosts, result_csr, connected, tmbase->best_result);
+      /* compute objective value w.r.t. original costs! */
+      const SCIP_Real obj = solstp_getObjCsr(graph, tmbase->csr_orgcosts, result_csr, connected);
 
-      (*success) = TRUE;
-      assert(solstp_isValid(scip, graph, tmbase->best_result));
-   }
-#else
-   /* here another measure than in the TM heuristics is being used */
-   const int nedges = graph_get_nEdges(graph);
-   const int* const result = tmbase->result;
-
-   const SCIP_Real obj = solstp_getObjBounded(graph, result, 0.0, nedges);
-
-   if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
-   {
-      if( graph->stp_type != STP_DHCSTP || solstp_getNedges(graph, result) <= graph->hoplimit )
+      if( LT(obj, tmbase->best_obj) )
       {
-         SCIPdebugMessage("improved obj=%.12e\n", obj);
+         SCIPdebugMessage("\n improved obj=%f ", obj);
 
          tmbase->best_obj = obj;
-         BMScopyMemoryArray(tmbase->best_result, result, nedges);
+         tmbase->best_start = startnode;
+         solstp_convertCsrToGraph(scip, graph, tmbase->csr_orgcosts, result_csr, connected, tmbase->best_result);
+
          (*success) = TRUE;
+         assert(solstp_isValid(scip, graph, tmbase->best_result));
       }
    }
-#endif
+   else
+   {
+      /* here another measure than in the TM heuristics is being used */
+      const int nedges = graph_get_nEdges(graph);
+      const int* const result = tmbase->result;
+      const SCIP_Real obj = solstp_getObjBounded(graph, result, 0.0, nedges);
+
+      assert(!graph_typeIsSpgLike(graph) && "test");
+
+      if( SCIPisLT(scip, obj, tmbase->best_obj) && (graph->stp_type != STP_DCSTP || solfound) )
+      {
+         if( graph->stp_type != STP_DHCSTP || solstp_getNedges(graph, result) <= graph->hoplimit )
+         {
+            SCIPdebugMessage("improved obj=%.12e\n", obj);
+
+            tmbase->best_obj = obj;
+            BMScopyMemoryArray(tmbase->best_result, result, nedges);
+            (*success) = TRUE;
+         }
+      }
+   }
 }
 
 
@@ -2332,7 +2346,7 @@ SCIP_RETCODE runTm(
    assert(!graph_pc_isPcMw(graph));
    assert(runs >= 1);
 
-   if( graph->stp_type == STP_DCSTP || mode == TM_SP  )
+   if( graph->stp_type == STP_DCSTP || mode == TM_SP )
    {
       buildTmAllSp(scip, graph, cost, costrev, tmallsp);
    }

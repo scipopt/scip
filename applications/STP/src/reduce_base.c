@@ -1303,6 +1303,7 @@ SCIP_RETCODE reduceHc(
 SCIP_RETCODE reduceSap(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
+   SCIP_Bool             dualascent,         /**< perform dual-ascent reductions? */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
@@ -1320,14 +1321,13 @@ SCIP_RETCODE reduceSap(
    int     redbound;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
-   STP_Bool    da = TRUE;
-   STP_Bool    sd = !TRUE;
-   STP_Bool    rpt = TRUE;
+   STP_Bool da = dualascent;
+   STP_Bool sd = !TRUE;
+   STP_Bool rpt = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
-
 
    redbound = MAX(nnodes / 1000, minelims);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -2020,7 +2020,7 @@ SCIP_RETCODE reduce(
       }
       else if( stp_type == STP_SAP )
       {
-         SCIP_CALL( reduceSap(scip, graph, offset, minelims) );
+         SCIP_CALL( reduceSap(scip, graph, FALSE, offset, minelims) );
       }
       else if( stp_type == STP_NWSPG )
       {
@@ -2049,7 +2049,7 @@ SCIP_RETCODE reduce(
       }
       else if( stp_type == STP_SAP )
       {
-         SCIP_CALL( reduceSap(scip, graph, offset, minelims) );
+         SCIP_CALL( reduceSap(scip, graph, TRUE, offset, minelims) );
       }
       else if( stp_type == STP_NWSPG )
       {

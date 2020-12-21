@@ -46,6 +46,7 @@
 #define BND_TMHEUR_NRUNS 100                  /**< number of runs of constructive heuristic */
 #define BND_TMHEUR_NRUNS_RESTRICT 16          /**< number of runs of constructive heuristic */
 #define BND_TMHEUR_NRUNS_RPC      16          /**< number of runs for RPC */
+#define DEFAULT_DARUNS_DIRECTED   3
 #define DEFAULT_DARUNS     8                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  8                  /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
@@ -1584,6 +1585,26 @@ SCIP_Real daGetMaxDeviation(
 }
 
 
+/** decide whether guided DA is promising */
+static
+SCIP_Bool daGuidedIsPromising(
+   const GRAPH*          graph,              /**< graph structure */
+   int                   run,                /**< number of current run */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+)
+{
+   assert(run >= 0);
+
+   if( !graph_typeIsUndirected(graph) )
+   {
+      assert(run < DEFAULT_DARUNS_DIRECTED);
+      if( run > 0 )
+         return TRUE;
+   }
+
+   return ((run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2));
+}
+
 /** order roots */
 static
 SCIP_RETCODE daOrderRoots(
@@ -1601,6 +1622,14 @@ SCIP_RETCODE daOrderRoots(
 
    assert(terms != NULL);
    assert(nterms > 0);
+
+   if( !graph_typeIsUndirected(graph) )
+   {
+      for( int i = 0; i < nterms; i++ )
+         terms[i] = graph->source;
+
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &termdegs, nterms) );
 
@@ -1679,6 +1708,7 @@ void daRedcostsExit(
 /** number of runs */
 static
 int daGetNruns(
+   const GRAPH*          graph,              /**< graph structure */
    const RPDA*           paramsda,           /**< parameters */
    int                   nterms              /**< number of terminals */
 )
@@ -1689,6 +1719,11 @@ int daGetNruns(
 	   nruns = MIN(nterms, DEFAULT_DARUNS / 2);
    else
 	   nruns = MIN(nterms, DEFAULT_DARUNS);
+
+   if( !graph_typeIsUndirected(graph) )
+   {
+      nruns = MIN(nruns, DEFAULT_DARUNS_DIRECTED);
+   }
 
    return nruns;
 }
@@ -2406,7 +2441,7 @@ SCIP_RETCODE reduce_da(
    SCIP_Real upperbound;
    const SCIP_Bool isRpc = (graph->stp_type == STP_RPCSPG);
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
-   const SCIP_Bool isDirected = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
+   const SCIP_Bool isDirected = !graph_typeIsUndirected(graph);
    int* terms;
    int* result;
    int* bestresult;
@@ -2472,7 +2507,7 @@ SCIP_RETCODE reduce_da(
 
    {
       REDCOST* redcostdata;
-	   const int nruns = daGetNruns(paramsda, nFixedTerms);
+	   const int nruns = daGetNruns(graph, paramsda, nFixedTerms);
       SCIP_Real cutoffbound = -1.0;
       havebestsol = FALSE;
 
@@ -2483,7 +2518,6 @@ SCIP_RETCODE reduce_da(
       {
          int ndeletions_run = 0;
          const SCIP_Real damaxdeviation = daGetMaxDeviation(paramsda, randnumgen);
-         const SCIP_Bool guidedDa = (run > 1) && (SCIPrandomGetInt(randnumgen, 0, 2) < 2) && graph->stp_type != STP_RSMT;
 
          if( useExtRed && run > 0 )
             redcosts_addLevel(redcostdata);
@@ -2491,7 +2525,7 @@ SCIP_RETCODE reduce_da(
          redcosts_setRootTop(terms[run], redcostdata);
 
      //   if( rpc ) {      // int todo; // check for more terminals to be added    }
-         if( guidedDa )
+         if( daGuidedIsPromising(graph, run, randnumgen) )
          {
             /* run dual-ascent (and possibly re-root solution stored in 'result') */
             SCIP_CALL( computeDualSolutionGuided(scip, graph, damaxdeviation, redcostdata, result) );

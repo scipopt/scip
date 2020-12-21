@@ -1393,7 +1393,7 @@ void graph_csr_build(
             if( pcmw && graph_pc_knotIsDummyTerm(g, ehead)  )
                continue;
 
-            assert(g->stp_type == STP_DHCSTP || (edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY));
+            assert(!graph_typeIsUndirected(g) || (edgecosts[e] < FARAWAY && edgecosts[flipedge(e)] < FARAWAY));
 
             head_csr[pos] = ehead;
             if( hasEdgeId )
