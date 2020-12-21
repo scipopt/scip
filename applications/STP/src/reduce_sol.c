@@ -799,6 +799,15 @@ void reduce_solPack(
       return;
 
    nodesol = redlevel->nodesol;
+
+   // todo also implement for PcMw!
+   if( !nodesol )
+   {
+      assert(graph_pc_isPcMw(g));
+      return;
+   }
+
+
    assert(nodesol);
 
    for( int i = 0; i < nnodes; i++ )
