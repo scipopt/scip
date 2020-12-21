@@ -44,7 +44,7 @@
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_MAXUNKNOWNTERMS      -1 /**< maximum number of unknown bilinear terms a row can have to be used */
+#define DEFAULT_MAXUNKNOWNTERMS       0 /**< maximum number of unknown bilinear terms a row can have to be used */
 #define DEFAULT_MAXUSEDVARS         100 /**< maximum number of variables that will be used to compute rlt cuts */
 #define DEFAULT_MAXNCUTS             -1 /**< maximum number of cuts that will be added per round */
 #define DEFAULT_MAXROUNDS             1 /**< maximum number of separation rounds per node (-1: unlimited) */
