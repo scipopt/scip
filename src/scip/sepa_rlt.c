@@ -1242,19 +1242,6 @@ SCIP_RETCODE detectHiddenProducts(
     * variable relations with each given variable */
    SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
 
-//#ifdef SCIP_DEBUG
-//   SCIPinfoMessage(scip, NULL, "\nadjacent vars (in two-var relations):");
-//   for( i = 0; i < vars_in_2rels->nvars; ++i )
-//   {
-//      int j;
-//
-//      SCIPinfoMessage(scip, NULL, "\nfor var <%s>: ", SCIPvarGetName(vars_in_2rels->vars[i]));
-//      for( j = 0; j < vars_in_2rels->nadjacentvars[i]; ++j )
-//         SCIPinfoMessage(scip, NULL, "<%s>; ", SCIPvarGetName(vars_in_2rels->adjacentvars[i][j]));
-//   }
-//   SCIPinfoMessage(scip, NULL, "\n");
-//#endif
-
    /* start actually looking for products */
    /* go through all sets of three variables */
    for( i = 0; i < SCIPhashtableGetNEntries(hashtable3); ++i )
