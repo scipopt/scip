@@ -104,7 +104,6 @@ struct SCIP_SepaData
    SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
 
    /* bilinear variables */
-   SCIP_HASHMAP*         bilinvarsmap;       /**< map for accessing the auxiliary variables/exprs of each bilinear term */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
    SCIP_HASHMAP*         bilinvardatamap;    /**< for each bilinear var: all vars that appear together with it in a product */
    int*                  varpriorities;      /**< priorities of variables */
@@ -354,7 +353,6 @@ SCIP_RETCODE freeSepaData(
    int i;
 
    assert(sepadata->iscreated);
-   assert(sepadata->bilinvarsmap != NULL);
 
    if( sepadata->nbilinvars != 0 )
    {
@@ -383,9 +381,6 @@ SCIP_RETCODE freeSepaData(
    {
       SCIPfreeBlockMemoryArray(scip, &sepadata->eqauxexpr, sepadata->nbilinterms);
    }
-
-   /* free the hashmap */
-   SCIPhashmapFree(&sepadata->bilinvarsmap);
 
    sepadata->iscreated = FALSE;
 
@@ -1612,9 +1607,6 @@ SCIP_RETCODE createSepaData(
    /* create variable map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), varmapsize) );
 
-   /* create the empty map for bilinear terms */
-   SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), varmapsize) );
-
    /* get all bilinear terms from the expression constraint handler */
    bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
@@ -1657,7 +1649,6 @@ SCIP_RETCODE createSepaData(
 
    if( sepadata->nbilinterms == 0 )
    {
-      SCIPhashmapFree(&sepadata->bilinvarsmap);
       return SCIP_OKAY;
    }
 
