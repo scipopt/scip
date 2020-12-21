@@ -3227,7 +3227,6 @@ SCIP_RETCODE reduce_daPcMw(
    SCIP_CALL( computeSteinerTreeRedCostsPcMw(scip, graph, NULL, cost, &upperbound, result, result2, pathedge, nodearrchar, &havenewsol) );
 
    assert(LT(upperbound, FARAWAY));
-   assert(solstp_isValid(scip, graph, result));
 
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
