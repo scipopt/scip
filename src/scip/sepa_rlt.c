@@ -32,10 +32,6 @@
 
 #include "scip/sepa_rlt.h"
 #include "scip/cons_expr.h"
-#include "scip/cons_linear.h"
-#include "scip/cons_knapsack.h"
-#include "scip/cons_varbound.h"
-#include "scip/cons_setppc.h"
 #include "scip/pub_lp.h"
 
 
