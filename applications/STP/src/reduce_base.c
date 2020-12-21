@@ -1998,9 +1998,8 @@ SCIP_RETCODE reduce(
    SCIP_CALL( reduce_unconnected(scip, graph) );
 
    /* if no reduction methods available for given problem, return */
-   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
+   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
    {
-      int todo; // what about STP_RMWCSP??? try it!
       graph_path_exit(scip, graph);
       return SCIP_OKAY;
    }
