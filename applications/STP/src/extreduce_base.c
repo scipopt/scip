@@ -199,6 +199,7 @@ SCIP_RETCODE replaceEdgeByPath(
    return SCIP_OKAY;
 }
 
+
 /** deletes an edge and makes corresponding adaptations */
 static inline
 void removeEdge(
@@ -1374,6 +1375,8 @@ SCIP_RETCODE pseudodeleteExecute(
    }
 
    SCIP_CALL( reduce_starInit(scip, EXT_PSEUDO_DEGREE_MAX, &stardata) );
+
+   reduce_nodesDeg1(scip, graph);
 
    for( int degree = EXT_PSEUDO_DEGREE_MIN; degree <= EXT_PSEUDO_DEGREE_MAX; degree++  )
    {

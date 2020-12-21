@@ -145,6 +145,25 @@ SCIP_RETCODE cutEdgeProbe(
 }
 
 
+/** removes nodes of degree one and unmarks */
+void reduce_nodesDeg1(
+   SCIP*                 scip,               /**< SCIP */
+   GRAPH*                graph               /**< graph data structure (in/out) */
+)
+{
+   const int nnodes = graph_get_nNodes(graph);
+
+   for( int i = 0; i < nnodes; ++i )
+   {
+      if( graph->grad[i] == 1 && !Is_term(graph->term[i]) )
+      {
+         graph_knot_del(scip, graph, i, TRUE);
+         graph->mark[i] = FALSE;
+      }
+   }
+}
+
+
 /** basic reduction tests for the STP */
 SCIP_RETCODE reduce_simple(
    SCIP*                 scip,               /**< SCIP data structure */

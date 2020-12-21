@@ -1316,10 +1316,10 @@ SCIP_RETCODE reduceSap(
    int*    vbase;
    int*    nodearrint;
    int*    nodearrint2;
-   int     e;
-   int     nnodes;
    int     degtnelims;
    int     redbound;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
    STP_Bool    da = TRUE;
    STP_Bool    sd = !TRUE;
    STP_Bool    rpt = TRUE;
@@ -1328,7 +1328,6 @@ SCIP_RETCODE reduceSap(
    /* create random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
-   nnodes = g->knots;
 
    redbound = MAX(nnodes / 1000, minelims);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -1344,13 +1343,15 @@ SCIP_RETCODE reduceSap(
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
 
    /* @todo change .stp file format for SAP! */
-   for( e = 0; e < g->edges; e++ )
-      if( SCIPisEQ(scip, g->cost[e], 20000.0) )
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( EQ(g->cost[e], 20000.0) )
          g->cost[e] = FARAWAY;
+   }
 
    SCIP_CALL( reduce_simple_sap(scip, g, fixed, &degtnelims) );
 
-   /* main loop */
+   /* main loop todo: why not sd??? */
    while( (sd || rpt || da) && !SCIPisStopped(scip) )
    {
       int danelims = 0;
