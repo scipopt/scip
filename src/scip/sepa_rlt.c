@@ -1579,7 +1579,6 @@ SCIP_RETCODE createSepaData(
    int i;
    int nvars;
    SCIP_CONSEXPR_BILINTERM* bilinterms;
-   int nbilinterms;
 
    assert(sepadata != NULL);
 
@@ -1590,13 +1589,12 @@ SCIP_RETCODE createSepaData(
    sepadata->eqauxexpr = NULL;
    sepadata->nbilinvars = 0;
    sepadata->sbilinvars = 0;
-   sepadata->nbilinterms = 0;
 
    /* get total number of bilinear terms */
-   nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
+   sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
    /* skip if there are no bilinear terms and implicit product detection is off */
-   if( nbilinterms == 0 && !sepadata->detecthidden )
+   if( sepadata->nbilinterms == 0 && !sepadata->detecthidden )
       return SCIP_OKAY;
 
    nvars = SCIPgetNVars(scip);
@@ -1611,7 +1609,7 @@ SCIP_RETCODE createSepaData(
    bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
    /* store the information of all variables that appear bilinearly */
-   for( i = 0; i < nbilinterms; ++i )
+   for( i = 0; i < sepadata->nbilinterms; ++i )
    {
       assert(bilinterms[i].x != NULL);
       assert(bilinterms[i].y != NULL);
@@ -1634,19 +1632,18 @@ SCIP_RETCODE createSepaData(
 
    if( sepadata->detecthidden )
    {
-      int oldnterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
+      int oldnterms = sepadata->nbilinterms;
 
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
+      sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
-      if( SCIPgetConsExprNBilinTerms(sepadata->conshdlr) > oldnterms )
+      if( sepadata->nbilinterms > oldnterms )
       {
-         SCIPstatisticMessage(" Number of hidden products: %d\n",
-                             SCIPgetConsExprNBilinTerms(sepadata->conshdlr) - oldnterms);
+         SCIPstatisticMessage(" Number of hidden products: %d\n", sepadata->nbilinterms - oldnterms);
       }
    }
 
    SCIPhashmapFree(&varmap);
-   sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
 
    if( sepadata->nbilinterms == 0 )
    {
