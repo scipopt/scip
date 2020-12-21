@@ -547,7 +547,14 @@ SCIP_RETCODE addProductVars(
 
    if( sepadata->bilinvardatamap == NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvardatamap, SCIPblkmem(scip), 10) );
+      int varmapsize;
+
+      /* the number of variables participating in bilinear products cannot exceed twice the number of bilinear terms;
+       * however, if we detect hidden products, the number of terms is yet unknown, so use the number of variables
+       */
+      varmapsize = sepadata->detecthidden ? SCIPgetNVars(scip) : MIN(SCIPgetNVars(scip), sepadata->nbilinterms * 2);
+
+      SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvardatamap, SCIPblkmem(scip), varmapsize) );
    }
 
    xidx = SCIPvarGetIndex(x);
@@ -1260,7 +1267,7 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
 
    /* allocate the adjacency data for variables that appear in 2-var relations */
-   SCIP_CALL( SCIPhashmapCreate(&vars_in_2rels, SCIPblkmem(scip), 10) );
+   SCIP_CALL( SCIPhashmapCreate(&vars_in_2rels, SCIPblkmem(scip), MIN(SCIPgetNVars(scip), nrows * 2)) );
 
    /* fill the data structures that will be used for product detection: hashtables and linked lists allowing to access
     * two and three variable relations by the variables; and the structure for accessing variables participating in two
@@ -1577,8 +1584,8 @@ SCIP_RETCODE createSepaData(
 {
    SCIP_HASHMAP* varmap;
    int i;
-   int nvars;
    SCIP_CONSEXPR_BILINTERM* bilinterms;
+   int varmapsize;
 
    assert(sepadata != NULL);
 
@@ -1597,13 +1604,16 @@ SCIP_RETCODE createSepaData(
    if( sepadata->nbilinterms == 0 && !sepadata->detecthidden )
       return SCIP_OKAY;
 
-   nvars = SCIPgetNVars(scip);
+   /* the number of variables participating in bilinear products cannot exceed twice the number of bilinear terms;
+    * however, if we detect hidden products, the number of terms is yet unknown, so use the number of variables
+    */
+   varmapsize = sepadata->detecthidden ? SCIPgetNVars(scip) : MIN(SCIPgetNVars(scip), sepadata->nbilinterms * 2);
 
    /* create variable map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), varmapsize) );
 
    /* create the empty map for bilinear terms */
-   SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvarsmap, SCIPblkmem(scip), varmapsize) );
 
    /* get all bilinear terms from the expression constraint handler */
    bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
