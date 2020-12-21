@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rlt.c
- * @brief  tests rlt cut selection
+/**@file   separation.c
+ * @brief  tests rlt cut separation
  * @author Ksenia Bestuzheva
  */
 
@@ -153,7 +153,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
-Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "test creation and freeing of separator data")
+Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test creation and freeing of separator data")
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
@@ -225,7 +225,7 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    SCIP_CALL( SCIPclearCuts(scip) );
 }
 
-Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = "test projection of problem")
+Test(separation, projection, .init = setup, .fini = teardown, .description = "test projection of problem")
 {
    SCIP_ROW** rows;
    SCIP_SOL* sol;
@@ -273,7 +273,7 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIPfreeBufferArray(scip, &rows);
 }
 
-Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
+Test(separation, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -329,7 +329,7 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIPfreeBufferArray(scip, &vars);
 }
 
-Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .description = "test cut computation when cliques are present")
+Test(separation, compute_clique_cuts, .init = setup, .fini = teardown, .description = "test cut computation when cliques are present")
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -401,7 +401,7 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
 }
 
 ///* test row marking */
-//Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test row marking")
+//Test(rlt_separation, mark, .init = setup, .fini = teardown, .description = "test row marking")
 //{
 //   SCIP_ROW** rows;
 //   SCIP_SOL* sol;

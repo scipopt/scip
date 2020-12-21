@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rlt.c
- * @brief  tests hidden product detection for rlt cuts
+/**@file   prodyct_detection.c
+ * @brief  tests hidden bilinear product detection for rlt cuts
  * @author Ksenia Bestuzheva
  */
 
@@ -144,7 +144,7 @@ void checkAuxExpr(
              "auxiliary expression [%d] should %soverestimate", auxidx, overestimate ? "" : "NOT ");
 }
 
-Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
+Test(product_detection, implrels, .init = setup, .fini = teardown, .description = "test extracting products from two implied relations")
 {
    SCIP_CONS* cons1;
    SCIP_CONS* cons2;
@@ -237,7 +237,7 @@ Test(rlt_product_detection, implrels, .init = setup, .fini = teardown, .descript
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and an implied bound")
+Test(product_detection, implrelbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and an implied bound")
 {
    SCIP_CONS* cons;
    SCIP_SEPADATA* sepadata;
@@ -316,7 +316,7 @@ Test(rlt_product_detection, implrelbnd, .init = setup, .fini = teardown, .descri
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and a clique")
+Test(product_detection, implrelclique, .init = setup, .fini = teardown, .description = "test extracting products from an implied relation and a clique")
 {
    SCIP_CONS* cons1;
    SCIP_SEPADATA* sepadata;
@@ -406,7 +406,7 @@ Test(rlt_product_detection, implrelclique, .init = setup, .fini = teardown, .des
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied bound and an unconditional relation")
+Test(product_detection, implbnd, .init = setup, .fini = teardown, .description = "test extracting products from an implied bound and an unconditional relation")
 {
    SCIP_CONS* cons;
    SCIP_SEPADATA* sepadata;
@@ -486,7 +486,7 @@ Test(rlt_product_detection, implbnd, .init = setup, .fini = teardown, .descripti
 }
 
 /* TODO proper checks */
-Test(rlt_product_detection, reltables, .init = setup, .fini = teardown, .description = "test creating relation tables")
+Test(product_detection, reltables, .init = setup, .fini = teardown, .description = "test creating relation tables")
 {
    SCIP_CONS* conss[5];
    SCIP_VAR* vars[3];

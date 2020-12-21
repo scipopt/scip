@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rlt.c
- * @brief  tests rlt functionalities
+/**@file   cuts.c
+ * @brief  tests rlt cut functionalities
  * @author Fabian Wegscheider
  */
 
@@ -147,7 +147,7 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
-TestSuite(rlt, .init = setup, .fini = teardown);
+TestSuite(cuts, .init = setup, .fini = teardown);
 
 static
 void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_Real lhs, SCIP_Real rhs)
@@ -183,7 +183,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
-Test(rlt, collect)
+Test(cuts, collect)
 {
    /* check original variables */
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, x, x)->aux.var, xx);
@@ -210,7 +210,7 @@ Test(rlt, collect)
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, logvar), NULL);
 }
 
-Test(rlt, separation)
+Test(cuts, separation)
 {
    SCIP_ROW* row1;
    SCIP_ROW* cutlhs;
