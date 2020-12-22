@@ -37,7 +37,6 @@ static SCIP_VAR* z;
 static SCIP_VAR* xx;
 static SCIP_VAR* xy;
 static SCIP_VAR* xz;
-static SCIP_VAR* sumvar;
 static SCIP_VAR* prodvar;
 static SCIP_VAR* absvar;
 static SCIP_VAR* powvar;
@@ -123,7 +122,6 @@ void setup(void)
 
    /* collect auxvars */
    expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0])->expr;
-   sumvar = SCIPgetConsExprExprAuxVar(expr);
    xx = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]);
    xy = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]);
    expr = SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[1])->expr;
@@ -183,6 +181,7 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
+/* checks the correspondence between variables and expressions */
 Test(cuts, collect)
 {
    /* check original variables */
@@ -210,6 +209,7 @@ Test(cuts, collect)
    cr_expect_eq(SCIPgetConsExprBilinTerm(conshdlr, powvar, logvar), NULL);
 }
 
+/* computes and checks cuts */
 Test(cuts, separation)
 {
    SCIP_ROW* row1;

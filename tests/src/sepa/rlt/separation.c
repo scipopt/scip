@@ -34,18 +34,10 @@
 static SCIP* scip;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_SEPA* sepa;
-static SCIP_VAR* x1o;
-static SCIP_VAR* x2o;
-static SCIP_VAR* x3o;
-static SCIP_VAR* x4o;
-static SCIP_VAR* y12o;
-static SCIP_VAR* b1o;
-static SCIP_VAR* b2o;
 static SCIP_VAR* x1;
 static SCIP_VAR* x2;
 static SCIP_VAR* x3;
 static SCIP_VAR* x4;
-static SCIP_VAR* y12;
 static SCIP_VAR* b1;
 static SCIP_VAR* b2;
 
@@ -53,6 +45,13 @@ static SCIP_VAR* b2;
 static
 void setup(void)
 {
+   SCIP_VAR* x1o;
+   SCIP_VAR* x2o;
+   SCIP_VAR* x3o;
+   SCIP_VAR* x4o;
+   SCIP_VAR* b1o;
+   SCIP_VAR* b2o;
+
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include cons_expr: this adds the operator handlers */
@@ -76,7 +75,6 @@ void setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &x2o, "x2", -6.0, -3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &x3o, "x3", 1.0, 3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &x4o, "x4", 1.0, 3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y12o, "y12", 2.0, 4.0, -3.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &b1o, "b1", 0, 1, 1, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &b2o, "b2", 0, 1, 1, SCIP_VARTYPE_BINARY) );
 
@@ -84,7 +82,6 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x2o) );
    SCIP_CALL( SCIPaddVar(scip, x3o) );
    SCIP_CALL( SCIPaddVar(scip, x4o) );
-   SCIP_CALL( SCIPaddVar(scip, y12o) );
    SCIP_CALL( SCIPaddVar(scip, b1o) );
    SCIP_CALL( SCIPaddVar(scip, b2o) );
 
@@ -97,14 +94,12 @@ void setup(void)
    SCIP_CALL( SCIPgetTransformedVar(scip, x2o, &x2) );
    SCIP_CALL( SCIPgetTransformedVar(scip, x3o, &x3) );
    SCIP_CALL( SCIPgetTransformedVar(scip, x4o, &x4) );
-   SCIP_CALL( SCIPgetTransformedVar(scip, y12o, &y12) );
    SCIP_CALL( SCIPgetTransformedVar(scip, b1o, &b1) );
    SCIP_CALL( SCIPgetTransformedVar(scip, b2o, &b2) );
    SCIP_CALL( SCIPreleaseVar(scip, &x1o) );
    SCIP_CALL( SCIPreleaseVar(scip, &x2o) );
    SCIP_CALL( SCIPreleaseVar(scip, &x3o) );
    SCIP_CALL( SCIPreleaseVar(scip, &x4o) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y12o) );
    SCIP_CALL( SCIPreleaseVar(scip, &b1o) );
    SCIP_CALL( SCIPreleaseVar(scip, &b2o) );
    cr_assert(x1 != NULL);
