@@ -174,7 +174,8 @@ void extractSubgraphAddNodes(
 static
 SCIP_RETCODE extractSubgraphInitHistory(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH*                orggraph,           /**< original graph */
+   SCIP_Bool             moveFixedEdges,     /**< move fixed edges? */
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
@@ -189,7 +190,7 @@ SCIP_RETCODE extractSubgraphInitHistory(
 
    assert(graph_getNpseudoAncestors(orggraph) == graph_getNpseudoAncestors(subgraph));
 
-   SCIP_CALL( graph_copyFixed(scip, orggraph, subgraph) );
+   SCIP_CALL( graph_copyFixed(scip, orggraph, moveFixedEdges, subgraph) );
 
    return SCIP_OKAY;
 }
@@ -468,7 +469,7 @@ SCIP_RETCODE borderNodesContract(
 static
 SCIP_RETCODE extractSubgraphBuild(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH*                orggraph,           /**< original graph */
    SUBINOUT*             subinout,
    GRAPH**               subgraph            /**< graph to be created */
    )
@@ -488,7 +489,7 @@ SCIP_RETCODE extractSubgraphBuild(
    extractSubgraphAddNodes(orggraph, subinout, subg);
    if( !subinout->useNewHistory )
    {
-      SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subg) );
+      SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, TRUE, subg) );
    }
    SCIP_CALL( extractSubgraphAddEdgesWithHistory(scip, orggraph, subinout, subg) );
 
@@ -503,7 +504,7 @@ SCIP_RETCODE extractSubgraphBuild(
 static
 void reinsertSubgraphTransferFixedHistory(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          subgraph,           /**< graph to be created */
+   GRAPH*                subgraph,           /**< sub-graph */
    GRAPH*                orggraph            /**< original graph */
    )
 {
@@ -518,11 +519,16 @@ void reinsertSubgraphTransferFixedHistory(
    assert(graph_getNpseudoAncestors(subgraph) == graph_getNpseudoAncestors(orggraph));
 
    if( orggraph->fixedcomponents )
+   {
+      graph_fixed_resetMoved(orggraph);
       graph_free_fixed(scip, orggraph);
+   }
    assert(orggraph->fixedcomponents == NULL);
+
    orggraph->fixedcomponents = subgraph->fixedcomponents;
 
    assert(graph_get_nFixpseudonodes(subgraph) == graph_get_nFixpseudonodes(orggraph));
+   subgraph->fixedcomponents = NULL;
 }
 
 
@@ -657,7 +663,7 @@ SCIP_RETCODE reinsertSubgraphDeleteOldEdges(
 static
 SCIP_RETCODE reinsertSubgraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          subgraph,           /**< graph to be inserted */
+   GRAPH*                subgraph,           /**< graph to be inserted */
    SUBINOUT*             subinout,
    GRAPH*                orggraph            /**< original graph */
    )
@@ -690,11 +696,11 @@ SCIP_RETCODE reinsertSubgraph(
 
 /** Obtains a new subgraph corresponding to marked nodes.
  *  Also fills a node map from the new to the original nodes.
- *  Creates a shallow copy wrt ancestor information:
- *  ancestors and pseudo-ancestors are kept and will be modified also for original graph! */
+ *  Creates a shallow copy and moves parts wrt ancestor information:
+ *  ancestors and pseudo-ancestors are kept/moved and will be modified also for original graph! */
 SCIP_RETCODE graph_subgraphExtract(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orggraph,           /**< original graph */
+   GRAPH*                orggraph,           /**< original graph */
    SUBINOUT*             subinout,
    GRAPH**               subgraph            /**< graph to be created */
    )
@@ -794,8 +800,8 @@ const int* graph_subinoutGetSubToOrgNodeMap(
  *  NOTE: necessary to allocate block memory on subscip */
 SCIP_RETCODE graph_subinoutCompleteNewHistory(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          orggraph,           /**< original graph */
    const SUBINOUT*       subinout,           /**< helper */
+   GRAPH*                orggraph,           /**< original graph */
    GRAPH*                subgraph            /**< graph to fill */
    )
 {
@@ -815,7 +821,7 @@ SCIP_RETCODE graph_subinoutCompleteNewHistory(
    assert(subinout->useNewHistory);
    assert(edgemap_subToOrg);
 
-   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, subgraph) );
+   SCIP_CALL( extractSubgraphInitHistory(scip, orggraph, FALSE, subgraph) );
    /* NOTE we want to have only the fixed pseudo-ancestor, or we get into trouble with the retransformation */
    graph_free_fixedEdgesOnly(scip, subgraph);
 
@@ -988,6 +994,7 @@ SCIP_RETCODE graph_subgraphReinsert(
       SCIPfreeMemoryArray(scip, &(subg->orgtail));
    }
 
+   assert(!subg->fixedcomponents);
    /* NOTE: fixed components are not deleted */
    graph_free(scip, subgraph, FALSE);
 

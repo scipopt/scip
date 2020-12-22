@@ -46,7 +46,8 @@ extern SCIP_Bool show; // todo delete
  */
 extern SCIP_RETCODE   graph_initContractTracing(SCIP*, GRAPH*);
 extern int            graph_contractTrace(int, const GRAPH*);
-extern SCIP_Bool            graph_knot_hasContractTrace(int, const GRAPH*);
+extern SCIP_Bool      graph_knot_hasContractTrace(int, const GRAPH*);
+extern void          graph_fixed_resetMoved(GRAPH*);
 extern SCIP_RETCODE  graph_singletonAncestors_init(SCIP*, const GRAPH*, int, SINGLETONANS*);
 extern void          graph_singletonAncestors_freeMembers(SCIP*, SINGLETONANS*);
 extern SCIP_Bool     graph_valid_ancestors(SCIP*, const GRAPH*);
@@ -98,7 +99,7 @@ extern SCIP_RETCODE   graph_fixed_add(SCIP*, IDX*, const int*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addEdge(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_addNodePc(SCIP*, int, GRAPH*);
 extern SCIP_RETCODE   graph_fixed_moveNodePc(SCIP*, int, GRAPH*);
-extern SCIP_RETCODE   graph_copyFixed(SCIP*, const GRAPH*, GRAPH*);
+extern SCIP_RETCODE   graph_copyFixed(SCIP*, GRAPH*, SCIP_Bool, GRAPH*);
 extern IDX*           graph_get_fixedges(const GRAPH*);
 extern const int*     graph_get_fixpseudonodes(SCIP*, const GRAPH*);
 extern int            graph_get_nFixpseudonodes(const GRAPH*);
@@ -192,7 +193,7 @@ extern SCIP_Bool graph_knotIsNWLeaf(const GRAPH*, int);
 
 /* graph_sub.c
  */
-extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, const GRAPH*, SUBINOUT*, GRAPH**);
+extern SCIP_RETCODE   graph_subgraphExtract(SCIP*, GRAPH*, SUBINOUT*, GRAPH**);
 extern SCIP_RETCODE   graph_subinoutInit(SCIP*, const GRAPH*, SUBINOUT**);
 extern void           graph_subinoutFree(SCIP*, SUBINOUT**);
 extern void           graph_subinoutClean(SCIP*, SUBINOUT*);
@@ -368,7 +369,7 @@ extern void   graph_pathHeapAdd(const PATH*, int, int*, int*, int*);
 extern void   graph_path_PcMwSd(SCIP*, const GRAPH*, PATH*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
 extern SCIP_Bool      graph_path_exists(const GRAPH*);
-extern SCIP_RETCODE    graph_subinoutCompleteNewHistory(SCIP*, const GRAPH*, const SUBINOUT*, GRAPH*);
+extern SCIP_RETCODE    graph_subinoutCompleteNewHistory(SCIP*, const SUBINOUT*, GRAPH*, GRAPH*);
 extern void   graph_sdPaths(const GRAPH*, PATH*, const SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int, int, int);
 
 /* graph_tpath.c

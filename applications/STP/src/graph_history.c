@@ -37,6 +37,7 @@ struct fixed_graph_components
    IDX*                  fixedges;           /**< fixed edges */
    int*                  fixpseudonodes;     /**< fixed psuedo eliminated nodes  */
    int                   nfixnodes;          /**< number of fixed nodes  */
+   SCIP_Bool             movedFrom;          /**< ancestor information moved away? */
 };
 
 /** blocked pseudo ancestors */
@@ -1511,6 +1512,7 @@ SCIP_RETCODE graph_init_fixed(
    fixedcomponents->fixedges = NULL;
    fixedcomponents->fixpseudonodes = NULL;
    fixedcomponents->nfixnodes = 0;
+   fixedcomponents->movedFrom = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1587,6 +1589,7 @@ SCIP_RETCODE graph_fixed_add(
       SCIP_CALL( graph_init_fixed(scip, g) );
 
    fixedcomponents = g->fixedcomponents;
+   assert(!fixedcomponents->movedFrom);
 
    if( edges )
    {
@@ -1690,6 +1693,21 @@ SCIP_RETCODE graph_fixed_moveNodePc(
 }
 
 
+/** resets */
+void graph_fixed_resetMoved(
+   GRAPH*                g                   /**< the graph */
+)
+{
+   assert(g);
+
+   if( g->fixedcomponents != NULL )
+   {
+      assert(g->fixedcomponents->movedFrom);
+      g->fixedcomponents->movedFrom = FALSE;
+   }
+}
+
+
 /** initializes */
 SCIP_RETCODE graph_initContractTracing(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1749,16 +1767,16 @@ int graph_contractTrace(
    return newnode;
 }
 
-/** copies fixed components */
+/** copies and potentially moves fixed components */
 SCIP_RETCODE graph_copyFixed(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                   /**< the graph */
+   SCIP*                 scip,                /**< SCIP data structure */
+   GRAPH*                g,                   /**< the original graph */
+   SCIP_Bool             moveFixedEdges,      /**< move fixed edges? If false, nothing is done! */
    GRAPH*                g_copy               /**< the copied graph */
 )
 {
    FIXED* fixed_copy;
-   const FIXED* fixed_org;
-   SCIP_Bool conflict;
+   FIXED* fixed_org;
 
    assert(scip && g && g_copy);
    assert(g_copy->fixedcomponents == NULL);
@@ -1768,16 +1786,19 @@ SCIP_RETCODE graph_copyFixed(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocMemory(scip, &(g_copy->fixedcomponents)) );
+   SCIP_CALL( graph_init_fixed(scip, g_copy) );
    fixed_copy = g_copy->fixedcomponents;
    fixed_org = g->fixedcomponents;
 
-   fixed_copy->fixedges = NULL;
+   assert(fixed_copy && fixed_org);
 
-   if( fixed_org->fixedges != NULL  )
+   if( moveFixedEdges  )
    {
-      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(fixed_copy->fixedges), fixed_org->fixedges, &conflict) );
-      assert(!conflict);
+      assert(!fixed_org->movedFrom);
+
+      fixed_copy->fixedges = fixed_org->fixedges;
+      fixed_org->fixedges = NULL;
+      fixed_org->movedFrom = TRUE;
    }
 
    fixed_copy->nfixnodes = fixed_org->nfixnodes;

@@ -452,7 +452,7 @@ SCIP_RETCODE decomposeSolveSub(
 
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( subScipSetup(scip, subscip) );
-   SCIP_CALL( graph_subinoutCompleteNewHistory(subscip, orggraph, bidecomp->subinout, subgraph) );
+   SCIP_CALL( graph_subinoutCompleteNewHistory(subscip, bidecomp->subinout, orggraph, subgraph) );
    /* NOTE: subgraph will be moved into subscip probdata! */
    SCIP_CALL( SCIPprobdataCreateFromGraph(subscip, 0.0, "subproblem", TRUE, subgraph) );
    SCIP_CALL( subcompInit(scip, subscip, &subcomp) );
