@@ -159,10 +159,10 @@ SCIP_RETCODE cut_add(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    const GRAPH*          g,                  /**< graph data structure */
+   const STP_Bool*       isRemoved,
    const SCIP_Real*      xvals,              /**< edge values */
    int*                  capa,               /**< edges capacities (scaled) */
    const int             updatecapa,         /**< update capacities? */
-   int*                  ncuts,              /**< pointer to store number of cuts */
    SCIP_Bool             local,              /**< is the cut local? */
    SCIP_Bool*            success             /**< pointer to store whether add cut be added */
    )
@@ -170,19 +170,17 @@ SCIP_RETCODE cut_add(
    SCIP_ROW* row;
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
    SCIP_Real sum = 0.0;
+   const int nedges = graph_get_nEdges(g);
    const int* const gmark = g->mark;
    const int* const gtail = g->tail;
    const int* const ghead = g->head;
-   const int nedges = graph_get_nEdges(g);
 
+   assert(g);
    assert(g->knots > 0);
    assert(xvals);
    assert(!updatecapa);
 
    (*success) = FALSE;
-
-   assert(g != NULL);
-   assert(scip != NULL);
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "twocut", 1.0, SCIPinfinity(scip), local, FALSE, TRUE) );
 
@@ -209,6 +207,12 @@ SCIP_RETCODE cut_add(
             }
          }
 #endif
+
+         if( isRemoved[i] )
+         {
+            assert(EQ(xvals[i], 0.0));
+            continue;
+         }
 
          sum += xvals[i];
 
@@ -242,7 +246,6 @@ SCIP_RETCODE cut_add(
       if( !infeasible )
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
 #endif
-      (*ncuts)++;
       (*success) = TRUE;
    }
 
@@ -787,6 +790,7 @@ SCIP_RETCODE sep_2cut(
 
    SCIP_VAR** vars;
    GRAPH*  g;
+   STP_Bool* edges_isRemoved;
    SCIP_Real* xval;
    int*    w;
    int*    capa;
@@ -1010,6 +1014,13 @@ SCIP_RETCODE sep_2cut(
    count = 0;
    rerun = FALSE;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges_isRemoved, nedges) );
+
+   for( i = 0; i < nedges; i++ )
+   {
+      edges_isRemoved[i] = (SCIPvarGetUbGlobal(vars[i]) < 0.5);
+   }
+
    while( terms > 0 )
    {
       if( ((unsigned) terms) % 32 == 0 && SCIPisStopped(scip) )
@@ -1061,7 +1072,9 @@ SCIP_RETCODE sep_2cut(
 
             /* cut */
             for( k = 0; k < nnodes; k++ )
+            {
                g->mark[k] = (w[k] != 0);
+            }
 
             assert(g->mark[root]);
          }
@@ -1085,16 +1098,19 @@ SCIP_RETCODE sep_2cut(
 
          rerun = TRUE;
 
-         SCIP_CALL( cut_add(scip, conshdlr, g, xval, capa, nested_cut || disjunct_cut, ncuts, localcut, &addedcut) );
+         SCIP_CALL( cut_add(scip, conshdlr, g, edges_isRemoved, xval, capa, nested_cut || disjunct_cut, localcut, &addedcut) );
          if( addedcut )
          {
             count++;
+            (*ncuts)++;
 
             if( *ncuts >= maxcuts )
                goto TERMINATE;
          }
          else
+         {
             break;
+         }
       }
       while( nested_cut );               /* Nested Cut is CONSTANT ! */
    } /* while terms > 0 */
@@ -1172,6 +1188,7 @@ SCIP_RETCODE sep_2cut(
       }
 #endif
  TERMINATE:
+   SCIPfreeBufferArray(scip, &edges_isRemoved);
    SCIPfreeBufferArray(scip, &rootcut);
    SCIPfreeBufferArray(scip, &start);
    SCIPfreeBufferArray(scip, &edgeflipped);
