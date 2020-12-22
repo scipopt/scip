@@ -159,7 +159,8 @@ SCIP_RETCODE cut_add(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    const GRAPH*          g,                  /**< graph data structure */
-   const STP_Bool*       isRemoved,
+   const int*            nodes_inRootComp,   /**< for each node: in root component? */
+   const STP_Bool*       edges_isRemoved,    /**< for each edge: removed? */
    const SCIP_Real*      xvals,              /**< edge values */
    int*                  capa,               /**< edges capacities (scaled) */
    const int             updatecapa,         /**< update capacities? */
@@ -171,7 +172,6 @@ SCIP_RETCODE cut_add(
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
    SCIP_Real sum = 0.0;
    const int nedges = graph_get_nEdges(g);
-   const int* const gmark = g->mark;
    const int* const gtail = g->tail;
    const int* const ghead = g->head;
 
@@ -186,11 +186,11 @@ SCIP_RETCODE cut_add(
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-   assert(gmark[g->source]);
+   assert(nodes_inRootComp[g->source]);
 
    for( int i = 0; i < nedges; i++ )
    {
-      if( !gmark[ghead[i]] && gmark[gtail[i]] )
+      if( !nodes_inRootComp[ghead[i]] && nodes_inRootComp[gtail[i]] )
       {
 #ifdef STP_USE_ADVANCED_FLOW
          if( updatecapa )
@@ -208,7 +208,7 @@ SCIP_RETCODE cut_add(
          }
 #endif
 
-         if( isRemoved[i] )
+         if( edges_isRemoved[i] )
          {
             assert(EQ(xvals[i], 0.0));
             continue;
@@ -806,8 +806,6 @@ SCIP_RETCODE sep_2cut(
    int*    edgeflipped;
    int*    headinactive;
    int     i;
-   int     k;
-   int     e;
    int     root;
    int     head;
    int     count;
@@ -872,13 +870,13 @@ SCIP_RETCODE sep_2cut(
 
    assert(nedges >= nnodes);
 
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       w[k] = 0;
       excess[k] = 0;
    }
 
-   for( e = 0; e < nedges; e += 2 )
+   for( int e = 0; e < nedges; e += 2 )
    {
       const int erev = e + 1;
 
@@ -917,14 +915,13 @@ SCIP_RETCODE sep_2cut(
    /* bfs loop */
    for( i = 0; i < rootcutsize; i++ )
    {
+      const int k = rootcut[i];
+
       assert(rootcutsize <= nnodes);
-
-      k = rootcut[i];
-
       assert(k < nnodes);
 
       /* traverse outgoing arcs */
-      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
          head = g->head[e];
 
@@ -953,7 +950,7 @@ SCIP_RETCODE sep_2cut(
    terms = 0;
 
    /* fill auxiliary adjacent vertex/edges arrays and get useable terms */
-   for( k = 0; k < nnodes; k++ )
+   for( int k = 0; k < nnodes; k++ )
    {
       headactive[k] = Q_NULL;
       headinactive[k] = Q_NULL;
@@ -964,7 +961,7 @@ SCIP_RETCODE sep_2cut(
       if( w[k] == 0 )
       {
          edgecurr[k] = i;
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             if( w[g->head[e]] == 0 && capa[e] != 0 )
             {
@@ -994,7 +991,7 @@ SCIP_RETCODE sep_2cut(
    start[nnodes] = i;
 
    /* initialize edgeflipped */
-   for( e = nedges - 1; e >= 0; e-- )
+   for( int e = nedges - 1; e >= 0; e-- )
    {
       if( edgearr[e] >= 0 )
       {
@@ -1070,13 +1067,9 @@ SCIP_RETCODE sep_2cut(
          {
             graph_mincut_exec(g, root, i, nnodes, newnedges, rootcutsize, rootcut, capa, w, start, edgeflipped, headarr, rerun);
 
-            /* cut */
-            for( k = 0; k < nnodes; k++ )
-            {
-               g->mark[k] = (w[k] != 0);
-            }
+            assert(w[root] != 0);
 
-            assert(g->mark[root]);
+            SCIP_CALL( cut_add(scip, conshdlr, g, w, edges_isRemoved, xval, capa, nested_cut || disjunct_cut, localcut, &addedcut) );
          }
          else
          {
@@ -1084,21 +1077,22 @@ SCIP_RETCODE sep_2cut(
 
             assert(rerun);
 
-            for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+            for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
                flowsum += xval[e];
 
             if( SCIPisFeasGE(scip, flowsum, 1.0) )
                continue;
 
-            for( k = 0; k < nnodes; k++ )
+            for( int k = 0; k < nnodes; k++ )
                g->mark[k] = TRUE;
 
             g->mark[i] = FALSE;
+
+            SCIP_CALL( cut_add(scip, conshdlr, g, g->mark, edges_isRemoved, xval, capa, nested_cut || disjunct_cut, localcut, &addedcut) );
          }
 
          rerun = TRUE;
 
-         SCIP_CALL( cut_add(scip, conshdlr, g, edges_isRemoved, xval, capa, nested_cut || disjunct_cut, localcut, &addedcut) );
          if( addedcut )
          {
             count++;
