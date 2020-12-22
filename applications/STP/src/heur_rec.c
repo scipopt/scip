@@ -1533,7 +1533,7 @@ SCIP_RETCODE SCIPStpHeurRecRun(
          /* reduce new graph */
          /* NOTE for MW the reductions seem to be quite expensive */
          if( probtype == STP_DHCSTP || probtype == STP_DCSTP || probtype == STP_NWSPG || probtype == STP_SAP
-              || graph_pc_isMw(graph) )
+              || probtype == STP_RMWCSP )
          {
             SCIP_CALL( reduce_solInit(scip, solgraph, FALSE, &redsol) );
             SCIP_CALL( reduce(scip, solgraph, redsol, 0, 5, FALSE) );
