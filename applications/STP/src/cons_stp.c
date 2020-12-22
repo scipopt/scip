@@ -471,6 +471,7 @@ static
 SCIP_RETCODE sep_flowIn(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SCIP_Real*      nodes_inflow,       /**< incoming flow per node */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      xval,               /**< LP-solution values */
    int                   vertex,             /**< vertex */
@@ -478,15 +479,21 @@ SCIP_RETCODE sep_flowIn(
    int*                  cutcount            /**< counts cuts */
 )
 {
-   SCIP_Real sum = 0.0;
-
    assert(xval && cutcount && vars);
    assert(!Is_term(g->term[vertex]));
 
-   for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
-      sum += xval[k];
+#ifndef NDEBUG
+   {
+      SCIP_Real sum = 0.0;
 
-   if( SCIPisFeasGT(scip, sum, 1.0) )
+      for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+         sum += xval[k];
+
+      assert(SCIPisEQ(scip, sum, nodes_inflow[vertex]));
+   }
+#endif
+
+   if( SCIPisFeasGT(scip, nodes_inflow[vertex], 1.0) )
    {
       SCIP_ROW* row = NULL;
       SCIP_Bool infeasible;
@@ -523,6 +530,7 @@ static
 SCIP_RETCODE sep_flowTermIn(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SCIP_Real*      nodes_inflow,       /**< incoming flow per node */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      xval,               /**< LP-solution values */
    int                   vertex,             /**< vertex */
@@ -530,14 +538,18 @@ SCIP_RETCODE sep_flowTermIn(
    int*                  cutcount            /**< counts cuts */
 )
 {
+#ifndef NDEBUG
    SCIP_Real sum = 0.0;
-
-   assert(Is_term(g->term[vertex]));
 
    for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
       sum += xval[k];
 
-   if( !SCIPisFeasEQ(scip, sum, 1.0) )
+   assert(SCIPisEQ(scip, sum, nodes_inflow[vertex]));
+#endif
+
+   assert(Is_term(g->term[vertex]));
+
+   if( !SCIPisFeasEQ(scip, nodes_inflow[vertex], 1.0) )
    {
       SCIP_ROW* row = NULL;
       SCIP_Bool infeasible;
@@ -574,6 +586,7 @@ static
 SCIP_RETCODE sep_flowBalance(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SCIP_Real*      nodes_inflow,       /**< incoming flow per node */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      xval,               /**< LP-solution values */
    int                   vertex,             /**< vertex */
@@ -582,15 +595,25 @@ SCIP_RETCODE sep_flowBalance(
 )
 {
    SCIP_ROW* row = NULL;
-   SCIP_Real sum = 0.0;
+   SCIP_Real sum = -nodes_inflow[vertex];
 
    assert(!Is_term(g->term[vertex]));
 
-   for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
-      sum -= xval[k];
-
    for( int k = g->outbeg[vertex]; k != EAT_LAST; k = g->oeat[k] )
       sum += xval[k];
+
+#ifndef NDEBUG
+   {
+      SCIP_Real sum_debug = 0.0;
+      for( int k = g->inpbeg[vertex]; k != EAT_LAST; k = g->ieat[k] )
+         sum_debug -= xval[k];
+
+      for( int k = g->outbeg[vertex]; k != EAT_LAST; k = g->oeat[k] )
+         sum_debug += xval[k];
+
+      assert(SCIPisEQ(scip, sum_debug, sum));
+   }
+#endif
 
    if( SCIPisFeasNegative(scip, sum) )
    {
@@ -630,6 +653,7 @@ static
 SCIP_RETCODE sep_flowEdgeOut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const SCIP_Real*      nodes_inflow,       /**< incoming flow per node */
    const GRAPH*          g,                  /**< graph data structure */
    const SCIP_Real*      xval,               /**< LP-solution values */
    int                   vertex,             /**< vertex */
@@ -642,11 +666,17 @@ SCIP_RETCODE sep_flowEdgeOut(
    for( int ijedge = g->outbeg[i]; ijedge != EAT_LAST; ijedge = g->oeat[ijedge] )
    {
       const int j = g->head[ijedge];
-      SCIP_Real sum = -xval[ijedge];
+      const SCIP_Real sum = nodes_inflow[i] - xval[ijedge] - xval[flipedge(ijedge)];
+
+#ifndef NDEBUG
+      SCIP_Real sum_debug = -xval[ijedge];
 
       for( int e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
          if( g->tail[e] != j )
-            sum += xval[e];
+            sum_debug += xval[e];
+
+      assert(SCIPisEQ(scip, sum, sum_debug));
+#endif
 
       if( SCIPisFeasNegative(scip, sum) )
       {
@@ -694,32 +724,43 @@ SCIP_RETCODE sep_flow(
    int*                  ncuts               /**< pointer to store number of cuts */
    )
 {
-   const GRAPH* g = consdata->graph;
-   SCIP_VAR** vars;
-   SCIP_Real* xval;
+   const GRAPH* const g = consdata->graph;
+   SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   const SCIP_Real* xval =SCIPprobdataGetXval(scip, NULL);
+   SCIP_Real* nodes_inflow;
    int count = 0;
+   const int nnodes = graph_get_nNodes(g);
+   const int maxcuts_local = maxcuts - *ncuts;
    const SCIP_Bool flowsep = conshdlrdata->flowsep;
    const SCIP_Bool inflowsep = conshdlrdata->inflowsep;
    const SCIP_Bool intermflowsep = conshdlrdata->intermflowsep;
    const SCIP_Bool outflowsep = conshdlrdata->outflowsep;
    const SCIP_Bool balanceflowsep = conshdlrdata->balanceflowsep;
 
-   assert(scip && conshdlr && g);
+   assert(conshdlr && xval && ncuts && vars);
 
-   vars = SCIPprobdataGetVars(scip);
-   xval = SCIPprobdataGetXval(scip, NULL);
-   assert(xval);
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_inflow, nnodes) );
 
-   for( int i = 0; i < g->knots; i++ )
+   for( int i = 0; i < nnodes; i++ )
+   {
+      SCIP_Real sum = 0;
+
+      for( int e = g->inpbeg[i]; e >= 0; e = g->ieat[e] )
+         sum += xval[e];
+
+      nodes_inflow[i] = sum;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
    {
       if( i == g->source )
          continue;
 
       if( intermflowsep && Is_term(g->term[i]) )
       {
-         SCIP_CALL( sep_flowTermIn(scip, conshdlr, g, xval, i, vars, &count) );
+         SCIP_CALL( sep_flowTermIn(scip, conshdlr, nodes_inflow, g, xval, i, vars, &count) );
 
-         if( *ncuts + count >= maxcuts )
+         if( count >= maxcuts_local )
             break;
       }
 
@@ -729,9 +770,9 @@ SCIP_RETCODE sep_flow(
 
       if( outflowsep )
       {
-         SCIP_CALL( sep_flowEdgeOut(scip, conshdlr, g, xval, i, vars, &count) );
+         SCIP_CALL( sep_flowEdgeOut(scip, conshdlr, nodes_inflow, g, xval, i, vars, &count) );
 
-         if( *ncuts + count >= maxcuts )
+         if( count >= maxcuts_local )
             break;
       }
 
@@ -741,17 +782,17 @@ SCIP_RETCODE sep_flow(
 
       if( inflowsep )
       {
-         SCIP_CALL( sep_flowIn(scip, conshdlr, g, xval, i, vars, &count) );
+         SCIP_CALL( sep_flowIn(scip, conshdlr, nodes_inflow, g, xval, i, vars, &count) );
 
-         if( *ncuts + count >= maxcuts )
+         if( count >= maxcuts_local )
             break;
       }
 
       if( balanceflowsep )
       {
-         SCIP_CALL( sep_flowBalance(scip, conshdlr, g, xval, i, vars, &count) );
+         SCIP_CALL( sep_flowBalance(scip, conshdlr, nodes_inflow, g, xval, i, vars, &count) );
 
-         if( *ncuts + count >= maxcuts )
+         if( count >= maxcuts_local )
             break;
       }
    }
@@ -759,6 +800,8 @@ SCIP_RETCODE sep_flow(
    SCIPdebugMessage("Flow Separator: %d Inequalities added\n", count);
 
    *ncuts += count;
+
+   SCIPfreeBufferArray(scip, &nodes_inflow);
 
    return SCIP_OKAY;
 }
