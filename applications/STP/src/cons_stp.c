@@ -902,6 +902,9 @@ SCIP_RETCODE sep_2cut(
    SCIP_CALL( SCIPallocBufferArray(scip, &start, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rootcut, nnodes + 1) );
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges_isRemoved, nedges) );
+
+
 #ifdef STP_MAXFLOW_TIME
    clock_t startt, endt;
    double cpu_time_used;
@@ -913,6 +916,11 @@ SCIP_RETCODE sep_2cut(
 
    assert(nedges >= nnodes);
 
+   for( i = 0; i < nedges; i++ )
+   {
+      edges_isRemoved[i] = (SCIPvarGetUbGlobal(vars[i]) < 0.5);
+   }
+
    for( int k = 0; k < nnodes; k++ )
    {
       w[k] = 0;
@@ -922,8 +930,16 @@ SCIP_RETCODE sep_2cut(
    for( int e = 0; e < nedges; e += 2 )
    {
       const int erev = e + 1;
+      SCIP_Bool eIsRemoved;
 
-      if( intree && SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5 )
+      if( intree )
+         eIsRemoved = SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[erev]) < 0.5;
+      else
+         eIsRemoved = edges_isRemoved[e] && edges_isRemoved[erev];
+
+      assert(eIsRemoved || !edges_isRemoved[e] || !edges_isRemoved[erev]);
+
+      if( eIsRemoved )
       {
          capa[e] = 0;
          capa[erev] = 0;
@@ -1053,13 +1069,6 @@ SCIP_RETCODE sep_2cut(
 
    count = 0;
    rerun = FALSE;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &edges_isRemoved, nedges) );
-
-   for( i = 0; i < nedges; i++ )
-   {
-      edges_isRemoved[i] = (SCIPvarGetUbGlobal(vars[i]) < 0.5);
-   }
 
    while( terms > 0 )
    {
