@@ -541,11 +541,13 @@ SCIP_RETCODE addProductVars(
    if( sepadata->bilinvardatamap == NULL )
    {
       int varmapsize;
+      int nvars;
 
       /* the number of variables participating in bilinear products cannot exceed twice the number of bilinear terms;
        * however, if we detect hidden products, the number of terms is yet unknown, so use the number of variables
        */
-      varmapsize = sepadata->detecthidden ? SCIPgetNVars(scip) : MIN(SCIPgetNVars(scip), sepadata->nbilinterms * 2);
+      nvars = SCIPgetNVars(scip);
+      varmapsize = sepadata->detecthidden ? nvars : MIN(nvars, sepadata->nbilinterms * 2);
 
       SCIP_CALL( SCIPhashmapCreate(&sepadata->bilinvardatamap, SCIPblkmem(scip), varmapsize) );
    }
@@ -1236,6 +1238,7 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_Real side2;
    int* row_list;
    SCIP_HASHMAP* vars_in_2rels;
+   int nvars;
 
    /* get the (initial) rows */
    SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
@@ -1254,7 +1257,8 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
 
    /* allocate the adjacency data map for variables that appear in 2-var relations */
-   SCIP_CALL( SCIPhashmapCreate(&vars_in_2rels, SCIPblkmem(scip), MIN(SCIPgetNVars(scip), nrows * 2)) );
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPhashmapCreate(&vars_in_2rels, SCIPblkmem(scip), MIN(nvars, nrows * 2)) );
 
    /* fill the data structures that will be used for product detection: hashtables and linked lists allowing to access
     * two and three variable relations by the variables; and the hashmap for accessing variables participating in two
@@ -1575,6 +1579,7 @@ SCIP_RETCODE createSepaData(
    int i;
    SCIP_CONSEXPR_BILINTERM* bilinterms;
    int varmapsize;
+   int nvars;
 
    assert(sepadata != NULL);
 
@@ -1596,7 +1601,8 @@ SCIP_RETCODE createSepaData(
    /* the number of variables participating in bilinear products cannot exceed twice the number of bilinear terms;
     * however, if we detect hidden products, the number of terms is yet unknown, so use the number of variables
     */
-   varmapsize = sepadata->detecthidden ? SCIPgetNVars(scip) : MIN(SCIPgetNVars(scip), sepadata->nbilinterms * 2);
+   nvars = SCIPgetNVars(scip);
+   varmapsize = sepadata->detecthidden ? nvars : MIN(nvars, sepadata->nbilinterms * 2);
 
    /* create variable map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), varmapsize) );
