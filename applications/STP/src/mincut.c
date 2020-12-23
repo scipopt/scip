@@ -27,6 +27,7 @@
 //#define SCIP_DEBUG
 #include "mincut.h"
 #include "probdata_stp.h"
+#include "misc_stp.h"
 #include "portab.h"
 
 #define Q_NULL     -1         /* NULL element of queue/list */
@@ -562,7 +563,8 @@ SCIP_RETCODE mincutPrepareForTermSepas(
 static
 int mincutGetNextSinkTerm(
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Bool             firstrun,            /**< first run?  */
+   SCIP_Bool             firstrun,           /**< first run?  */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator  or NULL   */
    MINCUT*               mincut              /**< minimum cut */
    )
 {
@@ -576,9 +578,16 @@ int mincutGetNextSinkTerm(
    assert(termcands != NULL);
    assert(ntermcands > 0);
 
-   if( firstrun ) // todo randomize?
+   if( firstrun )
    {
-      int todo; // probably got to randomize this! just swap with a random element
+      if( randnumgen && ntermcands > 1 )
+      {
+         const int pos = SCIPrandomGetInt(randnumgen, 0, ntermcands - 1);
+         assert(0 <= pos && pos <= ntermcands - 1);
+
+         SWAP_INTS(termcands[ntermcands - 1], termcands[pos]);
+      }
+
       assert(w[termcands[ntermcands - 1]] == 0);
       return termcands[ntermcands - 1];
    }
@@ -855,7 +864,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
          break;
 
       /* look for non-reachable terminal */
-      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
+      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, NULL, mincut);
       mincut->ntermcands--;
 
       printf("computing cut for sink terminal %d \n", sinkterm);
@@ -899,6 +908,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 SCIP_RETCODE mincut_separateLp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator  or NULL   */
    const int*            termorg,            /**< original terminals or NULL */
    GRAPH*                g,                  /**< graph data structure */
    int                   maxncuts,           /**< maximal number of cuts */
@@ -966,7 +976,7 @@ SCIP_RETCODE mincut_separateLp(
          break;
 
       /* look for non-reachable terminal */
-      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
+      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, randnumgen, mincut);
       mincut->ntermcands--;
 
       assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);

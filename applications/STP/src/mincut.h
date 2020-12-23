@@ -32,7 +32,7 @@ extern "C" {
 
 
 extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, GRAPH*);
-extern SCIP_RETCODE mincut_separateLp(SCIP*, SCIP_CONSHDLR*, const int*, GRAPH*, int, int*);
+extern SCIP_RETCODE mincut_separateLp(SCIP*, SCIP_CONSHDLR*, SCIP_RANDNUMGEN*, const int*, GRAPH*, int, int*);
 
 
 #ifdef __cplusplus

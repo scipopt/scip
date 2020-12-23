@@ -114,6 +114,7 @@ struct SCIP_ConsData
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                                           */
    PACLIQUES*            pacliques;          /**< pseudo ancestor cliques */
    PCIMPLICATION*        pcimplications;     /**< prize-collecting implications */
    VTIMPLICATION*        vtimplications;     /**< vertex-terminal implications */
@@ -616,6 +617,8 @@ SCIP_DECL_CONSFREE(consFreeStp)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   SCIPfreeRandom(scip, &conshdlrdata->randnumgen);
+
    SCIPfreeMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -819,7 +822,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    /* NOTE: for 2-terminal problems no cuts are necessary if flows are given */
    if( !conshdlrdata->flowsep || g->terms != 2 )
    {
-      SCIP_CALL( mincut_separateLp(scip, conshdlr, termorg, consdata->graph, maxcuts, &ncuts) );
+      SCIP_CALL( mincut_separateLp(scip, conshdlr, conshdlrdata->randnumgen, termorg, consdata->graph, maxcuts, &ncuts) );
    }
 
    if( ncuts > 0 )
@@ -1099,6 +1102,8 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
    conshdlrdata->pacliques = NULL;
    conshdlrdata->pcimplications = NULL;
    conshdlrdata->vtimplications = NULL;
+
+   SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->randnumgen, 1, TRUE) );
 
    return SCIP_OKAY;
 }
