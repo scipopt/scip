@@ -701,7 +701,7 @@ SCIP_RETCODE mincut_separateLp(
       sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
       mincut->ntermcands--;
 
-      assert(Is_term(g->term[sinkterm]) && root != sinkterm);
+      assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);
 
       if( nested_cut && !disjunct_cut )
          lpcutSetEdgeCapacity(g, xval, creep_flow, 0, mincut->edges_capa);
@@ -719,8 +719,7 @@ SCIP_RETCODE mincut_separateLp(
          if( nodes_wakeState[sinkterm] != 1 )
          {
             mincutExec(g, sinkterm, wasRerun, mincut);
-
-            assert(nodes_wakeState[root] != 0);
+            assert(nodes_wakeState[g->source] != 0);
 
             SCIP_CALL( lpcutAdd(scip, conshdlr, g, nodes_wakeState, edges_isRemoved, xval,
                   mincut->edges_capa, nested_cut || disjunct_cut, localcut, &addedcut) );
