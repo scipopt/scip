@@ -157,7 +157,7 @@ typedef struct RLT_SimpleRow RLT_SIMPLEROW;
  * Local methods
  */
 
-/** returns TRUE iff both keys are equal; two variable arrays are equal if they have the same pointer */
+/** returns TRUE iff both keys are equal; two variable pairs/triples are equal if the variables are equal */
 static
 SCIP_DECL_HASHKEYEQ(hashdataKeyEqConss)
 {  /*lint --e{715}*/
@@ -242,7 +242,7 @@ SCIP_RETCODE addAdjacentVars(
    {
       v2 = 1 - v1;
 
-      /* look for the first variable */
+      /* look for data of the first variable */
       adjacentvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(adjvarmap, (void*)(size_t) SCIPvarGetIndex(vars[v1]));
 
       /* if the first variable has not been added to adjvarmap yet, add it here */
@@ -291,7 +291,7 @@ SCIP_RETCODE addAdjacentVars(
 /** returns the array of adjacent variables for a given variable */
 static
 SCIP_VAR** getAdjacentVars(
-   SCIP_HASHMAP*         adjvarmap,          /**< data structure to store adjacent pairs */
+   SCIP_HASHMAP*         adjvarmap,          /**< hashmap mapping variables to their ADJACENTVARDATAs */
    SCIP_VAR*             var,                /**< variable */
    int*                  nadjacentvars       /**< buffer to store the number of variables in the returned array */
    )
@@ -301,7 +301,6 @@ SCIP_VAR** getAdjacentVars(
    assert(adjvarmap != NULL);
 
    *nadjacentvars = 0;
-
    adjacentvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(adjvarmap, (void*)(size_t) SCIPvarGetIndex(var));
 
    if( adjacentvardata == NULL )
@@ -312,10 +311,11 @@ SCIP_VAR** getAdjacentVars(
    return adjacentvardata->adjacentvars;
 }
 
+/** frees all ADJACENTVARDATAs stored in a hashmap */
 static
 void clearVarAdjacency(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HASHMAP*         adjvarmap           /**< data structure to store adjacent pairs */
+   SCIP_HASHMAP*         adjvarmap           /**< hashmap mapping variables to their ADJACENTVARDATAs */
    )
 {
    int i;
@@ -341,7 +341,7 @@ void clearVarAdjacency(
    }
 }
 
-/* helper method to free the separation data */
+/* free separator data */
 static
 SCIP_RETCODE freeSepaData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -494,9 +494,9 @@ SCIP_RETCODE storeSuitableRows(
 /* make sure that the arrays in sepadata are large enough to store information on n variables */
 static
 SCIP_RETCODE ensureVarsSize(
-   SCIP*                 scip,
-   SCIP_SEPADATA*        sepadata,
-   int                   n
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   int                   n                   /**< number of variables that we need to store */
    )
 {
    int newsize;
@@ -557,7 +557,7 @@ SCIP_RETCODE addProductVars(
 
    if( xpos == INT_MAX )
    {
-      /* create new bilinvardata for x */
+      /* add x to sepadata and initialise its priority */
       SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) xidx, sepadata->nbilinvars) ); /*lint !e571*/
       SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
       sepadata->varssorted[sepadata->nbilinvars] = x;
@@ -578,7 +578,7 @@ SCIP_RETCODE addProductVars(
 
       if( ypos == INT_MAX )
       {
-         /* create new bilinvardata for y */
+         /* add y to sepadata and initialise its priority */
          SCIP_CALL( SCIPhashmapInsertInt(varmap, (void*)(size_t) yidx, sepadata->nbilinvars) ); /*lint !e571*/
          SCIP_CALL( ensureVarsSize(scip, sepadata, sepadata->nbilinvars + 1) );
          sepadata->varssorted[sepadata->nbilinvars] = y;
@@ -594,6 +594,7 @@ SCIP_RETCODE addProductVars(
       sepadata->varpriorities[ypos] += nlocks;
    }
 
+   /* remember the connection between x and y */
    vars[0] = x;
    vars[1] = y;
    SCIP_CALL( addAdjacentVars(scip, sepadata->bilinvardatamap, vars) );
@@ -652,7 +653,7 @@ SCIP_RETCODE extractProducts(
 {
    SCIP_Real mult;
 
-   /* coefficients of the auxexpr */
+   /* coefficients and constant of the auxexpr */
    SCIP_Real A; /* coefficient of x */
    SCIP_Real B; /* coefficient of w */
    SCIP_Real C; /* coefficient of y */
@@ -682,6 +683,7 @@ SCIP_RETCODE extractProducts(
 
    assert(SCIPvarGetType(x) == SCIP_VARTYPE_BINARY);  /* x must be binary */
    assert(a1 != 0.0); /* the first relation is always conditional */
+   assert(b1 != 0.0 || b2 != 0.0); /* at least one w coefficient must be nonzero */
 
    SCIPdebugMsg(scip, "Extracting product from two implied relations:\n");
    SCIPdebugMsg(scip, "Relation 1: <%s> == %d => %g<%s> + %g<%s> %s %g\n", SCIPvarGetName(x), f, b1,
@@ -707,7 +709,7 @@ SCIP_RETCODE extractProducts(
    /* rewrite the linear relations in a standard form:
     * a1x + b1w + c1y <=/>= d1,
     * a2x + b2w + c2y <=/>= d2,
-    * where b1 > 0, b2 > 0 and the first implied relation is activated when x == 1
+    * where b1 > 0, b2 > 0 and first implied relation is activated when x == 1
     */
 
    /* if needed, multiply the rows by -1 so that coefs of w are positive */
@@ -728,22 +730,20 @@ SCIP_RETCODE extractProducts(
       sidetype2 = sidetype2 == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT;
    }
 
+   /* the linear relations imply a product only if the inequality signs are similar */
    if( sidetype1 != sidetype2 )
       return SCIP_OKAY;
-
-   /* at least one w coefficient must be nonzero */
-   assert(b1 != 0.0 || b2 != 0.0);
 
    /* when b1c2 = b2c1, the linear relations do not imply a product relation */
    if( SCIPisRelEQ(scip, b2*c1, c2*b1) )
    {
-      SCIPdebugMsg(scip, "Ignoring a pair of linear relations because a1c2 = a2c1\n");
+      SCIPdebugMsg(scip, "Ignoring a pair of linear relations because b1c2 = b2c1\n");
       return SCIP_OKAY;
    }
 
-   /* swap the linear relations so that the relation implied by x == TRUE goes first */
    if( !f )
    {
+      /* swap the linear relations so that the relation implied by x == TRUE goes first */
       SCIPswapReals(&a1, &a2);
       SCIPswapReals(&b1, &b2);
       SCIPswapReals(&c1, &c2);
@@ -762,8 +762,7 @@ SCIP_RETCODE extractProducts(
    /* determine the inequality sign; only check sidetype1 because sidetype2 is equal to it */
    overestimate = (sidetype1 == SCIP_SIDETYPE_LEFT && mult > 0.0) || (sidetype1 == SCIP_SIDETYPE_RIGHT && mult < 0.0);
 
-   SCIPdebugMsg(scip, "w coef is %s\n", overestimate ? "negative" : "positive");
-   SCIPdebugMsg(scip, "f, found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", a1,
+   SCIPdebugMsg(scip, "found suitable implied rels (w,x,y): %g<%s> + %g<%s> + %g<%s> <= %g\n", a1,
       SCIPvarGetName(x), b1, SCIPvarGetName(w), c1, SCIPvarGetName(y), d1);
    SCIPdebugMsg(scip, "  and %g<%s> + %g<%s> + %g<%s> <= %g\n", a2, SCIPvarGetName(x),
       b2, SCIPvarGetName(w), c2, SCIPvarGetName(y), d2);
@@ -787,7 +786,7 @@ SCIP_RETCODE extractProducts(
 static
 void implBndToBigM(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars_xwy,           /**< variables in order x, w, y */
+   SCIP_VAR**            vars_xwy,           /**< variables in order x,w,y */
    int                   binvarpos,          /**< position of binvar in vars_xwy */
    int                   implvarpos,         /**< position of implvar in vars_xwy */
    SCIP_BOUNDTYPE        bndtype,            /**< type of implied bound */
@@ -1059,10 +1058,11 @@ SCIP_RETCODE detectProductsUnconditional(
 
 /** finds and stores implied relations (x == f => ay + bw <= c, f can be 0 or 1) and 2-variable relations
  *
- * Fills the following:
+ *  Fills the following:
  *
- * - An array of variables that participate in two variable relations, and for each such variable, an array of
- *   variables that participate in two variable relations together with it.
+ * - An array of variables that participate in two variable relations; for each such variable, ADJACENTVARDATA
+ *   containing an array of variables that participate in two variable relations together with it; and a hashmap
+ *   mapping variables to ADJACENTVARDATAs.
  *
  * - Hashtables storing hashdata objects with the two or three variables and the position of the first row in the
  *   prob_rows array, which in combination with the linked list (described below) will allow access to all rows that
@@ -1073,11 +1073,6 @@ SCIP_RETCODE detectProductsUnconditional(
  *   possible because each row belongs to at most one list. The array indices of row_list represent the positions of
  *   rows in prob_rows, and a value in the row_list array represents the next index in the list (-1 if there is no next
  *   list element). The first index of each list is stored in one of the hashdata objects as firstrow.
- *
- *   Example of a linked list of length 3:
- *   firstrow = 5 (this means that prob_rows[5] is in the list, and the next row position is in row_list[5])
- *   row_list[5] = 3 (prob_rows[3] is in the list, and the next row position is in row_list[3])
- *   row_list[3] = -1 (the list ends here)
  */
 static
 SCIP_RETCODE fillRelationTables(
@@ -1114,10 +1109,9 @@ SCIP_RETCODE fillRelationTables(
 
       /* look for unconditional relations with 2 variables */
       if( SCIProwGetNNonz(prob_rows[r]) == 2 )
-      { /* this can be an unconditional relation: need to check for variable types */
+      {
          /* if at least one of the variables is binary, this is either an implied bound
           * or a clique; these are covered separately */
-         /* TODO is that so? */
          if( SCIPvarGetType(SCIPcolGetVar(cols[0])) == SCIP_VARTYPE_BINARY ||
              SCIPvarGetType(SCIPcolGetVar(cols[1])) == SCIP_VARTYPE_BINARY )
          {
@@ -1154,8 +1148,8 @@ SCIP_RETCODE fillRelationTables(
 
             SCIP_CALL( SCIPhashtableInsert(hashtable2, (void*)elementhashdata) );
 
-            /* hashdata.vars are two variables participating together in a two variable array, therefore update the
-             * variable adjacency data
+            /* hashdata.vars are two variables participating together in a two variable relation, therefore update
+             * these variables' adjacency data
              */
             SCIP_CALL( addAdjacentVars(scip, vars_in_2rels, searchhashdata.vars) );
          }
@@ -1259,11 +1253,11 @@ SCIP_RETCODE detectHiddenProducts(
       hashdataKeyEqConss, hashdataKeyValConss, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &row_list, nrows) );
 
-   /* allocate the adjacency data for variables that appear in 2-var relations */
+   /* allocate the adjacency data map for variables that appear in 2-var relations */
    SCIP_CALL( SCIPhashmapCreate(&vars_in_2rels, SCIPblkmem(scip), MIN(SCIPgetNVars(scip), nrows * 2)) );
 
    /* fill the data structures that will be used for product detection: hashtables and linked lists allowing to access
-    * two and three variable relations by the variables; and the structure for accessing variables participating in two
+    * two and three variable relations by the variables; and the hashmap for accessing variables participating in two
     * variable relations with each given variable */
    SCIP_CALL( fillRelationTables(scip, prob_rows, nrows, hashtable2, hashtable3, vars_in_2rels, row_list) );
 
@@ -1341,8 +1335,9 @@ SCIP_RETCODE detectHiddenProducts(
                   coefs1[1] = SCIProwGetVals(row1)[wpos];
                   coefs1[2] = SCIProwGetVals(row1)[ypos];
 
-                  /* look for the second relation: it should be tighter when x == !xfixing and can be either another
-                   * implied relation or one of several types of two and one variable relations
+                  /* look for the second relation: it should be tighter when x == !xfixing than when x == xfixing
+                   * and can be either another implied relation or one of several types of two and one variable
+                   * relations
                    */
 
                   /* go through the remaining rows (implied relations) for these three variables */
@@ -1399,7 +1394,7 @@ SCIP_RETCODE detectHiddenProducts(
                         SCIPvarGetUbGlobal(vars_xwy[1]), sidetype1, SCIP_SIDETYPE_RIGHT, varmap, xfixing) );
                   }
 
-                  /* do implied bounds and cliques with w */
+                  /* use implied bounds and cliques with w */
                   if( SCIPvarGetType(vars_xwy[1]) != SCIP_VARTYPE_BINARY )
                   {
                      /* w is non-binary - look for implied bounds x == !f => w >=/<= bound */
@@ -1542,6 +1537,7 @@ SCIP_RETCODE detectHiddenProducts(
       }
    }
 
+   /* free memory */
    clearVarAdjacency(scip, vars_in_2rels);
    SCIPhashmapFree(&vars_in_2rels);
 
