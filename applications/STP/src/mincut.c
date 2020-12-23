@@ -160,6 +160,9 @@ SCIP_RETCODE mincutInitForLp(
    assert(!mincut->isLpcut);
    assert(!mincut->edges_isRemoved);
 
+   mincut->xval = SCIPprobdataGetXval(scip, NULL);
+   assert(mincut->xval);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->edges_isRemoved), nedges) );
    mincut->isLpcut = TRUE;
    edges_isRemoved = mincut->edges_isRemoved;
@@ -169,14 +172,12 @@ SCIP_RETCODE mincutInitForLp(
       edges_isRemoved[i] = (SCIPvarGetUbGlobal(vars[i]) < 0.5);
    }
 
-   mincut->xval = SCIPprobdataGetXval(scip, NULL);
-   assert(mincut->xval);
 
    return SCIP_OKAY;
 }
 
 
-/** initializes for LP */
+/** prepares for LP */
 static
 SCIP_RETCODE mincutPrepareForLp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -227,8 +228,8 @@ SCIP_RETCODE mincutPrepareForLp(
          int todo; // what is the point of setting residual here???
          edges_capa[e] = 0;
          edges_capa[erev] = 0;
-         residual[e] = 0;
-         residual[erev] = 0;
+      //   residual[e] = 0;
+      //   residual[erev] = 0;
 
          csr_headarr[e] = 1;
          csr_headarr[erev] = 1;
@@ -237,8 +238,8 @@ SCIP_RETCODE mincutPrepareForLp(
       {
          edges_capa[e]     = (int)(xval[e] * FLOW_FACTOR + 0.5) + CREEP_VALUE;
          edges_capa[erev]  = (int)(xval[erev] * FLOW_FACTOR + 0.5) + CREEP_VALUE;
-         residual[e] = edges_capa[e];
-         residual[erev] = edges_capa[erev];
+     //    residual[e] = edges_capa[e];
+     //    residual[erev] = edges_capa[erev];
 
          /* NOTE: here we misuse csr_headarr to mark the free edges for the BFS */
          csr_headarr[e] = SCIPisFeasGE(scip, xval[e], 1.0) ? 0 : 1;
@@ -249,7 +250,6 @@ SCIP_RETCODE mincutPrepareForLp(
    /*
     * BFS along 0 edges from the root
     * */
-
 
    nodes_wakeState[root] = 1;
    rootcutsize = 0;
@@ -353,6 +353,151 @@ SCIP_RETCODE mincutPrepareForLp(
 }
 
 
+
+/** prepares for terminal separator comptation */
+static
+SCIP_RETCODE mincutPrepareForTermSepas(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   MINCUT*               mincut              /**< minimum cut */
+)
+{
+   int* RESTRICT nodes_wakeState = mincut->nodes_wakeState;
+   int* RESTRICT edges_capa = mincut->edges_capa;
+   int* RESTRICT terms = mincut->terms;
+   int* RESTRICT csr_start = mincut->csr_start;
+   int* RESTRICT rootcut = mincut->rootcut;
+   int* RESTRICT csr_edgeDefaultToCsr = mincut->csr_edgeDefaultToCsr;
+   int* RESTRICT csr_headarr = mincut->csr_headarr;
+   int* RESTRICT csr_edgeflipped = mincut->csr_edgeflipped;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
+   const int root = g->source;
+   int rootcutsize;
+   int csr_nedges;
+   int ntermcands;
+   int* RESTRICT excess = g->mincut_e;
+   int* RESTRICT residual = g->mincut_r;
+   int* RESTRICT edgecurr = g->mincut_numb;
+
+   assert(residual && edgecurr);
+   assert(!mincut->isLpcut);
+
+   for( int e = 0; e < nedges; e += 2 )
+   {
+      const int erev = e + 1;
+
+      edges_capa[e] = 0;
+      edges_capa[erev] = 0;
+      residual[e] = 0;
+      residual[erev] = 0;
+
+      csr_headarr[e] = 1; // 0 is taking
+      csr_headarr[erev] = 1;
+   }
+
+   /*
+    * BFS along 0 edges from the root
+    */
+
+   nodes_wakeState[root] = 1;
+   rootcutsize = 0;
+   rootcut[rootcutsize++] = root;
+
+   /* BFS loop */
+   for( int i = 0; i < rootcutsize; i++ )
+   {
+      const int k = rootcut[i];
+
+      assert(rootcutsize <= nnodes);
+      assert(k < nnodes);
+
+      /* traverse outgoing arcs */
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+
+         /* head not been added to root cut yet? */
+         if( nodes_wakeState[head] == 0 )
+         {
+            if( csr_headarr[e] == 0 )
+            {
+               nodes_wakeState[head] = 1;
+               rootcut[rootcutsize++] = head;
+            }
+            else
+            {
+               /* push as much as possible out of perpetually dormant nodes (possibly to other dormant nodes) */
+               assert(nodes_wakeState[head] == 0);
+#ifndef NDEBUG
+               residual[e] = 0;
+#endif
+               excess[head] += edges_capa[e];
+            }
+         }
+      }
+   }
+
+   for( int e = 0; e < nedges; e++ )
+      csr_edgeDefaultToCsr[e] = -1;
+
+   csr_nedges = 0;
+   ntermcands = 0;
+
+   /* fill auxiliary adjacent vertex/edges arrays and get useable terms */
+   for( int k = 0; k < nnodes; k++ )
+   {
+      csr_start[k] = csr_nedges;
+
+      /* non-dormant node? */
+      if( nodes_wakeState[k] == 0 )
+      {
+         edgecurr[k] = csr_nedges;
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            const int head = g->head[e];
+            if( nodes_wakeState[head] == 0 && edges_capa[e] != 0 )
+            {
+               csr_edgeDefaultToCsr[e] = csr_nedges;
+               residual[csr_nedges] = edges_capa[e];
+               csr_headarr[csr_nedges++] = head;
+            }
+         }
+
+         /* unreachable node? */
+         if( edgecurr[k] == csr_nedges )
+         {
+            nodes_wakeState[k] = 1;
+         }
+         else if( Is_term(g->term[k]) )
+         {
+            terms[ntermcands++] = k;
+         }
+      }
+      else
+      {
+         edgecurr[k] = -1;
+      }
+   }
+
+   csr_start[nnodes] = csr_nedges;
+
+   mincut->ntermcands = ntermcands;
+   mincut->rootcutsize = rootcutsize;
+   mincut->csr_nedges = csr_nedges;
+
+   /* initialize edgeflipped */
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( csr_edgeDefaultToCsr[e] >= 0 )
+      {
+         const int csr_pos = csr_edgeDefaultToCsr[e];
+         csr_edgeflipped[csr_pos] = csr_edgeDefaultToCsr[flipedge(e)];
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** returns next promising terminal for computing cut */
@@ -621,6 +766,61 @@ void lpcutSetEdgeCapacity(
 }
 
 
+/** searches for (small) terminal separators */
+SCIP_RETCODE mincut_findTerminalSeparators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+   )
+{
+   MINCUT* mincut;
+   int* nodes_wakeState;
+   SCIP_Bool wasRerun;
+
+   SCIP_CALL( mincutInit(scip, g, &mincut) );
+
+   /* sets excess, g->mincut_head,  g->mincut_head_inact */
+   graph_mincut_setDefaultVals(g);
+
+   SCIP_CALL( mincutPrepareForTermSepas(scip, g, mincut) );
+   nodes_wakeState = mincut->nodes_wakeState;
+   wasRerun = FALSE;
+
+   assert(nodes_wakeState);
+
+   while( mincut->ntermcands > 0 )
+   {
+      int sinkterm;
+
+      if( ((unsigned) mincut->ntermcands) % 32 == 0 && SCIPisStopped(scip) )
+         break;
+
+      /* look for non-reachable terminal */
+      sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
+      mincut->ntermcands--;
+
+      assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);
+
+       /* non-trivial cut? */
+       if( nodes_wakeState[sinkterm] != 1 )
+       {
+          mincutExec(g, sinkterm, wasRerun, mincut);
+          assert(nodes_wakeState[g->source] != 0);
+
+          assert(0);
+
+       }
+       else
+       {
+          assert(wasRerun);
+
+       }
+   }
+
+   mincutFree(scip, &mincut);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Interface methods
@@ -694,7 +894,7 @@ SCIP_RETCODE mincut_separateLp(
       int sinkterm;
       SCIP_Bool addedcut = FALSE;
 
-      if( ((unsigned) mincut->ntermcands) % 8 == 0 && SCIPisStopped(scip) )
+      if( ((unsigned) mincut->ntermcands) % 32 == 0 && SCIPisStopped(scip) )
          break;
 
       /* look for non-reachable terminal */

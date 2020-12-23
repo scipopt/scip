@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+
+extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, GRAPH*);
 extern SCIP_RETCODE mincut_separateLp(SCIP*, SCIP_CONSHDLR*, const int*, GRAPH*, int, int*);
 
 
