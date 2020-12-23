@@ -21,6 +21,10 @@
  *
  */
 
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+
+//#define SCIP_DEBUG
 #include "mincut.h"
 #include "probdata_stp.h"
 #include "portab.h"
@@ -96,6 +100,63 @@ void writeFlowProb(
    fclose(fptr);
 }
 #endif
+
+#ifdef SCIP_DEBUG
+static inline
+void mincutPrintCutNodes(
+   const GRAPH*          g,                  /**< the graph */
+   const MINCUT*         mincut              /**< minimum cut */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int* const nodes_wakeState = mincut->nodes_wakeState;
+
+   printf("root component nodes: \n");
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( nodes_wakeState[i] )
+         graph_knot_printInfo(g, i);
+   }
+
+   printf("remaining nodes: \n");
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !nodes_wakeState[i] )
+         graph_knot_printInfo(g, i);
+   }
+}
+
+static inline
+void mincutPrintCutEdges(
+   const GRAPH*          g,                  /**< the graph */
+   const MINCUT*         mincut              /**< minimum cut */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   const int* const nodes_wakeState = mincut->nodes_wakeState;
+
+   printf("cut edges: \n");
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( !nodes_wakeState[i] )
+         continue;
+
+      for( int e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+
+         if( nodes_wakeState[head] == 0 )
+         {
+            graph_edge_printInfo(g, e);
+         }
+      }
+   }
+}
+#endif
+
 
 
 /** initializes */
@@ -225,7 +286,6 @@ SCIP_RETCODE mincutPrepareForLp(
 
       if( eIsRemoved )
       {
-         int todo; // what is the point of setting residual here???
          edges_capa[e] = 0;
          edges_capa[erev] = 0;
       //   residual[e] = 0;
@@ -387,10 +447,8 @@ SCIP_RETCODE mincutPrepareForTermSepas(
    {
       const int erev = e + 1;
 
-      edges_capa[e] = 0;
-      edges_capa[erev] = 0;
-      residual[e] = 0;
-      residual[erev] = 0;
+      edges_capa[e] = (int) (g->cost[e] + 0.5);
+      edges_capa[erev] = (int) (g->cost[erev] + 0.5);
 
       csr_headarr[e] = 1; // 0 is taking
       csr_headarr[erev] = 1;
@@ -787,6 +845,8 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 
    assert(nodes_wakeState);
 
+   printf("ntermcands=%d \n",  mincut->ntermcands );
+
    while( mincut->ntermcands > 0 )
    {
       int sinkterm;
@@ -798,6 +858,8 @@ SCIP_RETCODE mincut_findTerminalSeparators(
       sinkterm = mincutGetNextSinkTerm(g, !wasRerun, mincut);
       mincut->ntermcands--;
 
+      printf("computing cut for sink terminal %d \n", sinkterm);
+
       assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);
 
        /* non-trivial cut? */
@@ -805,15 +867,21 @@ SCIP_RETCODE mincut_findTerminalSeparators(
        {
           mincutExec(g, sinkterm, wasRerun, mincut);
           assert(nodes_wakeState[g->source] != 0);
-
-          assert(0);
+#ifdef SCIP_DEBUG
+    //      mincutPrintCutNodes(g, mincut);
+          mincutPrintCutEdges(g, mincut);
+#endif
 
        }
        else
        {
+          printf("cut is trivial \n");
+
           assert(wasRerun);
 
        }
+
+       wasRerun = TRUE;
    }
 
    mincutFree(scip, &mincut);
