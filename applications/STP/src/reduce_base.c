@@ -1015,7 +1015,7 @@ SCIP_RETCODE reduceStp(
    {
       RPARAMS parameters = { .dualascent = dualascent, .boundreduce = bred, .nodereplacing = nodereplacing, .reductbound_min = minelims,
                                    .reductbound = reductbound, .userec = userec, .fullreduce = (dualascent && userec) };
-      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 2, .newLevelStarted = FALSE };
+      BIDECPARAMS decparameters = { .depth = 0, .maxdepth = 3, .newLevelStarted = FALSE };
       REDBASE redbase = { .redparameters = &parameters, .bidecompparams = &decparameters,
                           .solnode = NULL, .redsol = redsol,
                           .vnoi = vnoi, .path = path, .heap = heap,

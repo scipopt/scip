@@ -638,6 +638,10 @@ SCIP_Bool decomposeIsPromising(
 
    assert(GT(maxratio, 0.0));
 
+   // todo
+   if( bidecompparams->depth > 1 && g->knots < 10 )
+      return FALSE;
+
    return (maxratio < mincompratio);
 }
 
