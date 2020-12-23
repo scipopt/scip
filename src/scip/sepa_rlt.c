@@ -83,10 +83,12 @@ struct HashData
 };
 typedef struct HashData HASHDATA;
 
-/** data of a bilinear (i.e. appearing in bilinear products) variable */
+/** data structure representing an array of variables together with number of elements and size;
+ *  used for storing variables that are in some sense adjacent to a given variable
+ */
 struct AdjacentVarData
 {
-   SCIP_VAR**            adjacentvars;       /**< vars */
+   SCIP_VAR**            adjacentvars;       /**< adjacent vars */
    int                   nadjacentvars;      /**< number of vars in adjacentvars */
    int                   sadjacentvars;      /**< size of adjacentvars */
 };
@@ -101,7 +103,8 @@ struct SCIP_SepaData
 
    /* bilinear variables */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
-   SCIP_HASHMAP*         bilinvardatamap;    /**< for each bilinear var: all vars that appear together with it in a product */
+   SCIP_HASHMAP*         bilinvardatamap;    /**< maps each bilinear var to ADJACENTVARDATA containing vars appearing
+                                                  together with it in bilinear products */
    int*                  varpriorities;      /**< priorities of variables */
    int                   nbilinvars;         /**< total number of variables occurring in bilinear terms */
    int                   sbilinvars;         /**< size of arrays for variables occurring in bilinear terms */
@@ -111,9 +114,9 @@ struct SCIP_SepaData
    int                   nbilinterms;        /**< total number of bilinear terms */
 
    /* parameters */
-   int                   maxunknownterms;    /**< maximum number of unknown bilinear terms a row can have to be used */
-   int                   maxusedvars;        /**< maximum number of variables that will be used to compute rlt cuts */
-   int                   maxncuts;           /**< maximum number of cuts that will be added per round */
+   int                   maxunknownterms;    /**< maximum number of unknown bilinear terms a row can have to be used (-1: unlimited) */
+   int                   maxusedvars;        /**< maximum number of variables that will be used to compute rlt cuts (-1: unlimited) */
+   int                   maxncuts;           /**< maximum number of cuts that will be added per round (-1: unlimited) */
    int                   maxrounds;          /**< maximum number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximum number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             onlyeqrows;         /**< whether only equality rows should be used for rlt cuts */
@@ -178,13 +181,12 @@ SCIP_DECL_HASHKEYEQ(hashdataKeyEqConss)
       assert(SCIPvarCompare(hashdata1->vars[v], hashdata2->vars[v]) == 0);
    }
 
-   /* two hashdata objects are equal either if one of them doesn't have a row list yet (firstrow == -1),
-    * or if they both point to the same row list
+   /* if two hashdata objects have the same variables, then either one of them doesn't have a row list yet
+    * (firstrow == -1) or they both point to the same row list
     */
-   if( hashdata1->firstrow == -1 || hashdata2->firstrow == -1 || hashdata1->firstrow == hashdata2->firstrow )
-      return TRUE;
-   else
-      return FALSE;
+   assert(hashdata1->firstrow == -1 || hashdata2->firstrow == -1 || hashdata1->firstrow == hashdata2->firstrow);
+
+   return TRUE;
 }
 
 /** returns the hash value of the key */
