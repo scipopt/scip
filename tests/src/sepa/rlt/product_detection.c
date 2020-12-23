@@ -514,7 +514,6 @@ Test(product_detection, implbnd, .init = setup, .fini = teardown, .description =
    SCIPfreeBuffer(scip, &sepadata);
 }
 
-/* TODO proper checks */
 Test(product_detection, reltables, .init = setup, .fini = teardown, .description = "test creating relation tables")
 {
    SCIP_CONS* conss[5];
@@ -565,10 +564,9 @@ Test(product_detection, reltables, .init = setup, .fini = teardown, .description
    /* construct the LP */
    SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-   /* create the rows */
+   /* get the rows */
    nrows = 5;
    SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
-   SCIPsortPtr((void**)prob_rows, SCIProwComp, nrows);
 
    /* create tables of implied and unconditional relations */
    SCIP_CALL( SCIPhashtableCreate(&hashtable3, SCIPblkmem(scip), nrows, SCIPhashGetKeyStandard,
