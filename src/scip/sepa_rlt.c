@@ -1675,7 +1675,7 @@ SCIP_RETCODE createSepaData(
       }
    }
 
-   /* find maxnumber of variables that occurrence most often and sort them by number of occurrences
+   /* find maxnumber of variables that occur most often and sort them by number of occurrences
     * (same as normal sort, except that entries at positions maxusedvars..nbilinvars may be unsorted at end)
     */
    SCIPselectDownIntPtr(sepadata->varpriorities, (void**) sepadata->varssorted, sepadata->maxusedvars,
@@ -1700,8 +1700,8 @@ SCIP_RETCODE createSepaData(
    return SCIP_OKAY;
 }
 
-/** get the positions of the most violated auxiliary under- and overestimators for all products; -1 means
- * no relation with given product is violated
+/** get the positions of the most violated auxiliary under- and overestimators for each product; -1 means
+ *  no relation with given product is violated
  */
 static
 void getBestEstimators(
@@ -1802,17 +1802,19 @@ SCIP_RETCODE isAcceptableRow(
    return SCIP_OKAY;
 }
 
-/** computes coefficients of an auxiliary expression (coef*auxexpr) for a product term */
+/** adds coefficients and constant of an auxiliary expression;
+ *  the variables the pointers are pointing to must already be initialised
+ */
 static
 void addAuxexprCoefs(
    SCIP_VAR*             var1,               /**< first product variable */
    SCIP_VAR*             var2,               /**< second product variable */
    SCIP_CONSEXPR_AUXEXPR* auxexpr,           /**< auxiliary expression to be added */
    SCIP_Real             coef,               /**< coefficient of the auxiliary expression */
-   SCIP_Real*            coefaux,            /**< coefficient of the auxiliary variable */
-   SCIP_Real*            coef1,              /**< coefficient of the first variable */
-   SCIP_Real*            coef2,              /**< coefficient of the second variable */
-   SCIP_Real*            side                /**< buffer that stores the side of the cut */
+   SCIP_Real*            coefaux,            /**< pointer to add the coefficient of the auxiliary variable */
+   SCIP_Real*            coef1,              /**< pointer to add the coefficient of the first variable */
+   SCIP_Real*            coef2,              /**< pointer to add the coefficient of the second variable */
+   SCIP_Real*            cst                 /**< pointer to add the constant */
    )
 {
    assert(auxexpr != NULL);
@@ -1820,9 +1822,13 @@ void addAuxexprCoefs(
    assert(coefaux != NULL);
    assert(coef1 != NULL);
    assert(coef2 != NULL);
-   assert(side != NULL);
+   assert(cst != NULL);
 
    *coefaux += auxexpr->coefs[0] * coef;
+
+   /* in auxexpr, x goes before y and has the smaller index,
+    * so compare vars to figure out which one is x and which is y
+    */
    if( SCIPvarCompare(var1, var2) < 1 )
    {
       *coef1 += auxexpr->coefs[1] * coef;
@@ -1833,12 +1839,12 @@ void addAuxexprCoefs(
       *coef1 += auxexpr->coefs[2] * coef;
       *coef2 += auxexpr->coefs[1] * coef;
    }
-   *side += coef * auxexpr->cst;
+   *cst += coef * auxexpr->cst;
 }
 
-/** add a linearization of term coef*colvar*var to cut
+/** add a linear term coef*colvar multiplied by a bound factor (var - lb(var)) or (ub(var) - var)
  *
- * adds the linear term involving colvar to cut and updates coefvar and cst
+ *  adds the linear term with colvar to cut and updates coefvar and cst
  */
 static
 SCIP_RETCODE addRltTerm(
@@ -1891,16 +1897,14 @@ SCIP_RETCODE addRltTerm(
    signfactor = (uselb ? 1.0 : -1.0);
    boundfactor = (uselb ? -lbvar : ubvar);
 
-   coefterm = coef * signfactor;
-   coefcolvar = coef * boundfactor;
-   coefauxvar = 0.0;
+   coefterm = coef * signfactor; /* coefficient of the bilinear term */
+   coefcolvar = coef * boundfactor; /** coefficient of the linear term */
+   coefauxvar = 0.0; /* coefficient of the auxiliary variable corresponding to the bilinear term */
    auxvar = NULL;
 
    assert(!SCIPisInfinity(scip, REALABS(coefterm)));
 
-   /* we now have coefterm * var*colvar + coefcolvar * colvar to add to cut
-    * look into bilinterm for a linearization of var*colvar
-    */
+   /* first, add the linearisation of the bilinear term */
 
    idx = SCIPgetConsExprBilinTermIdx(sepadata->conshdlr, var, colvar);
    auxpos = -1;
@@ -1926,8 +1930,8 @@ SCIP_RETCODE addRltTerm(
       }
    }
 
-   /* if the term is implicit and a suitable auxiliary expression for var*colvar exists,
-    * get the auxiliary expression of coefterm * var*colvar in form coefauxvar * auxvar + coefvar * colvar + cst
+   /* if the term is implicit and a suitable auxiliary expression for var*colvar exists, add the coefficients
+    * of the auxiliary expression for coefterm*var*colvar to coefauxvar, coefcolvar, coefvar and cst
     */
    if( auxpos >= 0 )
    {
@@ -1944,6 +1948,7 @@ SCIP_RETCODE addRltTerm(
       coefauxvar += coefterm;
       auxvar = terms[idx].aux.var;
    }
+
    /* otherwise, use clique information or the McCormick estimator in place of the bilinear term */
    else if( colvar != var )
    {
@@ -2056,7 +2061,10 @@ SCIP_RETCODE addRltTerm(
       SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, coefauxvar) );
    }
 
-   /* add the linear term for this column */
+   /* we are done with the product linearisation, now add the term which comes from multiplying
+    * coef*colvar by the constant part of the bound factor
+    */
+
    if( colvar != var )
    {
       assert(!SCIPisInfinity(scip, REALABS(coefcolvar)));
@@ -2071,8 +2079,9 @@ SCIP_RETCODE addRltTerm(
 /** creates the RLT cut formed by multiplying a given row with (x - lb) or (ub - x)
  *
  * in detail:
- * - The row is multiplied either with (x - lb(x)) or with (ub(x) - x), depending on parameter uselb.
- * - The cut is computed either for lhs or rhs, depending on parameter uselhs.
+ * - The row is multiplied either with (x - lb(x)) or with (ub(x) - x), depending on parameter uselb, or by x if
+ *   this is an equality cut
+ * - The (inequality) cut is computed either for lhs or rhs, depending on parameter uselhs.
  * - Terms for which no auxiliary variable and no clique relation exists are replaced by either McCormick, secants
  *   or gradient linearization cuts
  */
@@ -2137,6 +2146,8 @@ SCIP_RETCODE computeRltCut(
       lbvar = local ? SCIPvarGetLbLocal(var) : SCIPvarGetLbGlobal(var);
       ubvar = local ? SCIPvarGetUbLocal(var) : SCIPvarGetUbGlobal(var);
    }
+
+   /* get row side */
    consside = uselhs ? lhs : rhs;
 
    /* if the bounds are too large or the respective side is infinity, skip this cut */
@@ -2173,7 +2184,7 @@ SCIP_RETCODE computeRltCut(
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *cut) );
 
-   /* iterate over all variables in the row and add the corresponding terms to the cuts */
+   /* iterate over all variables in the row and add the corresponding terms coef*colvar*(bound factor) to the cuts */
    for( i = 0; i < (useprojrow ? projrow->nnonz : SCIProwGetNNonz(row)); ++i )
    {
       SCIP_VAR* colvar;
