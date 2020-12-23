@@ -430,6 +430,24 @@ int mincutGetNextSinkTerm(
 }
 
 
+/** executes */
+static
+void mincutExec(
+   const GRAPH*          g,                  /**< the graph */
+   int                   sinkterm,
+   SCIP_Bool             wasRerun,
+   MINCUT*               mincut              /**< minimum cut */
+)
+{
+   const int root = g->source;
+   const int nnodes = graph_get_nNodes(g);
+
+   graph_mincut_exec(g, root, sinkterm, nnodes, mincut->csr_nedges, mincut->rootcutsize,
+         mincut->rootcut, mincut->edges_capa, mincut->nodes_wakeState,
+         mincut->csr_start, mincut->csr_edgeflipped, mincut->csr_headarr, wasRerun);
+}
+
+
 /** frees */
 static
 void mincutFree(
@@ -633,14 +651,8 @@ SCIP_RETCODE mincut_separateLp(
    MINCUT* mincut;
    const SCIP_Real* xval;
    int* nodes_wakeState;
-   int* edges_capa;
-   int* csr_start;
-   int* rootcut;
-   int* csr_edgeflipped;
-   int* csr_headarr;
    STP_Bool* edges_isRemoved;
    const int nnodes = graph_get_nNodes(g);
-   const int root = g->source;
    int cutcount;
    SCIP_Bool wasRerun;
 
@@ -671,18 +683,11 @@ SCIP_RETCODE mincut_separateLp(
 
    xval = mincut->xval;
    nodes_wakeState = mincut->nodes_wakeState;
-   edges_capa = mincut->edges_capa;
-   rootcut = mincut->rootcut;
-   csr_start = mincut->csr_start;
-   csr_edgeflipped = mincut->csr_edgeflipped;
-   csr_headarr = mincut->csr_headarr;
    edges_isRemoved = mincut->edges_isRemoved;
-
-   assert(xval && nodes_wakeState && edges_capa && edges_isRemoved);
-   assert(csr_start && csr_headarr && csr_edgeflipped);
-
    cutcount = 0;
    wasRerun = FALSE;
+
+   assert(xval && nodes_wakeState && edges_isRemoved);
 
    while( mincut->ntermcands > 0 )
    {
@@ -699,7 +704,7 @@ SCIP_RETCODE mincut_separateLp(
       assert(Is_term(g->term[sinkterm]) && root != sinkterm);
 
       if( nested_cut && !disjunct_cut )
-         lpcutSetEdgeCapacity(g, xval, creep_flow, 0, edges_capa);
+         lpcutSetEdgeCapacity(g, xval, creep_flow, 0, mincut->edges_capa);
 
       do
       {
@@ -713,17 +718,16 @@ SCIP_RETCODE mincut_separateLp(
          /* non-trivial cut? */
          if( nodes_wakeState[sinkterm] != 1 )
          {
-            graph_mincut_exec(g, root, sinkterm, nnodes, mincut->csr_nedges, mincut->rootcutsize,
-                  rootcut, edges_capa, nodes_wakeState, csr_start, csr_edgeflipped, csr_headarr, wasRerun);
+            mincutExec(g, sinkterm, wasRerun, mincut);
 
             assert(nodes_wakeState[root] != 0);
 
-            SCIP_CALL( lpcutAdd(scip, conshdlr, g, nodes_wakeState, edges_isRemoved, xval, edges_capa, nested_cut || disjunct_cut, localcut, &addedcut) );
+            SCIP_CALL( lpcutAdd(scip, conshdlr, g, nodes_wakeState, edges_isRemoved, xval,
+                  mincut->edges_capa, nested_cut || disjunct_cut, localcut, &addedcut) );
          }
          else
          {
             SCIP_Real flowsum = 0.0;
-
             assert(wasRerun);
 
             for( int e = g->inpbeg[sinkterm]; e != EAT_LAST; e = g->ieat[e] )
@@ -737,7 +741,8 @@ SCIP_RETCODE mincut_separateLp(
 
             g->mark[sinkterm] = FALSE;
 
-            SCIP_CALL( lpcutAdd(scip, conshdlr, g, g->mark, edges_isRemoved, xval, edges_capa, nested_cut || disjunct_cut, localcut, &addedcut) );
+            SCIP_CALL( lpcutAdd(scip, conshdlr, g, g->mark, edges_isRemoved, xval,
+                  mincut->edges_capa, nested_cut || disjunct_cut, localcut, &addedcut) );
          }
 
          wasRerun = TRUE;
