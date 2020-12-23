@@ -55,6 +55,7 @@ add_executable(scipstp
     src/heur_rec.c
     src/heur_slackprune.c
     src/heur_tm.c
+    src/mincut.c
     src/misc_stp.c
     src/mst.c
     src/pricer_stp.c

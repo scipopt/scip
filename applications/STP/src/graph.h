@@ -446,6 +446,7 @@ extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
 extern void   graph_mincut_exit(SCIP*, GRAPH*);
 extern void   graph_mincut_exec(const GRAPH*, const int, const int, const int, const int, const int, const int*, const int*, int* RESTRICT, const int*, const int*, const int*, const SCIP_Bool);
 extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
+extern void    graph_mincut_setDefaultVals(GRAPH*);
 #endif
 
 /* graph_load.c

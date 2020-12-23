@@ -105,6 +105,7 @@ CMAINOBJ	=	cmain.o \
 			heur_local.o \
 			heur_prune.o \
 			heur_rec.o \
+			mincut.o \
 			misc_stp.o \
 			mst.o \
 			probdata_stp.o \

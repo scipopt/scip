@@ -271,65 +271,6 @@ static int is_valid_arr(
 }
 #endif
 
-/** initialize min cut arrays */
-SCIP_RETCODE graph_mincut_init(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                p                   /**< graph data structure */
-     )
-{
-   assert(p    != NULL);
-   assert(p->mincut_dist == NULL);
-   assert(p->mincut_head == NULL);
-   assert(p->mincut_numb == NULL);
-   assert(p->mincut_prev == NULL);
-   assert(p->mincut_next == NULL);
-   assert(p->mincut_temp == NULL);
-   assert(p->mincut_e    == NULL);
-   assert(p->mincut_x    == NULL);
-   assert(p->mincut_r    == NULL);
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head_inact), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_numb), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_prev), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_next), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_temp), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_e), p->knots + 1) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_r), p->edges) );
-
-   return SCIP_OKAY;
-}
-
-/** frees min cut arrays */
-void graph_mincut_exit(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                p                   /**< graph data structure */
-     )
-{
-   assert(p->mincut_dist != NULL);
-   assert(p->mincut_head != NULL);
-   assert(p->mincut_numb != NULL);
-   assert(p->mincut_prev != NULL);
-   assert(p->mincut_next != NULL);
-   assert(p->mincut_temp != NULL);
-   assert(p->mincut_e    != NULL);
-   assert(p->mincut_r    != NULL);
-
-   SCIPfreeMemoryArray(scip, &(p->mincut_r));
-   SCIPfreeMemoryArray(scip, &(p->mincut_e));
-   SCIPfreeMemoryArray(scip, &(p->mincut_temp));
-   SCIPfreeMemoryArray(scip, &(p->mincut_next));
-   SCIPfreeMemoryArray(scip, &(p->mincut_prev));
-   SCIPfreeMemoryArray(scip, &(p->mincut_numb));
-   SCIPfreeMemoryArray(scip, &(p->mincut_head_inact));
-   SCIPfreeMemoryArray(scip, &(p->mincut_head));
-   SCIPfreeMemoryArray(scip, &(p->mincut_dist));
-
-#if STATIST
-   cut_statist();
-#endif
-}
 #if 0
 /** backwards bfs from t along arcs of cap > 0 and set distance labels according to distance from t */
 static int bfs(
@@ -1116,6 +1057,90 @@ static void reinitialise(
 
 #if DEBUG > 0
    assert(is_valid(p, s, t, capa, w));
+#endif
+}
+
+
+
+/** sets default values*/
+void graph_mincut_setDefaultVals(
+   GRAPH*                g                   /**< graph data structure */
+     )
+{
+   const int nnodes = graph_get_nNodes(g);
+   int* RESTRICT excess = g->mincut_e;
+   int* RESTRICT headactive = g->mincut_head;
+   int* RESTRICT headinactive = g->mincut_head_inact;
+
+   assert(excess && headactive && headinactive);
+
+   for( int k = 0; k < nnodes; k++ )
+      headactive[k] = Q_NULL;
+
+   for( int k = 0; k < nnodes; k++ )
+      headinactive[k] = Q_NULL;
+
+   for( int k = 0; k < nnodes; k++ )
+      excess[k] = 0;
+}
+
+/** initialize min cut arrays */
+SCIP_RETCODE graph_mincut_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
+{
+   assert(p    != NULL);
+   assert(p->mincut_dist == NULL);
+   assert(p->mincut_head == NULL);
+   assert(p->mincut_numb == NULL);
+   assert(p->mincut_prev == NULL);
+   assert(p->mincut_next == NULL);
+   assert(p->mincut_temp == NULL);
+   assert(p->mincut_e    == NULL);
+   assert(p->mincut_x    == NULL);
+   assert(p->mincut_r    == NULL);
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head_inact), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_numb), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_prev), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_next), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_temp), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_e), p->knots + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_r), p->edges) );
+
+   return SCIP_OKAY;
+}
+
+/** frees min cut arrays */
+void graph_mincut_exit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
+{
+   assert(p->mincut_dist != NULL);
+   assert(p->mincut_head != NULL);
+   assert(p->mincut_numb != NULL);
+   assert(p->mincut_prev != NULL);
+   assert(p->mincut_next != NULL);
+   assert(p->mincut_temp != NULL);
+   assert(p->mincut_e    != NULL);
+   assert(p->mincut_r    != NULL);
+
+   SCIPfreeMemoryArray(scip, &(p->mincut_r));
+   SCIPfreeMemoryArray(scip, &(p->mincut_e));
+   SCIPfreeMemoryArray(scip, &(p->mincut_temp));
+   SCIPfreeMemoryArray(scip, &(p->mincut_next));
+   SCIPfreeMemoryArray(scip, &(p->mincut_prev));
+   SCIPfreeMemoryArray(scip, &(p->mincut_numb));
+   SCIPfreeMemoryArray(scip, &(p->mincut_head_inact));
+   SCIPfreeMemoryArray(scip, &(p->mincut_head));
+   SCIPfreeMemoryArray(scip, &(p->mincut_dist));
+
+#if STATIST
+   cut_statist();
 #endif
 }
 
