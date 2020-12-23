@@ -1637,7 +1637,10 @@ SCIP_RETCODE createSepaData(
       int oldnterms = sepadata->nbilinterms;
 
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
+
+      /* update nbilinterms and bilinterms, as detectHiddenProducts might have found new terms */
       sepadata->nbilinterms = SCIPgetConsExprNBilinTerms(sepadata->conshdlr);
+      bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
 
       if( sepadata->nbilinterms > oldnterms )
       {
@@ -1650,12 +1653,6 @@ SCIP_RETCODE createSepaData(
    if( sepadata->nbilinterms == 0 )
    {
       return SCIP_OKAY;
-   }
-
-   if( sepadata->detecthidden )
-   {
-      /* update bilinterms, as detectHiddenProducts might have found new terms */
-      bilinterms = SCIPgetConsExprBilinTerms(sepadata->conshdlr);
    }
 
    /* mark positions of aux.exprs that must be equal to the product */
