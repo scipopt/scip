@@ -822,7 +822,7 @@ SCIP_DECL_CONSSEPALP(consSepalpStp)
    /* NOTE: for 2-terminal problems no cuts are necessary if flows are given */
    if( !conshdlrdata->flowsep || g->terms != 2 )
    {
-      SCIP_CALL( mincut_separateLp(scip, conshdlr, conshdlrdata->randnumgen, termorg, consdata->graph, maxcuts, &ncuts) );
+      SCIP_CALL( mincut_separateLp(scip, conshdlr, NULL, termorg, consdata->graph, maxcuts, &ncuts) );
    }
 
    if( ncuts > 0 )
