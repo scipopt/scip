@@ -273,6 +273,7 @@ SCIP_RETCODE mincutPrepareForLp(
    assert(xval && vars && edges_isRemoved);
    assert(mincut->isLpcut);
 
+#ifdef SCIP_DISABLED
    for( int e = 0; e < nedges; e += 2 )
    {
       const int erev = e + 1;
@@ -305,6 +306,30 @@ SCIP_RETCODE mincutPrepareForLp(
          /* NOTE: here we misuse csr_headarr to mark the free edges for the BFS */
          csr_headarr[e] = SCIPisFeasGE(scip, xval[e], 1.0) ? 0 : 1;
          csr_headarr[erev] = SCIPisFeasGE(scip, xval[erev], 1.0) ? 0 : 1;
+      }
+   }
+#endif
+
+   for( int e = 0; e < nedges; e++ )
+   {
+      SCIP_Bool eIsRemoved = edges_isRemoved[e];
+
+      if( intree && !eIsRemoved )
+      {
+         eIsRemoved = (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[flipedge(e)]) < 0.5);
+      }
+
+      if( eIsRemoved )
+      {
+         edges_capa[e] = 0;
+         csr_headarr[e] = 1;
+      }
+      else
+      {
+         edges_capa[e] = (int)(xval[e] * FLOW_FACTOR + 0.5) + CREEP_VALUE;
+
+         /* NOTE: here we misuse csr_headarr to mark the free edges for the BFS */
+         csr_headarr[e] = SCIPisFeasGE(scip, xval[e], 1.0) ? 0 : 1;
       }
    }
 
@@ -368,8 +393,11 @@ SCIP_RETCODE mincutPrepareForLp(
          for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
-            if( nodes_wakeState[head] == 0 && edges_capa[e] != 0 )
+            if( nodes_wakeState[head] == 0 )
             {
+               if( edges_capa[e] == 0 && edges_capa[flipedge(e)] == 0 )
+                  continue;
+
                csr_edgeDefaultToCsr[e] = csr_nedges;
                residual[csr_nedges] = edges_capa[e];
                csr_headarr[csr_nedges++] = head;
