@@ -25,6 +25,8 @@
 
 
 //#define SCIP_DEBUG
+
+
 #include "mincut.h"
 #include "probdata_stp.h"
 #include "misc_stp.h"
@@ -162,6 +164,43 @@ void debugPrintCutEdges(
       }
    }
 }
+
+
+static inline
+void debugPrintCsrCutEdges(
+   const GRAPH*          g,                  /**< the graph */
+   const MINCUT*         mincut              /**< minimum cut */
+)
+{
+   const int* const nodes_wakeState = mincut->nodes_wakeState;
+   const int* const csr_start = mincut->csr_start;
+   const int* const csr_headarr = mincut->csr_headarr;
+   const int nnodes_extended = mincut->termsepa_nnodes;
+
+   assert(!mincut->isLpcut);
+
+   printf("CSR cut edges: \n");
+
+   for( int i = 0; i < nnodes_extended; i++ )
+   {
+      const int start = csr_start[i];
+      const int end = csr_start[i + 1];
+
+      if( !nodes_wakeState[i] )
+         continue;
+
+      for( int j = start; j != end; j++ )
+      {
+         const int head = csr_headarr[j];
+
+         if( nodes_wakeState[head] == 0 )
+         {
+            printf("%d->%d \n", i, head);
+         }
+      }
+   }
+}
+
 
 
 /** prints extended graph */
@@ -1341,17 +1380,14 @@ SCIP_RETCODE mincut_findTerminalSeparators(
           mincutExec(g, sinkterm, wasRerun, mincut);
           assert(nodes_wakeState[g->source] != 0);
 #ifdef SCIP_DEBUG
-    //      mincutPrintCutNodes(g, mincut);
-          debugPrintCutEdges(g, mincut);
+          debugPrintCsrCutEdges(g, mincut);
 #endif
-
        }
        else
        {
           printf("cut is trivial \n");
 
           assert(wasRerun);
-
        }
 
        wasRerun = TRUE;
