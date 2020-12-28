@@ -630,6 +630,8 @@ SCIP_RETCODE graph_init(
 
    p->esize = esize;
    p->edges = 0;
+   p->mincut_nnodes = 0;
+   p->mincut_nedges = 0;
    p->prize  = NULL;
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;

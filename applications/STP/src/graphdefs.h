@@ -229,6 +229,8 @@ typedef struct
    int*                  contracttrace;      /**< used to trace node contractions */
 
    /* Data for min cut computation todo extra struct */
+   int                   mincut_nnodes;
+   int                   mincut_nedges;
    int* RESTRICT         mincut_dist;        /**< dist[i] : Distance-label of node i          */
    int* RESTRICT         mincut_head;        /**< head[i] : Head of active queue with label i */
    int* RESTRICT         mincut_head_inact;  /**< head[i] : Head of inactive queue with label i */

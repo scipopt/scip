@@ -355,6 +355,8 @@ SCIP_RETCODE mincutInit(
 {
    assert(nnodes > 0 && nedges > 0);
 
+   p->mincut_nnodes = nnodes;
+   p->mincut_nedges = nedges;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), nnodes + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), nnodes + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head_inact), nnodes + 1) );
@@ -1080,12 +1082,13 @@ void graph_mincut_setDefaultVals(
    GRAPH*                g                   /**< graph data structure */
      )
 {
-   const int nnodes = graph_get_nNodes(g);
+   const int nnodes = g->mincut_nnodes;
    int* RESTRICT excess = g->mincut_e;
    int* RESTRICT headactive = g->mincut_head;
    int* RESTRICT headinactive = g->mincut_head_inact;
 
-   assert(excess && headactive && headinactive);
+   assert(g && excess && headactive && headinactive);
+   assert(g->mincut_nnodes >= g->knots);
 
    for( int k = 0; k < nnodes; k++ )
       headactive[k] = Q_NULL;
@@ -1096,6 +1099,7 @@ void graph_mincut_setDefaultVals(
    for( int k = 0; k < nnodes; k++ )
       excess[k] = 0;
 }
+
 
 /** initialize min cut arrays */
 SCIP_RETCODE graph_mincut_init(
@@ -1112,7 +1116,6 @@ SCIP_RETCODE graph_mincut_init(
 }
 
 
-
 /** reinitializes minimum cut arrays */
 SCIP_RETCODE graph_mincut_reInit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1121,7 +1124,11 @@ SCIP_RETCODE graph_mincut_reInit(
    GRAPH*                p                   /**< graph data structure */
      )
 {
-   graph_mincut_exit(scip, p);
+   if( graph_mincut_isInitialized(p) )
+   {
+      graph_mincut_exit(scip, p);
+   }
+
    SCIP_CALL( mincutInit(scip, nnodes, nedges, p) );
 
    return SCIP_OKAY;
@@ -1144,11 +1151,12 @@ SCIP_Bool graph_mincut_isInitialized(
       assert(p->mincut_next != NULL);
       assert(p->mincut_temp != NULL);
       assert(p->mincut_e    != NULL);
+      assert(p->mincut_nnodes > 0);
 
       return TRUE;
    }
 
-
+   assert(p->mincut_nnodes == 0);
    assert(p->mincut_dist == NULL);
    assert(p->mincut_head == NULL);
    assert(p->mincut_numb == NULL);

@@ -344,7 +344,7 @@ void termsepaCsrAddTermCopies(
          /* NOTE: 1 is the default value for separator edges...so we basically push everything out of k */
          excess[nodes_termToCopy[k]] = 1;
 
-         SCIPdebugMessage("adding separator terminal %d \n", k);
+         SCIPdebugMessage("adding separator terminal %d (copyindex=%d) \n", k, nodes_termToCopy[k]);
 
       }
    }
