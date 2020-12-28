@@ -869,7 +869,8 @@ SCIP_RETCODE mincutPrepareForLp(
 
       if( intree && !eIsRemoved )
       {
-         eIsRemoved = (SCIPvarGetUbLocal(vars[e]) < 0.5); // && SCIPvarGetUbLocal(vars[flipedge(e)]) < 0.5);
+         // todo remove...does not really work together with non-local cuts!
+         eIsRemoved = (SCIPvarGetUbLocal(vars[e]) < 0.5 && SCIPvarGetUbLocal(vars[flipedge(e)]) < 0.5);
       }
 
       if( eIsRemoved )
@@ -1449,7 +1450,7 @@ SCIP_RETCODE mincut_separateLp(
       do
       {
          /* declare cuts on branched-on (artificial) terminals as local */
-         const SCIP_Bool localcut = (SCIPgetDepth(scip) > 0);//(termorg != NULL && termorg[sinkterm] != g->term[sinkterm]);
+         const SCIP_Bool localcut = (termorg != NULL && termorg[sinkterm] != g->term[sinkterm]);
 
 #ifdef STP_MAXFLOW_WRITE
          writeFlowProb(g, edges_capa, sinkterm);
