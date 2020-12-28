@@ -560,10 +560,11 @@ static void globalrelabel(
 
 
 /** initialize data for the first max-flow run */
-static void initialise(
-   const GRAPH* p,
+static
+void initialise(
    const int    s,
    const int    t,
+   const int    nnodesreal,
    const int    rootcutsize,
    const int*   rootcut,
    const int*   capa,
@@ -586,7 +587,6 @@ static void initialise(
    int*         glbmax
    )
 {
-   int i;
 #if 0
    int k;
    int e;
@@ -595,19 +595,17 @@ static void initialise(
    int head;
    int nedges;
 #endif
-   int nnodes;
+   const int nnodes = nnodesreal;
    int nextnode;
    int actmaxloc;
    int actminloc;
    int glbmaxloc;
 
-   assert(p      != NULL);
    assert(s      >= 0);
-   assert(s      <  p->knots);
+   assert(s      <  nnodes);
    assert(t      >= 0);
-   assert(t      <  p->knots);
+   assert(t      <  nnodes);
    assert(s      != t);
-   assert(capa   != NULL);
    assert(w      != NULL);
    assert(headactive != NULL);
    assert(headinactive != NULL);
@@ -623,7 +621,6 @@ static void initialise(
    assert(headactive != NULL);
    assert(headinactive != NULL);
 
-   nnodes = p->knots;
 #if 0
    nedges = p->edges;
 #endif
@@ -638,7 +635,7 @@ static void initialise(
    assert(w[t] == 0);
 
    /* set distance labels, and add nodes to lists */
-   for( i = nnodes - 1; i >= 0; i-- )
+   for( int i = nnodes - 1; i >= 0; i-- )
    {
       dist[i] = 1;
 
@@ -830,10 +827,11 @@ static void initialise(
 }
 
 /** initialize data for the repeated max-flow run */
-static void reinitialise(
-   const GRAPH* p,
+static
+void reinitialise(
    const int    s,
    const int    t,
+   const int    nnodesreal,
    const int    rootcutsize,
    const int*   rootcut,
    const int*   capa,
@@ -856,12 +854,7 @@ static void reinitialise(
    int*         glbmax
    )
 {
-   int i;
-   int j;
-   int k;
-   int l;
-   int end;
-   int nnodes;
+   const int nnodes = nnodesreal;
    int visited;
 #if 0
    int a;
@@ -875,13 +868,11 @@ static void reinitialise(
    int dormmaxlocp1;
    SCIP_Bool hit;
 
-   assert(p      != NULL);
    assert(s      >= 0);
-   assert(s      <  p->knots);
+   assert(s      <  nnodes);
    assert(t      >= 0);
-   assert(t      <  p->knots);
+   assert(t      <  nnodes);
    assert(s      != t);
-   assert(capa   != NULL);
    assert(w      != NULL);
    assert(dist != NULL);
    assert(prev != NULL);
@@ -897,12 +888,10 @@ static void reinitialise(
    assert(headinactive != NULL);
 
    /* initialize */
-   nnodes = p->knots;
 
    assert(w[s] == 1);
 
    dormmaxloc = 1;
-
    actmaxloc = 0;
    actminloc = nnodes;
    glbmaxloc = 0;
@@ -910,7 +899,7 @@ static void reinitialise(
    /* t already awake? */
    if( w[t] == 0 )
    {
-      for( i = nnodes - 1; i >= 0; i-- )
+      for( int i = nnodes - 1; i >= 0; i-- )
       {
          headactive[i] = Q_NULL;
          headinactive[i] = Q_NULL;
@@ -929,8 +918,8 @@ static void reinitialise(
    }
    else
    {
-      int wt = w[t];
-      for( i = nnodes - 1; i >= 0; i-- )
+      const int wt = w[t];
+      for( int i = nnodes - 1; i >= 0; i-- )
       {
          headactive[i] = Q_NULL;
          headinactive[i] = Q_NULL;
@@ -959,26 +948,25 @@ static void reinitialise(
    dist[t]         = 0;
 
    /* bfs loop */
-   for( j = 0; j < visited; j++ )
+   for( int j = 0; j < visited; j++ )
    {
+      const int i = temp[j];
+
       assert(visited <= nnodes);
-
-      i = temp[j];
-
       assert(i         >= 0);
       assert(i         <  nnodes);
       assert(dist[i] >= 0);
       assert(dist[i] <  visited);
       assert(w[i]      == 0);
 
-      for( l = edgestart[i], end = edgestart[i + 1]; l != end; l++ )
+      for( int outedge = edgestart[i], end = edgestart[i + 1]; outedge != end; outedge++ )
       {
-         k = headarr[l];
+         const int k = headarr[outedge];
 
          /* not visited yet? */
          if( dist[k] < 0 && w[k] == 0 )
          {
-            if( residual[edgearr[l]] > 0 )
+            if( residual[edgearr[outedge]] > 0 )
             {
                dist[k] = dist[i] + 1;
                temp[visited++] = k;
@@ -1004,7 +992,7 @@ static void reinitialise(
 
    hit = FALSE;
    dormmaxlocp1 = dormmaxloc + 1;
-   for( i = nnodes - 1; i >= 0; i-- )
+   for( int i = nnodes - 1; i >= 0; i-- )
    {
       /* unreachable non-dormant node? */
       if( dist[i] < 0 && w[i] == 0 )
@@ -1213,7 +1201,7 @@ void graph_mincut_exec(
    const int*            edgestart,
    const int*            edgearr,
    const int*            headarr,
-   const SCIP_Bool       rerun
+   const SCIP_Bool       isRerun
    )
 {
    int    l;
@@ -1252,7 +1240,6 @@ void graph_mincut_exec(
    assert(t      >= 0);
    assert(t      <  p->knots);
    assert(s      != t);
-   assert(capa   != NULL);
    assert(w      != NULL);
    assert(p->mincut_dist   != NULL);
    assert(p->mincut_numb   != NULL);
@@ -1280,12 +1267,16 @@ void graph_mincut_exec(
    relabelupdatebnd = (GLOBALRELABEL_MULT * nnodesreal) + nedgesreal;
    relabeltrigger = 0;
 
-   if( !rerun )
-      initialise(p, s, t, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
+   if( !isRerun )
+   {
+      initialise(s, t, nnodesreal, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
             edgearr, headarr, &dormmax, &actmin, &actmax, &glbmax);
+   }
    else
-      reinitialise(p, s, t, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
+   {
+      reinitialise(s, t, nnodesreal, rootcutsize, rootcut, capa, dist, headactive, headinactive, edgecurr, next, prev, temp, e, r, w, edgestart,
             edgearr, headarr, &dormmax, &actmin, &actmax, &glbmax);
+   }
 
    /* main loop: get highest label node */
    while( actmax >= actmin )
@@ -1609,6 +1600,7 @@ void graph_mincut_exec(
    assert(!w[t]);
 
 #if CHECK
+   assert(capa);
    if( !is_valid_arr(p, s, t, edgestart, headarr, edgearr, r, capa, w) )
       printf("flow is not valid \n");
    assert(is_valid_arr(p, s, t, edgestart, headarr, edgearr, r, capa, w));

@@ -37,8 +37,8 @@ SCIP_RETCODE stptest_testAll(
 {
    assert(scip);
 
-   SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_reduceBiconnected(scip) );
+   SCIP_CALL( stptest_extreduce(scip) );
    SCIP_CALL( stptest_reduceSdGetter(scip) );
    SCIP_CALL( stptest_reduceSdBiased(scip) );
    SCIP_CALL( stptest_reduceNsvImplied(scip) );

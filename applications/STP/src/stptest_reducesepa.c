@@ -31,6 +31,46 @@
 #include "graph.h"
 #include "reduce.h"
 #include "portab.h"
+#include "mincut.h"
+
+
+/** tests terminal separator method */
+static
+SCIP_RETCODE testTerminalSeparatorsAreFound(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 3;
+   int nedges = 4;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 1, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 1, 2, 1.0); // 2
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+   SCIP_CALL( graph_mincut_init(scip, graph) );
+
+   SCIP_CALL( mincut_findTerminalSeparators(scip, graph) );
+
+   graph_mincut_exit(scip, graph);
+
+   //assert(0);
+
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -393,6 +433,8 @@ SCIP_RETCODE stptest_reduceBiconnected(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( testTerminalSeparatorsAreFound(scip) );
+
    SCIP_CALL( testBiconnectedDecomposition(scip) );
    SCIP_CALL( testBiconnectedDecomposition2(scip) );
    SCIP_CALL( testBiconnectedDecomposition3(scip) );
