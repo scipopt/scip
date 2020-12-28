@@ -34,7 +34,7 @@
 
 #define Q_NULL     -1         /* NULL element of queue/list */
 #define ADDCUTSTOPOOL FALSE
-
+#define TERMSEPA_SPARSE_MAXRATIO 4
 /* *
 #define FLOW_FACTOR     100000
 #define CREEP_VALUE     1         this is the original value todo check what is better
@@ -1335,6 +1335,36 @@ void lpcutSetEdgeCapacity(
    }
 }
 
+/*
+ * Interface methods
+ */
+
+
+/** is it promising to look for terminal separators? */
+SCIP_Bool mincut_findTerminalSeparatorsIsPromising(
+   const GRAPH*          g                   /**< graph data structure */
+   )
+{
+   int nnodes;
+   int nedges;
+
+   assert(g);
+
+   graph_get_nVET(g, &nnodes, &nedges, NULL);
+
+   if( nedges == 0 )
+   {
+      return FALSE;
+   }
+
+   assert(nnodes > 0 && nedges >= 2);
+   assert(nedges % 2 == 0);
+
+   nedges /= 2;
+
+   return ((nedges / nnodes) <= TERMSEPA_SPARSE_MAXRATIO);
+}
+
 
 /** searches for (small) terminal separators */
 SCIP_RETCODE mincut_findTerminalSeparators(
@@ -1397,11 +1427,6 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 
    return SCIP_OKAY;
 }
-
-
-/*
- * Interface methods
- */
 
 
 /** separates Steiner cuts for LP */

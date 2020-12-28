@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-
+extern SCIP_Bool mincut_findTerminalSeparatorsIsPromising(const GRAPH*);
 extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, GRAPH*);
 extern SCIP_RETCODE mincut_separateLp(SCIP*, SCIP_CONSHDLR*, SCIP_RANDNUMGEN*, const int*, GRAPH*, int, int*);
 
