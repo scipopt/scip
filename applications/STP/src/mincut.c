@@ -172,6 +172,7 @@ void debugPrintCsrCutEdges(
    const MINCUT*         mincut              /**< minimum cut */
 )
 {
+   const int* const edges_capa = mincut->edges_capa;
    const int* const nodes_wakeState = mincut->nodes_wakeState;
    const int* const csr_start = mincut->csr_start;
    const int* const csr_headarr = mincut->csr_headarr;
@@ -195,7 +196,7 @@ void debugPrintCsrCutEdges(
 
          if( nodes_wakeState[head] == 0 )
          {
-            printf("%d->%d \n", i, head);
+            printf("%d->%d, c=%d \n", i, head, edges_capa[j]);
          }
       }
    }
@@ -241,6 +242,7 @@ SCIP_Bool csrFlipedgesAreValid(
    const MINCUT*         mincut              /**< minimum cut */
 )
 {
+   const int* const residual = g->mincut_r;
    const int* const csr_start = mincut->csr_start;
    const int* const csr_headarr = mincut->csr_headarr;
    const int* const csr_edgeflipped = mincut->csr_edgeflipped;
@@ -261,6 +263,8 @@ SCIP_Bool csrFlipedgesAreValid(
          {
             return FALSE;
          }
+
+         assert(residual[j] > 0 || residual[csr_edgeflipped[j]] > 0);
       }
    }
 
@@ -363,6 +367,7 @@ void termsepaCsrAddEdges(
    MINCUT*               mincut              /**< minimum cut */
 )
 {
+   int* RESTRICT edges_capa = mincut->edges_capa;
    int* RESTRICT residual = g->mincut_r;
    int* RESTRICT edgecurr = g->mincut_numb;
    int* RESTRICT csr_edgeDefaultToCsr = mincut->csr_edgeDefaultToCsr;
@@ -376,17 +381,17 @@ void termsepaCsrAddEdges(
    const int nnodes_org = graph_get_nNodes(g);
    int csr_nedges = 0;
 
-   assert(residual && edgecurr);
+   assert(residual && edgecurr && edges_capa);
 
    /* add edges from original nodes */
    for( int k = 0; k < nnodes_org; k++ )
    {
-      const SCIP_Bool kIsRealTerm = (Is_term(g->term[k]) && k != root);
+      const SCIP_Bool kIsSepaTerm = nodes_termToCopy[k] >= 0;
       edgecurr[k] = -1;
       csr_start[k] = csr_nedges;
 
       /* add edge from terminal to copy if existent */
-      if( nodes_termToCopy[k] >= 0 )
+      if( kIsSepaTerm )
       {
          const int kCopy = nodes_termToCopy[k];
 
@@ -425,10 +430,15 @@ void termsepaCsrAddEdges(
          for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
+
+            /* are both endpoints separation terminals? */
+            if( kIsSepaTerm && nodes_termToCopy[head] >= 0 )
+               continue;
+
             if( nodes_wakeState[head] == 0 )
             {
                csr_edgeDefaultToCsr[e] = csr_nedges;
-               residual[csr_nedges] = kIsRealTerm ? 0 : capa_infinity;
+               residual[csr_nedges] = kIsSepaTerm ? 0 : capa_infinity;
                csr_headarr[csr_nedges++] = head;
             }
          }
@@ -445,7 +455,9 @@ void termsepaCsrAddEdges(
    /* add edges from copy terminals */
    for( int k = 0; k < nnodes_org; k++ )
    {
-      if( nodes_termToCopy[k] >= 0 )
+      const SCIP_Bool kIsSepaTerm = nodes_termToCopy[k] >= 0;
+
+      if( kIsSepaTerm )
       {
          const int kCopy = nodes_termToCopy[k];
 
@@ -460,6 +472,8 @@ void termsepaCsrAddEdges(
          residual[csr_nedges] = 0;
          csr_headarr[csr_nedges++] = k;
 
+         // should not be necessary todo remove
+#ifdef SCIP_DISABLED
          for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
@@ -475,6 +489,7 @@ void termsepaCsrAddEdges(
                csr_headarr[csr_nedges++] = headCopy;
             }
          }
+#endif
 
          for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
@@ -492,6 +507,8 @@ void termsepaCsrAddEdges(
 
    mincut->termsepa_nedges = csr_nedges;
    csr_start[mincut->termsepa_nnodes] = csr_nedges;
+
+   BMScopyMemoryArray(edges_capa, residual, csr_nedges);
 
    mincut->csr_nedges = csr_nedges;
 }
@@ -746,7 +763,7 @@ SCIP_RETCODE mincutInitForTermSepa(
    assert(!mincut->isLpcut);
    assert(!mincut->edges_isRemoved);
 
-   mincut->edges_capa = NULL;
+   SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->edges_capa), nedges_enlarged) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->nodes_wakeState), nnodes_enlarged) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->terms), g->terms) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->csr_edgeDefaultToCsr), nedges) );
@@ -777,6 +794,7 @@ SCIP_RETCODE mincutInitForTermSepa(
    for( int i = 0; i < nedges_enlarged; i++ )
    {
       mincut->csr_edgeflipped[i] = -1;
+      mincut->edges_capa[i] = -1;
    }
 #endif
 
@@ -1144,20 +1162,25 @@ void mincutExec(
    MINCUT*               mincut              /**< minimum cut */
 )
 {
+   const int* capa;
    int nnodes;
    const int root = mincut->root;
 
    if( mincut->isLpcut )
    {
+      capa = mincut->edges_capa;
       nnodes = graph_get_nNodes(g);
    }
    else
    {
+      /* NOTE: in this case mincut->edges_capa refers to the extended CSR graph,
+       * and cannot be handled by graph_mincut_exec....anyway only needed for debug checks*/
+      capa = NULL;
       nnodes = mincut->termsepa_nnodes;
    }
 
    graph_mincut_exec(g, root, sinkterm, nnodes, mincut->csr_nedges, mincut->rootcutsize,
-         mincut->rootcut, mincut->edges_capa, mincut->nodes_wakeState,
+         mincut->rootcut, capa, mincut->nodes_wakeState,
          mincut->csr_start, mincut->csr_edgeflipped, mincut->csr_headarr, wasRerun);
 }
 
