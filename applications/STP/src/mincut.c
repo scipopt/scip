@@ -272,6 +272,17 @@ SCIP_Bool csrFlipedgesAreValid(
 }
 #endif
 
+
+/** gets infinity */
+static
+int termsepaGetCapaInf(
+   const GRAPH*          g,                  /**< the graph */
+   const MINCUT*         mincut              /**< minimum cut */
+)
+{
+   return g->terms;
+}
+
 /** initializes */
 static
 SCIP_RETCODE termsepaCsrInit(
@@ -375,7 +386,7 @@ void termsepaCsrAddEdges(
    int* RESTRICT csr_headarr = mincut->csr_headarr;
    int* RESTRICT nodes_wakeState = mincut->nodes_wakeState;
    const int* const nodes_termToCopy = mincut->termsepa_termToCopy;
-   const int capa_infinity = g->terms;
+   const int capa_infinity = termsepaGetCapaInf(g, mincut);
    const int capa_one = 1;
    const int root = mincut->root;
    const int nnodes_org = graph_get_nNodes(g);
@@ -446,8 +457,8 @@ void termsepaCsrAddEdges(
          /* unreachable node? */
          if( edgecurr[k] == csr_nedges )
          {
-            assert(0 && "should not happen");
-         //   nodes_wakeState[k] = 1;
+            assert(g->grad[k] == 0);
+            nodes_wakeState[k] = 1;
          }
       }
    }
@@ -683,7 +694,7 @@ SCIP_RETCODE termsepaBuildCsr(
    termsepaCsrAddReverseEdges(g, mincut);
 
 #ifdef SCIP_DEBUG
-   debugPrintCsr(g, mincut);
+   //debugPrintCsr(g, mincut);
 #endif
 
    return SCIP_OKAY;
@@ -1337,17 +1348,13 @@ void lpcutSetEdgeCapacity(
       krev = k + 1;
       if( !flip )
       {
-         capa[k]     = (int)(xval[k    ]
-            * FLOW_FACTOR + 0.5);
-         capa[krev] = (int)(xval[krev]
-            * FLOW_FACTOR + 0.5);
+         capa[k] = (int) (xval[k] * FLOW_FACTOR + 0.5);
+         capa[krev] = (int) (xval[krev] * FLOW_FACTOR + 0.5);
       }
       else
       {
-         capa[k]     = (int)(xval[krev]
-            * FLOW_FACTOR + 0.5);
-         capa[krev] = (int)(xval[k    ]
-            * FLOW_FACTOR + 0.5);
+         capa[k] = (int) (xval[krev] * FLOW_FACTOR + 0.5);
+         capa[krev] = (int) (xval[k] * FLOW_FACTOR + 0.5);
       }
 
       if( creep_flow )
@@ -1372,6 +1379,11 @@ SCIP_Bool mincut_findTerminalSeparatorsIsPromising(
    int nedges;
 
    assert(g);
+
+   if( g->terms < 4 )
+   {
+      return FALSE;
+   }
 
    graph_get_nVET(g, &nnodes, &nedges, NULL);
 
@@ -1399,6 +1411,12 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    int* nodes_wakeState;
    SCIP_Bool wasRerun;
 
+   if( g->terms < 4 )
+   {
+      SCIPdebugMessage("not enough terminals (%d), aborting terminal separator check \n", g->terms);
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( mincutInit(scip, FALSE, g, &mincut) );
 
    /* sets excess, g->mincut_head,  g->mincut_head_inact */
@@ -1410,7 +1428,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 
    assert(nodes_wakeState);
 
-   printf("ntermcands=%d \n",  mincut->ntermcands );
+   SCIPdebugMessage("ntermcands=%d \n",  mincut->ntermcands );
 
    while( mincut->ntermcands > 0 )
    {
@@ -1423,7 +1441,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
       sinkterm = mincutGetNextSinkTerm(g, !wasRerun, NULL, mincut);
       mincut->ntermcands--;
 
-      printf("computing cut for sink terminal %d \n", sinkterm);
+      SCIPdebugMessage("computing cut for sink terminal %d \n", sinkterm);
 
       assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);
 
