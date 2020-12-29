@@ -539,8 +539,8 @@ void termsepaCsrAddReverseEdges(
          }
 
          assert(antiedge < neighboredges_end);
-         assert(csr_edgeflipped[antiedge] == -1);
-         assert(csr_edgeflipped[copyedge] == -1);
+         assert(csr_edgeflipped[antiedge] == -1 || csr_edgeflipped[antiedge] == copyedge);
+         assert(csr_edgeflipped[copyedge] == -1 || csr_edgeflipped[copyedge] == antiedge);
 
          csr_edgeflipped[antiedge] = copyedge;
          csr_edgeflipped[copyedge] = antiedge;
