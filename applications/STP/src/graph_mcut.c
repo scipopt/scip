@@ -373,9 +373,9 @@ SCIP_RETCODE mincutInit(
 /** global relabel heuristic that sets distance of sink to zero and relabels all other nodes using backward bfs on residual
  * graph, starting from the sink.  */
 static void globalrelabel(
-   const GRAPH* graph,
    const int    s,
    const int    t,
+   const int     nnodesreal,
    int* RESTRICT dist,
    int* RESTRICT headactive,
    int* RESTRICT headinactive,
@@ -400,14 +400,14 @@ static void globalrelabel(
    int actminloc;
    int glbmaxloc;
    int dormmaxnext;
-   const int nnodes = graph_get_nNodes(graph);
+   const int nnodes = nnodesreal;
    const int end = *glbmax;
    SCIP_Bool hit;
 
    assert(s      >= 0);
-   assert(s      <  graph->knots);
+   assert(s      <  nnodesreal);
    assert(t      >= 0);
-   assert(t      <  graph->knots);
+   assert(t      <  nnodesreal);
    assert(s      != t);
    assert(w      != NULL);
    assert(headactive != NULL);
@@ -1573,7 +1573,7 @@ void graph_mincut_exec(
                      break;
 
                   /* execute global relabel heuristic */
-                  globalrelabel(p, s, t, dist, headactive, headinactive, edgecurr, next, prev,
+                  globalrelabel(s, t, nnodesreal, dist, headactive, headinactive, edgecurr, next, prev,
                         e, r, w, edgestart, edgearr, headarr, &actmin, &actmax, &glbmax, &dormmax);
 
                   relabeltrigger = 0;
@@ -1601,7 +1601,7 @@ void graph_mincut_exec(
             break;
 
          /* execute global relabel heuristic */
-         globalrelabel(p, s, t, dist, headactive, headinactive, edgecurr, next, prev,
+         globalrelabel(s, t, nnodesreal, dist, headactive, headinactive, edgecurr, next, prev,
                e, r, w, edgestart, edgearr, headarr, &actmin, &actmax, &glbmax, &dormmax);
 
          relabeltrigger = 0;

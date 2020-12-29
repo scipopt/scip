@@ -107,13 +107,65 @@ SCIP_RETCODE testTerminalSeparatorsAreFound2(
 
    graph_mincut_exit(scip, graph);
 
+   stptest_graphTearDown(scip, graph);
+
+   return SCIP_OKAY;
+}
+
+
+/** tests terminal separator method */
+static
+SCIP_RETCODE testTerminalSeparatorsAreFound3(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   GRAPH* graph;
+   int nnodes = 9;
+   int nedges = 26;
+
+   SCIP_CALL( graph_init(scip, &graph, nnodes, nedges, 1) );
+
+   for( int i = 0; i < nnodes; i++ )
+      graph_knot_add(graph, STP_TERM_NONE);
+
+   graph_knot_chg(graph, 0, STP_TERM);
+   graph_knot_chg(graph, 2, STP_TERM);
+   graph_knot_chg(graph, 3, STP_TERM);
+   graph_knot_chg(graph, 5, STP_TERM);
+   graph_knot_chg(graph, 8, STP_TERM);
+   graph_knot_chg(graph, 7, STP_TERM);
+
+
+   graph->source = 0;
+
+   graph_edge_addBi(scip, graph, 0, 1, 1.0); // 0
+   graph_edge_addBi(scip, graph, 0, 2, 1.0); // 2
+   graph_edge_addBi(scip, graph, 0, 3, 1.0);
+   graph_edge_addBi(scip, graph, 0, 4, 1.0);
+   graph_edge_addBi(scip, graph, 1, 5, 1.0);
+   graph_edge_addBi(scip, graph, 2, 5, 1.0);
+   graph_edge_addBi(scip, graph, 3, 7, 1.0);
+   graph_edge_addBi(scip, graph, 4, 6, 1.0);
+   graph_edge_addBi(scip, graph, 6, 7, 1.0);
+   graph_edge_addBi(scip, graph, 2, 8, 1.0);
+   graph_edge_addBi(scip, graph, 5, 8, 1.0);
+   graph_edge_addBi(scip, graph, 8, 7, 1.0);
+
+   graph_edge_addBi(scip, graph, 2, 2, 22.0);
+
+
+   SCIP_CALL( stptest_graphSetUp(scip, graph) );
+
+
+   SCIP_CALL( mincut_findTerminalSeparators(scip, graph) );
+
+
    //assert(0);
 
    stptest_graphTearDown(scip, graph);
 
    return SCIP_OKAY;
 }
-
 
 
 /** tests biconnected components method */
@@ -475,9 +527,9 @@ SCIP_RETCODE stptest_reduceBiconnected(
    SCIP*                 scip                /**< SCIP data structure */
 )
 {
+   SCIP_CALL( testTerminalSeparatorsAreFound3(scip) );
    SCIP_CALL( testTerminalSeparatorsAreFound2(scip) );
    SCIP_CALL( testTerminalSeparatorsAreFound(scip) );
-
 
    SCIP_CALL( testBiconnectedDecomposition(scip) );
    SCIP_CALL( testBiconnectedDecomposition2(scip) );
