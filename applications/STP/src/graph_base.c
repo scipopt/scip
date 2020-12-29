@@ -816,6 +816,9 @@ void graph_free(
          SCIPfreeMemoryArray(scip, &(p->grid_ncoords));
    }
 
+   if( graph_mincut_isInitialized(p) )
+      graph_mincut_exit(scip, p);
+
    SCIPfreeMemoryArray(scip, &(p->oeat));
    SCIPfreeMemoryArray(scip, &(p->ieat));
    SCIPfreeMemoryArray(scip, &(p->head));

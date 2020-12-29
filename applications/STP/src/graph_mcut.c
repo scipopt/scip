@@ -1179,7 +1179,10 @@ void graph_mincut_exit(
 {
    assert(scip && p);
    assert(graph_mincut_isInitialized(p));
+   assert(p->mincut_nnodes > 0);
 
+   p->mincut_nnodes = 0;
+   p->mincut_nedges = 0;
    SCIPfreeMemoryArray(scip, &(p->mincut_r));
    SCIPfreeMemoryArray(scip, &(p->mincut_e));
    SCIPfreeMemoryArray(scip, &(p->mincut_temp));
