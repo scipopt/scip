@@ -349,7 +349,7 @@ SCIP_Bool termsepaCutIsCorrect(
 
    StpVecFree(scip, stack);
 
-   if( nvisted != nsinknodes )
+   if( nvisted > nsinknodes )
    {
       SCIPerrorMessage("nvisted=%d nsinknodes=%d\n", nvisted, nsinknodes);
    }
