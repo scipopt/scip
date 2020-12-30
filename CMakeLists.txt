@@ -542,54 +542,51 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/scip/config.h.in ${PROJECT_BINARY
 # go to src/ and compile the code
 add_subdirectory(src)
 
-#
-# we set the SCIP_DIR variable explicitly for the following examples/applications and unittests that depend on SCIP.
-#
-set(SCIP_DIR ${PROJECT_BINARY_DIR})
-#
-# add SCIP tests
-#
-add_subdirectory(check)
-
-#
-# add unit tests as a single target. Including tests will add the unit tests as single executables
-#
-add_custom_target(unittests)
-add_subdirectory(tests EXCLUDE_FROM_ALL)
-add_subdirectory(doc EXCLUDE_FROM_ALL)
-add_custom_target(all_executables DEPENDS scip unittests examples applications)
-#
-# add examples
-#
-# use sub directory bin/examples for executables of examples
-#
+# store directory
 set(OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-if(MSVC)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-else()
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
-endif()
-add_subdirectory(examples)
 
-#
-# add applications
-#
-if(MSVC)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-else()
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
-endif()
-add_subdirectory(applications)
+include(CTest)
+if(BUILD_TESTING)
+    #
+    # add SCIP tests
+    #
+    add_subdirectory(check)
 
-#
-# add AMPL interface
-#
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
-add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+    #
+    # add unit tests as a single target. Including tests will add the unit tests as single executables
+    #
+    add_custom_target(unittests)
+    add_subdirectory(tests EXCLUDE_FROM_ALL)
+    add_subdirectory(doc EXCLUDE_FROM_ALL)
+
+    #
+    # add examples
+    #
+    # use sub directory bin/examples for executables of examples
+    #
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/examples)
+    add_subdirectory(examples)
+
+    #
+    # add applications
+    #
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/applications)
+    add_subdirectory(applications)
+
+    add_custom_target(all_executables DEPENDS scip unittests examples applications)
+endif()
+
+if(AMPL)
+    #
+    # add AMPL interface
+    #
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interfaces/ampl)
+    add_subdirectory(interfaces/ampl EXCLUDE_FROM_ALL)
+else()
+    message(STATUS "Support AMPL: OFF")
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OLD_CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-enable_testing()
 
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     include(FeatureSummary)
