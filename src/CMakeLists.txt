@@ -1014,6 +1014,11 @@ set_target_properties(libscip PROPERTIES
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
     INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+target_include_directories(scip PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>)
+
 # set the install rpath to the installed destination
 set_target_properties(scip PROPERTIES
     INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
