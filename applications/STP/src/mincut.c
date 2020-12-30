@@ -391,6 +391,9 @@ int termsepaFindTerminalSource(
    const MINCUT*         mincut              /**< minimum cut */
 )
 {
+#if 1
+   return g->source;
+#else
    int source = g->source;
    const int nnodes = graph_get_nNodes(g);
    const int nterms = graph_get_nTerms(g);
@@ -414,9 +417,8 @@ int termsepaFindTerminalSource(
          source = i;
    }
 
-   int todo;
-   return g->source;
-   //return source;
+   return source;
+#endif
 }
 
 
@@ -586,8 +588,12 @@ void termsepaCsrAddTermCopies(
          nsepaterms++;
 
          assert(excess[nodes_termToCopy[k]] == 0);
-         /* NOTE: 1 is the default value for separator edges...so we basically push everything out of k */
-         excess[nodes_termToCopy[k]] = 1;
+
+         if( nodes_wakeState[k] != 0 )
+         {
+            /* NOTE: 1 is the default value for separator edges...so we basically push everything out of k */
+            excess[nodes_termToCopy[k]] = 1;
+         }
 
          SCIPdebugMessage("adding separator terminal %d (copyindex=%d) \n", k, nodes_termToCopy[k]);
 
@@ -642,8 +648,8 @@ void termsepaCsrAddEdges(
          csr_headarr[csr_nedges++] = kCopy;
       }
 
-      /* non-dormant node? */
-      if( nodes_wakeState[k] == 0 )
+      /* non-dormant node or potential separator? */
+      if( kIsSepaTerm || nodes_wakeState[k] == 0 )
       {
          assert(k != mincut->root);
          edgecurr[k] = csr_nedges;
@@ -670,12 +676,12 @@ void termsepaCsrAddEdges(
          for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
+            const SCIP_Bool headIsSepaTerm = nodes_termToCopy[head] >= 0;
 
-            /* are both endpoints separation terminals? */
-            if( kIsSepaTerm && nodes_termToCopy[head] >= 0 )
+            if( kIsSepaTerm && headIsSepaTerm )
                continue;
 
-            if( nodes_wakeState[head] == 0 )
+            if( headIsSepaTerm || nodes_wakeState[head] == 0 )
             {
                csr_edgeDefaultToCsr[e] = csr_nedges;
                residual[csr_nedges] = kIsSepaTerm ? 0 : capa_infinity;
@@ -734,7 +740,9 @@ void termsepaCsrAddEdges(
          for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             const int head = g->head[e];
-            if( nodes_wakeState[head] == 0 )
+            const SCIP_Bool headIsSepaTerm = nodes_termToCopy[head] >= 0;
+
+            if( headIsSepaTerm || nodes_wakeState[head] == 0 )
             {
                residual[csr_nedges] = capa_infinity;
                csr_headarr[csr_nedges++] = head;
@@ -1669,9 +1677,6 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 
    assert(nodes_wakeState);
 
-   printf("ntermcands %d \n", mincut->ntermcands);
-
-
    SCIPdebugMessage("ntermcands=%d \n",  mincut->ntermcands );
 
    while( mincut->ntermcands > 0 )
@@ -1711,8 +1716,6 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    }
 
    mincutFree(scip, &mincut);
-
-   printf("finished \n");
 
    return SCIP_OKAY;
 }
