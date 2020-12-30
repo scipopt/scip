@@ -57,9 +57,9 @@ set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
 set(CPACK_PACKAGE_CONTACT "http://scipopt.org")
 include(CPack)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 
 # path to e.g. findGMP module
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
@@ -545,7 +545,7 @@ add_subdirectory(src)
 #
 # we set the SCIP_DIR variable explicitly for the following examples/applications and unittests that depend on SCIP.
 #
-set(SCIP_DIR ${CMAKE_BINARY_DIR})
+set(SCIP_DIR ${PROJECT_BINARY_DIR})
 #
 # add SCIP tests
 #
