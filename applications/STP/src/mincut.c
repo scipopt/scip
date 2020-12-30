@@ -30,11 +30,14 @@
 #include "mincut.h"
 #include "probdata_stp.h"
 #include "misc_stp.h"
+#include "stpvector.h"
+#include "reduce.h"
 #include "portab.h"
 
 #define Q_NULL     -1         /* NULL element of queue/list */
 #define ADDCUTSTOPOOL FALSE
 #define TERMSEPA_SPARSE_MAXRATIO 4
+#define TERMSEPA_MAXCUTSIZE 10
 /* *
 #define FLOW_FACTOR     100000
 #define CREEP_VALUE     1         this is the original value todo check what is better
@@ -270,7 +273,92 @@ SCIP_Bool csrFlipedgesAreValid(
 
    return TRUE;
 }
+
 #endif
+
+/** checks cut */
+static
+SCIP_Bool termsepaCutIsCorrect(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   ncutterms,
+   const int*            cutterms,
+   int                   sinkterm,
+   const MINCUT*         mincut              /**< minimum cut */
+)
+{
+   const int* const nodes_wakeState = mincut->nodes_wakeState;
+   STP_Vectype(int) stack = NULL;
+   SCIP_Bool* nodes_isBlocked;
+   SCIP_Bool* nodes_isVisited;
+   const int nnodes = graph_get_nNodes(g);
+   int nvisted = 1;
+   int nsinknodes = 0;
+
+   assert(ncutterms > 0);
+   assert(nodes_wakeState[sinkterm] == 0);
+
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodes_isBlocked, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &nodes_isVisited, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      nodes_isBlocked[i] = FALSE;
+      nodes_isVisited[i] = FALSE;
+   }
+
+   for( int i = 0; i < ncutterms; i++ )
+   {
+      assert(graph_knot_isInRange(g, cutterms[i]));
+      assert(!nodes_isBlocked[cutterms[i]]);
+
+      nodes_isBlocked[cutterms[i]] = TRUE;
+   }
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( nodes_wakeState[i] == 0 )
+      {
+         nsinknodes++;
+      }
+   }
+
+   /* DFS from sink terminal */
+   StpVecReserve(scip, stack, nnodes);
+   StpVecPushBack(scip, stack, sinkterm);
+   nodes_isVisited[sinkterm] = TRUE;
+
+   while( StpVecGetSize(stack)  )
+   {
+      const int k = stack[StpVecGetSize(stack) - 1];
+      StpVecPopBack(stack);
+
+      assert(nodes_isVisited[k]);
+
+      for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         if( !nodes_isVisited[head] && !nodes_isBlocked[head] )
+         {
+            nvisted++;
+            nodes_isVisited[head] = TRUE;
+            StpVecPushBack(scip, stack, head);
+         }
+      }
+   }
+
+   StpVecFree(scip, stack);
+
+   if( nvisted != nsinknodes )
+   {
+      SCIPerrorMessage("nvisted=%d nsinknodes=%d\n", nvisted, nsinknodes);
+   }
+
+   SCIPfreeMemoryArray(scip, &nodes_isVisited);
+   SCIPfreeMemoryArray(scip, &nodes_isBlocked);
+
+   return (nvisted == nsinknodes);
+}
 
 
 /** gets infinity */
@@ -281,6 +369,100 @@ int termsepaGetCapaInf(
 )
 {
    return g->terms;
+}
+
+
+/** adds cut */
+static
+SCIP_RETCODE termsepaStoreCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   sinkterm,
+   MINCUT*               mincut              /**< minimum cut */
+)
+{
+   int* cutterms;
+   const int* const edges_capa = mincut->edges_capa;
+   const int* const nodes_wakeState = mincut->nodes_wakeState;
+   const int* const csr_start = mincut->csr_start;
+   const int* const csr_headarr = mincut->csr_headarr;
+   const int nnodes_extended = mincut->termsepa_nnodes;
+   const int nnodes = graph_get_nNodes(g);
+   const int capa_inf = termsepaGetCapaInf(g, mincut);
+   int ncutterms = 0;
+   SCIP_Bool isGoodCut = TRUE;
+
+   assert(!mincut->isLpcut);
+   assert(nodes_wakeState[sinkterm] == 0);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutterms, TERMSEPA_MAXCUTSIZE + 1) );
+
+   for( int i = 0; i < nnodes_extended && isGoodCut; i++ )
+   {
+      const int start = csr_start[i];
+      const int end = csr_start[i + 1];
+
+      if( !nodes_wakeState[i] )
+         continue;
+
+      for( int j = start; j != end; j++ )
+      {
+         const int head = csr_headarr[j];
+
+         if( nodes_wakeState[head] == 0 && edges_capa[j] > 0 )
+         {
+            assert(ncutterms <= TERMSEPA_MAXCUTSIZE );
+            assert(edges_capa[j] == 1 || edges_capa[j] == capa_inf);
+
+            if( edges_capa[j] == capa_inf || ncutterms == TERMSEPA_MAXCUTSIZE )
+            {
+               isGoodCut = FALSE;
+               break;
+            }
+
+            cutterms[ncutterms++] = i;
+            assert(Is_term(g->term[i]));
+         }
+      }
+   }
+
+   if( isGoodCut )
+   {
+      int nsinknodes = 0;
+      int nsinkterms = 0;
+
+      assert(termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut));
+
+      if( !termsepaCutIsCorrect(scip, g, ncutterms, cutterms, sinkterm, mincut) )
+         return SCIP_ERROR;
+
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( nodes_wakeState[i] == 0 )
+         {
+            nsinknodes++;
+
+            if( Is_term(g->term[i]) )
+               nsinkterms++;
+         }
+      }
+
+      if( ncutterms <= 8 )
+      {
+         printf("terminal cut of size %d for sink %d \n", ncutterms, sinkterm);
+         printf("nsinknodes=%d nsinkterms=%d \n", nsinknodes, nsinkterms);
+
+         for( int i = 0; i < ncutterms; i++ )
+         {
+            printf("%d \n", cutterms[i]);
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &cutterms);
+
+   return SCIP_OKAY;
 }
 
 /** initializes */
@@ -388,7 +570,6 @@ void termsepaCsrAddEdges(
    const int* const nodes_termToCopy = mincut->termsepa_termToCopy;
    const int capa_infinity = termsepaGetCapaInf(g, mincut);
    const int capa_one = 1;
-   const int root = mincut->root;
    const int nnodes_org = graph_get_nNodes(g);
    int csr_nedges = 0;
 
@@ -406,7 +587,7 @@ void termsepaCsrAddEdges(
       {
          const int kCopy = nodes_termToCopy[k];
 
-         assert(Is_term(g->term[k]) && k != root);
+         assert(Is_term(g->term[k]) && k != mincut->root);
          assert(nnodes_org <= kCopy && kCopy < mincut->termsepa_nnodes);
 
          residual[csr_nedges] = capa_one;
@@ -416,7 +597,7 @@ void termsepaCsrAddEdges(
       /* non-dormant node? */
       if( nodes_wakeState[k] == 0 )
       {
-         assert(k != root);
+         assert(k != mincut->root);
          edgecurr[k] = csr_nedges;
 
          /* NOTE: we go two times over the incident edges so that the edges to
@@ -430,7 +611,7 @@ void termsepaCsrAddEdges(
             {
                const int headCopy = nodes_termToCopy[head];
 
-               assert(Is_term(g->term[head]) && head != root);
+               assert(Is_term(g->term[head]) && head != mincut->root);
                assert(nnodes_org <= headCopy && headCopy < mincut->termsepa_nnodes);
 
                residual[csr_nedges] = 0;
@@ -473,7 +654,7 @@ void termsepaCsrAddEdges(
          const int kCopy = nodes_termToCopy[k];
 
          assert(nodes_wakeState[kCopy] == 0);
-         assert(Is_term(g->term[k]) && k != root);
+         assert(Is_term(g->term[k]) && k != mincut->root);
          assert(nnodes_org <= kCopy && kCopy < mincut->termsepa_nnodes);
 
          edgecurr[kCopy] = csr_nedges;
@@ -1411,11 +1592,16 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    int* nodes_wakeState;
    SCIP_Bool wasRerun;
 
-   if( g->terms < 4 )
+   if( g->terms < 3 )
    {
       SCIPdebugMessage("not enough terminals (%d), aborting terminal separator check \n", g->terms);
       return SCIP_OKAY;
    }
+
+   SCIP_CALL( reduce_unconnected(scip, g) );
+
+   graph_printInfoReduced(g);
+
 
    SCIP_CALL( mincutInit(scip, FALSE, g, &mincut) );
 
@@ -1427,6 +1613,9 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    wasRerun = FALSE;
 
    assert(nodes_wakeState);
+
+   printf("ntermcands %d \n", mincut->ntermcands);
+
 
    SCIPdebugMessage("ntermcands=%d \n",  mincut->ntermcands );
 
@@ -1443,13 +1632,15 @@ SCIP_RETCODE mincut_findTerminalSeparators(
 
       SCIPdebugMessage("computing cut for sink terminal %d \n", sinkterm);
 
-      assert(Is_term(g->term[sinkterm]) && g->source != sinkterm);
+      assert(Is_term(g->term[sinkterm]) && mincut->root != sinkterm);
 
        /* non-trivial cut? */
        if( nodes_wakeState[sinkterm] != 1 )
        {
           mincutExec(g, sinkterm, wasRerun, mincut);
-          assert(nodes_wakeState[g->source] != 0);
+          assert(nodes_wakeState[mincut->root] != 0);
+
+          SCIP_CALL( termsepaStoreCut(scip, g, sinkterm, mincut) );
 #ifdef SCIP_DEBUG
           debugPrintCsrCutEdges(g, mincut);
 #endif
@@ -1465,6 +1656,8 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    }
 
    mincutFree(scip, &mincut);
+
+   printf("finished \n");
 
    return SCIP_OKAY;
 }
