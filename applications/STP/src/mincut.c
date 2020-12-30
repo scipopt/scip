@@ -287,6 +287,7 @@ SCIP_Bool termsepaCutIsCorrect(
    const MINCUT*         mincut              /**< minimum cut */
 )
 {
+   SCIP_Bool isCorrect = TRUE;
    const int* const nodes_wakeState = mincut->nodes_wakeState;
    STP_Vectype(int) stack = NULL;
    SCIP_Bool* nodes_isBlocked;
@@ -314,6 +315,8 @@ SCIP_Bool termsepaCutIsCorrect(
 
       nodes_isBlocked[cutterms[i]] = TRUE;
    }
+
+   assert(!nodes_isBlocked[mincut->root]);
 
    for( int i = 0; i < nnodes; i++ )
    {
@@ -352,12 +355,21 @@ SCIP_Bool termsepaCutIsCorrect(
    if( nvisted > nsinknodes )
    {
       SCIPerrorMessage("nvisted=%d nsinknodes=%d\n", nvisted, nsinknodes);
+      isCorrect = FALSE;
    }
+
+   if( nodes_isVisited[mincut->root] )
+   {
+      SCIPerrorMessage("root is in cut! \n");
+      isCorrect = FALSE;
+   }
+
 
    SCIPfreeMemoryArray(scip, &nodes_isVisited);
    SCIPfreeMemoryArray(scip, &nodes_isBlocked);
 
-   return (nvisted == nsinknodes);
+
+   return isCorrect;
 }
 
 
@@ -369,6 +381,42 @@ int termsepaGetCapaInf(
 )
 {
    return g->terms;
+}
+
+
+/** finds a root terminal */
+static
+int termsepaFindTerminalSource(
+   const GRAPH*          g,                  /**< the graph */
+   const MINCUT*         mincut              /**< minimum cut */
+)
+{
+   int source = g->source;
+   const int nnodes = graph_get_nNodes(g);
+   const int nterms = graph_get_nTerms(g);
+   const int start = (12 * nterms) % nnodes; // todo: proper randomization
+
+   for( int i = start; i < nnodes; i++ )
+   {
+      if( !Is_term(g->term[i]) )
+         continue;
+
+      if( g->grad[i] <= g->grad[source] )
+         source = i;
+   }
+
+   for( int i = 0; i < start; i++ )
+   {
+      if( !Is_term(g->term[i]) )
+         continue;
+
+      if( g->grad[i] <= g->grad[source] )
+         source = i;
+   }
+
+   int todo;
+   return g->source;
+   //return source;
 }
 
 
@@ -946,14 +994,20 @@ SCIP_RETCODE mincutInitForTermSepa(
 {
    int* RESTRICT nodes_termToCopy;
    int* RESTRICT nodes_wakeState;
-   const int nnodes_enlarged = termsepaGetMaxNnodes(g);
-   const int nedges_enlarged = termsepaGetMaxNedges(mincut->root, g);
+   int nnodes_enlarged;
+   int nedges_enlarged;
    const int nedges = graph_get_nEdges(g);
    const int nnodes = graph_get_nNodes(g);
 
    assert(mincut && scip);
    assert(!mincut->isLpcut);
    assert(!mincut->edges_isRemoved);
+
+   mincut->root = termsepaFindTerminalSource(g, mincut);
+   nnodes_enlarged = termsepaGetMaxNnodes(g);
+   nedges_enlarged = termsepaGetMaxNedges(mincut->root, g);
+
+   SCIPdebugMessage("selected source %d \n", mincut->root);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->edges_capa), nedges_enlarged) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(mincut->nodes_wakeState), nnodes_enlarged) );
@@ -1362,6 +1416,7 @@ void mincutExec(
    {
       capa = mincut->edges_capa;
       nnodes = graph_get_nNodes(g);
+      assert(g->source == root);
    }
    else
    {
