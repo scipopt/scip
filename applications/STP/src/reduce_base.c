@@ -39,7 +39,7 @@
 #define STP_RED_GLBFACTOR  3
 #define STP_RED_EDGELIMIT 100000
 #define STP_BND_THRESHOLD 0.03
-
+#include "mincut.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1935,6 +1935,16 @@ SCIP_RETCODE redLoopStp(
          reduceStatsPrint(fullreduce, "ext", extendedelims);
 
          SCIP_CALL(reduce_simple(scip, g, redbaseGetOffsetPointer(redbase), redbaseGetSolnode(redsollocal, redbase), &extendedelims, NULL));
+
+#ifdef XXX_XXX
+         if( redparameters->userec )
+         {
+            TERMSEPAS* termsepas;
+            SCIP_CALL( mincut_termsepasInit(scip, g, &termsepas) );
+            SCIP_CALL( mincut_findTerminalSeparators(scip, g, termsepas) );
+            mincut_termsepasFree(scip, &termsepas);
+         }
+#endif
 
          if( nodereplacing )
          {

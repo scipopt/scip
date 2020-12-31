@@ -30,8 +30,15 @@
 extern "C" {
 #endif
 
+typedef struct terminal_separator_storage TERMSEPAS;
+
+extern SCIP_RETCODE mincut_termsepasInit(SCIP*, const GRAPH*, TERMSEPAS**);
+extern void         mincut_termsepasFree(SCIP*, TERMSEPAS**);
+extern int          mincut_termsepasGetNall(const TERMSEPAS*);
+extern int          mincut_termsepasGetN(const TERMSEPAS*, int);
+extern const int*   mincut_termsepasGetNext(int, TERMSEPAS*, int*, int*);
 extern SCIP_Bool mincut_findTerminalSeparatorsIsPromising(const GRAPH*);
-extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, GRAPH*);
+extern SCIP_RETCODE mincut_findTerminalSeparators(SCIP*, GRAPH*, TERMSEPAS*);
 extern SCIP_RETCODE mincut_separateLp(SCIP*, SCIP_CONSHDLR*, SCIP_RANDNUMGEN*, const int*, GRAPH*, int, int*);
 
 

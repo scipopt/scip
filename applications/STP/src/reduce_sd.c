@@ -874,6 +874,13 @@ SCIP_Real sdGetSd(
          assert(Is_term(g->term[tj]));
          assert(tk >= 0);
 
+         /*
+         if( GE(sd_jk, sd) )
+         {
+            continue;
+         }
+*/
+
          if( onlyIntermedTerms )
          {
             if( tj == i2 || tk == i )
