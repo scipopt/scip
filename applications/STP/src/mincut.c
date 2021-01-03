@@ -68,6 +68,7 @@ typedef struct minimum_cut_helper
    int                   root;
    int                   termsepa_nnodes;
    int                   termsepa_nedges;
+   unsigned int          randseed;
    SCIP_Bool             isLpcut;            /**< cut for LP? */
 } MINCUT;
 
@@ -409,38 +410,75 @@ int termsepaGetCapaInf(
 /** finds a root terminal */
 static
 int termsepaFindTerminalSource(
+   SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< the graph */
    const MINCUT*         mincut              /**< minimum cut */
 )
 {
-#if 1
-   return g->source;
-#else
-   int source = g->source;
-   const int nnodes = graph_get_nNodes(g);
-   const int nterms = graph_get_nTerms(g);
-   const int start = (12 * nterms) % nnodes; // todo: proper randomization
+   int source = -1;
 
-   for( int i = start; i < nnodes; i++ )
+   /* NOTE: hack to allow for stable unit tests  */
+   if( mincut->randseed == 1 )
    {
-      if( !Is_term(g->term[i]) )
-         continue;
+      source = g->source;
+   }
+   else
+   {
+      SCIP_RANDNUMGEN* randnumgen;
+      int start;
+      const int nnodes = graph_get_nNodes(g);
 
-      if( g->grad[i] <= g->grad[source] )
-         source = i;
+      SCIP_CALL_ABORT( SCIPcreateRandom(scip, &randnumgen, mincut->randseed, TRUE) );
+      start = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
+
+      for( int i = start; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) )
+         {
+            source = i;
+            break;
+         }
+      }
+
+      if( source == -1 )
+      {
+         for( int i = 0; i < start; i++ )
+         {
+            if( Is_term(g->term[i]) )
+            {
+               source = i;
+               break;
+            }
+         }
+      }
+
+#ifdef SCIP_DISABLED
+      for( int i = start; i < nnodes; i++ )
+      {
+         if( !Is_term(g->term[i]) )
+            continue;
+
+         if( g->grad[i] <= g->grad[source] )
+            source = i;
+      }
+
+      for( int i = 0; i < start; i++ )
+      {
+         if( !Is_term(g->term[i]) )
+            continue;
+
+         if( g->grad[i] <= g->grad[source] )
+            source = i;
+      }
+#endif
+
+      SCIPfreeRandom(scip, &randnumgen);
    }
 
-   for( int i = 0; i < start; i++ )
-   {
-      if( !Is_term(g->term[i]) )
-         continue;
-
-      if( g->grad[i] <= g->grad[source] )
-         source = i;
-   }
+   assert(source >= 0);
+   assert(Is_term(g->term[source]));
 
    return source;
-#endif
 }
 
 
@@ -1088,7 +1126,7 @@ SCIP_RETCODE mincutInitForTermSepa(
    assert(!mincut->isLpcut);
    assert(!mincut->edges_isRemoved);
 
-   mincut->root = termsepaFindTerminalSource(g, mincut);
+   mincut->root = termsepaFindTerminalSource(scip, g, mincut);
    nnodes_enlarged = termsepaCsrGetMaxNnodes(g);
    nedges_enlarged = termsepaCsrGetMaxNedges(mincut->root, g);
 
@@ -1137,6 +1175,7 @@ SCIP_RETCODE mincutInitForTermSepa(
 static
 SCIP_RETCODE mincutInit(
    SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< random seed */
    SCIP_Bool             isLpcut,            /**< for LP cut? */
    GRAPH*                g,                  /**< the graph */
    MINCUT**              mincut              /**< minimum cut */
@@ -1160,6 +1199,7 @@ SCIP_RETCODE mincutInit(
    mcut->termsepa_termToCopy = NULL;
    mcut->termsepa_nnodes = -1;
    mcut->termsepa_nedges = -1;
+   mcut->randseed = randseed;
   // mcut->termsepa_inEdges = NULL;
   // mcut->termsepa_inNeighbors = NULL;
   // mcut->termsepa_inEdgesStart = NULL;
@@ -1855,6 +1895,7 @@ SCIP_Bool mincut_findTerminalSeparatorsIsPromising(
 /** searches for (small) terminal separators */
 SCIP_RETCODE mincut_findTerminalSeparators(
    SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          randseed,           /**< random seed */
    GRAPH*                g,                  /**< graph data structure */
    TERMSEPAS*            termsepas           /**< terminal separator storage */
    )
@@ -1875,7 +1916,7 @@ SCIP_RETCODE mincut_findTerminalSeparators(
    SCIP_CALL( reduce_unconnected(scip, g) );
    graph_printInfoReduced(g);
 
-   SCIP_CALL( mincutInit(scip, FALSE, g, &mincut) );
+   SCIP_CALL( mincutInit(scip, randseed, FALSE, g, &mincut) );
 
    /* sets excess, g->mincut_head, g->mincut_head_inact */
    graph_mincut_setDefaultVals(g);
@@ -1972,7 +2013,7 @@ SCIP_RETCODE mincut_separateLp(
    assert(nested_cut == FALSE);
    assert(disjunct_cut == FALSE);
 
-   SCIP_CALL( mincutInit(scip, TRUE, g, &mincut) );
+   SCIP_CALL( mincutInit(scip, 1, TRUE, g, &mincut) );
 
    /* sets excess, g->mincut_head,  g->mincut_head_inact */
    graph_mincut_setDefaultVals(g);
