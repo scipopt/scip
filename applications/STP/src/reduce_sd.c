@@ -802,7 +802,12 @@ SCIP_Real getSd(
 
          if( tj != tk )
          {
-            const SCIP_Real dist = reduce_sdgraphGetSd(tj, tk, sdgraph);
+            SCIP_Real dist;
+
+            if( GE(maxdist, sd) )
+              continue;
+
+            dist = reduce_sdgraphGetSd(tj, tk, sdgraph);
 
             assert(SCIPisGT(scip, dist, 0.0));
             if( GT(dist, maxdist) )
@@ -874,12 +879,10 @@ SCIP_Real sdGetSd(
          assert(Is_term(g->term[tj]));
          assert(tk >= 0);
 
-         /*
          if( GE(sd_jk, sd) )
          {
             continue;
          }
-*/
 
          if( onlyIntermedTerms )
          {
