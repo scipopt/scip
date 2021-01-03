@@ -260,6 +260,7 @@ void debugPrintCsr(
 }
 #endif
 
+
 #ifndef NDEBUG
 /** valid flip-edges? */
 static inline
@@ -680,7 +681,7 @@ void termsepaStoreCutFinalize(
    termsepas->nsepas_all++;
    termsepas->nsepas[ncutterms]++;
 
-   assert(termsepas->sepastarts_csr[nsepas_all + 1] == ncutterms);
+   assert(termsepas->sepastarts_csr[nsepas_all + 1] == termsepas->nsepaterms_csr);
 
    if( ncutterms <= 8 )
    {
@@ -1697,6 +1698,93 @@ void mincutFree(
 }
 
 
+#ifdef SCIP_DISABLED
+/** checks */
+static
+SCIP_RETCODE lpcutRemoveReachableTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   sinkterm,
+   MINCUT*               mincut              /**< minimum cut */
+)
+{
+   SCIP_Bool* nodes_isVisited;
+   STP_Vectype(int) queue = NULL;
+   const int* const nodes_wakeState = mincut->nodes_wakeState;
+   const SCIP_Real* const xval = mincut->xval;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(xval);
+   assert(mincut->isLpcut);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isVisited, nnodes) );
+
+   for( int i = 0; i < nnodes; i++ )
+      nodes_isVisited[i] = FALSE;
+
+   printf("check for removables from %d \n", sinkterm);
+
+   /* BFS from sink terminal */
+   StpVecReserve(scip, queue, 8);
+   StpVecPushBack(scip, queue, sinkterm);
+   nodes_isVisited[sinkterm] = TRUE;
+
+   /* BFS loop */
+   for( int i = 0; i < StpVecGetSize(queue); i++ )
+   {
+      const int node = queue[i];
+
+      assert(StpVecGetSize(queue) <= nnodes);
+      assert(graph_knot_isInRange(g, node));
+
+      /* traverse outgoing arcs */
+      for( int e = g->outbeg[node]; e >= 0; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+
+         if( nodes_wakeState[head] == 0 && !nodes_isVisited[head] )
+         {
+            if( SCIPisFeasGE(scip, xval[e], 1.0) )
+            {
+               nodes_isVisited[head] = TRUE;
+               StpVecPushBack(scip, queue, head);
+
+               if( Is_term(g->term[head]) )
+               {
+                  printf("found terminal %d \n", head);
+
+                  const int ntermcands = mincut->ntermcands;
+
+                  assert(mincut->nodes_wakeState[node] == 0);
+
+                  /* todo more efficiently */
+                  for( int t = 0; t < ntermcands; t++ )
+                  {
+                     if( head == mincut->terms[t] )
+                     {
+                        printf("removing terminal %d \n", head);
+
+                        SWAP_INTS(mincut->terms[mincut->ntermcands - 1], mincut->terms[t]);
+                        mincut->ntermcands--;
+                        break;
+                     }
+                  }
+
+               }
+            }
+         }
+      }
+   }
+
+   StpVecFree(scip, queue);
+
+   SCIPfreeBufferArray(scip, &nodes_isVisited);
+
+   return SCIP_OKAY;
+}
+#endif
+
+
 /** add a cut */
 static
 SCIP_RETCODE lpcutAdd(
@@ -1768,7 +1856,7 @@ SCIP_RETCODE lpcutAdd(
             return SCIP_OKAY;
          }
 
-         SCIP_CALL(SCIPaddVarToRow(scip, row, vars[i], 1.0));
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[i], 1.0) );
       }
    }
 
@@ -2218,7 +2306,6 @@ SCIP_RETCODE mincut_separateLp(
       }
       while( nested_cut );               /* Nested Cut is CONSTANT ! */
    } /* while terms > 0 */
-
 
 #ifdef STP_MAXFLOW_TIME
    endt = clock();
