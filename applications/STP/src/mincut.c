@@ -535,6 +535,110 @@ void termsepaCollectCutNodes(
 }
 
 
+/** removes terminals in current cut */
+static
+SCIP_RETCODE termsepaRemoveCutTerminals(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   int                   ncutterms,
+   const int*            cutterms,
+   int                   sinkterm,           /**< sink terminal of current cut */
+   MINCUT*               mincut              /**< minimum cut */
+)
+{
+   int* RESTRICT termcands = mincut->terms;
+   STP_Vectype(int) queue = NULL;
+   SCIP_Bool* nodes_isVisited;
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(ncutterms > 0);
+   assert(mincut->nodes_wakeState[sinkterm] == 0);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodes_isVisited, nnodes) );
+
+   for( int i = 0; i < ncutterms; i++ )
+   {
+      assert(graph_knot_isInRange(g, cutterms[i]));
+      assert(!nodes_isVisited[cutterms[i]]);
+
+      nodes_isVisited[cutterms[i]] = TRUE;
+   }
+
+   assert(!nodes_isVisited[mincut->root]);
+
+   /* BFS from sink terminal */
+   StpVecReserve(scip, queue, nnodes);
+   StpVecPushBack(scip, queue, sinkterm);
+   nodes_isVisited[sinkterm] = TRUE;
+
+   /* BFS loop */
+   for( int i = 0; i < StpVecGetSize(queue); i++ )
+   {
+      const int node = queue[i];
+      assert(nodes_isVisited[node]);
+
+      if( Is_term(g->term[node]) && node != sinkterm )
+      {
+         const int ntermcands = mincut->ntermcands;
+
+         assert(mincut->nodes_wakeState[node] == 0);
+
+         /* todo more efficiently */
+         for( int t = 0; t < ntermcands; t++ )
+         {
+            if( node == termcands[t] )
+            {
+               printf("removing terminal %d \n", node);
+
+               SWAP_INTS(termcands[mincut->ntermcands - 1], termcands[t]);
+               mincut->ntermcands--;
+               break;
+            }
+         }
+
+         continue;
+      }
+
+      for( int e = g->outbeg[node]; e >= 0; e = g->oeat[e] )
+      {
+         const int head = g->head[e];
+         if( !nodes_isVisited[head] )
+         {
+            nodes_isVisited[head] = TRUE;
+            StpVecPushBack(scip, queue, head);
+         }
+      }
+   }
+
+   for( int i = 0; i < StpVecGetSize(queue); i++ )
+   {
+      const int node = queue[i];
+      assert(nodes_isVisited[node]);
+      nodes_isVisited[node] = FALSE;
+
+   }
+
+   for( int i = 0; i < ncutterms; i++ )
+   {
+      assert(nodes_isVisited[cutterms[i]]);
+      nodes_isVisited[cutterms[i]] = FALSE;
+   }
+
+   StpVecFree(scip, queue);
+
+#ifndef NDEBUG
+   for( int i = 0; i < nnodes; i++ )
+   {
+      assert(nodes_isVisited[i] == FALSE);
+   }
+#endif
+
+   SCIPfreeCleanBufferArray(scip, &nodes_isVisited);
+
+   return SCIP_OKAY;
+}
+
+
 /** stores cut
  *  NOTE: this methods is call once the cut vertices are already stored in the CSR array */
 static
@@ -622,6 +726,14 @@ SCIP_RETCODE termsepaStoreCutTry(
          return SCIP_ERROR;
 
       termsepaStoreCutFinalize(g, sinkterm, mincut, ncutterms, termsepas);
+
+
+      if( ncutterms > 1 && 0 )
+      {
+         int todo;
+         SCIP_CALL( termsepaRemoveCutTerminals(scip, g, ncutterms, cutterms, sinkterm, mincut) );
+      }
+
    }
 
 
