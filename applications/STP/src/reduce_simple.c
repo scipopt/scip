@@ -396,6 +396,7 @@ SCIP_RETCODE reduce_simple_sap(
    int* pnode;
    char rerun;
 
+
    assert(g      != NULL);
    assert(fixed  != NULL);
    assert(count != NULL);
@@ -404,6 +405,10 @@ SCIP_RETCODE reduce_simple_sap(
    nnodes = g->knots;
 
    *count = 0;
+
+   if( g->stp_type == STP_NWPTSPG )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Degree Test: ");
 
    /* main loop */
@@ -517,7 +522,7 @@ SCIP_RETCODE reduce_simple_sap(
       pnode = (SCIPqueueRemove(queue));
       for (e = g->outbeg[*pnode]; e != EAT_LAST; e = g->oeat[e])
       {
-         if( !g->mark[g->head[e]] && SCIPisLT(scip, g->cost[e], FARAWAY) )
+         if( !g->mark[g->head[e]] && LT(g->cost[e], FARAWAY) )
          {
             g->mark[g->head[e]] = TRUE;
             SCIP_CALL(SCIPqueueInsert(queue, &(g->head[e])));
@@ -525,10 +530,14 @@ SCIP_RETCODE reduce_simple_sap(
       }
    }
 
-   for (i = 0; i < nnodes; i++)
+   for( i = 0; i < nnodes; i++ )
+   {
       if( !g->mark[i] )
-         while (g->inpbeg[i] != EAT_LAST)
-            graph_edge_del(scip, g, g->inpbeg[i], TRUE);
+      {
+         assert(!Is_term(g->term[i]));
+         graph_knot_del(scip, g, i, TRUE);
+      }
+   }
 
    /* delete all nodes that cannot reach a terminal other than the root by forward arcs (not using the root) */
 
@@ -567,9 +576,13 @@ SCIP_RETCODE reduce_simple_sap(
    SCIPqueueFree(&queue);
 
    for( i = 0; i < nnodes; i++ )
+   {
       if( !g->mark[i] )
-         while( g->inpbeg[i] != EAT_LAST )
-            graph_edge_del(scip, g, g->inpbeg[i], TRUE);
+      {
+         assert(!Is_term(g->term[i]));
+         graph_knot_del(scip, g, i, TRUE);
+      }
+   }
 
    SCIPdebugMessage("dirdeg %d Knots deleted\n", *count);
    assert(graph_valid(scip, g));
@@ -845,55 +858,70 @@ SCIP_RETCODE reduce_rpt(
    int*                  count               /**< pointer to number of reductions */
    )
 {
-   SCIP_Real pathcost;
+   STP_Bool* nodes_isForbidden;
    SCIP_Real* dijkdist;
-   int e;
-   int i1;
-   int old;
-   int nnodes;
+   const int nnodes = graph_get_nNodes(g);
    int* dijkedge;
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(fixed != NULL);
    assert(count != NULL);
-   assert(g->stp_type == STP_SAP);
+   assert(!graph_typeIsUndirected(g));
+   assert(g->stp_type != STP_NWPTSPG || !graph_knotIsNWLeaf(g, g->source));
 
-   nnodes = g->knots;
    *count = 0;
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodes_isForbidden, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &dijkdist, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &dijkedge, nnodes) );
 
    graph_path_execX(scip, g, g->source, g->cost, dijkdist, dijkedge);
 
    for( int i = 0; i < nnodes; i++ )
+      nodes_isForbidden[i] = FALSE;
+
+   for( int i = 0; i < nnodes; i++ )
    {
-      if( Is_term(g->term[i]) && i != g->source && g->grad[i] > 0 )
+      if( Is_term(g->term[i]) && i != g->source && g->grad[i] > 0 && !nodes_isForbidden[i] )
       {
+         int e;
          const int e1 = dijkedge[i];
-         pathcost = dijkdist[i];
+         const SCIP_Real pathcost = dijkdist[i];
 
          for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
          {
             if( e == e1 )
                continue;
 
-            if( SCIPisGT(scip, pathcost, g->cost[e]) )
+            if( GT(pathcost, g->cost[e]) )
                break;
          }
+
          if( e == EAT_LAST )
          {
-            i1 = g->tail[e1];
-            old = g->grad[i] + g->grad[i1] - 1;
+            const int i1 = g->tail[e1];
+            const int old = g->grad[i] + g->grad[i1] - 1;
 
             *fixed += g->cost[e1];
 
+            assert(g->grad[i1] > 0);
+
+            for( int e2 = g->outbeg[i]; e2 != EAT_LAST; e2 = g->oeat[e2] )
+               nodes_isForbidden[g->head[e2]] = TRUE;
+
+#ifdef SCIP_DEBUG
+            SCIPdebugMessage("contracting (a) -> (b) with (a) root-dist=%f \n", pathcost);
+            graph_edge_printInfo(g, e1);
+            graph_knot_printInfo(g, i);
+            graph_knot_printInfo(g, i1);
+#endif
+
             SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e1, i1, i) );
 
-            assert(old - g->grad[i1] > 0);
             *count += old - g->grad[i1];
-            SCIPdebugMessage("contract %d\n", old - g->grad[i] - g->grad[i1]);
+            SCIPdebugMessage("contract degree=%d\n", old - g->grad[i] - g->grad[i1]);
+            assert(old - g->grad[i1] > 0);
          }
 
       }
@@ -901,6 +929,7 @@ SCIP_RETCODE reduce_rpt(
 
    SCIPfreeBufferArray(scip, &dijkedge);
    SCIPfreeBufferArray(scip, &dijkdist);
+   SCIPfreeBufferArray(scip, &nodes_isForbidden);
 
    return SCIP_OKAY;
 }
