@@ -392,22 +392,16 @@ SCIP_RETCODE reduce_simple_sap(
    int i2;
    int e1;
    int e2;
-   int nnodes;
-   int* pnode;
+   const int nnodes = graph_get_nNodes(g);
    char rerun;
-
 
    assert(g      != NULL);
    assert(fixed  != NULL);
    assert(count != NULL);
 
    rerun = TRUE;
-   nnodes = g->knots;
-
    *count = 0;
 
-   if( g->stp_type == STP_NWPTSPG )
-      return SCIP_OKAY;
 
    SCIPdebugMessage("Degree Test: ");
 
@@ -519,7 +513,7 @@ SCIP_RETCODE reduce_simple_sap(
 
    while (!SCIPqueueIsEmpty(queue))
    {
-      pnode = (SCIPqueueRemove(queue));
+      int* pnode = (SCIPqueueRemove(queue));
       for (e = g->outbeg[*pnode]; e != EAT_LAST; e = g->oeat[e])
       {
          if( !g->mark[g->head[e]] && LT(g->cost[e], FARAWAY) )
@@ -562,7 +556,7 @@ SCIP_RETCODE reduce_simple_sap(
 
    while( !SCIPqueueIsEmpty(queue) )
    {
-      pnode = (SCIPqueueRemove(queue));
+      int* pnode = (SCIPqueueRemove(queue));
       for( e = g->inpbeg[*pnode]; e != EAT_LAST; e = g->ieat[e] )
       {
          if( !g->mark[g->tail[e]] && SCIPisLT(scip, g->cost[e], FARAWAY) )

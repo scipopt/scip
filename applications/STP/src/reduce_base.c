@@ -1321,12 +1321,13 @@ SCIP_RETCODE reduceSap(
    int     redbound;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
-   STP_Bool da = dualascent;
+   STP_Bool da = dualascent && (g->stp_type != STP_NWPTSPG);
    STP_Bool sd = TRUE;
    STP_Bool rpt = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
 
-   /* create random number generator */
+   assert(!graph_typeIsUndirected(g));
+
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
 
    redbound = MAX(nnodes / 1000, minelims);
@@ -1342,11 +1343,14 @@ SCIP_RETCODE reduceSap(
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
 
-   /* @todo change .stp file format for SAP! */
-   for( int e = 0; e < nedges; e++ )
+   if( g->stp_type == STP_SAP )
    {
-      if( EQ(g->cost[e], 20000.0) )
-         g->cost[e] = FARAWAY;
+      /* todo change .stp file format for SAP! */
+      for( int e = 0; e < nedges; e++ )
+      {
+         if( EQ(g->cost[e], 20000.0) )
+            g->cost[e] = FARAWAY;
+      }
    }
 
    SCIP_CALL( reduce_simple_sap(scip, g, fixed, &degtnelims) );
@@ -2008,7 +2012,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( reduce_unconnected(scip, graph) );
 
    /* if no reduction methods available for given problem, return */
-   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_BRMWCSP )
+   if( graph->stp_type == STP_DCSTP || graph->stp_type == STP_BRMWCSP )
    {
       graph_path_exit(scip, graph);
       return SCIP_OKAY;
@@ -2028,7 +2032,7 @@ SCIP_RETCODE reduce(
       {
          SCIP_CALL( reduceHc(scip, graph, offset, minelims) );
       }
-      else if( stp_type == STP_SAP )
+      else if( stp_type == STP_SAP || stp_type == STP_NWPTSPG )
       {
          SCIP_CALL( reduceSap(scip, graph, FALSE, offset, minelims) );
       }
@@ -2057,7 +2061,7 @@ SCIP_RETCODE reduce(
       {
          SCIP_CALL( reduceHc(scip, graph, offset, minelims) );
       }
-      else if( stp_type == STP_SAP )
+      else if( stp_type == STP_SAP || stp_type == STP_NWPTSPG )
       {
          SCIP_CALL( reduceSap(scip, graph, TRUE, offset, minelims) );
       }
