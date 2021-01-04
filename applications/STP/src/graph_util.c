@@ -425,13 +425,16 @@ SCIP_RETCODE graph_findCentralTerminal(
    double  minimum = FARAWAY;
    double  maximum = 0.0;
    double  oldval  = 0.0;
+   const int nnodes = graph_get_nNodes(g);
 
-   assert(g         != NULL);
    assert(g->layers == 1);
    assert(centertype == STP_CENTER_OK || centertype == STP_CENTER_DEG ||
           centertype == STP_CENTER_SUM  || centertype == STP_CENTER_MIN || centertype == STP_CENTER_ALL );
 
    *central_term = g->source;
+
+   assert(g->stp_type != STP_NWPTSPG );
+
 
    if( centertype == STP_CENTER_OK || g->grad[g->source] == 0)
    {
@@ -446,11 +449,8 @@ SCIP_RETCODE graph_findCentralTerminal(
    {
       degree = 0;
 
-      for( i = 0; i < g->knots; i++ )
+      for( i = 0; i < nnodes; i++ )
       {
-         if( g->stp_type == STP_NWPTSPG && graph_knotIsNWLeaf(g, i) )
-            continue;
-
          if( Is_term(g->term[i]) && (g->grad[i] > degree) )
          {
             degree = g->grad[i];
@@ -467,19 +467,19 @@ SCIP_RETCODE graph_findCentralTerminal(
    }
 
    /* For the other methods we need the shortest paths */
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, g->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, g->edges) );
 
    assert(path != NULL);
    assert(cost != NULL);
 
-   for( i = 0; i < g->knots; i++ )
+   for( i = 0; i < nnodes; i++ )
       g->mark[i] = TRUE;
 
    for( i = 0; i < g->edges; i++ )
       cost[i] = 1.0;
 
-   for( i = 0; i < g->knots; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       if (!Is_term(g->term[i]))
          continue;
@@ -492,7 +492,7 @@ SCIP_RETCODE graph_findCentralTerminal(
       sum = 0.0;
       max = 0.0;
 
-      for( k = 0; k < g->knots; k++ )
+      for( k = 0; k < nnodes; k++ )
       {
          assert((path[k].edge >= 0) || (k == i));
          assert((path[k].edge >= 0) || (path[k].dist == 0));

@@ -386,7 +386,6 @@ SCIP_RETCODE reduce_simple_sap(
    )
 {
    SCIP_QUEUE* queue;
-   int i;
    int e;
    int i1;
    int i2;
@@ -402,15 +401,14 @@ SCIP_RETCODE reduce_simple_sap(
    rerun = TRUE;
    *count = 0;
 
-
-   SCIPdebugMessage("Degree Test: ");
+   SCIPdebugMessage("Degree Test: \n");
 
    /* main loop */
    while( rerun )
    {
       rerun = FALSE;
 
-      for( i = 0; i < nnodes; i++ )
+      for( int i = 0; i < nnodes; i++ )
       {
          assert(g->grad[i] >= 0);
 
@@ -426,17 +424,28 @@ SCIP_RETCODE reduce_simple_sap(
 
             if( Is_term(g->term[i]) )
             {
+               if( g->terms == 1 )
+                  continue;
+
                if( i == g->source )
                {
                   e2 = flipedge(e1);
-
                   *fixed += g->cost[e2];
 
+                  SCIPdebugMessage("contract grad-1 terminal (source) \n");
                   SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e2, i1, i) );
                }
                else
                {
                   *fixed += g->cost[e1];
+#ifdef SCIP_DEBUG
+                  SCIPdebugMessage("contract grad-1 terminal ");
+                  graph_knot_printInfo(g, i);
+                  SCIPdebugMessage("with edge ");
+                  graph_edge_printInfo(g, e1);
+                  SCIPdebugMessage("into ");
+                  graph_knot_printInfo(g, i1);
+#endif
 
                   SCIP_CALL( graph_knot_contractFixed(scip, g, NULL, e1, i1, i) );
                }
@@ -444,6 +453,7 @@ SCIP_RETCODE reduce_simple_sap(
             else
             {
                graph_edge_del(scip, g, e1, TRUE);
+               SCIPdebugMessage("delete grad-1 node \n");
             }
 
             assert(g->grad[i] == 0);
@@ -483,6 +493,8 @@ SCIP_RETCODE reduce_simple_sap(
 
                   SCIP_CALL( graph_knot_contract(scip, g, NULL, i2, i) );
 
+                  SCIPdebugMessage("replace grad-2 node %d \n", i);
+
                   (*count)++;
                   if( ((i1 < i) && (g->grad[i1] < 3))
                      || ((i2 < i) && (g->grad[i2] < 3)) )
@@ -505,7 +517,7 @@ SCIP_RETCODE reduce_simple_sap(
    /* BFS  */
    SCIP_CALL(SCIPqueueCreate(&queue, nnodes, 1.1));
 
-   for (i = 0; i < nnodes; i++)
+   for (int i = 0; i < nnodes; i++)
       g->mark[i] = FALSE;
 
    g->mark[g->source] = TRUE;
@@ -524,11 +536,12 @@ SCIP_RETCODE reduce_simple_sap(
       }
    }
 
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
-      if( !g->mark[i] )
+      if( !g->mark[i] && g->grad[i] > 0 )
       {
          assert(!Is_term(g->term[i]));
+         SCIPdebugMessage("deleting unreachable (forward) node %d \n", i);
          graph_knot_del(scip, g, i, TRUE);
       }
    }
@@ -539,7 +552,7 @@ SCIP_RETCODE reduce_simple_sap(
 
    assert(SCIPqueueIsEmpty(queue));
 
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       if( Is_term(g->term[i]) && i != g->source )
       {
@@ -559,7 +572,7 @@ SCIP_RETCODE reduce_simple_sap(
       int* pnode = (SCIPqueueRemove(queue));
       for( e = g->inpbeg[*pnode]; e != EAT_LAST; e = g->ieat[e] )
       {
-         if( !g->mark[g->tail[e]] && SCIPisLT(scip, g->cost[e], FARAWAY) )
+         if( !g->mark[g->tail[e]] && LT(g->cost[e], FARAWAY) )
          {
             g->mark[g->tail[e]] = TRUE;
             SCIP_CALL( SCIPqueueInsert(queue, &(g->tail[e])) );
@@ -569,11 +582,12 @@ SCIP_RETCODE reduce_simple_sap(
 
    SCIPqueueFree(&queue);
 
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
-      if( !g->mark[i] )
+      if( !g->mark[i] && g->grad[i] > 0 )
       {
          assert(!Is_term(g->term[i]));
+         SCIPdebugMessage("deleting unreachable (backward) node %d \n", i);
          graph_knot_del(scip, g, i, TRUE);
       }
    }
