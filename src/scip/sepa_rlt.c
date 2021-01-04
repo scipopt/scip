@@ -54,8 +54,8 @@
 #define DEFAULT_ONLYORIGINAL       TRUE /**< whether only original variables and rows should be used for rlt cuts */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< whether the separator should also be used in sub-scips */
 #define DEFAULT_USEPROJECTION     FALSE /**< whether the separator should first check projected rows */
-#define DEFAULT_DETECTHIDDEN       TRUE /**< whether implicit products should be detected and separated by McCormick */
-#define DEFAULT_HIDDENRLT          TRUE /**< whether RLT cuts should be added for hidden products */
+#define DEFAULT_DETECTHIDDEN      FALSE /**< whether implicit products should be detected and separated by McCormick */
+#define DEFAULT_HIDDENRLT         FALSE /**< whether RLT cuts should be added for hidden products */
 #define DEFAULT_ADDTOPOOL          TRUE /**< whether globally valid RLT cuts are added to the global cut pool */
 
 #define DEFAULT_GOODSCORE           1.0 /**< threshold for score of cut relative to best score to be considered good,
