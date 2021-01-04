@@ -41,7 +41,7 @@ SCIP_Bool graph_knotIsNWLeaf(
    assert(g != NULL && g->stp_type == STP_NWPTSPG);
 
    for( e = g->outbeg[vertex]; e != EAT_LAST; e = g->oeat[e] )
-      if( g->cost[e] < FARAWAY )
+      if( LT(g->cost[e], FARAWAY) )
          break;
 
    return (e == EAT_LAST );

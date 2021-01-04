@@ -1588,9 +1588,10 @@ SCIP_RETCODE graph_load(
 
       if( g->source == UNKNOWN )
       {
+         const int* const grad = g->grad;
          for( i = 0; i < nnodes; i++ )
          {
-            if ((g->term[i] == 0) && ((g->source < 0) || (g->grad[i] > g->grad[g->source])))
+            if( (g->term[i] == STP_TERM) && ((g->source < 0) || (grad[i] > grad[g->source])) )
                g->source = i;
          }
       }

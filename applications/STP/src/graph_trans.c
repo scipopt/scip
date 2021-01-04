@@ -97,6 +97,50 @@ void markNonLeafTerms_pretransPc(
 }
 
 
+/** sets root */
+static
+void nwptstpSetRoot(
+ GRAPH*                g                   /**< the graph */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+
+   assert(g->source == UNKNOWN);
+   assert(g->stp_type == STP_NWPTSPG);
+
+   if( g->terms <= 2 )
+   {
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) )
+         {
+            g->source = i;
+            break;
+         }
+      }
+   }
+   else
+   {
+      const int* const grad = g->grad;
+
+      for( int i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) && ((g->source < 0) || (grad[i] > grad[g->source])) )
+         {
+            if( graph_knotIsNWLeaf(g, i) )
+               continue;
+
+            g->source = i;
+         }
+      }
+   }
+
+   assert(g->source != UNKNOWN);
+   assert(Is_term(g->term[g->source]));
+}
+
+
+
 /*
  * Interface methods
  */
@@ -1222,6 +1266,8 @@ SCIP_RETCODE graph_transNw(
    {
       SCIP_CALL( graph_transNw2sap(scip, presol, g) );
       assert(g->stp_type == STP_NWPTSPG);
+
+      nwptstpSetRoot(g);
    }
    else
    {

@@ -2856,7 +2856,7 @@ SCIP_RETCODE SCIPprobdataCreateFromGraph(
    }
 
    /* select a root node */
-   if( graph->stp_type == STP_SPG || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_NWSPG )
+   if( graph_typeIsSpgLike(graph) || graph->stp_type == STP_NWPTSPG || graph->stp_type == STP_NWSPG )
    {
       SCIP_CALL( graph_findCentralTerminal(scip, graph, compcentral, &(graph->source)) );
    }

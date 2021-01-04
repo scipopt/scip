@@ -163,6 +163,8 @@ void graph_knot_printInfo(
    if( k == g->source )
       printf("...%d is the root! \n", k);
 
+   if( g->stp_type == STP_NWPTSPG && graph_knotIsNWLeaf(g, k) )
+      printf("...%d is a leaf-terminal \n", k);
 }
 
 
