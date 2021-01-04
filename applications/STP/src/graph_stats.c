@@ -64,19 +64,19 @@ SCIP_Bool graph_typeIsSpgLike(
    return (type == STP_SPG || type == STP_RSMT || type == STP_GSTP || type == STP_OARSMT);
 }
 
-/** is the given graph undirected? */
+
+/** is the given graph (originally) undirected? */
 SCIP_Bool graph_typeIsUndirected(
    const GRAPH*          g                   /**< the graph */
    )
 {
    assert(g);
 
-   if( g->stp_type == STP_SAP || g->stp_type == STP_DHCSTP )
+   if( g->stp_type == STP_SAP || g->stp_type == STP_DHCSTP || g->stp_type == STP_NWPTSPG )
       return FALSE;
 
    return TRUE;
 }
-
 
 
 /** is the edge blocked? */

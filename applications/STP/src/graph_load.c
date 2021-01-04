@@ -1236,6 +1236,9 @@ SCIP_RETCODE graph_load(
                   curf.section = &section_table[0];
 
                   assert(nwcount == nodes);
+                  if( stp_type == STP_NWPTSPG )
+                     g->stp_type = STP_NWPTSPG;
+
                   SCIP_CALL( graph_transNw(scip, presol, g) );
 
                   break;

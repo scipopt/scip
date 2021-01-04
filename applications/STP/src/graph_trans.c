@@ -1199,7 +1199,7 @@ SCIP_RETCODE graph_transNw2sap(
       else
       {
          /* add node-weight to edge-weights of all incoming edges */
-         for( int i = g->inpbeg[i]; i != EAT_LAST; i = g->ieat[i] )
+         for( int i = g->inpbeg[k]; i != EAT_LAST; i = g->ieat[i] )
             g->cost[i] += nodeweight;
       }
    }
@@ -1218,7 +1218,15 @@ SCIP_RETCODE graph_transNw(
 #ifdef NW_TRANS_SIMPLE
    SCIP_CALL( graph_transNw2sap(scip, presol, g) );
 #else
-   SCIP_CALL( graph_transNw2pc(scip, presol, g) );
+   if( g->stp_type == STP_NWPTSPG )
+   {
+      SCIP_CALL( graph_transNw2sap(scip, presol, g) );
+      assert(g->stp_type == STP_NWPTSPG);
+   }
+   else
+   {
+      SCIP_CALL( graph_transNw2pc(scip, presol, g) );
+   }
 #endif
 
    return SCIP_OKAY;

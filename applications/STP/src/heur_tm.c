@@ -485,7 +485,7 @@ SCIP_Bool isTMSpType(
 {
    const int type = graph->stp_type;
 
-   return (type == STP_DHCSTP || type == STP_DCSTP  || type == STP_SAP);
+   return (type == STP_DHCSTP || type == STP_DCSTP  || type == STP_SAP || type == STP_NWPTSPG);
 }
 
 /** returns mode */
@@ -1246,7 +1246,7 @@ SCIP_RETCODE computeSteinerTree(
    )
 {
    SCIP_Real min;
-   SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_DHCSTP);
+   SCIP_Bool directed = (g->stp_type == STP_SAP || g->stp_type == STP_DHCSTP || g->stp_type == STP_NWPTSPG);
    int* perm = NULL;
    int* cluster = NULL;
    int    k;
