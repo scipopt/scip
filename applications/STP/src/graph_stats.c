@@ -127,7 +127,9 @@ void graph_edge_printInfo(
    const int t = g->tail[e];
    const int h = g->head[e];
 
-   if( graph_pc_isPcMw(g) )
+   if( !graph_typeIsUndirected(g) )
+      printf("e: %d   %d->%d (%d->%d) cost:=%f costrev=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e], g->cost[flipedge(e)]);
+   else if( graph_pc_isPcMw(g) )
       printf("e: %d   %d->%d (%d->%d) cost:=%f costrev=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e], g->cost[flipedge(e)]);
    else
       printf("e: %d   %d->%d (%d->%d) cost:=%f \n", e, t, h, g->term[t], g->term[h], g->cost[e]);
