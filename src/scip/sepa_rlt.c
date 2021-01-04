@@ -51,7 +51,7 @@
 #define DEFAULT_MAXROUNDSROOT        10 /**< maximum number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_ONLYEQROWS        FALSE /**< whether only equality rows should be used for rlt cuts */
 #define DEFAULT_ONLYCONTROWS      FALSE /**< whether only continuous rows should be used for rlt cuts */
-#define DEFAULT_ONLYINITIAL        TRUE /**< whether only initial rows should be used for rlt cuts */
+#define DEFAULT_ONLYORIGINAL       TRUE /**< whether only original variables and rows should be used for rlt cuts */
 #define DEFAULT_USEINSUBSCIP      FALSE /**< whether the separator should also be used in sub-scips */
 #define DEFAULT_USEPROJECTION     FALSE /**< whether the separator should first check projected rows */
 #define DEFAULT_DETECTHIDDEN       TRUE /**< whether implicit products should be detected and separated by McCormick */
@@ -99,7 +99,7 @@ struct SCIP_SepaData
 {
    SCIP_CONSHDLR*        conshdlr;           /**< expression constraint handler */
    SCIP_Bool             iscreated;          /**< indicates whether the sepadata has been initialized yet */
-   SCIP_Bool             isinitialround;     /**< indicates that this is the first round and initial rows are used */
+   SCIP_Bool             isinitialround;     /**< indicates that this is the first round and original rows are used */
 
    /* bilinear variables */
    SCIP_VAR**            varssorted;         /**< variables that occur in bilinear terms sorted by priority */
@@ -121,7 +121,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximum number of separation rounds in the root node (-1: unlimited) */
    SCIP_Bool             onlyeqrows;         /**< whether only equality rows should be used for rlt cuts */
    SCIP_Bool             onlycontrows;       /**< whether only continuous rows should be used for rlt cuts */
-   SCIP_Bool             onlyinitial;        /**< whether only initial rows should be used for rlt cuts */
+   SCIP_Bool             onlyoriginal;       /**< whether only original rows and variables should be used for rlt cuts */
    SCIP_Bool             useinsubscip;       /**< whether the separator should also be used in sub-scips */
    SCIP_Bool             useprojection;      /**< whether the separator should first check projected rows */
    SCIP_Bool             detecthidden;       /**< whether implicit products should be detected and separated by McCormick */
@@ -385,9 +385,9 @@ SCIP_RETCODE freeSepaData(
    return SCIP_OKAY;
 }
 
-/** creates and returns rows of initial linear constraints */
+/** creates and returns rows of original linear constraints */
 static
-SCIP_RETCODE getInitialRows(
+SCIP_RETCODE getOriginalRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW***           rows,               /**< buffer to store the rows */
    int*                  nrows               /**< buffer to store the number of linear rows */
@@ -1240,8 +1240,8 @@ SCIP_RETCODE detectHiddenProducts(
    SCIP_HASHMAP* vars_in_2rels;
    int nvars;
 
-   /* get the (initial) rows */
-   SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
+   /* get the (original) rows */
+   SCIP_CALL( getOriginalRows(scip, &prob_rows, &nrows) );
 
    if( nrows == 0 )
    {
@@ -1621,10 +1621,8 @@ SCIP_RETCODE createSepaData(
       if( bilinterms[i].aux.var == NULL )
          continue;
 
-      /* FIXME do they mean linear constraints by "initial rows"? if so, can we rename `onlyinitial` and change comments?
-         otherwise, also the initial LP can have rows build from estimators on products where x or y is an auxiliary variable */
-      /* if only initial rows are requested, skip products that contain at least one auxiliary variable */
-      if( sepadata->onlyinitial && (SCIPvarIsRelaxationOnly(bilinterms[i].x) ||
+      /* if only original variables should be used, skip products that contain at least one auxiliary variable */
+      if( sepadata->onlyoriginal && (SCIPvarIsRelaxationOnly(bilinterms[i].x) ||
           SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
          continue;
 
@@ -3170,9 +3168,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
    }
 
    /* get the rows, depending on settings */
-   if( sepadata->isinitialround || sepadata->onlyinitial )
+   if( sepadata->isinitialround || sepadata->onlyoriginal )
    {
-      SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
+      SCIP_CALL( getOriginalRows(scip, &prob_rows, &nrows) );
    }
    else
    {
@@ -3185,7 +3183,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRlt)
 
    SCIP_CALL( storeSuitableRows(scip, sepa, sepadata, prob_rows, rows, &nrows, row_to_pos, allowlocal) );
 
-   if( sepadata->isinitialround || sepadata->onlyinitial )
+   if( sepadata->isinitialround || sepadata->onlyoriginal )
    {
       SCIPfreeBufferArray(scip, &prob_rows);
       sepadata->isinitialround = FALSE;
@@ -3326,9 +3324,9 @@ SCIP_RETCODE SCIPincludeSepaRlt(
       &sepadata->onlycontrows, FALSE, DEFAULT_ONLYCONTROWS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-      "separating/" SEPA_NAME "/onlyinitial",
-      "if set to true, only initial constraints are used",
-      &sepadata->onlyinitial, FALSE, DEFAULT_ONLYINITIAL, NULL, NULL) );
+      "separating/" SEPA_NAME "/onlyoriginal",
+      "if set to true, only original rows and variables are used",
+      &sepadata->onlyoriginal, FALSE, DEFAULT_ONLYORIGINAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
       "separating/" SEPA_NAME "/useinsubscip",
