@@ -10948,39 +10948,37 @@ SCIP_Bool SCIPvarHasBinaryImplic(
    return SCIPvarHasImplic(var, varfixing, implvar, implvarfixing ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER);
 }
 
-/** gets the values of b in implications x == varfixing -> y <= b or y >= b in the implication graph */
+/** gets the values of b in implications x == varfixing -> y <= b or y >= b in the implication graph;
+ *  the values are set to SCIP_INVALID if there is no implied bound
+ */
 void SCIPvarGetImplicVarBounds(
    SCIP_VAR*      var,                      /**< problem variable x */
    SCIP_Bool      varfixing,                /**< FALSE if y should be searched in implications for x == 0, TRUE for x == 1 */
    SCIP_VAR*      implvar,                  /**< variable y to search for */
    SCIP_Real*     lb,                       /**< buffer to store the value of the implied lower bound */
-   SCIP_Real*     ub,                       /**< buffer to store the value of the implied upper bound */
-   SCIP_Bool*     foundlb,                  /**< buffer to store whether an implied lower bound has been found */
-   SCIP_Bool*     foundub                   /**< buffer to store whether an implied upper bound has been found */
+   SCIP_Real*     ub                        /**< buffer to store the value of the implied upper bound */
    )
 {
-   int lowerpos, upperpos;
+   int lowerpos;
+   int upperpos;
    SCIP_Real* bounds;
 
-   *foundlb = FALSE;
-   *foundub = FALSE;
+   *lb = SCIP_INVALID;
+   *ub = SCIP_INVALID;
 
    if( var->implics == NULL )
       return;
 
    SCIPimplicsGetVarImplicPoss(var->implics, varfixing, implvar, &lowerpos, &upperpos);
-
    bounds = SCIPvarGetImplBounds(var, varfixing);
 
    if( lowerpos >= 0 )
    {
-      *foundlb = TRUE;
       *lb = bounds[lowerpos];
    }
 
    if( upperpos >= 0 )
    {
-      *foundub = TRUE;
       *ub = bounds[upperpos];
    }
 }

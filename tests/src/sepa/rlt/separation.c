@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   rlt.c
- * @brief  tests rlt cut selection
+/**@file   separation.c
+ * @brief  tests rlt cut separation
  * @author Ksenia Bestuzheva
  */
 
@@ -34,18 +34,10 @@
 static SCIP* scip;
 static SCIP_CONSHDLR* conshdlr;
 static SCIP_SEPA* sepa;
-static SCIP_VAR* x1o;
-static SCIP_VAR* x2o;
-static SCIP_VAR* x3o;
-static SCIP_VAR* x4o;
-static SCIP_VAR* y12o;
-static SCIP_VAR* b1o;
-static SCIP_VAR* b2o;
 static SCIP_VAR* x1;
 static SCIP_VAR* x2;
 static SCIP_VAR* x3;
 static SCIP_VAR* x4;
-static SCIP_VAR* y12;
 static SCIP_VAR* b1;
 static SCIP_VAR* b2;
 
@@ -53,6 +45,13 @@ static SCIP_VAR* b2;
 static
 void setup(void)
 {
+   SCIP_VAR* x1o;
+   SCIP_VAR* x2o;
+   SCIP_VAR* x3o;
+   SCIP_VAR* x4o;
+   SCIP_VAR* b1o;
+   SCIP_VAR* b2o;
+
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* include cons_expr: this adds the operator handlers */
@@ -76,7 +75,6 @@ void setup(void)
    SCIP_CALL( SCIPcreateVarBasic(scip, &x2o, "x2", -6.0, -3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &x3o, "x3", 1.0, 3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &x4o, "x4", 1.0, 3.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y12o, "y12", 2.0, 4.0, -3.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &b1o, "b1", 0, 1, 1, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &b2o, "b2", 0, 1, 1, SCIP_VARTYPE_BINARY) );
 
@@ -84,7 +82,6 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x2o) );
    SCIP_CALL( SCIPaddVar(scip, x3o) );
    SCIP_CALL( SCIPaddVar(scip, x4o) );
-   SCIP_CALL( SCIPaddVar(scip, y12o) );
    SCIP_CALL( SCIPaddVar(scip, b1o) );
    SCIP_CALL( SCIPaddVar(scip, b2o) );
 
@@ -97,14 +94,12 @@ void setup(void)
    SCIP_CALL( SCIPgetTransformedVar(scip, x2o, &x2) );
    SCIP_CALL( SCIPgetTransformedVar(scip, x3o, &x3) );
    SCIP_CALL( SCIPgetTransformedVar(scip, x4o, &x4) );
-   SCIP_CALL( SCIPgetTransformedVar(scip, y12o, &y12) );
    SCIP_CALL( SCIPgetTransformedVar(scip, b1o, &b1) );
    SCIP_CALL( SCIPgetTransformedVar(scip, b2o, &b2) );
    SCIP_CALL( SCIPreleaseVar(scip, &x1o) );
    SCIP_CALL( SCIPreleaseVar(scip, &x2o) );
    SCIP_CALL( SCIPreleaseVar(scip, &x3o) );
    SCIP_CALL( SCIPreleaseVar(scip, &x4o) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y12o) );
    SCIP_CALL( SCIPreleaseVar(scip, &b1o) );
    SCIP_CALL( SCIPreleaseVar(scip, &b2o) );
    cr_assert(x1 != NULL);
@@ -153,13 +148,13 @@ void checkCut(SCIP_ROW* cut, SCIP_VAR** vars, SCIP_Real* vals, int nvars, SCIP_R
    }
 }
 
-Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "test creation and freeing of separator data")
+Test(separation, sepadata, .init = setup, .fini = teardown, .description = "test creation and freeing of separator data")
 {
    SCIP_CONS* cons;
    SCIP_Bool success;
    SCIP_Bool infeasible;
    SCIP_SEPADATA* sepadata;
-   BILINVARDATA** blvardatas;
+   ADJACENTVARDATA* adjvardata;
 
    SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
    sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
@@ -186,27 +181,35 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    cr_expect_eq(sepadata->varssorted[2], x2, "\nExpected varssorted[2] to be x2, got %s", SCIPvarGetName(sepadata->varssorted[2]));
    cr_expect_eq(sepadata->varssorted[3], x3, "\nExpected varssorted[3] to be x3, got %s", SCIPvarGetName(sepadata->varssorted[3]));
 
-   blvardatas = sepadata->bilinvardatas;
+   adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x1));
+   cr_assert(adjvardata != NULL);
+   cr_expect_eq(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x1, got %d", adjvardata->nadjacentvars);
+   cr_expect_eq(adjvardata->adjacentvars[0], x3, "\nBilinear var 0 for x1 should be x3, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[0]));
+   cr_expect_eq(adjvardata->adjacentvars[1], x2, "\nBilinear var 1 for x1 should be x2, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[1]));
 
-   cr_expect_eq(blvardatas[2]->nvarbilinvars, 2, "\nExpected 2 bilinear vars for x2, got %d", blvardatas[2]->nvarbilinvars);
-   cr_expect_eq(blvardatas[3]->nvarbilinvars, 1, "\nExpected 1 bilinear vars for x3, got %d", blvardatas[3]->nvarbilinvars);
-   cr_expect_eq(blvardatas[1]->nvarbilinvars, 2, "\nExpected 2 bilinear vars for x1, got %d", blvardatas[1]->nvarbilinvars);
-   cr_expect_eq(blvardatas[0]->nvarbilinvars, 2, "\nExpected 2 bilinear vars for x4, got %d", blvardatas[0]->nvarbilinvars);
+   adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x2));
+   cr_assert(adjvardata != NULL);
+   cr_expect_eq(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x2, got %d", adjvardata->nadjacentvars);
+   cr_expect_eq(adjvardata->adjacentvars[0], x4, "\nBilinear var 0 for x2 should be x4, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[0]));
+   cr_expect_eq(adjvardata->adjacentvars[1], x1, "\nBilinear var 1 for x2 should be x1, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[1]));
 
-   cr_expect_eq(blvardatas[0]->varbilinvars[0], x4,
-         "\nBilinear var 0 for x4 should be x4, got %s", SCIPvarGetName(blvardatas[0]->varbilinvars[0]));
-   cr_expect_eq(blvardatas[0]->varbilinvars[1], x2,
-         "\nBilinear var 1 for x4 should be x2, got %s", SCIPvarGetName(blvardatas[0]->varbilinvars[1]));
-   cr_expect_eq(blvardatas[1]->varbilinvars[0], x3,
-         "\nBilinear var 0 for x1 should be x3, got %s", SCIPvarGetName(blvardatas[1]->varbilinvars[0]));
-   cr_expect_eq(blvardatas[1]->varbilinvars[1], x2,
-         "\nBilinear var 1 for x1 should be x2, got %s", SCIPvarGetName(blvardatas[1]->varbilinvars[1]));
-   cr_expect_eq(blvardatas[2]->varbilinvars[0], x4,
-         "\nBilinear var 0 for x2 should be x4, got %s", SCIPvarGetName(blvardatas[2]->varbilinvars[0]));
-   cr_expect_eq(blvardatas[2]->varbilinvars[1], x1,
-         "\nBilinear var 1 for x2 should be x1, got %s", SCIPvarGetName(blvardatas[2]->varbilinvars[1]));
-   cr_expect_eq(blvardatas[3]->varbilinvars[0], x1,
-         "\nBilinear var 0 for x3 should be x1, got %s", SCIPvarGetName(blvardatas[3]->varbilinvars[0]));
+   adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x3));
+   cr_assert(adjvardata != NULL);
+   cr_expect_eq(adjvardata->nadjacentvars, 1, "\nExpected 1 bilinear vars for x3, got %d", adjvardata->nadjacentvars);
+   cr_expect_eq(adjvardata->adjacentvars[0], x1, "\nBilinear var 0 for x3 should be x1, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[0]));
+
+   adjvardata = (ADJACENTVARDATA*) SCIPhashmapGetImage(sepadata->bilinvardatamap, (void*)(size_t) SCIPvarGetIndex(x4));
+   cr_assert(adjvardata != NULL);
+   cr_expect_eq(adjvardata->nadjacentvars, 2, "\nExpected 2 bilinear vars for x4, got %d", adjvardata->nadjacentvars);
+   cr_expect_eq(adjvardata->adjacentvars[0], x4, "\nBilinear var 0 for x4 should be x4, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[0]));
+   cr_expect_eq(adjvardata->adjacentvars[1], x2, "\nBilinear var 1 for x4 should be x2, got %s",
+         SCIPvarGetName(adjvardata->adjacentvars[1]));
 
    SCIP_CALL( freeSepaData(scip, sepadata) );
    SCIPfreeBuffer(scip, &sepadata);
@@ -217,7 +220,7 @@ Test(rlt_selection, sepadata, .init = setup, .fini = teardown, .description = "t
    SCIP_CALL( SCIPclearCuts(scip) );
 }
 
-Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = "test projection of problem")
+Test(separation, projection, .init = setup, .fini = teardown, .description = "test projection of problem")
 {
    SCIP_ROW** rows;
    SCIP_SOL* sol;
@@ -265,7 +268,7 @@ Test(rlt_selection, projection, .init = setup, .fini = teardown, .description = 
    SCIPfreeBufferArray(scip, &rows);
 }
 
-Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
+Test(separation, compute_projcut, .init = setup, .fini = teardown, .description = "test projected cut computation")
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -321,7 +324,7 @@ Test(rlt_selection, compute_projcut, .init = setup, .fini = teardown, .descripti
    SCIPfreeBufferArray(scip, &vars);
 }
 
-Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .description = "test cut computation when cliques are present")
+Test(separation, compute_clique_cuts, .init = setup, .fini = teardown, .description = "test cut computation when cliques are present")
 {
    SCIP_SOL* sol;
    SCIP_VAR** vars;
@@ -391,119 +394,3 @@ Test(rlt_selection, compute_clique_cuts, .init = setup, .fini = teardown, .descr
    SCIPfreeBufferArray(scip, &vars);
    SCIPfreeBufferArray(scip, &rows);
 }
-
-///* test row marking */
-//Test(rlt_selection, mark, .init = setup, .fini = teardown, .description = "test row marking")
-//{
-//   SCIP_ROW** rows;
-//   SCIP_SOL* sol;
-//   SCIP_VAR** vars;
-//   SCIP_Real* vals;
-//   SCIP_SEPADATA* sepadata;
-//   SCIP_Bool success, infeasible;
-//   SCIP_CONSEXPR_EXPR* expr;
-//   SCIP_CONS* cons;
-//   int c;
-////   SCIP_LP* lp;
-//   int* row_marks;
-//   int* row_idcs;
-//   int nmarked;
-//   SCIP_HASHMAP* row_to_pos;
-//
-//   SCIPallocBufferArray(scip, &rows, 1);
-//   SCIPallocBufferArray(scip, &vars, 6);
-//   SCIPallocBufferArray(scip, &vals, 6);
-//   SCIP_CALL( SCIPallocCleanBufferArray(scip, &row_marks, 1) );
-//   SCIP_CALL( SCIPallocBufferArray(scip, &row_idcs, 1) );
-//
-////   SCIPlpCreate(&lp, scip->set, scip->messagehdlr, scip->stat, "lp");
-//
-//   /* create a row: -10 <= 4x1 - 7x2 + x3 <= 5 */
-//   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &rows[0], "test_row", -10.0, 5.0, FALSE, TRUE, FALSE) );
-//   SCIPaddRow(scip, rows[0], FALSE, &infeasible);
-////   SCIPlpAddRow(lp, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter, rows[0], 0);
-//   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x1, 4.0) );
-//   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x2, -7.0) );
-//   SCIP_CALL( SCIPaddVarToRow(scip, rows[0], x3, 1.0) );
-//   SCIPaddRow(scip, rows[0], FALSE, &infeasible);
-//
-//   SCIP_CALL( SCIPhashmapCreate(&row_to_pos, SCIPblkmem(scip), 1) );
-//   SCIP_CALL( SCIPhashmapSetImageInt(row_to_pos, (void*)(size_t)SCIProwGetIndex(rows[0]), 0) );
-//
-//   /* create a cons with some bilinear expressions */
-//   SCIP_CALL( SCIPparseCons(scip, &cons, (char*)"[expr] <test>: <t_x1>*<t_x2> + <t_x1>*<t_x3> + <t_x3>*<t_x2> <= 1", TRUE, TRUE,
-//                            TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-//   cr_assert(success);
-//   expr = SCIPgetExprConsExpr(scip, cons);
-//   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-//   {
-//      SCIP_CALL( SCIPcreateConsExprExprAuxVar(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], NULL) );
-//   }
-//
-//   /* specify solution */
-//   SCIPcreateSol(scip, &sol, NULL);
-//   vars[0] = x1; vals[0] = 5.0;   /* [-1,5] */
-//   vars[1] = x2; vals[1] = -5.0;  /* [-6,-3] */
-//   vars[2] = x3; vals[2] = 2.0;   /* [1,3] */
-//
-//   vars[3] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[0]); vals[3] = -25.0; /* y12 = x1*x2 */
-//   vars[4] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[1]); vals[4] = 10.0; /* y13 = x1*x3 */
-//   vars[5] = SCIPgetConsExprExprAuxVar(SCIPgetConsExprExprChildren(expr)[2]); vals[5] = -9.0; /* y23 > x2*x3 */
-//   SCIP_CALL( SCIPsetSolVals(scip, sol, 6, vars, vals) );
-//   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
-//   {
-//      SCIPevalConsExprExpr(scip, conshdlr, SCIPgetConsExprExprChildren(expr)[c], sol, 0);
-//   }
-//
-//   /* fill in sepadata */
-//   SCIP_CALL( SCIPallocBuffer(scip, &sepadata) );
-//   sepadata->conshdlr = SCIPfindConshdlr(scip, "expr");
-//   cr_assert(sepadata->conshdlr != NULL);
-//   SCIP_CALL( createSepaData(scip, sepadata) );
-//   sepadata->maxusedvars = 4;
-//   sepadata->maxncuts = 10;
-//   sepadata->maxunknownterms = 100;
-//
-//   SCIPinfoMessage(scip, NULL, "\nvarssorted: ");
-//   for( int i = 0; i < sepadata->nbilinvars; ++i )
-//   {
-//      SCIPinfoMessage(scip, NULL, "%s; prior = %d", SCIPvarGetName(sepadata->varssorted[i]), sepadata->varpriorities[i]);
-//   }
-//
-//   /* mark rows */
-//
-//   row_marks[0] = 0;
-//
-//   /* multiply by x1 */
-//   markRowsXj(scip, sepadata, conshdlr, sol, 0, FALSE, row_to_pos, row_marks, row_idcs, &nmarked);
-//
-//   /* no products involving x1 are violated => no mark should have been added */
-//   cr_assert_eq(row_marks[0], 0, "\nExpected row_marks[0] = 0 for x1, got %d", row_marks[0]);
-//
-//
-//   /* multiply by x2 */
-//   markRowsXj(scip, sepadata, conshdlr, sol, 1, FALSE, row_to_pos, row_marks, row_idcs, &nmarked);
-//   /* TODO this currently fails because the row doesn't get properly added to LP */
-//   cr_assert_eq(row_marks[0], 1, "\nExpected row_marks[0] = 1 for x2, got %d", row_marks[0]);
-//
-//   row_marks[0] = 0;
-//
-//   /* multiply by x3 */
-//   markRowsXj(scip, sepadata, conshdlr, sol, 2, FALSE, row_to_pos, row_marks, row_idcs, &nmarked);
-//   cr_assert_eq(row_marks[0], 2, "\nExpected row_marks[0] = 2 for x3, got %d", row_marks[0]);
-//
-//   /* free memory */
-//   SCIPclearCuts(scip);
-//   SCIP_CALL( freeSepaData(scip, sepadata) );
-//   SCIPfreeBuffer(scip, &sepadata);
-//   SCIPfreeSol(scip, &sol);
-//   SCIPreleaseCons(scip, &cons);
-//   SCIPreleaseRow(scip, &rows[0]);
-////   SCIPlpFree(&lp, SCIPblkmem(scip), scip->set, scip->eventqueue, scip->eventfilter);
-//   row_marks[0] = 0;
-//   SCIPfreeBufferArray(scip, &row_idcs);
-//   SCIPfreeCleanBufferArray(scip, &row_marks);
-//   SCIPfreeBufferArray(scip, &vals);
-//   SCIPfreeBufferArray(scip, &vars);
-//   SCIPfreeBufferArray(scip, &rows);
-//}
