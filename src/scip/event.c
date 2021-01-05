@@ -683,6 +683,8 @@ SCIP_RETCODE SCIPeventCreateObjChanged(
    (*event)->data.eventobjchg.var = var;
    (*event)->data.eventobjchg.oldobj = oldobj;
    (*event)->data.eventobjchg.newobj = newobj;
+   (*event)->data.eventobjchg.oldobjexact = NULL;
+   (*event)->data.eventobjchg.newobjexact = NULL;
 
    return SCIP_OKAY;
 }
@@ -794,7 +796,7 @@ SCIP_RETCODE SCIPeventCreateUbChanged(
 }
 
 /** adds the data for the exact changes to existing bound event */
-SCIP_RETCODE SCIPeventAddExactChg(
+SCIP_RETCODE SCIPeventAddExactBdChg(
    SCIP_EVENT*           event,              /**< the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Rational*        oldbound,           /**< old bound before bound changed */
@@ -807,6 +809,24 @@ SCIP_RETCODE SCIPeventAddExactChg(
 
    SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
    SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
+
+   return SCIP_OKAY;
+}
+
+/** adds the data for the exact changes to existing obj event */
+SCIP_RETCODE SCIPeventAddExactObjChg(
+   SCIP_EVENT*           event,              /**< the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Rational*        oldobj,             /**< old obj before change */
+   SCIP_Rational*        newobj              /**< new obj after change */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(!RatIsEqual(oldobj, newobj));
+
+   SCIP_CALL( RatCopy(blkmem, &(event->data.eventobjchg.oldobjexact), oldobj) );
+   SCIP_CALL( RatCopy(blkmem, &(event->data.eventobjchg.newobjexact), newobj) );
 
    return SCIP_OKAY;
 }
@@ -1103,6 +1123,12 @@ SCIP_RETCODE SCIPeventFree(
    {
       RatFreeBlock(blkmem, &(*event)->data.eventbdchg.newboundexact);
       RatFreeBlock(blkmem, &(*event)->data.eventbdchg.oldboundexact);
+   }
+
+   if( ((*event)->eventtype & SCIP_EVENTTYPE_OBJCHANGED) && (*event)->data.eventobjchg.newobjexact != NULL )
+   {
+      RatFreeBlock(blkmem, &(*event)->data.eventobjchg.newobjexact);
+      RatFreeBlock(blkmem, &(*event)->data.eventobjchg.oldobjexact);
    }
 
    BMSfreeBlockMemory(blkmem, event);
@@ -1757,10 +1783,18 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_Rational* newobj;
          SCIP_Rational* oldobj;
 
-         SCIP_CALL( RatCreateBuffer(set->buffer, &newobj) );
-         SCIP_CALL( RatCreateBuffer(set->buffer, &oldobj) );
-         RatSetReal(newobj, event->data.eventobjchg.newobj);
-         RatSetReal(oldobj, event->data.eventobjchg.oldobj);
+         if( event->data.eventobjchg.newobjexact != NULL )
+         {
+            newobj = event->data.eventobjchg.newobjexact;
+            oldobj = event->data.eventobjchg.oldobjexact;
+         }
+         else
+         {
+            SCIP_CALL( RatCreateBuffer(set->buffer, &newobj) );
+            SCIP_CALL( RatCreateBuffer(set->buffer, &oldobj) );
+            RatSetReal(newobj, event->data.eventobjchg.newobj);
+            RatSetReal(oldobj, event->data.eventobjchg.oldobj);
+         }
 
          if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
          {
@@ -1768,8 +1802,11 @@ SCIP_RETCODE SCIPeventProcess(
          }
          SCIP_CALL( SCIPlpExactUpdateVarObj(lp->lpexact, set, var, oldobj, newobj) );
 
-         RatFreeBuffer(set->buffer, &oldobj);
-         RatFreeBuffer(set->buffer, &newobj);
+         if( event->data.eventobjchg.newobjexact == NULL )
+         {
+            RatFreeBuffer(set->buffer, &oldobj);
+            RatFreeBuffer(set->buffer, &newobj);
+         }
       }
 
       /* inform all existing primal solutions about the objective change (only if this is not a temporary change in
