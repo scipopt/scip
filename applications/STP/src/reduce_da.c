@@ -102,8 +102,16 @@ SCIP_RETCODE computeDualSolutionGuided(
    }
    else
    {
-      SCIPdebugMessage("reroot solution and run guided dual-ascent \n");
-      SCIP_CALL(solstp_reroot(scip, graph, result, daroot));
+      if( graph_typeIsUndirected(graph) )
+      {
+         SCIPdebugMessage("reroot solution and run guided dual-ascent \n");
+         SCIP_CALL(solstp_reroot(scip, graph, result, daroot));
+      }
+      else
+      {
+         assert(daroot == graph->source);
+         SCIPdebugMessage("run guided dual-ascent \n");
+      }
 
       SCIP_CALL(dualascent_exec(scip, graph, result, &daparams, redcost, &dualobjval));
    }
@@ -212,6 +220,7 @@ SCIP_RETCODE computeSteinerTreeTM(
 }
 
 
+
 /** computes solution from reduced costs */
 static
 SCIP_RETCODE computeSteinerTreeRedCosts(
@@ -302,6 +311,63 @@ SCIP_RETCODE computeSteinerTreeRedCosts(
           objval = upperbound_sp;
       }
    }
+
+   if( SCIPisLE(scip, objval, *bestobjval) )
+   {
+      *havebestsol = TRUE;
+      *bestobjval = objval;
+      BMScopyMemoryArray(bestresult, result, nedges);
+   }
+   else if( *havebestsol )
+   {
+      *havebestsol = solstp_isUnreduced(scip, graph, bestresult);
+   }
+
+   assert(*havebestsol == FALSE || solstp_isValid(scip, graph, bestresult));
+
+   return SCIP_OKAY;
+}
+
+
+
+/** computes solution from reduced costs for directed graph */
+static
+SCIP_RETCODE computeSteinerTreeRedCostsDirected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   const REDCOST*        redcostdata,        /**< reduced cost data */
+   int*                  result,             /**< result array */
+   int*                  bestresult,         /**< result array */
+   SCIP_Bool*            havebestsol,        /**< could best solution be stored in bestresult? */
+   SCIP_Real*            bestobjval          /**< pointer to the objective value */
+)
+{
+   const SCIP_Real* redcosts = redcosts_getEdgeCostsTop(redcostdata);
+   const int daroot = redcosts_getRootTop(redcostdata);
+   const int nedges = graph->edges;
+   SCIP_Bool success;
+   SCIP_Real objval;
+
+   assert(graph_typeIsDirected(graph));
+
+   SCIP_CALL( SCIPStpHeurAscendPruneRun(scip, NULL, graph, redcosts, result, daroot, &success, FALSE));
+   objval = solstp_getObj(graph, result, 0.0);
+
+   SCIPdebugMessage("old obj=%f ascend-prune obj=%f \n", *bestobjval, objval);
+   if( !success )
+   {
+      assert(graph->stp_type == STP_DHCSTP);
+      *havebestsol = FALSE;
+
+      if( GE(*bestobjval, FARAWAY) )
+      {
+         SCIP_CALL( computeSteinerTreeTM(scip, graph, result, bestobjval) );
+         BMScopyMemoryArray(bestresult, result, nedges);
+      }
+      return SCIP_OKAY;
+   }
+
+   assert(success && solstp_isValid(scip, graph, result));
 
    if( SCIPisLE(scip, objval, *bestobjval) )
    {
@@ -805,6 +871,7 @@ int reduceWithEdgeFixingBounds(
    int nfixed = 0;
    int nnodes = graph->knots;
    const SCIP_Bool solgiven = (result != NULL);
+   const SCIP_Bool probIsDirected = graph_typeIsDirected(graph);
 
    assert(graph->stp_type == STP_SPG || graph->stp_type == STP_RSMT || !graph->extended);
    assert(!solgiven || SCIPisEQ(scip, upperbound, getSolObj(scip, graph, result)));
@@ -825,16 +892,16 @@ int reduceWithEdgeFixingBounds(
          if( graph->mark[graph->head[e]] )
          {
             const int erev = flipedge(e);
-            SCIP_Bool delete;
+            SCIP_Bool deleteEdge;
 
             if( !solgiven || result[e] == CONNECT || result[erev] == CONNECT )
-               delete = (SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]));
+               deleteEdge = (SCIPisLT(scip, upperbound, fixingbounds[e]) && SCIPisLT(scip, upperbound, fixingbounds[erev]));
             else
-               delete = (SCIPisLE(scip, upperbound, fixingbounds[e]) && SCIPisLE(scip, upperbound, fixingbounds[erev]));
+               deleteEdge = (SCIPisLE(scip, upperbound, fixingbounds[e]) && SCIPisLE(scip, upperbound, fixingbounds[erev]));
 
-            if( delete )
+            if( deleteEdge )
             {
-               assert(EQ(graph->cost[e], graph->cost[erev]) || graph_pc_isMw(graph));
+               assert(EQ(graph->cost[e], graph->cost[erev]) || graph_pc_isMw(graph) || probIsDirected);
 
                SCIPdebugMessage("delete edge %d (upperbound=%f fixingbound=%f) \n", e, upperbound, fixingbounds[e]);
 
@@ -844,6 +911,19 @@ int reduceWithEdgeFixingBounds(
                   graph_edge_del(scip, transgraph, e, FALSE);
 
                nfixed++;
+            }
+            else if( probIsDirected && LT(graph->cost[e], FARAWAY) )
+            {
+               SCIP_Bool deleteArc;
+               if( !solgiven || result[e] == CONNECT )
+                  deleteArc = (SCIPisLT(scip, upperbound, fixingbounds[e]) );
+               else
+                  deleteArc = (SCIPisLE(scip, upperbound, fixingbounds[e]) );
+
+               if( deleteArc )
+               {
+                  graph->cost[e] = FARAWAY;
+               }
             }
          }
 
@@ -1729,6 +1809,80 @@ int daGetNruns(
 }
 
 
+/** initializes DA round */
+static
+SCIP_RETCODE daRoundInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             upperbound,
+   GRAPH*                graph,              /**< graph structure */
+   REDCOST*              redcostdata,         /**< reduced cost data */
+   STP_Bool*             arcsdeleted,
+   SCIP_Real*            cutoffbound,
+   SCIP_Bool*            useExtRed
+)
+{
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
+
+   redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, cutoffbound);
+
+   if( SCIPisZero(scip, *cutoffbound) )
+      *useExtRed = FALSE;
+
+   if( isRpcmw )
+      graph_pc_2org(scip, graph);
+   else
+      graph_mark(graph);
+
+   if( graph_typeIsUndirected(graph) )
+   {
+      const int nedges = graph_get_nEdges(graph);
+
+      /* NOTE: because we change the root node for dual-ascent, the deleted arcs don't
+       * stay valid between rounds */
+      for( int e = 0; e < nedges; e++ )
+         arcsdeleted[e] = FALSE;
+   }
+
+   SCIP_CALL( redcosts_initializeDistancesTop(scip, graph, redcostdata) );
+
+   return SCIP_OKAY;
+}
+
+
+/** for exiting DA round */
+static
+void daRoundExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   ndeletions_run,
+   GRAPH*                graph,              /**< graph structure */
+   int*                  nelims
+)
+{
+   const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
+
+   assert(scip && nelims);
+   assert(ndeletions_run >= 0 && *nelims >= 0);
+
+   if( ndeletions_run > 0 && !isRpcmw )
+   {
+      if( graph_typeIsDirected(graph) )
+         reduce_unconnectedForDirected(scip, graph);
+      else
+         reduce_unconnected(scip, graph);
+   }
+
+   assert(graph_valid(scip, graph));
+
+   if( !isRpcmw )
+      graph_mark(graph);
+   else
+      graph_pc_2trans(scip, graph);
+
+   *nelims += ndeletions_run;
+   SCIPdebugMessage("new deletions: %d \n", ndeletions_run);
+}
+
+
 /** try to improve both dual and primal solution */
 static
 SCIP_RETCODE computePertubedSol(
@@ -1943,6 +2097,7 @@ SCIP_RETCODE reduceRootedProb(
    const int nnodes = graph->knots;
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(graph);
    const SCIP_Bool keepsol = (solgiven && SCIPisZero(scip, cutoffbound));
+   const SCIP_Bool isDirected = !graph_typeIsUndirected(graph);
 
    assert(GE(cutoffbound, 0.0));
 
@@ -2024,6 +2179,8 @@ SCIP_RETCODE reduceRootedProb(
             else
             {
                marked[e] = TRUE;
+               if( isDirected )
+                  graph->cost[e] = FARAWAY;
             }
          }
          e = enext;
@@ -2484,6 +2641,12 @@ SCIP_RETCODE reduce_da(
    if( isRpc )
       reduce_identifyNonLeafTerms(scip, graph);
 
+   if( isDirected )
+   {
+      for( int e = 0; e < nedges; e++ )
+         arcsdeleted[e] = GE(graph->cost[e], FARAWAY);
+   }
+
    upperbound = FARAWAY;
 
    if( redsollocal )
@@ -2493,10 +2656,6 @@ SCIP_RETCODE reduce_da(
    }
 
    graph_mark(graph);
-
-   if( isDirected )
-      SCIP_CALL( computeSteinerTreeTM(scip, graph, result, &upperbound) );
-
    collectFixedTerminals(graph, terms, &nFixedTerms);
 
    if( isRpcmw )
@@ -2518,6 +2677,7 @@ SCIP_RETCODE reduce_da(
       {
          int ndeletions_run = 0;
          const SCIP_Real damaxdeviation = daGetMaxDeviation(paramsda, randnumgen);
+         SCIPdebugMessage("new DA root %d in round %d \n", terms[run], run);
 
          if( useExtRed && run > 0 )
             redcosts_addLevel(redcostdata);
@@ -2535,31 +2695,24 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( computeDualSolution(scip, graph, damaxdeviation, redcostdata) );
          }
 
-         if( !isDirected )
+         if( isDirected )
+         {
+            SCIP_CALL( computeSteinerTreeRedCostsDirected(scip, graph, redcostdata, result, bestresult,
+                  &havebestsol, &upperbound) );
+         }
+         else
          {
             const SCIP_Bool useSlackPrune = (run == 1 && paramsda->useSlackPrune);
             SCIP_CALL( computeSteinerTreeRedCosts(scip, graph, redcostdata, useSlackPrune,
                         userec, pool, result, bestresult, &havebestsol, &upperbound) );
          }
 
-         redcosts_setAndReturnCutoffFromBoundTop(upperbound, redcostdata, &cutoffbound);
          SCIPdebugMessage("upper=%f lower=%f (round=%d havenewsol=%d)\n", upperbound, redcosts_getDualBoundTop(redcostdata), run, havebestsol);
 
-         if( SCIPisZero(scip, cutoffbound) )
-            useExtRed = FALSE;
+         SCIP_CALL( daRoundInit(scip, upperbound, graph, redcostdata, arcsdeleted, &cutoffbound, &useExtRed) );
 
-         if( isRpcmw )
-            graph_pc_2org(scip, graph);
-         else
-            graph_mark(graph);
-
-         for( int e = 0; e < nedges; e++ )
-            arcsdeleted[e] = FALSE;
-
-         SCIP_CALL( redcosts_initializeDistancesTop(scip, graph, redcostdata) );
          updateNodeFixingBounds(nodefixingbounds, graph, redcosts_getRootToNodeDistTop(redcostdata),
-               redcosts_getNodeToTermsPathsTop(redcostdata), redcosts_getDualBoundTop(redcostdata),
-               (run == 0));
+               redcosts_getNodeToTermsPathsTop(redcostdata), redcosts_getDualBoundTop(redcostdata), (run == 0));
          updateEdgeFixingBounds(edgefixingbounds, graph, redcosts_getEdgeCostsTop(redcostdata),
                redcosts_getRootToNodeDistTop(redcostdata), redcosts_getNodeToTermsPathsTop(redcostdata), redcosts_getDualBoundTop(redcostdata),
                nedges, (run == 0), TRUE);
@@ -2590,17 +2743,7 @@ SCIP_RETCODE reduce_da(
             SCIP_CALL( updateNodeReplaceBounds(scip, redcostdata, graph, nodereplacebounds, upperbound, (run == 0), FALSE));
          }
 
-         if( ndeletions_run > 0 && !isRpcmw )
-            reduce_unconnected(scip, graph);
-
-         assert(graph_valid(scip, graph));
-
-         if( !isRpcmw )
-            graph_mark(graph);
-         else
-            graph_pc_2trans(scip, graph);
-
-         *nelims += ndeletions_run;
+         daRoundExit(scip, ndeletions_run, graph, nelims);
       } /* root loop */
 
       if( redsollocal )
