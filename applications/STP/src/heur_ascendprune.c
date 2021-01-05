@@ -26,6 +26,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+//#define SCIP_DEBUG
 #define DEBUG_ASCENDPRUNE
 #include <assert.h>
 #include <string.h>
@@ -182,6 +183,26 @@ SCIP_RETCODE checkRedCostEdges(
 }
 #endif
 
+#ifndef NDEBUG
+/** gets number of terms that are marked */
+static
+int redcostGetNTermsMarked(
+   const GRAPH*          g,                  /**< the graph */
+   const RCGRAPH*        redcostgraph        /**< reduced cost graph data */
+   )
+{
+   int nterms = 0;
+   const int nnodes = graph_get_nNodes(g);
+
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( g->mark[i] && Is_term(g->term[i]) )
+         nterms++;
+   }
+
+   return nterms;
+}
+#endif
 
 
 /** marks part of graph corresponding to zero cost paths from the root to all terminals */
@@ -300,31 +321,19 @@ SCIP_RETCODE redcostGraphMark(
    redcostgraph->nnodes = nnewnodes;
    redcostgraph->nedges_half = nnewedges;
 
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("redcost graph: |V|=%d, |A|=%d ... original graph: \n", nnewnodes, nnewedges);
+   graph_printInfoReduced(g);
+#endif
+
 #ifdef DEBUG_ASCENDPRUNE
    SCIP_CALL( checkRedCostEdges(scip, g, redcostgraph) );
 #endif
 
+   assert(graph_typeIsUndirected(g) || g->terms == redcostGetNTermsMarked(g, redcostgraph));
+   assert(graph_pc_isPcMw(g) || redcostGetNTermsMarked(g, redcostgraph) == g->terms);
+
    return SCIP_OKAY;
-}
-
-
-/** gets number of terms that are marked */
-static
-int redcostGetNTermsMarked(
-   const GRAPH*          g,                  /**< the graph */
-   const RCGRAPH*        redcostgraph        /**< reduced cost graph data */
-   )
-{
-   int nterms = 0;
-   const int nnodes = graph_get_nNodes(g);
-
-   for( int i = 0; i < nnodes; i++ )
-   {
-      if( g->mark[i] && Is_term(g->term[i]) )
-         nterms++;
-   }
-
-   return nterms;
 }
 
 
@@ -340,7 +349,7 @@ SCIP_RETCODE redcostGraphBuild(
    const int nnodes = graph_get_nNodes(g);
    const SCIP_Bool pcmw = graph_pc_isPcMw(g);
    const int probtype = g->stp_type;
-   const int* const mark = g->mark;
+   const int* const nodes_isMarked = g->mark;
    const int* const newedges = redcostgraph->edgelist;
    const int nnewnodes = redcostgraph->nnodes;
    const int nnewedges = redcostgraph->nedges_half;
@@ -370,7 +379,7 @@ SCIP_RETCODE redcostGraphBuild(
 
    for( int k = 0; k < nnodes; k++ )
    {
-      if( mark[k] )
+      if( nodes_isMarked[k] )
       {
          if( pcmw )
          {
@@ -423,6 +432,9 @@ SCIP_RETCODE redcostGraphBuild(
             break;
       }
 
+      // todo should always hold?
+      assert(i == EAT_LAST);
+
       /* edge not added yet? */
       if( i == EAT_LAST )
       {
@@ -438,9 +450,9 @@ SCIP_RETCODE redcostGraphBuild(
    assert(!pcmw || TERM2EDGE_FIXEDTERM == newgraph->term2edge[newgraph->source]);
 
    SCIP_CALL( graph_pc_finalizeSubgraph(scip, newgraph) );
-
-   /* initialize ancestors of new graph edges */
    SCIP_CALL( graph_initHistory(scip, newgraph) );
+
+   assert(graph_pc_isPcMw(g) || graph_valid(scip, newgraph));
 
    return SCIP_OKAY;
 }
@@ -539,6 +551,90 @@ SCIP_RETCODE redcostGraphComputeSteinerTree(
    return SCIP_OKAY;
 }
 
+
+/** builds Steiner tree on directed subgraph */
+static
+SCIP_RETCODE redcostGraphComputeSteinerTreeDirected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< the graph */
+   RCGRAPH*              redcostgraph,
+   int*                  result
+   )
+{
+   GRAPH* const subgraph = redcostgraph->newgraph;
+   int* startstm = NULL;
+   int* subresult;
+   SCIP_Real* cost;
+   SCIP_Real* costrev;
+   const int* const edgeNew2OrgMap = redcostgraph->edgeNew2OrgMap;
+   const int nedges = graph_get_nEdges(g);
+   const int nsubnodes = graph_get_nNodes(subgraph);
+   const int nsubedges = graph_get_nEdges(subgraph);
+   int runstm = 10;
+   SCIP_Bool success;
+
+   SCIP_CALL( graph_path_init(scip, subgraph) );
+   SCIP_CALL( reduce_unconnectedForDirected(scip, subgraph) );
+   assert(graph_valid(scip, subgraph));
+
+#ifdef DEBUG_ASCENDPRUNE
+   SCIP_CALL( checkRedCostGraph(g, redcostgraph) );
+#endif
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &subresult, nsubedges ) );
+
+   /* build solution on new graph */
+
+   if( g->stp_type != STP_NWPTSPG )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &startstm, nsubnodes) );
+      SCIPStpHeurTMCompStarts(subgraph, startstm, &runstm);
+      assert(startstm[0] == subgraph->source);
+   }
+
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nsubedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nsubedges) );
+
+   graph_getEdgeCosts(subgraph, cost, costrev);
+
+   SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
+      subgraph, startstm, NULL, subresult, runstm, subgraph->source, cost, costrev, NULL, NULL, &success) );
+   assert(success);
+
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArrayNull(scip, &startstm);
+
+   // todo for HCDSTP solution might not be valid...also need hop-constant!
+
+   SCIPdebugMessage("su-obj after TM %f \n", solstp_getObj(subgraph, subresult, 0.0));
+   assert(success && solstp_isValid(scip, subgraph, subresult));
+
+   graph_path_exit(scip, subgraph);
+
+   /* transfer solution */
+
+   for( int e = 0; e < nedges; e++ )
+      result[e] = UNKNOWN;
+
+   for( int e = 0; e < nsubedges; e++ )
+   {
+      if( subresult[e] == CONNECT )
+      {
+         const int eorg = edgeNew2OrgMap[e];
+         assert(graph_edge_isInRange(g, eorg));
+
+         result[eorg] = CONNECT;
+      }
+   }
+   assert(solstp_isValid(scip, g, result));
+   SCIPdebugMessage("obj after retransformation %f \n", solstp_getObj(g, result, 0.0));
+
+   SCIPfreeBufferArray(scip, &subresult);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -715,19 +811,18 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
 {
    RCGRAPH redcostgraph = { .newgraph = NULL, .redcosts = redcosts, .edgelist = NULL, .nodeOrg2NewMap = NULL, .edgeNew2OrgMap = NULL,
          .nnodes = -1, . nedges_half = -1, .root = root  };
+   const int nnodes = graph_get_nNodes(g);
 
    assert(scip && redcosts && result && solfound);
    assert(!graph_pc_isPcMw(g) || g->extended);
+   assert(graph_valid(scip, g));
 
    *solfound = TRUE;
 
    if( root < 0 )
-   {
       redcostgraph.root = g->source;
-   }
 
    assert(Is_term(g->term[redcostgraph.root]));
-   assert(graph_valid(scip, g));
    assert(!graph_pc_isPcMw(g) || graph_pc_knotIsFixedTerm(g, redcostgraph.root));
 
    SCIP_CALL( redcostGraphMark(scip, g, &redcostgraph) );
@@ -741,37 +836,31 @@ SCIP_RETCODE SCIPStpHeurAscendPruneRun(
       return SCIP_OKAY;
    }
 
-   if( graph_typeIsSpgLike(g) && g->terms != redcostGetNTermsMarked(g, &redcostgraph) )
-   {
-      printf("not all terminals could be reached (%d < %d) abort ascend-and-prune \n",  g->terms,  redcostGetNTermsMarked(g, &redcostgraph) );
-      redcostGraphFree(scip, &redcostgraph);
-      *solfound = FALSE;
-
-      return SCIP_OKAY;
-   }
-
-   assert(graph_pc_isPcMw(g) || redcostGetNTermsMarked(g, &redcostgraph) == g->terms);
-
    SCIP_CALL( redcostGraphBuild(scip, g, &redcostgraph) );
-   SCIP_CALL( redcostGraphComputeSteinerTree(scip, g, &redcostgraph, result) );
+
+   if( graph_typeIsUndirected(g) )
+   {
+      SCIP_CALL( redcostGraphComputeSteinerTree(scip, g, &redcostgraph, result) );
+   }
+   else
+   {
+      SCIP_CALL( redcostGraphComputeSteinerTreeDirected(scip, g, &redcostgraph, result) );
+   }
 
    assert(solstp_isValid(scip, g, result));
 
 #ifdef SCIP_DEBUG
-   {
-      const SCIP_Real solval = solstp_getObj(g, result, 0.0);
-      graph_printInfo(g);
-      printf("ascend-prune obj=%f \n", solval);
-   }
+   graph_printInfo(g);
+   printf("ascend-prune obj=%f \n", solstp_getObj(g, result, 0.0));
 #endif
 
    if( addsol )
    {
       SCIP_CALL( solpool_addSolToScip(scip, heur, g, result, solfound) );
-      SCIPdebugMessage("Ascend-and-prune adding solution....succes=%d \n", *solfound);
+      SCIPdebugMessage("Ascend-and-prune adding solution....success=%d \n", *solfound);
    }
 
-   for( int k = 0; k < g->knots; k++ )
+   for( int k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
 
    redcostGraphFree(scip, &redcostgraph);

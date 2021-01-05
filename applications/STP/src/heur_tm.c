@@ -806,6 +806,8 @@ SCIP_RETCODE computeStarts(
 
       assert(!startsgiven);
 
+      start[count++] = graph->source;
+
       /* add terminals */
       for( int k = 0; k < nnodes && count < runs; k++ )
       {
