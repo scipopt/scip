@@ -174,6 +174,7 @@ extern SCIP_RETCODE    reduce_cutEdgeTryPrune(SCIP*, int, GRAPH*, SCIP_Bool*);
 extern SCIP_RETCODE    reduce_rpt(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern void            reduce_identifyNonLeafTerms(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduce_unconnected(SCIP*, GRAPH*);
+extern SCIP_RETCODE reduce_unconnectedForDirected(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduce_unconnectedInfeas(SCIP*, GRAPH*, SCIP_Bool*);
 
 

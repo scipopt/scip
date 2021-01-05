@@ -1079,6 +1079,36 @@ SCIP_RETCODE reduce_unconnected(
 }
 
 
+/* remove unconnected vertices for directed problems */
+SCIP_RETCODE reduce_unconnectedForDirected(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g                   /**< graph data structure */
+)
+{
+   const int nnodes = graph_get_nNodes(g);
+   SCIP_Bool* nodevisited;
+
+   assert(scip && g);
+   assert(!graph_typeIsUndirected(g));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, nnodes) );
+   SCIP_CALL( graph_trail_costAware(scip, g, g->source, nodevisited) );
+
+   for( int k = 0; k < nnodes; k++ )
+   {
+      if( !nodevisited[k] && (g->grad[k] > 0) )
+      {
+         assert(!Is_term(g->term[k]));
+         graph_knot_del(scip, g, k, TRUE);
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &nodevisited);
+
+   return SCIP_OKAY;
+}
+
+
 /** remove unconnected vertices and checks whether problem is infeasible  */
 SCIP_RETCODE reduce_unconnectedInfeas(
    SCIP*                 scip,               /**< SCIP data structure */
