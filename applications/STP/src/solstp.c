@@ -1571,13 +1571,23 @@ SCIP_Bool solstp_isUnreduced(
 {
    const int nedges = graph_get_nEdges(graph);
 
-   assert(scip != NULL);
-   assert(result != NULL);
+   assert(scip && result);
 
-   for( int i = 0; i < nedges; i++ )
+   if( graph_typeIsDirected(graph) )
    {
-      if( result[i] == CONNECT && graph->oeat[i] == EAT_FREE )
-         return FALSE;
+      for( int e = 0; e < nedges; e++ )
+      {
+         if( result[e] == CONNECT && (graph->oeat[e] == EAT_FREE || GE(graph->cost[e], FARAWAY)) )
+            return FALSE;
+      }
+   }
+   else
+   {
+      for( int e = 0; e < nedges; e++ )
+      {
+         if( result[e] == CONNECT && graph->oeat[e] == EAT_FREE )
+            return FALSE;
+      }
    }
 
    return TRUE;
