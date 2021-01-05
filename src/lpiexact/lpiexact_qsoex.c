@@ -55,23 +55,23 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPiExact
 {
-   mpq_QSprob prob;      /**< LP struct pointer */
-   int solstat;	       /**< solution status of last optimization call */
-   int previt;	          /**< previous number of simplex iterations performed */
-   int rowspace;         /**< current size of internal row-related arrays */
-   char* isen;	          /**< array of length rowspace */
-   mpq_t* irhs;          /**< array of rhs rowspace */
-   mpq_t* irng;          /**< array of range rowspace */
-   int* ircnt;	          /**< array of count rowspace */
-   int* irbeg;	          /**< array of begining index rowspace */
-   int colspace;         /**< current size of internal column-related arrays */
-   int* iccnt;	          /**< array of length colspace */
-   char* iccha;	       /**< array of type colspace */
-   int tbsz;	          /**< current size of tableau-related arrays */
-   mpq_t* itab;          /**< array of length tbsz */
-   char* ibas; 	       /**< array of length tbsz */
-   int pricing;	       /**< SCIP pricing option */
-   mpq_factor_work* factor; /**< factorized matrix  */
+   mpq_QSprob            prob;               /**< LP struct pointer */
+   int                   solstat;            /**< solution status of last optimization call */
+   int                   previt;             /**< previous number of simplex iterations performed */
+   int                   rowspace;           /**< current size of internal row-related arrays */
+   char*                 isen;               /**< array of length rowspace */
+   mpq_t*                irhs;               /**< array of rhs rowspace */
+   mpq_t*                irng;               /**< array of range rowspace */
+   int*                  ircnt;	             /**< array of count rowspace */
+   int*                  irbeg;	             /**< array of begining index rowspace */
+   int                   colspace;           /**< current size of internal column-related arrays */
+   int*                  iccnt;	             /**< array of length colspace */
+   char*                 iccha;              /**< array of type colspace */
+   int                   tbsz;	             /**< current size of tableau-related arrays */
+   mpq_t*                itab;               /**< array of length tbsz */
+   char*                 ibas; 	             /**< array of length tbsz */
+   int                   pricing;	         /**< SCIP pricing option */
+   mpq_factor_work*      factor;             /**< factorized matrix  */
 };
 
 
@@ -521,6 +521,10 @@ SCIP_RETCODE SCIPlpiExactFree(
    )
 {
    register int i;
+
+
+
+
    assert(lpi != NULL);
    assert(*lpi != NULL);
 

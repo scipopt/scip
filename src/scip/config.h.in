@@ -22,6 +22,7 @@
 #cmakedefine SCIP_WITH_READLINE
 #cmakedefine SCIP_WITH_GMP
 #cmakedefine SCIP_WITH_MPFR
+#cmakedefine SCIP_WITH_QSOPTEX
 #cmakedefine SCIP_WITH_LPSCHECK
 #cmakedefine SCIP_WITH_ZIMPL
 #cmakedefine SCIP_ROUNDING_FE
