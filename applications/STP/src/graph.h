@@ -264,6 +264,7 @@ extern void   graph_get_nVET(const GRAPH*, int*, int*, int*);
 extern SCIP_Real graph_get_avgDeg(const GRAPH*);
 extern SCIP_Bool graph_typeIsSpgLike(const GRAPH*);
 extern SCIP_Bool graph_typeIsUndirected(const GRAPH*);
+extern SCIP_Bool graph_typeIsDirected(const GRAPH*);
 
 
 /* graph_trans.c

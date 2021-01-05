@@ -79,6 +79,17 @@ SCIP_Bool graph_typeIsUndirected(
 }
 
 
+/** is the given graph (originally) directed? */
+SCIP_Bool graph_typeIsDirected(
+   const GRAPH*          g                   /**< the graph */
+   )
+{
+   assert(g);
+
+   return !(graph_typeIsUndirected(g));
+}
+
+
 /** is the edge blocked? */
 SCIP_Bool graph_edge_isBlocked(
    const GRAPH*          g,                  /**< the graph */
