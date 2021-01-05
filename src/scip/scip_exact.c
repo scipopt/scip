@@ -179,7 +179,7 @@ SCIP_Bool SCIPisCertificateActive(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   return (scip->stat->certificate != NULL && scip->stat->certificate->file != NULL);
+   return (scip->stat->certificate != NULL && scip->stat->certificate->transfile != NULL);
 }
 
 /** returns certificate data structure

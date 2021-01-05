@@ -47,6 +47,13 @@ extern "C" {
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIProwExactComp);
 
+/** gets variable this column represents */
+SCIP_EXPORT
+SCIP_VAR* SCIPcolExactGetVar(
+   SCIP_COLEXACT*        col                 /**< LP column */
+   );
+
+
 /** returns the left hand side of the row */
 SCIP_EXPORT
 SCIP_Rational* SCIProwExactGetLhs(
@@ -56,6 +63,24 @@ SCIP_Rational* SCIProwExactGetLhs(
 /** returns the right hand side of the row */
 SCIP_EXPORT
 SCIP_Rational* SCIProwExactGetRhs(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
+/** returns the constant of the row */
+SCIP_EXPORT
+SCIP_Rational* SCIProwExactGetConstant(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
+/** gets array with coefficients of nonzero entries */
+SCIP_EXPORT
+SCIP_Rational** SCIProwExactGetVals(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   );
+
+/** gets array of exact columns */
+SCIP_EXPORT
+SCIP_COLEXACT** SCIProwExactGetCols(
    SCIP_ROWEXACT*        row                 /**< LP row */
    );
 

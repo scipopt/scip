@@ -33,6 +33,7 @@
 #include "scip/pub_cons.h"
 #include "scip/pub_event.h"
 #include "scip/pub_lp.h"
+#include "scip/pub_lpexact.h"
 #include "scip/lpexact.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -15553,6 +15554,7 @@ SCIP_RETCODE printCertificateConsLinear(
    SCIP_Rational* lhs;
    SCIP_Rational* rhs;
    SCIP_Rational* quotient;
+   SCIP_Rational* correctedside;
    SCIP_Bool isupper;
    int* varsindex;
    int i;
@@ -15590,7 +15592,7 @@ SCIP_RETCODE printCertificateConsLinear(
          {
             isupper = RatIsPositive(vals[0]) ? FALSE : TRUE;
             RatDiv(quotient, lhs, vals[0]);
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
          }
 
          /* coefficient is positive -> rhs corresponds to upper bound, if negative to lower bound */
@@ -15598,7 +15600,7 @@ SCIP_RETCODE printCertificateConsLinear(
          {
             isupper = RatIsPositive(vals[0]) ? TRUE : FALSE;
             RatDiv(quotient, rhs, vals[0]);
-            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
+            SCIP_CALL( SCIPcertificatePrintBoundCons(certificate, FALSE, NULL, SCIPvarGetCertificateIndex(var), quotient, isupper) );
          }
 
          RatFreeBuffer(SCIPbuffer(scip), &quotient);
@@ -15621,22 +15623,33 @@ SCIP_RETCODE printCertificateConsLinear(
          }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &varsindex, consdata->nvars) );
-         for( i = 0; i < consdata->nvars; ++i )
-            varsindex[i] = SCIPvarGetCertificateIndex(consdata->vars[i]);
+         for( i = 0; i < SCIProwExactGetNNonz(row); ++i )
+            varsindex[i] = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(row)[i]));
+
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &correctedside) );
 
          /* print constraint */
          if( RatIsEqual(consdata->lhs, consdata->rhs) )
          {
             assert(!RatIsAbsInfinity(consdata->lhs));
-            SCIPcertificatePrintCons(certificate, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+            RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
+            SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
          }
          else
          {
             if( !RatIsNegInfinity(consdata->lhs) )
-               SCIPcertificatePrintCons(certificate, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+            {
+               RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
+               SCIPcertificatePrintCons(certificate, FALSE, NULL, 'G', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+            }
             if( !RatIsInfinity(consdata->rhs) )
-               SCIPcertificatePrintCons(certificate, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals);
+            {
+               RatDiff(correctedside, SCIProwExactGetRhs(row), SCIProwExactGetConstant(row));
+               SCIPcertificatePrintCons(certificate, FALSE, NULL, 'L', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+            }
          }
+
+         RatFreeBuffer(SCIPbuffer(scip), &correctedside);
          SCIPfreeBufferArray(scip, &varsindex);
       }
    }

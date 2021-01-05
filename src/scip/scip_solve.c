@@ -1789,7 +1789,8 @@ SCIP_RETCODE freeSolve(
    SCIPexitSolveDecompstore(scip);
 
    /* Print last part of certificate file */
-   SCIP_CALL( SCIPcertificatePrintResult(scip, scip->set, SCIPgetCertificate(scip)) );
+   SCIP_CALL( SCIPcertificatePrintResult(scip, TRUE, scip->set, SCIPgetCertificate(scip)) );
+   SCIP_CALL( SCIPcertificatePrintResult(scip, FALSE, scip->set, SCIPgetCertificate(scip)) );
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );
@@ -2687,6 +2688,7 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_SOLVING:
          /* reset display */
          SCIPstatResetDisplay(scip->stat);
+         SCIP_CALL( SCIPcertificateInitTransFile(scip) );
 
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,

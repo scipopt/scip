@@ -63,6 +63,11 @@ SCIP_RETCODE SCIPcertificateInit(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
+/** initializes certificate information and creates files for certificate output */
+SCIP_RETCODE SCIPcertificateInitTransFile(
+   SCIP*                 scip                /**< scip data structure */
+   );
+
 /** closes the certificate output files */
 void SCIPcertificateExit(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -84,6 +89,7 @@ SCIP_Real SCIPcertificateGetFilesize(
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Rational**       coefs,              /**< objective function coefficients */
    int                   nvars               /**< number of variables */
@@ -92,6 +98,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
 /** prints a string to the problem section of the certificate file */
 void SCIPcertificatePrintProblemMessage(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    );
@@ -106,6 +113,7 @@ void SCIPcertificatePrintProofMessage(
 /** prints a rational number to the problem section of the certificate file */
 void SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    );
@@ -120,6 +128,7 @@ void SCIPcertificatePrintProofRational(
 /** prints a comment to the problem section of the certificate file */
 void SCIPcertificatePrintProblemComment(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    );
@@ -134,23 +143,27 @@ void SCIPcertificatePrintProofComment(
 /** prints variable section header */
 void SCIPcertificatePrintVarHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    int                   nvars               /**< number of variables */
    );
 
 /** prints version header */
 void SCIPcertificatePrintVersionHeader(
-   SCIP_CERTIFICATE*     certificate         /**< certificate information */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile          /**< should the original solution be printed or in transformed space */
    );
 
 /** prints integer section header */
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    int                   nvars               /**< number of variables */
    );
 
 /** prints constraint section header */
 void SCIPcertificatePrintConsHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    int                   nconss,             /**< number of all constraints */
    int                   nboundconss         /**< number of bound constraints */
    );
@@ -163,6 +176,7 @@ void SCIPcertificatePrintDerHeader(
 /** prints constraint */
 void SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           consname,           /**< name of the constraint */
    const char            sense,              /**< sense of the constraint, i.e., G, L, or E */
    SCIP_Rational*        side,               /**< left/right-hand side */
@@ -174,6 +188,7 @@ void SCIPcertificatePrintCons(
 /** prints a variable bound to the problem section of the certificate file and returns line index */
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           boundname,          /**< name of the bound constraint */
    int                   varindex,           /**< index of the variable */
    SCIP_Rational*        boundval,           /**< value of the bound */
@@ -265,6 +280,7 @@ int SCIPcertificatePrintUnsplitting(
 /** prints RTP section with lowerbound and upperbound range */
 void SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
    SCIP_Rational*        upperbound          /**< pointer to upper bound on the objective */
    );
@@ -272,6 +288,7 @@ void SCIPcertificatePrintRtpRange(
 /** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
@@ -285,7 +302,8 @@ SCIP_RETCODE SCIPcertificateSaveFinalbound(
 
 /** prints RTP section for infeasibility */
 void SCIPcertificatePrintRtpInfeas(
-   SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_Bool             isorigfile          /**< should the original solution be printed or in transformed space */
    );
 
 /** prints SOL header and exact solution to certificate file */

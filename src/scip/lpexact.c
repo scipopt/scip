@@ -4308,6 +4308,14 @@ void SCIProwExactPrint(
          SCIPmessageFPrintInfo(messagehdlr, file, "%s<%s> ", buf, SCIPvarGetName(row->cols[r]->var));
    }
 
+   /* print constant */
+   if( !RatIsZero(row->constant) )
+   {
+      if( RatIsPositive(row->constant) )
+         SCIPmessageFPrintInfo(messagehdlr, file, "+");
+      RatMessage(messagehdlr, file, row->constant);
+   }
+
    RatToString(row->rhs, buf, SCIP_MAXSTRLEN);
    SCIPmessageFPrintInfo(messagehdlr, file, "<= %s, ", buf);
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
@@ -4331,6 +4339,27 @@ int SCIProwExactGetNNonz(
    assert(row != NULL);
 
    return row->len;
+}
+
+/** gets array with coefficients of nonzero entries */
+SCIP_Rational** SCIProwExactGetVals(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->vals;
+}
+
+
+/** gets array of exact columns */
+SCIP_COLEXACT** SCIProwExactGetCols(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+
+   return row->cols;
 }
 
 /** returns TRUE iff row is member of current LP */
@@ -5273,6 +5302,16 @@ SCIP_Rational* SCIPcolExactGetPrimsol(
       return NULL;
 }
 
+/** gets variable this column represents */
+SCIP_VAR* SCIPcolExactGetVar(
+   SCIP_COLEXACT*        col                 /**< LP column */
+   )
+{
+   assert(col != NULL);
+
+   return col->var;
+}
+
 /** ensures, that column array of row can store at least num entries */
 SCIP_RETCODE SCIProwExactEnsureSize(
    SCIP_ROWEXACT*        row,                /**< LP row */
@@ -5484,6 +5523,17 @@ SCIP_Rational* SCIProwExactGetRhs(
    assert(row->rhs != NULL);
 
    return row->rhs;
+}
+
+/** returns the constant of the row */
+SCIP_Rational* SCIProwExactGetConstant(
+   SCIP_ROWEXACT*        row                 /**< LP row */
+   )
+{
+   assert(row != NULL);
+   assert(row->constant != NULL);
+
+   return row->constant;
 }
 
 /** compute the objective delta due the new lower bound */
@@ -6731,14 +6781,15 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       RatSetString(lpicols[c]->primsol, "inf");
       RatSetString(lpicols[c]->redcost, "inf");
       lpicols[c]->validredcostlp = -1L;
-      lpicols[c]->validfarkaslp = -1L;
+      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+      lpicols[c]->validfarkaslp = stat->lpcount;
       if( overwritefplp )
       {
          lp->fplp->lpicols[c]->farkascoef = RatApproxReal(lp->lpicols[c]->farkascoef);
          lp->fplp->lpicols[c]->primsol =  SCIPsetInfinity(set);
          lp->fplp->lpicols[c]->redcost =  SCIPsetInfinity(set);
          lp->fplp->lpicols[c]->validredcostlp = -1L;
-         lpicols[c]->validfarkaslp = -1L;
+         lpicols[c]->validfarkaslp = stat->lpcount;
       }
 
       if( checkfarkas )
