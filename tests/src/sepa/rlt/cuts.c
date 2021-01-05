@@ -105,7 +105,7 @@ void setup(void)
    sepadata->conshdlr = conshdlr;
    sepadata->maxusedvars = 3;
    sepadata->maxunknownterms = 1;
-   sepadata->onlyinitial = FALSE;
+   sepadata->onlyoriginal = FALSE;
    sepadata->onlycontrows = TRUE;
    sepadata->onlyeqrows = FALSE;
 

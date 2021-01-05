@@ -566,7 +566,7 @@ Test(product_detection, reltables, .init = setup, .fini = teardown, .description
 
    /* get the rows */
    nrows = 5;
-   SCIP_CALL( getInitialRows(scip, &prob_rows, &nrows) );
+   SCIP_CALL( getOriginalRows(scip, &prob_rows, &nrows) );
 
    /* create tables of implied and unconditional relations */
    SCIP_CALL( SCIPhashtableCreate(&hashtable3, SCIPblkmem(scip), nrows, SCIPhashGetKeyStandard,
