@@ -1189,6 +1189,7 @@ SCIP_RETCODE reduceHc(
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
+   SCIP_RANDNUMGEN* randnumgen;
    PATH* vnoi;
    SCIP_Real*  cost;
    SCIP_Real*  radius;
@@ -1199,33 +1200,21 @@ SCIP_RETCODE reduceHc(
    int*    state;
    int*    vbase;
    int*    pathedge;
-   int     nnodes;
-   int     nedges;
+   STP_Bool* nodearrchar;
    int     redbound;
-#if 0
-   int     danelims;
-#endif
    int     degnelims;
-   int     brednelims;
-   int     hbrednelims;
-   int     hcrnelims;
-   int     hcrcnelims;
-   STP_Bool*   nodearrchar;
-#if 0
-   DOES NOT WORK for HC!
-      STP_Bool    da = !TRUE;
-#endif
-   STP_Bool    bred = TRUE;
-   STP_Bool    hbred = TRUE;
-   STP_Bool    rbred = TRUE;
-   STP_Bool    rcbred = TRUE;
+   STP_Bool bred = FALSE; // todo reduction method is not correct! ignores direction
+   STP_Bool hbred = TRUE;
+   STP_Bool rbred = TRUE;
+   STP_Bool rcbred = TRUE;
+   STP_Bool da = TRUE;
+   const int nnodes = graph_get_nNodes(g);
+   const int nedges = graph_get_nEdges(g);
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(minelims >= 0);
 
-   nnodes = g->knots;
-   nedges = g->edges;
    degnelims = 0;
    upperbound = -1.0;
    redbound = MAX(g->knots / 1000, minelims);
@@ -1243,9 +1232,19 @@ SCIP_RETCODE reduceHc(
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
 
    SCIP_CALL( reduce_simple_hc(scip, g, fixed, &degnelims) );
+   SCIP_CALL( reduce_unconnectedForDirected(scip, g) );
 
-   while( (bred || hbred || rbred || rcbred) && !SCIPisStopped(scip) )
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
+
+
+   while( (da || bred || hbred || rbred || rcbred) && !SCIPisStopped(scip) )
    {
+      int danelims = 0;
+      int brednelims = 0;
+      int hbrednelims = 0;
+      int hcrnelims = 0;
+      int hcrcnelims = 0;
+
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
@@ -1265,6 +1264,8 @@ SCIP_RETCODE reduceHc(
             rcbred = FALSE;
       }
 
+      SCIP_CALL( reduce_unconnectedForDirected(scip, g) );
+
       if( bred )
       {
          SCIP_CALL( reduce_bound(scip, g, vnoi, radius, fixed, &upperbound, heap, state, vbase, &brednelims) );
@@ -1283,9 +1284,17 @@ SCIP_RETCODE reduceHc(
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
+
+      if( da )
+      {
+         const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
+
+         SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
+         if( danelims <= redbound )
+            da = FALSE;
+      }
    }
 
-   /* free memory */
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);
    SCIPfreeBufferArray(scip, &vbase);
@@ -1295,6 +1304,8 @@ SCIP_RETCODE reduceHc(
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &heap);
    SCIPfreeBufferArray(scip, &nodearrchar);
+
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
