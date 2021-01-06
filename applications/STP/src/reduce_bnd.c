@@ -138,6 +138,8 @@ SCIP_RETCODE computeSteinerTree(
 
    *upperbound = obj;
 
+   SCIPfreeBufferArrayNull(scip, &starts);
+
    return SCIP_OKAY;
 }
 
