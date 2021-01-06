@@ -1189,13 +1189,13 @@ SCIP_RETCODE reduceHc(
    int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
+   REDSOLLOCAL* redsollocal;
    SCIP_RANDNUMGEN* randnumgen;
    PATH* vnoi;
    SCIP_Real*  cost;
    SCIP_Real*  radius;
    SCIP_Real*  costrev;
    SCIP_Real timelimit;
-   SCIP_Real upperbound;
    int*    heap;
    int*    state;
    int*    vbase;
@@ -1208,6 +1208,7 @@ SCIP_RETCODE reduceHc(
    STP_Bool rbred = TRUE;
    STP_Bool rcbred = TRUE;
    STP_Bool da = TRUE;
+   int nrounds = 0;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
 
@@ -1216,7 +1217,6 @@ SCIP_RETCODE reduceHc(
    assert(minelims >= 0);
 
    degnelims = 0;
-   upperbound = -1.0;
    redbound = MAX(g->knots / 1000, minelims);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
@@ -1235,7 +1235,7 @@ SCIP_RETCODE reduceHc(
    SCIP_CALL( reduce_unconnectedForDirected(scip, g) );
 
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
-
+   SCIP_CALL( reduce_sollocalInit(scip, g, &redsollocal) );
 
    while( (da || bred || hbred || rbred || rcbred) && !SCIPisStopped(scip) )
    {
@@ -1248,7 +1248,6 @@ SCIP_RETCODE reduceHc(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
-      upperbound = -1.0;
 
       if( rbred )
       {
@@ -1268,6 +1267,8 @@ SCIP_RETCODE reduceHc(
 
       if( bred )
       {
+         SCIP_Real upperbound = -1.0;
+
          SCIP_CALL( reduce_bound(scip, g, vnoi, radius, fixed, &upperbound, heap, state, vbase, &brednelims) );
          if( brednelims <= redbound )
             bred = FALSE;
@@ -1289,11 +1290,25 @@ SCIP_RETCODE reduceHc(
       {
          const RPDA paramsda = { .prevrounds = 0, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none, .nodereplacing = FALSE};
 
-         SCIP_CALL( reduce_da(scip, g, &paramsda, NULL, fixed, &danelims, randnumgen) );
+         SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
          if( danelims <= redbound )
             da = FALSE;
       }
+
+/*
+      if( da && nrounds == 0 )
+      {
+         rbred = TRUE;
+         hbred = TRUE;
+         rcbred = TRUE;
+      }
+*/
+
+      nrounds++;
    }
+
+   reduce_sollocalFree(scip, &redsollocal);
+   SCIPfreeRandom(scip, &randnumgen);
 
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);
@@ -1304,8 +1319,6 @@ SCIP_RETCODE reduceHc(
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &heap);
    SCIPfreeBufferArray(scip, &nodearrchar);
-
-   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }

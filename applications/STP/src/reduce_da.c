@@ -167,7 +167,8 @@ SCIP_RETCODE computeSteinerTreeTM(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph data structure */
    int*                  result,             /**< solution array */
-   SCIP_Real*            bestobjval          /**< pointer to the objective value */
+   SCIP_Real*            bestobjval,         /**< pointer to the objective value */
+   SCIP_Bool*            success
 )
 {
    SCIP_Real* cost = NULL;
@@ -175,7 +176,6 @@ SCIP_RETCODE computeSteinerTreeTM(
    int* startstm = NULL;
    const int nnodes = graph_get_nNodes(graph);
    const int nedges = graph_get_nEdges(graph);
-   SCIP_Bool success = FALSE;
    const SCIP_Bool directed = (graph->stp_type == STP_SAP || graph->stp_type == STP_NWSPG);
    int runstm;
    SCIP_Real hopfactor = -1.0; /* automatic set to default */
@@ -204,9 +204,9 @@ SCIP_RETCODE computeSteinerTreeTM(
    SCIPStpHeurTMCompStarts(graph, startstm, &runstm);
 
    SCIP_CALL( SCIPStpHeurTMRun(scip, pcmode_fromheurdata,
-      graph, startstm, NULL, result, runstm, graph->source, cost, costrev, &hopfactor, NULL, &success) );
+      graph, startstm, NULL, result, runstm, graph->source, cost, costrev, &hopfactor, NULL, success) );
 
-   if( success )
+   if( *success )
    {
       const SCIP_Real obj = getSolObj(scip, graph, result);
 
@@ -368,12 +368,10 @@ SCIP_RETCODE computeSteinerTreeRedCostsDirected(
 
       SCIPdebugMessage("ascend-prune failed \n");
 
-      if( GE(*bestobjval, FARAWAY) )
-      {
-         SCIP_CALL( computeSteinerTreeTM(scip, graph, result, bestobjval) );
-         BMScopyMemoryArray(bestresult, result, nedges);
-      }
-      return SCIP_OKAY;
+      SCIP_CALL( computeSteinerTreeTM(scip, graph, result, bestobjval, &success) );
+
+      if( !success )
+         return SCIP_OKAY;
    }
 
    objval = solstp_getObj(graph, result, 0.0);
@@ -2532,6 +2530,7 @@ SCIP_RETCODE reduce_dapaths(
    SCIP_Real objbound_upper = FARAWAY;
    const SCIP_Bool isRpcmw = graph_pc_isRootedPcMw(g);
    SCIP_Real dualobjval = -1.0;
+   SCIP_Bool solFound;
 
    assert(scip && offsetp && nelims);
 
@@ -2544,7 +2543,7 @@ SCIP_RETCODE reduce_dapaths(
 
    graph_mark(g);
    SCIP_CALL( redcosts_init(scip, g->knots, nedges, FARAWAY, g->source, &redcostdata) );
-   SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper) );
+   SCIP_CALL( computeSteinerTreeTM(scip, g, result, &objbound_upper, &solFound) );
    SCIP_CALL( dualascent_paths(scip, g, redcosts_getEdgeCostsTop(redcostdata), &dualobjval, result) );
    redcosts_setDualBoundTop(dualobjval, redcostdata);
    SCIP_CALL( redcosts_initializeDistancesTop(scip, g, redcostdata) );
