@@ -1288,6 +1288,42 @@ SCIP_RETCODE reduce_boundPruneHeur(
 }
 
 
+/** dual ascent based hop reductions for HCDSTP */
+SCIP_RETCODE reduce_boundHopDa(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   int*                  nelims,             /**< pointer to store number of reduced edges */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+)
+{
+   const RPDA paramsda = { .prevrounds = STP_DAHOPS_MAGIC, .useSlackPrune = FALSE, .useRec = FALSE, .extredMode = extred_none,
+         .nodereplacing = FALSE};
+   SCIP_Real* orgcosts;
+   SCIP_Real fixed = 0.0;
+   const int nedges = graph_get_nEdges(graph);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &orgcosts, nedges) );
+   BMScopyMemoryArray(orgcosts, graph->cost, nedges);
+
+   for( int i = 0; i < nedges; i++ )
+   {
+      if( LT(graph->cost[i], FARAWAY) )
+         graph->cost[i] = 1.0;
+   }
+
+   SCIP_CALL( reduce_da(scip, graph, &paramsda, NULL, &fixed, nelims, randnumgen) );
+   assert(EQ(fixed, 0.0));
+
+   BMScopyMemoryArray(graph->cost, orgcosts, nedges);
+
+   SCIPfreeBufferArray(scip, &orgcosts);
+
+   assert(graph_valid(scip, graph));
+   SCIP_CALL( reduce_unconnectedForDirected(scip, graph) );
+
+   return SCIP_OKAY;
+}
+
 
 /** bound-based reduction test for the HCDSTP */
 SCIP_RETCODE reduce_boundHop(

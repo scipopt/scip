@@ -145,7 +145,7 @@ extern SCIP_RETCODE    reduce_boundPruneHeur(SCIP*, GRAPH*, PATH*, SCIP_Real*, S
 extern SCIP_RETCODE    reduce_boundHop(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_boundHopR(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    reduce_boundHopRc(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
-
+extern SCIP_RETCODE    reduce_boundHopDa(SCIP*, GRAPH*, int*, SCIP_RANDNUMGEN*);
 
 /* reduce_da.c
  */

@@ -1208,6 +1208,7 @@ SCIP_RETCODE reduceHc(
    STP_Bool rbred = TRUE;
    STP_Bool rcbred = TRUE;
    STP_Bool da = TRUE;
+   STP_Bool dahop = TRUE;
    int nrounds = 0;
    const int nnodes = graph_get_nNodes(g);
    const int nedges = graph_get_nEdges(g);
@@ -1237,8 +1238,9 @@ SCIP_RETCODE reduceHc(
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1, TRUE) );
    SCIP_CALL( reduce_sollocalInit(scip, g, &redsollocal) );
 
-   while( (da || bred || hbred || rbred || rcbred) && !SCIPisStopped(scip) )
+   while( (da || bred || hbred || rbred || rcbred || dahop ) && !SCIPisStopped(scip) )
    {
+      int ndahopelims = 0;
       int danelims = 0;
       int brednelims = 0;
       int hbrednelims = 0;
@@ -1293,6 +1295,17 @@ SCIP_RETCODE reduceHc(
          SCIP_CALL( reduce_da(scip, g, &paramsda, redsollocal, fixed, &danelims, randnumgen) );
          if( danelims <= redbound )
             da = FALSE;
+      }
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( dahop )
+      {
+         SCIP_CALL( reduce_boundHopDa(scip, g, &ndahopelims, randnumgen) );
+
+         if( ndahopelims <= redbound )
+            dahop = FALSE;
       }
 
 /*

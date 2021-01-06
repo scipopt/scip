@@ -1660,7 +1660,6 @@ SCIP_Real daGetMaxDeviation(
    SCIP_Real damaxdeviation;
 
    assert(paramsda && randnumgen);
-   assert(paramsda->prevrounds >= 0);
 
 #if 1
    damaxdeviation = SCIPrandomGetReal(randnumgen, DAMAXDEVIATION_RANDOM_LOWER, DAMAXDEVIATION_RANDOM_UPPER);
@@ -1813,6 +1812,12 @@ int daGetNruns(
    if( !graph_typeIsUndirected(graph) )
    {
       nruns = MIN(nruns, DEFAULT_DARUNS_DIRECTED);
+   }
+
+   if( paramsda->prevrounds == STP_DAHOPS_MAGIC )
+   {
+      assert(graph->stp_type == STP_DHCSTP);
+      nruns = MIN(nruns, 2);
    }
 
    return nruns;
@@ -2622,6 +2627,8 @@ SCIP_RETCODE reduce_da(
    const SCIP_Bool nodereplacing = paramsda->nodereplacing;
    const SCIP_Bool userec = paramsda->useRec;
    SCIP_Bool havebestsol = FALSE;
+   const SCIP_Bool useHops = (paramsda->prevrounds == STP_DAHOPS_MAGIC);    // todo do that properly
+
 
    assert(scip && graph && nelims);
    assert(graph_valid_ancestors(scip, graph) && graph_valid(scip, graph));
@@ -2666,6 +2673,12 @@ SCIP_RETCODE reduce_da(
       upperbound = reduce_sollocalGetUpperBound(redsollocal);
    }
 
+   if( useHops )
+   {
+      assert(graph->stp_type == STP_DHCSTP);
+      upperbound = (SCIP_Real) graph->hoplimit;
+   }
+
    graph_mark(graph);
    collectFixedTerminals(graph, terms, &nFixedTerms);
 
@@ -2696,7 +2709,7 @@ SCIP_RETCODE reduce_da(
          redcosts_setRootTop(terms[run], redcostdata);
 
      //   if( rpc ) {      // int todo; // check for more terminals to be added    }
-         if( daGuidedIsPromising(graph, run, randnumgen) )
+         if( !useHops && daGuidedIsPromising(graph, run, randnumgen) )
          {
             /* run dual-ascent (and possibly re-root solution stored in 'result') */
             SCIP_CALL( computeDualSolutionGuided(scip, graph, damaxdeviation, redcostdata, result) );
@@ -2708,8 +2721,8 @@ SCIP_RETCODE reduce_da(
 
          if( isDirected )
          {
-            SCIP_CALL( computeSteinerTreeRedCostsDirected(scip, graph, redcostdata, result, bestresult,
-                  &havebestsol, &upperbound) );
+            if( !useHops )
+               SCIP_CALL( computeSteinerTreeRedCostsDirected(scip, graph, redcostdata, result, bestresult, &havebestsol, &upperbound) );
          }
          else
          {

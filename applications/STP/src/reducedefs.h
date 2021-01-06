@@ -35,6 +35,7 @@
 #define STP_REDUCTION_BASIC     1
 #define STP_REDUCTION_ADVANCED  2
 
+#define STP_DAHOPS_MAGIC -9991 // terrible :(
 
 /** lightweight minimum spanning tree structure that allows to add vertices to given MST on complete graph (in CSR format) */
 typedef struct dynamic_complete_minimum_spanning_tree DCMST;
